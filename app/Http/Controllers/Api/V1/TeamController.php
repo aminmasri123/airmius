@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
+use App\Models\Conversation;
 use App\Models\Event;
+use App\Models\Invoice;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
@@ -484,6 +486,182 @@ class TeamController extends Controller
         ]);
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
+    public function storeMember(Request $request, Team $team)
+    {
+        $this->authorize('invite', $team);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', Rule::in(Team::ROLES)],
+        ]);
+
+        $member = User::findOrFail($data['user_id']);
+
+        if (! $team->club->users()->where('users.id', $member->id)->exists()) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Dieses Mitglied muss zuerst im Verein angelegt oder eingeladen werden.',
+            ]);
+        }
+
+        if ($team->users()->where('users.id', $member->id)->exists()) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Mitglied ist bereits im Team.',
+            ]);
+        }
+
+        DB::transaction(function () use ($team, $member, $data) {
+            $team->users()->syncWithoutDetaching([
+                $member->id => ['role' => $data['role']],
+            ]);
+
+            $this->syncTeamChatMembers($team, [$member->id]);
+        });
+
+        AppNotification::send($member->id, 'team.member_added', [
+            'title' => 'Zum Team hinzugefügt',
+            'body' => 'Du wurdest zu '.$team->name.' hinzugefügt.',
+            'url' => '/teams/'.$team->id,
+            'club_id' => $team->club_id,
+            'team_id' => $team->id,
+            'role' => $data['role'],
+            'added_by' => $request->user()->id,
+        ]);
+
+        return (new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events'])))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function removeMember(Request $request, Team $team, User $user)
+    {
+        $isLeavingSelf = $request->user()->id === $user->id;
+        $data = $isLeavingSelf
+            ? $request->validate([
+                'reason' => ['nullable', 'string', 'max:1000'],
+            ])
+            : [];
+
+        if (! $isLeavingSelf) {
+            abort_unless($this->canRemoveTeamMembers($request->user(), $team), 403);
+        }
+
+        abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
+
+        if ($isLeavingSelf) {
+            $hasOpenDebt = Invoice::query()
+                ->where('club_id', $team->club_id)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['open', 'overdue'])
+                ->exists();
+
+            if ($hasOpenDebt) {
+                throw ValidationException::withMessages([
+                    'team' => 'Du kannst das Team erst verlassen, wenn alle offenen Rechnungen im Verein ausgeglichen sind.',
+                ]);
+            }
+        }
+
+        $team->users()->detach($user->id);
+        $this->removeTeamChatMember($team, $user->id);
+
+        if ($isLeavingSelf) {
+            $this->notifyClubManagers($team->club, 'team.member_left', [
+                'title' => 'Mitglied hat Team verlassen',
+                'body' => $user->name.' hat '.$team->name.' verlassen.'
+                    .(filled($data['reason'] ?? null) ? "\n\nBegründung: ".$data['reason'] : ''),
+                'url' => '/teams/'.$team->id,
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'user_id' => $user->id,
+            ], $user->id);
+        } else {
+            AppNotification::send($user, 'team.member_removed', [
+                'title' => 'Aus Team entfernt',
+                'body' => 'Du wurdest aus '.$team->name.' entfernt. Deine Vereinsmitgliedschaft bleibt bestehen.',
+                'url' => '/notifications',
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+            ]);
+        }
+
+        return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
+    private function canRemoveTeamMembers(User $user, Team $team): bool
+    {
+        if ($user->can('delete', $team->club)) {
+            return true;
+        }
+
+        $managesClubMembers = $team->club
+            ->users()
+            ->where('users.id', $user->id)
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']))
+            ->exists();
+
+        return $managesClubMembers
+            || ($user->can('team.kick') && $user->can('update', $team));
+    }
+
+    private function syncTeamChatMembers(Team $team, array $newUserIds = []): void
+    {
+        $participantIds = $team->users()
+            ->pluck('users.id')
+            ->merge($newUserIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $conversation = Conversation::firstOrCreate(
+            ['type' => 'team', 'team_id' => $team->id],
+            ['club_id' => $team->club_id],
+        );
+
+        if (! $conversation->club_id && $team->club_id) {
+            $conversation->update(['club_id' => $team->club_id]);
+        }
+
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
+
+        $missingIds = $participantIds->diff($existingIds)->values();
+
+        if ($missingIds->isEmpty()) {
+            return;
+        }
+
+        $joinedAt = now();
+
+        $conversation->users()->syncWithoutDetaching(
+            $missingIds
+                ->mapWithKeys(fn (int $id) => [$id => ['joined_at' => $joinedAt]])
+                ->all()
+        );
+    }
+
+    private function removeTeamChatMember(Team $team, int $userId): void
+    {
+        Conversation::query()
+            ->where('type', 'team')
+            ->where('team_id', $team->id)
+            ->each(fn (Conversation $conversation) => $conversation->users()->detach($userId));
+    }
+
+    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
+    {
+        $club->users()
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
+            ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
+            ->get(['users.id'])
+            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
     }
 
     private function teamInvitationPayload(TeamInvitation $invitation): array

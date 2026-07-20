@@ -1,5 +1,7 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -22,6 +24,10 @@ const props = defineProps({
     title: {
         type: String,
         default: '',
+    },
+    processing: {
+        type: Boolean,
+        default: false,
     },
 })
 
@@ -46,9 +52,18 @@ const acceptedModel = computed({
                         <span> · {{ providerLabel(confirmation.provider) }}</span>
                     </p>
                 </div>
-                <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="emit('close')">
-                    <i class="las la-times text-xl"></i>
-                </button>
+                <AppButton
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    icon-only
+                    :disabled="processing"
+                    aria-label="Checkout schliessen"
+                    title="Checkout schliessen"
+                    @click="emit('close')"
+                >
+                    <i class="las la-times text-xl" aria-hidden="true"></i>
+                </AppButton>
             </div>
 
             <label class="mt-5 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -61,21 +76,27 @@ const acceptedModel = computed({
                 </span>
             </label>
 
+            <AppLoadingState
+                v-if="processing"
+                class="mt-4"
+                label="Zahlung wird vorbereitet..."
+                inline
+            />
+
             <div class="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="emit('close')">
+                <AppButton type="button" variant="secondary" :disabled="processing" @click="emit('close')">
                     Abbrechen
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                     type="button"
-                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="!acceptedModel"
+                    :disabled="!acceptedModel || processing"
+                    :loading="processing"
                     @click="emit('confirm')"
                 >
-                    Zahlungspflichtig fortfahren
-                </button>
+                    {{ processing ? 'Bereitet Zahlung vor...' : 'Zahlungspflichtig fortfahren' }}
+                </AppButton>
             </div>
         </div>
     </div>
 </template>
-
 

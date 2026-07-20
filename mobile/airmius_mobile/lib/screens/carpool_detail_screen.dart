@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class CarpoolDetailScreen extends StatefulWidget {
   const CarpoolDetailScreen({super.key, required this.title, required this.status});
@@ -63,9 +62,9 @@ class _CarpoolDetailScreenState extends State<CarpoolDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sicherheit'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _guardianRequired, onChanged: (value) => setState(() => _guardianRequired = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Guardian-Freigabe verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Pflicht für Minderjaehrige oder sensible Fahrten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _sharePhone, onChanged: (value) => setState(() => _sharePhone = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Telefon erst nach Zusage teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt bleibt bis zur bestätigten Mitfahrt verborgen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _reportEnabled, onChanged: (value) => setState(() => _reportEnabled = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Melden & Blockieren erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Unsichere Fahrten können direkt moderiert werden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _guardianRequired, onChanged: (value) => setState(() => _guardianRequired = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Guardian-Freigabe verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Pflicht für Minderjaehrige oder sensible Fahrten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _sharePhone, onChanged: (value) => setState(() => _sharePhone = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Telefon erst nach Zusage teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt bleibt bis zur bestätigten Mitfahrt verborgen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _reportEnabled, onChanged: (value) => setState(() => _reportEnabled = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Melden & Blockieren erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Unsichere Fahrten können direkt moderiert werden.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

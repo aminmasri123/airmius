@@ -11,9 +11,12 @@ use App\Models\Folder;
 use App\Models\Team;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
+use App\Support\Api\V1\ApiPagination;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -132,6 +135,60 @@ class UploadController extends Controller
         ]);
     }
 
+    public function uploadIntent(Request $request)
+    {
+        $data = $request->validate([
+            'scope' => ['required', Rule::in(['user', 'team', 'club', 'event'])],
+            'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
+            'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
+            'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
+            'folder_id' => ['nullable', 'exists:folders,id'],
+            'file_name' => ['required', 'string', 'max:'.self::FILE_NAME_MAX_LENGTH, 'not_regex:#[\\\\/]#', 'not_regex:/[\x00-\x1F\x7F]/', 'not_regex:/^\.{1,2}$/'],
+            'mime_type' => ['required', 'string', 'max:160'],
+            'size_bytes' => ['nullable', 'integer', 'min:1', 'max:'.(self::MAX_FILE_SIZE_KB * 1024)],
+        ]);
+
+        $scope = $this->authorizeScope($request, $data);
+        $this->authorizeUploadToScope($request, $scope);
+        $this->assertSafeUploadIntent($data['file_name'], $data['mime_type']);
+
+        if (! empty($data['folder_id'])) {
+            $folder = Folder::findOrFail($data['folder_id']);
+            $this->authorizeFolderAccess($request, $folder);
+            $this->assertFolderScope($folder, $scope);
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => 'intent_'.Str::uuid()->toString(),
+                'status' => 'ready',
+                'upload' => [
+                    'method' => 'POST',
+                    'endpoint' => '/api/v1/uploads',
+                    'field_name' => 'file',
+                    'content_type' => 'multipart/form-data',
+                    'headers' => [
+                        'Accept' => 'application/json',
+                    ],
+                    'form_fields' => array_filter([
+                        'scope' => $data['scope'],
+                        'club_id' => $scope['club_id'] ?? null,
+                        'team_id' => $scope['team_id'] ?? null,
+                        'event_id' => $scope['event_id'] ?? null,
+                        'folder_id' => $data['folder_id'] ?? null,
+                    ], fn ($value) => $value !== null),
+                ],
+                'file' => [
+                    'file_name' => $this->normalizeSafeDisplayName($data['file_name']),
+                    'mime_type' => strtolower($data['mime_type']),
+                    'size_bytes' => $data['size_bytes'] ?? null,
+                    'max_size_bytes' => self::MAX_FILE_SIZE_KB * 1024,
+                    'max_size_kb' => self::MAX_FILE_SIZE_KB,
+                ],
+                'expires_at' => now()->addMinutes(15)->toJSON(),
+            ],
+        ], 201);
+    }
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -144,6 +201,7 @@ class UploadController extends Controller
         ]);
 
         $scope = $this->authorizeScope($request, $data);
+        $this->authorizeUploadToScope($request, $scope);
         $upload = $request->file('file');
         $this->assertSafeUpload($upload);
 
@@ -176,7 +234,7 @@ class UploadController extends Controller
 
     public function update(Request $request, File $file)
     {
-        $this->authorizeFileAccess($request, $file);
+        Gate::authorize('update', $file);
 
         $data = $request->validate([
             'display_name' => ['required', 'string', 'max:'.self::FILE_NAME_MAX_LENGTH],
@@ -191,7 +249,7 @@ class UploadController extends Controller
 
     public function destroy(Request $request, File $file)
     {
-        $this->authorizeFileAccess($request, $file);
+        Gate::authorize('delete', $file);
 
         $this->files->delete($file);
 
@@ -210,10 +268,11 @@ class UploadController extends Controller
             'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
             'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
             'parent_id' => ['nullable', 'exists:folders,id'],
-            'name' => ['required', 'string', 'max:120', 'not_regex:/[\\\\\/]/', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
+            'name' => ['required', 'string', 'max:120', 'not_regex:#[\\\\/]#', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
         ]);
 
         $scope = $this->authorizeScope($request, $data);
+        $this->authorizeFolderCreateToScope($request, $scope);
         $name = $this->normalizeFolderName($data['name']);
 
         if (! empty($data['parent_id'])) {
@@ -232,10 +291,10 @@ class UploadController extends Controller
 
     public function updateFolder(Request $request, Folder $folder)
     {
-        $this->authorizeFolderAccess($request, $folder);
+        Gate::authorize('update', $folder);
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120', 'not_regex:/[\\\\\/]/', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
+            'name' => ['required', 'string', 'max:120', 'not_regex:#[\\\\/]#', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
         ]);
 
         $folder->update(['name' => $this->normalizeFolderName($data['name'])]);
@@ -245,7 +304,7 @@ class UploadController extends Controller
 
     public function destroyFolder(Request $request, Folder $folder)
     {
-        $this->authorizeFolderAccess($request, $folder);
+        Gate::authorize('delete', $folder);
         $this->deleteFolderTree($folder);
 
         return response()->json(['data' => ['deleted' => true]]);
@@ -297,15 +356,30 @@ class UploadController extends Controller
         ];
     }
 
-    private function authorizeFileAccess(Request $request, File $file): void
+    private function authorizeUploadToScope(Request $request, array $scope): void
     {
-        abort_unless(
-            $file->user_id === $request->user()->id
-            || ($file->club_id && Club::query()->whereKey($file->club_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
-            || ($file->team_id && Team::query()->whereKey($file->team_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
-            || ($file->event_id && Event::query()->whereKey($file->event_id)->whereHas('participants', fn ($query) => $query->where('users.id', $request->user()->id))->exists()),
-            403
-        );
+        if ($this->isPersonalScope($request, $scope)) {
+            return;
+        }
+
+        Gate::authorize('upload', File::class);
+    }
+
+    private function authorizeFolderCreateToScope(Request $request, array $scope): void
+    {
+        if ($this->isPersonalScope($request, $scope)) {
+            return;
+        }
+
+        Gate::authorize('create', Folder::class);
+    }
+
+    private function isPersonalScope(Request $request, array $scope): bool
+    {
+        return (int) ($scope['user_id'] ?? 0) === (int) $request->user()->id
+            && empty($scope['club_id'])
+            && empty($scope['team_id'])
+            && empty($scope['event_id']);
     }
 
     private function authorizeFolderAccess(Request $request, Folder $folder): void
@@ -330,6 +404,28 @@ class UploadController extends Controller
         );
     }
 
+    private function assertSafeUploadIntent(string $fileName, string $mimeType): void
+    {
+        $extension = strtolower((string) pathinfo($fileName, PATHINFO_EXTENSION));
+        $dispositionParts = array_filter(
+            preg_split('/\./', strtolower($fileName), -1, PREG_SPLIT_NO_EMPTY),
+            static fn (string $part): bool => $part !== '',
+        );
+
+        foreach ($dispositionParts as $part) {
+            if (in_array($part, self::DISALLOWED_FILE_EXTENSIONS, true)) {
+                throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+            }
+        }
+
+        if ($extension !== '' && in_array($extension, self::DISALLOWED_FILE_EXTENSIONS, true)) {
+            throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+        }
+
+        if (in_array(strtolower($mimeType), self::DISALLOWED_MIME_TYPES, true)) {
+            throw ValidationException::withMessages(['mime_type' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+        }
+    }
     private function assertSafeUpload(UploadedFile $file): void
     {
         if (! $file->isValid() || (int) $file->getSize() <= 0) {
@@ -482,13 +578,8 @@ class UploadController extends Controller
 
     private function paginationPayload($page): array
     {
-        return [
-            'current_page' => $page->currentPage(),
-            'last_page' => $page->lastPage(),
-            'per_page' => $page->perPage(),
-            'total' => $page->total(),
-            'from' => $page->firstItem(),
-            'to' => $page->lastItem(),
-        ];
+        return array_merge(ApiPagination::meta($page), [
+            'links' => ApiPagination::links($page),
+        ]);
     }
 }

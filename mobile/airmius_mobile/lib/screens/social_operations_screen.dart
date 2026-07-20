@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class SocialOperationsScreen extends StatefulWidget {
   const SocialOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _SocialOperationsScreenState extends State<SocialOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Sicherheitsregeln'),
-                  SwitchListTile(value: _guardianCheck, onChanged: (value) => setState(() => _guardianCheck = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Guardian/Medienrechte prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Stories und Medien mit Minderjaehrigen nur mit passenden Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _notifyAuthor, onChanged: (value) => setState(() => _notifyAuthor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Autor informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Reaktion, Kommentar, Report oder Moderationsentscheidung erzeugt später eine Benachrichtigung.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _guardianCheck, onChanged: (value) => setState(() => _guardianCheck = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Guardian/Medienrechte prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Stories und Medien mit Minderjaehrigen nur mit passenden Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notifyAuthor, onChanged: (value) => setState(() => _notifyAuthor = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Autor informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Reaktion, Kommentar, Report oder Moderationsentscheidung erzeugt später eine Benachrichtigung.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _SocialOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _SocialOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Social-Aktion kann Inhalte entfernen, Sichtbarkeit ändern oder Moderation ausloesen.', item.action, action);
       return;

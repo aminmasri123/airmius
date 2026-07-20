@@ -5,7 +5,6 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 import 'module_sections.dart';
 
 class ModuleScreen extends StatelessWidget {

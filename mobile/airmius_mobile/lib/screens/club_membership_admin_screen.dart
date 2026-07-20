@@ -4,7 +4,6 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 import 'file_operations_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'membership_operations_screen.dart';
@@ -180,7 +179,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                       onChanged: (value) => setState(() => _fields[entry.key] = value),
                       title: Text(entry.key, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                       subtitle: Text(entry.value ? 'Wird im Formular angezeigt' : 'Ist für Antragsteller ausgeblendet', style: const TextStyle(color: AirmiusColors.muted)),
-                      activeColor: AirmiusColors.blue,
+                      activeThumbColor: AirmiusColors.blue,
                       contentPadding: EdgeInsets.zero,
                     ),
                 ],
@@ -194,7 +193,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                   const Eyebrow('Beitrag & Zahlung'),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _cycle,
+                    initialValue: _cycle,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(labelText: 'Zahlungsrhythmus'),
                     items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -202,7 +201,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _payment,
+                    initialValue: _payment,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(labelText: 'Zahlmethode'),
                     items: const ['Überweisung', 'Bar', 'SEPA-Lastschrift'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),

@@ -1,9 +1,7 @@
-﻿<script setup>
-import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
-import { confirmDialog, promptDialog } from '@/services/dialogService'
+<script setup>
+import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
+import { useAdminCommerceWorkspace } from "@/composables/useAdminCommerceWorkspace"
+import { Head } from "@inertiajs/vue3"
 
 defineOptions({ layout: AppLayout })
 
@@ -37,1274 +35,133 @@ const props = defineProps({
     providerLocations: { type: Array, default: () => [] },
 })
 
-const page = usePage()
-const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
-const activeTab = ref(queryTab || 'marketplace')
-const campaignStatusError = ref('')
-const stockAdjustments = ref({})
-
-const couponForm = useForm({
-    code: '',
-    name: '',
-    type: 'percent',
-    percent_off: 50,
-    value_cents: '',
-    max_redemptions: '',
-    starts_at: '',
-    ends_at: '',
-    is_active: true,
-})
-
-const addonForm = useForm({
-    slug: '',
-    name: '',
-    description: '',
-    monthly_price_cents: '',
-    yearly_price_cents: '',
-    target_actor: 'verein',
-    features: [],
-    is_active: true,
-})
-
-const productForm = useForm({
-    title: '',
-    description: '',
-    features_text: '',
-    attributes_text: '',
-    attribute_options: [],
-    variants: [],
-    image_url: '',
-    image_urls_text: '',
-    image_upload: null,
-    image_uploads: [],
-    category: 'product',
-    product_type: 'single',
-    sku: '',
-    is_shippable: true,
-    manages_stock: false,
-    stock_quantity: '',
-    tax_class: 'standard',
-    return_policy_type: 'standard',
-    return_window_days: 14,
-    digital_delivery_note: '',
-    price_cents: '',
-    currency: 'EUR',
-    status: 'draft',
-    commission_percent: 10,
-})
-const productAttributeRows = ref([{ name: '', values: [] }])
-const productFeatureRows = ref([''])
-const productVariantRows = ref([])
-
-const marketplaceVisualForm = useForm({
-    sources: Object.fromEntries(props.marketplaceVisuals.map((visual) => [visual.key, visual.source || ''])),
-    dimensions: Object.fromEntries(props.marketplaceVisuals.map((visual) => [visual.key, { width: visual.width, height: visual.height }])),
-    uploads: {},
-})
-
-const taxRateForm = useForm({
-    name: 'Deutschland Standard',
-    country_code: 'DE',
-    region: '',
-    tax_class: 'standard',
-    tax_label: 'MwSt.',
-    rate_percent: 19,
-    currency: 'EUR',
-    is_default: true,
-    is_active: true,
-    priority: 10,
-})
-
-const commerceSettingsForm = useForm({
-    company_country: props.commerceSettings.company_country || 'DE',
-    company_currency: props.commerceSettings.company_currency || 'EUR',
-    enable_oss: props.commerceSettings.enable_oss ?? true,
-    export_vat_mode: props.commerceSettings.export_vat_mode || 'zero',
-    reverse_charge_enabled: props.commerceSettings.reverse_charge_enabled ?? true,
-    ads_cpm_cents: centsToMajor(props.commerceSettings.ads_cpm_cents ?? 500),
-    ads_cpc_cents: centsToMajor(props.commerceSettings.ads_cpc_cents ?? 30),
-    ads_cpl_cents: centsToMajor(props.commerceSettings.ads_cpl_cents ?? 200),
-    ads_cpa_percent: props.commerceSettings.ads_cpa_percent ?? 10,
-    ads_min_budget_cents: centsToMajor(props.commerceSettings.ads_min_budget_cents ?? 1000),
-    ads_frequency_cap_per_day: props.commerceSettings.ads_frequency_cap_per_day ?? 3,
-    ads_frequency_cap_feed: props.commerceSettings.ads_frequency_cap_feed ?? 3,
-    ads_frequency_cap_sidebar: props.commerceSettings.ads_frequency_cap_sidebar ?? 6,
-    ads_frequency_cap_marketplace_card: props.commerceSettings.ads_frequency_cap_marketplace_card ?? 3,
-    ads_frequency_cap_sponsor_section: props.commerceSettings.ads_frequency_cap_sponsor_section ?? 4,
-})
-
-const marketplaceCommissionForm = useForm({
-    default_commission_percent: props.commerceSettings.marketplace_default_commission_percent ?? 10,
-    commissions: props.marketplaceCategoryCommissions.map((row) => ({
-        category: row.category,
-        label: row.label,
-        commission_percent: row.commission_percent ?? props.commerceSettings.marketplace_default_commission_percent ?? 10,
-    })),
-})
-
-const providerProfileForm = useForm({
-    display_name: props.providerProfile?.display_name || page.props.auth?.user?.name || 'Airmius',
-    legal_name: props.providerProfile?.legal_name || '',
-    provider_type: props.providerProfile?.provider_type || 'business',
-    support_email: props.providerProfile?.support_email || page.props.auth?.user?.email || '',
-    phone: props.providerProfile?.phone || '',
-    website: props.providerProfile?.website || '',
-    logo_url: props.providerProfile?.logo_url || '',
-    public_description: props.providerProfile?.public_description || '',
-    legal_country: props.providerProfile?.legal_country || 'DE',
-    legal_state: props.providerProfile?.legal_state || '',
-    legal_postal_code: props.providerProfile?.legal_postal_code || '',
-    legal_city: props.providerProfile?.legal_city || '',
-    legal_street: props.providerProfile?.legal_street || '',
-    legal_house_number: props.providerProfile?.legal_house_number || '',
-    show_public_address: Boolean(props.providerProfile?.show_public_address),
-    show_support_email: props.providerProfile?.show_support_email ?? true,
-    show_phone: Boolean(props.providerProfile?.show_phone),
-})
-
-const providerLocationForm = useForm({
-    name: '',
-    type: 'pickup',
-    country: 'DE',
-    state: '',
-    postal_code: '',
-    city: '',
-    street: '',
-    house_number: '',
-    opening_hours: '',
-    note: '',
-    phone: '',
-    email: '',
-    image_url: '',
-    latitude: '',
-    longitude: '',
-    pickup_enabled: true,
-    returns_enabled: false,
-    is_public: true,
-})
-const editingProviderLocation = ref(null)
-
-const shippingRateForm = useForm({
-    name: 'Deutschland Standardversand',
-    origin_country_code: '',
-    country_code: 'DE',
-    postal_code_prefix: '',
-    amount_cents: '4,90',
-    currency: 'EUR',
-    free_from_cents: '100,00',
-    is_active: true,
-    priority: 10,
-})
-
-const campaignForm = useForm({
-    is_internal: false,
-    force_priority: false,
-    name: '',
-    headline: '',
-    description: '',
-    primary_text: '',
-    target_url: '',
-    cta_label: 'Mehr erfahren',
-    objective: 'traffic',
-    placement: 'marketplace_card',
-    creative_format: 'feed_square',
-    creative_image_url: '',
-    creative_image_upload: null,
-    creatives: [],
-    audience_locations: '',
-    audience_interests: '',
-    audience_excluded_locations: '',
-    audience_excluded_interests: '',
-    audience_devices: '',
-    audience_languages: '',
-    audience_hours: '',
-    audience_age_min: '',
-    audience_age_max: '',
-    budget_cents: '',
-    daily_budget_cents: '',
-    spent_cents: '',
-    impressions: 0,
-    clicks: 0,
-    status: 'draft',
-    review_note: '',
-    starts_at: '',
-    ends_at: '',
-})
-
-const adFormats = [
-    { key: 'feed_square', label: 'Feed Quadrat', size: '1080 x 1080 px' },
-    { key: 'feed_portrait', label: 'Feed Portrait', size: '1080 x 1350 px' },
-    { key: 'story_vertical', label: 'Story/Reel', size: '1080 x 1920 px' },
-    { key: 'banner_wide', label: 'Wide Banner', size: '1200 x 628 px' },
-]
-const selectedAdFormat = computed(() => adFormats.find((format) => format.key === campaignForm.creative_format) || adFormats[0])
-const campaignCreativeRows = ref([
-    { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-    { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-])
-const rejectionModal = useForm({
-    open: false,
-    product: null,
-    selectedReason: '',
-    reason: '',
-})
-const productDeleteModal = ref({
-    open: false,
-    product: null,
-    confirmation: '',
-    processing: false,
-})
-const rejectionReasons = [
-    { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergänze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
-    { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist für Käufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
-    { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewählten Kategorie. Bitte wähle die passende Marketplace-Kategorie.' },
-    { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irreführende Bilder können nicht freigegeben werden.' },
-    { value: 'price_or_tax_issue', label: 'Preis, Steuer oder Versand unklar', text: 'Preis, Steuerklasse, Versand oder Lieferbedingungen sind nicht plausibel genug angegeben.' },
-    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthält Inhalte oder Leistungen, die auf Airmius nicht veröffentlicht werden können.' },
-    { value: 'quality_review', label: 'Qualitätsprüfung nicht bestanden', text: 'Das Angebot erfüllt aktuell nicht die Qualitätsanforderungen für den Marketplace.' },
-    { value: 'duplicate', label: 'Doppeltes Angebot', text: 'Ein sehr ähnliches Angebot existiert bereits. Bitte bearbeite das bestehende Angebot statt ein neues einzureichen.' },
-    { value: 'custom', label: 'Eigener Grund', text: '' },
-]
-const editProductForm = useForm({
-    open: false,
-    product: null,
-    title: '',
-    description: '',
-    features_text: '',
-    attributes_text: '',
-    attribute_options: [],
-    variants: [],
-    image_url: '',
-    image_urls_text: '',
-    image_upload: null,
-    image_uploads: [],
-    category: 'product',
-    product_type: 'single',
-    sku: '',
-    is_shippable: true,
-    manages_stock: false,
-    stock_quantity: 0,
-    low_stock_threshold: 0,
-    tax_class: 'standard',
-    return_policy_type: 'standard',
-    return_window_days: 14,
-    digital_delivery_note: '',
-    price_cents: '',
-    currency: 'EUR',
-    status: 'draft',
-    rejection_reason: '',
-    commission_percent: 10,
-})
-const editAttributeRows = ref([{ name: '', values: [] }])
-const editFeatureRows = ref([''])
-const editVariantRows = ref([])
-const shippingModal = useForm({
-    open: false,
-    order: null,
-    shipping_status: 'open',
-    shipping_carrier: '',
-    shipping_label_url: '',
-    tracking_number: '',
-    tracking_url: '',
-})
-const refundModal = useForm({
-    open: false,
-    order: null,
-    amount_cents: '',
-    reason: '',
-})
-const issueReplyModal = useForm({
-    open: false,
-    order: null,
-    issue_response: '',
-    issue_status: 'reviewing',
-})
-const reportedOrders = computed(() => props.orders.filter((order) => order.issue_status && order.issue_status !== 'none'))
-
-const sellerApplicationStatusLabel = (status) => ({
-    pending: 'Wartet auf Prüfung',
-    approved: 'Freigegeben',
-    rejected: 'Abgelehnt',
-}[status] || status || '-')
-
-const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-}).format(Number(cents || 0) / 100)
-
-const formatDateTime = (value) => {
-    if (!value) {
-        return '-'
-    }
-
-    return new Intl.DateTimeFormat('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(new Date(value))
-}
-
-const orderPaymentLabel = (order) => {
-    if (order.status === 'completed') {
-        return order.shipping_status === 'delivered' ? 'Abgeschlossen' : 'Bezahlt'
-    }
-
-    return {
-        pending: 'Offen',
-        awaiting_transfer: 'Wartet auf Überweisung',
-        cancelled: 'Storniert',
-        refunded: 'Erstattet',
-    }[order.status] || order.status
-}
-
-const orderPaymentHint = (order) => {
-    if (order.status === 'completed') {
-        return order.shipping_status === 'delivered'
-            ? 'Zahlung und Zustellung erledigt'
-            : 'Zahlung eingegangen, Versand läuft noch'
-    }
-
-    return {
-        pending: 'Zahlung noch offen',
-        awaiting_transfer: 'Banküberweisung muss bestätigt werden',
-        cancelled: 'Bestellung wurde storniert',
-        refunded: 'Betrag wurde erstattet',
-    }[order.status] || ''
-}
-
-const orderShippingLabel = (status) => ({
-    open: 'Offen',
-    prepared: 'Wird vorbereitet',
-    shipped: 'Versendet',
-    delivered: 'Zugestellt',
-}[status || 'open'] || status)
-
-const trackingUrlFor = (carrier, trackingNumber) => {
-    const number = String(trackingNumber || '').replace(/\s+/g, '').toUpperCase()
-    const normalizedCarrier = String(carrier || '').trim().toLowerCase()
-
-    if (!number) return ''
-    if (normalizedCarrier === 'dhl') return `https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${encodeURIComponent(number)}`
-    if (normalizedCarrier === 'ups') return `https://www.ups.com/track?tracknum=${encodeURIComponent(number)}`
-    if (normalizedCarrier === 'dpd') return `https://tracking.dpd.de/status/de_DE/parcel/${encodeURIComponent(number)}`
-    if (normalizedCarrier === 'hermes') return `https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation/#${encodeURIComponent(number)}`
-    if (normalizedCarrier === 'gls') return `https://gls-group.com/DE/de/paketverfolgung?match=${encodeURIComponent(number)}`
-    if (normalizedCarrier === 'fedex') return `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number)}`
-
-    return ''
-}
-
-const autofillTrackingUrl = () => {
-    if (shippingModal.tracking_url) return
-
-    shippingModal.tracking_url = trackingUrlFor(shippingModal.shipping_carrier, shippingModal.tracking_number)
-}
-
-const orderIssueLabel = (status) => ({
-    reported: 'Problem gemeldet',
-    reviewing: 'In Prüfung',
-    resolved: 'Gelöst',
-    refunded: 'Erstattet',
-    cancelled: 'Storniert',
-}[status] || status)
-
-const formatPercent = (value) => `${Number(value || 0).toFixed(2).replace('.', ',')} %`
-
-const ctr = (clicks, impressions) => {
-    if (!Number(impressions || 0)) {
-        return 0
-    }
-
-    return (Number(clicks || 0) / Number(impressions || 0)) * 100
-}
-
-const budgetUsage = (spent, budget) => {
-    if (!Number(budget || 0)) {
-        return 0
-    }
-
-    return Math.min(100, (Number(spent || 0) / Number(budget || 0)) * 100)
-}
-
-const tabs = computed(() => [
-    { key: 'marketplace', label: 'Marketplace', count: props.products.length + props.sellerApplications.length + props.warehouses.length },
-    { key: 'provider', label: 'Anbieter & Filialen', count: props.providerLocations.length },
-    { key: 'orders', label: 'Bestellungen', count: props.orders.length + props.returnRequests.length + props.websiteRequests.length },
-    { key: 'settings', label: 'Steuern & Versand', count: props.taxRates.length + props.shippingRates.length },
-    { key: 'ad-prices', label: 'Ads Preise', count: 5 },
-    { key: 'ads', label: 'Ads', count: props.campaigns.length },
-    { key: 'marketing', label: 'Rabatte & Add-ons', count: props.coupons.length + props.addons.length },
-    { key: 'payouts', label: 'Auszahlungen', count: props.payoutCandidates.length + props.payouts.length },
-    { key: 'reports', label: 'Reports', count: props.auditLogs.length + props.sellerReports.length },
-])
-
-const adPricingCards = computed(() => [
-    {
-        key: 'ads_cpm_cents',
-        label: 'CPM',
-        title: 'Preis pro 1.000 Impressionen',
-        value: commerceSettingsForm.ads_cpm_cents,
-        suffix: 'EUR / 1.000 Views',
-        formula: 'Kosten = Impressionen / 1.000 x CPM',
-        example: `10.000 Views = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpm_cents) * 10))}`,
-    },
-    {
-        key: 'ads_cpc_cents',
-        label: 'CPC',
-        title: 'Preis pro Klick',
-        value: commerceSettingsForm.ads_cpc_cents,
-        suffix: 'EUR / Klick',
-        formula: 'Kosten = Klicks x CPC',
-        example: `100 Klicks = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpc_cents) * 100))}`,
-    },
-    {
-        key: 'ads_cpl_cents',
-        label: 'CPL',
-        title: 'Preis pro Lead',
-        value: commerceSettingsForm.ads_cpl_cents,
-        suffix: 'EUR / Lead',
-        formula: 'Kosten = Leads x CPL',
-        example: `25 Leads = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpl_cents) * 25))}`,
-    },
-    {
-        key: 'ads_cpa_percent',
-        label: 'CPA',
-        title: 'Provision pro Verkauf',
-        value: commerceSettingsForm.ads_cpa_percent,
-        suffix: '% vom Warenwert',
-        formula: 'Kosten = Warenwert x CPA-Prozent / 100',
-        example: `600 EUR Verkauf = ${formatMoney(60000 * (Number(commerceSettingsForm.ads_cpa_percent || 0) / 100))}`,
-    },
-])
-
-const attributePresets = [
-    { name: 'Farbe', values: ['Schwarz', 'Weiß', 'Rot', 'Blau', 'Grün', 'Gelb', 'Orange', 'Grau'] },
-    { name: 'Größe', values: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'] },
-    { name: 'Material', values: ['Baumwolle', 'Polyester', 'Leder', 'Mesh', 'Kunststoff', 'Metall'] },
-    { name: 'Dauer', values: ['30 Minuten', '60 Minuten', '90 Minuten', '1 Tag', '2 Tage', 'Wochenende'] },
-    { name: 'Lieferart', values: ['E-Mail', 'Download', 'Online-Zugang', 'Vor Ort', 'Versand'] },
-]
-
-const presetValuesFor = (name) => attributePresets.find((preset) => preset.name === name)?.values || []
-
-const normalizeAttributeRows = (rows) => rows
-    .map((row) => ({
-        name: String(row.name || '').trim(),
-        values: Array.isArray(row.values)
-            ? row.values.map((value) => String(value || '').trim()).filter(Boolean)
-            : String(row.values || '').split(/[|,]/).map((value) => value.trim()).filter(Boolean),
-    }))
-    .filter((row) => row.name && row.values.length)
-
-const normalizeVariantRows = (rows) => rows
-    .map((row) => ({
-        sku: String(row.sku || '').trim(),
-        price_cents: row.price_cents === '' || row.price_cents === null ? null : majorToCents(row.price_cents),
-        stock_quantity: row.stock_quantity === '' || row.stock_quantity === null ? null : Number(row.stock_quantity),
-        image_url: String(row.image_url || '').trim(),
-        attributes: Object.entries(row.attributes || {})
-            .map(([name, value]) => ({ name, value: String(value || '').trim() }))
-            .filter((attribute) => attribute.name && attribute.value),
-    }))
-    .filter((row) => row.attributes.length)
-
-const productAttributesText = () => productAttributeRows.value
-    .map((row) => ({
-        name: String(row.name || '').trim(),
-        values: Array.isArray(row.values) ? row.values.join(' | ') : String(row.values || '').trim(),
-    }))
-    .filter((row) => row.name && row.values)
-    .map((row) => `${row.name}: ${row.values}`)
-    .join('\n')
-
-const productFeaturesText = () => productFeatureRows.value
-    .map((feature) => String(feature || '').trim())
-    .filter(Boolean)
-    .join('\n')
-
-const attributeRowsToText = (rows) => rows
-    .map((row) => ({
-        name: String(row.name || '').trim(),
-        values: Array.isArray(row.values) ? row.values.join(' | ') : String(row.values || '').trim(),
-    }))
-    .filter((row) => row.name && row.values)
-    .map((row) => `${row.name}: ${row.values}`)
-    .join('\n')
-
-const featureRowsToText = (rows) => rows
-    .map((feature) => String(feature || '').trim())
-    .filter(Boolean)
-    .join('\n')
-
-const galleryUrlsText = (product) => (product.gallery_images || [])
-    .filter((image) => image && image !== product.image_url)
-    .join('\n')
-
-const productPayload = (product, overrides = {}) => ({
-    title: product.title,
-    description: product.description,
-    features_text: (product.features || []).join('\n'),
-    attributes_text: (product.product_attributes || []).map((attribute) => `${attribute.name}: ${attribute.value}`).join('\n'),
-    attribute_options: product.attribute_options || [],
-    variants: product.variants || [],
-    image_url: product.image_url || '',
-    image_urls_text: galleryUrlsText(product),
-    category: product.category,
-    product_type: product.product_type || 'single',
-    price_cents: product.price_cents,
-    currency: product.currency || 'EUR',
-    status: product.status,
-    rejection_reason: product.rejection_reason || null,
-    commission_percent: product.commission_percent ?? 10,
-    sku: product.sku || '',
-    is_shippable: Boolean(product.is_shippable),
-    manages_stock: Boolean(product.manages_stock),
-    stock_quantity: product.stock_quantity ?? 0,
-    low_stock_threshold: product.low_stock_threshold || 0,
-    tax_class: product.tax_class || 'standard',
-    return_policy_type: product.return_policy_type || 'standard',
-    return_window_days: product.return_window_days ?? 14,
-    digital_delivery_note: product.digital_delivery_note || '',
-    ...overrides,
-})
-
-const addProductAttributeRow = () => {
-    productAttributeRows.value.push({ name: '', values: [] })
-}
-
-const removeProductAttributeRow = (index) => {
-    productAttributeRows.value.splice(index, 1)
-    if (!productAttributeRows.value.length) {
-        addProductAttributeRow()
-    }
-}
-
-const addProductVariantRow = () => {
-    productVariantRows.value.push({ sku: '', price_cents: productForm.price_cents || '', stock_quantity: '', image_url: '', attributes: {} })
-}
-
-const removeProductVariantRow = (index) => {
-    productVariantRows.value.splice(index, 1)
-}
-
-const addProductFeatureRow = () => {
-    productFeatureRows.value.push('')
-}
-
-const removeProductFeatureRow = (index) => {
-    productFeatureRows.value.splice(index, 1)
-    if (!productFeatureRows.value.length) {
-        addProductFeatureRow()
-    }
-}
-
-const addEditAttributeRow = () => {
-    editAttributeRows.value.push({ name: '', values: [] })
-}
-
-const removeEditAttributeRow = (index) => {
-    editAttributeRows.value.splice(index, 1)
-    if (!editAttributeRows.value.length) {
-        addEditAttributeRow()
-    }
-}
-
-const addEditVariantRow = () => {
-    editVariantRows.value.push({ sku: '', price_cents: editProductForm.price_cents || '', stock_quantity: '', image_url: '', attributes: {} })
-}
-
-const removeEditVariantRow = (index) => {
-    editVariantRows.value.splice(index, 1)
-}
-
-const addEditFeatureRow = () => {
-    editFeatureRows.value.push('')
-}
-
-const removeEditFeatureRow = (index) => {
-    editFeatureRows.value.splice(index, 1)
-    if (!editFeatureRows.value.length) {
-        addEditFeatureRow()
-    }
-}
-
-const setProductImageUpload = (event) => {
-    productForm.image_upload = event.target.files?.[0] || null
-}
-
-const setProductGalleryUploads = (event) => {
-    productForm.image_uploads = Array.from(event.target.files || [])
-}
-
-const setEditProductImageUpload = (event) => {
-    editProductForm.image_upload = event.target.files?.[0] || null
-}
-
-const setEditProductGalleryUploads = (event) => {
-    editProductForm.image_uploads = Array.from(event.target.files || [])
-}
-
-const storeCoupon = () => couponForm
-    .transform((data) => data.type === 'fixed'
-        ? transformMoneyFields(data, ['value_cents'])
-        : { ...data, value_cents: 0 })
-    .post(route('admin.commerce.coupons.store'), {
-    preserveScroll: true,
-    onSuccess: () => couponForm.reset('code', 'name', 'max_redemptions', 'starts_at', 'ends_at'),
-})
-
-const storeAddon = () => addonForm
-    .transform((data) => transformMoneyFields(data, ['monthly_price_cents', 'yearly_price_cents']))
-    .post(route('admin.commerce.addons.store'), {
-    preserveScroll: true,
-    onSuccess: () => addonForm.reset('slug', 'name', 'description'),
-})
-
-const storeProduct = () => {
-    productForm.attributes_text = productAttributesText()
-    productForm.features_text = productFeaturesText()
-    productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
-    productForm.variants = normalizeVariantRows(productVariantRows.value)
-
-    productForm
-        .transform((data) => transformMoneyFields(data, ['price_cents']))
-        .post(route('admin.commerce.products.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            productForm.reset('title', 'description', 'features_text', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'sku', 'digital_delivery_note')
-            productAttributeRows.value = [{ name: '', values: [] }]
-            productFeatureRows.value = ['']
-            productVariantRows.value = []
-        },
-        })
-}
-
-const setMarketplaceVisualUpload = (key, event) => {
-    marketplaceVisualForm.uploads[key] = event.target.files?.[0] || null
-}
-
-const updateMarketplaceVisuals = () => marketplaceVisualForm.post(route('admin.commerce.marketplace-visuals.update'), {
-    preserveScroll: true,
-    forceFormData: true,
-    onSuccess: () => {
-        marketplaceVisualForm.uploads = {}
-    },
-})
-
-const storeTaxRate = () => taxRateForm.post(route('admin.commerce.tax-rates.store'), {
-    preserveScroll: true,
-    onSuccess: () => taxRateForm.reset('region'),
-})
-
-const updateCommerceSettings = () => commerceSettingsForm
-    .transform((data) => transformMoneyFields(data, ['ads_cpm_cents', 'ads_cpc_cents', 'ads_cpl_cents', 'ads_min_budget_cents']))
-    .put(route('admin.commerce.settings.update'), {
-    preserveScroll: true,
-})
-
-const updateMarketplaceCommissions = () => marketplaceCommissionForm.put(route('admin.commerce.marketplace-commissions.update'), {
-    preserveScroll: true,
-})
-
-const storeProviderProfile = () => providerProfileForm.post(route('auth.commerce.provider-profile.store'), {
-    preserveScroll: true,
-})
-
-const resetProviderLocationForm = () => {
-    providerLocationForm.reset()
-    providerLocationForm.type = 'pickup'
-    providerLocationForm.country = 'DE'
-    providerLocationForm.pickup_enabled = true
-    providerLocationForm.returns_enabled = false
-    providerLocationForm.is_public = true
-    providerLocationForm.clearErrors()
-    editingProviderLocation.value = null
-}
-
-const editProviderLocation = (location) => {
-    editingProviderLocation.value = location
-    Object.assign(providerLocationForm, {
-        name: location.name || '',
-        type: location.type || 'pickup',
-        country: location.country || 'DE',
-        state: location.state || '',
-        postal_code: location.postal_code || '',
-        city: location.city || '',
-        street: location.street || '',
-        house_number: location.house_number || '',
-        opening_hours: location.opening_hours || '',
-        note: location.note || '',
-        phone: location.phone || '',
-        email: location.email || '',
-        image_url: location.image_url || '',
-        latitude: location.latitude || '',
-        longitude: location.longitude || '',
-        pickup_enabled: Boolean(location.pickup_enabled),
-        returns_enabled: Boolean(location.returns_enabled),
-        is_public: Boolean(location.is_public),
-    })
-}
-
-const saveProviderLocation = () => {
-    const options = {
-        preserveScroll: true,
-        onSuccess: resetProviderLocationForm,
-    }
-
-    if (editingProviderLocation.value) {
-        providerLocationForm.put(route('auth.commerce.provider-locations.update', editingProviderLocation.value.id), options)
-        return
-    }
-
-    providerLocationForm.post(route('auth.commerce.provider-locations.store'), options)
-}
-
-const destroyProviderLocation = async (location) => {
-    const confirmed = await confirmDialog({
-        title: 'Standort entfernen',
-        message: `${location.name} wirklich aus dem Anbieterprofil entfernen?`,
-        confirmLabel: 'Entfernen',
-        danger: true,
-    })
-
-    if (!confirmed) return
-
-    router.delete(route('auth.commerce.provider-locations.destroy', location.id), {
-        preserveScroll: true,
-    })
-}
-
-const addMarketplaceCommissionRow = () => {
-    marketplaceCommissionForm.commissions.push({
-        category: '',
-        label: 'Neue Kategorie',
-        commission_percent: marketplaceCommissionForm.default_commission_percent || 10,
-    })
-}
-
-const removeMarketplaceCommissionRow = (index) => {
-    marketplaceCommissionForm.commissions.splice(index, 1)
-}
-
-const updateTaxRate = (rate) => {
-    router.put(route('admin.commerce.tax-rates.update', rate.id), {
-        name: rate.name,
-        country_code: rate.country_code,
-        region: rate.region || '',
-        tax_class: rate.tax_class || 'standard',
-        tax_label: rate.tax_label || 'MwSt.',
-        rate_percent: rate.rate_percent,
-        currency: rate.currency || 'EUR',
-        is_default: Boolean(rate.is_default),
-        is_active: Boolean(rate.is_active),
-        priority: rate.priority || 100,
-    }, { preserveScroll: true })
-}
-
-const storeShippingRate = () => shippingRateForm
-    .transform((data) => transformMoneyFields(data, ['amount_cents', 'free_from_cents']))
-    .post(route('admin.commerce.shipping-rates.store'), {
-    preserveScroll: true,
-    onSuccess: () => shippingRateForm.reset('postal_code_prefix'),
-})
-
-const updateShippingRate = (rate) => {
-    router.put(route('admin.commerce.shipping-rates.update', rate.id), {
-        name: rate.name,
-        origin_country_code: rate.origin_country_code || '',
-        country_code: rate.country_code || '',
-        postal_code_prefix: rate.postal_code_prefix || '',
-        amount_cents: typeof rate.amount_cents === 'number' ? rate.amount_cents : majorToCents(rate.amount_cents),
-        currency: rate.currency || 'EUR',
-        free_from_cents: typeof rate.free_from_cents === 'number' ? rate.free_from_cents : majorToCents(rate.free_from_cents),
-        is_active: Boolean(rate.is_active),
-        priority: rate.priority || 100,
-    }, { preserveScroll: true })
-}
-
-const updateProductStatus = async (product, status) => {
-    if (status === 'rejected') {
-        rejectionModal.open = true
-        rejectionModal.product = product
-        rejectionModal.selectedReason = ''
-        rejectionModal.reason = product.rejection_reason || ''
-        return
-    }
-
-    if (status === 'published' && product.quality_issues?.length) {
-        const confirmed = await confirmDialog({
-            title: 'Produkt trotzdem freigeben?',
-            message: `Dieses Produkt hat noch ${product.quality_issues.length} Qualitätsproblem(e):\n\n${product.quality_issues.join('\n')}\n\nTrotzdem freigeben?`,
-            confirmLabel: 'Trotzdem freigeben',
-        })
-
-        if (!confirmed) {
-            router.reload({ only: ['products'], preserveScroll: true })
-            return
-        }
-    }
-
-    router.put(route('admin.commerce.products.update', product.id), productPayload(product, { status }), { preserveScroll: true })
-}
-
-const submitRejection = () => {
-    const product = rejectionModal.product
-    if (!product || !rejectionModal.reason.trim()) return
-
-    router.put(route('admin.commerce.products.update', product.id), productPayload(product, {
-        status: 'rejected',
-        rejection_reason: rejectionModal.reason,
-    }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            rejectionModal.open = false
-            rejectionModal.product = null
-            rejectionModal.selectedReason = ''
-            rejectionModal.reason = ''
-        },
-    })
-}
-
-const openDeleteProduct = (product) => {
-    productDeleteModal.value = {
-        open: true,
-        product,
-        confirmation: '',
-        processing: false,
-    }
-}
-
-const closeDeleteProduct = () => {
-    productDeleteModal.value = {
-        open: false,
-        product: null,
-        confirmation: '',
-        processing: false,
-    }
-}
-
-const destroyProduct = () => {
-    const product = productDeleteModal.value.product
-    if (!product || productDeleteModal.value.confirmation !== 'delete') {
-        return
-    }
-
-    productDeleteModal.value.processing = true
-    router.delete(route('admin.commerce.products.destroy', product.id), {
-        preserveScroll: true,
-        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
-        data: {
-            confirmation: productDeleteModal.value.confirmation,
-        },
-        onSuccess: closeDeleteProduct,
-        onFinish: () => {
-            productDeleteModal.value.processing = false
-        },
-    })
-}
-
-const selectRejectionReason = () => {
-    const selected = rejectionReasons.find((reason) => reason.value === rejectionModal.selectedReason)
-    rejectionModal.reason = selected?.text || ''
-}
-
-const updateProductStock = (product) => {
-    router.put(route('admin.commerce.products.update', product.id), productPayload(product, {
-        manages_stock: true,
-        stock_quantity: Math.max(0, Number(product.stock_quantity || 0)),
-    }), { preserveScroll: true })
-}
-
-const inventoryAdjustmentKey = (product, inventory) => `${product.id}:${inventory.id}`
-
-const inventoryAdjustment = (product, inventory) => stockAdjustments.value[inventoryAdjustmentKey(product, inventory)] || { quantity_delta: '', note: '' }
-
-const setInventoryAdjustment = (product, inventory, field, value) => {
-    const key = inventoryAdjustmentKey(product, inventory)
-    stockAdjustments.value[key] = {
-        ...inventoryAdjustment(product, inventory),
-        [field]: value,
-    }
-}
-
-const adjustInventoryStock = (product, inventory) => {
-    const adjustment = inventoryAdjustment(product, inventory)
-    const quantityDelta = Number(adjustment.quantity_delta || 0)
-
-    if (!quantityDelta) {
-        return
-    }
-
-    router.post(route('admin.commerce.products.stock.adjust', product.id), {
-        marketplace_product_inventory_id: inventory.id,
-        quantity_delta: quantityDelta,
-        note: adjustment.note || `Admin-Korrektur ${inventory.country_code}`,
-    }, {
-        preserveScroll: true,
-        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
-        onSuccess: () => {
-            stockAdjustments.value[inventoryAdjustmentKey(product, inventory)] = { quantity_delta: '', note: '' }
-        },
-    })
-}
-
-const adjustGlobalStock = (product) => {
-    const key = `${product.id}:global`
-    const adjustment = stockAdjustments.value[key] || { quantity_delta: '', note: '' }
-    const quantityDelta = Number(adjustment.quantity_delta || 0)
-
-    if (!quantityDelta) {
-        return
-    }
-
-    router.post(route('admin.commerce.products.stock.adjust', product.id), {
-        quantity_delta: quantityDelta,
-        note: adjustment.note || 'Admin-Korrektur global',
-    }, {
-        preserveScroll: true,
-        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
-        onSuccess: () => {
-            stockAdjustments.value[key] = { quantity_delta: '', note: '' }
-        },
-    })
-}
-
-const updateSellerApplication = async (application, status) => {
-    const reviewNote = status === 'rejected'
-        ? await promptDialog({
-            title: 'Shop-Antrag ablehnen',
-            message: 'Bitte gib den Ablehnungsgrund ein. Diese Notiz wird für die Prüfung gespeichert.',
-            inputLabel: 'Ablehnungsgrund',
-            multiline: true,
-            required: true,
-            confirmLabel: 'Ablehnen',
-            danger: true,
-        })
-        : ''
-
-    if (status === 'rejected' && (!reviewNote || !reviewNote.trim())) {
-        return
-    }
-
-    router.put(route('admin.commerce.seller-applications.update', application.id), {
-        status,
-        review_note: reviewNote,
-    }, { preserveScroll: true })
-}
-
-const openEditProduct = (product) => {
-    editProductForm.open = true
-    editProductForm.product = product
-    editProductForm.title = product.title || ''
-    editProductForm.description = product.description || ''
-    editProductForm.features_text = (product.features || []).join('\n')
-    editProductForm.attributes_text = (product.product_attributes || []).map((attribute) => `${attribute.name}: ${attribute.value}`).join('\n')
-    editProductForm.attribute_options = product.attribute_options || []
-    editProductForm.variants = product.variants || []
-    editProductForm.image_url = product.image_url || ''
-    editProductForm.image_urls_text = galleryUrlsText(product)
-    editProductForm.image_upload = null
-    editProductForm.image_uploads = []
-    editProductForm.category = product.category || 'product'
-    editProductForm.product_type = product.product_type || 'single'
-    editProductForm.sku = product.sku || ''
-    editProductForm.is_shippable = Boolean(product.is_shippable)
-    editProductForm.manages_stock = Boolean(product.manages_stock)
-    editProductForm.stock_quantity = product.stock_quantity ?? 0
-    editProductForm.low_stock_threshold = product.low_stock_threshold || 0
-    editProductForm.tax_class = product.tax_class || 'standard'
-    editProductForm.return_policy_type = product.return_policy_type || 'standard'
-    editProductForm.return_window_days = product.return_window_days ?? 14
-    editProductForm.digital_delivery_note = product.digital_delivery_note || ''
-    editProductForm.price_cents = centsToMajor(product.price_cents || 0)
-    editProductForm.currency = product.currency || 'EUR'
-    editProductForm.status = product.status || 'draft'
-    editProductForm.rejection_reason = product.rejection_reason || ''
-    editProductForm.commission_percent = product.commission_percent ?? 10
-    editAttributeRows.value = product.attribute_options?.length
-        ? product.attribute_options.map((attribute) => ({ name: attribute.name || '', values: attribute.values || [] }))
-        : (product.product_attributes?.length
-            ? product.product_attributes.map((attribute) => ({ name: attribute.name || '', values: String(attribute.value || '').split(/[|,]/).map((value) => value.trim()).filter(Boolean) }))
-            : [{ name: '', values: [] }])
-    editFeatureRows.value = product.features?.length ? [...product.features] : ['']
-    editVariantRows.value = product.variants?.length
-        ? product.variants.map((variant) => ({
-            sku: variant.sku || '',
-            price_cents: centsToMajor(variant.price_cents ?? product.price_cents ?? 0),
-            stock_quantity: variant.stock_quantity ?? '',
-            image_url: variant.image_url || '',
-            attributes: Object.fromEntries((variant.attributes || []).map((attribute) => [attribute.name, attribute.value])),
-        }))
-        : []
-}
-
-const closeEditProduct = () => {
-    editProductForm.open = false
-    editProductForm.product = null
-}
-
-const submitEditProduct = () => {
-    if (!editProductForm.product) return
-
-    editProductForm.attributes_text = attributeRowsToText(editAttributeRows.value)
-    editProductForm.features_text = featureRowsToText(editFeatureRows.value)
-    editProductForm.attribute_options = normalizeAttributeRows(editAttributeRows.value)
-    editProductForm.variants = normalizeVariantRows(editVariantRows.value)
-
-    editProductForm
-        .transform((data) => transformMoneyFields(data, ['price_cents']))
-        .put(route('admin.commerce.products.update', editProductForm.product.id), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: closeEditProduct,
-        })
-}
-
-const updateReturnRequest = (request, status, restock = false) => {
-    router.put(route('admin.commerce.returns.update', request.id), {
-        status,
-        resolution_note: request.resolution_note || '',
-        approved_amount_cents: typeof request.approved_amount_cents === 'number'
-            ? request.approved_amount_cents
-            : majorToCents(request.approved_amount_cents || centsToMajor(request.requested_amount_cents)),
-        restock,
-    }, { preserveScroll: true })
-}
-
-const setCampaignCreativeUpload = (event) => {
-    campaignForm.creative_image_upload = event.target.files?.[0] || null
-}
-
-const addCampaignCreativeRow = () => {
-    campaignCreativeRows.value.push({
-        name: `Variante ${String.fromCharCode(65 + campaignCreativeRows.value.length)}`,
-        headline: '',
-        primary_text: '',
-        description: '',
-        target_url: '',
-        cta_label: '',
-        creative_image_url: '',
-        weight: 100,
-        is_active: true,
-    })
-}
-
-const removeCampaignCreativeRow = (index) => {
-    campaignCreativeRows.value.splice(index, 1)
-    if (!campaignCreativeRows.value.length) {
-        addCampaignCreativeRow()
-    }
-}
-
-const normalizeCampaignCreatives = () => campaignCreativeRows.value
-    .map((creative) => ({
-        name: String(creative.name || '').trim(),
-        headline: String(creative.headline || '').trim(),
-        primary_text: String(creative.primary_text || '').trim(),
-        description: String(creative.description || '').trim(),
-        target_url: String(creative.target_url || '').trim(),
-        cta_label: String(creative.cta_label || '').trim(),
-        creative_image_url: String(creative.creative_image_url || '').trim(),
-        weight: Number(creative.weight || 100),
-        is_active: Boolean(creative.is_active),
-    }))
-    .filter((creative) => creative.headline || creative.primary_text || creative.creative_image_url)
-
-const resetCampaignCreativeRows = () => {
-    campaignCreativeRows.value = [
-        { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-        { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-    ]
-}
-
-const storeCampaign = () => {
-    campaignForm.creatives = normalizeCampaignCreatives()
-    if (!campaignForm.is_internal) {
-        campaignForm.force_priority = false
-    } else if (!campaignForm.budget_cents) {
-        campaignForm.budget_cents = '0'
-    }
-
-    campaignForm
-        .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents', 'spent_cents']))
-        .post(route('admin.commerce.campaigns.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            campaignForm.reset('is_internal', 'force_priority', 'name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_excluded_locations', 'audience_excluded_interests', 'audience_devices', 'audience_languages', 'audience_hours', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
-            resetCampaignCreativeRows()
-        },
-        })
-}
-
-const markOrderPaid = (order) => {
-    router.post(route('admin.commerce.orders.mark-paid', order.id), {}, {
-        preserveScroll: true,
-        onSuccess: () => {
-            order.status = 'completed'
-            order.completed_at = new Date().toISOString()
-            router.reload({
-                only: ['orders', 'summary', 'payoutCandidates'],
-                preserveScroll: true,
-                preserveState: true,
-            })
-        },
-    })
-}
-
-const updateCampaignStatus = (campaign, status) => {
-    campaignStatusError.value = ''
-
-    if (status === 'active' && campaign.user_id && !campaign.payment_completed) {
-        campaignStatusError.value = 'Diese Ads-Kampagne kann erst nach Zahlung freigegeben werden.'
-        return
-    }
-
-    router.put(route('admin.commerce.campaigns.status.update', campaign.id), {
-        status,
-        review_note: campaign.review_note || '',
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            campaignStatusError.value = ''
-        },
-        onError: (errors) => {
-            campaignStatusError.value = errors.campaign_status || errors.status || 'Status konnte nicht aktualisiert werden.'
-        },
-    })
-}
-
-const updateOrderIssue = (order, issueStatus, orderStatus = null) => {
-    router.put(route('admin.commerce.orders.issue', order.id), {
-        issue_status: issueStatus,
-        issue_note: order.issue_note || '',
-        order_status: orderStatus,
-    }, { preserveScroll: true })
-}
-
-const openIssueReplyModal = (order) => {
-    issueReplyModal.open = true
-    issueReplyModal.order = order
-    issueReplyModal.issue_response = order.issue_response || ''
-    issueReplyModal.issue_status = order.issue_status === 'resolved' ? 'resolved' : 'reviewing'
-}
-
-const closeIssueReplyModal = () => {
-    issueReplyModal.open = false
-    issueReplyModal.order = null
-    issueReplyModal.issue_response = ''
-    issueReplyModal.issue_status = 'reviewing'
-    issueReplyModal.clearErrors()
-}
-
-const submitIssueReply = () => {
-    if (!issueReplyModal.order) return
-
-    issueReplyModal.post(route('admin.commerce.orders.issue.reply', issueReplyModal.order.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            issueReplyModal.order.issue_response = issueReplyModal.issue_response
-            issueReplyModal.order.issue_status = issueReplyModal.issue_status
-            issueReplyModal.order.issue_responded_at = new Date().toISOString()
-            closeIssueReplyModal()
-            router.reload({
-                only: ['orders'],
-                preserveScroll: true,
-                preserveState: true,
-            })
-        },
-    })
-}
-
-const openShippingModal = (order) => {
-    shippingModal.open = true
-    shippingModal.order = order
-    shippingModal.shipping_status = order.shipping_status || 'open'
-    shippingModal.shipping_carrier = order.shipping_carrier || ''
-    shippingModal.shipping_label_url = order.shipping_label_url || ''
-    shippingModal.tracking_number = order.tracking_number || ''
-    shippingModal.tracking_url = order.tracking_url || ''
-}
-
-const submitShipping = () => {
-    if (!shippingModal.order) return
-
-    router.put(route('admin.commerce.orders.shipping', shippingModal.order.id), {
-        shipping_status: shippingModal.shipping_status,
-        shipping_carrier: shippingModal.shipping_carrier,
-        shipping_label_url: shippingModal.shipping_label_url,
-        tracking_number: shippingModal.tracking_number,
-        tracking_url: shippingModal.tracking_url,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            shippingModal.order.shipping_status = shippingModal.shipping_status
-            shippingModal.order.shipping_carrier = shippingModal.shipping_carrier
-            shippingModal.order.shipping_label_url = shippingModal.shipping_label_url
-            shippingModal.order.tracking_number = String(shippingModal.tracking_number || '').replace(/\s+/g, '').toUpperCase()
-            shippingModal.order.tracking_url = shippingModal.tracking_url || trackingUrlFor(shippingModal.shipping_carrier, shippingModal.tracking_number)
-            shippingModal.open = false
-            shippingModal.order = null
-            router.reload({
-                only: ['orders', 'summary', 'payoutCandidates'],
-                preserveScroll: true,
-                preserveState: true,
-            })
-        },
-    })
-}
-
-const openRefundModal = (order) => {
-    refundModal.open = true
-    refundModal.order = order
-    refundModal.amount_cents = centsToMajor(order.amount_cents || 0)
-    refundModal.reason = ''
-}
-
-const submitRefund = () => {
-    if (!refundModal.order) return
-
-    router.post(route('admin.commerce.orders.refund', refundModal.order.id), {
-        amount_cents: majorToCents(refundModal.amount_cents),
-        reason: refundModal.reason,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            refundModal.open = false
-            refundModal.order = null
-        },
-    })
-}
-
-const updateWebsiteRequest = (request, status) => {
-    router.put(route('admin.commerce.website-requests.update', request.id), {
-        status,
-        notes: request.notes || '',
-    }, { preserveScroll: true })
-}
-
-const createPayout = (candidate, method = 'bank_transfer') => {
-    router.post(route('admin.commerce.payouts.create', candidate.user_id), {
-        method,
-        notes: '',
-    }, { preserveScroll: true })
-}
-
-const markPayoutPaid = (payout) => {
-    router.put(route('admin.commerce.payouts.paid', payout.id), {
-        notes: payout.notes || '',
-    }, { preserveScroll: true })
-}
-
-const updatePayoutProfile = (profile, status) => {
-    router.put(route('admin.commerce.payout-profiles.update', profile.id), {
-        status,
-        notes: profile.notes || '',
-    }, { preserveScroll: true })
-}
+const {
+    page,
+    centsToMajor,
+    majorToCents,
+    moneyInputAttrs,
+    activeTab,
+    campaignStatusError,
+    couponForm,
+    addonForm,
+    marketplaceVisualForm,
+    taxRateForm,
+    commerceSettingsForm,
+    marketplaceCommissionForm,
+    providerProfileForm,
+    providerLocationForm,
+    editingProviderLocation,
+    shippingRateForm,
+    campaignForm,
+    adFormats,
+    selectedAdFormat,
+    campaignCreativeRows,
+    stockAdjustments,
+    productForm,
+    productAttributeRows,
+    productFeatureRows,
+    productVariantRows,
+    rejectionModal,
+    productDeleteModal,
+    rejectionReasons,
+    editProductForm,
+    editAttributeRows,
+    editFeatureRows,
+    editVariantRows,
+    attributePresets,
+    presetValuesFor,
+    normalizeAttributeRows,
+    addProductAttributeRow,
+    removeProductAttributeRow,
+    addProductVariantRow,
+    removeProductVariantRow,
+    addProductFeatureRow,
+    removeProductFeatureRow,
+    addEditAttributeRow,
+    removeEditAttributeRow,
+    addEditVariantRow,
+    removeEditVariantRow,
+    addEditFeatureRow,
+    removeEditFeatureRow,
+    setProductImageUpload,
+    setProductGalleryUploads,
+    setEditProductImageUpload,
+    setEditProductGalleryUploads,
+    storeProduct,
+    updateProductStatus,
+    submitRejection,
+    openDeleteProduct,
+    closeDeleteProduct,
+    setProductDeleteConfirmation,
+    destroyProduct,
+    selectRejectionReason,
+    updateProductStock,
+    inventoryAdjustment,
+    setInventoryAdjustment,
+    adjustInventoryStock,
+    adjustGlobalStock,
+    updateSellerApplication,
+    openEditProduct,
+    closeEditProduct,
+    submitEditProduct,
+    shippingModal,
+    refundModal,
+    issueReplyModal,
+    reportedOrders,
+    sellerApplicationStatusLabel,
+    formatMoney,
+    summaryCards,
+    formatDateTime,
+    orderPaymentLabel,
+    orderPaymentHint,
+    orderShippingLabel,
+    trackingUrlFor,
+    autofillTrackingUrl,
+    orderIssueLabel,
+    formatPercent,
+    ctr,
+    budgetUsage,
+    tabs,
+    adPricingCards,
+    setMarketplaceVisualUpload,
+    updateMarketplaceVisuals,
+    storeCoupon,
+    storeAddon,
+    storeTaxRate,
+    updateCommerceSettings,
+    updateMarketplaceCommissions,
+    storeProviderProfile,
+    resetProviderLocationForm,
+    editProviderLocation,
+    saveProviderLocation,
+    destroyProviderLocation,
+    addMarketplaceCommissionRow,
+    removeMarketplaceCommissionRow,
+    updateTaxRate,
+    storeShippingRate,
+    updateShippingRate,
+    updateReturnRequest,
+    setCampaignCreativeUpload,
+    addCampaignCreativeRow,
+    removeCampaignCreativeRow,
+    normalizeCampaignCreatives,
+    resetCampaignCreativeRows,
+    storeCampaign,
+    markOrderPaid,
+    updateCampaignStatus,
+    updateOrderIssue,
+    openIssueReplyModal,
+    closeIssueReplyModal,
+    submitIssueReply,
+    openShippingModal,
+    submitShipping,
+    openRefundModal,
+    submitRefund,
+    updateWebsiteRequest,
+    createPayout,
+    markPayoutPaid,
+    updatePayoutProfile,
+} = useAdminCommerceWorkspace(props)
 </script>
 
 <template>

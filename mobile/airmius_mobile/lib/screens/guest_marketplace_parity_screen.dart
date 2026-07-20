@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element
 import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
@@ -247,7 +248,7 @@ class _MarketplaceSnapshot extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: 2,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final offer = index == 0 ? hero : visible.skip(1).first;
                 return SizedBox(width: index == 0 ? 350 : 260, child: _SnapshotHeroCard(offer: offer, onTap: () => onOpen(offer)));
@@ -260,7 +261,7 @@ class _MarketplaceSnapshot extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: visible.take(4).length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final offer = visible[index];
                 return SizedBox(width: 144, child: _SnapshotProductCard(offer: offer, onTap: () => onOpen(offer), onWishlist: () => onWishlist(offer)));
@@ -421,9 +422,9 @@ class _SnapshotHeroCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF26364D)), image: DecorationImage(image: NetworkImage(offer.imageUrl), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withOpacity(.34), BlendMode.darken))),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF26364D)), image: DecorationImage(image: NetworkImage(offer.imageUrl), fit: BoxFit.cover, colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: .34), BlendMode.darken))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: Colors.black.withOpacity(.32), borderRadius: BorderRadius.circular(999)), child: Text(offer.id == 1 ? 'AIRMIUS MARKETPLACE' : offer.badge.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: Colors.black.withValues(alpha: .32), borderRadius: BorderRadius.circular(999)), child: Text(offer.id == 1 ? 'AIRMIUS MARKETPLACE' : offer.badge.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
           const SizedBox(height: 10),
           Text(offer.id == 1 ? 'Sport Deals für Training und Team' : offer.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.15)),
           const SizedBox(height: 8),
@@ -454,7 +455,7 @@ class _SnapshotProductCard extends StatelessWidget {
           Expanded(
             flex: 6,
             child: Stack(children: [
-              Positioned.fill(child: Image.network(offer.imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: offer.color.withOpacity(.55), child: Icon(offer.icon, color: Colors.white, size: 44)))),
+              Positioned.fill(child: Image.network(offer.imageUrl, fit: BoxFit.cover, errorBuilder: (_, _, _) => Container(color: offer.color.withValues(alpha: .55), child: Icon(offer.icon, color: Colors.white, size: 44)))),
               Positioned(left: 10, top: 10, child: Text(offer.badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
             ]),
           ),
@@ -559,7 +560,7 @@ class _Menu extends StatelessWidget {
     return SizedBox(
       width: 185,
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         isExpanded: true,
         decoration: InputDecoration(labelText: label, filled: true, fillColor: AirmiusColors.input, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
         dropdownColor: AirmiusColors.card,
@@ -728,7 +729,7 @@ class _ScreenshotProductRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: offers.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final offer = offers[index];
           return SizedBox(
@@ -778,7 +779,7 @@ class _OfferStrip extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: offers.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final offer = offers[index];
                 return SizedBox(width: 260, child: _ProductCard(offer: offer, compact: true, wishlisted: wishlist.contains(offer.id), onOpen: () => onOpen(offer), onWishlist: () => onWishlist(offer), onCart: () {}));
@@ -795,7 +796,7 @@ class _OfferStrip extends StatelessWidget {
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: offers.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          separatorBuilder: (_, _) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
             final offer = offers[index];
             return SizedBox(width: 190, child: _ProductCard(offer: offer, compact: true, wishlisted: wishlist.contains(offer.id), onOpen: () => onOpen(offer), onWishlist: () => onWishlist(offer), onCart: () {}));
@@ -888,7 +889,7 @@ class _ProductCard extends StatelessWidget {
               child: Image.network(
                 offer.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [offer.color.withValues(alpha: .62), const Color(0xFF0B111B)])), child: Center(child: Icon(offer.icon, size: compact ? 48 : 58, color: Colors.white))),
+                errorBuilder: (_, _, _) => DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [offer.color.withValues(alpha: .62), const Color(0xFF0B111B)])), child: Center(child: Icon(offer.icon, size: compact ? 48 : 58, color: Colors.white))),
               ),
             ),
             Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withValues(alpha: .06), Colors.black.withValues(alpha: .2)], begin: Alignment.topCenter, end: Alignment.bottomCenter)))),

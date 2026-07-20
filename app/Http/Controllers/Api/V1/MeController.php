@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Support\GuardianConsentState;
 use App\Support\GuardianConsentNotifier;
+use App\Support\MinorSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -81,6 +82,7 @@ class MeController extends Controller
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
+            ...($requiresGuardianConsent ? MinorSafety::privacyDefaults() : []),
         ]);
 
         if ($requiresGuardianConsent) {

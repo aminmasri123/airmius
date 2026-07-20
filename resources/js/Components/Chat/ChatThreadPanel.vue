@@ -1,4 +1,6 @@
 ﻿<script setup>
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { computed, ref } from 'vue'
 
 const props = defineProps({
@@ -162,14 +164,16 @@ const chatSearch = computed({
 
         <div v-if="selectedConversation" :ref="setMessagesContainer" class="custom-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4" @scroll.passive="onMessagesScroll">
             <div v-if="messagePage?.has_more || loadingOlderMessages" class="flex justify-center">
-                <button
+                <AppButton
                     type="button"
-                    class="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-inputBg disabled:cursor-wait disabled:opacity-70"
+                    variant="secondary"
+                    size="xs"
+                    :loading="loadingOlderMessages"
                     :disabled="loadingOlderMessages"
                     @click="loadOlderMessages"
                 >
                     {{ loadingOlderMessages ? 'Lade ältere Nachrichten...' : 'Ältere Nachrichten laden' }}
-                </button>
+                </AppButton>
             </div>
 
             <div
@@ -217,6 +221,10 @@ const chatSearch = computed({
                                     <img
                                         :src="fileUrl(attachment.file)"
                                         :alt="attachmentLabel(attachment)"
+                                        width="960"
+                                        height="720"
+                                        loading="lazy"
+                                        decoding="async"
                                         class="max-h-72 w-full object-cover"
                                     />
                                 </button>
@@ -370,6 +378,12 @@ const chatSearch = computed({
         </div>
 
         <form v-if="selectedConversation" class="border-t border-border p-3 sm:p-4" @submit.prevent="sendMessage">
+            <AppLoadingState
+                v-if="messageForm.processing"
+                class="mb-2"
+                label="Nachricht wird gesendet..."
+                inline
+            />
             <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
                 <span v-for="(file, index) in messageForm.attachments" :key="`${file.name}-${index}`" class="inline-flex max-w-full items-center gap-2 rounded border border-border px-2 py-1">
                     {{ file.name }}
@@ -391,13 +405,16 @@ const chatSearch = computed({
                     <i class="las la-paperclip text-xl"></i>
                     <input :ref="setAttachmentInput" type="file" multiple class="hidden" @change="onAttachmentChange">
                 </label>
-                <button
+                <AppButton
                     type="submit"
                     :disabled="messageForm.processing || !canSendMessage"
-                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                    :loading="messageForm.processing"
+                    icon-only
+                    aria-label="Nachricht senden"
+                    title="Nachricht senden"
                 >
-                    <i class="las la-paper-plane text-xl"></i>
-                </button>
+                    <i v-if="!messageForm.processing" class="las la-paper-plane text-xl" aria-hidden="true"></i>
+                </AppButton>
             </div>
         </form>
 
@@ -422,8 +439,5 @@ const chatSearch = computed({
         </div>
     </section>
 </template>
-
-
-
 
 

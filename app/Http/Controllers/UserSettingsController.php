@@ -9,6 +9,8 @@ use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
 use App\Services\Training\AthleteSportProfileService;
+use App\Support\BillingOverview;
+use App\Support\MinorSafety;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -22,8 +24,28 @@ class UserSettingsController extends Controller
      */
     public function index(Request $request, AthleteSportProfileService $sportProfiles)
     {
+        $user = $request->user();
+        $clubInvoices = Invoice::query()
+            ->where('user_id', $user->id)
+            ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $payments = Payment::query()
+            ->where('user_id', $user->id)
+            ->with(['club:id,name', 'invoice:id,number,title'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $subscriptionInvoices = SubscriptionInvoice::query()
+            ->where('user_id', $user->id)
+            ->with(['club:id,name', 'plan:id,name', 'checkout:id,status,provider'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
+
         return Inertia::render('Auth/Dashboard/Settings/Index', [
-            'profileAddress' => $request->user()->only([
+            'profileAddress' => $user->only([
                 'country',
                 'street',
                 'house_number',
@@ -31,7 +53,7 @@ class UserSettingsController extends Controller
                 'city',
                 'state',
             ]),
-            'privacySettings' => $request->user()->only([
+            'privacySettings' => $user->only([
                 'profile_visibility',
                 'direct_message_privacy',
                 'friend_request_privacy',
@@ -39,43 +61,31 @@ class UserSettingsController extends Controller
                 'ads_measurement_consent',
             ]),
             'eventDefaults' => [
-                'radius_km' => $request->user()->event_radius_km,
-                'sport_ids' => $request->user()->event_default_sport_ids ?? [],
-                'filters' => $request->user()->event_default_filters ?? [],
+                'radius_km' => $user->event_radius_km,
+                'sport_ids' => $user->event_default_sport_ids ?? [],
+                'filters' => $user->event_default_filters ?? [],
             ],
             'sports' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),
-            'sportProfiles' => $sportProfiles->settingsPayload($request->user()),
+            'sportProfiles' => $sportProfiles->settingsPayload($user),
             'billingHistory' => [
+                'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices, $payments),
                 'airmius_bank' => [
                     'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
                     'bank_name' => Setting::valueFor('billing_bank_name', ''),
                     'iban' => Setting::valueFor('billing_iban', ''),
                     'bic' => Setting::valueFor('billing_bic', ''),
                 ],
-                'invoices' => Invoice::query()
-                    ->where('user_id', $request->user()->id)
-                    ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
-                    ->latest('id')
-                    ->limit(30)
-                    ->get(),
-                'payments' => Payment::query()
-                    ->where('user_id', $request->user()->id)
-                    ->with(['club:id,name', 'invoice:id,number,title'])
-                    ->latest('id')
-                    ->limit(30)
-                    ->get(),
-                'subscription_invoices' => SubscriptionInvoice::query()
-                    ->where('user_id', $request->user()->id)
-                    ->with(['club:id,name', 'plan:id,name', 'checkout:id,status,provider'])
-                    ->latest('id')
-                    ->limit(30)
-                    ->get(),
+                'invoices' => $clubInvoices
+                    ->map(fn (Invoice $invoice) => $this->memberInvoicePayload($invoice))
+                    ->values(),
+                'payments' => $payments,
+                'subscription_invoices' => $subscriptionInvoices,
             ],
-            'currentUserSubscriptions' => $request->user()
+            'currentUserSubscriptions' => $user
                 ->subscriptions()
                 ->with('plan:id,name,target_actor')
                 ->latest('id')
@@ -91,17 +101,17 @@ class UserSettingsController extends Controller
                     'cancels_at' => $subscription->cancels_at?->toDateString(),
                     'plan' => $subscription->plan,
                 ]),
-            'socialAccounts' => $request->user()
+            'socialAccounts' => $user
                 ->socialAccounts()
                 ->latest('id')
                 ->get(['id', 'provider', 'email', 'name', 'avatar_url', 'created_at']),
             'sportIntegrations' => [
                 'providers' => SportIntegrationController::PROVIDERS,
-                'accounts' => $request->user()
+                'accounts' => $user
                     ->connectedSportAccounts()
                     ->latest('id')
                     ->get(['id', 'provider', 'display_name', 'status', 'last_synced_at', 'sync_summary', 'created_at']),
-                'activities' => $request->user()
+                'activities' => $user
                     ->connectedSportActivities()
                     ->latest('started_at')
                     ->limit(20)
@@ -111,7 +121,7 @@ class UserSettingsController extends Controller
                         'image_url' => $activity->image_path ? Storage::disk('public')->url($activity->image_path) : null,
                     ]),
             ],
-            'userRoles' => $request->user()
+            'userRoles' => $user
                 ->roles()
                 ->withCount('permissions')
                 ->orderBy('name')
@@ -123,7 +133,7 @@ class UserSettingsController extends Controller
                     'permissions_count' => $role->permissions_count,
                 ]),
             'activities' => Activity::query()
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $user->id)
                 ->with([
                     'club:id,name',
                     'team:id,name',
@@ -133,6 +143,36 @@ class UserSettingsController extends Controller
                 ->get(['id', 'user_id', 'club_id', 'team_id', 'type', 'data', 'created_at']),
         ]);
 
+    }
+
+    private function memberInvoicePayload(Invoice $invoice): array
+    {
+        return [
+            'id' => $invoice->id,
+            'club_id' => $invoice->club_id,
+            'user_id' => $invoice->user_id,
+            'number' => $invoice->number,
+            'title' => $invoice->title,
+            'description' => $invoice->description,
+            'amount' => $invoice->amount,
+            'status' => $invoice->status,
+            'status_label' => $invoice->statusLabel(),
+            'source' => $invoice->source,
+            'billing_period_start' => $invoice->billing_period_start?->toDateString(),
+            'billing_period_end' => $invoice->billing_period_end?->toDateString(),
+            'due_date' => $invoice->due_date?->toJSON(),
+            'issued_at' => $invoice->issued_at?->toJSON(),
+            'paid_at' => $invoice->paid_at?->toJSON(),
+            'club' => $invoice->club ? [
+                'id' => $invoice->club->id,
+                'name' => $invoice->club->name,
+                'sepa_account_holder' => $invoice->club->sepa_account_holder,
+                'sepa_iban' => $invoice->club->sepa_iban,
+                'sepa_bic' => $invoice->club->sepa_bic,
+            ] : null,
+            'created_at' => $invoice->created_at?->toJSON(),
+            'updated_at' => $invoice->updated_at?->toJSON(),
+        ];
     }
 
     /**
@@ -192,6 +232,10 @@ class UserSettingsController extends Controller
 
             if (empty($data['theme'])) {
                 unset($data['theme']);
+            }
+
+            if (MinorSafety::isUnderConsentAge($request->user())) {
+                $data = array_merge($data, MinorSafety::privacyDefaults());
             }
 
             $eventSportIds = collect($data['event_default_sport_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class WellbeingOperationsScreen extends StatefulWidget {
   const WellbeingOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _WellbeingOperationsScreenState extends State<WellbeingOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Freigaben'),
-                  SwitchListTile(value: _coachVisible, onChanged: (value) => setState(() => _coachVisible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Coach darf relevante Daten sehen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Readiness, Trainingslogs, Sportprofil und ausgewählte Nutrition-Hinweise werden später rollenbasiert geteilt.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _locationConsent, onChanged: (value) => setState(() => _locationConsent = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Standortfreigabe aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Routen, Live-Tracks und Orte benoetigen vor dem Start eine klare Zustimmung.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _coachVisible, onChanged: (value) => setState(() => _coachVisible = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Coach darf relevante Daten sehen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Readiness, Trainingslogs, Sportprofil und ausgewählte Nutrition-Hinweise werden später rollenbasiert geteilt.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _locationConsent, onChanged: (value) => setState(() => _locationConsent = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Standortfreigabe aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Routen, Live-Tracks und Orte benoetigen vor dem Start eine klare Zustimmung.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _WellbeingOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _WellbeingOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Aktion beeinflusst persoenliche Sport-, Standort- oder Gesundheitsdaten und wird später auditiert.', item.action, action);
       return;

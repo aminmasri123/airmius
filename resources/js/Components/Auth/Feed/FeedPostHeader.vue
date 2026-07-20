@@ -23,6 +23,10 @@ const emit = defineEmits(['delete-post', 'report-post'])
                     v-if="post.user?.profile_photo_thumb"
                     :src="post.user.profile_photo_thumb"
                     :alt="post.user.name"
+                    width="40"
+                    height="40"
+                    loading="lazy"
+                    decoding="async"
                     class="h-10 w-10 rounded-full object-cover"
                 >
 
@@ -94,4 +98,3 @@ const emit = defineEmits(['delete-post', 'report-post'])
         </div>
     </div>
 </template>
-

@@ -4,7 +4,6 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_policy_documents_screen.dart';
 import 'club_request_inbox_screen.dart';
-import 'membership_operations_screen.dart';
 import 'search_operations_screen.dart';
 
 class ClubVisibilitySettingsScreen extends StatefulWidget {
@@ -291,7 +290,7 @@ class _VisibilitySwitch extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
         value: value,
         onChanged: onChanged,
-        activeColor: color,
+        activeThumbColor: color,
         contentPadding: EdgeInsets.zero,
         secondary: Icon(icon, color: color),
         title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),

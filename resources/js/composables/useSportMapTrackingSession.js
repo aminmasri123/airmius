@@ -393,6 +393,7 @@ export function useSportMapTrackingSession({
         trackingElapsedLabel,
         trackingError,
         trackingFullscreen,
+        trackingLastAccuracyLabel,
         trackingLiveStatusLabel,
         trackingMobileMetrics,
         trackingPoints,

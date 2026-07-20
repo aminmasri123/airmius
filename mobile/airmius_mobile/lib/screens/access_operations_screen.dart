@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class AccessOperationsScreen extends StatefulWidget {
   const AccessOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _AccessOperationsScreenState extends State<AccessOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Sicherheitsregeln'),
-                  SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rollen-, Rechte- und Mitglieder-Änderungen werden später protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _notifyUser, onChanged: (value) => setState(() => _notifyUser = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User oder Admins erhalten eine Nachricht nach Rollen-/Statuswechsel.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rollen-, Rechte- und Mitglieder-Änderungen werden später protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notifyUser, onChanged: (value) => setState(() => _notifyUser = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User oder Admins erhalten eine Nachricht nach Rollen-/Statuswechsel.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _AccessOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _AccessOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Aktion beeinflusst Zugriff, Rollen oder Nutzerstatus und wird später mit Audit gespeichert.', item.action, action);
       return;

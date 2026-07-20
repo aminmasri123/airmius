@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('status', ['yes','no','maybe']);
+            $table->enum('status', ['yes','late','no','maybe']);
             $table->timestamps();
 
             $table->unique(['event_id', 'user_id']);

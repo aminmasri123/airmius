@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class RolePermissionDetailScreen extends StatefulWidget {
   const RolePermissionDetailScreen({super.key, required this.title, required this.status});
@@ -53,8 +52,8 @@ class _RolePermissionDetailScreenState extends State<RolePermissionDetailScreen>
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Security Gates'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auditpflicht bei sensiblen Aktionen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Alle Änderungen werden protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA für Rolle verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin, Finanzen und Jugendschutz.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auditpflicht bei sensiblen Aktionen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Alle Änderungen werden protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA für Rolle verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin, Finanzen und Jugendschutz.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
@@ -87,7 +86,7 @@ class _PermissionSwitch extends StatelessWidget {
     return SwitchListTile(
       value: value,
       onChanged: onChanged,
-      activeColor: AirmiusColors.blue,
+      activeThumbColor: AirmiusColors.blue,
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
       subtitle: Text(body, style: const TextStyle(color: AirmiusColors.muted)),

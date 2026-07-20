@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/airmius_api_client.dart' hide JsonMap;
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -564,7 +564,7 @@ class _EventPenaltyPanel extends StatelessWidget {
           if (canManage) ...[
             const SizedBox(height: 14),
             DropdownButtonFormField<int>(
-              value: selectedUserId,
+              initialValue: selectedUserId,
               decoration: const InputDecoration(labelText: 'Spieler'),
               dropdownColor: AirmiusColors.card,
               items: [
@@ -575,7 +575,7 @@ class _EventPenaltyPanel extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<int>(
-              value: selectedRuleId,
+              initialValue: selectedRuleId,
               decoration: const InputDecoration(labelText: 'Strafe aus Katalog'),
               dropdownColor: AirmiusColors.card,
               items: [

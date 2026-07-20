@@ -95,6 +95,21 @@ class MarketplaceProduct extends Model
         return $this->hasMany(MarketplaceProductInventory::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(MarketplaceProductReview::class);
+    }
+
+    public function publishedReviews()
+    {
+        return $this->reviews()->where('status', 'published');
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany(MarketplaceProductWishlist::class);
+    }
+
     public function isDigitalDelivery(): bool
     {
         return in_array($this->offer_type, ['online_course', 'training_plan'], true)

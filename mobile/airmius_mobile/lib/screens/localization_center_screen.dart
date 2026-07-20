@@ -4,7 +4,6 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class LocalizationCenterScreen extends StatelessWidget {
   const LocalizationCenterScreen({super.key});

@@ -12,7 +12,7 @@ defineProps({
     <section class="space-y-4">
         <article v-for="post in posts" :key="post.id" class="rounded-lg border border-border bg-card p-4">
             <div class="flex items-center gap-3">
-                <img :src="post.user.profile_photo_url" :alt="post.user.name" class="h-10 w-10 rounded-full object-cover">
+                <img :src="post.user.profile_photo_url" :alt="post.user.name" width="40" height="40" loading="lazy" decoding="async" class="h-10 w-10 rounded-full object-cover">
                 <div>
                     <Link :href="route('auth.users.show', post.user.id)" class="text-sm font-semibold text-primary hover:underline">
                         {{ post.user.name }}
@@ -31,5 +31,4 @@ defineProps({
         </div>
     </section>
 </template>
-
 

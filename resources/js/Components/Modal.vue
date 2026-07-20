@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import AppButton from './UI/AppButton.vue';
 
 const props = defineProps({
     show: {
@@ -88,11 +89,19 @@ const maxWidthClass = computed(() => {
                 <div v-show="show"
                     class="surface-card relative max-h-[calc(100dvh-2rem)] w-[calc(100vw-1.5rem)] overflow-hidden p-3 transform transition-all sm:mx-auto sm:w-full sm:p-4"
                     :class="maxWidthClass">
-                    <!-- Close Button -->
-                    <button v-if="closeable" @click="close"
-                        class="absolute top-3 right-3 text-secondary hover:text-error transition text-2xl">
-                        &times;
-                    </button>
+                    <AppButton
+                        v-if="closeable"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        icon-only
+                        class="absolute right-3 top-3 z-10"
+                        aria-label="Dialog schliessen"
+                        title="Dialog schliessen"
+                        @click="close"
+                    >
+                        <i class="las la-times text-lg" aria-hidden="true"></i>
+                    </AppButton>
 
                     <slot v-if="showSlot" />
                 </div>

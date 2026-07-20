@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'profile_skill_recommendation_screen.dart';
-import 'ui_action_result_screen.dart';
 
 class BadgeDetailScreen extends StatefulWidget {
   const BadgeDetailScreen({super.key, required this.title, required this.body, required this.status});
@@ -57,9 +56,9 @@ class _BadgeDetailScreenState extends State<BadgeDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Motivation'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _visibleOnProfile, onChanged: (value) => setState(() => _visibleOnProfile = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Profil anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Badge erscheint auf dem öffentlichen oder Vereinsprofil.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _notifyWhenUnlocked, onChanged: (value) => setState(() => _notifyWhenUnlocked = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push bei Freischaltung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Motivierende Benachrichtigung senden.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _leaderboardOptIn, onChanged: (value) => setState(() => _leaderboardOptIn = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Leaderboard Opt-in', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Ranking nur mit ausdrücklicher Freigabe.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _visibleOnProfile, onChanged: (value) => setState(() => _visibleOnProfile = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Profil anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Badge erscheint auf dem öffentlichen oder Vereinsprofil.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notifyWhenUnlocked, onChanged: (value) => setState(() => _notifyWhenUnlocked = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push bei Freischaltung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Motivierende Benachrichtigung senden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _leaderboardOptIn, onChanged: (value) => setState(() => _leaderboardOptIn = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Leaderboard Opt-in', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Ranking nur mit ausdrücklicher Freigabe.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

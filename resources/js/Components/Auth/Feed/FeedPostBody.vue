@@ -62,6 +62,10 @@ defineProps({
             v-if="post.image"
             :src="storageUrl(post.image)"
             alt=""
+            width="1200"
+            height="900"
+            loading="lazy"
+            decoding="async"
             class="mt-4 max-h-[70vh] w-full rounded-xl border border-border object-cover"
         >
 
@@ -83,6 +87,10 @@ defineProps({
                     v-else-if="attachment.file && isImageMime(attachment.file.type)"
                     :src="storageUrl(attachment.file.path)"
                     :alt="fileName(attachment.file)"
+                    width="1200"
+                    height="900"
+                    loading="lazy"
+                    decoding="async"
                     class="max-h-[70vh] w-full rounded-xl border border-border object-cover"
                 >
 
@@ -106,4 +114,3 @@ defineProps({
         </div>
     </div>
 </template>
-

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
@@ -28,8 +30,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
   List<AirmiusMessage>? _messages;
+  List<String> _typingUsers = const [];
+  Timer? _refreshTimer;
+  Timer? _typingStopTimer;
   bool _messagesLoaded = false;
   bool _sending = false;
+  bool _markingRead = false;
+  bool _typing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _messageController.addListener(_onComposerChanged);
+  }
 
   @override
   void didChangeDependencies() {
@@ -37,17 +50,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (_messagesLoaded) return;
     _messagesLoaded = true;
     _messagesFuture = _loadMessages();
+    _startRealtimePolling();
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    _typingStopTimer?.cancel();
+    _messageController.removeListener(_onComposerChanged);
     _messageController.dispose();
     super.dispose();
   }
 
   Future<AirmiusPage<AirmiusMessage>> _loadMessages() async {
-    final page = await AirmiusServicesScope.of(context).repositories.conversations.messages(widget.conversationId);
+    final services = AirmiusServicesScope.of(context);
+    final json = await services
+        .clientForSession(services.authState.session)
+        .conversationMessages(widget.conversationId);
+    final page = AirmiusPage<AirmiusMessage>.fromJson(
+      json,
+      AirmiusMessage.fromJson,
+    );
     _messages = page.items;
+    _updateTypingUsers(json);
+    unawaited(_markRead());
     return page;
   }
 
@@ -57,15 +83,102 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
   }
 
+  void _startRealtimePolling() {
+    _refreshTimer ??= Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) return;
+      unawaited(_refreshRealtime());
+    });
+  }
+
+  Future<void> _refreshRealtime() async {
+    try {
+      final page = await _loadMessages();
+      if (!mounted) return;
+      setState(() {
+        _messagesFuture = Future.value(page);
+      });
+    } catch (_) {
+      // Keep the current chat view during transient realtime refresh failures.
+    }
+  }
+
+  Future<void> _markRead() async {
+    if (!mounted) return;
+    if (_markingRead) return;
+    _markingRead = true;
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.conversations.markRead(widget.conversationId);
+    } catch (_) {
+      // Read receipts are retried by the next polling cycle.
+    } finally {
+      _markingRead = false;
+    }
+  }
+
+  void _updateTypingUsers(JsonMap json) {
+    final chat = json['chat'];
+    final typingUsers = chat is JsonMap ? chat['typing_users'] : null;
+    final nextUsers = typingUsers is List
+        ? typingUsers
+              .whereType<JsonMap>()
+              .map((user) => user['name']?.toString().trim() ?? '')
+              .where((name) => name.isNotEmpty)
+              .toList()
+        : const <String>[];
+    if (_sameStrings(_typingUsers, nextUsers)) return;
+    _typingUsers = nextUsers;
+  }
+
+  bool _sameStrings(List<String> first, List<String> second) {
+    if (first.length != second.length) return false;
+    for (var index = 0; index < first.length; index++) {
+      if (first[index] != second[index]) return false;
+    }
+    return true;
+  }
+
+  void _onComposerChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    _typingStopTimer?.cancel();
+
+    if (hasText) {
+      if (!_typing) unawaited(_sendTyping(true));
+      _typingStopTimer = Timer(
+        const Duration(seconds: 2),
+        () => unawaited(_sendTyping(false)),
+      );
+      return;
+    }
+
+    if (_typing) unawaited(_sendTyping(false));
+  }
+
+  Future<void> _sendTyping(bool typing) async {
+    if (_typing == typing) return;
+    _typing = typing;
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.conversations.sendTyping(widget.conversationId, typing);
+    } catch (_) {
+      // Typing is best-effort presence, not a blocking chat action.
+    }
+  }
+
   Future<void> _send() async {
     final message = _messageController.text.trim();
     if (message.isEmpty || _sending) return;
 
     setState(() => _sending = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.conversations.sendMessage(widget.conversationId, message);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.conversations.sendMessage(widget.conversationId, message);
       if (!mounted) return;
       _messageController.clear();
+      unawaited(_sendTyping(false));
       setState(() {
         _sending = false;
         _messagesFuture = _loadMessages();
@@ -80,7 +193,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _showActionResult(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _reactToMessage(AirmiusMessage message, String reaction) async {
@@ -88,18 +203,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final userId = authState.user?.id;
     if (userId == null) return;
 
-    final previousMessages = _messages == null ? null : List<AirmiusMessage>.from(_messages!);
+    final previousMessages = _messages == null
+        ? null
+        : List<AirmiusMessage>.from(_messages!);
     _applyLocalReaction(message.id, userId, reaction);
 
     try {
-      final response = await AirmiusServicesScope.of(context).clientForSession(authState.session).reactToMessage(message.id, reaction);
+      final response = await AirmiusServicesScope.of(context)
+          .clientForSession(authState.session)
+          .reactToMessage(message.id, reaction);
       if (!mounted) return;
       final serverReactions = response['reactions'];
       if (serverReactions is List) {
         _replaceMessage(
           message.id,
           (current) => current.copyWith(
-            reactions: serverReactions.whereType<JsonMap>().map(AirmiusMessageReaction.fromJson).toList(),
+            reactions: serverReactions
+                .whereType<JsonMap>()
+                .map(AirmiusMessageReaction.fromJson)
+                .toList(),
           ),
         );
       }
@@ -113,19 +235,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _applyLocalReaction(int messageId, int userId, String reaction) {
     _replaceMessage(messageId, (current) {
       final reactions = List<AirmiusMessageReaction>.from(current.reactions);
-      final existingIndex = reactions.indexWhere((item) => item.userId == userId);
+      final existingIndex = reactions.indexWhere(
+        (item) => item.userId == userId,
+      );
       if (existingIndex >= 0 && reactions[existingIndex].reaction == reaction) {
         reactions.removeAt(existingIndex);
       } else if (existingIndex >= 0) {
-        reactions[existingIndex] = AirmiusMessageReaction(id: reactions[existingIndex].id, userId: userId, reaction: reaction);
+        reactions[existingIndex] = AirmiusMessageReaction(
+          id: reactions[existingIndex].id,
+          userId: userId,
+          reaction: reaction,
+        );
       } else {
-        reactions.add(AirmiusMessageReaction(id: -userId, userId: userId, reaction: reaction));
+        reactions.add(
+          AirmiusMessageReaction(
+            id: -userId,
+            userId: userId,
+            reaction: reaction,
+          ),
+        );
       }
       return current.copyWith(reactions: reactions);
     });
   }
 
-  void _replaceMessage(int messageId, AirmiusMessage Function(AirmiusMessage current) update) {
+  void _replaceMessage(
+    int messageId,
+    AirmiusMessage Function(AirmiusMessage current) update,
+  ) {
     final messages = _messages;
     if (messages == null) return;
     final index = messages.indexWhere((item) => item.id == messageId);
@@ -137,7 +274,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _hideMessage(AirmiusMessage message) async {
     try {
-      await AirmiusServicesScope.of(context).clientForSession(AirmiusServicesScope.of(context).authState.session).hideMessage(message.id);
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .hideMessage(message.id);
       if (!mounted) return;
       _showActionResult('Nachricht ausgeblendet.');
       _reload();
@@ -149,7 +288,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _deleteMessage(AirmiusMessage message) async {
     try {
-      await AirmiusServicesScope.of(context).clientForSession(AirmiusServicesScope.of(context).authState.session).deleteMessage(message.id);
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .deleteMessage(message.id);
       if (!mounted) return;
       _showActionResult('Nachricht gelöscht.');
       _reload();
@@ -168,10 +309,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final scope = AirmiusScope.of(context);
     final authState = AirmiusServicesScope.of(context).authState;
     final userLabel = initialsFromName(
-      [
-        authState.user?.firstName,
-        authState.user?.lastName,
-      ].whereType<String>().map((part) => part.trim()).where((part) => part.isNotEmpty).join(' '),
+      [authState.user?.firstName, authState.user?.lastName]
+          .whereType<String>()
+          .map((part) => part.trim())
+          .where((part) => part.isNotEmpty)
+          .join(' '),
       fallback: initialsFromName(authState.user?.name, fallback: ''),
     );
 
@@ -186,24 +328,45 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onPressed: () => Navigator.maybePop(context),
         ),
         titleSpacing: 0,
-        title: const Text('Chat', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Chat',
+          style: TextStyle(
+            color: AirmiusColors.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'Suche',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
+            ),
             icon: const Icon(Icons.search, color: AirmiusColors.text),
           ),
           IconButton(
             tooltip: 'Chats',
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.chat_bubble_outline, color: AirmiusColors.text),
+            icon: const Icon(
+              Icons.chat_bubble_outline,
+              color: AirmiusColors.text,
+            ),
           ),
           IconButton(
             tooltip: 'Benachrichtigungen',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen())),
-            icon: const Icon(Icons.notifications_none, color: AirmiusColors.text),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => NotificationsCenterScreen()),
+            ),
+            icon: const Icon(
+              Icons.notifications_none,
+              color: AirmiusColors.text,
+            ),
           ),
-          UserBubble(label: userLabel.isEmpty ? 'ZK' : userLabel, imageUrl: authState.user?.avatarUrl),
+          UserBubble(
+            label: userLabel.isEmpty ? 'ZK' : userLabel,
+            imageUrl: authState.user?.avatarUrl,
+          ),
           const Icon(Icons.keyboard_arrow_down, color: AirmiusColors.muted),
           const SizedBox(width: 8),
         ],
@@ -221,7 +384,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _ConversationHeader(title: widget.title, subtitle: '${widget.kind} - 2 Mitglieder'),
+                _ConversationHeader(
+                  title: widget.title,
+                  subtitle: _conversationSubtitle(),
+                ),
                 Container(height: 1, color: AirmiusColors.border),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -232,18 +398,36 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     future: _messagesFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(padding: EdgeInsets.all(12), child: _LoadingMessages());
+                        return const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: _LoadingMessages(),
+                        );
                       }
                       if (snapshot.hasError) {
-                        return Padding(padding: const EdgeInsets.all(12), child: _ErrorMessages(onRetry: _reload));
+                        return Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: _ErrorMessages(onRetry: _reload),
+                        );
                       }
 
-                      final messages = (_messages ?? snapshot.data?.items ?? const <AirmiusMessage>[]).reversed.toList();
+                      final messages =
+                          (_messages ??
+                                  snapshot.data?.items ??
+                                  const <AirmiusMessage>[])
+                              .reversed
+                              .toList();
                       if (messages.isEmpty) {
                         return Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24),
-                            child: Text(scope.t('messages.noMessages'), textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+                            child: Text(
+                              scope.t('messages.noMessages'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AirmiusColors.muted,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         );
                       }
@@ -251,7 +435,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return ListView.separated(
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                         itemCount: messages.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) => _ChatBubble(
                           message: messages[index],
                           onReact: _reactToMessage,
@@ -275,6 +459,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       ),
     );
+  }
+
+  String _conversationSubtitle() {
+    if (_typingUsers.isEmpty) return '${widget.kind} - 2 Mitglieder';
+    if (_typingUsers.length == 1) return '${_typingUsers.first} schreibt...';
+    return '${_typingUsers.length} Personen schreiben...';
   }
 }
 
@@ -300,17 +490,42 @@ class _ConversationHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 20, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AirmiusColors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, fontWeight: FontWeight.w700)),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.notifications_none, color: AirmiusColors.text, size: 22),
+            decoration: BoxDecoration(
+              color: AirmiusColors.input,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.notifications_none,
+              color: AirmiusColors.text,
+              size: 22,
+            ),
           ),
         ],
       ),
@@ -326,15 +541,27 @@ class _ChatSearchField extends StatelessWidget {
     return SizedBox(
       height: 62,
       child: TextField(
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
+        style: const TextStyle(
+          color: AirmiusColors.text,
+          fontWeight: FontWeight.w700,
+        ),
         decoration: InputDecoration(
           hintText: 'Nachrichten in diesem Chat suchen',
           prefixIcon: const Icon(Icons.search, color: AirmiusColors.muted),
           filled: true,
           fillColor: AirmiusColors.input,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.blue)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 18,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AirmiusColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AirmiusColors.blue),
+          ),
         ),
       ),
     );
@@ -342,7 +569,11 @@ class _ChatSearchField extends StatelessWidget {
 }
 
 class _MessageComposer extends StatelessWidget {
-  const _MessageComposer({required this.controller, required this.sending, required this.onSend});
+  const _MessageComposer({
+    required this.controller,
+    required this.sending,
+    required this.onSend,
+  });
 
   final TextEditingController controller;
   final bool sending;
@@ -360,14 +591,26 @@ class _MessageComposer extends StatelessWidget {
               controller: controller,
               minLines: 1,
               maxLines: 4,
-              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: AirmiusColors.text,
+                fontWeight: FontWeight.w800,
+              ),
               decoration: InputDecoration(
                 hintText: 'Nachricht schreiben...',
                 filled: true,
                 fillColor: AirmiusColors.input,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.blue)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 16,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AirmiusColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AirmiusColors.blue),
+                ),
               ),
             ),
           ),
@@ -381,12 +624,25 @@ class _MessageComposer extends StatelessWidget {
               onPressed: sending ? null : onSend,
               style: FilledButton.styleFrom(
                 padding: EdgeInsets.zero,
-                backgroundColor: sending ? AirmiusColors.mutedSoft : AirmiusColors.blue,
+                backgroundColor: sending
+                    ? AirmiusColors.mutedSoft
+                    : AirmiusColors.blue,
                 foregroundColor: AirmiusColors.header,
                 disabledBackgroundColor: AirmiusColors.mutedSoft,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              child: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AirmiusColors.header)) : const Icon(Icons.send_outlined),
+              child: sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AirmiusColors.header,
+                      ),
+                    )
+                  : const Icon(Icons.send_outlined),
             ),
           ),
         ],
@@ -419,6 +675,7 @@ class _ComposerIconButton extends StatelessWidget {
     );
   }
 }
+
 class _ChatBubble extends StatelessWidget {
   const _ChatBubble({
     required this.message,
@@ -439,7 +696,9 @@ class _ChatBubble extends StatelessWidget {
     final isMine = message.mine;
     final bubbleColor = isMine ? AirmiusColors.lightCard : AirmiusColors.input;
     final primaryText = isMine ? AirmiusColors.lightText : AirmiusColors.text;
-    final secondaryText = isMine ? AirmiusColors.lightMuted : AirmiusColors.muted;
+    final secondaryText = isMine
+        ? AirmiusColors.lightMuted
+        : AirmiusColors.muted;
     final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
     final reactionCounts = _reactionCounts();
     final myReaction = _userReaction(currentUserId);
@@ -461,19 +720,42 @@ class _ChatBubble extends StatelessWidget {
                 bottomLeft: Radius.circular(isMine ? 14 : 4),
                 bottomRight: Radius.circular(isMine ? 4 : 14),
               ),
-              border: Border.all(color: isMine ? AirmiusColors.lightBorder : AirmiusColors.input),
+              border: Border.all(
+                color: isMine ? AirmiusColors.lightBorder : AirmiusColors.input,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(message.senderName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: primaryText, fontSize: 12, fontWeight: FontWeight.w800))),
-                    Text(_dateTimeLabel(message.createdAt), style: TextStyle(color: secondaryText, fontSize: 12)),
+                    Expanded(
+                      child: Text(
+                        message.senderName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: primaryText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      _dateTimeLabel(message.createdAt),
+                      style: TextStyle(color: secondaryText, fontSize: 12),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(message.message, style: TextStyle(color: primaryText, height: 1.35, fontWeight: FontWeight.w900)),
+                Text(
+                  message.message,
+                  style: TextStyle(
+                    color: primaryText,
+                    height: 1.35,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 if (reactionCounts.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Wrap(
@@ -481,35 +763,69 @@ class _ChatBubble extends StatelessWidget {
                     runSpacing: 5,
                     children: [
                       for (final entry in reactionCounts.entries)
-                        Builder(builder: (context) {
-                          final selected = myReaction == entry.key;
-                          final badgeColor = selected ? AirmiusColors.blue : secondaryText;
-                          return Container(
-                            height: 26,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? AirmiusColors.blue.withValues(alpha: isMine ? 0.18 : 0.16)
-                                  : (isMine ? AirmiusColors.lightInput : AirmiusColors.card),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: selected ? AirmiusColors.blue : (isMine ? AirmiusColors.lightBorder : AirmiusColors.border)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_reactionIcon(entry.key), size: 14, color: badgeColor),
-                                const SizedBox(width: 4),
-                                Text('${entry.value}', style: TextStyle(color: badgeColor, fontSize: 12, fontWeight: FontWeight.w900)),
-                              ],
-                            ),
-                          );
-                        }),
+                        Builder(
+                          builder: (context) {
+                            final selected = myReaction == entry.key;
+                            final badgeColor = selected
+                                ? AirmiusColors.blue
+                                : secondaryText;
+                            return Container(
+                              height: 26,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? AirmiusColors.blue.withValues(
+                                        alpha: isMine ? 0.18 : 0.16,
+                                      )
+                                    : (isMine
+                                          ? AirmiusColors.lightInput
+                                          : AirmiusColors.card),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: selected
+                                      ? AirmiusColors.blue
+                                      : (isMine
+                                            ? AirmiusColors.lightBorder
+                                            : AirmiusColors.border),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _reactionIcon(entry.key),
+                                    size: 14,
+                                    color: badgeColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${entry.value}',
+                                    style: TextStyle(
+                                      color: badgeColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ],
                 if (isMine) ...[
                   const SizedBox(height: 4),
-                  Align(alignment: Alignment.centerRight, child: Icon(Icons.done_all, size: 14, color: secondaryText)),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Icon(
+                      Icons.done_all,
+                      size: 14,
+                      color: message.read ? AirmiusColors.green : secondaryText,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -543,11 +859,15 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _openReactionPicker(BuildContext context) {
-    final myReaction = _userReaction(AirmiusServicesScope.of(context).authState.user?.id);
+    final myReaction = _userReaction(
+      AirmiusServicesScope.of(context).authState.user?.id,
+    );
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -555,25 +875,53 @@ class _ChatBubble extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: 38, height: 4, decoration: BoxDecoration(color: AirmiusColors.borderStrong, borderRadius: BorderRadius.circular(99))),
+                Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AirmiusColors.borderStrong,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
                 const SizedBox(height: 16),
-                const Text('Reaktion auswählen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                const Text(
+                  'Reaktion auswählen',
+                  style: TextStyle(
+                    color: AirmiusColors.text,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _QuickReaction(icon: Icons.thumb_up_alt_outlined, label: 'Like', selected: myReaction == 'like', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'like');
-                    }),
-                    _QuickReaction(icon: Icons.favorite_border, label: 'Herz', selected: myReaction == 'heart', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'heart');
-                    }),
-                    _QuickReaction(icon: Icons.check_circle_outline, label: 'OK', selected: myReaction == 'ok', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'ok');
-                    }),
+                    _QuickReaction(
+                      icon: Icons.thumb_up_alt_outlined,
+                      label: 'Like',
+                      selected: myReaction == 'like',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'like');
+                      },
+                    ),
+                    _QuickReaction(
+                      icon: Icons.favorite_border,
+                      label: 'Herz',
+                      selected: myReaction == 'heart',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'heart');
+                      },
+                    ),
+                    _QuickReaction(
+                      icon: Icons.check_circle_outline,
+                      label: 'OK',
+                      selected: myReaction == 'ok',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'ok');
+                      },
+                    ),
                   ],
                 ),
               ],
@@ -588,7 +936,9 @@ class _ChatBubble extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
       builder: (context) {
         return SafeArea(
           child: Padding(
@@ -596,40 +946,73 @@ class _ChatBubble extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: 38, height: 4, decoration: BoxDecoration(color: AirmiusColors.borderStrong, borderRadius: BorderRadius.circular(99))),
+                Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AirmiusColors.borderStrong,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _QuickReaction(icon: Icons.thumb_up_alt_outlined, label: 'Like', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'like');
-                    }),
-                    _QuickReaction(icon: Icons.favorite_border, label: 'Herz', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'heart');
-                    }),
-                    _QuickReaction(icon: Icons.check_circle_outline, label: 'OK', onTap: () {
-                      Navigator.pop(context);
-                      onReact(message, 'ok');
-                    }),
+                    _QuickReaction(
+                      icon: Icons.thumb_up_alt_outlined,
+                      label: 'Like',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'like');
+                      },
+                    ),
+                    _QuickReaction(
+                      icon: Icons.favorite_border,
+                      label: 'Herz',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'heart');
+                      },
+                    ),
+                    _QuickReaction(
+                      icon: Icons.check_circle_outline,
+                      label: 'OK',
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReact(message, 'ok');
+                      },
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                _SheetAction(icon: Icons.visibility_off_outlined, label: 'Nur für mich ausblenden', onTap: () {
-                  Navigator.pop(context);
-                  onHide(message);
-                }),
+                _SheetAction(
+                  icon: Icons.visibility_off_outlined,
+                  label: 'Nur für mich ausblenden',
+                  onTap: () {
+                    Navigator.pop(context);
+                    onHide(message);
+                  },
+                ),
                 if (isMine)
-                  _SheetAction(icon: Icons.delete_outline, label: 'Nachricht löschen', danger: true, onTap: () {
-                    Navigator.pop(context);
-                    onDelete(message);
-                  })
+                  _SheetAction(
+                    icon: Icons.delete_outline,
+                    label: 'Nachricht löschen',
+                    danger: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onDelete(message);
+                    },
+                  )
                 else
-                  _SheetAction(icon: Icons.flag_outlined, label: 'Nachricht melden', danger: true, onTap: () {
-                    Navigator.pop(context);
-                    onReport(message);
-                  }),
+                  _SheetAction(
+                    icon: Icons.flag_outlined,
+                    label: 'Nachricht melden',
+                    danger: true,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onReport(message);
+                    },
+                  ),
               ],
             ),
           ),
@@ -640,7 +1023,12 @@ class _ChatBubble extends StatelessWidget {
 }
 
 class _QuickReaction extends StatelessWidget {
-  const _QuickReaction({required this.icon, required this.label, required this.onTap, this.selected = false});
+  const _QuickReaction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+  });
 
   final IconData icon;
   final String label;
@@ -658,17 +1046,31 @@ class _QuickReaction extends StatelessWidget {
           height: 40,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: selected ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.input,
+            color: selected
+                ? AirmiusColors.blue.withValues(alpha: 0.16)
+                : AirmiusColors.input,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+            border: Border.all(
+              color: selected ? AirmiusColors.blue : AirmiusColors.border,
+            ),
           ),
           alignment: Alignment.center,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 17, color: selected ? AirmiusColors.blue : AirmiusColors.text),
+              Icon(
+                icon,
+                size: 17,
+                color: selected ? AirmiusColors.blue : AirmiusColors.text,
+              ),
               const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: selected ? AirmiusColors.blue : AirmiusColors.text, fontWeight: FontWeight.w900)),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? AirmiusColors.blue : AirmiusColors.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ],
           ),
         ),
@@ -678,7 +1080,12 @@ class _QuickReaction extends StatelessWidget {
 }
 
 class _SheetAction extends StatelessWidget {
-  const _SheetAction({required this.icon, required this.label, required this.onTap, this.danger = false});
+  const _SheetAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.danger = false,
+  });
 
   final IconData icon;
   final String label;
@@ -691,7 +1098,10 @@ class _SheetAction extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: color),
-      title: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
@@ -709,9 +1119,22 @@ class _LoadingMessages extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AirmiusColors.blue)),
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AirmiusColors.blue,
+              ),
+            ),
             const SizedBox(width: 12),
-            Text(scope.t('status.loading'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            Text(
+              scope.t('status.loading'),
+              style: const TextStyle(
+                color: AirmiusColors.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
         ),
       ),
@@ -733,9 +1156,21 @@ class _ErrorMessages extends StatelessWidget {
         children: [
           const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
           const SizedBox(height: 10),
-          Text(scope.t('messages.error'), textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text(
+            scope.t('messages.error'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AirmiusColors.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
-          AirmiusButton(label: scope.t('messages.retry'), icon: Icons.refresh_outlined, onPressed: onRetry, secondary: true),
+          AirmiusButton(
+            label: scope.t('messages.retry'),
+            icon: Icons.refresh_outlined,
+            onPressed: onRetry,
+            secondary: true,
+          ),
         ],
       ),
     );

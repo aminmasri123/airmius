@@ -4,7 +4,6 @@ import 'trust_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'ui_action_result_screen.dart';
-import 'trust_operations_screen.dart';
 
 class UserAdminDetailScreen extends StatefulWidget {
   const UserAdminDetailScreen({super.key, required this.name, required this.status});
@@ -55,22 +54,22 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
             const Eyebrow('Rolle & Status'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _role,
+              initialValue: _role,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Primaere Rolle'),
               items: const ['Player', 'Coach', 'Vereinsadmin', 'Guardian', 'Gast'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
               onChanged: (value) => setState(() => _role = value ?? _role),
             ),
             const SizedBox(height: 8),
-            SwitchListTile(value: _verified, onChanged: (value) => setState(() => _verified = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('E-Mail verifiziert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann Login, Anfragen und Benachrichtigungen nutzen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin- und Finanzrechte.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _blocked, onChanged: (value) => setState(() => _blocked = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Konto sperren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sperre verhindert Login und neue Aktionen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _verified, onChanged: (value) => setState(() => _verified = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('E-Mail verifiziert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann Login, Anfragen und Benachrichtigungen nutzen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin- und Finanzrechte.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _blocked, onChanged: (value) => setState(() => _blocked = value), activeThumbColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Konto sperren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sperre verhindert Login und neue Aktionen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Datenschutz & Sicherheit'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport angefragt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('DSGVO Export wird später über API bereitgestellt.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport angefragt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('DSGVO Export wird später über API bereitgestellt.', style: TextStyle(color: AirmiusColors.muted))),
             const Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Consent OK'), StatusPill('Push aktiv'), StatusPill('Keine Reports')]),
           ])),
           const SizedBox(height: 14),

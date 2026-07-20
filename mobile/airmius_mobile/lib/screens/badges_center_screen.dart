@@ -1,10 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'gamification_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'badge_detail_screen.dart';
-import 'gamification_operations_screen.dart';
 
 class BadgesCenterScreen extends StatefulWidget {
   const BadgesCenterScreen({super.key});

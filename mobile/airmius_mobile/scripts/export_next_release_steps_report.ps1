@@ -20,8 +20,22 @@ $RemainingEvidencePercent = [math]::Round((100 - $EvidencePercent), 1)
 function Get-GateAction {
     param($Gate)
 
+    $PlatformActions = New-Object System.Collections.Generic.List[string]
+
     if ($Gate.local_command) {
-        return $Gate.local_command
+        $PlatformActions.Add("Default: $($Gate.local_command)")
+    }
+
+    if ($Gate.linux_local_command) {
+        $PlatformActions.Add("Linux: $($Gate.linux_local_command)")
+    }
+
+    if ($Gate.macos_local_command) {
+        $PlatformActions.Add("macOS: $($Gate.macos_local_command)")
+    }
+
+    if ($PlatformActions.Count -gt 0) {
+        return ($PlatformActions -join " | ")
     }
 
     if ($Gate.runbook) {

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'checkout_status_screen.dart';
-import 'ui_action_result_screen.dart';
 
 class BillingOperationsScreen extends StatefulWidget {
   const BillingOperationsScreen({super.key});
@@ -65,8 +64,8 @@ class _BillingOperationsScreenState extends State<BillingOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Buchhaltungsregeln'),
-                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigung senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User, Verein oder Anbieter nach Zahlungsstatus informieren.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('DATEV/Audit vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Rechnungsdaten für Buchhaltung vormerken.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigung senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User, Verein oder Anbieter nach Zahlungsstatus informieren.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('DATEV/Audit vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Rechnungsdaten für Buchhaltung vormerken.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -132,7 +131,7 @@ class _BillingOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _BillingOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Billing-Aktion verändert Zahlstatus, Abo oder Rechnung. Später wird sie mit Audit protokolliert.', item.action, action);
       return;

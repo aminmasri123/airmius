@@ -1,0 +1,157 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Notification;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class NotificationCenterFeatureTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_web_notification_center_handles_read_unread_delete_and_action_links(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $notification = Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'event.reminder',
+            'data' => [
+                'title' => 'Training heute',
+                'body' => 'Beginn ist 18:00 Uhr.',
+                'action_url' => '/events/7',
+            ],
+            'read' => false,
+        ]);
+
+        Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'chat.message',
+            'data' => ['title' => 'Chat'],
+            'read' => false,
+        ]);
+
+        $otherNotification = Notification::query()->create([
+            'user_id' => $other->id,
+            'type' => 'event.reminder',
+            'data' => ['title' => 'Fremd'],
+            'read' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('auth.notifications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('notifications.data', 1)
+                ->where('notifications.data.0.id', $notification->id)
+                ->where('notifications.data.0.title', 'Training heute')
+                ->where('notifications.data.0.body', 'Beginn ist 18:00 Uhr.')
+                ->where('notifications.data.0.url', '/events/7')
+                ->where('notifications.data.0.action_url', '/events/7')
+                ->where('notifications.data.0.read', false)
+                ->where('notifications.data.0.unread', true)
+            );
+
+        $this->actingAs($user)
+            ->post(route('auth.notifications.read', $notification))
+            ->assertRedirect();
+
+        $this->assertTrue($notification->fresh()->read);
+
+        $this->actingAs($user)
+            ->post(route('auth.notifications.unread', $notification))
+            ->assertRedirect();
+
+        $this->assertFalse($notification->fresh()->read);
+
+        $this->actingAs($user)
+            ->post(route('auth.notifications.read-all'))
+            ->assertRedirect();
+
+        $this->assertTrue($notification->fresh()->read);
+
+        $this->actingAs($user)
+            ->post(route('auth.notifications.read', $otherNotification))
+            ->assertRedirect()
+            ->assertSessionHasErrors();
+
+        $this->actingAs($user)
+            ->delete(route('auth.notifications.destroy', $notification))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
+    }
+
+    public function test_api_notification_center_handles_detail_unread_delete_and_ownership(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $notification = Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'invoice.created',
+            'data' => [
+                'title' => 'Neue Rechnung',
+                'message' => 'Deine Vereinsrechnung ist bereit.',
+                'url' => '/billing/invoices/11',
+            ],
+            'read' => false,
+        ]);
+
+        Notification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'event.reminder',
+            'data' => ['title' => 'Schon gelesen'],
+            'read' => true,
+        ]);
+
+        $otherNotification = Notification::query()->create([
+            'user_id' => $other->id,
+            'type' => 'invoice.created',
+            'data' => ['title' => 'Fremd'],
+            'read' => false,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/notifications?unread_only=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $notification->id)
+            ->assertJsonPath('data.0.body', 'Deine Vereinsrechnung ist bereit.')
+            ->assertJsonPath('data.0.url', '/billing/invoices/11')
+            ->assertJsonPath('data.0.action_url', '/billing/invoices/11')
+            ->assertJsonPath('data.0.read', false)
+            ->assertJsonPath('data.0.unread', true)
+            ->assertJsonPath('meta.unread_count', 1);
+
+        $this->getJson("/api/v1/notifications/{$notification->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $notification->id)
+            ->assertJsonPath('data.action_url', '/billing/invoices/11');
+
+        $this->postJson("/api/v1/notifications/{$notification->id}/read")
+            ->assertOk()
+            ->assertJsonPath('data.read', true)
+            ->assertJsonPath('data.unread', false);
+
+        $this->postJson("/api/v1/notifications/{$notification->id}/unread")
+            ->assertOk()
+            ->assertJsonPath('data.read', false)
+            ->assertJsonPath('data.unread', true);
+
+        $this->getJson("/api/v1/notifications/{$otherNotification->id}")
+            ->assertNotFound();
+
+        $this->deleteJson("/api/v1/notifications/{$notification->id}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
+    }
+}

@@ -1,10 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'sponsor_ads_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'sponsor_detail_screen.dart';
-import 'sponsor_ads_operations_screen.dart';
 
 class SponsorsCenterScreen extends StatefulWidget {
   const SponsorsCenterScreen({super.key});

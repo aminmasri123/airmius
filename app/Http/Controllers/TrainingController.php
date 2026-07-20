@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Services\Training\TrainingPlanQualityService;
+use App\Services\Training\TrainingResourceService;
 use App\Support\Roles;
 use App\Support\AppNotification;
 use Carbon\CarbonImmutable;
@@ -25,6 +26,8 @@ use Inertia\Inertia;
 
 class TrainingController extends Controller
 {
+    public function __construct(private TrainingResourceService $resources) {}
+
     public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
@@ -53,12 +56,12 @@ class TrainingController extends Controller
             ->latest('id')
             ->limit(30)
             ->get()
-            ->map(fn (TrainingPlan $plan) => $this->serializePlan($plan, $user));
+            ->map(fn (TrainingPlan $plan) => $this->resources->plan($plan, $user));
 
         return Inertia::render('Auth/Dashboard/Training/Index', [
             'plans' => $plans,
             'activeDraftLog' => $activeDraft
-                ? $this->serializeLog($activeDraft->load([
+                ? $this->resources->log($activeDraft->load([
                     'athlete:id,name,first_name,last_name,email',
                     'creator:id,name,first_name,last_name,email',
                     'trainer:id,name,first_name,last_name,email',
@@ -98,8 +101,8 @@ class TrainingController extends Controller
                 ->latest('id')
                 ->limit(60)
                 ->get()
-                ->map(fn (TrainingLog $log) => $this->serializeLog($log)),
-            'manageableAthletes' => $manageableAthletes->map(fn (User $athlete) => $this->serializeUser($athlete)),
+                ->map(fn (TrainingLog $log) => $this->resources->log($log)),
+            'manageableAthletes' => $manageableAthletes->map(fn (User $athlete) => $this->resources->user($athlete)),
             'sportCatalog' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -120,9 +123,9 @@ class TrainingController extends Controller
                     'id' => $team->id,
                     'name' => $team->name,
                     'club_id' => $team->club_id,
-                    'users' => $team->users->map(fn (User $member) => $this->serializeUser($member)),
+                    'users' => $team->users->map(fn (User $member) => $this->resources->user($member)),
                 ]),
-            'people' => $manageableAthletes->map(fn (User $person) => $this->serializeUser($person)),
+            'people' => $manageableAthletes->map(fn (User $person) => $this->resources->user($person)),
             'aiCapabilities' => $ai->capabilities($user),
         ]);
     }
@@ -151,7 +154,7 @@ class TrainingController extends Controller
         ]);
 
         return Inertia::render('Auth/Dashboard/Training/LogShow', [
-            'log' => $this->serializeLog($log),
+            'log' => $this->resources->log($log),
         ]);
     }
 
@@ -176,8 +179,8 @@ class TrainingController extends Controller
         ]);
 
         return Inertia::render('Auth/Dashboard/Training/PlanItemShow', [
-            'plan' => $this->serializePlan($plan, $request->user()),
-            'item' => $this->serializePlanItemDetail($item),
+            'plan' => $this->resources->plan($plan, $request->user()),
+            'item' => $this->resources->planItemDetail($item),
         ]);
     }
 
@@ -454,7 +457,7 @@ class TrainingController extends Controller
 
         return response()->json([
             'message' => 'KI-Trainingsplan wurde gespeichert. Du kannst jede Einheit jetzt bearbeiten oder dokumentieren.',
-            'plan' => $this->serializePlan($plan, $user),
+            'plan' => $this->resources->plan($plan, $user),
         ], 201);
     }
 
@@ -670,7 +673,7 @@ class TrainingController extends Controller
 
         return response()->json([
             'saved_at' => now()->toIso8601String(),
-            'log' => $this->serializeLog($log->load([
+            'log' => $this->resources->log($log->load([
                 'athlete:id,name,first_name,last_name,email',
                 'creator:id,name,first_name,last_name,email',
                 'trainer:id,name,first_name,last_name,email',
@@ -846,7 +849,7 @@ class TrainingController extends Controller
 
     public function storePlanItem(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         $data = $this->validatePlanItemData($request);
         $imagePath = $request->file('image')?->store('training-plans', 'public');
@@ -863,7 +866,7 @@ class TrainingController extends Controller
 
     public function updatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
         abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
 
         $data = $this->validatePlanItemData($request);
@@ -883,7 +886,7 @@ class TrainingController extends Controller
 
     public function duplicatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
         abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
 
         $copy = $item->replicate();
@@ -899,7 +902,7 @@ class TrainingController extends Controller
 
     public function destroyPlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
         abort_unless((int) $item->training_plan_id === (int) $plan->id, 404);
 
         $this->deletePlanItemImageIfUnused($item);
@@ -910,7 +913,7 @@ class TrainingController extends Controller
 
     public function updatePlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         $teamIds = $request->user()->teams()->pluck('teams.id')->all();
         $data = $request->validate([
@@ -985,7 +988,7 @@ class TrainingController extends Controller
 
     public function publishPlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         $plan->update(['status' => 'published']);
 
@@ -996,7 +999,7 @@ class TrainingController extends Controller
 
     public function duplicatePlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->canWritePlan($request->user(), $plan), 403);
+        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         DB::transaction(function () use ($request, $plan) {
             $plan->load(['items', 'assignments']);
@@ -1090,129 +1093,6 @@ class TrainingController extends Controller
         return back()->with('success', 'Trainingsplan wurde gelöscht.');
     }
 
-    private function serializePlan(TrainingPlan $plan, User $viewer): array
-    {
-        $items = $plan->items;
-        $itemCount = max(1, $items->count());
-        $completedCount = $items->filter(fn ($item) => $item->relationLoaded('logs') && $item->logs->contains(fn ($log) => $log->status === 'completed'))->count();
-        $missedCount = $items->filter(fn ($item) => $item->relationLoaded('logs') && $item->logs->contains(fn ($log) => $log->status === 'missed'))->count();
-
-        return [
-            'id' => $plan->id,
-            'title' => $plan->title,
-            'description' => $plan->description,
-            'cadence' => $plan->cadence,
-            'starts_on' => $plan->starts_on?->toDateString(),
-            'ends_on' => $plan->ends_on?->toDateString(),
-            'status' => $plan->status,
-            'share_permission' => $plan->share_permission,
-            'settings' => $plan->settings ?? [],
-            'creator' => $plan->creator ? $this->serializeUser($plan->creator) : null,
-            'team' => $plan->team ? ['id' => $plan->team->id, 'name' => $plan->team->name] : null,
-            'can_write' => $this->canWritePlan($viewer, $plan),
-            'progress' => [
-                'completed' => $completedCount,
-                'missed' => $missedCount,
-                'open' => max(0, $items->count() - $completedCount - $missedCount),
-                'percent' => $items->count() ? (int) round(($completedCount / $itemCount) * 100) : 0,
-            ],
-            'items' => $items->map(fn ($item) => [
-                ...$item->toArray(),
-                'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
-                'log_statuses' => $item->relationLoaded('logs')
-                    ? $item->logs->map(fn (TrainingLog $log) => [
-                        'id' => $log->id,
-                        'status' => $log->status,
-                        'user_id' => $log->user_id,
-                        'reason' => $log->metrics['missed_reason'] ?? null,
-                    ])
-                    : [],
-            ]),
-            'assignments' => $plan->assignments->map(fn ($assignment) => [
-                'id' => $assignment->id,
-                'permission' => $assignment->permission,
-                'user' => $assignment->user ? $this->serializeUser($assignment->user) : null,
-                'team' => $assignment->team ? ['id' => $assignment->team->id, 'name' => $assignment->team->name] : null,
-            ]),
-        ];
-    }
-
-    private function serializeLog(TrainingLog $log): array
-    {
-        return [
-            'id' => $log->id,
-            'title' => $log->title,
-            'status' => $log->status,
-            'sport_type' => $log->sport_type,
-            'performed_at' => $log->performed_at?->toIso8601String(),
-            'created_at' => $log->created_at?->toIso8601String(),
-            'updated_at' => $log->updated_at?->toIso8601String(),
-            'duration_minutes' => $log->duration_minutes,
-            'distance_meters' => $log->distance_meters,
-            'calories' => $log->calories,
-            'intensity' => $log->intensity,
-            'notes' => $log->notes,
-            'trainer_feedback' => $log->trainer_feedback,
-            'metrics' => $log->metrics ?? [],
-            'athlete' => $log->athlete ? $this->serializeUser($log->athlete) : null,
-            'creator' => $log->creator ? $this->serializeUser($log->creator) : null,
-            'trainer' => $log->trainer ? $this->serializeUser($log->trainer) : null,
-            'team' => $log->team ? ['id' => $log->team->id, 'name' => $log->team->name] : null,
-            'plan' => $log->plan ? ['id' => $log->plan->id, 'title' => $log->plan->title] : null,
-            'plan_item' => $log->planItem ? [
-                'id' => $log->planItem->id,
-                'title' => $log->planItem->title,
-                'sport_type' => $log->planItem->sport_type,
-                'description' => $log->planItem->description,
-                'scheduled_at' => $log->planItem->scheduled_at?->toIso8601String(),
-                'duration_minutes' => $log->planItem->duration_minutes,
-                'distance_meters' => $log->planItem->distance_meters,
-                'calories' => $log->planItem->calories,
-                'intensity' => $log->planItem->intensity,
-                'todos' => $log->planItem->todos ?? [],
-                'metrics' => $log->planItem->metrics ?? [],
-            ] : null,
-            'plan_comparison' => $this->trainingPlanComparison($log),
-            'entries' => $log->entries->map(fn ($entry) => [
-                'id' => $entry->id,
-                'title' => $entry->title,
-                'sets' => $entry->sets,
-                'reps' => $entry->reps,
-                'weight_kg' => $entry->weight_kg,
-                'duration_seconds' => $entry->duration_seconds,
-                'distance_meters' => $entry->distance_meters,
-                'intensity' => $entry->intensity,
-                'notes' => $entry->notes,
-                'metrics' => $entry->metrics ?? [],
-            ]),
-            'feedbacks' => $log->relationLoaded('feedbacks')
-                ? $log->feedbacks->map(fn (TrainingLogFeedback $feedback) => [
-                    'id' => $feedback->id,
-                    'body' => $feedback->body,
-                    'role' => $feedback->role,
-                    'created_at' => $feedback->created_at?->toIso8601String(),
-                    'author' => $feedback->author ? $this->serializeUser($feedback->author) : null,
-                ])
-                : [],
-        ];
-    }
-
-    private function serializePlanItemDetail(TrainingPlanItem $item): array
-    {
-        return [
-            ...$item->toArray(),
-            'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
-            'logs' => $item->relationLoaded('logs')
-                ? $item->logs->map(fn (TrainingLog $log) => $this->serializeLog($log))
-                : [],
-            'stats' => [
-                'completed' => $item->relationLoaded('logs') ? $item->logs->where('status', 'completed')->count() : 0,
-                'missed' => $item->relationLoaded('logs') ? $item->logs->where('status', 'missed')->count() : 0,
-                'in_progress' => $item->relationLoaded('logs') ? $item->logs->where('status', 'in_progress')->count() : 0,
-            ],
-        ];
-    }
-
     private function logFormProps(User $user, ?TrainingLog $draft = null): array
     {
         $teamIds = $user->teams()->pluck('teams.id');
@@ -1232,11 +1112,11 @@ class TrainingController extends Controller
             ->latest('id')
             ->limit(50)
             ->get()
-            ->map(fn (TrainingPlan $plan) => $this->serializePlan($plan, $user));
+            ->map(fn (TrainingPlan $plan) => $this->resources->plan($plan, $user));
 
         return [
             'plans' => $plans,
-            'manageableAthletes' => $manageableAthletes->map(fn (User $athlete) => $this->serializeUser($athlete)),
+            'manageableAthletes' => $manageableAthletes->map(fn (User $athlete) => $this->resources->user($athlete)),
             'sportCatalog' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -1259,7 +1139,7 @@ class TrainingController extends Controller
                 ]),
             'recentExercises' => $this->recentExerciseSuggestions($user, $manageableAthletes),
             'recentSports' => $this->recentSportSuggestions($user, $manageableAthletes),
-            'draftLog' => $draft ? $this->serializeLog($draft->loadMissing([
+            'draftLog' => $draft ? $this->resources->log($draft->loadMissing([
                 'athlete:id,name,first_name,last_name,email',
                 'creator:id,name,first_name,last_name,email',
                 'trainer:id,name,first_name,last_name,email',
@@ -1268,15 +1148,6 @@ class TrainingController extends Controller
                 'planItem:id,title,scheduled_at',
                 'entries',
             ])) : null,
-        ];
-    }
-
-    private function serializeUser(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: $user->name,
-            'email' => $user->email,
         ];
     }
 
@@ -1289,24 +1160,6 @@ class TrainingController extends Controller
         $teamIds = $user->teams()->pluck('teams.id');
 
         return $plan->assignments()
-            ->where(function ($query) use ($user, $teamIds) {
-                $query
-                    ->where('user_id', $user->id)
-                    ->orWhereIn('team_id', $teamIds);
-            })
-            ->exists();
-    }
-
-    private function canWritePlan(User $user, TrainingPlan $plan): bool
-    {
-        if ((int) $plan->created_by === (int) $user->id) {
-            return true;
-        }
-
-        $teamIds = $user->teams()->pluck('teams.id');
-
-        return $plan->assignments()
-            ->where('permission', 'write')
             ->where(function ($query) use ($user, $teamIds) {
                 $query
                     ->where('user_id', $user->id)
@@ -1370,8 +1223,8 @@ class TrainingController extends Controller
 
     private function notifyTrainingLogSaved(TrainingLog $log, User $actor): void
     {
-        $actorName = $this->serializeUser($actor)['name'];
-        $athleteName = $log->athlete ? $this->serializeUser($log->athlete)['name'] : 'Sportler';
+        $actorName = $this->resources->user($actor)['name'];
+        $athleteName = $log->athlete ? $this->resources->user($log->athlete)['name'] : 'Sportler';
         $privacyScope = $log->metrics['privacy_scope'] ?? 'trainer';
 
         if ($privacyScope === 'private') {
@@ -1417,53 +1270,9 @@ class TrainingController extends Controller
         ]));
     }
 
-    private function trainingPlanComparison(TrainingLog $log): ?array
-    {
-        if (! $log->planItem) {
-            return null;
-        }
-
-        $planned = [
-            'title' => $log->planItem->title,
-            'scheduled_at' => $log->planItem->scheduled_at?->toIso8601String(),
-            'duration_minutes' => $log->planItem->duration_minutes,
-            'distance_meters' => $log->planItem->distance_meters,
-            'calories' => $log->planItem->calories,
-            'intensity' => $log->planItem->intensity,
-            'todos_count' => count($log->planItem->todos ?? []),
-            'metrics_count' => count($log->planItem->metrics ?? []),
-        ];
-
-        $actual = [
-            'title' => $log->title,
-            'performed_at' => $log->performed_at?->toIso8601String(),
-            'duration_minutes' => $log->duration_minutes,
-            'distance_meters' => $log->distance_meters,
-            'calories' => $log->calories,
-            'intensity' => $log->intensity,
-            'entries_count' => $log->relationLoaded('entries') ? $log->entries->count() : null,
-        ];
-
-        return [
-            'planned' => $planned,
-            'actual' => $actual,
-            'delta' => [
-                'duration_minutes' => $actual['duration_minutes'] !== null && $planned['duration_minutes'] !== null
-                    ? (int) $actual['duration_minutes'] - (int) $planned['duration_minutes']
-                    : null,
-                'distance_meters' => $actual['distance_meters'] !== null && $planned['distance_meters'] !== null
-                    ? (int) $actual['distance_meters'] - (int) $planned['distance_meters']
-                    : null,
-                'calories' => $actual['calories'] !== null && $planned['calories'] !== null
-                    ? (int) $actual['calories'] - (int) $planned['calories']
-                    : null,
-            ],
-        ];
-    }
-
     private function notifyTrainingFeedbackRecipients(TrainingLog $log, TrainingLogFeedback $feedback): void
     {
-        $authorName = $feedback->author ? $this->serializeUser($feedback->author)['name'] : 'Jemand';
+        $authorName = $feedback->author ? $this->resources->user($feedback->author)['name'] : 'Jemand';
         $recipientIds = collect([
             $log->user_id,
             $log->created_by,

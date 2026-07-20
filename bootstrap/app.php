@@ -5,13 +5,19 @@ use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
+use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HardenAdminArea;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\StoreIntendedUrlFromQuery;
 use App\Http\Middleware\TrackUserActivity;
+use App\Support\Api\V1\ApiContract;
+use App\Support\Api\V1\ApiErrorResponse;
+use App\Support\PermissionDeniedMessage;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,8 +25,11 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -32,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(EnsureApiCorsHeaders::class);
+        $middleware->append(ApplySecurityHeaders::class);
 
         $middleware->statefulApi();
 
@@ -72,6 +82,44 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $apiV1Request = fn (Request $request): bool => ApiContract::matches($request);
+
+        $exceptions->render(function (AuthenticationException $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::unauthenticated($exception, $request)
+                : null;
+        });
+
+        $exceptions->render(function (ValidationException $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::validation($exception, $request)
+                : null;
+        });
+
+        $exceptions->render(function (ModelNotFoundException $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::modelNotFound($exception, $request)
+                : null;
+        });
+
+        $exceptions->render(function (NotFoundHttpException $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::notFound($exception, $request)
+                : null;
+        });
+
+        $exceptions->render(function (MethodNotAllowedHttpException $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::methodNotAllowed($exception, $request)
+                : null;
+        });
+
+        $exceptions->render(function (HttpExceptionInterface $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::http($exception, $request)
+                : null;
+        });
+
         $exceptions->render(function (TokenMismatchException $exception, Request $request) {
             Log::warning('CSRF token mismatch', [
                 'method' => $request->method(),
@@ -101,25 +149,25 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $upgradePayload = function (?string $message = null): array {
-            $fallback = 'Diese Funktion ist in deinem aktuellen Paket oder mit deiner aktuellen Rolle nicht freigeschaltet. Bitte fuehre ein Upgrade durch oder bitte deinen Verein/Admin um die passende Berechtigung.';
-
             return [
                 'status' => 403,
-                'title' => 'Upgrade oder Berechtigung erforderlich',
-                'message' => $message ?: $fallback,
+                'title' => PermissionDeniedMessage::TITLE,
+                'message' => PermissionDeniedMessage::normalize($message),
                 'upgradeUrl' => route('guest.pricing'),
             ];
         };
 
-        $exceptions->render(function (AuthorizationException $exception, Request $request) use ($upgradePayload) {
+        $exceptions->render(function (AuthorizationException $exception, Request $request) use ($apiV1Request, $upgradePayload) {
+            if ($apiV1Request($request)) {
+                return ApiErrorResponse::forbidden($exception, $request);
+            }
+
             if ($request->expectsJson()) {
                 return null;
             }
 
             $rawMessage = trim((string) $exception->getMessage());
-            $message = $rawMessage && $rawMessage !== 'This action is unauthorized.'
-                ? $rawMessage
-                : null;
+            $message = PermissionDeniedMessage::normalize($rawMessage);
             $payload = $upgradePayload($message);
 
             if (! $request->isMethod('get')) {
@@ -139,9 +187,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             $rawMessage = trim((string) $exception->getMessage());
-            $message = $rawMessage && $rawMessage !== 'This action is unauthorized.'
-                ? $rawMessage
-                : null;
+            $message = PermissionDeniedMessage::normalize($rawMessage);
             $payload = $upgradePayload($message);
 
             if (! $request->isMethod('get')) {
@@ -153,5 +199,11 @@ return Application::configure(basePath: dirname(__DIR__))
             return Inertia::render('Errors/Forbidden', $payload)
                 ->toResponse($request)
                 ->setStatusCode(403);
+        });
+
+        $exceptions->render(function (\Throwable $exception, Request $request) use ($apiV1Request) {
+            return $apiV1Request($request)
+                ? ApiErrorResponse::serverError($exception, $request)
+                : null;
         });
     })->create();

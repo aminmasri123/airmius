@@ -3,19 +3,19 @@
 namespace App\Support;
 
 use App\Models\User;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class GuardianConsentState
 {
     public static function sync(User $user): void
     {
-        if (! $user->birth_date || $user->guardian_consent_at) {
+        if (! MinorSafety::isUnderConsentAge($user)) {
             return;
         }
 
-        $birthDate = Carbon::parse($user->birth_date);
-        if ($birthDate->age >= 16 || blank($user->guardian_email)) {
+        MinorSafety::enforcePrivacyDefaults($user);
+
+        if ($user->guardian_consent_at || blank($user->guardian_email)) {
             return;
         }
 

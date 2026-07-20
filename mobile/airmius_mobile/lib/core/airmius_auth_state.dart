@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -61,23 +62,20 @@ class AirmiusMemoryTokenStore implements AirmiusTokenStore {
   }
 }
 
-enum AirmiusAuthPhase {
-  booting,
-  guest,
-  authenticated,
-  expired,
-  loading,
-  error,
-}
+enum AirmiusAuthPhase { booting, guest, authenticated, expired, loading, error }
 
 class AirmiusAuthState extends ChangeNotifier {
   AirmiusAuthState({
     required this.tokenStore,
     required this.clientFactory,
+    this.onAuthenticated,
+    this.onBeforeSignOut,
   });
 
   final AirmiusTokenStore tokenStore;
   final AirmiusApiClient Function(AirmiusSession? session) clientFactory;
+  final Future<void> Function(AirmiusSession session)? onAuthenticated;
+  final Future<void> Function(AirmiusSession session)? onBeforeSignOut;
 
   AirmiusSession? _session;
   AirmiusAuthPhase _phase = AirmiusAuthPhase.booting;
@@ -86,7 +84,9 @@ class AirmiusAuthState extends ChangeNotifier {
   AirmiusSession? get session => _session;
   AirmiusAuthPhase get phase => _phase;
   String? get error => _error;
-  bool get isAuthenticated => _session?.isAuthenticated == true && _phase == AirmiusAuthPhase.authenticated;
+  bool get isAuthenticated =>
+      _session?.isAuthenticated == true &&
+      _phase == AirmiusAuthPhase.authenticated;
   AirmiusUser? get user => _session?.user;
 
   Future<void> restore() async {
@@ -109,16 +109,28 @@ class AirmiusAuthState extends ChangeNotifier {
     }
     final resolved = await _refreshUserProfileIfPossible(restored);
     _session = resolved == null ? restored : restored.copyWith(user: resolved);
+    if (resolved != null) {
+      await tokenStore.write(_session!);
+    }
     _setPhase(AirmiusAuthPhase.authenticated);
+    _notifyAuthenticated(_session!);
   }
 
-  Future<void> signIn({required String email, required String password, String locale = 'de'}) async {
+  Future<void> signIn({
+    required String email,
+    required String password,
+    String locale = 'de',
+  }) async {
     _error = null;
     _setPhase(AirmiusAuthPhase.loading);
     try {
       final guestClient = clientFactory(null);
       final json = await guestClient.login(email: email, password: password);
-      await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Login fehlgeschlagen: Token vom Server fehlt.');
+      await _completeTokenSignIn(
+        json,
+        locale: locale,
+        missingTokenMessage: 'Login fehlgeschlagen: Token vom Server fehlt.',
+      );
     } catch (error) {
       if (error is AirmiusApiException) {
         _error = _readableAuthError(error);
@@ -129,14 +141,20 @@ class AirmiusAuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> register({required JsonMap payload, String locale = 'de'}) async {
+  Future<void> register({
+    required JsonMap payload,
+    String locale = 'de',
+  }) async {
     _error = null;
     _setPhase(AirmiusAuthPhase.loading);
     try {
       final guestClient = clientFactory(null);
       final email = payload['email']?.toString().trim() ?? '';
       if (email.isNotEmpty) {
-        final existingMessage = await _existingRegistrationEmailMessage(guestClient, email);
+        final existingMessage = await _existingRegistrationEmailMessage(
+          guestClient,
+          email,
+        );
         if (existingMessage != null) {
           _error = existingMessage;
           _setPhase(AirmiusAuthPhase.error);
@@ -145,22 +163,38 @@ class AirmiusAuthState extends ChangeNotifier {
       }
 
       final json = await guestClient.register(payload);
-      await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Registrierung fehlgeschlagen: Token vom Server fehlt.');
+      await _completeTokenSignIn(
+        json,
+        locale: locale,
+        missingTokenMessage:
+            'Registrierung fehlgeschlagen: Token vom Server fehlt.',
+      );
     } catch (error) {
-      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
-      _setPhase(AirmiusAuthPhase.authenticated);
+      _error = error is AirmiusApiException
+          ? _readableAuthError(error)
+          : error.toString();
+      _setPhase(AirmiusAuthPhase.error);
     }
   }
 
-  Future<String?> _existingRegistrationEmailMessage(AirmiusApiClient client, String email) async {
+  Future<String?> _existingRegistrationEmailMessage(
+    AirmiusApiClient client,
+    String email,
+  ) async {
     try {
       final json = await client.registrationEmailStatus(email: email);
       final data = json['data'];
-      final exists = data is JsonMap ? _truthy(data['exists']) : _truthy(json['exists']);
+      final exists = data is JsonMap
+          ? _truthy(data['exists'])
+          : _truthy(json['exists']);
       if (!exists) return null;
 
-      final message = data is JsonMap ? data['message']?.toString().trim() : json['message']?.toString().trim();
-      return message == null || message.isEmpty ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.' : message;
+      final message = data is JsonMap
+          ? data['message']?.toString().trim()
+          : json['message']?.toString().trim();
+      return message == null || message.isEmpty
+          ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.'
+          : message;
     } on AirmiusApiException catch (error) {
       if (error.statusCode == 404 || error.statusCode == 405) {
         return null;
@@ -171,7 +205,10 @@ class AirmiusAuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> signInWithToken({required String token, String locale = 'de'}) async {
+  Future<void> signInWithToken({
+    required String token,
+    String locale = 'de',
+  }) async {
     final normalizedToken = token.trim();
     if (normalizedToken.isEmpty) {
       _error = 'Social Login fehlgeschlagen: Token vom Server fehlt.';
@@ -182,14 +219,23 @@ class AirmiusAuthState extends ChangeNotifier {
     _error = null;
     _setPhase(AirmiusAuthPhase.loading);
     try {
-      final tokenSession = AirmiusSession(token: normalizedToken, locale: locale);
+      final tokenSession = AirmiusSession(
+        token: normalizedToken,
+        locale: locale,
+      );
       final user = await _refreshUserProfileIfPossible(tokenSession);
-      final session = tokenSession.copyWith(user: user, clearUser: user == null);
+      final session = tokenSession.copyWith(
+        user: user,
+        clearUser: user == null,
+      );
       await tokenStore.write(session);
       _session = session;
       _setPhase(AirmiusAuthPhase.authenticated);
+      _notifyAuthenticated(session);
     } catch (error) {
-      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
+      _error = error is AirmiusApiException
+          ? _readableAuthError(error)
+          : error.toString();
       _setPhase(AirmiusAuthPhase.error);
     }
   }
@@ -219,13 +265,19 @@ class AirmiusAuthState extends ChangeNotifier {
     try {
       final sessionClient = clientFactory(current);
       final json = await sessionClient.updateProfile(payload);
-      final updatedUser = _extractUser(json) ?? await _refreshUserProfileIfPossible(current);
-      final next = current.copyWith(user: updatedUser, clearUser: updatedUser == null);
+      final updatedUser =
+          _extractUser(json) ?? await _refreshUserProfileIfPossible(current);
+      final next = current.copyWith(
+        user: updatedUser,
+        clearUser: updatedUser == null,
+      );
       await tokenStore.write(next);
       _session = next;
       _setPhase(AirmiusAuthPhase.authenticated);
     } catch (error) {
-      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
+      _error = error is AirmiusApiException
+          ? _readableAuthError(error)
+          : error.toString();
       _setPhase(AirmiusAuthPhase.error);
     }
   }
@@ -246,6 +298,7 @@ class AirmiusAuthState extends ChangeNotifier {
     if (current != null && current.token.isNotEmpty) {
       try {
         final sessionClient = clientFactory(current);
+        await _runBeforeSignOut(current);
         await sessionClient.logout();
       } catch (_) {
         // ignore backend errors on logout, local session is still removed to ensure the user can continue
@@ -256,12 +309,32 @@ class AirmiusAuthState extends ChangeNotifier {
     _setPhase(AirmiusAuthPhase.guest);
   }
 
+  void _notifyAuthenticated(AirmiusSession session) {
+    final callback = onAuthenticated;
+    if (callback == null) return;
+    unawaited(callback(session).catchError((_) {}));
+  }
+
+  Future<void> _runBeforeSignOut(AirmiusSession session) async {
+    final callback = onBeforeSignOut;
+    if (callback == null) return;
+    try {
+      await callback(session);
+    } catch (_) {
+      // Logout must not be blocked by push-device cleanup.
+    }
+  }
+
   void _setPhase(AirmiusAuthPhase phase) {
     _phase = phase;
     notifyListeners();
   }
 
-  Future<void> _completeTokenSignIn(JsonMap json, {required String locale, required String missingTokenMessage}) async {
+  Future<void> _completeTokenSignIn(
+    JsonMap json, {
+    required String locale,
+    required String missingTokenMessage,
+  }) async {
     final token = _tokenFrom(json);
     if (token.isEmpty) {
       _error = missingTokenMessage;
@@ -270,12 +343,17 @@ class AirmiusAuthState extends ChangeNotifier {
     }
 
     final loginUser = _extractUser(json);
-    final tokenSession = AirmiusSession(token: token, locale: locale, user: loginUser);
+    final tokenSession = AirmiusSession(
+      token: token,
+      locale: locale,
+      user: loginUser,
+    );
     final user = await _refreshUserProfileIfPossible(tokenSession);
     final session = tokenSession.copyWith(user: user, clearUser: user == null);
     await tokenStore.write(session);
     _session = session;
     _setPhase(AirmiusAuthPhase.authenticated);
+    _notifyAuthenticated(session);
   }
 
   String _tokenFrom(JsonMap json) {
@@ -285,17 +363,22 @@ class AirmiusAuthState extends ChangeNotifier {
       json['plain_text_token'],
       json['plainTextToken'],
       if (json['data'] is JsonMap) ...[
-        if ((json['data'] as JsonMap)['token'] is Object) (json['data'] as JsonMap)['token'],
-        if ((json['data'] as JsonMap)['access_token'] is Object) (json['data'] as JsonMap)['access_token'],
-        if ((json['data'] as JsonMap)['plain_text_token'] is Object) (json['data'] as JsonMap)['plain_text_token'],
-        if ((json['data'] as JsonMap)['plainTextToken'] is Object) (json['data'] as JsonMap)['plainTextToken'],
+        if ((json['data'] as JsonMap)['token'] is Object)
+          (json['data'] as JsonMap)['token'],
+        if ((json['data'] as JsonMap)['access_token'] is Object)
+          (json['data'] as JsonMap)['access_token'],
+        if ((json['data'] as JsonMap)['plain_text_token'] is Object)
+          (json['data'] as JsonMap)['plain_text_token'],
+        if ((json['data'] as JsonMap)['plainTextToken'] is Object)
+          (json['data'] as JsonMap)['plainTextToken'],
       ],
     ]);
     return token ?? '';
   }
 
   String _readableAuthError(AirmiusApiException error) {
-    if (error.path.contains('/auth/login') && _isLikelyInvalidCredentials(error)) {
+    if (error.path.contains('/auth/login') &&
+        _isLikelyInvalidCredentials(error)) {
       return 'E-Mail oder Passwort ist falsch.';
     }
 
@@ -399,7 +482,9 @@ class AirmiusAuthState extends ChangeNotifier {
 
   bool _isUniqueValidationMessage(String message) {
     final normalized = message.toLowerCase();
-    return normalized.contains('validation.unique') || normalized.contains('already been taken') || normalized.contains('bereits vergeben');
+    return normalized.contains('validation.unique') ||
+        normalized.contains('already been taken') ||
+        normalized.contains('bereits vergeben');
   }
 
   String _readableValidationMessage(String message) {
@@ -425,7 +510,9 @@ class AirmiusAuthState extends ChangeNotifier {
     return null;
   }
 
-  Future<AirmiusUser?> _refreshUserProfileIfPossible(AirmiusSession session) async {
+  Future<AirmiusUser?> _refreshUserProfileIfPossible(
+    AirmiusSession session,
+  ) async {
     if (session.token.isEmpty) return session.user;
     try {
       final repos = AirmiusRepositoryBundle.api(clientFactory(session));
@@ -445,7 +532,9 @@ class AirmiusAuthState extends ChangeNotifier {
       if (data['user'] is JsonMap) {
         return AirmiusUser.fromJson(data['user'] as JsonMap);
       }
-      if (data.containsKey('id') || data.containsKey('name') || data.containsKey('email')) {
+      if (data.containsKey('id') ||
+          data.containsKey('name') ||
+          data.containsKey('email')) {
         return AirmiusUser.fromJson(data);
       }
     }

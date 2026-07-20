@@ -1,5 +1,7 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -91,6 +93,8 @@ const copy = {
         terms: 'AGB',
         withdrawal: 'Widerruf',
         saveCampaign: 'Kampagne speichern',
+        saving: 'Speichert...',
+        savingCampaign: 'Kampagne wird gespeichert...',
         ownCampaigns: 'eigene Kampagnen',
         myCampaigns: 'Meine Ads-Kampagnen',
         myCampaignsHelp: 'Status, Impressionen, Klicks und CTR deiner vorbereiteten oder aktiven Kampagnen.',
@@ -176,6 +180,8 @@ const copy = {
         terms: 'Terms',
         withdrawal: 'Withdrawal',
         saveCampaign: 'Save campaign',
+        saving: 'Saving...',
+        savingCampaign: 'Saving campaign...',
         ownCampaigns: 'own campaigns',
         myCampaigns: 'My ads campaigns',
         myCampaignsHelp: 'Status, impressions, clicks and CTR of your prepared or active campaigns.',
@@ -339,9 +345,12 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                             <Link :href="route('legal.withdrawal')" class="text-air-blue underline">{{ c('withdrawal') }}</Link>
                         </span>
                     </label>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="campaignForm.processing">
-                        {{ c('saveCampaign') }}
-                    </button>
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <AppButton type="submit" :loading="campaignForm.processing" :disabled="campaignForm.processing">
+                            {{ campaignForm.processing ? c('saving') : c('saveCampaign') }}
+                        </AppButton>
+                        <AppLoadingState v-if="campaignForm.processing" :label="c('savingCampaign')" inline />
+                    </div>
                     <div v-if="campaignCreateError || campaignCreateErrors.length" class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                         <p v-if="campaignCreateError" class="font-semibold">{{ campaignCreateError }}</p>
                         <ul v-if="campaignCreateErrors.length" class="mt-2 list-disc space-y-1 pl-5">
@@ -558,7 +567,5 @@ const c = (key) => labels.value[key] || copy.de[key] || key
             </article>
         </section>
 </template>
-
-
 
 

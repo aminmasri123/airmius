@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\BillingOverview;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,7 @@ class SubscriptionInvoiceResource extends JsonResource
             'amount_cents' => $this->amount_cents,
             'currency' => $this->currency,
             'status' => $this->status,
+            'status_label' => BillingOverview::statusLabel($this->status),
             'payment_method' => $this->payment_method,
             'payment_reference' => $this->payment_reference,
             'billing_period_start' => $this->billing_period_start?->toDateString(),

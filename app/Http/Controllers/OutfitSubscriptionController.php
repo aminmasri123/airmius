@@ -11,6 +11,7 @@ use App\Models\Sport;
 use App\Models\User;
 use App\Services\OutfitInvoiceService;
 use App\Support\AppNotification;
+use App\Support\PaymentWebhookVerifier;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
@@ -924,25 +925,6 @@ class OutfitSubscriptionController extends Controller
     {
         $webhookId = config('services.paypal.outfit_webhook_id') ?: config('services.paypal.webhook_id');
 
-        if (blank($webhookId)) {
-            return config('services.paypal.mode') !== 'live';
-        }
-
-        try {
-            $response = Http::withToken($this->paypalAccessToken())
-                ->post($this->paypalBaseUrl().'/v1/notifications/verify-webhook-signature', [
-                    'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
-                    'cert_url' => $request->header('PAYPAL-CERT-URL'),
-                    'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
-                    'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
-                    'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                    'webhook_id' => $webhookId,
-                    'webhook_event' => $request->all(),
-                ]);
-
-            return $response->ok() && $response->json('verification_status') === 'SUCCESS';
-        } catch (\Throwable) {
-            return false;
-        }
+        return app(PaymentWebhookVerifier::class)->isValidPayPalWebhook($request, $webhookId);
     }
 }

@@ -30,6 +30,8 @@ const items = computed(() => [
     ['las la-chalkboard-teacher', 'guest.subnav.e_learning', safeRoute('guest.e-learning', '/e-learning')],
     ['las la-trophy', 'guest.subnav.levels', safeRoute('guest.gamification', '/gamification'), { hideOnMobile: true }],
     ['las la-warehouse', 'guest.subnav.clubs', safeRoute('guest.vereine', '/vereine')],
+    ['las la-calendar-alt', 'Events', safeRoute('guest.events', '/veranstaltungen')],
+    ['las la-running', 'Sportarten', safeRoute('guest.sports', '/sportarten')],
     ['las la-tags', 'guest.subnav.subscriptions', safeRoute('guest.pricing', '/abos')],
     ['las la-shopping-bag', 'guest.subnav.shop', safeRoute('guest.marketplace', '/marketplace')],
 ])
@@ -52,6 +54,8 @@ const items = computed(() => [
         <div
             id="guest-mobile-subnav"
             class="fixed bottom-0 left-0 right-0 z-40 rounded-t-3xl border-t border-white/10 bg-gradient-to-b from-card/98 to-bg/98 shadow-2xl shadow-black/60 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300 md:bottom-auto md:top-24 md:w-40 md:translate-y-0 md:rounded-xl md:border md:bg-card/95 md:bg-none md:opacity-100 md:shadow-xl"
+            role="navigation"
+            :aria-label="$t('guest.subnav.quick_navigation')"
             :class="[
                 mobileSubnavOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[110%] opacity-0 md:pointer-events-auto',
                 isRtl ? 'md:left-4 md:right-auto' : 'md:left-auto md:right-4'
@@ -98,6 +102,8 @@ const items = computed(() => [
     <div
         v-else
         class="fixed bottom-0 left-0 right-0 z-40 mx-auto h-16 max-w-7xl border-y border-border bg-card/90 backdrop-blur transition-all duration-300 sm:px-6 md:top-16"
+        role="navigation"
+        :aria-label="$t('guest.subnav.quick_navigation')"
     >
         <div class="hidden items-center justify-center gap-6 py-2 text-sm font-medium text-secondary md:flex">
             <Link
@@ -130,4 +136,3 @@ const items = computed(() => [
         </div>
     </div>
 </template>
-

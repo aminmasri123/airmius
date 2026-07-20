@@ -255,7 +255,7 @@ class _Tabs extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final item = values[index];
           final active = item == value;
@@ -322,7 +322,7 @@ class _AdminFinanceCard extends StatelessWidget {
           Container(
             width: 54,
             height: 54,
-            decoration: BoxDecoration(color: item.color.withOpacity(.14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withOpacity(.45))),
+            decoration: BoxDecoration(color: item.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .45))),
             child: Icon(item.icon, color: item.color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -452,7 +452,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withOpacity(.55))),
+      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
       child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }

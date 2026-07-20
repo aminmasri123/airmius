@@ -12,6 +12,7 @@ use App\Models\UserSport;
 use App\Models\UserBadge;
 use App\Models\UserSportSkill;
 use App\Services\GamificationService;
+use App\Services\SportProfileScoutService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,7 +21,10 @@ class UserController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private GamificationService $gamification) {}
+    public function __construct(
+        private GamificationService $gamification,
+        private SportProfileScoutService $sportProfiles,
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -130,6 +134,8 @@ class UserController extends Controller
 
         $gamification = $this->gamification->summaryFor($user);
 
+        $sportCv = $this->sportProfiles->sportCv($user, $viewer);
+
         $sportSkills = collect();
         $recommendations = collect();
         $posts = collect();
@@ -202,6 +208,8 @@ class UserController extends Controller
                 'profile_photo_url' => $user->profile_photo_url,
                 'direct_message_privacy' => $user->direct_message_privacy ?? 'everyone',
                 'friend_request_privacy' => $user->friend_request_privacy ?? 'everyone',
+                'sport_cv' => $sportCv,
+                'profile_privacy' => $sportCv['privacy_matrix'] ?? null,
                 'followers_count' => $user->followers_count,
                 'following_count' => $user->following_count,
                 'posts_count' => $user->posts_count,

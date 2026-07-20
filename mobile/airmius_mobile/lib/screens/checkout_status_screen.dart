@@ -3,8 +3,6 @@ import 'marketplace_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
-import 'marketplace_operations_screen.dart';
 
 class CheckoutStatusScreen extends StatefulWidget {
   const CheckoutStatusScreen({
@@ -83,8 +81,8 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Benachrichtigung'),
-            SwitchListTile(value: _sendReceipt, onChanged: (value) => setState(() => _sendReceipt = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beleg per E-Mail senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rechnung, Bankdaten oder Abbruchinfo zustellen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _notifyClub, onChanged: (value) => setState(() => _notifyClub = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Verein / Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Bei Club-Abos, Bestellungen oder Outfit-Lieferungen relevant.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _sendReceipt, onChanged: (value) => setState(() => _sendReceipt = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beleg per E-Mail senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rechnung, Bankdaten oder Abbruchinfo zustellen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notifyClub, onChanged: (value) => setState(() => _notifyClub = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Verein / Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Bei Club-Abos, Bestellungen oder Outfit-Lieferungen relevant.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

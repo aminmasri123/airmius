@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Models\User;
 use App\Notifications\AccountWelcomeNotification;
 use App\Support\GuardianConsentNotifier;
+use App\Support\MinorSafety;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +25,8 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        $input['gender'] = filled($input['gender'] ?? null) ? $input['gender'] : 'not_specified';
+
         Validator::make($input, [
             'first_name' => ['required', 'string', 'max:120'],
             'last_name' => ['required', 'string', 'max:120'],
@@ -82,6 +85,7 @@ class CreateNewUser implements CreatesNewUsers
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
+            ...($requiresGuardianConsent ? MinorSafety::privacyDefaults() : []),
             'password' => Hash::make($input['password']),
         ]);
 

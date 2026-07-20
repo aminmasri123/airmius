@@ -14,6 +14,7 @@
                       "status":  "pending_execution",
                       "required_evidence":  "Local prerequisite log confirms Flutter command, required scripts/files, Android SDK, adb, cmdline-tools, Android licenses and Java are available",
                       "local_command":  "scripts/assert_local_release_prerequisites.ps1",
+                      "linux_local_command":  "scripts/assert_linux_android_release_prerequisites.sh --require-android-device && scripts/run_android_real_device_smoke.sh --build-release",
                       "ci_artifacts":  [
                                            "release_evidence/local-release-prerequisites.log"
                                        ]
@@ -86,6 +87,7 @@
                       "status":  "pending_execution",
                       "required_evidence":  "No-codesign CI build plus signed IPA/TestFlight evidence",
                       "local_command":  "flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true",
+                      "macos_local_command":  "scripts/run_ios_real_device_smoke.sh --build-ipa",
                       "ci_artifacts":  [
                                            "airmius-mobile-ios-release-evidence/ios-release-build-no-codesign.log",
                                            "airmius-mobile-ios-release-evidence/artifacts/Runner.app.zip"
@@ -110,6 +112,20 @@
                       "status":  "pending_capture",
                       "required_evidence":  "Android and iOS screenshot folders captured from release-equivalent app",
                       "runbook":  "store_listing/screenshots/screenshot_capture_plan.md"
+                  },
+                  {
+                      "id":  "real_device_smoke",
+                      "title":  "Android and iOS Real Device Smoke",
+                      "owner":  "Mobile",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Android and iOS real-device or TestFlight evidence for login, push, upload and deep links",
+                      "local_command":  "scripts/run_android_real_device_smoke.sh --build-release && scripts/assert_real_device_smoke_evidence.sh",
+                      "macos_local_command":  "scripts/run_ios_real_device_smoke.sh --build-ipa",
+                      "runbook":  "store_listing/release/real_device_smoke_test_runbook.md",
+                      "ci_artifacts":  [
+                                           "release_evidence/manual/real_device_smoke/android-real-device-smoke.md",
+                                           "release_evidence/manual/real_device_smoke/ios-real-device-smoke.md"
+                                       ]
                   },
                   {
                       "id":  "real_api_qa",

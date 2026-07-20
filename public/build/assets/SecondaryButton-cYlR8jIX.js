@@ -1,0 +1,1 @@
+import{_ as a}from"./AppButton-Cajnaxel.js";import{A as o,y as r,m as n,o as s}from"./vendor-vue-DzErvHCd.js";const m={__name:"SecondaryButton",props:{type:{type:String,default:"button"}},setup(t){return(e,p)=>(s(),o(a,{type:t.type,variant:"secondary"},{default:r(()=>[n(e.$slots,"default")]),_:3},8,["type"]))}};export{m as _};

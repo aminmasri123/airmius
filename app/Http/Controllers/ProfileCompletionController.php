@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\GuardianConsentNotifier;
+use App\Support\MinorSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -50,6 +51,7 @@ class ProfileCompletionController extends Controller
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
+            ...($requiresGuardianConsent ? MinorSafety::privacyDefaults() : []),
         ]);
 
         if ($requiresGuardianConsent) {

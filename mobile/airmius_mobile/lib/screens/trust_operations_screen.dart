@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/api_contract.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class TrustOperationsScreen extends StatefulWidget {
   const TrustOperationsScreen({super.key, this.initialTab = 'Verifizierung'});
@@ -41,9 +40,9 @@ class _TrustOperationsScreenState extends State<TrustOperationsScreen> {
             const SizedBox(height: 8),
             const Text('Verifizierung und Moderation sind Entscheidungen mit Wirkung nach aussen. Die mobile UI zeigt deshalb Status, Audit, Benachrichtigung, Eskalation und Begruendung immer sichtbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 12),
-            SwitchListTile(value: _notifyAffected, onChanged: (value) => setState(() => _notifyAffected = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Verein, User oder Reporter bekommt Statusupdate.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entscheidung nur mit Grund und Bearbeiter speichern.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _escalate, onChanged: (value) => setState(() => _escalate = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Eskalieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Safety, Recht, Zahlung oder Minderjaehrige priorisieren.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notifyAffected, onChanged: (value) => setState(() => _notifyAffected = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Verein, User oder Reporter bekommt Statusupdate.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entscheidung nur mit Grund und Bearbeiter speichern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _escalate, onChanged: (value) => setState(() => _escalate = value), activeThumbColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Eskalieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Safety, Recht, Zahlung oder Minderjaehrige priorisieren.', style: TextStyle(color: AirmiusColors.muted))),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [for (final tab in _tabs) ChoiceChip(label: Text(tab), selected: _tab == tab, onSelected: (_) => setState(() => _tab = tab), selectedColor: AirmiusColors.amber.withValues(alpha: .22), backgroundColor: AirmiusColors.panelSoft, side: BorderSide(color: _tab == tab ? AirmiusColors.amber : AirmiusColors.border), labelStyle: TextStyle(color: _tab == tab ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900))]),
           ])),

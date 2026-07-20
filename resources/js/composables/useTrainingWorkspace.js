@@ -28,6 +28,8 @@ export function useTrainingWorkspace(props) {
     const selectedDraft = ref(null)
     const activityImageInput = ref(null)
     const planImageInput = ref(null)
+    const itemImageInput = ref(null)
+    const editItemImageInput = ref(null)
     const draggedItem = ref(null)
 
     const planWizardStep = ref(0)
@@ -831,6 +833,8 @@ export function useTrainingWorkspace(props) {
         selectedDraft,
         activityImageInput,
         planImageInput,
+        itemImageInput,
+        editItemImageInput,
         draggedItem,
         planWizardStep,
         activityForm,

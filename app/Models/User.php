@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\MyCustomResetPassword;
+use App\Support\MinorSafety;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -123,6 +124,7 @@ class User extends Authenticatable
             'guardian_consent_at' => 'datetime',
             'guardian_consent_rejected_at' => 'datetime',
             'guardian_consent_revoked_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
             'event_radius_km' => 'integer',
             'event_default_sport_ids' => 'array',
             'event_default_filters' => 'array',
@@ -249,6 +251,16 @@ class User extends Authenticatable
     public function commerceShippingAddresses()
     {
         return $this->hasMany(CommerceShippingAddress::class);
+    }
+
+    public function marketplaceSellerApplications()
+    {
+        return $this->hasMany(MarketplaceSellerApplication::class);
+    }
+
+    public function approvedSellerApplications()
+    {
+        return $this->marketplaceSellerApplications()->where('status', 'approved');
     }
 
     public function subscriptionInvoices()
@@ -415,6 +427,10 @@ class User extends Authenticatable
             return false;
         }
 
+        if (! MinorSafety::canDirectMessage($user, $this)) {
+            return false;
+        }
+
         return ($this->direct_message_privacy ?? 'everyone') === 'everyone'
             || $this->isFriendsWith($user);
     }
@@ -442,6 +458,10 @@ class User extends Authenticatable
 
     public function isProfileVisibleTo(?User $user): bool
     {
+        if (! MinorSafety::canViewMinorProfile($this, $user)) {
+            return false;
+        }
+
         return $this->profile_visibility !== 'private'
             || $user?->id === $this->id
             || $user?->can('user.manage')

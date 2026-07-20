@@ -13,6 +13,7 @@ use App\Notifications\SubscriptionInvoicePaid;
 use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
+use App\Support\PaymentWebhookVerifier;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
@@ -1113,49 +1114,11 @@ class SubscriptionCheckoutController extends Controller
 
     private function isValidStripeSignature(string $payload, ?string $signature): bool
     {
-        $secret = config('services.stripe.webhook_secret');
-
-        if (blank($secret)) {
-            return true;
-        }
-
-        if (! $signature) {
-            return false;
-        }
-
-        $parts = collect(explode(',', $signature))
-            ->mapWithKeys(function ($part) {
-                [$key, $value] = array_pad(explode('=', $part, 2), 2, null);
-
-                return [$key => $value];
-            });
-        $timestamp = $parts->get('t');
-        $expected = hash_hmac('sha256', $timestamp.'.'.$payload, $secret);
-
-        return hash_equals($expected, (string) $parts->get('v1'));
+        return app(PaymentWebhookVerifier::class)->isValidStripeSignature($payload, $signature);
     }
 
     private function isValidPayPalWebhook(Request $request): bool
     {
-        if (blank(config('services.paypal.webhook_id'))) {
-            return true;
-        }
-
-        try {
-            $response = Http::withToken($this->paypalAccessToken())
-                ->post($this->paypalBaseUrl().'/v1/notifications/verify-webhook-signature', [
-                    'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
-                    'cert_url' => $request->header('PAYPAL-CERT-URL'),
-                    'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
-                    'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
-                    'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                    'webhook_id' => config('services.paypal.webhook_id'),
-                    'webhook_event' => $request->all(),
-                ]);
-
-            return $response->ok() && $response->json('verification_status') === 'SUCCESS';
-        } catch (\Throwable) {
-            return false;
-        }
+        return app(PaymentWebhookVerifier::class)->isValidPayPalWebhook($request, config('services.paypal.webhook_id'));
     }
 }

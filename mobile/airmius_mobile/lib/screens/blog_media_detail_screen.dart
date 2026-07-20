@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class BlogMediaDetailScreen extends StatefulWidget {
   const BlogMediaDetailScreen({super.key, required this.title, required this.status});
@@ -46,7 +45,7 @@ class _BlogMediaDetailScreenState extends State<BlogMediaDetailScreen> {
             const Eyebrow('Publikation'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _publish,
+              initialValue: _publish,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Status'),
               items: const ['Entwurf', 'Review', 'Geplant', 'Veröffentlicht'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -66,7 +65,7 @@ class _BlogMediaDetailScreenState extends State<BlogMediaDetailScreen> {
                 ),
             ]),
             const SizedBox(height: 8),
-            SwitchListTile(value: _comments, onChanged: (value) => setState(() => _comments = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Kommentare erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kommentare werden moderierbar im Feed angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _comments, onChanged: (value) => setState(() => _comments = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Kommentare erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kommentare werden moderierbar im Feed angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -74,8 +73,8 @@ class _BlogMediaDetailScreenState extends State<BlogMediaDetailScreen> {
             const SizedBox(height: 8),
             Container(height: 150, decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(18), border: Border.all(color: AirmiusColors.border)), child: const Center(child: Icon(Icons.perm_media_outlined, color: AirmiusColors.blue, size: 42))),
             const SizedBox(height: 8),
-            SwitchListTile(value: _imageRights, onChanged: (value) => setState(() => _imageRights = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Bildrechte bestätigt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datei wird mit Richtlinie und Autor verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _guardianConsent, onChanged: (value) => setState(() => _guardianConsent = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Guardian Consent geprüft', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Pflicht bei Minderjaehrigen auf Foto oder Video.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _imageRights, onChanged: (value) => setState(() => _imageRights = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Bildrechte bestätigt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datei wird mit Richtlinie und Autor verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _guardianConsent, onChanged: (value) => setState(() => _guardianConsent = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Guardian Consent geprüft', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Pflicht bei Minderjaehrigen auf Foto oder Video.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

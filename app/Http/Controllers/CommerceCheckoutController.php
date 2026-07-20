@@ -31,30 +31,28 @@ use App\Models\Sport;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionAddonPurchase;
 use App\Models\SubscriptionInvoice;
-use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderCompleted;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceCartService;
 use App\Services\CommerceDocumentService;
+use App\Services\CommerceCheckoutPayloadService;
 use App\Services\CommerceLearningOrderService;
 use App\Services\CommercePaymentGatewayService;
+use App\Services\MarketplacePricingService;
 use App\Services\MarketplaceProductImportService;
 use App\Services\MediaOptimizer;
-use App\Services\MarketplacePricingService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\CommerceOrderSupport;
 use App\Support\CommerceOrderNotifier;
-use App\Support\EuVatId;
 use App\Support\MarketplaceProductInput;
 use App\Support\MarketplaceProductQualityGate;
 use App\Support\MarketplaceSellerReadiness;
 use App\Support\Roles;
 use App\Support\UploadStorage;
-use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
@@ -68,12 +66,13 @@ class CommerceCheckoutController extends Controller
 {
     public function __construct(
         private ModerationService $moderation,
+        private CommerceCartService $cartService,
         private MarketplacePricingService $pricing,
         private CommerceAuditService $audit,
         private CommerceDocumentService $documents,
         private MediaOptimizer $mediaOptimizer,
         private CommerceOrderSupport $orderSupport,
-        private CommerceCartService $cartService,
+        private CommerceCheckoutPayloadService $checkoutPayload,
         private CommerceLearningOrderService $learningOrders,
         private MarketplaceProductImportService $productImport,
         private CommercePaymentGatewayService $payments,
@@ -104,7 +103,7 @@ class CommerceCheckoutController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),
-            'accountPlans' => $this->accountPlansFor($request),
+            'accountPlans' => $this->checkoutPayload->accountPlansFor($request),
             'products' => MarketplaceProduct::query()
                 ->where('status', 'published')
                 ->where(fn ($query) => $query
@@ -208,11 +207,11 @@ class CommerceCheckoutController extends Controller
                 ->latest('id')
                 ->limit(20)
                 ->get(),
-            'cart' => $this->cartResource($request),
-            'pricingCountries' => $this->pricingCountries(),
-            'checkoutAddress' => $this->shippingAddressForAuthenticatedUser($request, []),
-            'profileAddress' => $this->profileAddressFor($request->user()),
-            'shippingAddresses' => $this->shippingAddressesFor($request->user()),
+            'cart' => $this->checkoutPayload->cartResource($request),
+            'pricingCountries' => $this->checkoutPayload->pricingCountries(),
+            'checkoutAddress' => $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, []),
+            'profileAddress' => $this->checkoutPayload->profileAddressFor($request->user()),
+            'shippingAddresses' => $this->checkoutPayload->shippingAddressesFor($request->user()),
         ]);
     }
 
@@ -224,60 +223,13 @@ class CommerceCheckoutController extends Controller
                 'name' => $request->user()->name,
                 'email' => $request->user()->email,
             ] : null,
-            'cart' => $this->cartResource($request),
-            'pricingCountries' => $this->pricingCountries(),
-            'checkoutAddress' => $this->shippingAddressForAuthenticatedUser($request, []),
-            'profileAddress' => $this->profileAddressFor($request->user()),
-            'shippingAddresses' => $this->shippingAddressesFor($request->user()),
+            'cart' => $this->checkoutPayload->cartResource($request),
+            'pricingCountries' => $this->checkoutPayload->pricingCountries(),
+            'checkoutAddress' => $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, []),
+            'profileAddress' => $this->checkoutPayload->profileAddressFor($request->user()),
+            'shippingAddresses' => $this->checkoutPayload->shippingAddressesFor($request->user()),
             'marketplaceVisuals' => $this->marketplaceVisuals(),
         ]);
-    }
-
-    private function accountPlansFor(Request $request): array
-    {
-        $resolvedCountry = app(VisitorCountry::class)->resolve($request, $request->user()?->country);
-        $activePlanIds = $request->user()
-            ? $request->user()
-                ->subscriptions()
-                ->whereIn('status', ['active', 'trialing'])
-                ->pluck('subscription_plan_id')
-                ->all()
-            : [];
-
-        return SubscriptionPlan::query()
-            ->with('countryPrices')
-            ->where('target_actor', 'sportler')
-            ->where('is_public', true)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(function (SubscriptionPlan $plan) use ($resolvedCountry, $activePlanIds) {
-                $price = $plan->priceForCountry($resolvedCountry['country']);
-
-                if (! $price['available']) {
-                    return null;
-                }
-
-                return [
-                    'id' => $plan->id,
-                    'slug' => $plan->slug,
-                    'name' => $plan->name,
-                    'description' => $plan->description,
-                    'monthly_price_cents' => $price['monthly_price_cents'],
-                    'yearly_price_cents' => $price['yearly_price_cents'],
-                    'currency' => $price['currency'],
-                    'pricing_country' => $price['country_code'],
-                    'localized_price' => $price['localized'],
-                    'storage_gb' => $plan->storage_gb,
-                    'features' => $plan->features ?? [],
-                    'cta_label' => $plan->cta_label,
-                    'badge' => $plan->badge,
-                    'is_owned' => in_array($plan->id, $activePlanIds, true),
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
     }
 
     private function commerceClubsFor(User $user)
@@ -623,7 +575,7 @@ class CommerceCheckoutController extends Controller
             'coupon_code' => ['nullable', 'string', 'max:40'],
         ]);
         $quantity = (int) ($data['quantity'] ?? 1);
-        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
+        $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
         if (! $this->cartService->hasSellableStock($product, $shippingAddress['country'], $quantity)) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
@@ -643,7 +595,7 @@ class CommerceCheckoutController extends Controller
             'commerce_warehouse_id' => $fulfillmentInventory->commerce_warehouse_id,
             'country_code' => $fulfillmentInventory->country_code,
         ] : null;
-        $customer = $this->customerFromData($data);
+        $customer = $this->checkoutPayload->customerFromData($data);
 
         $order = CommerceOrder::create([
             'user_id' => $request->user()->id,
@@ -652,7 +604,7 @@ class CommerceCheckoutController extends Controller
             'orderable_id' => $product->id,
             'type' => 'marketplace_product',
             'provider' => $data['provider'],
-            ...$this->orderAmountsFromQuote($quote),
+            ...$this->checkoutPayload->orderAmountsFromQuote($quote),
             'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
             'currency' => $quote['currency'],
             'tax_country' => $quote['country'],
@@ -759,9 +711,9 @@ class CommerceCheckoutController extends Controller
         $cart = $this->cartService->cartFor($request->user())->load('items.product');
         abort_if($cart->items->isEmpty(), 422, 'Dein Einkaufswagen ist leer.');
 
-        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
+        $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
-        $customer = $this->customerFromData($data);
+        $customer = $this->checkoutPayload->customerFromData($data);
         $summary = $this->cartService->quote($cart, $shippingAddress, $customer);
 
         DB::transaction(function () use ($cart, $shippingAddress) {
@@ -1284,7 +1236,7 @@ class CommerceCheckoutController extends Controller
         );
 
         $product->load(['user:id,name', 'club:id,name']);
-        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, []);
+        $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, []);
         $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
         $this->rememberMarketplaceInterest($request, $product, 'view');
 
@@ -1296,10 +1248,10 @@ class CommerceCheckoutController extends Controller
                 'club' => $product->club,
             'price' => $quote,
             ],
-            'pricingCountries' => $this->pricingCountries(),
+            'pricingCountries' => $this->checkoutPayload->pricingCountries(),
             'checkoutAddress' => $shippingAddress,
-            'profileAddress' => $this->profileAddressFor($request->user()),
-            'shippingAddresses' => $this->shippingAddressesFor($request->user()),
+            'profileAddress' => $this->checkoutPayload->profileAddressFor($request->user()),
+            'shippingAddresses' => $this->checkoutPayload->shippingAddressesFor($request->user()),
         ]);
     }
 
@@ -3610,39 +3562,6 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
-    private function shippingAddressForAuthenticatedUser(Request $request, array $data): array
-    {
-        $user = $request->user();
-
-        return [
-            'country' => strtoupper((string) ($data['shipping_country'] ?? $user?->country ?? 'DE')),
-            'state' => trim((string) ($data['shipping_state'] ?? $user?->state ?? '')),
-            'postal_code' => trim((string) ($data['shipping_postal_code'] ?? $user?->postal_code ?? '')),
-            'city' => trim((string) ($data['shipping_city'] ?? $user?->city ?? '')),
-            'street' => trim((string) ($data['shipping_street'] ?? $user?->street ?? '')),
-            'house_number' => trim((string) ($data['shipping_house_number'] ?? $user?->house_number ?? '')),
-        ];
-    }
-
-    private function profileAddressFor(?\App\Models\User $user): ?array
-    {
-        if (! $user) {
-            return null;
-        }
-
-        return $this->addressResource([
-            'id' => 'profile',
-            'label' => 'Meine Adresse',
-            'country' => $user->country ?: 'DE',
-            'state' => $user->state,
-            'postal_code' => $user->postal_code,
-            'city' => $user->city,
-            'street' => $user->street,
-            'house_number' => $user->house_number,
-            'is_default' => false,
-        ]);
-    }
-
     private function providerProfileForUser(User $user): MarketplaceProviderProfile
     {
         return MarketplaceProviderProfile::query()->firstOrCreate(
@@ -3784,46 +3703,6 @@ class CommerceCheckoutController extends Controller
         abort_unless((int) $location->providerProfile?->user_id === (int) $request->user()->id, 403);
     }
 
-    private function shippingAddressesFor(?\App\Models\User $user): array
-    {
-        if (! $user) {
-            return [];
-        }
-
-        return CommerceShippingAddress::query()
-            ->where('user_id', $user->id)
-            ->orderByDesc('is_default')
-            ->latest('id')
-            ->get()
-            ->map(fn (CommerceShippingAddress $address) => $this->addressResource($address->toArray()))
-            ->all();
-    }
-
-    private function addressResource(array $address): array
-    {
-        $lineOne = trim(implode(' ', array_filter([
-            $address['street'] ?? '',
-            $address['house_number'] ?? '',
-        ])));
-        $lineTwo = trim(implode(' ', array_filter([
-            $address['postal_code'] ?? '',
-            $address['city'] ?? '',
-        ])));
-
-        return [
-            'id' => $address['id'] ?? null,
-            'label' => $address['label'] ?: ($lineOne ?: 'Lieferadresse'),
-            'country' => strtoupper((string) ($address['country'] ?? 'DE')),
-            'state' => trim((string) ($address['state'] ?? '')),
-            'postal_code' => trim((string) ($address['postal_code'] ?? '')),
-            'city' => trim((string) ($address['city'] ?? '')),
-            'street' => trim((string) ($address['street'] ?? '')),
-            'house_number' => trim((string) ($address['house_number'] ?? '')),
-            'is_default' => (bool) ($address['is_default'] ?? false),
-            'summary' => trim(implode(', ', array_filter([$lineOne, $lineTwo, strtoupper((string) ($address['country'] ?? 'DE'))]))),
-        ];
-    }
-
     private function saveShippingAddressIfRequested(Request $request, array $data, array $address): void
     {
         $user = $request->user();
@@ -3856,35 +3735,6 @@ class CommerceCheckoutController extends Controller
         );
     }
 
-    private function customerFromData(array $data): array
-    {
-        return [
-            'type' => ($data['customer_type'] ?? 'consumer') === 'business' ? 'business' : 'consumer',
-            'company' => trim((string) ($data['customer_company'] ?? '')),
-            'vat_id' => EuVatId::normalize((string) ($data['customer_vat_id'] ?? '')),
-            'vat_id_is_valid' => EuVatId::looksValid((string) ($data['customer_vat_id'] ?? '')),
-        ];
-    }
-
-    private function orderAmountsFromQuote(array $quote): array
-    {
-        return [
-            'item_gross_cents' => (int) ($quote['item_gross_cents'] ?? $quote['gross_cents']),
-            'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
-            'net_cents' => (int) ($quote['net_cents'] ?? 0),
-            'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
-            'amount_cents' => (int) ($quote['gross_cents'] ?? 0),
-        ];
-    }
-
-    private function cartResource(Request $request): array
-    {
-        return $this->cartService->resourceFor(
-            $request->user(),
-            $this->shippingAddressForAuthenticatedUser($request, []),
-        );
-    }
-
     private function marketplaceVisuals(): array
     {
         $defaults = [
@@ -3909,11 +3759,6 @@ class CommerceCheckoutController extends Controller
         return $visuals;
     }
 
-    private function looksLikeEuVatId(?string $vatId): bool
-    {
-        return EuVatId::looksValid($vatId);
-    }
-
     private function nextDocumentNumber(string $settingKey, string $prefix): string
     {
         return DB::transaction(function () use ($settingKey, $prefix) {
@@ -3924,17 +3769,4 @@ class CommerceCheckoutController extends Controller
         });
     }
 
-    private function pricingCountries(): array
-    {
-        return collect($this->pricing->taxProfiles())
-            ->map(fn (array $profile, string $country) => [
-                'country' => $country,
-                'currency' => $profile['currency'],
-                'tax_rate' => $profile['tax_rate'],
-                'label' => $country.' - '.$profile['currency'].' - '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
-            ])
-            ->values()
-            ->all();
-    }
 }
-

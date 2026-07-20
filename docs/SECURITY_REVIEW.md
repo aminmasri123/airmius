@@ -1,6 +1,6 @@
 # Airmius Security Kurzprüfung
 
-Stand: 2026-05-04
+Stand: 2026-07-17
 
 Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. Der aktuelle Stand wirkt als Beta-Basis ordentlich, muss vor einem öffentlichen Produktivstart aber noch gehärtet und mit echten Provider-Daten getestet werden.
 
@@ -20,7 +20,19 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
   - Remember Token.
   - Two-Factor-Daten.
 - Debug-Ausgabe im Profilformular entfernt.
-- Webhook-Routen sind von CSRF ausgenommen und müssen über Provider-Signaturen geschützt werden.
+- Webhook-Routen sind von CSRF ausgenommen und ueber Provider-Signaturen geschuetzt:
+  - Stripe nutzt `STRIPE_WEBHOOK_SECRET`, HMAC-SHA256 und ein konfigurierbares Toleranzfenster.
+  - PayPal nutzt die Provider-Verifikation `/v1/notifications/verify-webhook-signature` mit dem jeweiligen Webhook-ID-Kontext fuer Abo, Commerce und Outfit.
+- Globale Security-Header sind per `App\Http\Middleware\ApplySecurityHeaders` aktiv:
+  - `Content-Security-Policy` mit `default-src 'self'`, `object-src 'none'` und `frame-ancestors 'none'`.
+  - `X-Frame-Options: DENY`.
+  - `Referrer-Policy: strict-origin-when-cross-origin`.
+  - `X-Content-Type-Options: nosniff`.
+  - `Permissions-Policy` mit gesperrter Kamera/Mikrofon/USB und erlaubter Geolocation nur fuer die eigene Origin.
+  - `Strict-Transport-Security` bei HTTPS-Requests.
+- Plattform-Adminrollen `super_admin`, `admin` und `system_admin` muessen bestaetigte 2FA haben:
+  - Web-Adminbereich wird sonst zu `/settings?tab=security` umgeleitet.
+  - Mobile/API-Adminrouten liefern `403` mit Code `admin_two_factor_required`.
 
 ## Vor Beta prüfen
 
@@ -29,8 +41,8 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
 - `APP_URL=https://deine-domain.de` setzen.
 - `SESSION_SECURE_COOKIE=true` setzen, sobald HTTPS aktiv ist.
 - Google/Microsoft OAuth Redirect-URLs exakt auf die echte Domain setzen.
-- Stripe- und PayPal-Webhooks mit echten Secrets/Webhook-IDs testen.
-- Admin-Konten mit Zwei-Faktor-Authentifizierung absichern.
+- Stripe- und PayPal-Webhooks mit echten Sandbox-Secrets/Webhook-IDs gegen Provider-Testevents pruefen.
+- Admin-Konten mit Zwei-Faktor-Authentifizierung anlegen und Recovery-Codes sicher ablegen.
 - Rollen und Berechtigungen für Adminbereiche manuell testen.
 - Elternzustimmung, Profilvervollständigung und Wartungsmodus mit echten Rollen testen.
 - Moderationsflows mit harmlosen Testfällen prüfen.
@@ -38,12 +50,8 @@ Diese Datei ist eine technische Kurzprüfung, kein externer Penetrationstest. De
 
 ## Vor Produktion härten
 
-- HTTPS erzwingen und HSTS aktivieren.
-- Security Header setzen:
-  - Content-Security-Policy.
-  - X-Frame-Options oder `frame-ancestors`.
-  - Referrer-Policy.
-  - Permissions-Policy.
+- HTTPS auf dem Server erzwingen und HSTS im Produktivbetrieb mit echter Domain pruefen.
+- Content-Security-Policy nach jeder neuen externen Integration pruefen und enger ziehen, sobald keine Inline-Skripte mehr benoetigt werden.
 - Rate-Limits für öffentliche und sensible Endpunkte prüfen:
   - Login.
   - Registrierung.

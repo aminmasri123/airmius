@@ -460,6 +460,7 @@ class LegalPageController extends Controller
                 'title' => 'Notwendige Cookies',
                 'body' => [
                     'Airmius nutzt notwendige Cookies und lokale Speichermechanismen für Login, Sicherheit, Sprache, Theme, CSRF-Schutz und Sitzungsverwaltung.',
+                    'Weitere lokale Speicherwerte wie Theme, Sprache, Dashboard-Anordnung oder Landingpage-Variante werden nur für die gewünschte Darstellung und Bedienung der Plattform genutzt.',
                     'Hostinger verarbeitet technisch notwendige Verbindungsdaten für den Abruf der Plattform.',
                     'Cloudflare kann technisch notwendige Verbindungsdaten für Sicherheit, R2-Speicherabruf und CDN-Auslieferung verarbeiten.',
                     'Diese Technologien sind für den Betrieb der Plattform erforderlich.',
@@ -469,6 +470,8 @@ class LegalPageController extends Controller
                 'title' => 'Optionale Technologien',
                 'body' => [
                     'Analyse-, Marketing- oder Tracking-Technologien dürfen nur eingesetzt werden, wenn sie hier konkret benannt werden und eine erforderliche Einwilligung eingeholt wird.',
+                    'Aktuell bindet Airmius im Weblayout keine externen Analytics-, Marketing-, Retargeting- oder Pixel-Skripte ein.',
+                    'Clientseitige Landingpage-Events an dataLayer oder gtag werden technisch blockiert, solange keine Einwilligung zur Werbe-/Conversion-Messung gespeichert ist.',
                     'Airmius kann für eigene Ads- und Sponsorbereiche Kampagnenmessung einsetzen, insbesondere Impressionen, Klicks, Budgetverbrauch, Frequenzbegrenzung und Conversion-Zuordnung. Diese Messung dient Abrechnung, Reporting, Budgetkontrolle, Optimierung und Missbrauchsvermeidung.',
                     'Personalisierte Werbung, Retargeting, Conversion-Messung, externe Pixel oder Cross-Site-Tracking werden nur eingesetzt, wenn du vorher eingewilligt hast.',
                     'Wenn du personalisierte Werbung erlaubst, kann Airmius einfache Marketplace-Interessen und Anzeigeninteraktionen verwenden, um passendere Anzeigen auszuspielen.',

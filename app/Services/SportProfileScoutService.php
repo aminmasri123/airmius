@@ -22,17 +22,30 @@ class SportProfileScoutService
 
         $visible = ($profileUser->profile_visibility ?? 'public') === 'public'
             || ($viewer && (int) $viewer->id === (int) $profileUser->id);
+        $privacyMatrix = $this->privacyMatrix($profileUser, $viewer, $visible);
 
         if (! $visible) {
             return [
                 'user_id' => $profileUser->id,
                 'visibility' => 'private',
+                'headline' => 'Privates Sportprofil',
                 'headline_key' => 'profile.sport_cv.private_headline',
                 'primary_sports' => [],
                 'best_metrics' => [],
                 'verified_skills' => [],
+                'top_skills' => [],
+                'proof' => [],
+                'profile_quality' => [
+                    'version' => '2026-06-03',
+                    'score' => 0,
+                    'level' => 'private',
+                    'missing' => [],
+                ],
+                'career_timeline' => [],
                 'recommendation_summary' => ['approved_count' => 0],
                 'scout_card' => ['ready' => false],
+                'next_actions' => [],
+                'privacy_matrix' => $privacyMatrix,
             ];
         }
 
@@ -44,6 +57,7 @@ class SportProfileScoutService
             ->where('status', 'approved')
             ->count();
         $score = $this->profileScore($sportProfiles, $bestMetrics, $skills, $recommendationsCount);
+        $profileQuality = $this->profileQuality($sportProfiles, $bestMetrics, $skills, $recommendationsCount);
 
         return [
             'user_id' => $profileUser->id,
@@ -67,6 +81,10 @@ class SportProfileScoutService
                 ->all(),
             'best_metrics' => $bestMetrics,
             'verified_skills' => $skills,
+            'top_skills' => $skills,
+            'proof' => $this->proof($recommendationsCount, $skills),
+            'profile_quality' => $profileQuality,
+            'career_timeline' => $this->careerTimeline($sportProfiles, $bestMetrics),
             'recommendation_summary' => [
                 'approved_count' => $recommendationsCount,
                 'has_trainer_recommendation' => ProfileRecommendation::query()
@@ -91,6 +109,8 @@ class SportProfileScoutService
                     'trust_score' => $profileUser->trust_score ?? 100,
                 ],
             ],
+            'next_actions' => $this->nextActions($profileQuality),
+            'privacy_matrix' => $privacyMatrix,
             'privacy' => [
                 'metric_visibility' => 'field_level',
                 'recommendations' => 'approved_only',
@@ -98,7 +118,6 @@ class SportProfileScoutService
             ],
         ];
     }
-
     public function scoutSearch(User $viewer, array $filters): array
     {
         $limit = max(1, min(30, (int) ($filters['limit'] ?? 15)));
@@ -177,6 +196,119 @@ class SportProfileScoutService
         ];
     }
 
+    private function profileQuality(Collection $sportProfiles, array $bestMetrics, array $skills, int $recommendationsCount): array
+    {
+        $missing = [];
+
+        if ($sportProfiles->isEmpty()) {
+            $missing[] = 'sports';
+        }
+
+        if (count($bestMetrics) === 0) {
+            $missing[] = 'best_metrics';
+        }
+
+        if (count($skills) < 2) {
+            $missing[] = 'skills';
+        }
+
+        if ($recommendationsCount === 0) {
+            $missing[] = 'recommendations';
+        }
+
+        $score = min(100,
+            ($sportProfiles->isNotEmpty() ? 25 : 0)
+            + (count($bestMetrics) > 0 ? 20 : 0)
+            + (count($skills) > 0 ? 15 : 0)
+            + ($recommendationsCount > 0 ? 10 : 0)
+            + 10
+        );
+
+        return [
+            'version' => '2026-06-03',
+            'score' => $score,
+            'level' => $score >= 80 ? 'strong' : ($score >= 55 ? 'building' : 'starter'),
+            'missing' => $missing,
+        ];
+    }
+
+    private function proof(int $recommendationsCount, array $skills): array
+    {
+        return [
+            [
+                'key' => 'recommendations',
+                'label_key' => 'profile.sport_cv.proof.recommendations',
+                'value' => $recommendationsCount,
+            ],
+            [
+                'key' => 'verified_skills',
+                'label_key' => 'profile.sport_cv.proof.verified_skills',
+                'value' => collect($skills)->where('verification.status', 'verified')->count(),
+            ],
+        ];
+    }
+
+    private function careerTimeline(Collection $sportProfiles, array $bestMetrics): array
+    {
+        $profiles = $sportProfiles->map(fn (UserSport $profile) => [
+            'type' => 'sport_profile',
+            'title' => $profile->sport?->name ?: 'Sportprofil',
+            'subtitle' => $profile->experience_level,
+            'sport' => $this->sportPayload($profile->sport),
+        ]);
+
+        $metrics = collect($bestMetrics)->map(fn (array $metric) => [
+            'type' => 'best_metric',
+            'title' => $metric['key'],
+            'value' => $metric['value'],
+            'sport' => $metric['sport'] ?? null,
+        ]);
+
+        return $profiles->concat($metrics)->values()->take(12)->all();
+    }
+
+    private function nextActions(array $profileQuality): array
+    {
+        return collect($profileQuality['missing'] ?? [])
+            ->map(fn (string $key) => [
+                'key' => $key,
+                'label_key' => 'profile.sport_cv.next_actions.'.$key,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function privacyMatrix(User $profileUser, ?User $viewer, bool $visible): array
+    {
+        $metricVisibility = $profileUser->sportProfiles
+            ->flatMap(function (UserSport $profile) {
+                $metrics = collect($profile->performance_metrics ?? [])->keys();
+                $visibility = $profile->performance_visibility ?? [];
+
+                return $metrics->map(fn (string $key) => $visibility[$key] ?? 'private');
+            })
+            ->values();
+
+        $sections = [
+            ['key' => 'overview', 'visibility' => $visible ? 'public' : 'private', 'visible_to_viewer' => $visible],
+            ['key' => 'contact', 'visibility' => $visible ? ($profileUser->direct_message_privacy ?? 'everyone') : 'private', 'visible_to_viewer' => $visible],
+            ['key' => 'sports', 'visibility' => $visible ? 'public' : 'private', 'visible_to_viewer' => $visible],
+            ['key' => 'skills', 'visibility' => $visible ? 'visible_only' : 'private', 'visible_to_viewer' => $visible],
+            ['key' => 'recommendations', 'visibility' => $visible ? 'approved_only' : 'private', 'visible_to_viewer' => $visible],
+            ['key' => 'best_metrics', 'visibility' => $visible ? 'field_level' : 'private', 'visible_to_viewer' => $visible && $metricVisibility->contains('public')],
+        ];
+
+        return [
+            'version' => '2026-06-03',
+            'profile_visible_to_viewer' => $visible,
+            'viewer_is_owner' => $viewer ? (int) $viewer->id === (int) $profileUser->id : false,
+            'summary' => [
+                'public_metrics' => $metricVisibility->filter(fn ($visibility) => $visibility === 'public')->count(),
+                'private_metrics' => $metricVisibility->reject(fn ($visibility) => $visibility === 'public')->count(),
+            ],
+            'sections' => $sections,
+        ];
+    }
     private function verifiedSkills(Collection $skills): array
     {
         return $skills

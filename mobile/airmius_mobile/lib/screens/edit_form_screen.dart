@@ -147,7 +147,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
         AirmiusTextField(label: 'Nachname', hint: 'Nachname', controller: _lastNameController),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _gender.isEmpty ? null : _gender,
+          initialValue: _gender.isEmpty ? null : _gender,
           dropdownColor: AirmiusColors.cardSoft,
           decoration: const InputDecoration(
             labelText: 'Geschlecht',
@@ -185,7 +185,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
           onChanged: (value) => setState(() => _publicVisible = value),
           title: const Text('Profil sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
           subtitle: const Text('Andere Nutzer können dein Profil finden.', style: TextStyle(color: AirmiusColors.muted)),
-          activeColor: AirmiusColors.blue,
+          activeThumbColor: AirmiusColors.blue,
           contentPadding: EdgeInsets.zero,
         ),
         SwitchListTile(
@@ -193,7 +193,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
           onChanged: (value) => setState(() => _enabled = value),
           title: const Text('Benachrichtigungen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
           subtitle: const Text('Push, E-Mail und Vereinsupdates.', style: TextStyle(color: AirmiusColors.muted)),
-          activeColor: AirmiusColors.blue,
+          activeThumbColor: AirmiusColors.blue,
           contentPadding: EdgeInsets.zero,
         ),
       ])),
@@ -226,7 +226,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
         const Eyebrow('Admin-Aktion'),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _status,
+          initialValue: _status,
           dropdownColor: AirmiusColors.cardSoft,
           decoration: const InputDecoration(labelText: 'Status'),
           items: const ['Aktiv', 'In Prüfung', 'Gesperrt', 'Abgelehnt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -234,7 +234,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _role,
+          initialValue: _role,
           dropdownColor: AirmiusColors.cardSoft,
           decoration: const InputDecoration(labelText: 'Rolle'),
           items: const ['Mitglied', 'Trainer', 'Club Admin', 'System Admin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),

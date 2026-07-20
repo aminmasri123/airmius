@@ -55,10 +55,10 @@ class _OutfitDeliveryDetailScreenState extends State<OutfitDeliveryDetailScreen>
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Supportfall'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _issue, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Problemtyp'), items: const ['Groesse', 'Qualitaet', 'Versand', 'Rückgabe', 'Sonstiges'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _issue = value ?? _issue)),
+            DropdownButtonFormField<String>(initialValue: _issue, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Problemtyp'), items: const ['Groesse', 'Qualitaet', 'Versand', 'Rückgabe', 'Sonstiges'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _issue = value ?? _issue)),
             const SizedBox(height: 12),
             const AirmiusTextField(label: 'Beschreibung', hint: 'Was ist passiert?', maxLines: 3),
-            SwitchListTile(value: _pauseNext, onChanged: (value) => setState(() => _pauseNext = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Naechste Lieferung pausieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Abo bleibt aktiv, naechste Box wird ausgesetzt.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _pauseNext, onChanged: (value) => setState(() => _pauseNext = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Naechste Lieferung pausieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Abo bleibt aktiv, naechste Box wird ausgesetzt.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

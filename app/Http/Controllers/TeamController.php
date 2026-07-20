@@ -72,17 +72,13 @@ class TeamController extends Controller
             }))
             ->orderBy('name')
             ->with([
-                'admins:id,name,email',
                 'users:id,name,email,profile_photo_path',
                 'sponsors' => fn ($query) => $query->latest('id'),
                 'jobs' => fn ($query) => $query->latest('id'),
                 'teams' => fn ($query) => $query
                     ->withCount('users')
                     ->with([
-                        'users:id,name,email',
-                        'invitations' => fn ($query) => $query
-                            ->where('status', 'pending')
-                            ->with('recipient:id,name,email'),
+                        'users:id,name',
                         'joinRequests' => fn ($query) => $query
                             ->where('status', 'pending')
                             ->with('user:id,name,email'),
@@ -142,7 +138,7 @@ class TeamController extends Controller
         $receivedInvitations = TeamInvitation::query()
             ->where('recipient_id', $user->id)
             ->where('status', 'pending')
-            ->with(['team.club:id,name', 'inviter:id,name,email'])
+            ->with(['team.club:id,name', 'inviter:id,name'])
             ->latest('id')
             ->get()
             ->map(fn (TeamInvitation $invitation) => [
@@ -161,11 +157,6 @@ class TeamController extends Controller
         return Inertia::render('Auth/Dashboard/Teams/Index', [
             'clubs' => $clubs,
             'receivedInvitations' => $receivedInvitations,
-            'availableUsers' => User::query()
-                ->select(['id', 'name', 'email'])
-                ->orderBy('name')
-                ->limit(200)
-                ->get(),
             'teamRoles' => Team::ROLES,
             'clubRoles' => self::CLUB_MEMBER_ROLES,
             'filters' => $filters,
@@ -810,6 +801,54 @@ class TeamController extends Controller
         }
 
         return back()->with('success', 'Beitrittsanfrage abgelehnt.');
+    }
+
+    public function storeMember(Request $request, Team $team)
+    {
+        $this->authorize('invite', $team);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', Rule::in(Team::ROLES)],
+        ]);
+
+        $member = User::findOrFail($data['user_id']);
+
+        if (! $team->club->users()->where('users.id', $member->id)->exists()) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Dieses Mitglied muss zuerst im Verein angelegt oder eingeladen werden.',
+            ]);
+        }
+
+        if ($team->users()->where('users.id', $member->id)->exists()) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Mitglied ist bereits im Team.',
+            ]);
+        }
+
+        DB::transaction(function () use ($team, $member, $data) {
+            $team->users()->syncWithoutDetaching([
+                $member->id => ['role' => $data['role']],
+            ]);
+
+            $this->syncTeamChatMembers($team, [$member->id]);
+        });
+
+        AppNotification::send($member->id, 'team.member_added', [
+            'title' => 'Zum Team hinzugefügt',
+            'body' => 'Du wurdest zu '.$team->name.' hinzugefügt.',
+            'url' => route('auth.teams.show', $team),
+            'club_id' => $team->club_id,
+            'team_id' => $team->id,
+            'role' => $data['role'],
+            'added_by' => $request->user()->id,
+        ]);
+
+        if ($request->expectsJson()) {
+            return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+        }
+
+        return back()->with('success', 'Mitglied wurde zum Team hinzugefügt.');
     }
 
     public function updateMember(Request $request, Team $team, User $user)

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class TeamOperationsScreen extends StatefulWidget {
   const TeamOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _TeamOperationsScreenState extends State<TeamOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Team-Regeln'),
-                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Team informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kader-, Rollen-, Kalender- und Chat-Änderungen erzeugen später Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _guardianGate, onChanged: (value) => setState(() => _guardianGate = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz-Gate aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjaehrige, Medien, Chats und Fahrten werden mit Guardian Consent geprüft.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Team informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kader-, Rollen-, Kalender- und Chat-Änderungen erzeugen später Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _guardianGate, onChanged: (value) => setState(() => _guardianGate = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz-Gate aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjaehrige, Medien, Chats und Fahrten werden mit Guardian Consent geprüft.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _TeamOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _TeamOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Team-Aktion kann Rollen, Kader oder Zugriff beeinflussen und wird später auditiert.', item.action, action);
       return;

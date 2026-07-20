@@ -4,7 +4,6 @@ import 'learning_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'ui_action_result_screen.dart';
-import 'learning_operations_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
   const LessonDetailScreen({super.key, required this.title, required this.description, required this.status, required this.lessons, required this.progress});

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class TrainingLogDetailScreen extends StatefulWidget {
   const TrainingLogDetailScreen({
@@ -134,7 +133,7 @@ class _TrainingLogDetailScreenState extends State<TrainingLogDetailScreen> {
                   SwitchListTile(
                     value: _requestFeedback,
                     onChanged: (value) => setState(() => _requestFeedback = value),
-                    activeColor: AirmiusColors.blue,
+                    activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Trainerfeedback anfordern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                     subtitle: const Text('Trainer erhaelt eine Aufgabe im Cockpit.', style: TextStyle(color: AirmiusColors.muted)),
@@ -142,7 +141,7 @@ class _TrainingLogDetailScreenState extends State<TrainingLogDetailScreen> {
                   SwitchListTile(
                     value: _shareWithTeam,
                     onChanged: (value) => setState(() => _shareWithTeam = value),
-                    activeColor: AirmiusColors.blue,
+                    activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Kurzupdate im Teamfeed teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                     subtitle: const Text('Nur Zusammenfassung, keine sensiblen Daten.', style: TextStyle(color: AirmiusColors.muted)),

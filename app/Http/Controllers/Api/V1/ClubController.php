@@ -25,16 +25,19 @@ use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\BillingOverview;
+use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubRoles;
 use App\Support\Roles;
+use App\Support\Validation\ClubProfileRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -74,25 +77,7 @@ class ClubController extends Controller
     {
         Gate::authorize('create', Club::class);
 
-        $club = $this->clubService->create($request->user(), $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'sport_type' => ['nullable', 'string', 'max:120'],
-            'is_official' => ['boolean'],
-            'official_club_number' => ['nullable', 'string', 'max:120'],
-            'country' => ['required', 'string', 'size:2'],
-            'street' => ['nullable', 'string', 'max:255'],
-            'house_number' => ['nullable', 'string', 'max:40'],
-            'postal_code' => ['nullable', 'string', 'max:30'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'state' => ['nullable', 'string', 'max:255'],
-            'sepa_account_holder' => ['nullable', 'string', 'max:120'],
-            'sepa_iban' => ['nullable', 'string', 'max:40'],
-            'sepa_bic' => ['nullable', 'string', 'max:20'],
-            'is_listed' => ['boolean'],
-            'teams_are_listed' => ['boolean'],
-            'members_can_post_to_club' => ['boolean'],
-            'members_can_post_to_teams' => ['boolean'],
-        ]));
+        $club = $this->clubService->create($request->user(), $request->validate(ClubProfileRules::store()));
 
         $club->loadCount(['users', 'teams']);
 
@@ -200,13 +185,18 @@ class ClubController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
+            'role' => ['nullable', Rule::in(ClubRoles::INVITABLE)],
             'member_number' => ['nullable', 'string', 'max:120'],
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'membership_status' => ['nullable', Rule::in(['active', 'non_member', 'pending', 'paused', 'former'])],
+            'invitation_expires_at' => ['nullable', 'date', 'after_or_equal:today'],
             'send_invitation' => ['boolean'],
         ]);
 
         $sendInvitation = $request->boolean('send_invitation', true);
+        $roles = ClubRoles::normalize($data['role'] ?? 'member', [$data['role'] ?? 'member']);
+        $invitationExpiresAt = $this->invitationExpiresAt($data['invitation_expires_at'] ?? null);
+
         if ($sendInvitation) {
             $this->planFeatures->ensureCanSendMemberInvitations($club);
         }
@@ -226,8 +216,8 @@ class ClubController extends Controller
         $athleteLicenseNumber = trim((string) ($data['athlete_license_number'] ?? '')) ?: null;
 
         $memberData = [
-            'role' => 'member',
-            'roles' => ['member'],
+            'role' => ClubRoles::primary($roles),
+            'roles' => $roles,
             'membership_status' => $data['membership_status'] ?? 'active',
             'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
             'contribution_amount' => null,
@@ -283,7 +273,7 @@ class ClubController extends Controller
                 [
                     'created_by' => $request->user()->id,
                     'name' => trim((string) ($data['name'] ?? '')) ?: null,
-                    'role' => 'member',
+                    'role' => $memberData['role'],
                     'membership_status' => $memberData['membership_status'],
                     'member_number' => $memberData['member_number'],
                     'athlete_license_number' => $athleteLicenseNumber,
@@ -300,17 +290,19 @@ class ClubController extends Controller
                     'membership_ends_on' => null,
                     'membership_end_notified_at' => null,
                     'membership_notes' => null,
-                    'invitation_status' => $sendInvitation ? 'pending' : 'none',
-                    'invitation_token' => $sendInvitation ? Str::random(64) : null,
+                    'invitation_status' => 'none',
+                    'invitation_token' => null,
                     'invited_at' => null,
+                    'invitation_expires_at' => null,
                 ],
             );
 
             if ($sendInvitation) {
+                $externalMember->issueInvitation($invitationExpiresAt);
+
                 try {
                     Notification::route('mail', $email)
                         ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
-                    $externalMember->forceFill(['invited_at' => now()])->save();
                 } catch (Throwable $exception) {
                     Log::warning('External club membership invitation mail failed via API.', [
                         'club_id' => $club->id,
@@ -355,7 +347,9 @@ class ClubController extends Controller
             'name' => $request->input('name'),
             'member_number' => $request->input('member_number'),
             'athlete_license_number' => $request->input('athlete_license_number'),
+            'role' => $request->input('role'),
             'membership_status' => $request->input('membership_status', 'active'),
+            'invitation_expires_at' => $request->input('invitation_expires_at'),
             'send_invitation' => $request->boolean('send_invitation', true),
         ]);
 
@@ -470,12 +464,20 @@ class ClubController extends Controller
             ->with(['club', 'invoice', 'user:id,name,email'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'payments_page');
+        $invoiceSummary = BillingOverview::clubInvoiceSummary(
+            Invoice::query()
+                ->where('club_id', $club->id)
+                ->get(['id', 'amount', 'status'])
+        );
 
         return response()->json([
             'data' => [
                 'can_manage' => true,
+                'invoice_status_options' => Invoice::statusOptions(),
+                'invoice_summary' => $invoiceSummary,
                 'invoices' => InvoiceResource::collection($invoices)->response()->getData(true),
                 'payments' => PaymentResource::collection($payments)->response()->getData(true),
+                'audit_logs' => ClubAuditLog::forClub($club),
             ],
         ]);
     }
@@ -511,6 +513,12 @@ class ClubController extends Controller
         $invoice->update([
             'status' => 'paid',
             'paid_at' => $data['paid_at'] ?? now(),
+        ]);
+
+        ClubAuditLog::record($club, $request->user(), 'club.payment.recorded', $invoice, [
+            'invoice_number' => $invoice->number,
+            'amount' => $data['amount'] ?? $invoice->amount,
+            'method' => $data['method'] ?? 'manual',
         ]);
 
         if ($invoice->user_id) {
@@ -848,8 +856,12 @@ class ClubController extends Controller
         }
 
         abort_unless($club->membership_requests_enabled, 403, 'Dieser Verein nimmt aktuell keine Online-Mitgliedsanfragen an.');
+        abort_if($club->users()->where('users.id', $request->user()->id)->exists(), 422, 'Du bist bereits Mitglied in diesem Verein.');
 
         $applicationData = $this->validatedMembershipApplicationData($request, $club, $data['application_data'] ?? []);
+        $acceptedDocuments = $this->validatedMembershipApplicationDocuments($club, $data['accepted_documents'] ?? []);
+        $preferredPaymentMethod = $this->validatedMembershipPaymentMethod($club, $data['preferred_payment_method'] ?? null);
+        $requestedBillingInterval = $this->validatedMembershipBillingInterval($data['requested_billing_interval'] ?? null);
         $previewRule = $this->matchingContributionRule($club, $data['club_membership_type_id'] ?? null);
         $membershipRequest = ClubMembershipRequest::query()->updateOrCreate(
             [
@@ -862,12 +874,12 @@ class ClubController extends Controller
                         'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
                         'message' => $data['message'] ?? null,
                         'application_data' => $applicationData,
-                        'accepted_documents' => $data['accepted_documents'] ?? [],
-                        'preferred_payment_method' => $data['preferred_payment_method'] ?? null,
-                        'requested_billing_interval' => $data['requested_billing_interval'] ?? null,
+                        'accepted_documents' => $acceptedDocuments,
+                        'preferred_payment_method' => $preferredPaymentMethod,
+                        'requested_billing_interval' => $requestedBillingInterval,
                         'applicant_confirmed_at' => now(),
                         'preview_amount' => $previewRule?->amount,
-                        'preview_interval' => $previewRule?->billing_interval,
+                        'preview_interval' => $requestedBillingInterval ?? $previewRule?->billing_interval,
                     ],
         );
 
@@ -964,6 +976,78 @@ class ClubController extends Controller
         }
 
         return $applicationData;
+    }
+
+    private function validatedMembershipApplicationDocuments(Club $club, array $acceptedInput): array
+    {
+        $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+            ->where('is_visible', true)
+            ->values();
+        $acceptedDocumentIds = collect($acceptedInput)
+            ->filter(fn ($accepted) => (bool) $accepted)
+            ->keys()
+            ->map(fn ($id) => (string) $id)
+            ->all();
+        $acceptedDocuments = [];
+        $errors = [];
+
+        foreach ($visibleDocuments as $document) {
+            $isAccepted = in_array((string) $document['id'], $acceptedDocumentIds, true);
+
+            if (($document['is_required'] ?? false) && ! $isAccepted) {
+                $errors['accepted_documents.'.$document['id']] = $document['title'].' muss bestaetigt werden.';
+            }
+
+            if ($isAccepted) {
+                $acceptedDocuments[] = [
+                    'id' => $document['id'],
+                    'type' => $document['type'],
+                    'title' => $document['title'],
+                    'url' => $document['url'],
+                    'file_id' => $document['file_id'] ?? null,
+                    'file_name' => $document['file_name'] ?? '',
+                    'accepted_at' => now()->toIso8601String(),
+                ];
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $acceptedDocuments;
+    }
+
+    private function validatedMembershipPaymentMethod(Club $club, ?string $method): ?string
+    {
+        if (blank($method)) {
+            return null;
+        }
+
+        $allowed = ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods);
+
+        if (! in_array($method, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'preferred_payment_method' => 'Diese Zahlmethode ist fuer diesen Verein nicht verfuegbar.',
+            ]);
+        }
+
+        return $method;
+    }
+
+    private function validatedMembershipBillingInterval(?string $interval): ?string
+    {
+        if (blank($interval)) {
+            return null;
+        }
+
+        if (! in_array($interval, self::CONTRIBUTION_INTERVALS, true)) {
+            throw ValidationException::withMessages([
+                'requested_billing_interval' => 'Dieses Beitragsintervall ist ungueltig.',
+            ]);
+        }
+
+        return $interval;
     }
 
     private function canManageMembership(Request $request, Club $club): bool
@@ -1167,11 +1251,21 @@ class ClubController extends Controller
             ->get();
 
         $financeSummary = $this->financeBalanceSummary($club);
+        $invoiceSummary = BillingOverview::clubInvoiceSummary(
+            Invoice::query()
+                ->where('club_id', $club->id)
+                ->get(['id', 'amount', 'status'])
+        );
 
         return [
             ...$base,
             'membership_statuses' => ['active', 'non_member', 'pending', 'paused', 'former'],
             'contribution_intervals' => ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'],
+            'contribution_rule_types' => ClubContributionRule::ruleTypeOptions(),
+            'contribution_discount_operators' => ClubContributionRule::discountOperatorOptions(),
+            'invoice_status_options' => Invoice::statusOptions(),
+            'club_roles' => ClubRoles::options(),
+            'invitable_club_roles' => ClubRoles::options(ClubRoles::INVITABLE),
             'team_roles' => Team::ROLES,
             'pending_team_join_requests' => $pendingTeamJoinRequests,
             'pending_requests' => $pendingTeamJoinRequests,
@@ -1215,7 +1309,10 @@ class ClubController extends Controller
                 'membership_end_notified_at' => $externalMember->membership_end_notified_at?->toJSON(),
                 'membership_notes' => $externalMember->membership_notes,
                 'invitation_status' => $externalMember->invitation_status,
+                'invitation_token' => $externalMember->invitation_token,
+                'invitation_url' => $externalMember->invitationUrl(),
                 'invited_at' => $externalMember->invited_at?->toJSON(),
+                'invitation_expires_at' => $externalMember->invitation_expires_at?->toJSON(),
                 'linked_at' => $externalMember->linked_at?->toJSON(),
                 'linked_user' => $externalMember->linkedUser,
             ])->values(),
@@ -1239,8 +1336,10 @@ class ClubController extends Controller
                 'amount' => $rule->amount,
                 'age_min' => $rule->age_min,
                 'age_max' => $rule->age_max,
-                'factor_key' => $rule->factor_key,
+                'factor_key' => $rule->factor_key ?: 'standard',
+                'factor_label' => ClubContributionRule::RULE_TYPE_LABELS[$rule->factor_key ?: 'standard'] ?? 'Standardbeitrag',
                 'factor_operator' => $rule->factor_operator,
+                'factor_operator_label' => $rule->factor_operator ? (ClubContributionRule::DISCOUNT_OPERATOR_LABELS[$rule->factor_operator] ?? $rule->factor_operator) : null,
                 'factor_value' => $rule->factor_value,
                 'is_active' => $rule->is_active,
                 'notes' => $rule->notes,
@@ -1248,7 +1347,9 @@ class ClubController extends Controller
             'membership_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
             'club_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
             'invoices' => InvoiceResource::collection($invoices)->resolve($request),
+            'invoice_summary' => $invoiceSummary,
             'payments' => PaymentResource::collection($payments)->resolve($request),
+            'audit_logs' => ClubAuditLog::forClub($club),
             'finance_entries' => ClubFinanceEntryResource::collection($financeEntries)->resolve($request),
             'bank_transactions' => $bankTransactions->map(fn (BankTransaction $transaction) => [
                 'id' => $transaction->id,
@@ -1274,8 +1375,8 @@ class ClubController extends Controller
                 'linked_people_count' => $club->users->count(),
                 'pending_membership_requests_count' => $membershipRequests->count(),
                 'pending_team_join_requests_count' => $pendingTeamJoinRequests->count(),
-                'open_invoice_amount' => (float) $invoices->where('status', '!=', 'paid')->sum('amount'),
-                'open_invoices_count' => $invoices->where('status', '!=', 'paid')->count(),
+                'open_invoice_amount' => $invoiceSummary['open_amount'],
+                'open_invoices_count' => $invoiceSummary['open_count'],
                 'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count(),
                 'recurring_contribution_total' => (float) $club->users->sum(fn (User $member) => (float) ($member->pivot?->contribution_amount ?? 0)),
                 ...$financeSummary,
@@ -1327,6 +1428,11 @@ class ClubController extends Controller
         ];
     }
 
+    private function invitationExpiresAt(?string $date): ?Carbon
+    {
+        return filled($date) ? Carbon::parse($date)->endOfDay() : null;
+    }
+
     private function validatedContributionRuleData(Request $request, Club $club): array
     {
         $data = $request->validate([
@@ -1338,15 +1444,41 @@ class ClubController extends Controller
             'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'age_min' => ['nullable', 'integer', 'min:0', 'max:120'],
             'age_max' => ['nullable', 'integer', 'min:0', 'max:120'],
-            'factor_key' => ['nullable', 'string', 'max:80'],
-            'factor_operator' => ['nullable', 'string', 'max:20'],
-            'factor_value' => ['nullable', 'string', 'max:120'],
+            'factor_key' => ['nullable', Rule::in(ClubContributionRule::RULE_TYPES)],
+            'factor_operator' => ['nullable', Rule::in(ClubContributionRule::DISCOUNT_OPERATORS)],
+            'factor_value' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'is_active' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $ruleType = $data['factor_key'] ?? 'standard';
+
+        if ($ruleType === 'discount') {
+            if (blank($data['factor_operator'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'factor_operator' => 'Rabattregeln brauchen einen Rabatt-Typ.',
+                ]);
+            }
+
+            if (blank($data['factor_value'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'factor_value' => 'Rabattregeln brauchen einen Rabattwert.',
+                ]);
+            }
+        } else {
+            $data['factor_operator'] = null;
+            $data['factor_value'] = null;
+        }
+
+        if ($ruleType === 'special' && ($data['billing_interval'] ?? null) !== 'once') {
+            throw ValidationException::withMessages([
+                'billing_interval' => 'Sonderbeitraege muessen einmalig abgerechnet werden.',
+            ]);
+        }
+
         return [
             ...$data,
+            'factor_key' => $ruleType,
             'is_active' => (bool) ($data['is_active'] ?? true),
         ];
     }

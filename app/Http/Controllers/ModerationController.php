@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ContentReport;
 use App\Models\ModerationFlag;
 use App\Models\AccountWarning;
+use App\Support\ModerationAuditLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -49,18 +50,38 @@ class ModerationController extends Controller
         $data = $request->validate([
             'status' => ['required', Rule::in(['open', 'dismissed', 'actioned'])],
             'remove_content' => ['nullable', 'boolean'],
+            'decision_reason' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        $previousStatus = $flag->status;
+        $actionTaken = $data['status'];
 
         if ($data['remove_content'] ?? false) {
             $this->removeContent($flag->flaggable);
             $data['status'] = 'actioned';
+            $actionTaken = 'content_removed';
         }
 
         $flag->update([
             'status' => $data['status'],
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
+            'decision_reason' => $data['decision_reason'] ?? null,
+            'action_taken' => $actionTaken,
         ]);
+
+        ModerationAuditLog::record(
+            $flag,
+            'decision',
+            $request->user(),
+            $previousStatus,
+            $flag->status,
+            $data['decision_reason'] ?? null,
+            [
+                ...ModerationAuditLog::contentMetadata($flag->flaggable),
+                'action_taken' => $actionTaken,
+            ]
+        );
 
         return back()->with('success', 'Moderationsfall wurde aktualisiert.');
     }
@@ -70,20 +91,79 @@ class ModerationController extends Controller
         $data = $request->validate([
             'status' => ['required', Rule::in(['open', 'dismissed', 'actioned'])],
             'remove_content' => ['nullable', 'boolean'],
+            'decision_reason' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        $previousStatus = $report->status;
+        $actionTaken = $data['status'];
 
         if ($data['remove_content'] ?? false) {
             $this->removeContent($report->reportable);
             $data['status'] = 'actioned';
+            $actionTaken = 'content_removed';
         }
 
         $report->update([
             'status' => $data['status'],
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
+            'decision_reason' => $data['decision_reason'] ?? null,
+            'action_taken' => $actionTaken,
         ]);
 
+        ModerationAuditLog::record(
+            $report,
+            'decision',
+            $request->user(),
+            $previousStatus,
+            $report->status,
+            $data['decision_reason'] ?? null,
+            [
+                ...ModerationAuditLog::contentMetadata($report->reportable),
+                'action_taken' => $actionTaken,
+            ]
+        );
+
         return back()->with('success', 'Meldung wurde aktualisiert.');
+    }
+
+    public function decideReportAppeal(Request $request, ContentReport $report)
+    {
+        abort_unless($report->appeal_status === 'pending', 422, 'Zu dieser Meldung ist keine offene Beschwerde vorhanden.');
+
+        $data = $request->validate([
+            'appeal_status' => ['required', Rule::in(['accepted', 'rejected'])],
+            'appeal_decision' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        $previousAppealStatus = $report->appeal_status;
+        $updates = [
+            'appeal_status' => $data['appeal_status'],
+            'appeal_decision' => $data['appeal_decision'],
+            'appeal_decided_by' => $request->user()->id,
+            'appeal_decided_at' => now(),
+        ];
+
+        if ($data['appeal_status'] === 'accepted' && $report->status === 'dismissed') {
+            $updates['status'] = 'open';
+        }
+
+        $report->forceFill($updates)->save();
+
+        ModerationAuditLog::record(
+            $report,
+            'appeal_decided',
+            $request->user(),
+            $previousAppealStatus,
+            $report->appeal_status,
+            $data['appeal_decision'],
+            [
+                ...ModerationAuditLog::contentMetadata($report->reportable),
+                'report_status' => $report->status,
+            ]
+        );
+
+        return back()->with('success', 'Beschwerde wurde entschieden.');
     }
 
     private function removeContent(?Model $model): void
@@ -109,11 +189,17 @@ class ModerationController extends Controller
             'severity' => $flag->severity,
             'status' => $flag->status,
             'automated_action' => $flag->automated_action,
+            'decision_reason' => $flag->decision_reason,
+            'action_taken' => $flag->action_taken,
             'categories' => $flag->categories ?: [],
             'matched_terms' => $flag->matched_terms ?: [],
             'created_at' => $flag->created_at,
             'user' => $flag->user,
             'content' => $this->contentPayload($flag->flaggable),
+            'logs' => ModerationAuditLog::forCase($flag)
+                ->limit(20)
+                ->get()
+                ->map(fn ($log) => $this->logPayload($log)),
         ];
     }
 
@@ -124,9 +210,20 @@ class ModerationController extends Controller
             'reason' => $report->reason,
             'details' => $report->details,
             'status' => $report->status,
+            'decision_reason' => $report->decision_reason,
+            'action_taken' => $report->action_taken,
+            'appeal_reason' => $report->appeal_reason,
+            'appeal_status' => $report->appeal_status,
+            'appealed_at' => $report->appealed_at,
+            'appeal_decision' => $report->appeal_decision,
+            'appeal_decided_at' => $report->appeal_decided_at,
             'created_at' => $report->created_at,
             'reporter' => $report->reporter,
             'content' => $this->contentPayload($report->reportable),
+            'logs' => ModerationAuditLog::forCase($report)
+                ->limit(20)
+                ->get()
+                ->map(fn ($log) => $this->logPayload($log)),
         ];
     }
 
@@ -185,5 +282,22 @@ class ModerationController extends Controller
         }
 
         return 'Datei oder gelöschter Inhalt';
+    }
+
+    private function logPayload($log): array
+    {
+        return [
+            'id' => $log->id,
+            'action' => $log->action,
+            'previous_status' => $log->previous_status,
+            'new_status' => $log->new_status,
+            'reason' => $log->reason,
+            'metadata' => $log->metadata ?: [],
+            'created_at' => $log->created_at,
+            'actor' => $log->actor ? [
+                'id' => $log->actor->id,
+                'name' => $log->actor->name,
+            ] : null,
+        ];
     }
 }

@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'airmius_api_client.dart';
 import 'airmius_api_repositories.dart';
 import 'airmius_auth_state.dart';
+import 'airmius_preferences_store.dart';
+import 'airmius_push_device_registry.dart';
 import 'airmius_secure_token_store.dart';
 
 class AirmiusAppEnvironment {
@@ -25,47 +27,86 @@ class AirmiusServiceContainer {
     required this.environment,
     required AirmiusApiTransport transport,
     AirmiusTokenStore? tokenStore,
-  })  : tokenStore = tokenStore ?? AirmiusSecureTokenStore(),
-        transport = environment.enableOfflineQueue ? AirmiusQueuedTransport(inner: transport, timeout: environment.requestTimeout) : transport {
-    authState = AirmiusAuthState(tokenStore: this.tokenStore, clientFactory: clientForSession);
+    AirmiusPreferencesStore? offlineQueueStore,
+    AirmiusPreferencesStore? pushDeviceStore,
+    AirmiusPushTokenProvider? pushTokenProvider,
+  }) : tokenStore = tokenStore ?? AirmiusSecureTokenStore(),
+       pushDevices = AirmiusPushDeviceRegistry(
+         store: pushDeviceStore ?? createAirmiusPreferencesStore(),
+         tokenProvider:
+             pushTokenProvider ?? const AirmiusNoopPushTokenProvider(),
+         locale: environment.locale,
+       ),
+       transport = environment.enableOfflineQueue
+           ? AirmiusQueuedTransport(
+               inner: transport,
+               timeout: environment.requestTimeout,
+               store: offlineQueueStore ?? createAirmiusPreferencesStore(),
+             )
+           : transport {
+    authState = AirmiusAuthState(
+      tokenStore: this.tokenStore,
+      clientFactory: clientForSession,
+      onAuthenticated: (session) =>
+          pushDevices.registerIfOptedIn(clientForSession(session)),
+      onBeforeSignOut: (session) =>
+          pushDevices.unregister(clientForSession(session)),
+    );
   }
 
   final AirmiusAppEnvironment environment;
   final AirmiusApiTransport transport;
   final AirmiusTokenStore tokenStore;
+  final AirmiusPushDeviceRegistry pushDevices;
   late final AirmiusAuthState authState;
 
-  AirmiusApiClient clientForSession(AirmiusSession? session) => AirmiusApiClient(
+  AirmiusApiClient clientForSession(AirmiusSession? session) =>
+      AirmiusApiClient(
         transport: transport,
         baseUrl: environment.apiBaseUrl,
         token: session?.token,
         locale: session?.locale ?? environment.locale,
       );
 
-  AirmiusRepositoryBundle repositoriesFor(AirmiusSession? session) => AirmiusRepositoryBundle.api(clientForSession(session));
+  AirmiusRepositoryBundle repositoriesFor(AirmiusSession? session) =>
+      AirmiusRepositoryBundle.api(clientForSession(session));
 
-  AirmiusRepositoryBundle get repositories => repositoriesFor(authState.session);
+  AirmiusRepositoryBundle get repositories =>
+      repositoriesFor(authState.session);
 }
 
 class AirmiusQueuedTransport implements AirmiusApiTransport {
   AirmiusQueuedTransport({
     required this.inner,
     required this.timeout,
+    this.store,
+    this.storageKey = defaultStorageKey,
     this.maxRetries = 2,
   });
 
+  static const defaultStorageKey = 'airmius.offline.queue.v1';
+
   final AirmiusApiTransport inner;
   final Duration timeout;
+  final AirmiusPreferencesStore? store;
+  final String storageKey;
   final int maxRetries;
   final List<AirmiusQueuedRequest> queue = [];
 
   bool offline = false;
+  bool _queueRestored = false;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    await _restoreQueue();
+
     if (offline) {
-      final queued = AirmiusQueuedRequest(request: request, queuedAt: DateTime.now());
+      final queued = AirmiusQueuedRequest(
+        request: request,
+        queuedAt: DateTime.now(),
+      );
       queue.add(queued);
+      await _persistQueue();
       return const AirmiusApiResponse(statusCode: 202, body: '{"queued":true}');
     }
 
@@ -105,24 +146,106 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
   }
 
   Future<List<AirmiusApiResponse>> flush() async {
+    await _restoreQueue();
+
     final pending = List<AirmiusQueuedRequest>.from(queue);
     queue.clear();
+    await _persistQueue();
+
     final responses = <AirmiusApiResponse>[];
     for (final item in pending) {
-      responses.add(await send(item.request));
+      final response = await send(item.request);
+      responses.add(response);
+      if (response.statusCode == 599) {
+        queue.add(item);
+      }
     }
+    await _persistQueue();
     return responses;
+  }
+
+  Future<void> _restoreQueue() async {
+    if (_queueRestored) return;
+    _queueRestored = true;
+
+    final queueStore = store;
+    if (queueStore == null) return;
+
+    try {
+      final raw = await queueStore.readString(storageKey);
+      if (raw == null || raw.trim().isEmpty) return;
+
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return;
+
+      queue
+        ..clear()
+        ..addAll(
+          decoded
+              .whereType<Map>()
+              .map(AirmiusQueuedRequest.fromJson)
+              .whereType<AirmiusQueuedRequest>(),
+        );
+    } catch (_) {
+      queue.clear();
+    }
+  }
+
+  Future<void> _persistQueue() async {
+    final queueStore = store;
+    if (queueStore == null) return;
+
+    await queueStore.writeString(
+      storageKey,
+      jsonEncode(queue.map((item) => item.toJson()).toList()),
+    );
   }
 }
 
 class AirmiusQueuedRequest {
-  const AirmiusQueuedRequest({
-    required this.request,
-    required this.queuedAt,
-  });
+  const AirmiusQueuedRequest({required this.request, required this.queuedAt});
 
   final AirmiusApiRequest request;
   final DateTime queuedAt;
+
+  factory AirmiusQueuedRequest.fromJson(Map<dynamic, dynamic> json) {
+    final request = json['request'];
+    return AirmiusQueuedRequest(
+      request: AirmiusApiRequest(
+        method: '${(request as Map)['method']}',
+        path: '${request['path']}',
+        body: request['body'] is Map
+            ? Map<String, dynamic>.from(request['body'] as Map)
+            : null,
+        query: request['query'] is Map
+            ? Map<String, String>.from(
+                (request['query'] as Map).map(
+                  (key, value) => MapEntry('$key', '$value'),
+                ),
+              )
+            : const {},
+        headers: request['headers'] is Map
+            ? Map<String, String>.from(
+                (request['headers'] as Map).map(
+                  (key, value) => MapEntry('$key', '$value'),
+                ),
+              )
+            : const {},
+      ),
+      queuedAt: DateTime.tryParse('${json['queued_at']}') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'queued_at': queuedAt.toIso8601String(),
+    'request': {
+      'method': request.method,
+      'path': request.path,
+      if (request.body != null) 'body': request.body,
+      if (request.query.isNotEmpty) 'query': request.query,
+      if (request.headers.isNotEmpty) 'headers': request.headers,
+    },
+  };
 }
 
 class AirmiusStaticTransport implements AirmiusApiTransport {
@@ -133,6 +256,10 @@ class AirmiusStaticTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     final key = '${request.method} ${request.path}';
-    return responses[key] ?? const AirmiusApiResponse(statusCode: 404, body: '{"error":"not_found"}');
+    return responses[key] ??
+        const AirmiusApiResponse(
+          statusCode: 404,
+          body: '{"error":"not_found"}',
+        );
   }
 }

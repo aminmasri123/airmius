@@ -155,7 +155,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
               AirmiusTextField(label: 'Nachname *', controller: _lastName),
               AirmiusTextField(label: 'Geburtsdatum *', hint: 'TT.MM.JJJJ', icon: Icons.calendar_today_outlined, controller: _birthDate),
               DropdownButtonFormField<String>(
-                value: _membershipGenderOptions.contains(_gender.text.trim()) ? _gender.text.trim() : null,
+                initialValue: _membershipGenderOptions.contains(_gender.text.trim()) ? _gender.text.trim() : null,
                 dropdownColor: AirmiusColors.cardSoft,
                 decoration: const InputDecoration(
                   labelText: 'Geschlecht *',
@@ -452,7 +452,7 @@ class _SelectField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       dropdownColor: AirmiusColors.cardSoft,
       style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
       decoration: InputDecoration(labelText: label),

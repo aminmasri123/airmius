@@ -232,7 +232,7 @@ class _OperationsList extends StatelessWidget {
   Widget build(BuildContext context) => ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
         itemCount: operations.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) => _OperationCard(operation: operations[index], onTap: () => onTap(operations[index])),
       );
 }

@@ -4,9 +4,7 @@ import 'sports_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'profile_skill_recommendation_screen.dart';
-import 'ui_action_result_screen.dart';
 import 'wellbeing_operations_screen.dart';
-import 'sports_operations_screen.dart';
 
 class SportProfileDetailScreen extends StatefulWidget {
   const SportProfileDetailScreen({super.key, required this.title, required this.status});
@@ -40,7 +38,7 @@ class _SportProfileDetailScreenState extends State<SportProfileDetailScreen> {
             const Eyebrow('Profilbasis'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _level,
+              initialValue: _level,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Erfahrung'),
               items: const ['Einsteiger', 'Fortgeschritten', 'Leistungssport', 'Trainer'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -48,7 +46,7 @@ class _SportProfileDetailScreenState extends State<SportProfileDetailScreen> {
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _goal,
+              initialValue: _goal,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Hauptziel'),
               items: const ['Ausdauer verbessern', 'Wettkampf vorbereiten', 'Kraft aufbauen', 'Gesund bleiben'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -71,9 +69,9 @@ class _SportProfileDetailScreenState extends State<SportProfileDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('KI-Coach & Freigaben'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _useForAi, onChanged: (value) => setState(() => _useForAi = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Für KI-Trainingsplan verwenden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Profilwerte dürfen in Planvorschläge einfließen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _shareWithCoach, onChanged: (value) => setState(() => _shareWithCoach = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Trainer teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach sieht Leistungswerte, Ziele und Readiness.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _medicalNote, onChanged: (value) => setState(() => _medicalNote = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Gesundheitshinweis vorhanden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Hinweis nur für berechtigte Trainer sichtbar.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _useForAi, onChanged: (value) => setState(() => _useForAi = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Für KI-Trainingsplan verwenden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Profilwerte dürfen in Planvorschläge einfließen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _shareWithCoach, onChanged: (value) => setState(() => _shareWithCoach = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Trainer teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach sieht Leistungswerte, Ziele und Readiness.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _medicalNote, onChanged: (value) => setState(() => _medicalNote = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Gesundheitshinweis vorhanden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Hinweis nur für berechtigte Trainer sichtbar.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

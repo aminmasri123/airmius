@@ -55,8 +55,8 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _visibility, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Profil sichtbar für'), items: const ['Privat', 'Freunde', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: widget.ownProfile ? (value) => setState(() => _visibility = value ?? _visibility) : null),
-            SwitchListTile(value: _shareRecommendations, onChanged: (value) => setState(() => _shareRecommendations = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Empfehlungen freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gemeinsame Vereine und Trainingsvorschläge sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(initialValue: _visibility, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Profil sichtbar für'), items: const ['Privat', 'Freunde', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: widget.ownProfile ? (value) => setState(() => _visibility = value ?? _visibility) : null),
+            SwitchListTile(value: _shareRecommendations, onChanged: (value) => setState(() => _shareRecommendations = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Empfehlungen freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gemeinsame Vereine und Trainingsvorschläge sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

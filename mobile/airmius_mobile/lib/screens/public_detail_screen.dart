@@ -9,7 +9,6 @@ import 'legal_document_screen.dart';
 import 'public_blog_reader_screen.dart';
 import 'public_interest_screen.dart';
 import 'public_top_content_screen.dart';
-import 'public_growth_operations_screen.dart';
 
 class PublicDetailScreen extends StatelessWidget {
   const PublicDetailScreen({super.key, required this.title, required this.body, required this.icon, required this.kind});

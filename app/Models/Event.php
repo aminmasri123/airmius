@@ -35,6 +35,8 @@ class Event extends Model
         'location_latitude',
         'location_longitude',
         'max_participants',
+        'participant_response_required',
+        'participant_response_deadline_at',
         'uses_penalty_catalog',
         'notes',
         'recurring',
@@ -58,6 +60,8 @@ class Event extends Model
         'location_latitude' => 'float',
         'location_longitude' => 'float',
         'max_participants' => 'integer',
+        'participant_response_required' => 'boolean',
+        'participant_response_deadline_at' => 'datetime',
         'uses_penalty_catalog' => 'boolean',
     ];
 
@@ -86,10 +90,15 @@ class Event extends Model
         return $this->belongsTo(User::class, 'cancelled_by');
     }
 
+    public function rides()
+    {
+        return $this->hasMany(Ride::class);
+    }
+
     public function participants()
     {
         return $this->belongsToMany(User::class, 'event_participants')
-            ->withPivot('status')
+            ->withPivot(['status', 'response_reason', 'response_mode', 'responded_at'])
             ->withTimestamps();
     }
 

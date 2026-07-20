@@ -13,10 +13,35 @@ Use this short command list when the operator is ready to collect real release e
 If Android `cmdline-tools`, `adb`, Java or licenses are missing, first follow:
 
 - `store_listing/release/windows_android_setup_runbook.md`
+- `store_listing/release/linux_android_setup_runbook.md`
+- `store_listing/release/real_device_smoke_test_runbook.md`
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
 .\scripts\assert_local_release_prerequisites.ps1 -FlutterCommand "C:\flutter\bin\flutter.bat"
+```
+
+On Linux, use the Android prerequisite checker before collecting real-device evidence:
+
+```bash
+cd /var/www/airmius/mobile/airmius_mobile
+scripts/install_android_sdk_user.sh --accept-licenses
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+scripts/assert_linux_android_release_prerequisites.sh --require-android-device
+```
+
+After the checker passes, collect Android real-device smoke evidence:
+
+```bash
+scripts/run_android_real_device_smoke.sh --build-release
+```
+
+On macOS, collect iOS/TestFlight smoke evidence:
+
+```bash
+scripts/run_ios_real_device_smoke.sh --build-ipa
 ```
 
 ## 2. Run the first evidence pipeline
@@ -38,6 +63,7 @@ cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
 Follow:
 
 - `store_listing/release/manual_evidence_gates.md`
+- `store_listing/release/real_device_smoke_test_runbook.md`
 - `store_listing/release/logo_theme_parity_qa.md`
 - `store_listing/release/secure_token_storage_qa.md`
 - `store_listing/release/store_review_account_runbook.md`

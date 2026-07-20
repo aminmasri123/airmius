@@ -7,7 +7,6 @@ import 'certificate_verification_screen.dart';
 import 'content_operations_screen.dart';
 import 'lesson_detail_screen.dart';
 import 'ui_action_result_screen.dart';
-import 'learning_operations_screen.dart';
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({super.key});

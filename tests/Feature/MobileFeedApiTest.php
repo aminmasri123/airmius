@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Comment;
+use App\Models\ContentReport;
+use App\Models\ModerationFlag;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -161,5 +164,97 @@ class MobileFeedApiTest extends TestCase
         $this->getJson('/api/v1/feed')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_mobile_feed_reports_posts_and_comments_for_moderation(): void
+    {
+        $author = User::factory()->create();
+        $reporter = User::factory()->create();
+        $viewer = User::factory()->create();
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Bitte pruefen.',
+        ]);
+        $comment = Comment::query()->create([
+            'post_id' => $post->id,
+            'user_id' => $author->id,
+            'moderation_status' => 'approved',
+            'content' => 'Kommentar bitte pruefen.',
+        ]);
+
+        Sanctum::actingAs($reporter);
+
+        $this->postJson('/api/v1/reports', [
+            'type' => 'comment',
+            'id' => $comment->id,
+            'reason' => 'spam',
+            'details' => 'Wirkt automatisiert.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'comment')
+            ->assertJsonPath('data.reason', 'spam');
+
+        $this->assertDatabaseHas('content_reports', [
+            'reporter_id' => $reporter->id,
+            'reportable_type' => Comment::class,
+            'reportable_id' => $comment->id,
+            'reason' => 'spam',
+        ]);
+        $this->assertDatabaseHas('moderation_flags', [
+            'flaggable_type' => Comment::class,
+            'flaggable_id' => $comment->id,
+            'source' => 'user_report',
+        ]);
+        $this->assertDatabaseHas('comments', [
+            'id' => $comment->id,
+            'moderation_status' => 'reported',
+        ]);
+
+        $this->getJson("/api/v1/posts/{$post->id}/comments")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->postJson('/api/v1/reports', [
+            'type' => 'post',
+            'id' => $post->id,
+            'reason' => 'other',
+            'details' => 'Unklarer Inhalt.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'post')
+            ->assertJsonPath('data.reason', 'other');
+
+        $this->assertDatabaseHas('content_reports', [
+            'reporter_id' => $reporter->id,
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+            'reason' => 'other',
+        ]);
+        $this->assertDatabaseHas('moderation_flags', [
+            'flaggable_type' => Post::class,
+            'flaggable_id' => $post->id,
+            'source' => 'user_report',
+        ]);
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'moderation_status' => 'reported',
+        ]);
+
+        Sanctum::actingAs($viewer);
+
+        $this->getJson('/api/v1/feed')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        Sanctum::actingAs($author);
+
+        $this->getJson('/api/v1/feed')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $post->id);
+
+        $this->assertSame(2, ContentReport::query()->count());
+        $this->assertSame(2, ModerationFlag::query()->where('source', 'user_report')->count());
     }
 }

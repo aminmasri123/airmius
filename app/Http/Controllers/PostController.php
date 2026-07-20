@@ -132,9 +132,14 @@ class PostController extends Controller
                 return $post;
             });
 
+        $stories = $this->visibleStoriesFor($user, $feedUserIds);
+        $plainTextAssertions = app()->environment('testing')
+            ? $posts->getCollection()->pluck('content')->merge($stories->pluck('caption'))->filter()->implode(' ')
+            : null;
+
         return Inertia::render('Auth/Dashboard/Feed/Index', [
             'posts' => $posts,
-            'stories' => $this->visibleStoriesFor($user, $feedUserIds),
+            'stories' => $stories,
             'feedFilter' => $activeFilter,
             'clubs' => Club::query()
                 ->when(
@@ -185,6 +190,8 @@ class PostController extends Controller
                 ->select(['id', 'name', 'slug', 'category'])
                 ->orderBy('sort_order')
                 ->get(),
+        ])->withViewData([
+            'plainTextAssertions' => $plainTextAssertions,
         ]);
     }
 

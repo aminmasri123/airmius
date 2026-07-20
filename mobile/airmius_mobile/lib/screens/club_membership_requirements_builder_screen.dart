@@ -234,7 +234,7 @@ class _RequirementCard extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Als Pflichtfeld aktivieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800)),
                   value: group.required,
-                  activeColor: group.color,
+                  activeThumbColor: group.color,
                   onChanged: group.onChanged,
                 ),
               ],

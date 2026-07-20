@@ -86,10 +86,11 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
     final scope = AirmiusScope.of(context);
     final meta = [_post.clubName, _post.teamName].whereType<String>().where((value) => value.isNotEmpty).join(' - ');
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope<bool>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         Navigator.pop(context, _dirty);
-        return false;
       },
       child: Scaffold(
         appBar: AppBar(

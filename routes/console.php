@@ -52,6 +52,10 @@ Schedule::command('airmius:monitor-learning-health')
     ->hourly()
     ->withoutOverlapping();
 
+Schedule::command('airmius:monitor-operations')
+    ->hourly()
+    ->withoutOverlapping();
+
 Schedule::command('airmius:check-ai-provider-tokens')
     ->hourly()
     ->withoutOverlapping();

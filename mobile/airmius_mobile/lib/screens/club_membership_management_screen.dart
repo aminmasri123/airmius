@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
@@ -11,7 +12,6 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
   const ClubMembershipManagementScreen({super.key});
@@ -377,7 +377,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                         : ListView.separated(
                             shrinkWrap: true,
                             itemCount: options.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1, color: AirmiusColors.border),
+                            separatorBuilder: (_, _) => const Divider(height: 1, color: AirmiusColors.border),
                             itemBuilder: (context, index) {
                               final category = options[index];
                               final isSelected = category.toLowerCase() == selected.toLowerCase();
@@ -692,7 +692,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                             ? const Center(child: Text('Kein Mitglied gefunden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)))
                             : ListView.separated(
                                 itemCount: filtered.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                separatorBuilder: (_, _) => const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final member = filtered[index];
                                   final selected = member.id == selectedMemberId;
@@ -759,7 +759,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 DropdownButtonFormField<int>(
-                  value: selectedInvoiceId,
+                  initialValue: selectedInvoiceId,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Rechnung'),
                   items: [
@@ -782,7 +782,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: method,
+                  initialValue: method,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
@@ -822,6 +822,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     notes.dispose();
 
     if (payload == null) return;
+    if (!mounted) return;
 
     try {
       final invoiceId = _intFromAny(payload['invoice_id']);
@@ -875,7 +876,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: method,
+                  initialValue: method,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
@@ -918,6 +919,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     notes.dispose();
 
     if (payload == null) return;
+    if (!mounted) return;
 
     try {
       final management = await AirmiusServicesScope.of(context).repositories.clubs.recordDonation(club.id, payload);
@@ -971,7 +973,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 AirmiusTextField(label: 'Betrag EUR', hint: '120,00', controller: amount, keyboardType: TextInputType.number),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: method,
+                  initialValue: method,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
@@ -1045,6 +1047,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     notes.dispose();
 
     if (payload == null) return;
+    if (!mounted) return;
 
     try {
       final management = await AirmiusServicesScope.of(context).repositories.clubs.recordPrepayment(club.id, payload);
@@ -1111,7 +1114,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: method,
+                  initialValue: method,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: methodOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
@@ -1154,6 +1157,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     notes.dispose();
 
     if (payload == null) return;
+    if (!mounted) return;
 
     try {
       final management = await AirmiusServicesScope.of(context).repositories.clubs.updatePayment(club.id, payment.id, payload);
@@ -1197,7 +1201,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Typ'),
                   items: typeOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeTypeLabel(item)))).toList(),
@@ -1212,7 +1216,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: account,
+                  initialValue: account,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Konto'),
                   items: accountOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeAccountLabel(item)))).toList(),
@@ -1295,10 +1299,11 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     description.dispose();
 
     if (payload == null) return;
+    if (!mounted) return;
 
     try {
       final repositories = AirmiusServicesScope.of(context).repositories.clubs;
-      final management = isEdit ? await repositories.updateFinanceEntry(club.id, entry!.id, payload) : await repositories.createFinanceEntry(club.id, payload);
+      final management = isEdit ? await repositories.updateFinanceEntry(club.id, entry.id, payload) : await repositories.createFinanceEntry(club.id, payload);
       if (!mounted) return;
       _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1572,7 +1577,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                       SizedBox(
                         width: 150,
                         child: DropdownButtonFormField<String>(
-                          value: _period,
+                          initialValue: _period,
                           dropdownColor: AirmiusColors.cardSoft,
                           decoration: const InputDecoration(labelText: 'Zeitraum'),
                           items: const ['Juni 2026', 'Mai 2026', 'Q2 2026', '2026'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -1845,7 +1850,7 @@ class _ClubMembershipClubSelector extends StatelessWidget {
           const SizedBox(height: 10),
           if (clubs.length > 1)
             DropdownButtonFormField<int>(
-              value: selectedClubId,
+              initialValue: selectedClubId,
               dropdownColor: AirmiusColors.cardSoft,
               decoration: const InputDecoration(
                 labelText: 'Aktiver Verein',
@@ -2235,7 +2240,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Dokumenttyp'),
                   items: const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].map((item) => DropdownMenuItem(value: item, child: Text(_documentTypeLabel(item)))).toList(),
@@ -2453,7 +2458,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                               SizedBox(
                                 width: fieldWidth,
                                 child: DropdownButtonFormField<String>(
-                                  value: (() {
+                                  initialValue: (() {
                                     final current = _fieldModes[_string(field['key'])] ?? _string(field['mode'], fallback: 'off');
                                     return const ['required', 'optional', 'off'].contains(current) ? current : 'off';
                                   })(),
@@ -2480,7 +2485,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                               ? null
                               : () async {
                                   final saved = await _saveSettings();
-                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
                                 },
                           icon: const Icon(Icons.save_outlined),
                           label: Text(_saving ? 'Speichert...' : 'Speichern'),
@@ -2546,7 +2551,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                               ? null
                               : () async {
                                   final saved = await _saveType();
-                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
                                 },
                           icon: const Icon(Icons.badge_outlined),
                           label: Text(_saving ? 'Speichert...' : (_editingTypeId == null ? 'Erstellen' : 'Aktualisieren')),
@@ -2593,7 +2598,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                     Text(_editingRuleId == null ? 'Beitragsregel erstellen' : 'Beitragsregel bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<int>(
-                      value: _ruleTypeId ?? 0,
+                      initialValue: _ruleTypeId ?? 0,
                       dropdownColor: AirmiusColors.cardSoft,
                       decoration: const InputDecoration(labelText: 'Mitgliedschaftstyp'),
                       items: [
@@ -2609,7 +2614,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                     AirmiusTextField(label: 'Beitrag EUR', hint: '12.00', controller: _ruleAmount, keyboardType: TextInputType.number),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: intervals.contains(_ruleInterval) ? _ruleInterval : intervals.first,
+                      initialValue: intervals.contains(_ruleInterval) ? _ruleInterval : intervals.first,
                       dropdownColor: AirmiusColors.cardSoft,
                       decoration: const InputDecoration(labelText: 'Intervall'),
                       items: [for (final interval in intervals) DropdownMenuItem(value: interval, child: Text(_intervalLabel(interval)))],
@@ -2640,7 +2645,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                               ? null
                               : () async {
                                   final saved = await _saveRule();
-                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
                                 },
                           icon: const Icon(Icons.tune_outlined),
                           label: Text(_saving ? 'Speichert...' : (_editingRuleId == null ? 'Erstellen' : 'Aktualisieren')),

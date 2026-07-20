@@ -3,8 +3,6 @@ import 'learning_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
-import 'learning_operations_screen.dart';
 
 class CertificateVerificationScreen extends StatefulWidget {
   const CertificateVerificationScreen({super.key, this.code = 'AIR-2026-001'});
@@ -42,8 +40,8 @@ class _CertificateVerificationScreenState extends State<CertificateVerificationS
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Status'),
-            SwitchListTile(value: _valid, onChanged: (value) => setState(() => _valid = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zertifikat gültig', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren API-Erfolgs- oder Fehlerzustand.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _public, onChanged: (value) => setState(() => _public = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich verifizierbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann von Vereinen, Arbeitgebern oder Kursanbietern geprüft werden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _valid, onChanged: (value) => setState(() => _valid = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zertifikat gültig', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren API-Erfolgs- oder Fehlerzustand.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _public, onChanged: (value) => setState(() => _public = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich verifizierbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann von Vereinen, Arbeitgebern oder Kursanbietern geprüft werden.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

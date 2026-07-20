@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class MembershipOperationsScreen extends StatefulWidget {
   const MembershipOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _MembershipOperationsScreenState extends State<MembershipOperationsScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Vereinsregeln'),
-                  SwitchListTile(value: _requireDocuments, onChanged: (value) => setState(() => _requireDocuments = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Dokumentbestätigung erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datenschutz, Beitragsordnung und Vereinsregeln müssen vor Antrag bestätigt werden.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _autoMemberNumber, onChanged: (value) => setState(() => _autoMemberNumber = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Mitgliedsnummer automatisch', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Annahme wird eine Vereinsnummer vorbereitet.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _requireDocuments, onChanged: (value) => setState(() => _requireDocuments = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Dokumentbestätigung erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datenschutz, Beitragsordnung und Vereinsregeln müssen vor Antrag bestätigt werden.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _autoMemberNumber, onChanged: (value) => setState(() => _autoMemberNumber = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Mitgliedsnummer automatisch', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Annahme wird eine Vereinsnummer vorbereitet.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _MembershipOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _MembershipOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Aktion verändert Antrag, Mitgliedschaft oder Zahlstatus und wird später auditiert.', item.action, action);
       return;

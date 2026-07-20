@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\EventService;
 use App\Services\GamificationService;
 use App\Support\AppNotification;
+use App\Support\EventAttendance;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -215,6 +216,7 @@ class EventController extends Controller
         $event->load([
             'user:id,name',
             'team:id,name,club_id,sport_type',
+            'team.users:id,name,email,profile_photo_path',
             'club:id,name',
             'conversation:id',
             'cancelledBy:id,name',
@@ -227,6 +229,8 @@ class EventController extends Controller
         $event->loadCount([
             'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
         ]);
+        $currentParticipant = $event->participants->firstWhere('id', auth()->id());
+        $responseDeadlineExpired = $event->participant_response_deadline_at?->isPast() ?? false;
 
         return Inertia::render('Auth/Dashboard/Events/Show', [
             'event' => $event,
@@ -243,13 +247,22 @@ class EventController extends Controller
             'eventTypes' => Event::TYPES,
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
-            'currentParticipantStatus' => $event->participants()
-                ->where('users.id', auth()->id())
-                ->first()?->pivot?->status,
+            'currentParticipantStatus' => $currentParticipant?->pivot?->status,
+            'currentParticipantResponse' => [
+                'reason' => $currentParticipant?->pivot?->response_reason,
+                'response_mode' => $currentParticipant?->pivot?->response_mode ?: 'self',
+                'responded_at' => $currentParticipant?->pivot?->responded_at,
+            ],
+            'participationPolicy' => [
+                'response_required' => (bool) $event->participant_response_required,
+                'response_deadline_at' => $event->participant_response_deadline_at?->toIso8601String(),
+                'deadline_expired' => $responseDeadlineExpired,
+            ],
             'can' => [
                 'update' => auth()->user()->can('update', $event),
                 'delete' => auth()->user()->can('delete', $event),
                 'cancel' => auth()->user()->can('cancel', $event),
+                'manage_attendance' => EventAttendance::canManage(auth()->user(), $event),
                 'manage_penalties' => $event->team
                     ? $this->canManageTeamCashbox(auth()->user(), $event->team)
                     : false,
@@ -367,6 +380,8 @@ class EventController extends Controller
 
         $data = $request->validate([
             'status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'response_reason' => ['nullable', 'string', 'max:1000'],
+            'response_mode' => ['nullable', Rule::in(['self', 'guardian', 'trainer', 'coach', 'system'])],
         ]);
 
         $currentStatus = $event->participants()
@@ -379,6 +394,17 @@ class EventController extends Controller
             $event->participants()->detach($request->user()->id);
 
             return back()->with('success', 'Teilnahmemeldung entfernt.');
+        }
+
+        $responseDeadlineExpired = $event->participant_response_deadline_at?->isPast() ?? false;
+
+        if ((bool) $event->participant_response_required
+            && ! $responseDeadlineExpired
+            && $data['status'] === 'no'
+            && blank($data['response_reason'] ?? null)) {
+            throw ValidationException::withMessages([
+                'response_reason' => 'Bitte gib kurz an, warum du absagst.',
+            ]);
         }
 
         if ($data['status'] === 'yes' && $currentStatus !== 'yes' && $event->max_participants) {
@@ -394,7 +420,12 @@ class EventController extends Controller
         }
 
         $event->participants()->syncWithoutDetaching([
-            $request->user()->id => ['status' => $data['status']],
+            $request->user()->id => [
+                'status' => $data['status'],
+                'response_reason' => $data['response_reason'] ?? null,
+                'response_mode' => $data['response_mode'] ?? 'self',
+                'responded_at' => now(),
+            ],
         ]);
 
         if ($data['status'] === 'yes') {
@@ -412,6 +443,22 @@ class EventController extends Controller
         $event->participants()->detach($request->user()->id);
 
         return back()->with('success', 'Teilnahme entfernt.');
+    }
+
+    public function recordAttendance(Request $request, Event $event)
+    {
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        $data = $request->validate([
+            'attendance' => ['required', 'array', 'min:1', 'max:500'],
+            'attendance.*.user_id' => ['required', 'integer', 'exists:users,id'],
+            'attendance.*.status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
+            'attendance.*.response_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        EventAttendance::record($event, $data['attendance'], 'trainer');
+
+        return back()->with('success', 'Trainingsanwesenheit gespeichert.');
     }
 
     public function comment(Request $request, Event $event)

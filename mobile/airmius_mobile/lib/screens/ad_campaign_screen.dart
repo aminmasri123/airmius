@@ -3,8 +3,6 @@ import 'sponsor_ads_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
-import 'sponsor_ads_operations_screen.dart';
 
 class AdCampaignScreen extends StatefulWidget {
   const AdCampaignScreen({
@@ -67,7 +65,7 @@ class _AdCampaignScreenState extends State<AdCampaignScreen> {
             const Eyebrow('Placement'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _placement,
+              initialValue: _placement,
               dropdownColor: AirmiusColors.cardSoft,
               decoration: const InputDecoration(labelText: 'Anzeigenflaeche'),
               items: const ['Marketplace Karte', 'Hero Banner', 'Sale Kachel', 'Sponsor Slot', 'Vereinsprofil'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -79,9 +77,9 @@ class _AdCampaignScreenState extends State<AdCampaignScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Tracking'),
-            SwitchListTile(value: _trackClicks, onChanged: (value) => setState(() => _trackClicks = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Klicktracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entspricht später der Ads-Click-Route.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _trackConversions, onChanged: (value) => setState(() => _trackConversions = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Conversiontracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Checkout, Lead oder Sponsor-Anfrage als Conversion vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _clubVisible, onChanged: (value) => setState(() => _clubVisible = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Im Vereinskontext sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbarkeit für Verein, Public-Bereich oder Marketplace steuern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _trackClicks, onChanged: (value) => setState(() => _trackClicks = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Klicktracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entspricht später der Ads-Click-Route.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _trackConversions, onChanged: (value) => setState(() => _trackConversions = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Conversiontracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Checkout, Lead oder Sponsor-Anfrage als Conversion vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _clubVisible, onChanged: (value) => setState(() => _clubVisible = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Im Vereinskontext sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbarkeit für Verein, Public-Bereich oder Marketplace steuern.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

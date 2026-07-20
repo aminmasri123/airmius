@@ -73,6 +73,65 @@ class ChatSecurityTest extends TestCase
         $this->assertDatabaseHas('conversations', ['type' => 'group']);
     }
 
+    public function test_web_direct_and_group_chats_can_be_created_with_initial_messages(): void
+    {
+        $actor = User::factory()->create();
+        $recipient = User::factory()->create();
+        $friend = User::factory()->create();
+        $secondFriend = User::factory()->create();
+
+        $this->befriend($actor, $friend);
+        $this->befriend($actor, $secondFriend);
+
+        $this->actingAs($actor)
+            ->post(route('auth.conversations.store'), [
+                'type' => 'direct',
+                'participant_ids' => [$recipient->id],
+                'message' => 'Direktnachricht aus Web.',
+            ])
+            ->assertRedirect();
+
+        $direct = Conversation::query()
+            ->where('type', 'direct')
+            ->whereHas('users', fn ($query) => $query->where('users.id', $actor->id))
+            ->whereHas('users', fn ($query) => $query->where('users.id', $recipient->id))
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $direct->id,
+            'sender_id' => $actor->id,
+            'message' => 'Direktnachricht aus Web.',
+        ]);
+        $this->assertDatabaseHas('message_receipts', [
+            'user_id' => $recipient->id,
+        ]);
+
+        $this->actingAs($actor)
+            ->post(route('auth.conversations.store'), [
+                'type' => 'group',
+                'participant_ids' => [$friend->id, $secondFriend->id],
+                'name' => 'Laufgruppe Montag',
+                'message' => 'Willkommen im Gruppenchat.',
+            ])
+            ->assertRedirect();
+
+        $group = Conversation::query()
+            ->where('type', 'group')
+            ->where('owner_id', $actor->id)
+            ->where('name', 'Laufgruppe Montag')
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('conversation_users', [
+            'conversation_id' => $group->id,
+            'user_id' => $friend->id,
+        ]);
+        $this->assertDatabaseHas('messages', [
+            'conversation_id' => $group->id,
+            'sender_id' => $actor->id,
+            'message' => 'Willkommen im Gruppenchat.',
+        ]);
+    }
+
     public function test_chat_file_preview_requires_visible_chat_membership(): void
     {
         config([

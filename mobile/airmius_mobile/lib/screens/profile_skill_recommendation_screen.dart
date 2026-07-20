@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class ProfileSkillRecommendationScreen extends StatefulWidget {
   const ProfileSkillRecommendationScreen({
@@ -41,7 +40,7 @@ class _ProfileSkillRecommendationScreenState extends State<ProfileSkillRecommend
             Text('${widget.person} kann Skills pflegen, Empfehlungen erhalten und Endorsements freigeben.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _skillLevel,
+              initialValue: _skillLevel,
               dropdownColor: AirmiusColors.cardSoft,
               decoration: const InputDecoration(labelText: 'Skill-Level'),
               items: const ['Einsteiger', 'Fortgeschritten', 'Experte', 'Trainer'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -59,9 +58,9 @@ class _ProfileSkillRecommendationScreenState extends State<ProfileSkillRecommend
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Skill-Freigabe'),
-            SwitchListTile(value: _visible, onChanged: (value) => setState(() => _visible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Profil anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Skill erscheint je nach Sichtbarkeit im Profil.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _verifiedClubContext, onChanged: (value) => setState(() => _verifiedClubContext = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Vereinskontext verifiziert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Endorsement stammt aus Verein, Team oder Training.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Person oder Empfehlungsgeber über Status informieren.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _visible, onChanged: (value) => setState(() => _visible = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Profil anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Skill erscheint je nach Sichtbarkeit im Profil.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _verifiedClubContext, onChanged: (value) => setState(() => _verifiedClubContext = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Vereinskontext verifiziert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Endorsement stammt aus Verein, Team oder Training.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Person oder Empfehlungsgeber über Status informieren.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

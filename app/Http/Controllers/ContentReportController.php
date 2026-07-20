@@ -9,6 +9,7 @@ use App\Models\ModerationFlag;
 use App\Models\Post;
 use App\Models\Story;
 use App\Models\User;
+use App\Support\ModerationAuditLog;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -35,6 +36,7 @@ class ContentReportController extends Controller
             'reportable_id' => $model->getKey(),
             'reason' => $data['reason'],
             'details' => $data['details'] ?? null,
+            'status' => 'open',
         ]);
 
         ModerationFlag::create([
@@ -51,6 +53,16 @@ class ContentReportController extends Controller
             $model->forceFill(['moderation_status' => 'reported'])->save();
         }
 
+        ModerationAuditLog::record(
+            $report,
+            'reported',
+            $request->user(),
+            null,
+            $report->status,
+            $report->reason,
+            ModerationAuditLog::contentMetadata($model)
+        );
+
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => [
@@ -65,6 +77,52 @@ class ContentReportController extends Controller
         }
 
         return back()->with('success', 'Danke. Die Meldung wurde an die Moderation gesendet.');
+    }
+
+    public function appeal(Request $request, ContentReport $report)
+    {
+        abort_unless((int) $report->reporter_id === (int) $request->user()->id, 403);
+        abort_if($report->status === 'open', 422, 'Eine Beschwerde ist erst nach einer Moderationsentscheidung moeglich.');
+        abort_if($report->appeal_status === 'pending', 422, 'Zu dieser Meldung ist bereits eine Beschwerde offen.');
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        $previousStatus = $report->appeal_status;
+
+        $report->forceFill([
+            'appeal_reason' => $data['reason'],
+            'appeal_status' => 'pending',
+            'appealed_at' => now(),
+            'appeal_decision' => null,
+            'appeal_decided_by' => null,
+            'appeal_decided_at' => null,
+        ])->save();
+
+        ModerationAuditLog::record(
+            $report,
+            'appeal_submitted',
+            $request->user(),
+            $previousStatus,
+            'pending',
+            $data['reason'],
+            ModerationAuditLog::contentMetadata($report->reportable)
+        );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'id' => $report->id,
+                    'status' => $report->status,
+                    'appeal_status' => $report->appeal_status,
+                    'appealed_at' => $report->appealed_at?->toJSON(),
+                ],
+                'message' => 'Deine Beschwerde wurde an die Moderation gesendet.',
+            ], 201);
+        }
+
+        return back()->with('success', 'Deine Beschwerde wurde an die Moderation gesendet.');
     }
 
     private function findReportable(string $type, int $id)

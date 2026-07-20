@@ -84,6 +84,7 @@ Route::middleware([
     Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:system.manage')->name('admin.moderation.index');
     Route::put('/admin/moderation/flags/{flag}', [ModerationController::class, 'updateFlag'])->middleware('can:system.manage')->name('admin.moderation.flags.update');
     Route::put('/admin/moderation/reports/{report}', [ModerationController::class, 'updateReport'])->middleware('can:system.manage')->name('admin.moderation.reports.update');
+    Route::put('/admin/moderation/reports/{report}/appeal', [ModerationController::class, 'decideReportAppeal'])->middleware('can:system.manage')->name('admin.moderation.reports.appeal.update');
 
     // BLOG CMS
     Route::get('/admin/blogs', [BlogPostController::class, 'index'])->middleware('can:blog.view')->name('blogs.index');

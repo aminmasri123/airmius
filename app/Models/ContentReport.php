@@ -18,12 +18,22 @@ class ContentReport extends Model
         'status',
         'reviewed_by',
         'reviewed_at',
+        'decision_reason',
+        'action_taken',
+        'appeal_reason',
+        'appeal_status',
+        'appealed_at',
+        'appeal_decision',
+        'appeal_decided_by',
+        'appeal_decided_at',
     ];
 
     protected function casts(): array
     {
         return [
             'reviewed_at' => 'datetime',
+            'appealed_at' => 'datetime',
+            'appeal_decided_at' => 'datetime',
         ];
     }
 
@@ -40,5 +50,16 @@ class ContentReport extends Model
     public function reportable()
     {
         return $this->morphTo();
+    }
+
+    public function appealReviewer()
+    {
+        return $this->belongsTo(User::class, 'appeal_decided_by');
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(ModerationLog::class, 'case_id')
+            ->where('case_type', self::class);
     }
 }

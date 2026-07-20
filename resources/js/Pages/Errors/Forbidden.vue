@@ -6,10 +6,10 @@ defineOptions({ layout: AppLayout })
 
 defineProps({
     status: { type: Number, default: 403 },
-    title: { type: String, default: 'Upgrade oder Berechtigung erforderlich' },
+    title: { type: String, default: 'Du hast dafür keine Berechtigung' },
     message: {
         type: String,
-        default: 'Diese Funktion ist in deinem aktuellen Paket oder mit deiner aktuellen Rolle nicht freigeschaltet.',
+        default: 'Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.',
     },
     upgradeUrl: { type: String, default: '/preise' },
 })
@@ -38,7 +38,7 @@ defineProps({
 
             <div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link :href="upgradeUrl" class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                    Upgrade ansehen
+                    Paket ansehen
                 </Link>
 
                 <Link :href="route('auth.dashboard')" class="rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary hover:border-borderHover">
@@ -48,4 +48,3 @@ defineProps({
         </section>
     </div>
 </template>
-

@@ -18,6 +18,7 @@ class InvoiceResource extends JsonResource
             'description' => $this->description,
             'amount' => $this->amount,
             'status' => $this->status,
+            'status_label' => $this->statusLabel(),
             'source' => $this->source,
             'billing_period_start' => $this->billing_period_start?->toDateString(),
             'billing_period_end' => $this->billing_period_end?->toDateString(),

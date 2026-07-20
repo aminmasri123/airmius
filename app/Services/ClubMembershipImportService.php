@@ -29,7 +29,7 @@ class ClubMembershipImportService
             'athlete_license_number' => trim((string) ($row['lizenznummer'] ?? $row['athlete_license_number'] ?? '')) ?: null,
             'contribution_amount' => ClubMembershipInput::normalizeMoney($row['beitrag'] ?? $row['contribution_amount'] ?? null),
             'contribution_interval' => ClubMembershipInput::normalizeContributionInterval($row['intervall'] ?? $row['contribution_interval'] ?? 'none'),
-            'contribution_next_invoice_on' => ClubMembershipInput::normalizeDate($row['nächsten_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
+            'contribution_next_invoice_on' => ClubMembershipInput::normalizeDate($row['naechste_rechnung'] ?? $row['naechsten_rechnung'] ?? $row['nächsten_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
             'sepa_iban' => ClubMembershipInput::normalizeIban($row['iban'] ?? $row['sepa_iban'] ?? null),
             'sepa_bic' => ClubMembershipInput::normalizeBic($row['bic'] ?? $row['sepa_bic'] ?? null),
             'sepa_mandate_reference' => trim((string) ($row['mandatsreferenz'] ?? $row['sepa_mandate_reference'] ?? '')) ?: null,

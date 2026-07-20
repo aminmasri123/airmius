@@ -11,11 +11,15 @@ class MarketplaceProductQualityGate
     public static function evaluate(MarketplaceProduct $product): array
     {
         $product->loadMissing(['inventories', 'user.approvedSellerApplications', 'club']);
+        $isLearningOffer = in_array($product->offer_type, ['online_course', 'training_plan'], true) || filled($product->learning_course_id);
+        $hasLearningStructure = filled($product->learning_course_id)
+            || count((array) ($product->course_outline ?: [])) > 0
+            || count((array) ($product->learning_goals ?: [])) > 0;
 
         $checks = [
             self::check('title', mb_strlen(trim((string) $product->title)) >= 8, 'required', 'Titel ist klar genug.'),
-            self::check('description', mb_strlen(trim((string) $product->description)) >= 80, 'required', 'Beschreibung erklärt Nutzen, Zustand, Ablauf und Einschraenkungen.'),
-            self::check('main_image', filled($product->image_url), 'required', 'Hauptbild ist vorhanden.'),
+            self::check('description', mb_strlen(trim((string) $product->description)) >= 80 || ($isLearningOffer && $hasLearningStructure && mb_strlen(trim((string) $product->description)) >= 30), 'required', 'Beschreibung erklärt Nutzen, Zustand, Ablauf und Einschraenkungen.'),
+            self::check('main_image', $isLearningOffer || filled($product->image_url), 'required', 'Hauptbild ist vorhanden.'),
             self::check('price', (int) $product->price_cents > 0, 'required', 'Preis ist gesetzt.'),
             self::check('seller', (bool) ($product->club_id || $product->user_id || $product->payout_status === 'not_applicable'), 'required', 'Anbieter ist zugeordnet.'),
             self::check('seller_verified', self::sellerVerified($product), 'required', 'Anbieter ist für den Marketplace freigegeben.'),

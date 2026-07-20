@@ -4,8 +4,6 @@ import 'marketplace_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'checkout_status_screen.dart';
-import 'ui_action_result_screen.dart';
-import 'marketplace_operations_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -42,9 +40,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Zahlung & Lieferung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Kreditkarte', 'PayPal', 'Überweisung', 'Bar beim Verein'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
+            DropdownButtonFormField<String>(initialValue: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Kreditkarte', 'PayPal', 'Überweisung', 'Bar beim Verein'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _delivery, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Lieferart'), items: const ['Versand', 'Abholung beim Verein'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _delivery = value ?? _delivery)),
+            DropdownButtonFormField<String>(initialValue: _delivery, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Lieferart'), items: const ['Versand', 'Abholung beim Verein'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _delivery = value ?? _delivery)),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

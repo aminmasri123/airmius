@@ -194,7 +194,7 @@ const checkoutCart = () => {
                     <div class="divide-y divide-border">
                         <article v-for="item in cartItems" :key="item.id" class="grid gap-4 p-5 md:grid-cols-[6rem_minmax(0,1fr)_8rem_auto] md:items-center">
                             <Link :href="item.product?.show_url || route('auth.commerce.products.show', item.product?.id)" class="block overflow-hidden rounded border border-border bg-inputBg">
-                                <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" class="aspect-square h-full w-full object-cover">
+                                <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" width="192" height="192" loading="lazy" decoding="async" class="aspect-square h-full w-full object-cover">
                                 <div v-else class="flex aspect-square items-center justify-center">
                                     <i class="las la-store text-4xl text-buttonPrimary"></i>
                                 </div>
@@ -345,4 +345,3 @@ const checkoutCart = () => {
         <Footer />
     </div>
 </template>
-

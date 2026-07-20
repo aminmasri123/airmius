@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class RouteDetailScreen extends StatefulWidget {
   const RouteDetailScreen({super.key, required this.title, required this.body, required this.status, required this.icon, this.mode = 'route'});
@@ -49,8 +48,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Sicherheit'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _permission, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Sichtbarkeit'), items: const ['Privat', 'Team intern', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _permission = value ?? _permission)),
-            SwitchListTile(value: _shareWithTeam, onChanged: (value) => setState(() => _shareWithTeam = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Team teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Route, Track oder Live-Standort für Team sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(initialValue: _permission, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Sichtbarkeit'), items: const ['Privat', 'Team intern', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _permission = value ?? _permission)),
+            SwitchListTile(value: _shareWithTeam, onChanged: (value) => setState(() => _shareWithTeam = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Team teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Route, Track oder Live-Standort für Team sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

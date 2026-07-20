@@ -4,7 +4,6 @@ import 'gamification_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'gamification_rule_detail_screen.dart';
-import 'gamification_operations_screen.dart';
 
 class GamificationRulesScreen extends StatefulWidget {
   const GamificationRulesScreen({super.key});

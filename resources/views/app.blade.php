@@ -51,5 +51,10 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
+        @env('testing')
+            @isset($plainTextAssertions)
+                <template data-testid="plain-text-assertions">{{ $plainTextAssertions }}</template>
+            @endisset
+        @endenv
     </body>
 </html>

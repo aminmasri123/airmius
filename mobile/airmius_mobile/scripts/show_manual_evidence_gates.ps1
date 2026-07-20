@@ -16,6 +16,7 @@ $ManualGateIds = @(
     "ios_release_build",
     "domain_verification",
     "screenshots",
+    "real_device_smoke",
     "real_api_qa",
     "legal_privacy",
     "localization_qa",

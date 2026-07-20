@@ -130,9 +130,9 @@ class _RuleBuilderPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Regel-Builder'),
           const SizedBox(height: 10),
-          DropdownButtonFormField<String>(value: frequency, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlungsrhythmus'), items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich', 'Einmalig'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onFrequency),
+          DropdownButtonFormField<String>(initialValue: frequency, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlungsrhythmus'), items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich', 'Einmalig'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onFrequency),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(value: method, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Standard-Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Online Checkout', 'Kostenlos'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onMethod),
+          DropdownButtonFormField<String>(initialValue: method, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Standard-Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Online Checkout', 'Kostenlos'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onMethod),
           const SizedBox(height: 10),
           _RuleSwitch(icon: Icons.payments_outlined, title: 'Barzahlung erlauben', body: 'Verein kann Barzahlung für Mitglieder oder bestimmte Typen aktivieren.', value: cashAllowed, onChanged: onCash, color: AirmiusColors.green),
           _RuleSwitch(icon: Icons.account_balance_outlined, title: 'Überweisung erlauben', body: 'Mitglieder erhalten später Zahlungsdaten, Verwendungszweck und Fälligkeitsdatum.', value: bankTransferAllowed, onChanged: onBank, color: AirmiusColors.blue),
@@ -211,7 +211,7 @@ class _RuleSwitch extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
         value: value,
         onChanged: onChanged,
-        activeColor: color,
+        activeThumbColor: color,
         contentPadding: EdgeInsets.zero,
         secondary: Icon(icon, color: color),
         title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),

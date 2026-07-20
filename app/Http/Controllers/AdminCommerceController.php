@@ -27,6 +27,7 @@ use App\Models\SubscriptionCoupon;
 use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Models\WebsiteRequest;
+use App\Services\AdminCommerceDashboardPayloadService;
 use App\Services\MediaOptimizer;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
@@ -50,6 +51,7 @@ class AdminCommerceController extends Controller
         private MediaOptimizer $mediaOptimizer,
         private CommerceAuditService $audit,
         private CommerceDocumentService $documents,
+        private AdminCommerceDashboardPayloadService $dashboardPayload,
     ) {}
 
     public function index(Request $request)
@@ -59,20 +61,7 @@ class AdminCommerceController extends Controller
             ->first();
 
         return Inertia::render('Auth/Dashboard/Admin/Commerce/Index', [
-            'summary' => [
-                'revenue_cents' => SubscriptionInvoice::query()->where('status', 'paid')->sum('amount_cents'),
-                'open_cents' => SubscriptionInvoice::query()->whereIn('status', ['open', 'awaiting_transfer', 'overdue'])->sum('amount_cents'),
-                'coupons' => SubscriptionCoupon::query()->count(),
-                'addons' => SubscriptionAddon::query()->count(),
-                'products' => MarketplaceProduct::query()->count(),
-                'warehouses' => CommerceWarehouse::query()->count(),
-                'campaigns' => AdCampaign::query()->count(),
-                'orders' => CommerceOrder::query()->count(),
-                'commission_cents' => CommerceOrder::query()->where('status', 'completed')->sum('commission_cents'),
-                'payout_cents' => CommerceOrder::query()->where('status', 'completed')->sum('amount_cents')
-                    - CommerceOrder::query()->where('status', 'completed')->sum('commission_cents'),
-                'website_requests' => WebsiteRequest::query()->count(),
-            ],
+            'summary' => $this->dashboardPayload->summary(),
             'coupons' => SubscriptionCoupon::query()->latest('id')->get(),
             'addons' => SubscriptionAddon::query()->withCount('purchases')->latest('id')->get(),
             'products' => MarketplaceProduct::query()
@@ -112,13 +101,7 @@ class AdminCommerceController extends Controller
                 ->latest('id')
                 ->limit(100)
                 ->get(),
-            'adReport' => [
-                'impressions' => AdCampaign::query()->sum('impressions'),
-                'clicks' => AdCampaign::query()->sum('clicks'),
-                'spent_cents' => AdCampaign::query()->sum('spent_cents'),
-                'budget_cents' => AdCampaign::query()->sum('budget_cents'),
-                'active' => AdCampaign::query()->where('status', 'active')->count(),
-            ],
+            'adReport' => $this->dashboardPayload->adReport(),
             'adPlacementReport' => $this->adPlacementReport(),
             'adDiagnostics' => $this->adDiagnostics(),
             'orders' => CommerceOrder::query()
@@ -161,24 +144,7 @@ class AdminCommerceController extends Controller
             'sellerReports' => $this->sellerReports(),
             'providerProfile' => $this->marketplaceProviderProfileResource($providerProfile, $request->user()),
             'providerLocations' => $this->providerLocationsForProfile($providerProfile),
-            'commerceSettings' => [
-                'company_country' => Setting::valueFor('commerce_company_country', 'DE'),
-                'company_currency' => Setting::valueFor('commerce_company_currency', 'EUR'),
-                'enable_oss' => Setting::boolFor('commerce_enable_oss', true),
-                'export_vat_mode' => Setting::valueFor('commerce_export_vat_mode', 'zero'),
-                'reverse_charge_enabled' => Setting::boolFor('commerce_reverse_charge_enabled', true),
-                'ads_cpm_cents' => (int) Setting::valueFor('ads_cpm_cents', 500),
-                'ads_cpc_cents' => (int) Setting::valueFor('ads_cpc_cents', 30),
-                'ads_cpl_cents' => (int) Setting::valueFor('ads_cpl_cents', 200),
-                'ads_cpa_percent' => (int) Setting::valueFor('ads_cpa_percent', 10),
-                'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
-                'ads_frequency_cap_per_day' => (int) Setting::valueFor('ads_frequency_cap_per_day', 3),
-                'ads_frequency_cap_feed' => (int) Setting::valueFor('ads_frequency_cap_feed', 3),
-                'ads_frequency_cap_sidebar' => (int) Setting::valueFor('ads_frequency_cap_sidebar', 6),
-                'ads_frequency_cap_marketplace_card' => (int) Setting::valueFor('ads_frequency_cap_marketplace_card', 3),
-                'ads_frequency_cap_sponsor_section' => (int) Setting::valueFor('ads_frequency_cap_sponsor_section', 4),
-                'marketplace_default_commission_percent' => (int) Setting::valueFor('marketplace_default_commission_percent', 10),
-            ],
+            'commerceSettings' => $this->dashboardPayload->commerceSettings(),
         ]);
     }
 
@@ -1910,5 +1876,4 @@ class AdminCommerceController extends Controller
             ->all();
     }
 }
-
 

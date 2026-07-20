@@ -80,7 +80,7 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                   const Eyebrow('Profilstart'),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: _role,
+                    initialValue: _role,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(labelText: 'Rolle'),
                     items: const ['Sportler', 'Vereinsadmin', 'Trainer', 'Guardian', 'Gast', 'Seller'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -88,7 +88,7 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _workspace,
+                    initialValue: _workspace,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(labelText: 'Startbereich'),
                     items: const ['Privat', 'Verein', 'Team', 'Trainer', 'Admin', 'Public'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -283,7 +283,7 @@ class _PermissionSwitch extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
         value: value,
         onChanged: onChanged,
-        activeColor: color,
+        activeThumbColor: color,
         contentPadding: EdgeInsets.zero,
         secondary: Icon(icon, color: color),
         title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),

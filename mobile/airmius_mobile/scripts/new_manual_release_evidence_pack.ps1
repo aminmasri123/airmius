@@ -56,6 +56,22 @@ $Gates = @(
         )
     },
     @{
+        Id = "real_device_smoke"
+        Title = "Android and iOS Real Device Smoke"
+        EvidenceFiles = @(
+            "android-real-device-smoke.md",
+            "ios-real-device-smoke.md",
+            "android-login.png",
+            "android-push.png",
+            "android-upload.png",
+            "android-deep-link.png",
+            "ios-login.png",
+            "ios-push.png",
+            "ios-upload.png",
+            "ios-deep-link.png"
+        )
+    },
+    @{
         Id = "legal_privacy_approval"
         Title = "Legal and Privacy Approval"
         EvidenceFiles = @(

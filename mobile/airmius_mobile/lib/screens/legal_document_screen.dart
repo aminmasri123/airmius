@@ -3,8 +3,6 @@ import 'legal_support_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
-import 'legal_support_operations_screen.dart';
 
 class LegalDocumentScreen extends StatefulWidget {
   const LegalDocumentScreen({super.key, this.initialDocument = 'Datenschutz'});
@@ -70,8 +68,8 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Akzeptanz & Version'),
-            SwitchListTile(value: _showVersion, onChanged: (value) => setState(() => _showVersion = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Versionshinweis anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt Stand und Änderungsdatum in der App.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zur Kenntnis genommen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Akzeptanz wird später serverseitig protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _showVersion, onChanged: (value) => setState(() => _showVersion = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Versionshinweis anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt Stand und Änderungsdatum in der App.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zur Kenntnis genommen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Akzeptanz wird später serverseitig protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

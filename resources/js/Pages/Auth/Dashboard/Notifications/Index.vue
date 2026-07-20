@@ -91,6 +91,10 @@ const objectToRemoval = (notification) => {
     })
 }
 
+const notificationTitle = (notification) => notification.title || notification.data?.title || 'Neue Benachrichtigung'
+const notificationBody = (notification) => notification.body || notification.data?.body || notification.data?.message || null
+const notificationActionUrl = (notification) => notification.action_url || notification.url || notification.data?.action_url || notification.data?.url || null
+
 const visitPage = (url) => {
     if (!url) return
 
@@ -154,10 +158,10 @@ onUnmounted(() => {
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div class="min-w-0">
                                 <h2 class="text-sm font-semibold text-primary">
-                                    {{ notification.data?.title || 'Neue Benachrichtigung' }}
+                                    {{ notificationTitle(notification) }}
                                 </h2>
-                                <p v-if="notification.data?.body" class="mt-1 text-sm text-secondary">
-                                    {{ notification.data.body }}
+                                <p v-if="notificationBody(notification)" class="mt-1 text-sm text-secondary">
+                                    {{ notificationBody(notification) }}
                                 </p>
                                 <p class="mt-2 text-xs text-secondary">
                                     {{ formatDate(notification.created_at) }}
@@ -166,8 +170,8 @@ onUnmounted(() => {
 
                             <div class="flex shrink-0 gap-2">
                                 <a
-                                    v-if="notification.data?.url"
-                                    :href="notification.data.url"
+                                    v-if="notificationActionUrl(notification)"
+                                    :href="notificationActionUrl(notification)"
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
                                     @click="markAsRead(notification)"
                                 >
@@ -194,7 +198,7 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-error/40 hover:bg-error/10 hover:text-error"
-                                    :aria-label="`Benachrichtigung ${notification.data?.title || notification.id} löschen`"
+                                    :aria-label="`Benachrichtigung ${notificationTitle(notification)} löschen`"
                                     title="Benachrichtigung löschen"
                                     @click="deleteNotification(notification)"
                                 >
@@ -229,4 +233,3 @@ onUnmounted(() => {
         </div>
     </div>
 </template>
-

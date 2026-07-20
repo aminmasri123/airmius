@@ -63,6 +63,7 @@ return [
     'stripe' => [
         'secret' => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'webhook_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
     ],
 
     'paypal' => [

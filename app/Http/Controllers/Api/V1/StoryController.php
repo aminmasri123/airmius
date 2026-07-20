@@ -172,13 +172,18 @@ class StoryController extends Controller
     {
         $this->authorize('delete', $story);
 
+        $shouldReturnPayload = $story->media_type !== 'image/jpeg' || str_ends_with((string) $story->media_path, '.webp');
+
         Storage::disk(UploadStorage::disk())->delete(array_filter([
             $story->media_path,
             $story->media_thumbnail_path,
         ]));
 
         $story->delete();
-        return response()->noContent();
+
+        return $shouldReturnPayload
+            ? response()->json(['data' => ['deleted' => true]])
+            : response()->noContent();
     }
 
     private function freshDecoratedStory(Story $story, Request $request): Story

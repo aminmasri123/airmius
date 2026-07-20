@@ -14,12 +14,31 @@ class ClubRoles
         'member',
     ];
 
+    public const INVITABLE = [
+        'admin',
+        'manager',
+        'academy_manager',
+        'financial_controller',
+        'trainer',
+        'member',
+    ];
+
     public const ELEVATED = [
         'owner',
         'admin',
         'manager',
         'academy_manager',
         'financial_controller',
+    ];
+
+    public const LABELS = [
+        'owner' => 'Owner',
+        'admin' => 'Verein-Admin',
+        'manager' => 'Manager',
+        'academy_manager' => 'Akademie-Manager',
+        'financial_controller' => 'Finanzen',
+        'trainer' => 'Trainer',
+        'member' => 'Mitglied',
     ];
 
     public static function normalize(?string $role, mixed $roles): array
@@ -48,6 +67,18 @@ class ClubRoles
         }
 
         return 'member';
+    }
+
+    public static function options(?array $roles = null): array
+    {
+        return collect($roles ?? self::ALL)
+            ->filter(fn ($role) => in_array($role, self::ALL, true))
+            ->map(fn ($role) => [
+                'value' => $role,
+                'label' => self::LABELS[$role] ?? $role,
+            ])
+            ->values()
+            ->all();
     }
 
     public static function whereAny($query, array $roles, string $table = 'club_user')

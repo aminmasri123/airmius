@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 import 'training_operations_screen.dart';
 import 'training_log_detail_screen.dart';
 import 'training_plan_detail_screen.dart';
@@ -45,7 +44,7 @@ class _CoachActionDetailScreenState extends State<CoachActionDetailScreen> {
             const Eyebrow('Bearbeitung'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _priority,
+              initialValue: _priority,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Prioritaet'),
               items: const ['Niedrig', 'Normal', 'Hoch', 'Kritisch'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -53,8 +52,8 @@ class _CoachActionDetailScreenState extends State<CoachActionDetailScreen> {
             ),
             const SizedBox(height: 10),
             const AirmiusTextField(label: 'Coach-Feedback', hint: 'Antwort, Anpassung oder Planhinweis schreiben', icon: Icons.rate_review_outlined, maxLines: 4),
-            SwitchListTile(value: _notifyAthlete, onChanged: (value) => setState(() => _notifyAthlete = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Athlet benachrichtigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push und Inbox-Eintrag vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _markResolved, onChanged: (value) => setState(() => _markResolved = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Aufgabe abschließen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach-Aktion als erledigt markieren.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notifyAthlete, onChanged: (value) => setState(() => _notifyAthlete = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Athlet benachrichtigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push und Inbox-Eintrag vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _markResolved, onChanged: (value) => setState(() => _markResolved = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Aufgabe abschließen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach-Aktion als erledigt markieren.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

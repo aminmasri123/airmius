@@ -55,7 +55,7 @@ class SendEventReminders extends Command
                 }
             });
 
-        $this->info("{$sentNotifications} Event-Erinnerungen für {$sentEvents} Events versendet.");
+        $this->info("{$sentNotifications} Event-Erinnerungen fuer {$sentEvents} Events versendet.");
 
         return self::SUCCESS;
     }

@@ -22,8 +22,11 @@ const props = defineProps({
     approveJoinRequest: { type: Function, required: true },
     declineJoinRequest: { type: Function, required: true },
     inviteFormFor: { type: Function, required: true },
+    teamMemberFormFor: { type: Function, required: true },
+    availableTeamMemberOptions: { type: Function, required: true },
     loadTeamInsights: { type: Function, required: true },
     inviteUser: { type: Function, required: true },
+    addTeamMember: { type: Function, required: true },
 })
 
 const { locale } = useI18n()
@@ -222,6 +225,47 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                 </div>
             </div>
 
+            <form
+                v-if="team.can_manage"
+                class="grid gap-2 border-t border-border pt-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto]"
+                @submit.prevent="addTeamMember(team)"
+            >
+                <select
+                    v-model="teamMemberFormFor(team).user_id"
+                    class="min-w-0 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                >
+                    <option value="">Vereinsmitglied wählen</option>
+                    <option
+                        v-for="member in availableTeamMemberOptions(team)"
+                        :key="member.id"
+                        :value="member.id"
+                    >
+                        {{ member.name }} · {{ member.email }}
+                    </option>
+                </select>
+
+                <select
+                    v-model="teamMemberFormFor(team).role"
+                    class="rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                >
+                    <option
+                        v-for="role in teamRoles"
+                        :key="role"
+                        :value="role"
+                    >
+                        {{ teamRoleLabel(role) }}
+                    </option>
+                </select>
+
+                <button
+                    type="submit"
+                    class="rounded bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
+                    :disabled="!teamMemberFormFor(team).user_id"
+                >
+                    Hinzufügen
+                </button>
+            </form>
+
             <section class="rounded-lg border border-border bg-card p-3">
                 <button
                     type="button"
@@ -408,5 +452,3 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
         </div>
     </div>
 </template>
-
-

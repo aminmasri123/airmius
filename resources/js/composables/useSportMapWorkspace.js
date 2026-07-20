@@ -121,12 +121,16 @@ export function useSportMapWorkspace(props) {
         trackForm,
         trackGpxImportForm,
         trackingAnalysisMetrics,
+        trackingAveragePaceLabel,
+        trackingAverageSpeedLabel,
+        trackingCaloriesLabel,
         trackingCompactMetrics,
         trackingDesktopMetrics,
         trackingDistance,
         trackingElapsedLabel,
         trackingError,
         trackingFullscreen,
+        trackingLastAccuracyLabel,
         trackingLiveStatusLabel,
         trackingMobileMetrics,
         trackingPoints,
@@ -465,7 +469,12 @@ export function useSportMapWorkspace(props) {
 
     const fallbackMapLabels = sportMapFallbackLabels
     const tabs = sportMapTabs
-    const landingActions = sportMapLandingActions
+    const landingActions = sportMapLandingActions.map((action) => ({
+        ...action,
+        key: action.target || action.key,
+        title: action.title || (action.titleKey ? t(action.titleKey) : action.key),
+        description: action.description || (action.descriptionKey ? t(action.descriptionKey) : ''),
+    }))
 
     watch(() => props.routes, (routes) => {
         const nextRoutes = Array.isArray(routes) ? routes : []
@@ -1556,12 +1565,16 @@ export function useSportMapWorkspace(props) {
         trackForm,
         trackGpxImportForm,
         trackingAnalysisMetrics,
+        trackingAveragePaceLabel,
+        trackingAverageSpeedLabel,
+        trackingCaloriesLabel,
         trackingCompactMetrics,
         trackingDesktopMetrics,
         trackingDistance,
         trackingElapsedLabel,
         trackingError,
         trackingFullscreen,
+        trackingLastAccuracyLabel,
         trackingLiveStatusLabel,
         trackingMobileMetrics,
         trackingPoints,
@@ -1714,6 +1727,7 @@ export function useSportMapWorkspace(props) {
         routeGeneratorSteps,
         routeGeneratorSurfaceOptions,
         defaultSportMapTileSource,
+        PLAYBACK_SPEED_OPTIONS: sportMapPlaybackSpeedOptions,
         sportMapFallbackLabels,
         sportMapLandingActions,
         sportMapMapLayerOptions,

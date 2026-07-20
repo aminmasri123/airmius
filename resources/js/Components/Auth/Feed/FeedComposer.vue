@@ -1,4 +1,6 @@
 ﻿<script setup>
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
@@ -399,21 +401,33 @@ const submitPost = () => {
                     </div>
 
                     <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-                        <button
+                        <AppLoadingState
+                            v-if="postForm.processing"
+                            class="sm:mr-auto"
+                            label="Post wird veroeffentlicht..."
+                            inline
+                        />
+
+                        <AppButton
                             type="button"
-                            class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
+                            variant="secondary"
+                            size="lg"
+                            class="w-full sm:w-auto"
+                            :disabled="postForm.processing"
                             @click="closeComposer"
                         >
                             Abbrechen
-                        </button>
+                        </AppButton>
 
-                        <button
+                        <AppButton
                             type="submit"
                             :disabled="postForm.processing || Boolean(postBlockReason)"
-                            class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 sm:w-auto"
+                            :loading="postForm.processing"
+                            size="lg"
+                            class="w-full sm:w-auto"
                         >
-                            Posten
-                        </button>
+                            {{ postForm.processing ? 'Postet...' : 'Posten' }}
+                        </AppButton>
                     </div>
                 </form>
             </div>

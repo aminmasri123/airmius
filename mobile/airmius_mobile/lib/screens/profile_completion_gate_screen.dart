@@ -98,7 +98,7 @@ class _ProfileCompletionGateScreenState extends State<ProfileCompletionGateScree
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _gender.isEmpty ? null : _gender,
+                        initialValue: _gender.isEmpty ? null : _gender,
                         dropdownColor: AirmiusColors.cardSoft,
                         decoration: const InputDecoration(
                           labelText: 'Geschlecht',

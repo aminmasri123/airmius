@@ -4,7 +4,6 @@ import 'sports_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'sport_profile_detail_screen.dart';
-import 'sports_operations_screen.dart';
 
 class SportsCenterScreen extends StatefulWidget {
   const SportsCenterScreen({super.key});

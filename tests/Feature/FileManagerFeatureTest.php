@@ -2,12 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Models\Club;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Friendship;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -246,5 +252,237 @@ class FileManagerFeatureTest extends TestCase
             'parent_id' => null,
             'name' => 'Projektordner (Kopie) (Kopie)',
         ]);
+    }
+
+    public function test_api_personal_file_workspace_allows_owner_and_blocks_other_users(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+
+        Sanctum::actingAs($owner);
+
+        $folderId = $this->postJson('/api/v1/files/folders', [
+            'scope' => 'user',
+            'name' => 'Trainingsplaene',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Trainingsplaene')
+            ->json('data.id');
+
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'user',
+            'folder_id' => $folderId,
+            'file' => UploadedFile::fake()->image('plan.jpg', 24, 24),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.folder_id', $folderId)
+            ->assertJsonPath('data.display_name', 'plan.jpg');
+
+        $file = File::query()->where('folder_id', $folderId)->firstOrFail();
+
+        Sanctum::actingAs($other);
+
+        $this->patchJson("/api/v1/files/folders/{$folderId}", [
+            'name' => 'Fremder Name',
+        ])->assertForbidden();
+
+        $this->deleteJson("/api/v1/uploads/{$file->id}")
+            ->assertForbidden();
+
+        Sanctum::actingAs($owner);
+
+        $this->patchJson("/api/v1/files/folders/{$folderId}", [
+            'name' => 'Trainingsplaene 2026',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Trainingsplaene 2026');
+
+        $this->patchJson("/api/v1/uploads/{$file->id}", [
+            'display_name' => 'plan-final.jpg',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.display_name', 'plan-final.jpg');
+
+        $this->deleteJson("/api/v1/files/folders/{$folderId}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->assertDatabaseMissing('folders', ['id' => $folderId]);
+        $this->assertDatabaseMissing('files', ['id' => $file->id]);
+    }
+
+    public function test_api_scoped_uploads_and_folder_actions_respect_file_permissions(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $member->id => [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ],
+        ]);
+        $team->users()->attach($member->id, ['role' => 'player']);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson('/api/v1/files/upload-intents', [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'file_name' => 'verein.jpg',
+            'mime_type' => 'image/jpeg',
+            'size_bytes' => 128,
+        ])->assertForbidden();
+
+        $this->postJson('/api/v1/files/folders', [
+            'scope' => 'team',
+            'team_id' => $team->id,
+            'name' => 'Teamordner',
+        ])->assertForbidden();
+
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'club',
+            'club_id' => $club->id,
+            'file' => UploadedFile::fake()->image('verein.jpg', 24, 24),
+        ])->assertForbidden();
+
+        $this->grantUserPermissions($member, ['file.upload', 'file.view']);
+
+        $folderId = $this->postJson('/api/v1/files/folders', [
+            'scope' => 'team',
+            'team_id' => $team->id,
+            'name' => 'Teamordner',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.team_id', $team->id)
+            ->json('data.id');
+
+        $this->postJson('/api/v1/files/upload-intents', [
+            'scope' => 'team',
+            'team_id' => $team->id,
+            'folder_id' => $folderId,
+            'file_name' => 'team.jpg',
+            'mime_type' => 'image/jpeg',
+            'size_bytes' => 128,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.upload.form_fields.team_id', $team->id)
+            ->assertJsonPath('data.upload.form_fields.folder_id', $folderId);
+
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'team',
+            'team_id' => $team->id,
+            'folder_id' => $folderId,
+            'file' => UploadedFile::fake()->image('team.jpg', 24, 24),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.team_id', $team->id)
+            ->assertJsonPath('data.folder_id', $folderId);
+
+        $file = File::query()->where('folder_id', $folderId)->firstOrFail();
+
+        $this->patchJson("/api/v1/uploads/{$file->id}", [
+            'display_name' => 'team-final.jpg',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.display_name', 'team-final.jpg');
+
+        $this->patchJson("/api/v1/files/folders/{$folderId}", [
+            'name' => 'Teamordner final',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Teamordner final');
+
+        $this->deleteJson("/api/v1/uploads/{$file->id}")
+            ->assertForbidden();
+
+        $this->deleteJson("/api/v1/files/folders/{$folderId}")
+            ->assertForbidden();
+
+        $this->grantUserPermissions($member, ['file.delete']);
+
+        $this->deleteJson("/api/v1/uploads/{$file->id}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->deleteJson("/api/v1/files/folders/{$folderId}")
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
+        $this->assertDatabaseMissing('files', ['id' => $file->id]);
+        $this->assertDatabaseMissing('folders', ['id' => $folderId]);
+    }
+
+    public function test_web_scoped_file_and_folder_actions_respect_permissions(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $member->id => [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ],
+        ]);
+
+        $this->actingAs($member)
+            ->post(route('auth.folders.store'), [
+                'scope' => 'club',
+                'club_id' => $club->id,
+                'name' => 'Vereinsordner',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors();
+
+        $this->grantUserPermissions($member, ['file.upload', 'file.view']);
+
+        $this->actingAs($member)
+            ->post(route('auth.folders.store'), [
+                'scope' => 'club',
+                'club_id' => $club->id,
+                'name' => 'Vereinsordner',
+            ])
+            ->assertRedirect();
+
+        $folder = Folder::query()->where('club_id', $club->id)->firstOrFail();
+
+        $this->actingAs($member)
+            ->post(route('auth.files.store'), [
+                'scope' => 'club',
+                'club_id' => $club->id,
+                'folder_id' => $folder->id,
+                'file' => UploadedFile::fake()->image('satzung.jpg', 24, 24),
+            ])
+            ->assertRedirect();
+
+        $file = File::query()->where('folder_id', $folder->id)->firstOrFail();
+
+        $this->actingAs($member)
+            ->put(route('auth.files.update', $file), [
+                'display_name' => 'satzung-final.jpg',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($member)
+            ->delete(route('auth.files.destroy', $file))
+            ->assertRedirect()
+            ->assertSessionHasErrors();
+
+        $this->grantUserPermissions($member, ['file.delete']);
+
+        $this->actingAs($member)
+            ->delete(route('auth.files.destroy', $file))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('files', ['id' => $file->id]);
     }
 }

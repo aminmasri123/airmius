@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class TrainingOperationsScreen extends StatefulWidget {
   const TrainingOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _TrainingOperationsScreenState extends State<TrainingOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Automationen'),
-                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teilnehmer informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnahme, Absage, Warteliste, Planfreigabe und Feedback senden später Push/In-App Hinweise.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _coachReview, onChanged: (value) => setState(() => _coachReview = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Coach Review erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Logs, Risiko-Hinweise und Wochenplaene werden für Trainer sichtbar gemacht.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teilnehmer informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnahme, Absage, Warteliste, Planfreigabe und Feedback senden später Push/In-App Hinweise.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _coachReview, onChanged: (value) => setState(() => _coachReview = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Coach Review erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Logs, Risiko-Hinweise und Wochenplaene werden für Trainer sichtbar gemacht.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _TrainingOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _TrainingOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Event-/Training-Aktion kann Teilnahme, Plan, Log oder Coachstatus verändern und wird später auditiert.', item.action, action);
       return;

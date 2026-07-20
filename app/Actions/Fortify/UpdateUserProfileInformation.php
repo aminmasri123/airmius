@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Models\User;
 use App\Services\ImageService;
+use App\Support\MinorSafety;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
@@ -61,7 +62,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $firstName = trim($input['first_name']);
             $lastName = trim($input['last_name']);
 
-            $user->forceFill([
+            $updates = [
                 'name' => trim($firstName.' '.$lastName),
                 'first_name' => $firstName,
                 'last_name' => $lastName,
@@ -69,7 +70,13 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
                 'athlete_license_number' => $input['athlete_license_number'] ?? null,
                 'profile_visibility' => $input['profile_visibility'],
                 'bio' => $input['bio'] ?? null,
-            ])->save();
+            ];
+
+            if (MinorSafety::isUnderConsentAge($user)) {
+                $updates = array_merge($updates, MinorSafety::privacyDefaults());
+            }
+
+            $user->forceFill($updates)->save();
         }
     }
 
@@ -83,7 +90,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
         $firstName = trim($input['first_name']);
         $lastName = trim($input['last_name']);
 
-        $user->forceFill([
+        $updates = [
             'name' => trim($firstName.' '.$lastName),
             'first_name' => $firstName,
             'last_name' => $lastName,
@@ -92,7 +99,13 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'profile_visibility' => $input['profile_visibility'],
             'bio' => $input['bio'] ?? null,
             'email_verified_at' => null,
-        ])->save();
+        ];
+
+        if (MinorSafety::isUnderConsentAge($user)) {
+            $updates = array_merge($updates, MinorSafety::privacyDefaults());
+        }
+
+        $user->forceFill($updates)->save();
 
         $user->sendEmailVerificationNotification();
     }

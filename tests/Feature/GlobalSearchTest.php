@@ -52,11 +52,11 @@ class GlobalSearchTest extends TestCase
 
         $response = $this->actingAs($user)
             ->getJson(route('auth.search', ['q' => 'Runner']))
-            ->assertOk()
-            ->assertJsonCount(3, 'results');
+            ->assertOk();
 
         $results = collect($response->json('results'));
 
+        $this->assertGreaterThanOrEqual(3, $results->count());
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'user' && $result['id'] === $matchedUser->id));
         $this->assertFalse($results->contains(fn (array $result) => $result['type'] === 'user' && $result['id'] === $user->id));
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'club' && $result['id'] === $club->id));

@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 
 class AirmiusDeepLinkInbox {
   AirmiusDeepLinkInbox({
-    MethodChannel channel = const MethodChannel('com.airmius.app/deep_links'),
-  }) : _channel = channel;
+    this._channel = const MethodChannel('com.airmius.app/deep_links'),
+  });
 
   final MethodChannel _channel;
 

@@ -13,6 +13,7 @@ use App\Models\TrainingLog;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
+use App\Services\AthleteDailyFlowService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -66,6 +67,9 @@ class DashboardController extends Controller
             ->latest()
             ->limit(4)
             ->get(['id', 'type', 'data', 'read', 'created_at']);
+
+        $dailyFlow = app(AthleteDailyFlowService::class)
+            ->fromDashboardData($user, $weekLogs, $upcomingItems, $upcomingEvents, $latestNotifications);
 
         return Inertia::render('Auth/Dashboard/Index', [
             'dashboard' => [
@@ -170,6 +174,7 @@ class DashboardController extends Controller
                         ])
                         ->values(),
                 ],
+                'daily_flow' => $dailyFlow,
                 'focus' => $this->focusItems($weekLogs, $upcomingItems, $upcomingEvents, $latestNotifications),
                 'preferences' => [
                     'widgets' => $user->dashboard_widget_keys,
@@ -181,6 +186,7 @@ class DashboardController extends Controller
     public function updatePreferences(Request $request)
     {
         $widgetKeys = [
+            'daily_flow',
             'training',
             'focus',
             'nutrition',

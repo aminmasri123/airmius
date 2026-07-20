@@ -304,6 +304,10 @@ const visitPage = (url) => url && router.visit(url, {
                                 v-if="post.user?.profile_photo_thumb"
                                 :src="post.user.profile_photo_thumb"
                                 :alt="post.user.name"
+                                width="40"
+                                height="40"
+                                loading="lazy"
+                                decoding="async"
                                 class="h-10 w-10 rounded-full object-cover"
                             />
 
@@ -562,6 +566,10 @@ const visitPage = (url) => url && router.visit(url, {
                         v-if="post.image"
                         :src="storageUrl(post.image)"
                         alt=""
+                        width="1200"
+                        height="900"
+                        loading="lazy"
+                        decoding="async"
                         class="mt-4 max-h-[70vh] w-full rounded-xl border border-border object-cover"
                     />
 
@@ -583,6 +591,10 @@ const visitPage = (url) => url && router.visit(url, {
                                 v-else-if="attachment.file && isImageMime(attachment.file.type)"
                                 :src="storageUrl(attachment.file.path)"
                                 :alt="fileName(attachment.file)"
+                                width="1200"
+                                height="900"
+                                loading="lazy"
+                                decoding="async"
                                 class="max-h-[70vh] w-full rounded-xl border border-border object-cover"
                             />
 

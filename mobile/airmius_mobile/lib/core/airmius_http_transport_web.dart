@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
+
 import 'dart:convert';
 import 'dart:html';
 
@@ -31,7 +33,7 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
       );
     }
     final headers = <String, String>{};
-    for (final line in (xhr.getAllResponseHeaders() ?? '').split('\n')) {
+    for (final line in xhr.getAllResponseHeaders().split('\n')) {
       final separator = line.indexOf(':');
       if (separator > 0) headers[line.substring(0, separator).trim()] = line.substring(separator + 1).trim();
     }

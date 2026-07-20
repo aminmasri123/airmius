@@ -88,6 +88,10 @@ const emit = defineEmits([
                         v-if="editCampaignPreviewUrl"
                         :src="editCampaignPreviewUrl"
                         :alt="form.headline || form.name || 'Ads Vorschau'"
+                        width="640"
+                        height="360"
+                        loading="eager"
+                        decoding="async"
                         class="max-h-64 w-full bg-inputBg object-contain"
                     >
                     <div v-else class="flex min-h-36 items-center justify-center px-4 py-8 text-center text-sm text-secondary">
@@ -129,7 +133,7 @@ const emit = defineEmits([
                             <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante">
                             <div v-if="creativePreviewUrl(creative)" class="overflow-hidden rounded-lg border border-border bg-bg">
                                 <p class="border-b border-border px-3 py-2 text-xs font-semibold uppercase text-secondary">Variantenbild</p>
-                                <img :src="creativePreviewUrl(creative)" :alt="creative.name || 'Variantenbild'" class="max-h-40 w-full bg-inputBg object-contain">
+                                <img :src="creativePreviewUrl(creative)" :alt="creative.name || 'Variantenbild'" width="480" height="270" loading="lazy" decoding="async" class="max-h-40 w-full bg-inputBg object-contain">
                             </div>
                             <button v-if="editCampaignCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="emit('remove-creative-row', index)">
                                 Variante entfernen
@@ -165,4 +169,3 @@ const emit = defineEmits([
         </form>
     </div>
 </template>
-

@@ -36,9 +36,11 @@ use App\Http\Controllers\TeamController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
+use App\Http\Controllers\TrainerCockpitController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserBadgeController;
+use App\Http\Controllers\UserPrivacyController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
 use Illuminate\Http\Request;
@@ -73,6 +75,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
+    Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->name('auth.trainer-cockpit.index');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
@@ -131,6 +134,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     //SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
+    Route::get('/settings/privacy/export', [UserPrivacyController::class, 'export'])->name('auth.settings.privacy.export');
+    Route::patch('/settings/privacy/correction', [UserPrivacyController::class, 'correct'])->name('auth.settings.privacy.correct');
+    Route::post('/settings/privacy/withdraw-consents', [UserPrivacyController::class, 'withdrawConsents'])->name('auth.settings.privacy.withdraw-consents');
     Route::put('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'updateSportProfile'])->name('auth.settings.sport-profiles.update');
     Route::delete('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'destroySportProfile'])->name('auth.settings.sport-profiles.destroy');
     Route::post('/settings/subscription-invoices/{subscriptionInvoice}/cancel-open-payment', [UserSettingsController::class, 'cancelOpenPayment'])->name('auth.settings.subscription-invoices.cancel-open-payment');
@@ -313,6 +319,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.team-join-requests.decline');
+    Route::post('/teams/{team}/members', [TeamController::class, 'storeMember'])
+        ->middleware(EnsureApiCorsHeaders::class)
+        ->name('auth.teams.members.store');
     Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.teams.members.update');
@@ -330,6 +339,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // EVENT PARTICIPATION
     Route::post('/events/{event}/join', [EventController::class, 'join'])->name('auth.events.join');
     Route::post('/events/{event}/leave', [EventController::class, 'leave'])->name('auth.events.leave');
+    Route::put('/events/{event}/attendance', [EventController::class, 'recordAttendance'])->name('auth.events.attendance.update');
     Route::post('/events/{event}/comments', [EventController::class, 'comment'])->name('auth.events.comments.store');
     Route::get('/events/{event}/chat', [EventController::class, 'chat'])->name('auth.events.chat');
 
@@ -358,6 +368,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
 
     // CONTENT REPORTS
     Route::post('/reports', [ContentReportController::class, 'store'])->name('auth.reports.store');
+    Route::post('/reports/{report}/appeal', [ContentReportController::class, 'appeal'])->name('auth.reports.appeal');
 
     // CHAT
     Route::get('/conversations', [ConversationController::class, 'index'])->name('auth.conversations.index');

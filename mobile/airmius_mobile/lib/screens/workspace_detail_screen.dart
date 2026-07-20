@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
   const WorkspaceDetailScreen({super.key, required this.title, required this.status});
@@ -37,7 +36,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             const Text('So kann ein User zwischen Gastseite, Verein, Team, Trainerbereich und Admin-Aufgaben wechseln, ohne die App zu verlassen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _context,
+              initialValue: _context,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Arbeitsbereich'),
               items: const ['Gastseite', 'Dashboard', 'Vereinsbereich', 'Trainerbereich', 'Admin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -50,9 +49,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Workspace-Regeln'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _pinToHome, onChanged: (value) => setState(() => _pinToHome = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Home sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Arbeitsbereich erscheint im Dashboard-Schnellzugriff.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _pushEnabled, onChanged: (value) => setState(() => _pushEnabled = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push in diesem Kontext', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigungen respektieren Rollen und Ruhezeiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _inheritRoles, onChanged: (value) => setState(() => _inheritRoles = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Vereinsrollen übernehmen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Team- und Trainerrechte aus Vereinsrollen ableiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _pinToHome, onChanged: (value) => setState(() => _pinToHome = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Home sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Arbeitsbereich erscheint im Dashboard-Schnellzugriff.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _pushEnabled, onChanged: (value) => setState(() => _pushEnabled = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push in diesem Kontext', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigungen respektieren Rollen und Ruhezeiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _inheritRoles, onChanged: (value) => setState(() => _inheritRoles = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Vereinsrollen übernehmen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Team- und Trainerrechte aus Vereinsrollen ableiten.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [

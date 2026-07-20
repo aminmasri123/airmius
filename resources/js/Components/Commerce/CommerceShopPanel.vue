@@ -146,7 +146,7 @@ const emit = defineEmits([
         <div class="grid gap-4 p-5 lg:grid-cols-3">
             <article v-for="product in visibleShopProducts" :key="product.id" class="overflow-hidden rounded-lg border border-border bg-bg">
                 <div class="aspect-[4/3] bg-inputBg">
-                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" width="480" height="360" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                     <div v-else class="flex h-full items-center justify-center">
                         <i class="las la-store text-5xl text-air-blue"></i>
                     </div>
@@ -195,7 +195,6 @@ const emit = defineEmits([
         </div>
     </section>
 </template>
-
 
 
 

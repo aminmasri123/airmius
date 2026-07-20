@@ -25,6 +25,8 @@ const showCancelModal = ref(false)
 const penaltyError = ref('')
 const attendanceError = ref('')
 const attendanceSaving = ref(false)
+const bulkAttendanceSaving = ref(false)
+const attendanceForm = ref({})
 const eventState = ref(JSON.parse(JSON.stringify(props.event)))
 const currentParticipantStatus = ref(props.currentParticipantStatus)
 const penaltyCatalogState = ref(props.penaltyCatalog || { rules: [], fees: [], can_manage: false })
@@ -192,8 +194,21 @@ const recurrenceDaysLabel = computed(() => {
 })
 
 const yesCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'yes').length || 0)
+const lateCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'late').length || 0)
 const maybeCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'maybe').length || 0)
 const noCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'no').length || 0)
+const attendanceStatusFor = (member) => event.value.participants
+    ?.find((participant) => Number(participant.id) === Number(member.id))
+    ?.pivot
+    ?.status || ''
+const attendanceRoster = computed(() => {
+    const roster = event.value.team?.users?.length ? event.value.team.users : (event.value.participants || [])
+
+    return roster.map((member) => ({
+        ...member,
+        attendance_status: attendanceStatusFor(member),
+    }))
+})
 const eventPenaltyParticipants = computed(() => (event.value.participants || [])
     .filter((participant) => ['yes', 'late'].includes(participant.pivot?.status)))
 const activePenaltyRules = computed(() => penaltyCatalogState.value?.rules || [])
@@ -214,6 +229,18 @@ const isFullForYes = computed(() => hasParticipantLimit.value
 const capacityLabel = computed(() => hasParticipantLimit.value
     ? `${yesCount.value}/${event.value.max_participants} Plätze belegt`
     : `${yesCount.value} Zusagen, unbegrenzt`)
+
+const syncAttendanceForm = () => {
+    const next = {}
+
+    attendanceRoster.value.forEach((member) => {
+        next[member.id] = member.attendance_status || ''
+    })
+
+    attendanceForm.value = next
+}
+
+watch(event, () => syncAttendanceForm(), { deep: true, immediate: true })
 
 const optimisticParticipantForViewer = (status) => {
     const user = page.props.auth?.user || page.props.user || {}
@@ -271,6 +298,38 @@ const setStatus = (status) => {
         },
         onFinish: () => {
             attendanceSaving.value = false
+        },
+    })
+}
+
+const saveBulkAttendance = () => {
+    if (bulkAttendanceSaving.value) return
+
+    const attendance = attendanceRoster.value
+        .map((member) => ({
+            user_id: member.id,
+            status: attendanceForm.value[member.id],
+        }))
+        .filter((row) => row.status)
+
+    if (!attendance.length) {
+        attendanceError.value = 'Bitte mindestens einen Anwesenheitsstatus auswählen.'
+
+        return
+    }
+
+    attendanceError.value = ''
+    bulkAttendanceSaving.value = true
+
+    router.put(route('auth.events.attendance.update', props.event.id), { attendance }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            attendanceError.value = errors.attendance
+                || Object.values(errors || {})[0]
+                || 'Anwesenheit konnte nicht gespeichert werden.'
+        },
+        onFinish: () => {
+            bulkAttendanceSaving.value = false
         },
     })
 }
@@ -550,10 +609,14 @@ onMounted(() => {
                     <p v-if="attendanceError" class="mt-3 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
                         {{ attendanceError }}
                     </p>
-                    <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
                         <div class="rounded-lg bg-success/10 p-3 text-success">
                             <p class="text-2xl font-bold">{{ yesCount }}</p>
                             <p class="text-xs font-semibold">Zusagen</p>
+                        </div>
+                        <div class="rounded-lg bg-warning/10 p-3 text-warning">
+                            <p class="text-2xl font-bold">{{ lateCount }}</p>
+                            <p class="text-xs font-semibold">Verspätet</p>
                         </div>
                         <div class="rounded-lg bg-air-blue/10 p-3 text-air-blue">
                             <p class="text-2xl font-bold">{{ maybeCount }}</p>
@@ -594,6 +657,33 @@ onMounted(() => {
                         </div>
                         <p v-if="!event.participants?.length" class="text-sm text-secondary">Noch keine Teilnehmer.</p>
                     </div>
+
+                    <form
+                        v-if="can.manage_attendance && event.type === 'training' && attendanceRoster.length"
+                        class="mt-4 space-y-2 border-t border-border pt-4"
+                        @submit.prevent="saveBulkAttendance"
+                    >
+                        <div
+                            v-for="member in attendanceRoster"
+                            :key="member.id"
+                            class="flex items-center gap-2 rounded-lg bg-inputBg px-3 py-2 text-sm"
+                        >
+                            <span class="min-w-0 flex-1 truncate font-medium text-primary">{{ member.name }}</span>
+                            <select v-model="attendanceForm[member.id]" class="rounded border border-border bg-card px-2 py-1 text-xs text-primary">
+                                <option value="">Offen</option>
+                                <option v-for="status in participantStatuses" :key="status" :value="status">
+                                    {{ statusLabels[status] || status }}
+                                </option>
+                            </select>
+                        </div>
+                        <button
+                            type="submit"
+                            class="w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-50"
+                            :disabled="bulkAttendanceSaving"
+                        >
+                            {{ bulkAttendanceSaving ? 'Speichert...' : 'Anwesenheit speichern' }}
+                        </button>
+                    </form>
                 </section>
             </aside>
         </section>

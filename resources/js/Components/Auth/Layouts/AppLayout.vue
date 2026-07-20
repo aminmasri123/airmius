@@ -12,6 +12,12 @@ const props = defineProps({
 
 const page = usePage()
 const { t, te } = useI18n()
+const permissionDeniedMessage = 'Du hast dafür keine Berechtigung.'
+const defaultBackendPermissionMessages = new Set([
+    'Forbidden',
+    'This action is forbidden.',
+    'This action is unauthorized.',
+])
 
 const componentTitles = {
     'Auth/Dashboard/Index': 'Dashboard',
@@ -363,9 +369,19 @@ const addFeedback = (type, message, flashId = null) => {
     feedbackTimers.set(id, window.setTimeout(() => removeFeedback(id), type === 'error' ? 7000 : 4500))
 }
 
+const normalizeFeedbackMessage = (message) => {
+    const text = String(message || '').trim()
+
+    if (defaultBackendPermissionMessages.has(text)) {
+        return permissionDeniedMessage
+    }
+
+    return text
+}
+
 const firstErrorMessage = (errors) => {
     const values = Object.values(errors || {}).flat()
-    const first = values.find((value) => String(value || '').trim())
+    const first = values.map(normalizeFeedbackMessage).find((value) => value)
 
     return first || 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.'
 }
@@ -386,7 +402,7 @@ const showFlashFeedback = (flash = {}) => {
 
 const httpErrorMessage = (status) => {
     if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
-    if (status === 403) return 'Du hast für diese Aktion keine Berechtigung.'
+    if (status === 403) return permissionDeniedMessage
     if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
     if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
     if (status === 422) return 'Bitte prüfe die Eingaben.'
@@ -553,12 +569,17 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
     <Head :title="translatedPageTitle" />
 
     <div class="min-h-dvh w-full bg-bg text-primary">
+        <a href="#main-content" class="skip-link">{{ t('Zum Hauptinhalt springen') }}</a>
+
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
 
         <Teleport to="body">
             <div
                 v-if="feedbackMessages.length"
                 class="pointer-events-none fixed inset-x-0 bottom-4 z-[90] flex flex-col gap-2 px-3 sm:bottom-auto sm:left-auto sm:right-4 sm:top-4 sm:w-[min(24rem,calc(100vw-2rem))] sm:px-0"
+                role="status"
+                aria-live="polite"
+                aria-atomic="false"
             >
                 <TransitionGroup name="airmius-feedback" tag="div" class="space-y-2">
                     <article
@@ -618,6 +639,8 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                         <!-- ☰ MOBILE MENU BUTTON -->
                         <button type="button" class="rounded-lg p-2 hover:bg-muted md:hidden"
+                            :aria-label="t('Navigation öffnen')"
+                            :aria-expanded="sidebarOpen"
                             @click="sidebarOpen = !sidebarOpen">
                             <i class="las la-bars text-xl"></i>
                         </button>
@@ -640,6 +663,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                         <!-- Search Mobile -->
                         <button type="button" class="rounded-lg p-2 hover:bg-muted sm:hidden"
+                            :aria-label="t('Suche öffnen')"
                             @click="searchOpen = true">
                             <i class="las la-search text-xl"></i>
                         </button>
@@ -650,6 +674,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                             <input v-model="searchTerm" @focus="searchOpen = true"
                                 class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm"
+                                :aria-label="t('Suche')"
                                 :placeholder="$t('search.placeholder')">
 
                             <div
@@ -706,7 +731,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         </div>
 
                         <!-- Chats -->
-                        <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted">
+                        <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted" :aria-label="t('Chats öffnen')">
                             <i class="las la-comments text-xl"></i>
                             <span
                                 v-if="unreadChatsCount"
@@ -722,6 +747,10 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                 type="button"
                                 class="relative rounded-lg p-2 hover:bg-muted"
                                 :class="{ 'bg-muted': notificationOpen }"
+                                :aria-label="t('Benachrichtigungen öffnen')"
+                                :aria-expanded="notificationOpen"
+                                aria-haspopup="dialog"
+                                aria-controls="notification-popover"
                                 @click="toggleNotifications"
                             >
                                 <i class="las la-bell text-xl"></i>
@@ -735,11 +764,15 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                             <div
                                 v-if="notificationOpen"
+                                id="notification-popover"
                                 class="fixed left-3 right-3 top-16 z-50 mt-0 max-h-[calc(100dvh-5rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-[min(22rem,calc(100vw-1.5rem))] sm:rounded-xl"
+                                role="dialog"
+                                aria-modal="false"
+                                aria-labelledby="notification-popover-title"
                             >
                                 <div class="flex items-center justify-between border-b border-border px-4 py-3">
                                     <div>
-                                        <p class="text-sm font-semibold text-primary">{{ t('Benachrichtigungen') }}</p>
+                                        <p id="notification-popover-title" class="text-sm font-semibold text-primary">{{ t('Benachrichtigungen') }}</p>
                                         <p class="text-xs text-secondary">
                                             {{ unreadCount ? t('notifications.unread_count', { count: unreadCount }) : t('Alles gelesen') }}
                                         </p>
@@ -824,7 +857,13 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
             <!-- Mobile Search Overlay -->
             <Teleport to="body">
-                <div v-if="searchOpen" class="fixed inset-0 z-[70] bg-black/60 p-3 sm:hidden">
+                <div
+                    v-if="searchOpen"
+                    class="fixed inset-0 z-[70] bg-black/60 p-3 sm:hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    :aria-label="t('Suche')"
+                >
                     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
                         <div class="flex items-center gap-2 border-b border-border p-3">
                             <div class="relative min-w-0 flex-1">
@@ -832,6 +871,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                                 <input v-model="searchTerm"
                                     class="w-full rounded-lg border border-border bg-inputBg py-3 pl-9 pr-3 text-sm text-primary"
+                                    :aria-label="t('Suche')"
                                     :placeholder="$t('search.short')" autofocus>
                             </div>
 
@@ -893,7 +933,12 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
             </Teleport>
 
             <!-- Content -->
-            <main class="min-w-0 flex-1 overflow-x-hidden p-3 pb-24 sm:p-4 lg:p-6">
+            <main
+                id="main-content"
+                class="min-w-0 flex-1 overflow-x-hidden p-3 pb-24 sm:p-4 lg:p-6"
+                tabindex="-1"
+                :aria-label="translatedPageTitle"
+            >
                 <slot />
             </main>
         </div>
@@ -912,4 +957,3 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
     transform: translateY(12px);
 }
 </style>
-

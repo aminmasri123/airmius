@@ -1,4 +1,7 @@
 ﻿<script setup>
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
+
 defineProps({
     storageUsage: { type: Object, default: null },
     formatStorage: { type: Function, required: true },
@@ -61,18 +64,31 @@ defineProps({
             <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                 {{ uploadForm.errors.file || uploadForm.errors.general }}
             </p>
-            <button :disabled="uploadForm.processing || !uploadForm.file || isStorageFull" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 md:h-10">
-                Hochladen
-            </button>
+            <AppLoadingState v-if="uploadForm.processing" class="mt-2" label="Upload laeuft..." inline />
+            <AppButton
+                type="submit"
+                class="mt-2"
+                block
+                :loading="uploadForm.processing"
+                :disabled="uploadForm.processing || !uploadForm.file || isStorageFull"
+            >
+                {{ uploadForm.processing ? 'Laedt hoch...' : 'Hochladen' }}
+            </AppButton>
         </form>
 
         <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neuer Ordner</h2>
             <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary md:h-10" placeholder="Ordnername">
-            <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 md:h-10">
-                Erstellen
-            </button>
+            <AppLoadingState v-if="folderForm.processing" class="mt-2" label="Ordner wird erstellt..." inline />
+            <AppButton
+                type="submit"
+                class="mt-2"
+                block
+                :loading="folderForm.processing"
+                :disabled="folderForm.processing || !folderForm.name.trim()"
+            >
+                {{ folderForm.processing ? 'Erstellt...' : 'Erstellen' }}
+            </AppButton>
         </form>
     </aside>
 </template>
-

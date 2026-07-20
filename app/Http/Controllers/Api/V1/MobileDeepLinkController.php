@@ -33,10 +33,11 @@ class MobileDeepLinkController extends Controller
         return match ($first) {
             'dashboard' => $this->target('dashboard', 'Dashboard', '/api/v1/dashboard/daily-flow', '/dashboard'),
             'profile' => $this->target('profile', 'ProfileShow', '/api/v1/users/'.($second ?? '{user}'), '/users/'.($second ?? ''), ['user' => $second]),
-            'feed' => $this->target('feed_post', 'FeedPost', '/api/v1/feed', '/feed', ['post' => $second]),
-            'chat' => $this->target('chat_conversation', 'ChatConversation', '/api/v1/chat/conversations/'.($second ?? '{conversation}'), '/chat?conversation='.($second ?? ''), ['conversation' => $second]),
+            'feed', 'posts' => $this->target('feed_post', 'FeedPost', '/api/v1/feed', '/feed', ['post' => $second]),
+            'chat', 'conversations' => $this->target('chat_conversation', 'ChatConversation', '/api/v1/chat/conversations/'.($second ?? '{conversation}'), '/chat?conversation='.($second ?? ''), ['conversation' => $second]),
             'events' => $this->target('event_show', 'EventShow', '/api/v1/events/'.($second ?? '{event}'), '/events/'.($second ?? ''), ['event' => $second]),
             'teams' => $this->target('team_show', 'TeamShow', '/api/v1/teams/'.($second ?? '{team}'), '/teams/'.($second ?? ''), ['team' => $second]),
+            'invitations', 'team-invitations', 'club-member-invitations' => $this->invitationTarget($segments),
             'training' => $second === 'plans'
                 ? $this->target('training_plan', 'TrainingPlanShow', '/api/v1/training/plans/'.($third ?? '{trainingPlan}'), '/training', ['trainingPlan' => $third])
                 : $this->target('training', 'TrainingHome', '/api/v1/training/plans', '/training'),
@@ -44,9 +45,39 @@ class MobileDeepLinkController extends Controller
             'sport-routes' => $this->target('sport_route', 'SportRouteNavigation', '/api/v1/sport-routes/'.($second ?? '{sportRoute}'), '/sport-map', ['sportRoute' => $second]),
             'sport-tracks' => $this->target('sport_track', 'SportTrackReplay', '/api/v1/sport-tracks', '/sport-map', ['sportTrack' => $second]),
             'commerce' => $this->commerceTarget($segments),
-            'clubs' => $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($second ?? '{club}').'/billing', '/club-cockpit', ['club' => $second]),
+            'clubs' => $third === 'billing'
+                ? $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($second ?? '{club}').'/billing', '/club-cockpit', ['club' => $second])
+                : $this->target('club_show', 'ClubShow', '/api/v1/clubs/'.($second ?? '{club}'), '/clubs/'.($second ?? ''), ['club' => $second]),
             default => $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false),
         };
+    }
+
+    private function invitationTarget(array $segments): array
+    {
+        $type = $segments[0] ?? 'invitations';
+        $token = $this->invitationToken($segments);
+
+        return $this->target(
+            'invitation',
+            'InvitationAccept',
+            '/api/v1/mobile/deep-links/resolve',
+            match ($type) {
+                'team-invitations' => '/team-invitations/token/'.($token ?? '').'/accept',
+                'club-member-invitations' => '/club-member-invitations/token/'.($token ?? '').'/accept',
+                default => '/invitations/'.($token ?? ''),
+            },
+            ['type' => $type, 'token' => $token],
+            $token !== null && $token !== ''
+        );
+    }
+
+    private function invitationToken(array $segments): ?string
+    {
+        if (($segments[1] ?? null) === 'token') {
+            return $segments[2] ?? null;
+        }
+
+        return $segments[1] ?? null;
     }
 
     private function commerceTarget(array $segments): array

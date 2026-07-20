@@ -606,7 +606,7 @@ class _SportAutocompleteField extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   shrinkWrap: true,
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AirmiusColors.border),
+                  separatorBuilder: (_, _) => const Divider(height: 1, color: AirmiusColors.border),
                   itemBuilder: (context, index) {
                     final sport = items[index];
                     return ListTile(
@@ -640,7 +640,7 @@ class _CountryField extends StatelessWidget {
       const Text('Land', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
       const SizedBox(height: 6),
       DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         dropdownColor: AirmiusColors.card,
         decoration: const InputDecoration(),
         style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
@@ -1025,7 +1025,7 @@ class _ClubInlineWorkspace extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (panel == 'edit') ...[
-          _ClubEditInlinePanel(club: club, onOpenProfile: onOpenProfile),
+          _ClubEditInlinePanel(club: club, onOpenProfile: onOpenProfile, onSaved: onReload),
           const SizedBox(height: 12),
         ],
         if (panel == 'team') ...[
@@ -1348,7 +1348,7 @@ class _MemberLine extends StatelessWidget {
         ]),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: role,
+          initialValue: role,
           isExpanded: true,
           dropdownColor: AirmiusColors.card,
           decoration: InputDecoration(
@@ -1394,14 +1394,58 @@ Color _clubRoleColor(String role) => switch (role) {
 
 String _formatMoney(double value) => '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
 
-class _ClubEditInlinePanel extends StatelessWidget {
-  const _ClubEditInlinePanel({required this.club, required this.onOpenProfile});
+class _ClubEditInlinePanel extends StatefulWidget {
+  const _ClubEditInlinePanel({required this.club, required this.onOpenProfile, required this.onSaved});
 
   final ClubSummary club;
   final VoidCallback onOpenProfile;
 
+  final VoidCallback onSaved;
+
+  @override
+  State<_ClubEditInlinePanel> createState() => _ClubEditInlinePanelState();
+}
+
+class _ClubEditInlinePanelState extends State<_ClubEditInlinePanel> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    final country = widget.club.country?.trim().toUpperCase();
+    if (country == null || country.length != 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Land fehlt. Oeffne Details und ergaenze den Verein zuerst.')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.updateClub(widget.club.id, {
+        'name': widget.club.name.trim(),
+        'sport_type': widget.club.sportType?.trim(),
+        'country': country,
+        'city': widget.club.city.trim().isEmpty ? null : widget.club.city.trim(),
+        'postal_code': widget.club.postalCode?.trim(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vereinsdaten gespeichert.')),
+      );
+      widget.onSaved();
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vereinsdaten konnten nicht gespeichert werden: $error')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final club = widget.club;
     return _InlineSection(
       title: 'Vereinsdaten bearbeiten',
       subtitle: 'Basisdaten, Adresse und Sportart pflegen.',
@@ -1421,9 +1465,9 @@ class _ClubEditInlinePanel extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _SmallInlineButton(label: 'Speichern', filled: true, onPressed: () => openUiAction(context, title: 'Vereinsdaten speichern', body: 'Der native Flutter-Dialog ist vorbereitet. Für echtes Speichern braucht die mobile API noch PUT /api/v1/clubs/{id}.', status: 'API fehlt', icon: Icons.save_outlined))),
+              Expanded(child: _SmallInlineButton(label: _saving ? 'Speichert...' : 'Speichern', filled: true, onPressed: _saving ? null : _save)),
               const SizedBox(width: 10),
-              Expanded(child: _SmallInlineButton(label: 'Details', onPressed: onOpenProfile)),
+              Expanded(child: _SmallInlineButton(label: 'Details', onPressed: widget.onOpenProfile)),
             ],
           ),
         ],
@@ -1565,7 +1609,7 @@ class _InlineSection extends StatelessWidget {
                   ],
                 ),
               ),
-              if (action != null) action!,
+              ?action,
             ],
           ),
           const SizedBox(height: 12),
@@ -1652,7 +1696,7 @@ class _SmallInlineButton extends StatelessWidget {
   const _SmallInlineButton({required this.label, required this.onPressed, this.filled = false});
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool filled;
 
   @override
@@ -1843,6 +1887,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
       try {
         final services = AirmiusServicesScope.of(context);
         await services.repositories.memberships.withdrawClubRequest(selectedClub.id);
+        if (!mounted || !context.mounted) return;
         widget.onWithdraw(selectedClub);
         setState(() => _requestStatusOverride = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage zurückgezogen.')));
@@ -1972,7 +2017,7 @@ class _ClubProfileHero extends StatelessWidget {
 }
 
 class _ClubCover extends StatelessWidget {
-  const _ClubCover({required this.club, required this.height, this.compact = false});
+  const _ClubCover({required this.club, required this.height}) : compact = false;
 
   final ClubSummary club;
   final double height;
@@ -2005,7 +2050,7 @@ class _ClubCover extends StatelessWidget {
               Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             Container(color: Colors.black.withValues(alpha: compact ? 0.16 : 0.24)),
           ],

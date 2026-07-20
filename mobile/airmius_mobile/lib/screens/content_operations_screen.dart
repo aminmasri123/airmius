@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class ContentOperationsScreen extends StatefulWidget {
   const ContentOperationsScreen({super.key});
@@ -64,8 +63,8 @@ class _ContentOperationsScreenState extends State<ContentOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Freigaberegeln'),
-                  SwitchListTile(value: _publicPreview, onChanged: (value) => setState(() => _publicPreview = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Public Preview aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Artikel, Kurs und Sponsor werden vor Veröffentlichung als Vorschau angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _qualityGate, onChanged: (value) => setState(() => _qualityGate = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Qualitaetsfreigabe erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Learning, Medien und Public-Inhalte brauchen Review/Audit.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _publicPreview, onChanged: (value) => setState(() => _publicPreview = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Public Preview aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Artikel, Kurs und Sponsor werden vor Veröffentlichung als Vorschau angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _qualityGate, onChanged: (value) => setState(() => _qualityGate = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Qualitaetsfreigabe erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Learning, Medien und Public-Inhalte brauchen Review/Audit.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -127,7 +126,7 @@ class _ContentOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _ContentOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Content-Aktion kann Public-Inhalte entfernen oder Sichtbarkeit ändern.', item.action, action);
       return;

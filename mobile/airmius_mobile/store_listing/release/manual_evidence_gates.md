@@ -100,6 +100,59 @@ Why manual:
 
 - Requires real Laravel API environment, test users and backend data.
 
+## Mobile Real Device Smoke Test
+
+Manifest gate:
+
+- `real_device_smoke`
+
+Runbook:
+
+- `store_listing/release/real_device_smoke_test_runbook.md`
+- `store_listing/release/linux_android_setup_runbook.md`
+
+Linux prerequisite checker:
+
+```bash
+scripts/install_android_sdk_user.sh --accept-licenses
+scripts/assert_linux_android_release_prerequisites.sh --require-android-device
+```
+
+Android evidence helper:
+
+```bash
+scripts/run_android_real_device_smoke.sh --build-release
+```
+
+iOS/TestFlight evidence helper on macOS:
+
+```bash
+scripts/run_ios_real_device_smoke.sh --build-ipa
+```
+
+Combined evidence validator after Android and iOS notes are completed:
+
+```bash
+scripts/assert_real_device_smoke_evidence.sh
+```
+
+Required evidence:
+
+- Android physical-device smoke result for login, push opt-in/notification, upload and deep links.
+- iOS physical-device or TestFlight smoke result for login, push opt-in/notification, upload and deep links.
+- Device model, OS version, app build number and API base URL.
+- Screenshots or screen recordings without private data, secrets, tokens or payment data.
+
+Current local status:
+
+- 2026-07-17: Ubuntu host only sees `Linux (desktop)` in `flutter devices`.
+- 2026-07-17: `flutter doctor -v` reports missing Android SDK.
+- 2026-07-17: iOS real-device testing remains blocked on this host because it requires macOS/Xcode/TestFlight.
+
+Why manual:
+
+- Push permissions, native upload pickers, secure storage lifecycle and OS-level deep links must be verified on real Android and iOS devices.
+
 ## Legal and Privacy Approval
 
 Required evidence:

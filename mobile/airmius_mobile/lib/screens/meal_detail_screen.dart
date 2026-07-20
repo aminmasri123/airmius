@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class MealDetailScreen extends StatefulWidget {
   const MealDetailScreen({super.key, required this.title, required this.body, required this.kcal, required this.icon, this.mode = 'meal'});
@@ -45,10 +44,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Portion & Korrektur'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _portion, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Portion'), items: const ['Klein', 'Normal', 'Groß', 'Eigene Menge'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _portion = value ?? _portion)),
+            DropdownButtonFormField<String>(initialValue: _portion, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Portion'), items: const ['Klein', 'Normal', 'Groß', 'Eigene Menge'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _portion = value ?? _portion)),
             const SizedBox(height: 12),
             const AirmiusTextField(label: 'Notiz oder Korrektur', hint: 'z.B. ohne Sauce, mehr Reis, weniger Oel...'),
-            SwitchListTile(value: _saveTemplate, onChanged: (value) => setState(() => _saveTemplate = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Als Vorlage speichern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später schneller erfassen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _saveTemplate, onChanged: (value) => setState(() => _saveTemplate = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Als Vorlage speichern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später schneller erfassen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

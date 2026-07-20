@@ -1,40 +1,8 @@
-﻿<template>
-    <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-card p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-            <h3 class="text-lg font-semibold text-primary mb-4">{{ title }}</h3>
-            <p class="text-secondary mb-4">
-                {{ message }}
-            </p>
-            <p class="text-sm text-secondary mb-4">
-                Geben Sie <strong>"{{ confirmText }}"</strong> ein, um zu bestätigen:
-            </p>
-            <input
-                v-model="confirmation"
-                type="text"
-                class="w-full px-3 py-2 border border-border rounded-lg bg-card text-primary focus:outline-none focus:ring-primary focus:border-primary mb-4"
-                :placeholder="confirmText"
-            />
-            <div class="flex justify-end space-x-2">
-                <button
-                    @click="cancel"
-                    class="px-4 py-2 bg-secondary text-primary rounded-lg hover:bg-secondary/80 transition-colors"
-                >
-                    {{ cancelText }}
-                </button>
-                <button
-                    @click="confirm"
-                    :disabled="confirmation !== confirmText"
-                    class="px-4 py-2 bg-error text-white rounded-lg hover:bg-error/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {{ confirmText }}
-                </button>
-            </div>
-        </div>
-    </div>
-</template>
-
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch } from 'vue';
+import Modal from '@/Components/Modal.vue';
+import AppButton from '@/Components/UI/AppButton.vue';
+import AppFormField from '@/Components/UI/AppFormField.vue';
 
 const props = defineProps({
     show: {
@@ -43,11 +11,11 @@ const props = defineProps({
     },
     title: {
         type: String,
-        default: 'Bestätigung erforderlich',
+        default: 'Bestaetigung erforderlich',
     },
     message: {
         type: String,
-        default: 'Sind Sie sicher, dass Sie diese Aktion ausführen möchten?',
+        default: 'Sind Sie sicher, dass Sie diese Aktion ausfuehren moechten?',
     },
     confirmText: {
         type: String,
@@ -57,28 +25,78 @@ const props = defineProps({
         type: String,
         default: 'Abbrechen',
     },
-})
+});
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(['confirm', 'cancel']);
 
-const confirmation = ref('')
+const confirmation = ref('');
+
+const reset = () => {
+    confirmation.value = '';
+};
 
 const confirm = () => {
-    if (confirmation.value === props.confirmText) {
-        emit('confirm')
-        confirmation.value = ''
+    if (confirmation.value !== props.confirmText) {
+        return;
     }
-}
+
+    emit('confirm');
+    reset();
+};
 
 const cancel = () => {
-    emit('cancel')
-    confirmation.value = ''
-}
+    emit('cancel');
+    reset();
+};
 
-// Reset confirmation when modal is shown/hidden
-watch(() => props.show, (newVal) => {
-    if (!newVal) {
-        confirmation.value = ''
+watch(() => props.show, (show) => {
+    if (!show) {
+        reset();
     }
-})
+});
 </script>
+
+<template>
+    <Modal :show="show" max-width="md" @close="cancel">
+        <div class="p-5">
+            <div class="flex size-11 items-center justify-center rounded-lg bg-error/10 text-error">
+                <i class="las la-exclamation-triangle text-2xl" aria-hidden="true"></i>
+            </div>
+
+            <h3 class="mt-4 text-lg font-semibold text-primary">
+                {{ title }}
+            </h3>
+
+            <p class="mt-2 text-sm leading-6 text-secondary">
+                {{ message }}
+            </p>
+
+            <AppFormField
+                class="mt-4"
+                :label="`Geben Sie &quot;${confirmText}&quot; ein, um zu bestaetigen:`"
+            >
+                <input
+                    v-model="confirmation"
+                    type="text"
+                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary placeholder:text-secondary/70 focus:border-borderHover focus:outline-none focus:ring-borderHover"
+                    :placeholder="confirmText"
+                    @keydown.enter.prevent="confirm"
+                >
+            </AppFormField>
+
+            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <AppButton type="button" variant="secondary" @click="cancel">
+                    {{ cancelText }}
+                </AppButton>
+                <AppButton
+                    type="button"
+                    variant="danger"
+                    :disabled="confirmation !== confirmText"
+                    @click="confirm"
+                >
+                    {{ confirmText }}
+                </AppButton>
+            </div>
+        </div>
+    </Modal>
+</template>

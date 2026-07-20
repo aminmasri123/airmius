@@ -13,6 +13,15 @@ const props = defineProps({
     clubs: { type: Array, default: () => [] },
     membershipStatuses: { type: Array, default: () => ['active', 'non_member', 'pending', 'former'] },
     contributionIntervals: { type: Array, default: () => ['none', 'monthly', 'quarterly', 'yearly', 'once'] },
+    contributionRuleTypes: { type: Array, default: () => [{ value: 'standard', label: 'Standardbeitrag' }] },
+    contributionDiscountOperators: { type: Array, default: () => [{ value: 'percent', label: 'Prozentualer Rabatt' }] },
+    invoiceStatusOptions: { type: Array, default: () => [
+        { value: 'open', label: 'Offen' },
+        { value: 'paid', label: 'Bezahlt' },
+        { value: 'overdue', label: 'Überfällig' },
+        { value: 'cancelled', label: 'Storniert' },
+    ] },
+    clubRoles: { type: Array, default: () => [{ value: 'member', label: 'Mitglied' }] },
     teamRoles: { type: Array, default: () => ['Coach', 'Captain', 'Player'] },
 })
 
@@ -40,6 +49,7 @@ const processingJoinRequestIds = ref(new Set())
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
+    role: 'member',
     membership_status: 'active',
     member_number: '',
     athlete_license_number: '',
@@ -55,6 +65,7 @@ const createEmailMemberRow = () => ({
 })
 const emailMemberForm = ref({
     send_invitation: true,
+    invitation_expires_at: '',
     members: [createEmailMemberRow()],
 })
 const importForm = useForm({
@@ -81,7 +92,7 @@ const contributionRuleForm = useForm({
     amount: '',
     age_min: '',
     age_max: '',
-    factor_key: '',
+    factor_key: 'standard',
     factor_operator: '',
     factor_value: '',
     is_active: true,
@@ -177,10 +188,22 @@ const invoices = computed(() => selectedClub.value?.invoices || [])
 const payments = computed(() => selectedClub.value?.payments || [])
 const financeEntries = computed(() => selectedClub.value?.finance_entries || [])
 const bankTransactions = computed(() => selectedClub.value?.bank_transactions || [])
+const auditLogs = computed(() => selectedClub.value?.audit_logs || [])
 
 const activeMembersCount = computed(() => members.value.filter((member) => formFor(member).membership_status === 'active').length)
 const openInvoices = computed(() => invoices.value.filter((invoice) => ['open', 'overdue'].includes(invoice.status)))
 const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))
+const invoiceSummary = computed(() => selectedClub.value?.invoice_summary || {
+    total_count: invoices.value.length,
+    open_count: openInvoices.value.length,
+    paid_count: invoices.value.filter((invoice) => invoice.status === 'paid').length,
+    overdue_count: invoices.value.filter((invoice) => invoice.status === 'overdue').length,
+    cancelled_count: invoices.value.filter((invoice) => invoice.status === 'cancelled').length,
+    open_amount: openInvoiceTotal.value,
+    paid_amount: invoices.value.filter((invoice) => invoice.status === 'paid').reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0),
+    overdue_amount: invoices.value.filter((invoice) => invoice.status === 'overdue').reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0),
+    cancelled_amount: invoices.value.filter((invoice) => invoice.status === 'cancelled').reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0),
+})
 const paymentAmount = (payment) => Number(payment.amount || 0)
 const fallbackCashBalance = computed(() => payments.value
     .filter((payment) => payment.method === 'cash')
@@ -315,6 +338,7 @@ const tabs = computed(() => [
     { key: 'rules', label: 'Beitragsregeln', count: contributionRules.value.length, icon: 'las la-sliders-h' },
     { key: 'invoices', label: 'Rechnungen', count: openInvoices.value.length, icon: 'las la-file-invoice' },
     { key: 'payments', label: 'Finanzen', count: payments.value.length + financeEntries.value.length, icon: 'las la-university' },
+    { key: 'audit', label: 'Audit', count: auditLogs.value.length, icon: 'las la-history' },
     { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
 ])
 
@@ -333,6 +357,36 @@ const statusClass = (status) => ({
     paused: 'bg-warning/10 text-warning',
     former: 'bg-error/10 text-error',
 }[status] || 'bg-muted text-secondary')
+
+const invoiceStatusLabel = (status) => props.invoiceStatusOptions.find((option) => option.value === status)?.label || status || '-'
+const invoiceStatusClass = (status) => ({
+    open: 'bg-air-blue/15 text-air-blue',
+    paid: 'bg-air-green/15 text-air-green',
+    overdue: 'bg-error/15 text-error',
+    cancelled: 'bg-muted text-secondary',
+}[status] || 'bg-muted text-secondary')
+
+const auditDetail = (entry) => {
+    const data = entry.data || {}
+
+    if (data.old_status && data.new_status) {
+        return `${invoiceStatusLabel(data.old_status)} -> ${invoiceStatusLabel(data.new_status)}`
+    }
+
+    if (data.invoice_number && data.amount) {
+        return `${data.invoice_number} · ${formatMoney(data.amount)}`
+    }
+
+    if (data.invoice_number) {
+        return data.invoice_number
+    }
+
+    if (data.member_name) {
+        return data.member_name
+    }
+
+    return '-'
+}
 
 const clubRoleOptions = [
     { value: 'owner', label: 'Owner' },
@@ -640,9 +694,15 @@ const storeMembershipType = () => {
 const storeContributionRule = () => {
     contributionRuleForm.post(route('auth.club-memberships.contribution-rules.store', selectedClub.value.id), {
         preserveScroll: true,
-        onSuccess: () => contributionRuleForm.reset('name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_key', 'factor_operator', 'factor_value', 'notes'),
+        onSuccess: () => {
+            contributionRuleForm.reset('name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'notes')
+            contributionRuleForm.factor_key = 'standard'
+        },
     })
 }
+
+const contributionRuleTypeLabel = (value) => props.contributionRuleTypes.find((type) => type.value === value)?.label || value || 'Standardbeitrag'
+const contributionDiscountOperatorLabel = (value) => props.contributionDiscountOperators.find((operator) => operator.value === value)?.label || value
 
 const saveMember = (member) => {
     router.put(route('auth.club-memberships.members.update', [selectedClub.value.id, member.id]), formFor(member), {
@@ -739,6 +799,7 @@ const addEmailMember = () => {
             decrementInvitationLimit(selectedClub.value, invitationCount)
             emailMemberForm.value = {
                 send_invitation: true,
+                invitation_expires_at: '',
                 members: [createEmailMemberRow()],
             }
             showAddMemberModal.value = false
@@ -809,6 +870,24 @@ const inviteExternalMember = (member) => {
             class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success"
         >
             {{ page.props.flash.success }}
+        </div>
+
+        <div
+            v-if="page.props.flash?.import_report?.total_errors"
+            class="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-primary"
+        >
+            <p class="font-semibold">Import-Fehlerbericht</p>
+            <p class="mt-1 text-secondary">
+                {{ page.props.flash.import_report.total_errors }} Meldungen wurden protokolliert; betroffene Datensätze wurden übersprungen.
+            </p>
+            <ul class="mt-3 space-y-1 text-xs text-secondary">
+                <li
+                    v-for="error in page.props.flash.import_report.errors"
+                    :key="`${error.row}-${error.email}-${error.reason}`"
+                >
+                    Zeile {{ error.row }}<template v-if="error.email">, {{ error.email }}</template>: {{ error.reason }}
+                </li>
+            </ul>
         </div>
 
         <div
@@ -929,6 +1008,41 @@ const inviteExternalMember = (member) => {
                         <span>{{ tab.label }}</span>
                         <span class="rounded bg-black/10 px-1.5 py-0.5 text-xs">{{ tab.count }}</span>
                     </button>
+                </div>
+            </section>
+
+            <section v-if="activeTab === 'audit'" class="surface-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Audit Log</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ auditLogs.length }} Vereinsaktion(en)</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Zeit</th>
+                                <th class="py-2 pr-4">Aktion</th>
+                                <th class="py-2 pr-4">Person</th>
+                                <th class="py-2 pr-4">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="entry in auditLogs" :key="entry.id">
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(entry.created_at) }}</td>
+                                <td class="py-3 pr-4">
+                                    <span class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">
+                                        {{ entry.label }}
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-4 text-primary">{{ entry.actor?.name || '-' }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ auditDetail(entry) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p v-if="!auditLogs.length" class="py-6 text-sm text-secondary">Noch keine Audit-Einträge.</p>
                 </div>
             </section>
 
@@ -1271,13 +1385,21 @@ const inviteExternalMember = (member) => {
                                         <p class="text-sm text-secondary">
                                             {{ rule.membership_type_name || 'Alle Typen' }} · {{ formatMoney(rule.amount) }} / {{ intervalLabel(rule.billing_interval) }}
                                         </p>
-                                        <p class="mt-1 text-xs text-secondary">
-                                            Gilt {{ formatDate(rule.valid_from) }} bis {{ formatDate(rule.valid_until) }}
-                                            <span v-if="rule.age_min || rule.age_max"> · Alter {{ rule.age_min || 0 }}-{{ rule.age_max || 'offen' }}</span>
-                                        </p>
-                                    </div>
-                                    <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
-                                        {{ rule.is_active ? 'aktiv' : 'inaktiv' }}
+	                                        <p class="mt-1 text-xs text-secondary">
+	                                            Gilt {{ formatDate(rule.valid_from) }} bis {{ formatDate(rule.valid_until) }}
+	                                            <span v-if="rule.age_min || rule.age_max"> · Alter {{ rule.age_min || 0 }}-{{ rule.age_max || 'offen' }}</span>
+	                                        </p>
+	                                        <p class="mt-2 flex flex-wrap gap-2 text-xs">
+	                                            <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
+	                                                {{ rule.factor_label || contributionRuleTypeLabel(rule.factor_key) }}
+	                                            </span>
+	                                            <span v-if="rule.factor_key === 'discount' && rule.factor_value" class="rounded-full bg-warning/10 px-2 py-1 font-semibold text-warning">
+	                                                {{ rule.factor_operator_label || contributionDiscountOperatorLabel(rule.factor_operator) }}: {{ rule.factor_value }}
+	                                            </span>
+	                                        </p>
+	                                    </div>
+	                                    <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
+	                                        {{ rule.is_active ? 'aktiv' : 'inaktiv' }}
                                     </span>
                                 </div>
                             </article>
@@ -1307,15 +1429,25 @@ const inviteExternalMember = (member) => {
                             <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="">Alle Typen</option>
                                 <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
-                            </select>
-                            <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regelname" required>
-                            <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beitrag EUR" required>
-                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
-                            </select>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" required>
-                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                            </select>
+	                            <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regelname" required>
+	                            <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beitrag EUR" required>
+	                            <select v-model="contributionRuleForm.factor_key" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                                <option v-for="type in contributionRuleTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+	                            </select>
+	                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                                <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
+	                            </select>
+	                            <div v-if="contributionRuleForm.factor_key === 'discount'" class="grid grid-cols-2 gap-2">
+	                                <select v-model="contributionRuleForm.factor_operator" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+	                                    <option value="">Rabatt-Typ</option>
+	                                    <option v-for="operator in contributionDiscountOperators" :key="operator.value" :value="operator.value">{{ operator.label }}</option>
+	                                </select>
+	                                <input v-model="contributionRuleForm.factor_value" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Rabattwert">
+	                            </div>
+	                            <div class="grid grid-cols-2 gap-2">
+	                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" required>
+	                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <input v-model="contributionRuleForm.age_min" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
@@ -1562,11 +1694,32 @@ const inviteExternalMember = (member) => {
                     <p class="text-sm text-secondary">{{ filteredInvoices.length }} von {{ invoices.length }} Rechnungen sichtbar.</p>
                     <select v-model="invoiceStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         <option value="all">Alle Status</option>
-                        <option value="open">Offen</option>
-                        <option value="paid">Bezahlt</option>
-                        <option value="overdue">Überfällig</option>
-                        <option value="cancelled">Storniert</option>
+                        <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
+                            {{ status.label }}
+                        </option>
                     </select>
+                </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Offen</p>
+                        <p class="mt-2 text-xl font-bold text-primary">{{ invoiceSummary.open_count || 0 }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ formatMoney(invoiceSummary.open_amount) }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Bezahlt</p>
+                        <p class="mt-2 text-xl font-bold text-primary">{{ invoiceSummary.paid_count || 0 }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ formatMoney(invoiceSummary.paid_amount) }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Überfällig</p>
+                        <p class="mt-2 text-xl font-bold text-primary">{{ invoiceSummary.overdue_count || 0 }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ formatMoney(invoiceSummary.overdue_amount) }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Storniert</p>
+                        <p class="mt-2 text-xl font-bold text-primary">{{ invoiceSummary.cancelled_count || 0 }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ formatMoney(invoiceSummary.cancelled_amount) }}</p>
+                    </div>
                 </div>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
@@ -1589,12 +1742,16 @@ const inviteExternalMember = (member) => {
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(invoice.amount) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_date) }}</td>
                                 <td class="py-3 pr-4">
-                                    <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary" @change="updateInvoiceStatus(invoice, $event.target.value)">
-                                        <option value="open">Offen</option>
-                                        <option value="paid">Bezahlt</option>
-                                        <option value="overdue">Überfällig</option>
-                                        <option value="cancelled">Storniert</option>
-                                    </select>
+                                    <div class="flex flex-col gap-2">
+                                        <span class="inline-flex w-fit rounded-full px-2 py-1 text-xs font-semibold" :class="invoiceStatusClass(invoice.status)">
+                                            {{ invoice.status_label || invoiceStatusLabel(invoice.status) }}
+                                        </span>
+                                        <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary" @change="updateInvoiceStatus(invoice, $event.target.value)">
+                                            <option v-for="status in invoiceStatusOptions" :key="status.value" :value="status.value">
+                                                {{ status.label }}
+                                            </option>
+                                        </select>
+                                    </div>
                                 </td>
                                 <td class="py-3 pr-4">
                                     <div class="flex gap-2">
@@ -1905,6 +2062,15 @@ const inviteExternalMember = (member) => {
                         Einladung zu Airmius verschicken
                     </label>
 
+                    <div v-if="emailMemberForm.send_invitation">
+                        <label class="text-xs font-semibold uppercase text-secondary">Einladung gültig bis</label>
+                        <input
+                            v-model="emailMemberForm.invitation_expires_at"
+                            type="date"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                        >
+                    </div>
+
                     <div class="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
                         <article
                             v-for="(member, index) in emailMemberForm.members"
@@ -1943,15 +2109,22 @@ const inviteExternalMember = (member) => {
                                     >
                                 </div>
 
-                                <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedschaft</label>
-                                    <select v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                        <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
-                                    </select>
-                                </div>
+	                                <div>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedschaft</label>
+	                                    <select v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+	                                        <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
+	                                    </select>
+	                                </div>
 
-                                <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedsnummer</label>
+	                                <div>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">Vereinsrolle</label>
+	                                    <select v-model="member.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+	                                        <option v-for="role in clubRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
+	                                    </select>
+	                                </div>
+
+	                                <div>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedsnummer</label>
                                     <input
                                         v-model="member.member_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"

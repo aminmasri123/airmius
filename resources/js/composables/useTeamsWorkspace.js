@@ -58,6 +58,7 @@ const defaultClubForm = () => ({
 const clubForm = useForm(defaultClubForm())
 
 const inviteForms = ref({})
+const teamMemberForms = ref({})
 const inviteNotices = ref({})
 const joinRequestNotices = ref({})
 const teamForms = ref({})
@@ -189,6 +190,20 @@ const teamFormFor = (club) => {
 const inviteFormFor = (team) => {
     inviteForms.value[team.id] ??= { email: '', role: 'Player' }
     return inviteForms.value[team.id]
+}
+
+const teamMemberFormFor = (team) => {
+    teamMemberForms.value[team.id] ??= { user_id: '', role: 'Player' }
+    return teamMemberForms.value[team.id]
+}
+
+const availableTeamMemberOptions = (team) => {
+    const club = clubForTeam(team)
+    const currentMemberIds = new Set((team.users || []).map((member) => Number(member.id)))
+
+    return (club?.users || [])
+        .filter((member) => !currentMemberIds.has(Number(member.id)))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
 }
 
 const loadTeamInsights = async (team) => {
@@ -382,6 +397,28 @@ const inviteUser = (team) => {
                 || errors.message
                 || Object.values(errors)[0]
                 || 'Einladung konnte nicht gesendet werden.'
+            setInviteNotice(team, 'error', message)
+        },
+    })
+}
+
+const addTeamMember = (team) => {
+    actionNotice.value = null
+    inviteNotices.value[team.id] = null
+
+    router.post(route('auth.teams.members.store', team.id), teamMemberFormFor(team), {
+        preserveScroll: true,
+        onSuccess: () => {
+            teamMemberForms.value[team.id] = { user_id: '', role: 'Player' }
+            setInviteNotice(team, 'success', 'Mitglied wurde zum Team hinzugefügt.')
+        },
+        onError: (errors) => {
+            const message = errors.user_id
+                || errors.role
+                || errors.general
+                || errors.message
+                || Object.values(errors)[0]
+                || 'Mitglied konnte nicht hinzugefügt werden.'
             setInviteNotice(team, 'error', message)
         },
     })
@@ -682,6 +719,7 @@ const deleteTeam = (team) => {
         defaultClubForm,
         clubForm,
         inviteForms,
+        teamMemberForms,
         inviteNotices,
         joinRequestNotices,
         teamForms,
@@ -711,6 +749,8 @@ const deleteTeam = (team) => {
         closeTeamModal,
         teamFormFor,
         inviteFormFor,
+        teamMemberFormFor,
+        availableTeamMemberOptions,
         loadTeamInsights,
         setActionNotice,
         setInviteNotice,
@@ -737,6 +777,7 @@ const deleteTeam = (team) => {
         resetFilters,
         createTeam,
         inviteUser,
+        addTeamMember,
         acceptInvitation,
         declineInvitation,
         requestJoinTeam,

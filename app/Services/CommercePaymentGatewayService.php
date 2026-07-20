@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CommerceOrder;
 use App\Models\Setting;
+use App\Support\PaymentWebhookVerifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -100,49 +101,14 @@ class CommercePaymentGatewayService
 
     public function isValidStripeSignature(string $payload, ?string $signature): bool
     {
-        $secret = config('services.stripe.webhook_secret');
-
-        if (blank($secret)) {
-            return true;
-        }
-
-        if (! $signature) {
-            return false;
-        }
-
-        $parts = collect(explode(',', $signature))->mapWithKeys(function ($part) {
-            [$key, $value] = array_pad(explode('=', $part, 2), 2, null);
-
-            return [$key => $value];
-        });
-
-        return hash_equals(hash_hmac('sha256', $parts->get('t').'.'.$payload, $secret), (string) $parts->get('v1'));
+        return app(PaymentWebhookVerifier::class)->isValidStripeSignature($payload, $signature);
     }
 
     public function isValidPayPalWebhook(Request $request): bool
     {
         $webhookId = config('services.paypal.commerce_webhook_id') ?: config('services.paypal.webhook_id');
 
-        if (blank($webhookId)) {
-            return true;
-        }
-
-        try {
-            $response = Http::withToken($this->paypalAccessToken())
-                ->post($this->paypalBaseUrl().'/v1/notifications/verify-webhook-signature', [
-                    'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
-                    'cert_url' => $request->header('PAYPAL-CERT-URL'),
-                    'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
-                    'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
-                    'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                    'webhook_id' => $webhookId,
-                    'webhook_event' => $request->all(),
-                ]);
-
-            return $response->ok() && $response->json('verification_status') === 'SUCCESS';
-        } catch (\Throwable) {
-            return false;
-        }
+        return app(PaymentWebhookVerifier::class)->isValidPayPalWebhook($request, $webhookId);
     }
 
     private function createStripeCheckout(CommerceOrder $order): string

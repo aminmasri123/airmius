@@ -103,6 +103,7 @@ class HandleInertiaRequests extends Middleware
             'success' => $request->session()->get('success'),
             'error' => $request->session()->get('error'),
             'message' => $request->session()->get('message'),
+            'import_report' => $request->session()->get('import_report'),
         ];
         $flashId = $request->session()->get('flash_id');
 
@@ -127,6 +128,8 @@ class HandleInertiaRequests extends Middleware
                     'profile_photo_path' => $user->profile_photo_path,
                     'profile_photo_url' => $user->profile_photo_url,
                     'profile_photo_thumb' => $user->profile_photo_thumb,
+                    'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
+                    'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
                     'has_social_login' => $user->socialAccounts()->exists(),
 
 
@@ -187,6 +190,12 @@ class HandleInertiaRequests extends Middleware
                 'pending_received_count' => $pendingFriendInvitationsCount,
             ],
 
+            'privacyConsent' => [
+                'ads_personalization_consent' => (bool) $user?->ads_personalization_consent,
+                'ads_measurement_consent' => (bool) $user?->ads_measurement_consent,
+                'source' => $user ? 'user_settings' : 'none',
+            ],
+
             'uploads' => [
                 'disk' => config('filesystems.uploads_disk'),
                 'url' => config('filesystems.uploads_url'),
@@ -199,6 +208,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $flash['success'],
                 'error' => $flash['error'],
                 'message' => $flash['message'],
+                'import_report' => $flash['import_report'],
             ],
 
             'locale' => $user?->language

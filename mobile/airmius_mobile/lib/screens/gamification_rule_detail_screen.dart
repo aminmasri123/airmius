@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class GamificationRuleDetailScreen extends StatefulWidget {
   const GamificationRuleDetailScreen({super.key, required this.title, required this.status});
@@ -44,7 +43,7 @@ class _GamificationRuleDetailScreenState extends State<GamificationRuleDetailScr
             const Eyebrow('Trigger & Belohnung'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _trigger,
+              initialValue: _trigger,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Trigger'),
               items: const ['Mitgliedschaft angenommen', 'Training geloggt', 'Kurs abgeschlossen', 'Event teilgenommen'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -52,7 +51,7 @@ class _GamificationRuleDetailScreenState extends State<GamificationRuleDetailScr
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _reward,
+              initialValue: _reward,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Belohnung'),
               items: const ['Badge + XP', 'Nur XP', 'Levelpunkt', 'Streak'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -63,9 +62,9 @@ class _GamificationRuleDetailScreenState extends State<GamificationRuleDetailScr
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Datenschutz & Steuerung'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _active, onChanged: (value) => setState(() => _active = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Regel aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Regel wird bei passenden Events ausgewertet.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _leaderboardAllowed, onChanged: (value) => setState(() => _leaderboardAllowed = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Leaderboard erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nur mit Opt-in und sichtbarem Profil auswerten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _audit, onChanged: (value) => setState(() => _audit = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Regeländerungen auditieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Änderungen werden im Admin-Audit erfasst.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _active, onChanged: (value) => setState(() => _active = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Regel aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Regel wird bei passenden Events ausgewertet.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _leaderboardAllowed, onChanged: (value) => setState(() => _leaderboardAllowed = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Leaderboard erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nur mit Opt-in und sichtbarem Profil auswerten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _audit, onChanged: (value) => setState(() => _audit = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Regeländerungen auditieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Änderungen werden im Admin-Audit erfasst.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

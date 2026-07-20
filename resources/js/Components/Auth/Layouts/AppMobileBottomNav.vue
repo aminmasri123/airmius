@@ -29,11 +29,11 @@ const copy = {
         more: 'Plus',
     },
     ar: {
-        today: 'ا�"�S�^�.',
+        today: 'اليوم',
         start: 'ابدأ',
-        map: 'ا�"خر�Sطة',
-        team: 'ا�"فر�S�,',
-        more: 'ا�"�.ز�Sد',
+        map: 'الخريطة',
+        team: 'الفريق',
+        more: 'المزيد',
     },
 }
 

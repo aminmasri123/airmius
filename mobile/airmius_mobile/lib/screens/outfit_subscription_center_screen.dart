@@ -34,7 +34,7 @@ class _OutfitSubscriptionCenterScreenState extends State<OutfitSubscriptionCente
               const Text('Sportkleidung als Abo mit Groessen, Stil, Lieferungen und Support-Faellen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                value: _size,
+                initialValue: _size,
                 dropdownColor: AirmiusColors.cardSoft,
                 decoration: const InputDecoration(labelText: 'Groesse'),
                 items: const ['XS', 'S', 'M', 'L', 'XL'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -42,7 +42,7 @@ class _OutfitSubscriptionCenterScreenState extends State<OutfitSubscriptionCente
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _style,
+                initialValue: _style,
                 dropdownColor: AirmiusColors.cardSoft,
                 decoration: const InputDecoration(labelText: 'Stil'),
                 items: const ['Sportlich', 'Schlicht', 'Vereinsfarben', 'Performance'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),

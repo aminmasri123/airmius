@@ -21,6 +21,8 @@ class ModerationFlag extends Model
         'automated_action',
         'reviewed_by',
         'reviewed_at',
+        'decision_reason',
+        'action_taken',
     ];
 
     protected function casts(): array
@@ -45,5 +47,11 @@ class ModerationFlag extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(ModerationLog::class, 'case_id')
+            ->where('case_type', self::class);
     }
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'operations_hub_screen.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_services_scope.dart';
 import '../models/app_tab.dart';
@@ -121,6 +122,13 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   void _openModule(ModuleDefinition module) {
+    if (!AirmiusMvpSurface.isModuleVisible(module)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dieses Modul ist im MVP ausgeblendet.')),
+      );
+      return;
+    }
+
     if (module.title == 'Feed') {
       _openTab(AppTab.feed);
       return;
@@ -215,8 +223,12 @@ class _ShellScreenState extends State<ShellScreen> {
             AppTab.profile => const ProfileScreen(),
           };
 
-    return WillPopScope(
-      onWillPop: () async => !_handleBackNavigation(),
+    return PopScope(
+      canPop: _openedModule == null && _tabHistory.isEmpty && _tab == AppTab.dashboard,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBackNavigation();
+      },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AirmiusTopBar(
@@ -362,7 +374,9 @@ class _ModuleDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final drawerModules = appModules.where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
+    final drawerModules = appModules
+        .where(AirmiusMvpSurface.isModuleVisible)
+        .where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);
     return SizedBox(
@@ -398,8 +412,10 @@ class _ModuleDrawer extends StatelessWidget {
                     _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
                     _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
                     _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
-                    _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
-                    _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
+                    if (AirmiusMvpSurface.showDeveloperSuites)
+                      _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
+                    if (AirmiusMvpSurface.isOperationsHubVisible)
+                      _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
                     const SizedBox(height: 18),
                     const Eyebrow('Alle Module'),
                     const SizedBox(height: 8),

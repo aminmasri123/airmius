@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Support\AirmiusRoleMatrix;
+use App\Support\Api\V1\ApiContract;
 
 class MobileMetaController extends Controller
 {
@@ -10,10 +12,24 @@ class MobileMetaController extends Controller
     {
         return response()->json([
             'data' => [
-                'api_version' => 'v1',
+                'api_version' => ApiContract::VERSION,
+                'contract_version' => ApiContract::CONTRACT_VERSION,
+                'minimum_client_version' => ApiContract::MIN_CLIENT_VERSION,
+                'minimum_app_version' => ApiContract::MIN_CLIENT_VERSION,
                 'auth' => 'sanctum_bearer_token',
+                'feature_flags' => [
+                    'mvp_surface' => true,
+                    'flutter_dev_suites' => false,
+                    'offline_queue' => true,
+                    'upload_retry' => true,
+                    'push_devices' => true,
+                    'deep_links' => true,
+                    'chat_realtime_polling' => true,
+                    'secure_token_storage' => true,
+                ],
                 'supported_locales' => ['de', 'en', 'fr', 'ar'],
                 'rtl_locales' => ['ar'],
+                'role_matrix' => AirmiusRoleMatrix::forClient(),
                 'capabilities' => [
                     'profile' => ['user_card'],
                     'feed' => ['list', 'create', 'stories', 'story_upload', 'story_reactions'],
@@ -25,8 +41,8 @@ class MobileMetaController extends Controller
                         'manager_billing',
                     ],
                     'teams' => ['list', 'show'],
-                    'chat' => ['conversations', 'messages', 'send_message', 'typing'],
-                    'events' => ['list', 'show'],
+                    'chat' => ['conversations', 'create_conversation', 'messages', 'send_message', 'typing', 'read', 'reactions'],
+                    'events' => ['list', 'show', 'create', 'update', 'cancel', 'delete', 'participation', 'attendance'],
                     'training' => [
                         'plans',
                         'logs',
@@ -38,10 +54,10 @@ class MobileMetaController extends Controller
                         'meal_logging',
                         'macro_summary',
                         'goal_targets',
-                        'water_tracking',
-                        'water_quick_add',
                         'recipe_suggestions',
                         'food_search_open_food_facts',
+                        'water_tracking',
+                        'water_quick_add',
                         'training_context',
                         'barcode_ready',
                         'photo_estimate_ai',

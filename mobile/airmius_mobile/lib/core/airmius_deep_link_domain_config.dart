@@ -10,16 +10,27 @@ class AirmiusDeepLinkDomainConfig {
 
   static const supportedRoutes = [
     '/clubs/{id}',
+    '/clubs/{id}/billing',
+    '/teams/{id}',
     '/membership-applications/{id}',
     '/events/{id}',
+    '/feed/{post}',
+    '/posts/{id}',
+    '/chat/{conversation}',
+    '/conversations/{id}',
     '/messages/{id}',
+    '/invitations/{token}',
+    '/club-member-invitations/token/{token}/accept',
+    '/team-invitations/token/{token}/accept',
     '/notifications/{id}',
     '/profile/{section}',
   ];
 
-  static Uri androidAssetLinksUri() => Uri.https(productionHost, androidAssetLinksPath);
+  static Uri androidAssetLinksUri() =>
+      Uri.https(productionHost, androidAssetLinksPath);
 
-  static Uri iosAssociationUri() => Uri.https(productionHost, iosAssociationPath);
+  static Uri iosAssociationUri() =>
+      Uri.https(productionHost, iosAssociationPath);
 
   static Uri productionLink(String path) => Uri.https(productionHost, path);
 
@@ -28,6 +39,10 @@ class AirmiusDeepLinkDomainConfig {
     if (segments.isEmpty) {
       return Uri(scheme: customScheme);
     }
-    return Uri(scheme: customScheme, host: segments.first, pathSegments: segments.skip(1));
+    return Uri(
+      scheme: customScheme,
+      host: segments.first,
+      pathSegments: segments.skip(1),
+    );
   }
 }

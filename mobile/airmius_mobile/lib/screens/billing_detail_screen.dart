@@ -49,8 +49,8 @@ class _BillingDetailScreenState extends State<BillingDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Zahlung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Überweisung', 'SEPA-Lastschrift', 'Kreditkarte', 'PayPal'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
-            SwitchListTile(value: _autoRenew, onChanged: (value) => setState(() => _autoRenew = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Automatisch verlaengern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später über Provider/API steuerbar.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(initialValue: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Überweisung', 'SEPA-Lastschrift', 'Kreditkarte', 'PayPal'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
+            SwitchListTile(value: _autoRenew, onChanged: (value) => setState(() => _autoRenew = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Automatisch verlaengern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später über Provider/API steuerbar.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

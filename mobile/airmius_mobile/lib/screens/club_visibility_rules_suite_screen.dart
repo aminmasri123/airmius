@@ -191,7 +191,7 @@ class _RuleCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(child: Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900))),
-                    Switch.adaptive(value: row.value, activeColor: row.color, onChanged: row.onChanged),
+                    Switch.adaptive(value: row.value, activeThumbColor: row.color, onChanged: row.onChanged),
                   ],
                 ),
                 const SizedBox(height: 6),

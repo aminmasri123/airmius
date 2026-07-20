@@ -12,6 +12,7 @@ use App\Models\Sponsor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -384,11 +385,7 @@ class OutfitSubscriptionModuleTest extends TestCase
 
     public function test_paypal_webhook_activates_pending_outfit_subscription(): void
     {
-        config([
-            'services.paypal.mode' => 'sandbox',
-            'services.paypal.outfit_webhook_id' => null,
-            'services.paypal.webhook_id' => null,
-        ]);
+        $this->fakeSuccessfulOutfitPayPalWebhookVerification();
 
         $user = User::factory()->create();
         $plan = OutfitSubscriptionPlan::query()->create([
@@ -413,13 +410,15 @@ class OutfitSubscriptionModuleTest extends TestCase
             'currency' => 'EUR',
         ]);
 
-        $this->post(route('webhooks.outfit-subscriptions.paypal'), [
-            'event_type' => 'BILLING.SUBSCRIPTION.ACTIVATED',
-            'resource' => [
-                'id' => 'I-PAYPAL123',
-                'status' => 'ACTIVE',
-            ],
-        ])->assertOk();
+        $this
+            ->withHeaders($this->paypalWebhookHeaders())
+            ->post(route('webhooks.outfit-subscriptions.paypal'), [
+                'event_type' => 'BILLING.SUBSCRIPTION.ACTIVATED',
+                'resource' => [
+                    'id' => 'I-PAYPAL123',
+                    'status' => 'ACTIVE',
+                ],
+            ])->assertOk();
 
         $this->assertDatabaseHas('outfit_subscriptions', [
             'id' => $subscription->id,
@@ -460,11 +459,7 @@ class OutfitSubscriptionModuleTest extends TestCase
 
     public function test_paypal_suspended_webhook_pauses_outfit_subscription(): void
     {
-        config([
-            'services.paypal.mode' => 'sandbox',
-            'services.paypal.outfit_webhook_id' => null,
-            'services.paypal.webhook_id' => null,
-        ]);
+        $this->fakeSuccessfulOutfitPayPalWebhookVerification();
 
         $user = User::factory()->create();
         $plan = OutfitSubscriptionPlan::query()->create([
@@ -489,12 +484,14 @@ class OutfitSubscriptionModuleTest extends TestCase
             'next_delivery_at' => now()->addMonth(),
         ]);
 
-        $this->post(route('webhooks.outfit-subscriptions.paypal'), [
-            'event_type' => 'BILLING.SUBSCRIPTION.SUSPENDED',
-            'resource' => [
-                'id' => 'I-SUSPENDED123',
-            ],
-        ])->assertOk();
+        $this
+            ->withHeaders($this->paypalWebhookHeaders())
+            ->post(route('webhooks.outfit-subscriptions.paypal'), [
+                'event_type' => 'BILLING.SUBSCRIPTION.SUSPENDED',
+                'resource' => [
+                    'id' => 'I-SUSPENDED123',
+                ],
+            ])->assertOk();
 
         $this->assertDatabaseHas('outfit_subscriptions', [
             'id' => $subscription->id,
@@ -506,11 +503,7 @@ class OutfitSubscriptionModuleTest extends TestCase
 
     public function test_paypal_cancelled_webhook_cancels_outfit_subscription(): void
     {
-        config([
-            'services.paypal.mode' => 'sandbox',
-            'services.paypal.outfit_webhook_id' => null,
-            'services.paypal.webhook_id' => null,
-        ]);
+        $this->fakeSuccessfulOutfitPayPalWebhookVerification();
 
         $user = User::factory()->create();
         $plan = OutfitSubscriptionPlan::query()->create([
@@ -535,12 +528,14 @@ class OutfitSubscriptionModuleTest extends TestCase
             'next_delivery_at' => now()->addMonth(),
         ]);
 
-        $this->post(route('webhooks.outfit-subscriptions.paypal'), [
-            'event_type' => 'BILLING.SUBSCRIPTION.CANCELLED',
-            'resource' => [
-                'id' => 'I-CANCELLED123',
-            ],
-        ])->assertOk();
+        $this
+            ->withHeaders($this->paypalWebhookHeaders())
+            ->post(route('webhooks.outfit-subscriptions.paypal'), [
+                'event_type' => 'BILLING.SUBSCRIPTION.CANCELLED',
+                'resource' => [
+                    'id' => 'I-CANCELLED123',
+                ],
+            ])->assertOk();
 
         $subscription->refresh();
 
@@ -551,11 +546,7 @@ class OutfitSubscriptionModuleTest extends TestCase
 
     public function test_paypal_expired_webhook_cancels_pending_outfit_subscription_payment(): void
     {
-        config([
-            'services.paypal.mode' => 'sandbox',
-            'services.paypal.outfit_webhook_id' => null,
-            'services.paypal.webhook_id' => null,
-        ]);
+        $this->fakeSuccessfulOutfitPayPalWebhookVerification();
 
         $user = User::factory()->create();
         $plan = OutfitSubscriptionPlan::query()->create([
@@ -579,12 +570,14 @@ class OutfitSubscriptionModuleTest extends TestCase
             'currency' => 'EUR',
         ]);
 
-        $this->post(route('webhooks.outfit-subscriptions.paypal'), [
-            'event_type' => 'BILLING.SUBSCRIPTION.EXPIRED',
-            'resource' => [
-                'id' => 'I-EXPIRED123',
-            ],
-        ])->assertOk();
+        $this
+            ->withHeaders($this->paypalWebhookHeaders())
+            ->post(route('webhooks.outfit-subscriptions.paypal'), [
+                'event_type' => 'BILLING.SUBSCRIPTION.EXPIRED',
+                'resource' => [
+                    'id' => 'I-EXPIRED123',
+                ],
+            ])->assertOk();
 
         $this->assertDatabaseHas('outfit_subscriptions', [
             'id' => $subscription->id,
@@ -889,5 +882,36 @@ class OutfitSubscriptionModuleTest extends TestCase
         $this->assertSame('shipped', $audit->after['status']);
         $this->assertSame('TRACK-123', $audit->after['tracking_number']);
         $this->assertSame('https://tracking.example.test/TRACK-123', $audit->after['tracking_url']);
+    }
+
+    private function fakeSuccessfulOutfitPayPalWebhookVerification(): void
+    {
+        config([
+            'services.paypal.mode' => 'sandbox',
+            'services.paypal.client_id' => 'paypal-client-id',
+            'services.paypal.client_secret' => 'paypal-client-secret',
+            'services.paypal.outfit_webhook_id' => 'outfit-webhook-id',
+            'services.paypal.webhook_id' => null,
+        ]);
+
+        Http::fake([
+            'https://api-m.sandbox.paypal.com/v1/oauth2/token' => Http::response([
+                'access_token' => 'paypal-access-token',
+            ]),
+            'https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature' => Http::response([
+                'verification_status' => 'SUCCESS',
+            ]),
+        ]);
+    }
+
+    private function paypalWebhookHeaders(): array
+    {
+        return [
+            'PAYPAL-AUTH-ALGO' => 'SHA256withRSA',
+            'PAYPAL-CERT-URL' => 'https://api-m.sandbox.paypal.com/certs/test.pem',
+            'PAYPAL-TRANSMISSION-ID' => 'transmission-id',
+            'PAYPAL-TRANSMISSION-SIG' => 'signature',
+            'PAYPAL-TRANSMISSION-TIME' => now()->toIso8601String(),
+        ];
     }
 }

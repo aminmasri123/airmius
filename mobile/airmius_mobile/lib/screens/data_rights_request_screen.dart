@@ -188,7 +188,7 @@ class _SwitchRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-          Switch.adaptive(value: value, onChanged: onChanged, activeColor: AirmiusColors.blue),
+          Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
         ],
       ),
     );

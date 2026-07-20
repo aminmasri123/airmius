@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'guest_marketplace_parity_screen.dart';
 import 'support_helpdesk_screen.dart';
 
 class GuestMarketplaceBuyerScreen extends StatefulWidget {
@@ -30,8 +29,6 @@ class _GuestMarketplaceBuyerScreenState extends State<GuestMarketplaceBuyerScree
 
   @override
   Widget build(BuildContext context) {
-    return const GuestMarketplaceParityScreen();
-
     final items = _visibleItems;
 
     return Scaffold(
@@ -184,7 +181,7 @@ class _SwitchRow extends StatelessWidget {
       decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-        Switch.adaptive(value: value, onChanged: onChanged, activeColor: AirmiusColors.blue),
+        Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
       ]),
     );
   }

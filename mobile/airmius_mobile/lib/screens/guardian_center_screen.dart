@@ -37,7 +37,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
                 value: _consentEnabled,
                 onChanged: (value) => setState(() => _consentEnabled = value),
                 contentPadding: EdgeInsets.zero,
-                activeColor: AirmiusColors.blue,
+                activeThumbColor: AirmiusColors.blue,
                 title: const Text('Guardian Consent aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                 subtitle: const Text('Minderjaehrige benoetigen Zustimmung.', style: TextStyle(color: AirmiusColors.muted)),
               ),

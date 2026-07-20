@@ -5,7 +5,6 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class SettingsDetailScreen extends StatefulWidget {
   const SettingsDetailScreen({super.key, required this.section, required this.status});
@@ -57,7 +56,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
             const AirmiusTextField(label: 'Sportprofil', hint: 'Laufen, Tennis, Fitness', icon: Icons.sports_outlined),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _language,
+              initialValue: _language,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Sprache'),
               items: const ['Deutsch', 'English', 'Francais', '???????'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -83,27 +82,27 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
                 ),
             ]),
             const SizedBox(height: 8),
-            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Profil, Mitgliedschaften, Zahlungen und Medien exportieren.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Profil, Mitgliedschaften, Zahlungen und Medien exportieren.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Benachrichtigungen'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _push, onChanged: (value) => setState(() => _push = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Events, Chat, Zahlungen und Mitgliedsanfragen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _email, onChanged: (value) => setState(() => _email = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('E-Mail aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Wichtige Konto- und Vereinsinformationen per Mail.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _push, onChanged: (value) => setState(() => _push = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Events, Chat, Zahlungen und Mitgliedsanfragen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _email, onChanged: (value) => setState(() => _email = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('E-Mail aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Wichtige Konto- und Vereinsinformationen per Mail.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sicherheit'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Zwei-Faktor-Anmeldung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Code bei sensiblen Logins und Adminrechten verlangen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _biometric, onChanged: (value) => setState(() => _biometric = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Biometrische Entsperrung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Native App-Entsperrung per Fingerabdruck oder Face ID vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Zwei-Faktor-Anmeldung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Code bei sensiblen Logins und Adminrechten verlangen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _biometric, onChanged: (value) => setState(() => _biometric = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Biometrische Entsperrung', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Native App-Entsperrung per Fingerabdruck oder Face ID vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.red.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Kontoaktion'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontolöschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestätigung final.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeThumbColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontolöschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestätigung final.', style: TextStyle(color: AirmiusColors.muted))),
             const SizedBox(height: 10),
             if (_deleteRequested) ...[
               const Text('Fordere zuerst einen Löschcode an. Bei Passwort-Login gib dein Passwort ein, bei Social Login deine Konto-E-Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
@@ -170,6 +169,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     setState(() => _deletingAccount = true);
     try {

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'api_connection_screen.dart';
-import 'ui_action_result_screen.dart';
 
 class PlatformOperationsScreen extends StatelessWidget {
   const PlatformOperationsScreen({super.key});

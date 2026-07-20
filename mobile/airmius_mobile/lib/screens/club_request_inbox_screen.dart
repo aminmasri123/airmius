@@ -218,7 +218,7 @@ class _InboxSwitch extends StatelessWidget {
   Widget build(BuildContext context) => SwitchListTile(
         value: value,
         onChanged: onChanged,
-        activeColor: color,
+        activeThumbColor: color,
         contentPadding: EdgeInsets.zero,
         secondary: Icon(icon, color: color),
         title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),

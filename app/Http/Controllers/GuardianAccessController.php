@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GuardianAccessCode;
 use App\Models\User;
 use App\Notifications\GuardianAccessCodeRequested;
+use App\Support\AppNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -361,6 +362,14 @@ class GuardianAccessController extends Controller
             }
         });
 
+        AppNotification::send($child, 'guardian.consent_revoked', [
+            'title' => 'Zustimmung widerrufen',
+            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte klaere das mit deinem Erziehungsberechtigten.',
+            'minor_id' => $child->id,
+            'guardian_email' => $email,
+            'url' => route('guardian-consent.pending'),
+        ]);
+
         return back()->with('success', 'Die Zustimmung wurde widerrufen.');
     }
 
@@ -415,6 +424,14 @@ class GuardianAccessController extends Controller
                 }
             }
         });
+
+        AppNotification::send($child, 'guardian.consent_approved', [
+            'title' => 'Zustimmung erteilt',
+            'body' => 'Dein Airmius-Konto wurde von einem Erziehungsberechtigten freigegeben.',
+            'minor_id' => $child->id,
+            'guardian_user_id' => $child->fresh()->guardian_user_id,
+            'url' => route('auth.dashboard'),
+        ]);
 
         return back()->with('success', 'Die Ablehnung wurde zurückgenommen und die Zustimmung erteilt.');
     }

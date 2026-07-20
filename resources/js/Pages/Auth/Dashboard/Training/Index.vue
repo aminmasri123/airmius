@@ -1,7 +1,7 @@
-﻿<script setup>
-import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { computed, reactive, ref } from 'vue'
+<script setup>
+import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
+import { useTrainingWorkspace } from "@/composables/useTrainingWorkspace"
+import { Head, Link } from "@inertiajs/vue3"
 
 defineOptions({ layout: AppLayout })
 
@@ -17,1180 +17,151 @@ const props = defineProps({
     aiCapabilities: { type: Object, default: () => ({}) },
 })
 
-const sports = [
-    { key: 'all', label: 'Alle', icon: 'las la-layer-group', accent: 'bg-air-blue' },
-    { key: 'laufen', label: 'Laufen', icon: 'las la-running', accent: 'bg-emerald-500', metrics: ['Distanz km', 'Pace Ziel', 'Höhenmeter', 'RPE'] },
-    { key: 'schwimmen', label: 'Schwimmen', icon: 'las la-swimmer', accent: 'bg-cyan-500', metrics: ['Bahnen', 'Stil', 'Intervall', 'Pausenzeit'] },
-    { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', accent: 'bg-rose-500', metrics: ['Sätze', 'Wiederholungen', 'Gewicht kg', 'Pause'] },
-    { key: 'fussball', label: 'Fußball', icon: 'las la-futbol', accent: 'bg-lime-500', metrics: ['Schwerpunkt', 'Spielfeld', 'Spielerzahl', 'Drill'] },
-    { key: 'tanzen', label: 'Tanzen', icon: 'las la-music', accent: 'bg-fuchsia-500', metrics: ['Stil', 'Choreo', 'Takte', 'Tempo'] },
-    { key: 'golf', label: 'Golf', icon: 'las la-golf-ball', accent: 'bg-amber-500', metrics: ['Löcher', 'Schläger', 'Schwerpunkt', 'Zielscore'] },
-    { key: 'cycling', label: 'Radfahren', icon: 'las la-biking', accent: 'bg-orange-500', metrics: ['Distanz km', 'Watt Ziel', 'Kadenz', 'Höhenmeter'] },
-    { key: 'yoga', label: 'Yoga', icon: 'las la-spa', accent: 'bg-violet-500', metrics: ['Flow', 'Atemfokus', 'Level', 'Haltezeit'] },
-]
-
-const planTrainingTypes = [
-    { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', sport_type: 'gym', accent: 'bg-sky-500' },
-    { key: 'run_interval', label: 'Intervalle', icon: 'las la-stopwatch', sport_type: 'laufen', accent: 'bg-amber-400' },
-    { key: 'long_run', label: 'Long Run', icon: 'las la-route', sport_type: 'laufen', accent: 'bg-emerald-500' },
-    { key: 'swim', label: 'Swim', icon: 'las la-swimmer', sport_type: 'schwimmen', accent: 'bg-cyan-500' },
-    { key: 'football', label: 'Fußball', icon: 'las la-futbol', sport_type: 'fussball', accent: 'bg-lime-500' },
-    { key: 'cycling', label: 'Bike', icon: 'las la-biking', sport_type: 'cycling', accent: 'bg-fuchsia-500' },
-    { key: 'generic', label: 'Frei', icon: 'las la-clipboard-list', sport_type: 'laufen', accent: 'bg-indigo-500' },
-]
-
-const aiTrainingMethodGroups = {
-    laufen: [
-        { key: 'long_run', label: 'Ausdauerlauf', hint: 'ruhig und länger', icon: 'las la-route', accent: 'bg-emerald-500' },
-        { key: 'run_interval', label: 'Intervalle', hint: 'schnelle Abschnitte', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
-        { key: 'tempo_run', label: 'Tempolauf', hint: 'kontrolliert hart', icon: 'las la-tachometer-alt', accent: 'bg-rose-500' },
-        { key: 'recovery_run', label: 'Regeneration', hint: 'locker erholen', icon: 'las la-leaf', accent: 'bg-lime-500' },
-    ],
-    gym: [
-        { key: 'strength', label: 'Kraft', hint: 'stärker werden', icon: 'las la-dumbbell', accent: 'bg-sky-500' },
-        { key: 'hypertrophy', label: 'Muskelaufbau', hint: 'Volumen & Technik', icon: 'las la-fire-alt', accent: 'bg-rose-500' },
-        { key: 'gym', label: 'Ganzkörper', hint: 'ausgewogen', icon: 'las la-clipboard-list', accent: 'bg-violet-500' },
-        { key: 'mobility', label: 'Mobility', hint: 'Beweglichkeit', icon: 'las la-spa', accent: 'bg-emerald-500' },
-    ],
-    schwimmen: [
-        { key: 'swim', label: 'Technik', hint: 'Wasserlage & Stil', icon: 'las la-swimmer', accent: 'bg-cyan-500' },
-        { key: 'swim_interval', label: 'Intervalle', hint: 'Serien & Pausen', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
-        { key: 'endurance_swim', label: 'Ausdauer', hint: 'ruhige Meter', icon: 'las la-water', accent: 'bg-blue-500' },
-    ],
-    fussball: [
-        { key: 'football', label: 'Technik & Spiel', hint: 'Ball, Taktik, Spielform', icon: 'las la-futbol', accent: 'bg-lime-500' },
-        { key: 'football_conditioning', label: 'Kondition', hint: 'spielnah belastbar', icon: 'las la-running', accent: 'bg-emerald-500' },
-        { key: 'football_speed', label: 'Sprints', hint: 'Antritt & Explosivität', icon: 'las la-bolt', accent: 'bg-amber-400' },
-    ],
-    cycling: [
-        { key: 'cycling', label: 'Grundlagenfahrt', hint: 'ruhig und lang', icon: 'las la-biking', accent: 'bg-fuchsia-500' },
-        { key: 'bike_interval', label: 'Rad-Intervalle', hint: 'Watt & Pausen', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
-        { key: 'hill_ride', label: 'Anstiege', hint: 'Kraft am Berg', icon: 'las la-mountain', accent: 'bg-orange-500' },
-    ],
-    yoga: [
-        { key: 'mobility', label: 'Mobility', hint: 'Beweglichkeit', icon: 'las la-spa', accent: 'bg-violet-500' },
-        { key: 'recovery', label: 'Regeneration', hint: 'ruhig & entlastend', icon: 'las la-leaf', accent: 'bg-emerald-500' },
-    ],
-    default: [
-        { key: 'generic', label: 'Freier Plan', hint: 'KI wählt passende Einheiten', icon: 'las la-clipboard-list', accent: 'bg-indigo-500' },
-    ],
-}
-
-const defaultTrainingTypeForSport = () => 'balanced'
-
-const activeSport = ref('all')
-const activeTrainingSection = ref('overview')
-const activeModal = ref(null)
-const deleteText = ref('')
-const selectedPlan = ref(null)
-const selectedItem = ref(null)
-const selectedDraft = ref(null)
-const activityImageInput = ref(null)
-const planImageInput = ref(null)
-const itemImageInput = ref(null)
-const editItemImageInput = ref(null)
-const draggedItem = ref(null)
-
-const trainingSections = [
-    { key: 'overview', label: 'Übersicht', hint: 'Start', icon: 'las la-home' },
-    { key: 'plans', label: 'Pläne', hint: 'Aufbau', icon: 'las la-clipboard-list' },
-    { key: 'week', label: 'Woche', hint: 'Kalender', icon: 'las la-calendar-week' },
-    { key: 'logs', label: 'Logs', hint: 'Dokumentation', icon: 'las la-pen-alt' },
-    { key: 'analysis', label: 'Analyse', hint: 'Signale', icon: 'las la-chart-line' },
-]
-
-const planWizardStep = ref(0)
-const planWizardSteps = [
-    { label: 'Basis', hint: 'Name & Rhythmus', icon: 'las la-clipboard-list' },
-    { label: 'Ziel', hint: 'Zeitraum & Niveau', icon: 'las la-bullseye' },
-    { label: 'Freigabe', hint: 'Team & Sportler', icon: 'las la-user-friends' },
-    { label: 'Einheit', hint: 'Erstes Training', icon: 'las la-running' },
-]
-
-const aiPlanStep = ref(0)
-const aiTrainingPlanPreview = ref(null)
-const aiTrainingPlanError = ref('')
-const aiTrainingPlanMessage = ref('')
-const aiTrainingPlanGenerating = ref(false)
-const aiTrainingPlanSaving = ref(false)
-const aiPlanSourcePlan = ref(null)
-const aiProfileMissingFields = ref([])
-const aiProfileCompletionUrl = ref('')
-const aiProfileMissingMessage = ref('')
-const aiProfileEstimateAllowed = ref(false)
-
-const aiPlanSteps = [
-    { label: 'Ziel', hint: 'Was soll besser werden?', icon: 'las la-bullseye' },
-    { label: 'Rahmen', hint: 'Zeit, Niveau, Regeln', icon: 'las la-sliders-h' },
-    { label: 'Vorschau', hint: 'Prüfen und speichern', icon: 'las la-check-circle' },
-]
-
-const aiPlanDurationPresets = [
-    { label: '1 Monat', weeks: 4, hint: 'Schneller Start' },
-    { label: '2 Monate', weeks: 8, hint: 'Aufbau' },
-    { label: '3 Monate', weeks: 12, hint: 'Stabiler Block' },
-    { label: '6 Monate', weeks: 26, hint: 'Langfristig' },
-]
-
-const aiPlanDefaults = () => ({
-    title: '',
-    goal: '',
-    sport_type: activeSport.value === 'all' ? 'laufen' : activeSport.value,
-    training_type: defaultTrainingTypeForSport(),
-    level: 'intermediate',
-    phase: 'build',
-    weeks: 4,
-    sessions_per_week: 3,
-    duration_minutes: 45,
-    starts_on: '',
-    equipment: '',
-    constraints: '',
-    preferences: '',
-    revision_instruction: '',
-    allow_profile_estimate: false,
-})
-
-const aiPlanForm = reactive(aiPlanDefaults())
-
-const activityForm = useForm({
-    title: '',
-    activity_type: 'laufen',
-    started_at: '',
-    duration_minutes: '',
-    distance_km: '',
-    calories: '',
-    image: null,
-})
-
-const emptyLogEntry = () => ({
-    title: '',
-    sets: '',
-    reps: '',
-    weight_kg: '',
-    duration_minutes: '',
-    distance_km: '',
-    intensity: '',
-    notes: '',
-})
-
-const logForm = useForm({
-    user_id: '',
-    team_id: '',
-    training_plan_item_id: '',
-    title: '',
-    sport_type: 'laufen',
-    status: 'completed',
-    performed_at: '',
-    duration_minutes: '',
-    distance_km: '',
-    calories: '',
-    intensity: 'mittel',
-    notes: '',
-    trainer_feedback: '',
-    entries: [emptyLogEntry()],
-})
-
-const planForm = useForm({
-    title: '',
-    description: '',
-    cadence: 'weekly',
-    starts_on: '',
-    ends_on: '',
-    goal: '',
-    phase: 'base',
-    level: 'intermediate',
-    weeks: '',
-    weekly_sessions: '',
-    macrocycle: '',
-    mesocycle: '',
-    deload_week: '',
-    competition_date: '',
-    status: 'published',
-    share_permission: 'read',
-    team_id: '',
-    user_ids: [],
-    item_training_type: 'long_run',
-    item_title: '',
-    item_sport_type: 'laufen',
-    item_description: '',
-    item_scheduled_at: '',
-    item_week: '',
-    item_duration_minutes: '',
-    item_distance_km: '',
-    item_calories: '',
-    item_intensity: 'mittel',
-    item_load: 'medium',
-    item_focus: '',
-    item_todos: '',
-    item_image: null,
-    item_video_url: '',
-    item_metrics: {},
-})
-
-const editForm = useForm({
-    title: '',
-    description: '',
-    cadence: 'weekly',
-    starts_on: '',
-    ends_on: '',
-    goal: '',
-    phase: 'base',
-    level: 'intermediate',
-    weeks: '',
-    weekly_sessions: '',
-    macrocycle: '',
-    mesocycle: '',
-    deload_week: '',
-    competition_date: '',
-    status: 'published',
-    share_permission: 'read',
-    team_id: '',
-    user_ids: [],
-})
-
-const itemForm = useForm({
-    title: '',
-    sport_type: 'laufen',
-    description: '',
-    scheduled_at: '',
-    week: '',
-    duration_minutes: '',
-    distance_km: '',
-    calories: '',
-    intensity: 'mittel',
-    load: 'medium',
-    focus: '',
-    todos: '',
-    image: null,
-    video_url: '',
-    metrics: {},
-})
-
-const editItemForm = useForm({
-    title: '',
-    sport_type: 'laufen',
-    description: '',
-    scheduled_at: '',
-    week: '',
-    duration_minutes: '',
-    distance_km: '',
-    calories: '',
-    intensity: 'mittel',
-    load: 'medium',
-    focus: '',
-    todos: '',
-    image: null,
-    video_url: '',
-    metrics: {},
-})
-
-const missedForm = useForm({
-    user_id: '',
-    reason: 'keine_zeit',
-    notes: '',
-})
-
-const selectedSport = computed(() => sports.find((sport) => sport.key === activeSport.value) || sports[0])
-const planSport = computed(() => sports.find((sport) => sport.key === planForm.item_sport_type) || sports[1])
-const itemSport = computed(() => sports.find((sport) => sport.key === itemForm.sport_type) || sports[1])
-const editItemSport = computed(() => sports.find((sport) => sport.key === editItemForm.sport_type) || sports[1])
-const visibleLogs = computed(() => (props.logs || []).filter((log) => Number(log.id) !== Number(props.activeDraftLog?.id)))
-const sportChoices = computed(() => {
-    const customSports = (props.sportCatalog || [])
-        .map((sport) => ({
-            key: sport.slug || sport.name,
-            label: sport.name,
-            icon: 'las la-running',
-            accent: 'bg-air-blue',
-        }))
-        .filter((sport) => sport.key)
-
-    return [...sports.filter((sport) => sport.key !== 'all'), ...customSports]
-        .filter((sport, index, list) => list.findIndex((item) => item.key === sport.key) === index)
-})
-
-const aiPlanSportChoices = computed(() => sportChoices.value.filter((sport) => ['laufen', 'gym', 'schwimmen', 'fussball', 'cycling', 'yoga'].includes(sport.key)))
-const plannedLogItems = computed(() => props.plans
-    .flatMap((plan) => (plan.items || []).map((item) => ({ ...item, plan })))
-    .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0)))
-
-const athleteOptions = computed(() => [
-    { id: '', name: 'Ich selbst', email: '' },
-    ...(props.manageableAthletes || []),
-])
-
-const filteredPlans = computed(() => {
-    if (activeSport.value === 'all') return props.plans
-
-    return props.plans.filter((plan) => plan.items?.some((item) => item.sport_type === activeSport.value))
-})
-
-const upcomingItems = computed(() => props.plans
-    .flatMap((plan) => (plan.items || []).map((item) => ({ ...item, plan })))
-    .filter((item) => item.scheduled_at)
-    .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
-    .slice(0, 5))
-
-const weekDays = computed(() => {
-    const today = new Date()
-    const monday = new Date(today)
-    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
-    monday.setHours(0, 0, 0, 0)
-
-    return Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(monday)
-        date.setDate(monday.getDate() + index)
-        const key = date.toISOString().slice(0, 10)
-
-        return {
-            key,
-            date,
-            items: plannedLogItems.value.filter((item) => item.scheduled_at?.slice(0, 10) === key),
-        }
-    })
-})
-
-const plannedThisWeekCount = computed(() => weekDays.value.reduce((count, day) => count + day.items.length, 0))
-const completedThisWeekCount = computed(() => {
-    const keys = new Set(weekDays.value.map((day) => day.key))
-
-    return visibleLogs.value.filter((log) => {
-        const value = log.performed_at || log.created_at
-        return value && keys.has(value.slice(0, 10))
-    }).length
-})
-
-const nextTrainingItem = computed(() => upcomingItems.value[0] || null)
-
-const trainerDashboard = computed(() => {
-    const overdue = plannedLogItems.value.filter((item) => {
-        if (!item.scheduled_at) return false
-        if (item.log_statuses?.some((log) => ['completed', 'missed'].includes(log.status))) return false
-
-        return new Date(item.scheduled_at) < new Date()
-    })
-
-    const missed = plannedLogItems.value.filter((item) => item.log_statuses?.some((log) => log.status === 'missed'))
-    const feedbackOpen = visibleLogs.value.filter((log) => log.status === 'completed' && !log.trainer_feedback && log.athlete?.id)
-    const painSignals = visibleLogs.value.filter((log) => Number(log.metrics?.wellness?.pain || 0) >= 4)
-
-    return { overdue, missed, feedbackOpen, painSignals }
-})
-
-const athleteCockpit = computed(() => Object.values(visibleLogs.value.reduce((groups, log) => {
-    const athlete = log.athlete || { id: 'self', name: 'Ich' }
-    const key = athlete.id || 'self'
-    const wellness = log.metrics?.wellness || {}
-
-    groups[key] ||= {
-        athlete,
-        sessions: 0,
-        minutes: 0,
-        meters: 0,
-        painTotal: 0,
-        painCount: 0,
-        rpeTotal: 0,
-        rpeCount: 0,
-        latest: null,
-    }
-
-    groups[key].sessions += 1
-    groups[key].minutes += Number(log.duration_minutes || 0)
-    groups[key].meters += Number(log.distance_meters || 0)
-
-    if (wellness.pain !== undefined && wellness.pain !== '') {
-        groups[key].painTotal += Number(wellness.pain)
-        groups[key].painCount += 1
-    }
-
-    if (wellness.rpe !== undefined && wellness.rpe !== '') {
-        groups[key].rpeTotal += Number(wellness.rpe)
-        groups[key].rpeCount += 1
-    }
-
-    if (!groups[key].latest || new Date(log.performed_at || log.created_at) > new Date(groups[key].latest.performed_at || groups[key].latest.created_at)) {
-        groups[key].latest = log
-    }
-
-    return groups
-}, {})).map((entry) => ({
-    ...entry,
-    avgPain: entry.painCount ? (entry.painTotal / entry.painCount).toFixed(1) : '-',
-    avgRpe: entry.rpeCount ? (entry.rpeTotal / entry.rpeCount).toFixed(1) : '-',
-})).sort((a, b) => b.sessions - a.sessions))
-
-const sportStats = computed(() => Object.values(visibleLogs.value.reduce((groups, log) => {
-    const key = log.sport_type || 'training'
-    groups[key] ||= { key, label: sportLabel(key), sessions: 0, minutes: 0, meters: 0 }
-    groups[key].sessions += 1
-    groups[key].minutes += Number(log.duration_minutes || 0)
-    groups[key].meters += Number(log.distance_meters || 0)
-
-    return groups
-}, {})).sort((a, b) => b.sessions - a.sessions))
-
-const aiTrainingPlan = computed(() => props.aiCapabilities?.training_plan_generation || {})
-const aiTrainingPlanAvailable = computed(() => Boolean(aiTrainingPlan.value.available))
-const aiPlanMaxItems = computed(() => Number(aiTrainingPlan.value.max_items || 156))
-const aiPlanMaxWeeks = computed(() => Number(aiTrainingPlan.value.max_weeks || 26))
-const aiPlanMonthlyLimit = computed(() => aiTrainingPlan.value.monthly_limit)
-const aiPlanMonthlyRemaining = computed(() => aiTrainingPlan.value.monthly_remaining)
-const aiPlanRequestedItems = computed(() => {
-    const weeks = Math.max(1, Number(aiPlanForm.weeks || 0))
-    const sessions = Math.max(1, Number(aiPlanForm.sessions_per_week || 0))
-
-    return weeks * sessions
-})
-const aiPlanTooLarge = computed(() => aiPlanRequestedItems.value > aiPlanMaxItems.value)
-const aiPlanWeeksTooLong = computed(() => Math.max(1, Number(aiPlanForm.weeks || 0)) > aiPlanMaxWeeks.value)
-const aiPlanCannotGenerate = computed(() => !aiTrainingPlanAvailable.value || aiPlanTooLarge.value || aiPlanWeeksTooLong.value)
-const aiPlanTierLabel = computed(() => aiTrainingPlan.value.tier_label || 'Free')
-const aiPlanLimitLabel = computed(() => {
-    if (aiPlanMonthlyLimit.value === null || aiPlanMonthlyLimit.value === undefined) {
-        return `Stufe ${aiPlanTierLabel.value}: bis ${aiPlanMaxWeeks.value} Wochen`
-    }
-
-    return `Stufe ${aiPlanTierLabel.value}: ${Math.max(0, Number(aiPlanMonthlyRemaining.value ?? 0))}/${aiPlanMonthlyLimit.value} KI-Pläne diesen Monat, bis ${aiPlanMaxWeeks.value} Wochen`
-})
-const aiTrainingProviderLabel = computed(() => {
-    const provider = aiTrainingPlan.value.primary_provider || props.aiCapabilities?.primary_provider || 'ionos'
-    const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
-
-    return match?.label || provider
-})
-
-const qualityStatusClass = (status) => ({
-    ok: 'border-success/30 bg-success/10 text-success',
-    warning: 'border-warning/30 bg-warning/10 text-warning',
-    danger: 'border-danger/30 bg-danger/10 text-danger',
-}[status] || 'border-border bg-inputBg text-secondary')
-
-const qualityRiskClass = (risk) => ({
-    niedrig: 'border-success/30 bg-success/10 text-success',
-    mittel: 'border-warning/30 bg-warning/10 text-warning',
-    hoch: 'border-danger/30 bg-danger/10 text-danger',
-}[risk] || 'border-border bg-inputBg text-secondary')
-
-const aiGeneratedPlans = computed(() => (props.plans || []).filter((plan) => plan.settings?.ai_generation))
-const aiGeneratedPlanInsights = computed(() => aiGeneratedPlans.value
-    .flatMap((plan) => [
-        ...(plan.settings?.ai_generation?.analysis_tips || []).map((text) => ({ plan, text, label: 'Analyse' })),
-        ...(plan.settings?.ai_generation?.adjustment_tips || []).map((text) => ({ plan, text, label: 'Anpassung' })),
-    ])
-    .filter((item) => item.text)
-    .slice(0, 6))
-
-const exerciseLibrary = [
-    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssätze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
-    { training_type: 'long_run', sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Hoehenmeter: '-', RPE: '4-5' } },
-    { training_type: 'run_interval', sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Hoehenmeter: '-', RPE: '8' } },
-    { training_type: 'swim', sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
-    { training_type: 'football', sport_type: 'fussball', title: 'Ballkontrolle + Sprints', focus: 'Explosivitaet', duration_minutes: 60, todos: 'Koordination\nDribbling-Parcours\n8 x 20m Sprint\nkleines Abschlussspiel', metrics: { Schwerpunkt: 'Technik', Spielfeld: 'Halbfeld', Spielerzahl: '4-8', Drill: 'Sprint + Ball' } },
-]
-
-const templatePlans = computed(() => props.plans.filter((plan) => plan.settings?.is_template_copy || plan.status === 'draft'))
-
-const selectedTeamMembers = computed(() => {
-    const team = props.teams.find((item) => Number(item.id) === Number(planForm.team_id))
-    return team?.users || []
-})
-
-const selectPlanTrainingType = (key) => {
-    const type = planTrainingTypes.find((item) => item.key === key) || planTrainingTypes[planTrainingTypes.length - 1]
-    planForm.item_training_type = type.key
-    planForm.item_sport_type = type.sport_type
-    planForm.item_metrics = {
-        ...planForm.item_metrics,
-        _training_type: type.key,
-    }
-}
-
-const canOpenPlanWizardStep = (index) => index === 0 || Boolean(planForm.title?.trim())
-const goToPlanWizardStep = (index) => {
-    if (!canOpenPlanWizardStep(index)) return
-    planWizardStep.value = index
-}
-
-const planWizardCanContinue = computed(() => {
-    if (planWizardStep.value === 0) return Boolean(planForm.title?.trim())
-    if (planWizardStep.value === planWizardSteps.length - 1) return Boolean(planForm.item_title?.trim())
-
-    return true
-})
-
-const nextPlanWizardStep = () => {
-    if (!planWizardCanContinue.value) return
-    planWizardStep.value = Math.min(planWizardStep.value + 1, planWizardSteps.length - 1)
-}
-
-const previousPlanWizardStep = () => {
-    planWizardStep.value = Math.max(planWizardStep.value - 1, 0)
-}
-
-const cadenceLabels = {
-    single: 'Einmalig',
-    daily: 'Täglich',
-    weekly: 'Wöchentlich',
-    monthly: 'Monatlich',
-}
-
-const phaseLabels = {
-    base: 'Grundlage',
-    build: 'Aufbau',
-    peak: 'Peak',
-    recovery: 'Regeneration',
-    rehab: 'Reha',
-}
-
-const levelLabels = {
-    beginner: 'Einsteiger',
-    intermediate: 'Fortgeschritten',
-    advanced: 'Advanced',
-    elite: 'Leistung',
-}
-
-const loadLabels = {
-    low: 'Locker',
-    medium: 'Mittel',
-    high: 'Hoch',
-    test: 'Test',
-}
-
-const permissionLabels = {
-    read: 'Nur lesen',
-    write: 'Mitarbeiten',
-}
-
-const resetPlanForm = () => {
-    planForm.reset()
-    planWizardStep.value = 0
-    planForm.cadence = 'weekly'
-    planForm.status = 'published'
-    planForm.share_permission = 'read'
-    planForm.phase = 'base'
-    planForm.level = 'intermediate'
-    planForm.macrocycle = ''
-    planForm.mesocycle = ''
-    planForm.deload_week = ''
-    planForm.competition_date = ''
-    planForm.item_load = 'medium'
-    planForm.item_week = 1
-    planForm.item_training_type = activeSport.value === 'gym' ? 'gym' : activeSport.value === 'schwimmen' ? 'swim' : activeSport.value === 'fussball' ? 'football' : activeSport.value === 'cycling' ? 'cycling' : 'long_run'
-    planForm.item_sport_type = planTrainingTypes.find((type) => type.key === planForm.item_training_type)?.sport_type || (activeSport.value === 'all' ? 'laufen' : activeSport.value)
-    planForm.item_intensity = 'mittel'
-    planForm.item_metrics = { _training_type: planForm.item_training_type }
-    if (planImageInput.value) planImageInput.value.value = ''
-}
-
-const resetAiTrainingPlanForm = () => {
-    Object.assign(aiPlanForm, aiPlanDefaults())
-    aiPlanStep.value = 0
-    aiTrainingPlanPreview.value = null
-    aiTrainingPlanError.value = ''
-    aiTrainingPlanMessage.value = ''
-    aiPlanSourcePlan.value = null
-    aiProfileMissingFields.value = []
-    aiProfileCompletionUrl.value = ''
-    aiProfileMissingMessage.value = ''
-    aiProfileEstimateAllowed.value = false
-}
-
-const selectAiPlanSportType = (sportKey) => {
-    aiPlanForm.sport_type = sportKey
-    aiPlanForm.training_type = defaultTrainingTypeForSport()
-    aiPlanForm.allow_profile_estimate = false
-    aiProfileMissingFields.value = []
-    aiProfileCompletionUrl.value = ''
-    aiProfileMissingMessage.value = ''
-    aiProfileEstimateAllowed.value = false
-}
-
-const setAiPlanDurationPreset = (weeks) => {
-    aiPlanForm.weeks = Math.min(weeks, aiPlanMaxWeeks.value)
-
-    if (weeks >= 26 && Number(aiPlanForm.sessions_per_week || 0) > 6) {
-        aiPlanForm.sessions_per_week = 6
-    }
-}
-
-const compactPlanForAi = (plan) => {
-    if (!plan) return null
-
-    return {
-        title: plan.title,
-        description: plan.description,
-        settings: plan.settings || {},
-        items: (plan.items || []).map((item) => ({
-            title: item.title,
-            sport_type: item.sport_type,
-            description: item.description,
-            duration_minutes: item.duration_minutes,
-            distance_km: item.distance_meters ? Number(item.distance_meters) / 1000 : null,
-            intensity: item.intensity,
-            todos: item.todos || [],
-            metrics: item.metrics || {},
-        })),
-    }
-}
-
-const openAiTrainingPlanModal = (plan = null) => {
-    resetAiTrainingPlanForm()
-
-    if (plan) {
-        aiPlanSourcePlan.value = plan
-        aiPlanForm.title = `${plan.title || 'Trainingsplan'} angepasst`
-        aiPlanForm.goal = plan.settings?.goal || ''
-        aiPlanForm.phase = plan.settings?.phase || 'build'
-        aiPlanForm.level = plan.settings?.level || 'intermediate'
-        aiPlanForm.weeks = plan.settings?.weeks || 4
-        aiPlanForm.sessions_per_week = plan.settings?.weekly_sessions || 3
-        aiPlanForm.sport_type = plan.items?.[0]?.sport_type || 'laufen'
-        aiPlanForm.training_type = plan.items?.[0]?.metrics?._training_type || plan.items?.[0]?.metrics?.training_type || 'long_run'
-        aiPlanForm.starts_on = plan.starts_on || ''
-        aiPlanStep.value = 1
-    }
-
-    activeModal.value = 'ai-plan'
-}
-
-const canOpenAiPlanStep = (index) => {
-    if (index === 0) return true
-    if (index === 1) return Boolean(aiPlanForm.goal?.trim())
-
-    return Boolean(aiTrainingPlanPreview.value)
-}
-
-const continueAiTrainingPlan = () => {
-    if (aiPlanStep.value === 0) {
-        aiPlanStep.value = 1
-        return
-    }
-
-    generateAiTrainingPlan(false)
-}
-
-const generateAiTrainingPlanWithProfileEstimates = () => {
-    aiPlanForm.allow_profile_estimate = true
-    aiProfileMissingFields.value = []
-    aiProfileCompletionUrl.value = ''
-    aiProfileMissingMessage.value = ''
-    aiProfileEstimateAllowed.value = false
-    generateAiTrainingPlan(false, true)
-}
-
-const generateAiTrainingPlan = async (revise = false, allowProfileEstimate = false) => {
-    if (!aiTrainingPlanAvailable.value) {
-        aiTrainingPlanError.value = aiTrainingPlan.value.access_reason || 'KI-Trainingspläne sind für dein aktuelles Kontingent nicht verfügbar.'
-        return
-    }
-
-    if (!aiPlanForm.goal?.trim()) {
-        aiTrainingPlanError.value = 'Bitte gib zuerst ein klares Trainingsziel ein.'
-        aiPlanStep.value = 0
-        return
-    }
-
-    if (revise && !aiPlanForm.revision_instruction?.trim()) {
-        aiTrainingPlanError.value = 'Bitte schreibe kurz, was die KI am Plan verändern soll.'
-        return
-    }
-
-    if (aiPlanWeeksTooLong.value) {
-        aiTrainingPlanError.value = `Deine aktuelle Stufe erlaubt KI-Trainingspläne bis ${aiPlanMaxWeeks.value} Wochen. Bitte wähle eine kürzere Dauer oder nutze die nächste Stufe.`
-        aiPlanStep.value = 1
-        return
-    }
-    if (aiPlanTooLarge.value) {
-        aiTrainingPlanError.value = `Dieser Plan hätte ${aiPlanRequestedItems.value} Einheiten. Bitte reduziere Wochen oder Einheiten pro Woche auf maximal ${aiPlanMaxItems.value} Einheiten.`
-        aiPlanStep.value = 1
-        return
-    }
-
-    aiTrainingPlanGenerating.value = true
-    aiTrainingPlanError.value = ''
-    aiTrainingPlanMessage.value = ''
-    aiProfileMissingFields.value = []
-    aiProfileCompletionUrl.value = ''
-    aiProfileMissingMessage.value = ''
-    aiProfileEstimateAllowed.value = false
-
-    try {
-        const response = await window.axios.post(route('auth.training.ai.plans.preview'), {
-            title: aiPlanForm.title,
-            goal: aiPlanForm.goal,
-            sport_type: aiPlanForm.sport_type,
-            training_type: aiPlanForm.training_type,
-            level: aiPlanForm.level,
-            phase: aiPlanForm.phase,
-            weeks: aiPlanForm.weeks,
-            sessions_per_week: aiPlanForm.sessions_per_week,
-            duration_minutes: aiPlanForm.duration_minutes,
-            starts_on: aiPlanForm.starts_on,
-            equipment: aiPlanForm.equipment,
-            constraints: aiPlanForm.constraints,
-            preferences: aiPlanForm.preferences,
-            revision_instruction: revise || aiPlanSourcePlan.value ? aiPlanForm.revision_instruction : '',
-            current_plan: revise || aiPlanSourcePlan.value ? (aiTrainingPlanPreview.value || compactPlanForAi(aiPlanSourcePlan.value)) : null,
-            allow_profile_estimate: Boolean(allowProfileEstimate || aiPlanForm.allow_profile_estimate),
-        })
-
-        aiTrainingPlanPreview.value = response.data?.plan || null
-        aiTrainingPlanMessage.value = response.data?.message || 'KI-Vorschlag erstellt.'
-        aiProfileMissingFields.value = []
-        aiProfileCompletionUrl.value = ''
-        aiProfileMissingMessage.value = ''
-        aiProfileEstimateAllowed.value = false
-        aiPlanForm.allow_profile_estimate = false
-        aiPlanStep.value = 2
-    } catch (error) {
-        const responseData = error.response?.data || {}
-        const missingFields = responseData.missing_profile_fields || []
-
-        if (missingFields.length) {
-            aiTrainingPlanError.value = ''
-            aiTrainingPlanMessage.value = ''
-            aiProfileMissingFields.value = missingFields
-            aiProfileCompletionUrl.value = responseData.profile_completion_url || route('auth.settings', { tab: 'sport-profile' })
-            aiProfileMissingMessage.value = responseData.message || 'Für einen zuverlässigen Plan fehlen noch Sportprofil-Daten.'
-            aiProfileEstimateAllowed.value = Boolean(responseData.profile_estimate_allowed)
-            aiPlanForm.allow_profile_estimate = false
-            aiPlanStep.value = 1
-            return
-        }
-
-        aiTrainingPlanError.value = responseData.message || 'KI-Trainingsplan konnte nicht erstellt werden.'
-    } finally {
-        aiTrainingPlanGenerating.value = false
-    }
-}
-
-const saveAiTrainingPlan = async () => {
-    if (!aiTrainingPlanPreview.value) return
-
-    aiTrainingPlanSaving.value = true
-    aiTrainingPlanError.value = ''
-
-    try {
-        await window.axios.post(route('auth.training.ai.plans.store'), {
-            plan: aiTrainingPlanPreview.value,
-            starts_on: aiPlanForm.starts_on,
-            status: 'published',
-            share_permission: 'read',
-        })
-
-        activeTrainingSection.value = 'plans'
-        closeModal()
-        router.reload({ preserveScroll: true })
-    } catch (error) {
-        aiTrainingPlanError.value = error.response?.data?.message || 'KI-Plan konnte nicht gespeichert werden.'
-    } finally {
-        aiTrainingPlanSaving.value = false
-    }
-}
-
-const openModal = (name, plan = null, item = null) => {
-    selectedPlan.value = plan
-    selectedItem.value = item
-    deleteText.value = ''
-
-    if (name === 'plan') resetPlanForm()
-    if (name === 'ai-plan') resetAiTrainingPlanForm()
-    if (name === 'activity') {
-        activityForm.reset()
-        activityForm.activity_type = activeSport.value === 'all' ? 'laufen' : activeSport.value
-        if (activityImageInput.value) activityImageInput.value.value = ''
-    }
-    if (name === 'log') {
-        logForm.reset()
-        logForm.user_id = ''
-        logForm.team_id = ''
-        logForm.training_plan_item_id = ''
-        logForm.status = 'completed'
-        logForm.sport_type = activeSport.value === 'all' ? 'laufen' : activeSport.value
-        logForm.intensity = 'mittel'
-        logForm.entries = [emptyLogEntry()]
-        logForm.clearErrors()
-    }
-    if (name === 'edit' && plan) {
-        editForm.title = plan.title || ''
-        editForm.description = plan.description || ''
-        editForm.cadence = plan.cadence || 'weekly'
-        editForm.starts_on = plan.starts_on || ''
-        editForm.ends_on = plan.ends_on || ''
-        editForm.goal = plan.settings?.goal || ''
-        editForm.phase = plan.settings?.phase || 'base'
-        editForm.level = plan.settings?.level || 'intermediate'
-        editForm.weeks = plan.settings?.weeks || ''
-        editForm.weekly_sessions = plan.settings?.weekly_sessions || ''
-        editForm.macrocycle = plan.settings?.macrocycle || ''
-        editForm.mesocycle = plan.settings?.mesocycle || ''
-        editForm.deload_week = plan.settings?.deload_week || ''
-        editForm.competition_date = plan.settings?.competition_date || ''
-        editForm.status = plan.status || 'draft'
-        editForm.share_permission = plan.share_permission || 'read'
-        editForm.team_id = plan.team?.id || ''
-        editForm.user_ids = (plan.assignments || []).filter((assignment) => assignment.user).map((assignment) => assignment.user.id)
-        editForm.clearErrors()
-    }
-    if (name === 'item' && plan) {
-        itemForm.reset()
-        itemForm.sport_type = plan.items?.[0]?.sport_type || (activeSport.value === 'all' ? 'laufen' : activeSport.value)
-        itemForm.intensity = 'mittel'
-        itemForm.load = 'medium'
-        itemForm.week = nextPlanWeek(plan)
-        itemForm.distance_km = ''
-        itemForm.calories = ''
-        itemForm.focus = ''
-        itemForm.metrics = {}
-        if (itemImageInput.value) itemImageInput.value.value = ''
-    }
-    if (name === 'item-edit' && plan && item) {
-        editItemForm.title = item.title || ''
-        editItemForm.sport_type = item.sport_type || 'laufen'
-        editItemForm.description = item.description || ''
-        editItemForm.scheduled_at = toLocalDateTime(item.scheduled_at)
-        editItemForm.week = item.metrics?.Woche || ''
-        editItemForm.duration_minutes = item.duration_minutes || ''
-        editItemForm.distance_km = item.distance_meters ? (Number(item.distance_meters) / 1000).toFixed(2) : ''
-        editItemForm.calories = item.calories || ''
-        editItemForm.intensity = item.intensity || 'mittel'
-        editItemForm.load = item.metrics?.Belastung || 'medium'
-        editItemForm.focus = item.metrics?.Fokus || ''
-        editItemForm.todos = (item.todos || []).join('\n')
-        editItemForm.image = null
-        editItemForm.video_url = item.video_url || ''
-        editItemForm.metrics = Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)))
-        editItemForm.clearErrors()
-        if (editItemImageInput.value) editItemImageInput.value.value = ''
-    }
-    if (name === 'item-missed' && plan && item) {
-        missedForm.reset()
-        missedForm.user_id = ''
-        missedForm.reason = 'keine_zeit'
-        missedForm.notes = ''
-        missedForm.clearErrors()
-    }
-
-    activeModal.value = name
-}
-
-const nextPlanWeek = (plan) => {
-    const weeks = (plan?.items || [])
-        .map((item) => Number(item.metrics?.Woche || 0))
-        .filter(Boolean)
-
-    return weeks.length ? Math.max(...weeks) : 1
-}
-
-const closeModal = () => {
-    activeModal.value = null
-    selectedPlan.value = null
-    selectedItem.value = null
-    selectedDraft.value = null
-    deleteText.value = ''
-}
-
-const togglePlanUser = (userId, form = planForm) => {
-    const id = Number(userId)
-    form.user_ids = form.user_ids.map(Number).includes(id)
-        ? form.user_ids.filter((value) => Number(value) !== id)
-        : [...form.user_ids, id]
-}
-
-const setActivityImage = (event) => {
-    activityForm.image = event.target.files?.[0] || null
-}
-
-const setPlanImage = (event) => {
-    planForm.item_image = event.target.files?.[0] || null
-}
-
-const setItemImage = (event) => {
-    itemForm.image = event.target.files?.[0] || null
-}
-
-const setEditItemImage = (event) => {
-    editItemForm.image = event.target.files?.[0] || null
-}
-
-const submitActivity = () => {
-    activityForm.post(route('auth.training.activities.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: closeModal,
-    })
-}
-
-const openLogPage = () => {
-    router.visit(route('auth.training.logs.create'))
-}
-
-const openDraftDelete = () => {
-    if (!props.activeDraftLog) return
-    selectedDraft.value = props.activeDraftLog
-    deleteText.value = ''
-    activeModal.value = 'draft-delete'
-}
-
-const logStatusLabel = (status) => ({
-    draft: 'Entwurf',
-    planned: 'Geplant',
-    in_progress: 'Läuft gerade',
-    completed: 'Abgeschlossen',
-    missed: 'Nicht gemacht',
-}[status] || status)
-
-const applySelectedPlanItem = () => {
-    const item = plannedLogItems.value.find((entry) => Number(entry.id) === Number(logForm.training_plan_item_id))
-    if (!item) return
-
-    logForm.title = logForm.title || item.title || ''
-    logForm.sport_type = item.sport_type || logForm.sport_type
-    logForm.performed_at = logForm.performed_at || toLocalDateTime(item.scheduled_at)
-    logForm.duration_minutes = logForm.duration_minutes || item.duration_minutes || ''
-    logForm.distance_km = logForm.distance_km || (item.distance_meters ? (Number(item.distance_meters) / 1000).toFixed(2) : '')
-    logForm.calories = logForm.calories || item.calories || ''
-    logForm.intensity = item.intensity || logForm.intensity
-    logForm.notes = logForm.notes || item.description || ''
-}
-
-const setLogStatus = () => {
-    if (logForm.status === 'in_progress' && !logForm.performed_at) {
-        logForm.performed_at = toLocalDateTime(new Date())
-    }
-}
-
-const addLogEntry = () => {
-    logForm.entries = [...logForm.entries, emptyLogEntry()]
-}
-
-const removeLogEntry = (index) => {
-    logForm.entries = logForm.entries.filter((_, entryIndex) => entryIndex !== index)
-    if (!logForm.entries.length) {
-        logForm.entries = [emptyLogEntry()]
-    }
-}
-
-const submitLog = () => {
-    logForm.post(route('auth.training.logs.store'), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const submitPlan = () => {
-    if (!planForm.title?.trim()) {
-        planWizardStep.value = 0
-        return
-    }
-    if (!planForm.item_title?.trim()) {
-        planWizardStep.value = planWizardSteps.length - 1
-        return
-    }
-
-    planForm.item_metrics = {
-        ...planForm.item_metrics,
-        _training_type: planForm.item_training_type,
-    }
-
-    planForm.post(route('auth.training.plans.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: closeModal,
-    })
-}
-
-const updatePlan = () => {
-    if (!selectedPlan.value) return
-    editForm.put(route('auth.training.plans.update', selectedPlan.value.id), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const publishPlan = (plan) => {
-    router.post(route('auth.training.plans.publish', plan.id), {}, { preserveScroll: true })
-}
-
-const deletePlan = () => {
-    if (!selectedPlan.value || deleteText.value !== 'delete') return
-    router.delete(route('auth.training.plans.destroy', selectedPlan.value.id), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const deleteDraft = () => {
-    if (!selectedDraft.value || deleteText.value !== 'delete') return
-    router.delete(route('auth.training.logs.draft.destroy', selectedDraft.value.id), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const submitPlanItem = () => {
-    if (!selectedPlan.value) return
-    itemForm.post(route('auth.training.plans.items.store', selectedPlan.value.id), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: closeModal,
-    })
-}
-
-const updatePlanItem = () => {
-    if (!selectedPlan.value || !selectedItem.value) return
-
-    editItemForm
-        .transform((data) => ({ ...data, _method: 'put' }))
-        .post(route('auth.training.plans.items.update', [selectedPlan.value.id, selectedItem.value.id]), {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: closeModal,
-        })
-}
-
-const duplicatePlanItem = (plan, item) => {
-    router.post(route('auth.training.plans.items.duplicate', [plan.id, item.id]), {}, { preserveScroll: true })
-}
-
-const duplicatePlan = (plan) => {
-    router.post(route('auth.training.plans.duplicate', plan.id), {}, { preserveScroll: true })
-}
-
-const itemPayload = (item, scheduledAt = null) => ({
-    title: item.title || '',
-    sport_type: item.sport_type || 'laufen',
-    description: item.description || '',
-    scheduled_at: scheduledAt ?? toLocalDateTime(item.scheduled_at),
-    week: item.metrics?.Woche || '',
-    duration_minutes: item.duration_minutes || '',
-    distance_km: item.distance_meters ? (Number(item.distance_meters) / 1000).toFixed(2) : '',
-    calories: item.calories || '',
-    intensity: item.intensity || 'mittel',
-    load: item.metrics?.Belastung || 'medium',
-    focus: item.metrics?.Fokus || '',
-    todos: (item.todos || []).join('\n'),
-    video_url: item.video_url || '',
-    metrics: Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key))),
-    _method: 'put',
-})
-
-const openPlanItem = (item) => {
-    router.visit(route('auth.training.plans.items.show', [item.plan.id, item.id]))
-}
-
-const startDragItem = (item) => {
-    draggedItem.value = item
-}
-
-const dropItemOnDay = (day) => {
-    if (!draggedItem.value) return
-
-    const item = draggedItem.value
-    const previousTime = item.scheduled_at ? toLocalDateTime(item.scheduled_at).slice(11, 16) : '18:00'
-    const scheduledAt = `${day.key}T${previousTime || '18:00'}`
-
-    router.post(route('auth.training.plans.items.update', [item.plan.id, item.id]), itemPayload(item, scheduledAt), {
-        preserveScroll: true,
-        onFinish: () => { draggedItem.value = null },
-    })
-}
-
-const applyExerciseTemplate = (template, form = itemForm) => {
-    form.sport_type = template.sport_type
-    form.title = template.title
-    form.focus = template.focus
-    form.duration_minutes = template.duration_minutes
-    form.todos = template.todos
-    form.metrics = { ...template.metrics }
-}
-
-const applyPlanExerciseTemplate = (template) => {
-    planForm.item_training_type = template.training_type || planForm.item_training_type || 'generic'
-    planForm.item_sport_type = template.sport_type
-    planForm.item_title = template.title
-    planForm.item_focus = template.focus
-    planForm.item_duration_minutes = template.duration_minutes
-    planForm.item_todos = template.todos
-    planForm.item_metrics = { ...template.metrics, _training_type: planForm.item_training_type }
-}
-
-const documentPlanItem = (item) => {
-    router.visit(route('auth.training.logs.create', { plan_item_id: item.id }))
-}
-
-const markPlanItemMissed = () => {
-    if (!selectedPlan.value || !selectedItem.value) return
-
-    missedForm.post(route('auth.training.plans.items.missed', [selectedPlan.value.id, selectedItem.value.id]), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const deletePlanItem = () => {
-    if (!selectedPlan.value || !selectedItem.value || deleteText.value !== 'delete') return
-
-    router.delete(route('auth.training.plans.items.destroy', [selectedPlan.value.id, selectedItem.value.id]), {
-        preserveScroll: true,
-        onSuccess: closeModal,
-    })
-}
-
-const formatDate = (value) => {
-    if (!value) return '-'
-    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
-}
-
-const formatWeekday = (value) => new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(value))
-
-const itemStatusLabel = (item) => {
-    if (item.log_statuses?.some((log) => log.status === 'completed')) return 'Erledigt'
-    if (item.log_statuses?.some((log) => log.status === 'missed')) return 'Nicht gemacht'
-    if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return 'Fällig'
-
-    return 'Geplant'
-}
-
-const itemStatusClass = (item) => {
-    const label = itemStatusLabel(item)
-    if (label === 'Erledigt') return 'bg-success/10 text-success'
-    if (label === 'Nicht gemacht') return 'bg-danger/10 text-danger'
-    if (label === 'Fällig') return 'bg-warning/10 text-warning'
-
-    return 'bg-muted text-secondary'
-}
-
-const formatTime = (value) => {
-    if (!value) return ''
-    return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
-}
-
-const toLocalDateTime = (value) => {
-    if (!value) return ''
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return ''
-    const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    return offsetDate.toISOString().slice(0, 16)
-}
-
-const formatDuration = (minutesOrSeconds, isSeconds = false) => {
-    const minutes = isSeconds ? Math.round(Number(minutesOrSeconds || 0) / 60) : Number(minutesOrSeconds || 0)
-    if (!minutes) return '-'
-    if (minutes < 60) return `${minutes} min`
-    const hours = Math.floor(minutes / 60)
-    const rest = minutes % 60
-    return rest ? `${hours} h ${rest} min` : `${hours} h`
-}
-
-const formatDistance = (meters) => {
-    if (!meters) return '-'
-    return `${(Number(meters) / 1000).toFixed(2).replace('.', ',')} km`
-}
-
-const sportLabel = (key) => sportChoices.value.find((sport) => sport.key === key)?.label || key || 'Training'
-const sportIcon = (key) => sports.find((sport) => sport.key === key)?.icon || 'las la-running'
-const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent || 'bg-air-blue'
+const {
+    activeSport,
+    activeTrainingSection,
+    activeModal,
+    deleteText,
+    selectedPlan,
+    selectedItem,
+    selectedDraft,
+    activityImageInput,
+    planImageInput,
+    itemImageInput,
+    editItemImageInput,
+    draggedItem,
+    planWizardStep,
+    activityForm,
+    emptyLogEntry,
+    logForm,
+    planForm,
+    editForm,
+    itemForm,
+    editItemForm,
+    missedForm,
+    selectedSport,
+    planSport,
+    itemSport,
+    editItemSport,
+    visibleLogs,
+    sportChoices,
+    aiGeneratedPlanInsights,
+    aiGeneratedPlans,
+    aiPlanCannotGenerate,
+    aiPlanForm,
+    aiPlanLimitLabel,
+    aiPlanMaxItems,
+    aiPlanMaxWeeks,
+    aiPlanRequestedItems,
+    aiPlanSourcePlan,
+    aiPlanSportChoices,
+    aiPlanStep,
+    aiPlanTooLarge,
+    aiPlanWeeksTooLong,
+    aiProfileCompletionUrl,
+    aiProfileEstimateAllowed,
+    aiProfileMissingFields,
+    aiProfileMissingMessage,
+    aiTrainingPlan,
+    aiTrainingPlanAvailable,
+    aiTrainingPlanError,
+    aiTrainingPlanGenerating,
+    aiTrainingPlanMessage,
+    aiTrainingPlanPreview,
+    aiTrainingPlanSaving,
+    aiTrainingProviderLabel,
+    canOpenAiPlanStep,
+    continueAiTrainingPlan,
+    generateAiTrainingPlan,
+    generateAiTrainingPlanWithProfileEstimates,
+    openAiTrainingPlanModal,
+    qualityRiskClass,
+    qualityStatusClass,
+    resetAiTrainingPlanForm,
+    saveAiTrainingPlan,
+    selectAiPlanSportType,
+    setAiPlanDurationPreset,
+    plannedLogItems,
+    athleteOptions,
+    filteredPlans,
+    upcomingItems,
+    weekDays,
+    plannedThisWeekCount,
+    completedThisWeekCount,
+    nextTrainingItem,
+    trainerDashboard,
+    athleteCockpit,
+    sportStats,
+    templatePlans,
+    selectedTeamMembers,
+    selectPlanTrainingType,
+    canOpenPlanWizardStep,
+    goToPlanWizardStep,
+    planWizardCanContinue,
+    nextPlanWizardStep,
+    previousPlanWizardStep,
+    resetPlanForm,
+    openModal,
+    nextPlanWeek,
+    closeModal,
+    togglePlanUser,
+    setActivityImage,
+    setPlanImage,
+    setItemImage,
+    setEditItemImage,
+    submitActivity,
+    openLogPage,
+    openDraftDelete,
+    logStatusLabel,
+    applySelectedPlanItem,
+    setLogStatus,
+    addLogEntry,
+    removeLogEntry,
+    submitLog,
+    submitPlan,
+    updatePlan,
+    publishPlan,
+    deletePlan,
+    deleteDraft,
+    submitPlanItem,
+    updatePlanItem,
+    duplicatePlanItem,
+    duplicatePlan,
+    itemPayload,
+    openPlanItem,
+    startDragItem,
+    dropItemOnDay,
+    applyExerciseTemplate,
+    applyPlanExerciseTemplate,
+    documentPlanItem,
+    markPlanItemMissed,
+    deletePlanItem,
+    formatDate,
+    formatWeekday,
+    itemStatusLabel,
+    itemStatusClass,
+    formatTime,
+    toLocalDateTime,
+    formatDuration,
+    formatDistance,
+    sportLabel,
+    sportIcon,
+    sportAccent,
+    aiPlanDurationPresets,
+    aiPlanSteps,
+    aiTrainingMethodGroups,
+    cadenceLabels,
+    defaultTrainingTypeForSport,
+    exerciseLibrary,
+    levelLabels,
+    loadLabels,
+    permissionLabels,
+    phaseLabels,
+    planTrainingTypes,
+    planWizardSteps,
+    sports,
+    trainingSections,
+} = useTrainingWorkspace(props)
 </script>
 
 <template>

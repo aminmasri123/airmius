@@ -4,7 +4,6 @@ import 'trust_operations_screen.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'ui_action_result_screen.dart';
-import 'trust_operations_screen.dart';
 
 class AdminDetailScreen extends StatefulWidget {
   const AdminDetailScreen({super.key, required this.area, required this.title, required this.body, required this.status, required this.icon, this.urgent = false});
@@ -60,10 +59,10 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Bearbeitung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _status, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Status'), items: const ['Offen', 'In Prüfung', 'Genehmigt', 'Abgelehnt', 'Dringend', 'Archiviert', 'Shop', 'Billing', 'Config', 'System', 'Kosten', 'Rollen', 'Aktiv'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _status = value ?? _status)),
+            DropdownButtonFormField<String>(initialValue: _status, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Status'), items: const ['Offen', 'In Prüfung', 'Genehmigt', 'Abgelehnt', 'Dringend', 'Archiviert', 'Shop', 'Billing', 'Config', 'System', 'Kosten', 'Rollen', 'Aktiv'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _status = value ?? _status)),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _assignee, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zuweisung'), items: const ['Admin Team', 'Billing Team', 'Moderation', 'Commerce', 'System'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _assignee = value ?? _assignee)),
-            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigung oder E-Mail nach Statuswechsel vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(initialValue: _assignee, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zuweisung'), items: const ['Admin Team', 'Billing Team', 'Moderation', 'Commerce', 'System'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _assignee = value ?? _assignee)),
+            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigung oder E-Mail nach Statuswechsel vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

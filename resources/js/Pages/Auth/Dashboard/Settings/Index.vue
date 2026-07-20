@@ -178,6 +178,7 @@ const tabClass = (tab) =>
 // Theme
 const { setTheme } = useTheme()
 const addressNotice = ref(null)
+const privacyNotice = ref(null)
 const currentTheme = ref(page.props.auth?.user?.theme || localStorage.getItem('theme') || 'air')
 const themeOptions = [
     { key: 'air', label: 'Air', descriptionKey: 'air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
@@ -231,6 +232,30 @@ const saveAddress = (showFeedback = true) => {
                     type: 'error',
                     message: settingsText('address.save_failed', 'Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
                 }
+            }
+        },
+    })
+}
+
+const withdrawPrivacyConsents = () => {
+    privacyNotice.value = null
+
+    router.post(route('auth.settings.privacy.withdraw-consents'), {
+        consents: ['all'],
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.ads_personalization_consent = false
+            form.ads_measurement_consent = false
+            privacyNotice.value = {
+                type: 'success',
+                message: settingsText('privacy.withdraw_success', 'Einwilligungen wurden widerrufen.'),
+            }
+        },
+        onError: () => {
+            privacyNotice.value = {
+                type: 'error',
+                message: settingsText('privacy.withdraw_failed', 'Einwilligungen konnten nicht widerrufen werden.'),
             }
         },
     })
@@ -688,6 +713,7 @@ const invoiceStatusLabel = (status) => settingsText(`billing.statuses.${status}`
     past_due: 'Zahlung offen',
     cancels_at_period_end: 'Gekündigt zum Periodenende',
 }[status] || status))
+const billingSummary = computed(() => props.billingHistory.summary || {})
 
 const isPayableClubInvoice = (invoice) => ['open', 'overdue', 'awaiting_transfer'].includes(invoice.status)
 const isOpenSubscriptionPayment = (invoice) => Boolean(invoice.payment_checkout_id)
@@ -1762,6 +1788,16 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </p>
                 </div>
 
+                <div
+                    v-if="privacyNotice"
+                    class="rounded-lg border px-4 py-3 text-sm"
+                    :class="privacyNotice.type === 'success'
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-error/30 bg-error/10 text-error'"
+                >
+                    {{ privacyNotice.message }}
+                </div>
+
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.profile_visibility', 'Profil-Sichtbarkeit') }}</span>
                     <select v-model="form.profile_visibility" class="input">
@@ -1813,9 +1849,36 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </label>
                 </div>
 
-                <button class="btn-primary" :disabled="form.processing">
-                    {{ settingsText('privacy.save_button', 'Privatsphäre speichern') }}
-                </button>
+                <div class="rounded-lg border border-border bg-bg p-4">
+                    <h3 class="text-sm font-semibold text-primary">{{ settingsText('privacy.rights_title', 'Datenschutzrechte') }}</h3>
+                    <p class="mt-1 text-sm text-secondary">
+                        {{ settingsText('privacy.rights_description', 'Export, Berichtigung, Löschung und Widerruf sind über Konto und Einstellungen erreichbar.') }}
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <a
+                            :href="route('auth.settings.privacy.export')"
+                            class="btn-secondary"
+                        >
+                            {{ settingsText('privacy.export_button', 'Datenauskunft herunterladen') }}
+                        </a>
+                        <button
+                            type="button"
+                            class="btn-secondary"
+                            @click="withdrawPrivacyConsents"
+                        >
+                            {{ settingsText('privacy.withdraw_button', 'Einwilligungen widerrufen') }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button class="btn-primary" :disabled="form.processing">
+                        {{ settingsText('privacy.save_button', 'Privatsphäre speichern') }}
+                    </button>
+                    <Link :href="route('profile.show')" class="btn-secondary">
+                        {{ settingsText('privacy.correct_profile_button', 'Profildaten berichtigen') }}
+                    </Link>
+                </div>
             </form>
         </div>
 
@@ -1879,6 +1942,31 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 <p v-if="!currentUserSubscriptions.length" class="mt-4 text-sm text-secondary">
                     {{ settingsText('billing.no_subscription', 'Du hast noch kein persönliches Airmius Abo.') }}
                 </p>
+            </section>
+
+            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="surface-card p-5">
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ settingsText('billing.summary.open', 'Offen') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ billingSummary.open_count || 0 }}</p>
+                    <p class="mt-1 text-xs text-secondary">{{ formatMoney(billingSummary.open_amount) }}</p>
+                </div>
+                <div class="surface-card p-5">
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ settingsText('billing.summary.paid', 'Bezahlt') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ billingSummary.paid_count || 0 }}</p>
+                    <p class="mt-1 text-xs text-secondary">{{ formatMoney(billingSummary.paid_amount) }}</p>
+                </div>
+                <div class="surface-card p-5">
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ settingsText('billing.summary.overdue', 'Überfällig') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ billingSummary.overdue_count || 0 }}</p>
+                    <p class="mt-1 text-xs text-secondary">{{ formatMoney(billingSummary.overdue_amount) }}</p>
+                </div>
+                <div class="surface-card p-5">
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ settingsText('billing.summary.total', 'Alle Rechnungen') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ billingSummary.total_count || 0 }}</p>
+                    <p class="mt-1 text-xs text-secondary">
+                        {{ billingSummary.club_invoice_count || 0 }} Verein · {{ billingSummary.subscription_invoice_count || 0 }} Airmius
+                    </p>
+                </div>
             </section>
 
             <section class="surface-card p-5">
@@ -2522,5 +2610,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
 .btn-primary {
     @apply rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary;
+}
+
+.btn-secondary {
+    @apply rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary transition hover:border-borderHover hover:bg-muted;
 }
 </style>

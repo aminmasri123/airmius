@@ -10,15 +10,18 @@ class NotificationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $data = $this->data ?: [];
+        $actionUrl = $data['action_url'] ?? ($data['url'] ?? null);
 
         return [
             'id' => $this->id,
             'type' => $this->type,
             'title' => $data['title'] ?? null,
             'body' => $data['body'] ?? ($data['message'] ?? null),
-            'url' => $data['url'] ?? null,
+            'url' => $actionUrl,
+            'action_url' => $actionUrl,
             'data' => $data,
             'read' => (bool) $this->read,
+            'unread' => ! (bool) $this->read,
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

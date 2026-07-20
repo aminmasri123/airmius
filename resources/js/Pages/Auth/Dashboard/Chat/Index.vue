@@ -1,5 +1,8 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
@@ -1185,13 +1188,29 @@ onUnmounted(() => {
                         </div>
                     </Link>
 
-                    <div v-if="conversations.length === 0" class="p-8 text-center text-sm text-secondary">
-                        Noch keine Chats. Starte oben eine neue Konversation.
-                    </div>
+                    <AppEmptyState
+                        v-if="conversations.length === 0"
+                        class="m-3"
+                        title="Noch keine Chats"
+                        description="Starte eine neue Konversation, damit Nachrichten hier erscheinen."
+                        compact
+                    >
+                        <template #icon>
+                            <i class="las la-comments text-xl" aria-hidden="true"></i>
+                        </template>
+                    </AppEmptyState>
 
-                    <div v-else-if="filteredConversations.length === 0" class="p-8 text-center text-sm text-secondary">
-                        Keine passenden Chats Für diesen Filter.
-                    </div>
+                    <AppEmptyState
+                        v-else-if="filteredConversations.length === 0"
+                        class="m-3"
+                        title="Keine passenden Chats"
+                        description="Aendere den Filter oder suche nach einem anderen Namen."
+                        compact
+                    >
+                        <template #icon>
+                            <i class="las la-filter text-xl" aria-hidden="true"></i>
+                        </template>
+                    </AppEmptyState>
                 </div>
             </aside>
 
@@ -1287,14 +1306,16 @@ onUnmounted(() => {
 
                 <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4 custom-scrollbar" @scroll.passive="onMessagesScroll">
                     <div v-if="messagePage?.has_more || loadingOlderMessages" class="flex justify-center">
-                        <button
+                        <AppButton
                             type="button"
-                            class="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-inputBg disabled:cursor-wait disabled:opacity-70"
+                            variant="secondary"
+                            size="xs"
+                            :loading="loadingOlderMessages"
                             :disabled="loadingOlderMessages"
                             @click="loadOlderMessages"
                         >
                             {{ loadingOlderMessages ? 'Lade ältere Nachrichten...' : 'Ältere Nachrichten laden' }}
-                        </button>
+                        </AppButton>
                     </div>
 
                     <div
@@ -1342,6 +1363,10 @@ onUnmounted(() => {
                                         <img
                                             :src="fileUrl(attachment.file)"
                                             :alt="attachmentLabel(attachment)"
+                                            width="960"
+                                            height="720"
+                                            loading="lazy"
+                                            decoding="async"
                                             class="max-h-72 w-full object-cover"
                                         />
                                     </button>
@@ -1485,9 +1510,16 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div v-if="selectedMessages.length === 0" class="flex h-full items-center justify-center text-sm text-secondary">
-                        Keine Nachrichten in diesem Chat.
-                    </div>
+                    <AppEmptyState
+                        v-if="selectedMessages.length === 0"
+                        title="Keine Nachrichten"
+                        description="Schreibe die erste Nachricht oder fuege einen Anhang hinzu."
+                        compact
+                    >
+                        <template #icon>
+                            <i class="las la-comment-dots text-xl" aria-hidden="true"></i>
+                        </template>
+                    </AppEmptyState>
 
                     <div v-if="activeTypingUsers.length" class="text-xs text-secondary">
                         {{ activeTypingUsers.map((user) => user.name).join(', ') }} schreibt...
@@ -1495,6 +1527,12 @@ onUnmounted(() => {
                 </div>
 
                 <form v-if="selectedConversation" class="border-t border-border p-3 sm:p-4" @submit.prevent="sendMessage">
+                    <AppLoadingState
+                        v-if="messageForm.processing"
+                        class="mb-2"
+                        label="Nachricht wird gesendet..."
+                        inline
+                    />
                     <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
                         <span v-for="(file, index) in messageForm.attachments" :key="`${file.name}-${index}`" class="inline-flex max-w-full items-center gap-2 rounded border border-border px-2 py-1">
                             {{ file.name }}
@@ -1516,13 +1554,16 @@ onUnmounted(() => {
                             <i class="las la-paperclip text-xl"></i>
                             <input ref="attachmentInput" type="file" multiple class="hidden" @change="onAttachmentChange">
                         </label>
-                        <button
+                        <AppButton
                             type="submit"
                             :disabled="messageForm.processing || !canSendMessage"
-                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                            :loading="messageForm.processing"
+                            icon-only
+                            aria-label="Nachricht senden"
+                            title="Nachricht senden"
                         >
-                            <i class="las la-paper-plane text-xl"></i>
-                        </button>
+                            <i v-if="!messageForm.processing" class="las la-paper-plane text-xl" aria-hidden="true"></i>
+                        </AppButton>
                     </div>
                 </form>
 
@@ -1573,6 +1614,10 @@ onUnmounted(() => {
             <img
                 :src="fileUrl(activeMediaAttachment.file)"
                 :alt="attachmentLabel(activeMediaAttachment)"
+                width="1200"
+                height="900"
+                loading="eager"
+                decoding="async"
                 class="max-h-[82dvh] max-w-full rounded-lg object-contain"
             />
             <button

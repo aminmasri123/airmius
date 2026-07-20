@@ -37,6 +37,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'country' => 'DE',
             'birth_date' => now()->subYears(18)->toDateString(),
+            'gender' => 'not_specified',
             'password' => static::$password ??= Hash::make('password'),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,

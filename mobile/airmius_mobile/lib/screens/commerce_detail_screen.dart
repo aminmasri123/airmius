@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class CommerceDetailScreen extends StatefulWidget {
   const CommerceDetailScreen({super.key, required this.title, required this.status});
@@ -44,7 +43,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
             const Eyebrow('Fulfillment & Status'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _fulfillment,
+              initialValue: _fulfillment,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Order-Status'),
               items: const ['Bezahlt', 'Versand vorbereiten', 'Versendet', 'Rückgabe', 'Storniert'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -57,8 +56,8 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Produktqualitaet & Inventar'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _qualityApproved, onChanged: (value) => setState(() => _qualityApproved = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Qualitaetsfreigabe erteilt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Produkt darf im Marketplace sichtbar sein.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _inventoryWarning, onChanged: (value) => setState(() => _inventoryWarning = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Inventarwarnung aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Warnung bei niedrigem Bestand oder fehlenden Varianten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _qualityApproved, onChanged: (value) => setState(() => _qualityApproved = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Qualitaetsfreigabe erteilt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Produkt darf im Marketplace sichtbar sein.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _inventoryWarning, onChanged: (value) => setState(() => _inventoryWarning = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Inventarwarnung aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Warnung bei niedrigem Bestand oder fehlenden Varianten.', style: TextStyle(color: AirmiusColors.muted))),
             const Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('S'), StatusPill('M'), StatusPill('L'), StatusPill('XL')]),
           ])),
           const SizedBox(height: 14),
@@ -66,7 +65,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
             const Eyebrow('Coupon'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _couponType,
+              initialValue: _couponType,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Coupon-Typ'),
               items: const ['Prozent', 'Fixbetrag', 'Kostenloser Versand', 'Vereinsrabatt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -113,7 +112,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
           AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Payout'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _payoutReady, onChanged: (value) => setState(() => _payoutReady = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Auszahlung freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Payout wird mit Rechnung, Provider und Verein verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _payoutReady, onChanged: (value) => setState(() => _payoutReady = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Auszahlung freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Payout wird mit Rechnung, Provider und Verein verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
             const Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Provider'), StatusPill('Rechnung offen'), StatusPill('DATEV bereit')]),
           ])),
           const SizedBox(height: 14),

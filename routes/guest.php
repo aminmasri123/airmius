@@ -12,6 +12,11 @@ use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicSponsorController;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
+use App\Models\Club;
+use App\Models\Event;
+use App\Models\MarketplaceProduct;
+use App\Models\Sport;
+use App\Models\Team;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +44,8 @@ Route::get('/sitemap.xml', function () {
     $staticRoutes = [
         ['loc' => route('welcome'), 'priority' => '1.0', 'changefreq' => 'weekly'],
         ['loc' => route('guest.vereine'), 'priority' => '0.8', 'changefreq' => 'daily'],
+        ['loc' => route('guest.events'), 'priority' => '0.7', 'changefreq' => 'daily'],
+        ['loc' => route('guest.sports'), 'priority' => '0.7', 'changefreq' => 'weekly'],
         ['loc' => route('guest.pricing'), 'priority' => '0.8', 'changefreq' => 'monthly'],
         ['loc' => route('guest.blog.index'), 'priority' => '0.8', 'changefreq' => 'weekly'],
         ['loc' => route('guest.jobs'), 'priority' => '0.7', 'changefreq' => 'weekly'],
@@ -83,10 +90,81 @@ Route::get('/sitemap.xml', function () {
             'changefreq' => 'weekly',
         ]);
 
+    $marketplaceProducts = MarketplaceProduct::query()
+        ->where('status', 'published')
+        ->where(function ($query) {
+            $query
+                ->whereIn('offer_type', ['online_course', 'training_plan', 'service'])
+                ->orWhere('product_type', 'digital')
+                ->orWhere(function ($query) {
+                    $query
+                        ->where('manages_stock', true)
+                        ->where(function ($stockQuery) {
+                            $stockQuery
+                                ->whereHas('inventories', fn ($inventoryQuery) => $inventoryQuery->availableForCountry('DE'))
+                                ->orWhere(function ($legacyQuery) {
+                                    $legacyQuery
+                                        ->whereDoesntHave('inventories')
+                                        ->whereNotNull('stock_quantity')
+                                        ->where('stock_quantity', '>', 0);
+                                });
+                        });
+                })
+                ->orWhere(function ($query) {
+                    $query
+                        ->where('manages_stock', false)
+                        ->whereIn('category', ['camp', 'service']);
+                });
+        })
+        ->where(function ($query) {
+            $query
+                ->whereIn('offer_type', ['online_course', 'training_plan', 'service'])
+                ->orWhere('product_type', 'digital')
+                ->orWhereNull('available_countries')
+                ->orWhereJsonLength('available_countries', 0)
+                ->orWhereJsonContains('available_countries', 'DE');
+        })
+        ->latest('updated_at')
+        ->limit(500)
+        ->get(['id', 'updated_at', 'club_id', 'user_id']);
+
+    $marketplaceProductRoutes = $marketplaceProducts
+        ->map(fn (MarketplaceProduct $product) => [
+            'loc' => route('guest.marketplace.products.show', $product),
+            'lastmod' => optional($product->updated_at)->toAtomString(),
+            'priority' => '0.6',
+            'changefreq' => 'weekly',
+        ]);
+
+    $marketplaceProviderRoutes = $marketplaceProducts
+        ->flatMap(function (MarketplaceProduct $product) {
+            if ($product->club_id) {
+                return [[
+                    'loc' => route('guest.marketplace.providers.show', ['type' => 'club', 'id' => $product->club_id]),
+                    'lastmod' => optional($product->updated_at)->toAtomString(),
+                    'priority' => '0.5',
+                    'changefreq' => 'weekly',
+                ]];
+            }
+
+            if ($product->user_id) {
+                return [[
+                    'loc' => route('guest.marketplace.providers.show', ['type' => 'user', 'id' => $product->user_id]),
+                    'lastmod' => optional($product->updated_at)->toAtomString(),
+                    'priority' => '0.5',
+                    'changefreq' => 'weekly',
+                ]];
+            }
+
+            return [];
+        })
+        ->unique('loc')
+        ->values();
+
     $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
     $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
 
-    foreach (collect($staticRoutes)->merge($blogCategoryRoutes)->merge($blogRoutes) as $url) {
+    foreach (collect($staticRoutes)->merge($blogCategoryRoutes)->merge($blogRoutes)->merge($marketplaceProductRoutes)->merge($marketplaceProviderRoutes) as $url) {
         $xml .= "  <url>\n";
         $xml .= '    <loc>'.e($url['loc'])."</loc>\n";
         if (! empty($url['lastmod'])) {
@@ -180,6 +258,134 @@ Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
 ]))->name('guest.gamification');
 
 Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vereine');
+Route::get('/veranstaltungen', function (Request $request) {
+    $filters = $request->validate([
+        'search' => ['nullable', 'string', 'max:120'],
+        'type' => ['nullable', 'in:training,match,meeting,public'],
+        'location' => ['nullable', 'string', 'max:120'],
+    ]);
+
+    $events = Event::query()
+        ->with([
+            'club:id,name,sport_type,city,country',
+            'team:id,name,club_id,sport_type',
+            'team.club:id,name,sport_type,city,country',
+        ])
+        ->where('visibility', 'public')
+        ->where('status', 'scheduled')
+        ->where('start_time', '>=', now()->startOfDay())
+        ->when($filters['search'] ?? null, fn ($query, $search) => $query->where(function ($query) use ($search) {
+            $query
+                ->where('title', 'like', '%'.$search.'%')
+                ->orWhere('notes', 'like', '%'.$search.'%')
+                ->orWhereHas('club', fn ($clubQuery) => $clubQuery->where('name', 'like', '%'.$search.'%'))
+                ->orWhereHas('team', fn ($teamQuery) => $teamQuery->where('name', 'like', '%'.$search.'%'));
+        }))
+        ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+        ->when($filters['location'] ?? null, fn ($query, $location) => $query->where(function ($query) use ($location) {
+            $query
+                ->where('location', 'like', '%'.$location.'%')
+                ->orWhere('location_name', 'like', '%'.$location.'%')
+                ->orWhere('location_city', 'like', '%'.$location.'%')
+                ->orWhereHas('club', fn ($clubQuery) => $clubQuery
+                    ->where('city', 'like', '%'.$location.'%')
+                    ->orWhere('country', 'like', '%'.$location.'%'))
+                ->orWhereHas('team.club', fn ($clubQuery) => $clubQuery
+                    ->where('city', 'like', '%'.$location.'%')
+                    ->orWhere('country', 'like', '%'.$location.'%'));
+        }))
+        ->orderBy('start_time')
+        ->paginate(24)
+        ->withQueryString()
+        ->through(fn (Event $event) => [
+            'id' => $event->id,
+            'title' => $event->title,
+            'type' => $event->type,
+            'start_time' => $event->start_time?->toIso8601String(),
+            'location' => $event->location_name ?: $event->location,
+            'location_city' => $event->location_city,
+            'club' => $event->club ? [
+                'id' => $event->club->id,
+                'name' => $event->club->name,
+                'sport_type' => $event->club->sport_type,
+                'city' => $event->club->city,
+                'country' => $event->club->country,
+            ] : null,
+            'team' => $event->team ? [
+                'id' => $event->team->id,
+                'name' => $event->team->name,
+                'sport_type' => $event->team->sport_type,
+                'club' => $event->team->club ? [
+                    'id' => $event->team->club->id,
+                    'name' => $event->team->club->name,
+                    'city' => $event->team->club->city,
+                    'country' => $event->team->club->country,
+                ] : null,
+            ] : null,
+        ]);
+
+    return Inertia::render('Guest/Events', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'events' => $events,
+        'eventTypes' => Event::TYPES,
+        'filters' => [
+            'search' => $filters['search'] ?? '',
+            'type' => $filters['type'] ?? '',
+            'location' => $filters['location'] ?? '',
+        ],
+    ]);
+})->name('guest.events');
+Route::get('/sportarten', function (Request $request) {
+    $filters = $request->validate([
+        'category' => ['nullable', 'string', 'max:80'],
+        'search' => ['nullable', 'string', 'max:120'],
+    ]);
+    $clubCounts = Club::query()
+        ->verified()
+        ->whereNotNull('sport_type')
+        ->selectRaw('sport_type, COUNT(*) as aggregate')
+        ->groupBy('sport_type')
+        ->pluck('aggregate', 'sport_type');
+    $teamCounts = Team::query()
+        ->whereNotNull('sport_type')
+        ->selectRaw('sport_type, COUNT(*) as aggregate')
+        ->groupBy('sport_type')
+        ->pluck('aggregate', 'sport_type');
+
+    $sports = Sport::query()
+        ->where('is_active', true)
+        ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
+        ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('name', 'like', '%'.$search.'%'))
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get(['id', 'name', 'slug', 'category'])
+        ->map(fn (Sport $sport) => [
+            'id' => $sport->id,
+            'name' => $sport->name,
+            'slug' => $sport->slug,
+            'category' => $sport->category,
+            'clubs_count' => (int) ($clubCounts[$sport->slug] ?? $clubCounts[$sport->name] ?? 0),
+            'teams_count' => (int) ($teamCounts[$sport->slug] ?? $teamCounts[$sport->name] ?? 0),
+        ]);
+
+    return Inertia::render('Guest/Sportarten', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'sports' => $sports,
+        'categories' => Sport::query()
+            ->where('is_active', true)
+            ->whereNotNull('category')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->values(),
+        'filters' => [
+            'category' => $filters['category'] ?? '',
+            'search' => $filters['search'] ?? '',
+        ],
+    ]);
+})->name('guest.sports');
 Route::get('/marketplace', [PublicMarketplaceController::class, 'index'])->name('guest.marketplace');
 Route::get('/marketplace/providers/{type}/{id}', [PublicMarketplaceController::class, 'provider'])->name('guest.marketplace.providers.show');
 Route::get('/marketplace/products/{product}', [PublicMarketplaceController::class, 'show'])->name('guest.marketplace.products.show');

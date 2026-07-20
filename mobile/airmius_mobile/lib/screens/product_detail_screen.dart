@@ -5,7 +5,6 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'checkout_screen.dart';
 import 'ui_action_result_screen.dart';
-import 'marketplace_operations_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({super.key, required this.title, required this.provider, required this.description, required this.category, required this.price, required this.icon});
@@ -49,9 +48,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Varianten'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _size, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Groesse'), items: const ['S', 'M', 'L', 'XL'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _size = value ?? _size)),
+            DropdownButtonFormField<String>(initialValue: _size, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Groesse'), items: const ['S', 'M', 'L', 'XL'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _size = value ?? _size)),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _variant, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Variante'), items: const ['Blau', 'Schwarz', 'Weiss'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _variant = value ?? _variant)),
+            DropdownButtonFormField<String>(initialValue: _variant, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Variante'), items: const ['Blau', 'Schwarz', 'Weiss'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _variant = value ?? _variant)),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

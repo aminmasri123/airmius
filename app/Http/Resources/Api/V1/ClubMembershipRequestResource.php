@@ -25,6 +25,8 @@ class ClubMembershipRequestResource extends JsonResource
             'requested_pause_until' => $this->requested_pause_until?->toDateString(),
             'preview_amount' => $this->preview_amount,
             'preview_interval' => $this->preview_interval,
+            'submitted_at' => $this->created_at?->toJSON(),
+            'withdrawn_at' => $this->status === 'withdrawn' ? $this->reviewed_at?->toJSON() : null,
             'reviewed_at' => $this->reviewed_at?->toJSON(),
             'review_note' => $this->review_note,
             'membership_type' => $this->whenLoaded('membershipType'),

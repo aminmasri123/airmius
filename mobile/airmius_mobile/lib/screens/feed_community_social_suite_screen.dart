@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -698,7 +699,6 @@ class _StoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final story = group.first;
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () => _openStory(context),

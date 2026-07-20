@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 class ClubExternalMember extends Model
 {
     use HasFactory;
+
+    public const INVITATION_TTL_DAYS = 14;
 
     protected $fillable = [
         'club_id',
@@ -35,6 +40,7 @@ class ClubExternalMember extends Model
         'invitation_status',
         'invitation_token',
         'invited_at',
+        'invitation_expires_at',
         'linked_at',
     ];
 
@@ -50,8 +56,48 @@ class ClubExternalMember extends Model
             'membership_ends_on' => 'date',
             'membership_end_notified_at' => 'datetime',
             'invited_at' => 'datetime',
+            'invitation_expires_at' => 'datetime',
             'linked_at' => 'datetime',
         ];
+    }
+
+    public function issueInvitation(?CarbonInterface $expiresAt = null): self
+    {
+        $expiresAt = $expiresAt
+            ? $expiresAt->copy()->endOfDay()
+            : now()->addDays(self::INVITATION_TTL_DAYS)->endOfDay();
+
+        $this->forceFill([
+            'invitation_status' => 'pending',
+            'invitation_token' => Str::random(64),
+            'invited_at' => now(),
+            'invitation_expires_at' => $expiresAt,
+        ])->save();
+
+        return $this;
+    }
+
+    public function invitationUrl(): ?string
+    {
+        if (blank($this->invitation_token) || ! Route::has('auth.club-member-invitations.accept')) {
+            return null;
+        }
+
+        return route('auth.club-member-invitations.accept', $this->invitation_token);
+    }
+
+    public function invitationExpired(): bool
+    {
+        return (bool) $this->invitation_expires_at?->isPast();
+    }
+
+    public function markInvitationExpired(): self
+    {
+        $this->forceFill([
+            'invitation_status' => 'expired',
+        ])->save();
+
+        return $this;
     }
 
     public function club()

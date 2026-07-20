@@ -65,7 +65,7 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _cycle,
+                    initialValue: _cycle,
                     dropdownColor: AirmiusColors.card,
                     decoration: _fieldDecoration('Trainingszyklus'),
                     items: const ['Woche 24', 'Woche 25', 'Monatsblock Juni', 'Vorbereitung']
@@ -111,7 +111,7 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                   SwitchListTile(
                     value: _publishToAthletes,
                     onChanged: (value) => setState(() => _publishToAthletes = value),
-                    activeColor: AirmiusColors.blue,
+                    activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Sichtbar für Athleten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                     subtitle: const Text('Plan erscheint in App, Kalender und Wochenübersicht.', style: TextStyle(color: AirmiusColors.muted)),
@@ -119,7 +119,7 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                   SwitchListTile(
                     value: _requireLog,
                     onChanged: (value) => setState(() => _requireLog = value),
-                    activeColor: AirmiusColors.blue,
+                    activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Log nach Einheit verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                     subtitle: const Text('Athleten werden nach Abschluss an die Rückmeldung erinnert.', style: TextStyle(color: AirmiusColors.muted)),

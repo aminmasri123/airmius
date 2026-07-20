@@ -1,6 +1,13 @@
 ﻿import { router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
+const permissionDeniedMessage = 'Du hast dafür keine Berechtigung.'
+const defaultBackendPermissionMessages = new Set([
+    'Forbidden',
+    'This action is forbidden.',
+    'This action is unauthorized.',
+])
+
 export function useGlobalFeedback(page) {
     const feedbackMessages = ref([])
 
@@ -82,9 +89,19 @@ export function useGlobalFeedback(page) {
         feedbackTimers.set(id, window.setTimeout(() => removeFeedback(id), type === 'error' ? 7000 : 4500))
     }
 
+    const normalizeFeedbackMessage = (message) => {
+        const text = String(message || '').trim()
+
+        if (defaultBackendPermissionMessages.has(text)) {
+            return permissionDeniedMessage
+        }
+
+        return text
+    }
+
     const firstErrorMessage = (errors) => {
         const values = Object.values(errors || {}).flat()
-        const first = values.find((value) => String(value || '').trim())
+        const first = values.map(normalizeFeedbackMessage).find((value) => value)
 
         return first || 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.'
     }
@@ -105,7 +122,7 @@ export function useGlobalFeedback(page) {
 
     const httpErrorMessage = (status) => {
         if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
-        if (status === 403) return 'Du hast für diese Aktion keine Berechtigung.'
+        if (status === 403) return permissionDeniedMessage
         if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
         if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
         if (status === 422) return 'Bitte prüfe die Eingaben.'
@@ -156,4 +173,3 @@ export function useGlobalFeedback(page) {
         uninstallGlobalFeedback,
     }
 }
-

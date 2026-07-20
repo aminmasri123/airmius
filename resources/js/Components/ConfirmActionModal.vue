@@ -1,5 +1,6 @@
 ﻿<script setup>
 import Modal from '@/Components/Modal.vue'
+import AppButton from '@/Components/UI/AppButton.vue'
 
 defineProps({
     show: {
@@ -49,25 +50,23 @@ const emit = defineEmits(['cancel', 'confirm'])
             <p class="mt-2 text-sm leading-6 text-secondary">{{ message }}</p>
 
             <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button
+                <AppButton
                     type="button"
-                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary transition hover:bg-inputBg disabled:opacity-60"
+                    variant="secondary"
                     :disabled="processing"
                     @click="emit('cancel')"
                 >
                     {{ cancelLabel }}
-                </button>
-                <button
+                </AppButton>
+                <AppButton
                     type="button"
-                    class="rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60"
-                    :class="danger ? 'bg-error text-white hover:opacity-90' : 'bg-buttonPrimary text-buttonTextPrimary hover:bg-buttonPrimaryHover'"
+                    :variant="danger ? 'danger' : 'primary'"
                     :disabled="processing"
                     @click="emit('confirm')"
                 >
                     {{ confirmLabel }}
-                </button>
+                </AppButton>
             </div>
         </div>
     </Modal>
 </template>
-

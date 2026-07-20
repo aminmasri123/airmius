@@ -97,7 +97,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                           AirmiusTextField(label: 'Vorname *', controller: _firstName),
                           AirmiusTextField(label: 'Nachname *', controller: _lastName),
                           DropdownButtonFormField<String>(
-                            value: _gender.isEmpty ? null : _gender,
+                            initialValue: _gender.isEmpty ? null : _gender,
                             dropdownColor: AirmiusColors.cardSoft,
                             decoration: const InputDecoration(
                               labelText: 'Geschlecht *',

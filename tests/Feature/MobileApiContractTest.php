@@ -35,6 +35,21 @@ class MobileApiContractTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function assertApiErrorContract($response, string $code): void
+    {
+        $response
+            ->assertJsonStructure([
+                'message',
+                'errors',
+                'code',
+                'error' => ['code', 'message'],
+                'meta' => ['api_version', 'contract_version', 'request_id'],
+            ])
+            ->assertJsonPath('code', $code)
+            ->assertJsonPath('error.code', $code)
+            ->assertJsonPath('meta.api_version', 'v1');
+    }
+
     public function test_mobile_meta_returns_versioned_capabilities(): void
     {
         config()->set('sport_map.routing.provider', 'local');
@@ -42,8 +57,19 @@ class MobileApiContractTest extends TestCase
         $this->getJson('/api/v1/meta')
             ->assertOk()
             ->assertJsonPath('data.api_version', 'v1')
+            ->assertJsonPath('data.contract_version', \App\Support\Api\V1\ApiContract::CONTRACT_VERSION)
+            ->assertJsonPath('data.minimum_app_version', \App\Support\Api\V1\ApiContract::MIN_CLIENT_VERSION)
+            ->assertJsonPath('data.feature_flags.mvp_surface', true)
+            ->assertJsonPath('data.feature_flags.secure_token_storage', true)
             ->assertJsonPath('data.supported_locales.0', 'de')
             ->assertJsonPath('data.supported_locales.3', 'ar')
+            ->assertJsonPath('data.role_matrix.0.key', 'sportler')
+            ->assertJsonPath('data.role_matrix.1.key', 'trainer')
+            ->assertJsonPath('data.role_matrix.2.key', 'verein_admin')
+            ->assertJsonPath('data.role_matrix.3.key', 'elternteil')
+            ->assertJsonPath('data.role_matrix.4.key', 'plattform_admin')
+            ->assertJsonPath('data.role_matrix.2.club_roles.0', 'owner')
+            ->assertJsonPath('data.role_matrix.3.team_roles.0', 'ParentContact')
             ->assertJsonPath('data.capabilities.profile.0', 'user_card')
             ->assertJsonPath('data.capabilities.chat.0', 'conversations')
             ->assertJsonPath('data.capabilities.commerce.0', 'products')
@@ -74,6 +100,45 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.capabilities.settings.1', 'update');
     }
 
+    public function test_api_v1_client_errors_use_contract_shape(): void
+    {
+        $this->assertApiErrorContract(
+            $this->getJson('/api/v1/me')->assertUnauthorized(),
+            'unauthenticated',
+        );
+
+        $this->assertApiErrorContract(
+            $this->postJson('/api/v1/auth/login', [])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['email', 'password']),
+            'validation_failed',
+        );
+
+        $this->assertApiErrorContract(
+            $this->getJson('/api/v1/posts/999999999/image')->assertNotFound(),
+            'not_found',
+        );
+
+        $this->assertApiErrorContract(
+            $this->deleteJson('/api/v1/meta')->assertStatus(405),
+            'method_not_allowed',
+        );
+    }
+
+    public function test_api_v1_server_errors_use_contract_shape(): void
+    {
+        config()->set('app.debug', false);
+
+        \Illuminate\Support\Facades\Route::get('/api/v1/__test/server-error', fn () => throw new \RuntimeException('boom'));
+
+        $this->assertApiErrorContract(
+            $this->getJson('/api/v1/__test/server-error')
+                ->assertStatus(500)
+                ->assertJsonPath('message', 'An unexpected error occurred.'),
+            'server_error',
+        );
+    }
+
     public function test_regular_club_member_cannot_read_member_or_billing_management_api(): void
     {
         $user = User::factory()->create();
@@ -90,8 +155,18 @@ class MobileApiContractTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->getJson("/api/v1/clubs/{$club->id}/members")->assertForbidden();
-        $this->getJson("/api/v1/clubs/{$club->id}/billing")->assertForbidden();
+        $this->assertApiErrorContract(
+            $this->getJson("/api/v1/clubs/{$club->id}/members")
+                ->assertForbidden()
+                ->assertJsonPath('message', 'Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.'),
+            'forbidden',
+        );
+        $this->assertApiErrorContract(
+            $this->getJson("/api/v1/clubs/{$club->id}/billing")
+                ->assertForbidden()
+                ->assertJsonPath('message', 'Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.'),
+            'forbidden',
+        );
     }
 
     public function test_club_manager_can_read_member_and_billing_management_api(): void

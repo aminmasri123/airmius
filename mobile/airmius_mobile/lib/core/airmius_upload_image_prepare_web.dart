@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
+
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:math' as math;
@@ -6,7 +8,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 
 const int _maxUploadBytes = 4 * 1024 * 1024;
-const int _initialMaxDimension = 1600;
 
 Future<PlatformFile> preparePostImageForUpload(PlatformFile file) async {
   final bytes = file.bytes;

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class EventAdminDetailScreen extends StatefulWidget {
   const EventAdminDetailScreen({super.key, required this.title, required this.status});
@@ -56,10 +55,10 @@ class _EventAdminDetailScreenState extends State<EventAdminDetailScreen> {
                 ),
             ]),
             const SizedBox(height: 8),
-            SwitchListTile(value: _waitlist, onChanged: (value) => setState(() => _waitlist = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Warteliste aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer können nachrücken.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _eventChat, onChanged: (value) => setState(() => _eventChat = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Eventchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat bleibt mit Termin und Teilnehmern verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _reminder, onChanged: (value) => setState(() => _reminder = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Erinnerungen senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push vor Eventbeginn vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _cancellationAllowed, onChanged: (value) => setState(() => _cancellationAllowed = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Absage erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer dürfen Status ändern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _waitlist, onChanged: (value) => setState(() => _waitlist = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Warteliste aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer können nachrücken.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _eventChat, onChanged: (value) => setState(() => _eventChat = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Eventchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat bleibt mit Termin und Teilnehmern verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _reminder, onChanged: (value) => setState(() => _reminder = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Erinnerungen senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push vor Eventbeginn vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _cancellationAllowed, onChanged: (value) => setState(() => _cancellationAllowed = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Absage erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer dürfen Status ändern.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: 0.45), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

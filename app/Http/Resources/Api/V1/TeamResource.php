@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,6 +33,16 @@ class TeamResource extends JsonResource
             $canRequestJoin = $viewerIsClubMember && ! $viewerIsMember && ! $viewerPendingJoinRequestId;
         }
         $canManageTeam = (bool) ($request->user()?->can('update', $this->resource) ?? false);
+        $canRemoveMembers = $this->getAttribute('can_remove_members');
+        if ($canRemoveMembers === null && $viewer && $this->club) {
+            $canRemoveMembers = $viewer->can('delete', $this->club)
+                || $this->club
+                    ->users()
+                    ->where('users.id', $viewer->id)
+                    ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']))
+                    ->exists()
+                || ($viewer->can('team.kick') && $canManageTeam);
+        }
         $pendingJoinRequests = collect();
         if ($canManageTeam) {
             $pendingJoinRequests = $this->relationLoaded('joinRequests')
@@ -53,6 +64,7 @@ class TeamResource extends JsonResource
             'cover_image_url' => UploadStorage::url($this->cover_image),
             'can_manage' => $canManageTeam,
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
+            'can_remove_members' => (bool) $canRemoveMembers,
             'viewer_is_member' => $viewerIsMember,
             'viewer_pending_join_request_id' => $viewerPendingJoinRequestId,
             'can_request_join' => (bool) $canRequestJoin,

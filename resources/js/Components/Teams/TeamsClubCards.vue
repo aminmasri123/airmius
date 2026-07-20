@@ -32,8 +32,11 @@ defineProps({
     setClubEditTab: { type: Function, required: true },
     openTeamModal: { type: Function, required: true },
     inviteFormFor: { type: Function, required: true },
+    teamMemberFormFor: { type: Function, required: true },
+    availableTeamMemberOptions: { type: Function, required: true },
     loadTeamInsights: { type: Function, required: true },
     inviteUser: { type: Function, required: true },
+    addTeamMember: { type: Function, required: true },
     requestJoinTeam: { type: Function, required: true },
     approveJoinRequest: { type: Function, required: true },
     declineJoinRequest: { type: Function, required: true },
@@ -162,8 +165,11 @@ defineProps({
             :approve-join-request="approveJoinRequest"
             :decline-join-request="declineJoinRequest"
             :invite-form-for="inviteFormFor"
+            :team-member-form-for="teamMemberFormFor"
+            :available-team-member-options="availableTeamMemberOptions"
             :load-team-insights="loadTeamInsights"
             :invite-user="inviteUser"
+            :add-team-member="addTeamMember"
         />
 
         <TeamsClubMembersSection
@@ -185,5 +191,4 @@ defineProps({
         />
     </div>
 </template>
-
 

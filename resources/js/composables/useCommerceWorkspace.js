@@ -14,6 +14,7 @@ export function useCommerceWorkspace(props) {
     const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
     const showCartCheckout = ref(false)
     const checkoutConfirmation = ref({ open: false, type: null, item: null, provider: 'bank_transfer', accepted: false })
+    const checkoutProcessing = ref(false)
     const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
     const queryOrderId = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('order')
     const activeTab = ref(queryTab === 'marketplace' || !queryTab ? 'shop' : queryTab)
@@ -404,11 +405,18 @@ export function useCommerceWorkspace(props) {
     }
 
     const confirmAddonCheckout = (addon, selectedProvider) => {
+        checkoutProcessing.value = true
         router.post(route('auth.commerce.addons.checkout', addon.id), {
             provider: selectedProvider,
             billing_interval: interval.value,
             club_id: selectedClubId.value || null,
             accepted_terms: true,
+        }, {
+            preserveScroll: true,
+            onSuccess: closeCheckoutConfirmation,
+            onFinish: () => {
+                checkoutProcessing.value = false
+            },
         })
     }
 
@@ -425,6 +433,7 @@ export function useCommerceWorkspace(props) {
             return
         }
 
+        checkoutProcessing.value = true
         const url = new URL(`/checkout/subscriptions/${plan.id}/start`, window.location.origin)
         url.searchParams.set('provider', selectedProvider)
         url.searchParams.set('billing_interval', interval.value)
@@ -437,14 +446,22 @@ export function useCommerceWorkspace(props) {
     }
 
     const confirmProductCheckout = (product, selectedProvider) => {
+        checkoutProcessing.value = true
         router.post(route('auth.commerce.products.checkout', product.id), {
             provider: selectedProvider,
             accepted_terms: true,
+        }, {
+            preserveScroll: true,
+            onSuccess: closeCheckoutConfirmation,
+            onFinish: () => {
+                checkoutProcessing.value = false
+            },
         })
     }
 
     const closeCheckoutConfirmation = () => {
         checkoutConfirmation.value = { open: false, type: null, item: null, provider: 'bank_transfer', accepted: false }
+        checkoutProcessing.value = false
     }
 
     const setCheckoutAccepted = (accepted) => {
@@ -503,8 +520,6 @@ export function useCommerceWorkspace(props) {
         } else if (checkout.type === 'product') {
             confirmProductCheckout(checkout.item, checkout.provider)
         }
-
-        closeCheckoutConfirmation()
     }
 
     const addToCart = (product, quantity = 1) => {
@@ -1098,6 +1113,7 @@ export function useCommerceWorkspace(props) {
         issueModal,
         showCartCheckout,
         checkoutConfirmation,
+        checkoutProcessing,
         queryTab,
         queryOrderId,
         activeTab,

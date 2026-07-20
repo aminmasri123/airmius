@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class SharedFileAccessScreen extends StatefulWidget {
   const SharedFileAccessScreen({super.key, this.token = 'share-zbb-2026'});
@@ -39,9 +38,9 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Zugriff'),
-            SwitchListTile(value: _requiresPassword, onChanged: (value) => setState(() => _requiresPassword = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Passwort erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Optionaler Schutz für sensible Vereinsdokumente.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutzhinweis akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Vor Download oder Preview bestätigen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _expired, onChanged: (value) => setState(() => _expired = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Link abgelaufen simulieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren Error-State für ungültige Tokens.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _requiresPassword, onChanged: (value) => setState(() => _requiresPassword = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Passwort erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Optionaler Schutz für sensible Vereinsdokumente.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutzhinweis akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Vor Download oder Preview bestätigen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _expired, onChanged: (value) => setState(() => _expired = value), activeThumbColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Link abgelaufen simulieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren Error-State für ungültige Tokens.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

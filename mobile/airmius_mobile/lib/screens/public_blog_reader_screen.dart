@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class PublicBlogReaderScreen extends StatefulWidget {
   const PublicBlogReaderScreen({super.key, this.initialCategory = 'Alle'});

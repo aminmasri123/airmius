@@ -76,7 +76,7 @@ const shortDescription = (text, length = 78) => {
     <article class="group flex h-full overflow-hidden rounded border border-border bg-card transition hover:border-borderHover">
         <Link :href="product.show_url" class="flex w-full flex-col">
             <div class="relative h-36 shrink-0 overflow-hidden bg-inputBg sm:h-auto sm:aspect-square">
-                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" width="360" height="360" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
                 <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ product.badge }}</span>
             </div>
@@ -112,7 +112,7 @@ const shortDescription = (text, length = 78) => {
                 <div class="mt-2 hidden items-center justify-between gap-2 text-xs text-secondary sm:flex">
                     <span class="inline-flex min-w-0 items-center gap-1">
                         <span class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-buttonPrimary/10 text-[9px] font-black text-buttonPrimary">
-                            <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                            <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" width="20" height="20" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                             <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
                         </span>
                         <span class="truncate">{{ providerName }}</span>
@@ -137,5 +137,4 @@ const shortDescription = (text, length = 78) => {
         </Link>
     </article>
 </template>
-
 

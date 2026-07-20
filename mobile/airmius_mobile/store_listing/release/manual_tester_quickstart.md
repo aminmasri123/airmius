@@ -76,6 +76,21 @@ Expected:
 - Message/event/notification links open the deep-link arrival screen with detail preview.
 - Unknown link opens safe fallback.
 
+## 4a. Real device smoke test
+
+Use the focused runbook before final MVP release:
+
+```text
+store_listing/release/real_device_smoke_test_runbook.md
+```
+
+Minimum required real-device checks:
+
+- Android and iOS login with restart/session-restore/logout.
+- Android and iOS push opt-in, token registration, test notification and logout token cleanup.
+- Android and iOS native upload picker with successful upload and retryable failure.
+- Android and iOS deep links for club, event, chat/message and invitation targets.
+
 ## 5. Release candidate evidence
 
 Prepare local folders and sign-off files for manual screenshots, API QA and approvals:
@@ -115,6 +130,29 @@ The prerequisite check now stops early when Flutter, Java, Android SDK path, `ad
 
 ```powershell
 flutter doctor --android-licenses
+```
+
+Linux Android prerequisite checker:
+
+```bash
+cd /var/www/airmius/mobile/airmius_mobile
+scripts/install_android_sdk_user.sh --accept-licenses
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+scripts/assert_linux_android_release_prerequisites.sh --require-android-device
+```
+
+Linux Android real-device evidence helper after prerequisites pass:
+
+```bash
+scripts/run_android_real_device_smoke.sh --build-release
+```
+
+macOS iOS/TestFlight evidence helper:
+
+```bash
+scripts/run_ios_real_device_smoke.sh --build-ipa
 ```
 
 ```powershell

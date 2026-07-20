@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Events\ChatTyping;
 use App\Events\MessageDeleted;
+use App\Events\MessageReceiptsUpdated;
 use App\Events\MessageReactionUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ConversationResource;
@@ -11,10 +12,14 @@ use App\Http\Resources\Api\V1\MessageResource;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageHide;
+use App\Models\MessageReceipt;
 use App\Models\MessageReaction;
+use App\Models\Team;
+use App\Models\User;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
@@ -47,6 +52,86 @@ class ChatController extends Controller
         );
     }
 
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'type' => ['required', 'in:direct,group,team'],
+            'club_id' => ['nullable', 'exists:clubs,id'],
+            'team_id' => ['nullable', 'required_if:type,team', 'exists:teams,id'],
+            'participant_ids' => ['nullable', 'array'],
+            'participant_ids.*' => ['integer', 'exists:users,id'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'message' => ['nullable', 'string', 'max:4000'],
+        ]);
+
+        $conversation = DB::transaction(function () use ($request, $data) {
+            $participantIds = collect($data['participant_ids'] ?? [])
+                ->push($request->user()->id)
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            abort_if($data['type'] === 'direct' && $participantIds->count() !== 2, 422);
+            abort_if($data['type'] === 'group' && $participantIds->count() < 3, 422);
+
+            if ($data['type'] === 'team') {
+                $team = Team::query()
+                    ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                    ->findOrFail($data['team_id']);
+
+                $conversation = Conversation::firstOrCreate(
+                    ['type' => 'team', 'team_id' => $team->id],
+                    ['club_id' => $team->club_id]
+                );
+                $this->attachNewParticipantsWithJoinedAt(
+                    $conversation,
+                    $team->users()->pluck('users.id')->push($request->user()->id)
+                );
+            } elseif ($data['type'] === 'direct') {
+                $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== $request->user()->id));
+
+                abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+
+                $conversation = Conversation::query()
+                    ->where('type', 'direct')
+                    ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                    ->whereHas('users', fn ($query) => $query->where('users.id', $recipient->id))
+                    ->first();
+
+                if (! $conversation) {
+                    $conversation = Conversation::create([
+                        'type' => 'direct',
+                        'club_id' => $data['club_id'] ?? null,
+                    ]);
+                    $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
+                }
+            } else {
+                $this->authorizeGroupParticipants($request, $participantIds->reject(fn ($id) => (int) $id === $request->user()->id));
+
+                $conversation = Conversation::create([
+                    'type' => 'group',
+                    'club_id' => $data['club_id'] ?? null,
+                    'owner_id' => $request->user()->id,
+                    'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
+                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                ]);
+                $conversation->users()->attach($this->participantsWithJoinedAt($participantIds));
+            }
+
+            if (! empty($data['message'])) {
+                $message = $this->chatService->sendMessage($request->user(), $conversation->id, $data['message']);
+                $this->moderation->flagIfNeeded($message, $message->message, $request->user()->id);
+            }
+
+            return $conversation;
+        });
+
+        return (new ConversationResource(
+            $conversation->fresh()->loadMissing(['users', 'team', 'owner'])->loadCount('messages')
+        ))->response()->setStatusCode(201);
+    }
+
     public function messages(Request $request, Conversation $conversation)
     {
         $this->authorizeParticipant($conversation, $request);
@@ -57,7 +142,11 @@ class ChatController extends Controller
             ->latest()
             ->paginate($this->perPage($request));
 
-        return MessageResource::collection($messages);
+        return MessageResource::collection($messages)->additional([
+            'chat' => [
+                'typing_users' => $this->typingUsers($conversation, $request),
+            ],
+        ]);
     }
 
     public function sendMessage(Request $request, Conversation $conversation)
@@ -100,12 +189,59 @@ class ChatController extends Controller
             'typing' => ['required', 'boolean'],
         ]);
 
+        $cacheKey = $this->typingCacheKey($conversation->id, $request->user()->id);
+        if ((bool) $data['typing']) {
+            Cache::put($cacheKey, true, now()->addSeconds(8));
+        } else {
+            Cache::forget($cacheKey);
+        }
+
         broadcast(new ChatTyping($conversation, $request->user(), (bool) $data['typing']))->toOthers();
 
         return response()->json([
             'data' => [
                 'conversation_id' => $conversation->id,
                 'typing' => (bool) $data['typing'],
+                'typing_users' => $this->typingUsers($conversation, $request),
+            ],
+        ]);
+    }
+
+    public function markRead(Request $request, Conversation $conversation)
+    {
+        $this->authorizeParticipant($conversation, $request);
+
+        $messageIds = MessageReceipt::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->whereHas('message', fn ($query) => $query->where('conversation_id', $conversation->id))
+            ->pluck('message_id')
+            ->all();
+
+        MessageReceipt::query()
+            ->whereIn('message_id', $messageIds)
+            ->where('user_id', $request->user()->id)
+            ->update([
+                'delivered_at' => now(),
+                'read_at' => now(),
+            ]);
+
+        $request->user()
+            ->appNotifications()
+            ->where('type', 'chat.message')
+            ->where('read', false)
+            ->where('data->conversation_id', $conversation->id)
+            ->update(['read' => true]);
+
+        if ($messageIds) {
+            $this->broadcastSafely(fn () => broadcast(new MessageReceiptsUpdated($conversation, $messageIds))->toOthers());
+        }
+
+        return response()->json([
+            'data' => [
+                'conversation_id' => $conversation->id,
+                'read_message_ids' => $messageIds,
+                'read_count' => count($messageIds),
             ],
         ]);
     }
@@ -187,6 +323,67 @@ class ChatController extends Controller
         );
     }
 
+    private function participantsWithJoinedAt($participantIds): array
+    {
+        $joinedAt = now();
+
+        return collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->mapWithKeys(fn ($id) => [$id => ['joined_at' => $joinedAt]])
+            ->all();
+    }
+
+    private function attachNewParticipantsWithJoinedAt(Conversation $conversation, $participantIds): void
+    {
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
+
+        $newParticipantIds = $participantIds->diff($existingIds)->values();
+
+        if ($newParticipantIds->isNotEmpty()) {
+            $conversation->users()->syncWithoutDetaching($this->participantsWithJoinedAt($newParticipantIds));
+        }
+    }
+
+    private function authorizeGroupParticipants(Request $request, $participantIds): void
+    {
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $participants = User::query()
+            ->whereIn('id', $participantIds)
+            ->get()
+            ->keyBy('id');
+
+        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewaehlte Person wurde nicht gefunden.');
+
+        foreach ($participants as $participant) {
+            abort_unless(
+                $request->user()->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($request->user()),
+                403,
+                'Gruppenchats koennen nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+            );
+        }
+    }
+
     private function authorizeMessageAccess(Message $message, Request $request): void
     {
         $conversation = $message->conversation;
@@ -216,5 +413,24 @@ class ChatController extends Controller
     private function perPage(Request $request): int
     {
         return min(max((int) $request->integer('per_page', 25), 1), 100);
+    }
+
+    private function typingUsers(Conversation $conversation, Request $request): array
+    {
+        return $conversation->users()
+            ->where('users.id', '!=', $request->user()->id)
+            ->get(['users.id', 'users.name'])
+            ->filter(fn ($user) => Cache::has($this->typingCacheKey($conversation->id, $user->id)))
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function typingCacheKey(int $conversationId, int $userId): string
+    {
+        return "chat:typing:{$conversationId}:{$userId}";
     }
 }

@@ -15,13 +15,7 @@ class NotificationController extends Controller
             ->where('type', '!=', 'chat.message')
             ->latest()
             ->paginate(20)
-            ->through(fn (Notification $notification) => [
-                'id' => $notification->id,
-                'type' => $notification->type,
-                'data' => $notification->data,
-                'read' => $notification->read,
-                'created_at' => $notification->created_at,
-            ]);
+            ->through(fn (Notification $notification) => $this->payload($notification));
 
         return Inertia::render('Auth/Dashboard/Notifications/Index', [
             'notifications' => $notifications,
@@ -64,5 +58,25 @@ class NotificationController extends Controller
         $notification->delete();
 
         return back()->with('success', 'Benachrichtigung wurde gelöscht.');
+    }
+
+    private function payload(Notification $notification): array
+    {
+        $data = $notification->data ?: [];
+        $actionUrl = $data['action_url'] ?? ($data['url'] ?? null);
+
+        return [
+            'id' => $notification->id,
+            'type' => $notification->type,
+            'title' => $data['title'] ?? null,
+            'body' => $data['body'] ?? ($data['message'] ?? null),
+            'url' => $actionUrl,
+            'action_url' => $actionUrl,
+            'data' => $data,
+            'read' => (bool) $notification->read,
+            'unread' => ! (bool) $notification->read,
+            'created_at' => $notification->created_at?->toJSON(),
+            'updated_at' => $notification->updated_at?->toJSON(),
+        ];
     }
 }

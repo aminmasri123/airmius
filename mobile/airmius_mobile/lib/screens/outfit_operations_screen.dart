@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class OutfitOperationsScreen extends StatefulWidget {
   const OutfitOperationsScreen({super.key});
@@ -62,7 +61,7 @@ class _OutfitOperationsScreenState extends State<OutfitOperationsScreen> {
               child: SwitchListTile(
                 value: _notify,
                 onChanged: (value) => setState(() => _notify = value),
-                activeColor: AirmiusColors.blue,
+                activeThumbColor: AirmiusColors.blue,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('User informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                 subtitle: const Text('Zahlstatus, Lieferung, Problemfall und Planwechsel erzeugen später eine Benachrichtigung.', style: TextStyle(color: AirmiusColors.muted)),
@@ -126,7 +125,7 @@ class _OutfitOperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _OutfitOperation item) {
-    final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.action}?', 'Diese Outfit-Admin-Aktion verändert Abo, Lieferung oder Plan. Später wird sie auditiert.', item.action, action);
       return;

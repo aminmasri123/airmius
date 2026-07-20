@@ -56,15 +56,17 @@ const navItems = [
 </script>
 
 <template>
-    <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur">
+    <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur" aria-label="Hauptnavigation">
         <div
             class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
             :class="isRtl ? 'rtl-mobile-nav' : ''"
         >
             <button
+                type="button"
                 @click="scrollTo('hero')"
                 class="flex shrink-0 items-center font-heading font-900 text-xl tracking-tight"
                 :class="isRtl ? 'max-lg:order-2 max-lg:flex-row-reverse' : ''"
+                aria-label="Airmius Start"
             >
                 <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
             </button>
@@ -80,6 +82,7 @@ const navItems = [
                     </Link>
                     <button
                         v-else
+                        type="button"
                         @click="scrollTo(item.id)"
                         class="whitespace-nowrap hover:text-primary transition"
                     >
@@ -125,7 +128,14 @@ const navItems = [
                     <UserCard />
                 </div>
 
-                <button @click="toggleMobile" class="lg:hidden text-primary hover:text-air-blue p-2">
+                <button
+                    type="button"
+                    class="lg:hidden text-primary hover:text-air-blue p-2"
+                    :aria-expanded="mobileOpen"
+                    aria-controls="guest-mobile-menu"
+                    aria-label="Menü öffnen"
+                    @click="toggleMobile"
+                >
                     <i class="las la-bars text-2xl"></i>
                 </button>
             </div>
@@ -141,8 +151,19 @@ const navItems = [
             leave-from-class="opacity-100"
             leave-to-class="opacity-0"
         >
-            <div v-if="mobileOpen" class="fixed inset-0 z-[99999] lg:hidden">
-                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="mobileOpen = false"></div>
+            <div
+                v-if="mobileOpen"
+                class="fixed inset-0 z-[99999] lg:hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menü"
+            >
+                <button
+                    type="button"
+                    class="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                    aria-label="Menü schließen"
+                    @click="mobileOpen = false"
+                ></button>
 
                 <Transition
                     enter-active-class="transition duration-300 ease-out"
@@ -154,12 +175,13 @@ const navItems = [
                 >
                     <div
                         v-if="mobileOpen"
+                        id="guest-mobile-menu"
                         class="absolute top-0 h-full w-full bg-card flex flex-col"
                         :class="isRtl ? 'left-0 border-r border-border' : 'right-0 border-l border-border'"
                     >
                         <div class="flex justify-between items-center p-5 border-b border-border">
                             <span class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
-                            <button @click="mobileOpen = false" class="text-primary text-2xl p-1">&times;</button>
+                            <button type="button" aria-label="Menü schließen" @click="mobileOpen = false" class="text-primary text-2xl p-1">&times;</button>
                         </div>
 
                         <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
@@ -174,6 +196,7 @@ const navItems = [
                                 </Link>
                                 <button
                                     v-else
+                                    type="button"
                                     @click="scrollTo(item.id)"
                                     class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                                 >
@@ -258,4 +281,3 @@ const navItems = [
     }
 }
 </style>
-

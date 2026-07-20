@@ -280,7 +280,7 @@ class SubscriptionPlanController extends Controller
         $this->authorize('cancel', $subscription);
 
         if (! $this->isUserSubscriptionCancellable($subscription)) {
-            return back()->with('error', 'Das Abo wurde bereits gekündigt.');
+            return back()->with('error', 'Das Abo wurde bereits gekuendigt.');
         }
 
         $this->cancelSubscription($subscription, 'period_end');

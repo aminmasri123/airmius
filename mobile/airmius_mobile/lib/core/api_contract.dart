@@ -6,7 +6,7 @@ class AirmiusApiContract {
     defaultValue: 'http://localhost/api/v1',
   );
 
-  static const meta = '/friends/meta';
+  static const meta = '/api/v1/meta';
   static const csrfToken = '/friends/checkout/csrf-token';
   static const robots = '/friends/robots.txt';
   static const sitemap = '/friends/sitemap.xml';
@@ -14,7 +14,8 @@ class AirmiusApiContract {
   static const webhooksPaypal = '/friends/webhooks/paypal';
   static const webhooksCommerceStripe = '/friends/webhooks/commerce/stripe';
   static const webhooksCommercePaypal = '/friends/webhooks/commerce/paypal';
-  static const webhooksOutfitPaypal = '/friends/webhooks/outfit-subscriptions/paypal';
+  static const webhooksOutfitPaypal =
+      '/friends/webhooks/outfit-subscriptions/paypal';
   static const login = '/friends/auth/login';
   static const logout = '/friends/auth/logout';
   static const register = '/friends/auth/register';
@@ -57,7 +58,8 @@ class AirmiusApiContract {
   static const folders = '/friends/folders';
   static const sharedFiles = '/friends/shared-files';
   static const conversations = '/friends/chat/conversations';
-  static const conversationInvitations = '/friends/chat/conversation-invitations';
+  static const conversationInvitations =
+      '/friends/chat/conversation-invitations';
   static const messages = '/friends/chat/messages';
   static const events = '/friends/events';
   static const trainingPlans = '/friends/training/plans';
@@ -144,12 +146,16 @@ class AirmiusApiContract {
   static const adminCommerceCoupons = '/friends/admin/commerce/coupons';
   static const adminCommerceAddons = '/friends/admin/commerce/addons';
   static const adminCommerceSettings = '/friends/admin/commerce/settings';
-  static const adminCommerceCommissions = '/friends/admin/commerce/marketplace-commissions';
-  static const adminCommerceVisuals = '/friends/admin/commerce/marketplace-visuals';
-  static const adminCommerceWebsiteRequests = '/friends/admin/commerce/website-requests';
+  static const adminCommerceCommissions =
+      '/friends/admin/commerce/marketplace-commissions';
+  static const adminCommerceVisuals =
+      '/friends/admin/commerce/marketplace-visuals';
+  static const adminCommerceWebsiteRequests =
+      '/friends/admin/commerce/website-requests';
   static const adminCommerceReturns = '/friends/admin/commerce/returns';
   static const adminCommercePayouts = '/friends/admin/commerce/payouts';
-  static const adminCommercePayoutProfiles = '/friends/admin/commerce/payout-profiles';
+  static const adminCommercePayoutProfiles =
+      '/friends/admin/commerce/payout-profiles';
 
   static String workspace(int id) => '$workspaces/$id';
   static String notification(String id) => '$notifications/$id';
@@ -160,52 +166,74 @@ class AirmiusApiContract {
   static String storyViewed(int id) => '$stories/$id/viewed';
   static String storyReact(int id) => '$stories/$id/react';
   static String publicBlogPost(String slug) => '$publicBlog/$slug';
-  static String publicTopContentItem(String type, String id) => '$publicTopContent/$type/$id';
-  static String publicBlogCategory(String slug) => '$publicBlogCategories/$slug';
+  static String publicTopContentItem(String type, String id) =>
+      '$publicTopContent/$type/$id';
+  static String publicBlogCategory(String slug) =>
+      '$publicBlogCategories/$slug';
   static String legalPage(String slug) => '$legalPages/$slug';
   static String contactLocation(int id) => '$contactLocations/$id';
   static String club(int id) => '$clubs/$id';
   static String clubMembers(int id) => '$clubs/$id/members';
   static String clubBilling(int id) => '$clubs/$id/billing';
-  static String clubMembershipRequests(int id) => '$clubs/$id/membership-requests';
-  static String clubMembershipRequest(int clubId, int requestId) => '$clubs/$clubId/membership-requests/$requestId';
-  static String clubMembershipRequestAccept(int clubId, int requestId) => '$clubs/$clubId/membership-requests/$requestId/accept';
-  static String clubMembershipRequestReject(int clubId, int requestId) => '$clubs/$clubId/membership-requests/$requestId/reject';
-  static String clubMembershipRequestWithdraw(int clubId, int requestId) => '$clubs/$clubId/membership-requests/$requestId/withdraw';
-  static String clubMembershipFormSchema(int id) => '$clubs/$id/membership-form-schema';
+  static String clubMembershipRequests(int id) =>
+      '$clubs/$id/membership-requests';
+  static String clubMembershipRequest(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId';
+  static String clubMembershipRequestAccept(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/accept';
+  static String clubMembershipRequestReject(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/reject';
+  static String clubMembershipRequestWithdraw(int clubId, int requestId) =>
+      '$clubs/$clubId/membership-requests/$requestId/withdraw';
+  static String clubMembershipFormSchema(int id) =>
+      '$clubs/$id/membership-form-schema';
   static String clubMembershipTypes(int id) => '$clubs/$id/membership-types';
-  static String clubMembershipDocuments(int id) => '$clubs/$id/membership-documents';
+  static String clubMembershipDocuments(int id) =>
+      '$clubs/$id/membership-documents';
   static String clubMembershipFees(int id) => '$clubs/$id/membership-fees';
   static String clubDocuments(int id) => '$clubs/$id/documents';
   static String team(int id) => '$teams/$id';
   static String teamMembers(int id) => '$teams/$id/members';
-  static String teamMember(int teamId, int userId) => '$teams/$teamId/members/$userId';
+  static String teamMember(int teamId, int userId) =>
+      '$teams/$teamId/members/$userId';
   static String teamInvitations(int id) => '$teams/$id/invitations';
-  static String teamInvitation(int teamId, int invitationId) => '$teams/$teamId/invitations/$invitationId';
+  static String teamInvitation(int teamId, int invitationId) =>
+      '$teams/$teamId/invitations/$invitationId';
   static String teamJoinRequests(int id) => '$teams/$id/join-requests';
-  static String teamJoinRequest(int teamId, int requestId) => '$teams/$teamId/join-requests/$requestId';
+  static String teamJoinRequest(int teamId, int requestId) =>
+      '$teams/$teamId/join-requests/$requestId';
   static String teamEvents(int id) => '$teams/$id/events';
   static String teamFiles(int id) => '$teams/$id/files';
   static String teamChat(int id) => '$teams/$id/chat';
   static String teamPenalties(int id) => '/api/v1/teams/$id/penalties';
   static String teamPenaltyRules(int id) => '/api/v1/teams/$id/penalty-rules';
-  static String teamPenaltyRule(int teamId, int ruleId) => '/api/v1/teams/$teamId/penalty-rules/$ruleId';
+  static String teamPenaltyRule(int teamId, int ruleId) =>
+      '/api/v1/teams/$teamId/penalty-rules/$ruleId';
   static String teamPenaltyFees(int id) => '/api/v1/teams/$id/penalty-fees';
-  static String teamPenaltyFeePaid(int teamId, int feeId) => '/api/v1/teams/$teamId/penalty-fees/$feeId/paid';
-  static String teamPenaltyFeeCancel(int teamId, int feeId) => '/api/v1/teams/$teamId/penalty-fees/$feeId/cancel';
+  static String teamPenaltyFeePaid(int teamId, int feeId) =>
+      '/api/v1/teams/$teamId/penalty-fees/$feeId/paid';
+  static String teamPenaltyFeeCancel(int teamId, int feeId) =>
+      '/api/v1/teams/$teamId/penalty-fees/$feeId/cancel';
   static String role(int id) => '$roles/$id';
   static String sport(int id) => '$sports/$id';
   static String profileSport(int id) => '$profileSports/$id';
   static String profileSkill(int id) => '$profileSkills/$id';
-  static String userSkillEndorse(int userId, int skillId) => '$users/$userId/skills/$skillId/endorse';
-  static String userRecommendation(int userId) => '$users/$userId/recommendations';
-  static String profileRecommendationApprove(int id) => '$profileRecommendations/$id/approve';
-  static String profileRecommendationReject(int id) => '$profileRecommendations/$id/reject';
+  static String userSkillEndorse(int userId, int skillId) =>
+      '$users/$userId/skills/$skillId/endorse';
+  static String userRecommendation(int userId) =>
+      '$users/$userId/recommendations';
+  static String profileRecommendationApprove(int id) =>
+      '$profileRecommendations/$id/approve';
+  static String profileRecommendationReject(int id) =>
+      '$profileRecommendations/$id/reject';
   static String friend(int id) => '$friends/$id';
   static String friendInvitation(int id) => '$friendInvitations/$id';
-  static String friendInvitationToken(String token) => '$friendInvitations/token/$token';
-  static String friendInvitationAccept(int id) => '$friendInvitations/$id/accept';
-  static String friendInvitationDecline(int id) => '$friendInvitations/$id/decline';
+  static String friendInvitationToken(String token) =>
+      '$friendInvitations/token/$token';
+  static String friendInvitationAccept(int id) =>
+      '$friendInvitations/$id/accept';
+  static String friendInvitationDecline(int id) =>
+      '$friendInvitations/$id/decline';
   static String file(int id) => '$files/$id';
   static String folder(int id) => '$folders/$id';
   static String sharedFile(String token) => '$sharedFiles/$token';
@@ -214,12 +242,16 @@ class AirmiusApiContract {
   static String conversationMute(int id) => '$conversations/$id/mute';
   static String conversationLeave(int id) => '$conversations/$id/leave';
   static String conversationMembers(int id) => '$conversations/$id/members';
-  static String conversationMember(int conversationId, int userId) => '$conversations/$conversationId/members/$userId';
+  static String conversationMember(int conversationId, int userId) =>
+      '$conversations/$conversationId/members/$userId';
   static String conversationOwner(int id) => '$conversations/$id/owner';
   static String conversationTyping(int id) => '$conversations/$id/typing';
-  static String conversationInvitation(int id) => '$conversationInvitations/$id';
-  static String conversationInvitationAccept(int id) => '$conversationInvitations/$id/accept';
-  static String conversationInvitationDecline(int id) => '$conversationInvitations/$id/decline';
+  static String conversationInvitation(int id) =>
+      '$conversationInvitations/$id';
+  static String conversationInvitationAccept(int id) =>
+      '$conversationInvitations/$id/accept';
+  static String conversationInvitationDecline(int id) =>
+      '$conversationInvitations/$id/decline';
   static String message(int id) => '$messages/$id';
   static String messagesRead() => '$messages/read';
   static String messageHide(int id) => '$messages/$id/hide';
@@ -244,15 +276,18 @@ class AirmiusApiContract {
   static String nutritionMeal(int id) => '$nutritionMeals/$id';
   static String sportRoute(int id) => '$sportRoutes/$id';
   static String sportRouteDuplicate(int id) => '$sportRoutes/$id/duplicate';
-  static String sportRouteAnalytics(int id) => '/friends/maturity/routes/$id/analytics';
+  static String sportRouteAnalytics(int id) =>
+      '/friends/maturity/routes/$id/analytics';
   static String sportTrack(int id) => '$sportTracks/$id';
   static String sportTrackPoints(int id) => '$sportTracks/$id/points';
   static String sportTrackComplete(int id) => '$sportTracks/$id/complete';
   static String sportPlace(int id) => '$sportPlaces/$id';
   static String carpool(int id) => '$carpools/$id';
   static String carpoolJoin(int id) => '$carpools/$id/join';
-  static String carpoolRequest(int rideId, int userId) => '$carpools/$rideId/requests/$userId';
-  static String carpoolMember(int rideId, int userId) => '$carpools/$rideId/members/$userId';
+  static String carpoolRequest(int rideId, int userId) =>
+      '$carpools/$rideId/requests/$userId';
+  static String carpoolMember(int rideId, int userId) =>
+      '$carpools/$rideId/members/$userId';
   static String badge(int id) => '$badges/$id';
   static String gamificationRule(int id) => '$gamificationRules/$id';
   static String course(int id) => '$courses/$id';
@@ -264,9 +299,12 @@ class AirmiusApiContract {
   static String sellerApplication(int id) => '$sellerApplications/$id';
   static String providerProfile(int id) => '$providerProfiles/$id';
   static String subscription(int id) => '$subscriptions/$id';
-  static String subscriptionCheckoutSuccess(int id) => '$subscriptionCheckouts/$id/success';
-  static String subscriptionCheckoutCancel(int id) => '$subscriptionCheckouts/$id/cancel';
-  static String subscriptionCheckoutBankTransfer(int id) => '$subscriptionCheckouts/$id/bank-transfer';
+  static String subscriptionCheckoutSuccess(int id) =>
+      '$subscriptionCheckouts/$id/success';
+  static String subscriptionCheckoutCancel(int id) =>
+      '$subscriptionCheckouts/$id/cancel';
+  static String subscriptionCheckoutBankTransfer(int id) =>
+      '$subscriptionCheckouts/$id/bank-transfer';
   static String invoice(int id) => '$billing/invoices/$id';
   static String payment(int id) => '$payments/$id';
   static String adminInvoice(int id) => '$admin/invoices/$id';
@@ -276,23 +314,33 @@ class AirmiusApiContract {
   static String commerceProductStock(int id) => '$commerceProducts/$id/stock';
   static String commerceOrder(int id) => '$commerceOrders/$id';
   static String commerceOrderIssue(int id) => '$commerceOrders/$id/issue';
-  static String commerceOrderIssueReply(int id) => '$commerceOrders/$id/issue/reply';
+  static String commerceOrderIssueReply(int id) =>
+      '$commerceOrders/$id/issue/reply';
   static String commerceOrderShipping(int id) => '$commerceOrders/$id/shipping';
   static String commerceOrderRefund(int id) => '$commerceOrders/$id/refund';
   static String commerceOrderInvoice(int id) => '$commerceOrders/$id/invoice';
-  static String commerceOrderCreditNote(int id) => '$commerceOrders/$id/credit-note';
-  static String commerceCheckoutSuccess(int id) => '$commerceCheckouts/$id/success';
-  static String commerceCheckoutCancel(int id) => '$commerceCheckouts/$id/cancel';
-  static String commerceCheckoutBankTransfer(int id) => '$commerceCheckouts/$id/bank-transfer';
-  static String commerceGuestCheckoutSuccess(int orderId, String token) => '/friends/checkout/guest-commerce/$orderId/$token/success';
-  static String commerceGuestCheckoutCancel(int orderId, String token) => '/friends/checkout/guest-commerce/$orderId/$token/cancel';
-  static String commerceGuestCheckoutBankTransfer(int orderId, String token) => '/friends/checkout/guest-commerce/$orderId/$token/bank-transfer';
-  static String commerceGuestReturn(int orderId, String token) => '$commerceOrders/$orderId/$token/returns';
+  static String commerceOrderCreditNote(int id) =>
+      '$commerceOrders/$id/credit-note';
+  static String commerceCheckoutSuccess(int id) =>
+      '$commerceCheckouts/$id/success';
+  static String commerceCheckoutCancel(int id) =>
+      '$commerceCheckouts/$id/cancel';
+  static String commerceCheckoutBankTransfer(int id) =>
+      '$commerceCheckouts/$id/bank-transfer';
+  static String commerceGuestCheckoutSuccess(int orderId, String token) =>
+      '/friends/checkout/guest-commerce/$orderId/$token/success';
+  static String commerceGuestCheckoutCancel(int orderId, String token) =>
+      '/friends/checkout/guest-commerce/$orderId/$token/cancel';
+  static String commerceGuestCheckoutBankTransfer(int orderId, String token) =>
+      '/friends/checkout/guest-commerce/$orderId/$token/bank-transfer';
+  static String commerceGuestReturn(int orderId, String token) =>
+      '$commerceOrders/$orderId/$token/returns';
   static String commerceCampaign(int id) => '$commerceCampaigns/$id';
   static String commerceAd(int id) => '$commerceAds/$id';
   static String commerceCoupon(int id) => '$commerceCoupons/$id';
   static String commerceAddon(int id) => '$commerceAddons/$id';
-  static String commerceWebsiteRequest(int id) => '$commerceWebsiteRequests/$id';
+  static String commerceWebsiteRequest(int id) =>
+      '$commerceWebsiteRequests/$id';
   static String adClick(int id) => '/friends/ads/$id/click';
   static String adConversion(int id) => '/friends/ads/$id/conversion';
   static String sponsor(int id) => '$sponsors/$id';
@@ -304,67 +352,100 @@ class AirmiusApiContract {
   static String adminBlogCategory(int id) => '$admin/blog-categories/$id';
   static String adminBlogContentImages() => '$admin/blogs/content-images';
   static String adminBlogPreview(int id) => '$admin/blogs/$id/preview';
-  static String adminMediaGuidelineVisuals() => '$admin/media-guidelines/visuals';
+  static String adminMediaGuidelineVisuals() =>
+      '$admin/media-guidelines/visuals';
   static String user(int id) => '$users/$id';
   static String guardianConsent(int id) => '$guardianConsents/$id';
   static String guardianConsentPending() => '$guardianConsents/pending';
   static String guardianConsentResend() => '$guardianConsents/resend';
-  static String guardianConsentToken(String token) => '$guardianConsents/$token';
-  static String guardianConsentApprove(String token) => '$guardianConsents/$token/approve';
-  static String guardianConsentReject(String token) => '$guardianConsents/$token/reject';
-  static String guardianConsentApproveDirect(String token) => '$guardianConsents/$token/approve-direct';
-  static String guardianConsentRejectDirect(String token) => '$guardianConsents/$token/reject-direct';
+  static String guardianConsentToken(String token) =>
+      '$guardianConsents/$token';
+  static String guardianConsentApprove(String token) =>
+      '$guardianConsents/$token/approve';
+  static String guardianConsentReject(String token) =>
+      '$guardianConsents/$token/reject';
+  static String guardianConsentApproveDirect(String token) =>
+      '$guardianConsents/$token/approve-direct';
+  static String guardianConsentRejectDirect(String token) =>
+      '$guardianConsents/$token/reject-direct';
   static String guardianAccessLogin() => '$guardianAccess/login';
   static String guardianAccessVerify() => '$guardianAccess/code';
   static String guardianAccessConfirm() => '$guardianAccess/code/confirm';
   static String guardianAccessChildren() => '$guardianAccess/children';
   static String guardianAccessAccount() => '$guardianAccess/account';
   static String guardianAccessChild(int id) => '$guardianAccess/children/$id';
-  static String guardianAccessChildRevoke(int id) => '$guardianAccess/children/$id/revoke';
-  static String guardianAccessChildApprove(int id) => '$guardianAccess/children/$id/approve';
+  static String guardianAccessChildRevoke(int id) =>
+      '$guardianAccess/children/$id/revoke';
+  static String guardianAccessChildApprove(int id) =>
+      '$guardianAccess/children/$id/approve';
   static String maturityGate(int id) => '$maturityGates/$id';
   static String outfitSubscription(int id) => '$outfitSubscriptions/$id';
   static String outfitCheckoutSuccess(int id) => '$outfitCheckouts/$id/success';
   static String outfitCheckoutCancel(int id) => '$outfitCheckouts/$id/cancel';
   static String outfitDelivery(int id) => '$outfitDeliveries/$id';
-  static String adminOutfitSubscriptionMarkPaid(int id) => '$adminOutfitSubscriptions/$id/mark-paid';
-  static String adminOutfitSubscriptionMarkUnpaid(int id) => '$adminOutfitSubscriptions/$id/mark-unpaid';
-  static String adminOutfitSubscriptionShippingAddress(int id) => '$adminOutfitSubscriptions/$id/shipping-address';
-  static String adminOutfitSubscriptionPaymentReminder(int id) => '$adminOutfitSubscriptions/$id/payment-reminder';
-  static String adminOutfitSubscriptionCancel(int id) => '$adminOutfitSubscriptions/$id/cancel';
-  static String adminOutfitSubscriptionVisuals() => '$adminOutfitSubscriptions/visuals';
-  static String adminOutfitDeliveryIssue(int id) => '$admin/outfit-deliveries/$id/issue';
-  static String adminOutfitDeliveryShipped(int id) => '$admin/outfit-deliveries/$id/shipped';
-  static String adminOutfitDeliveryDelivered(int id) => '$admin/outfit-deliveries/$id/delivered';
-  static String adminOutfitPlan(int id) => '$admin/outfit-subscription-plans/$id';
+  static String adminOutfitSubscriptionMarkPaid(int id) =>
+      '$adminOutfitSubscriptions/$id/mark-paid';
+  static String adminOutfitSubscriptionMarkUnpaid(int id) =>
+      '$adminOutfitSubscriptions/$id/mark-unpaid';
+  static String adminOutfitSubscriptionShippingAddress(int id) =>
+      '$adminOutfitSubscriptions/$id/shipping-address';
+  static String adminOutfitSubscriptionPaymentReminder(int id) =>
+      '$adminOutfitSubscriptions/$id/payment-reminder';
+  static String adminOutfitSubscriptionCancel(int id) =>
+      '$adminOutfitSubscriptions/$id/cancel';
+  static String adminOutfitSubscriptionVisuals() =>
+      '$adminOutfitSubscriptions/visuals';
+  static String adminOutfitDeliveryIssue(int id) =>
+      '$admin/outfit-deliveries/$id/issue';
+  static String adminOutfitDeliveryShipped(int id) =>
+      '$admin/outfit-deliveries/$id/shipped';
+  static String adminOutfitDeliveryDelivered(int id) =>
+      '$admin/outfit-deliveries/$id/delivered';
+  static String adminOutfitPlan(int id) =>
+      '$admin/outfit-subscription-plans/$id';
   static String adminUser(int id) => '$adminUsers/$id';
   static String adminMember(int id) => '$adminMembers/$id';
-  static String adminMemberInactivityNotice(int id) => '$adminMembers/$id/inactivity-notice';
+  static String adminMemberInactivityNotice(int id) =>
+      '$adminMembers/$id/inactivity-notice';
   static String adminRole(int id) => '$adminRoles/$id';
   static String adminPermission(int id) => '$adminPermissions/$id';
   static String adminModerationFlag(int id) => '$adminModeration/flags/$id';
   static String adminModerationReport(int id) => '$adminModeration/reports/$id';
-  static String adminClubVerificationApprove(int id) => '$adminClubVerifications/$id/approve';
-  static String adminClubVerificationReject(int id) => '$adminClubVerifications/$id/reject';
+  static String adminClubVerificationApprove(int id) =>
+      '$adminClubVerifications/$id/approve';
+  static String adminClubVerificationReject(int id) =>
+      '$adminClubVerifications/$id/reject';
   static String adminBadge(int id) => '$adminBadges/$id';
   static String adminSport(int id) => '$adminSports/$id';
-  static String adminLearningCourseQuality(int id) => '$adminLearning/courses/$id/quality';
-  static String adminSubscriptionInvoice(int id) => '$admin/subscription-invoices/$id';
-  static String adminOutfitSubscription(int id) => '$adminOutfitSubscriptions/$id';
+  static String adminLearningCourseQuality(int id) =>
+      '$adminLearning/courses/$id/quality';
+  static String adminSubscriptionInvoice(int id) =>
+      '$admin/subscription-invoices/$id';
+  static String adminOutfitSubscription(int id) =>
+      '$adminOutfitSubscriptions/$id';
   static String adminOutfitDelivery(int id) => '$admin/outfit-deliveries/$id';
   static String adminCommerceCoupon(int id) => '$adminCommerceCoupons/$id';
   static String adminCommerceAddon(int id) => '$adminCommerceAddons/$id';
-  static String adminCommerceWebsiteRequest(int id) => '$adminCommerceWebsiteRequests/$id';
-  static String adminCommerceProductStatus(int id) => '$admin/commerce/products/$id/status';
-  static String adminCommerceProductStock(int id) => '$admin/commerce/products/$id/stock';
-  static String adminCommerceSellerApplication(int id) => '$admin/commerce/seller-applications/$id';
+  static String adminCommerceWebsiteRequest(int id) =>
+      '$adminCommerceWebsiteRequests/$id';
+  static String adminCommerceProductStatus(int id) =>
+      '$admin/commerce/products/$id/status';
+  static String adminCommerceProductStock(int id) =>
+      '$admin/commerce/products/$id/stock';
+  static String adminCommerceSellerApplication(int id) =>
+      '$admin/commerce/seller-applications/$id';
   static String adminCommerceReturn(int id) => '$adminCommerceReturns/$id';
   static String adminCommercePayout(int id) => '$adminCommercePayouts/$id';
-  static String adminCommercePayoutPaid(int id) => '$adminCommercePayouts/$id/paid';
-  static String adminCommercePayoutProfile(int id) => '$adminCommercePayoutProfiles/$id';
-  static String adminCommerceOrderDocuments(int id) => '$admin/commerce/orders/$id/documents';
-  static String adminCommerceOrderInvoice(int id) => '$admin/commerce/orders/$id/invoice';
-  static String adminCommerceOrderCreditNote(int id) => '$admin/commerce/orders/$id/credit-note';
+  static String adminCommercePayoutPaid(int id) =>
+      '$adminCommercePayouts/$id/paid';
+  static String adminCommercePayoutProfile(int id) =>
+      '$adminCommercePayoutProfiles/$id';
+  static String adminCommerceOrderDocuments(int id) =>
+      '$admin/commerce/orders/$id/documents';
+  static String adminCommerceOrderInvoice(int id) =>
+      '$admin/commerce/orders/$id/invoice';
+  static String adminCommerceOrderCreditNote(int id) =>
+      '$admin/commerce/orders/$id/credit-note';
 
   // Compatibility aliases for legacy ApiContract members consumed by screens.
   static const authLogin = '/auth/login';
@@ -378,17 +459,21 @@ class AirmiusApiContract {
   static const accountProfile = '/user/profile-information';
   static const accountExport = '/user/export';
   static const accountDelete = '/user';
-  static String authProviderRedirect(String provider) => '/auth/$provider/redirect';
-  static String authProviderCallback(String provider) => '/auth/$provider/callback';
+  static String authProviderRedirect(String provider) =>
+      '/auth/$provider/redirect';
+  static String authProviderCallback(String provider) =>
+      '/auth/$provider/callback';
   static const adminSponsors = '/friends/admin/sponsors';
   static String adminSponsor(int id) => '$adminSponsors/$id';
   static const adminInactiveUsers = '/friends/admin/inactive-users';
-  static String adminInactiveUserNote(int id) => '${adminInactiveUsers}/$id/note';
+  static String adminInactiveUserNote(int id) => '$adminInactiveUsers/$id/note';
   static const adminOperatingContracts = '/friends/admin/operating-contracts';
-  static String adminOperatingContract(int id) => '$adminOperatingContracts/$id';
-  static String carpoolContactRelease(int id) => '${carpools}/$id/contact-release';
-  static String carpoolLeave(int id) => '${carpools}/$id/leave';
-  static String carpoolReport(int id) => '${carpools}/$id/report';
+  static String adminOperatingContract(int id) =>
+      '$adminOperatingContracts/$id';
+  static String carpoolContactRelease(int id) =>
+      '$carpools/$id/contact-release';
+  static String carpoolLeave(int id) => '$carpools/$id/leave';
+  static String carpoolReport(int id) => '$carpools/$id/report';
   static const legalImprint = '/impressum';
   static const legalPrivacy = '/datenschutz';
   static const legalTerms = '/agb';
@@ -409,22 +494,29 @@ class AirmiusApiContract {
   static String publicJobInterest(int id) => '/jobs/$id/interest';
   static const publicActiveAd = '/ads/active';
   static String publicAdClick(int campaignId) => '/ads/$campaignId/click';
-  static String publicAdConversion(int campaignId) => '/ads/$campaignId/conversion';
+  static String publicAdConversion(int campaignId) =>
+      '/ads/$campaignId/conversion';
   static const publicLearning = '/e-learning';
   static String publicCourse(int id) => '/e-learning/courses/$id';
-  static String publicCertificate(String code) => '/e-learning/certificates/$code';
+  static String publicCertificate(String code) =>
+      '/e-learning/certificates/$code';
   static const publicMarketplace = '/marketplace';
   static String publicMarketplaceProduct(int id) => '/marketplace/products/$id';
-  static String publicMarketplaceProductCheckout(int id) => '/marketplace/products/$id/checkout';
-  static String publicMarketplaceProvider(String type, int id) => '/marketplace/providers/$type/$id';
-  static String publicGuestReturn(int orderId, String token) => '/marketplace/orders/$orderId/$token/returns';
+  static String publicMarketplaceProductCheckout(int id) =>
+      '/marketplace/products/$id/checkout';
+  static String publicMarketplaceProvider(String type, int id) =>
+      '/marketplace/providers/$type/$id';
+  static String publicGuestReturn(int orderId, String token) =>
+      '/marketplace/orders/$orderId/$token/returns';
   static String certificateReport(String code) => '$certificates/$code/report';
   static const gamificationXpLedger = '/friends/gamification/xp-ledger';
   static const gamificationXpAdjust = '/friends/gamification/xp-adjust';
   static const gamificationStreaks = '/friends/gamification/streaks';
   static const gamificationLeaderboard = '/friends/gamification/leaderboard';
-  static const gamificationLeaderboardOptOut = '/friends/gamification/leaderboard/opt-out';
-  static String gamificationStreakRescue(int id) => '${gamificationStreaks}/$id/rescue';
+  static const gamificationLeaderboardOptOut =
+      '/friends/gamification/leaderboard/opt-out';
+  static String gamificationStreakRescue(int id) =>
+      '$gamificationStreaks/$id/rescue';
   static String sportGoal(int id) => '$sportGoals/$id';
   static const sportGoals = '/friends/profile/sport-goals';
   static const sportPerformance = '/friends/profile/sport-performance';
@@ -433,35 +525,47 @@ class AirmiusApiContract {
   static String upload(int id) => '$uploads/$id';
   static String uploadShare(int id) => '$uploads/$id/share';
   static String sharedFilePublic(String token) => '/shared-files/$token';
-  static String clubDocument(int clubId, int fileId) => '${clubDocuments(clubId)}/$fileId';
-  static String clubDocumentPurpose(int clubId, int fileId, String purpose) => '${clubDocument(clubId, fileId)}/purpose/$purpose';
-  static String clubMembershipDocument(int clubId, int fileId) => '${clubMembershipDocuments(clubId)}/$fileId';
-  static String teamFile(int teamId, int fileId) => '${teamFiles(teamId)}/$fileId';
+  static String clubDocument(int clubId, int fileId) =>
+      '${clubDocuments(clubId)}/$fileId';
+  static String clubDocumentPurpose(int clubId, int fileId, String purpose) =>
+      '${clubDocument(clubId, fileId)}/purpose/$purpose';
+  static String clubMembershipDocument(int clubId, int fileId) =>
+      '${clubMembershipDocuments(clubId)}/$fileId';
+  static String teamFile(int teamId, int fileId) =>
+      '${teamFiles(teamId)}/$fileId';
   static String friendBlock(int id) => '$friends/$id/block';
   static String friendRemove(int id) => '$friends/$id/remove';
   static String friendReport(int id) => '$friends/$id/report';
-  static String globalSearchType(String type) => '${globalSearch}?type=$type';
+  static String globalSearchType(String type) => '$globalSearch?type=$type';
   static const guardianAccessPublic = '/friends/eltern-login';
   static const guardianAccessCode = '/friends/eltern-login/code';
   static const guardianAccountCreate = '/friends/eltern/konto-erstellen';
   static const guardianAccessLogout = '/friends/eltern/logout';
   static const guardianChildrenPublic = '/friends/eltern/kinder';
-  static String guardianConsentApproveToken(String token) => '$guardianConsentPublic/$token/approve';
-  static String guardianConsentRejectToken(String token) => '$guardianConsentPublic/$token/reject';
-  static String guardianChildApprove(int childId) => '$guardianChildrenPublic/$childId/zustimmen';
-  static String guardianChildRevoke(int childId) => '$guardianChildrenPublic/$childId/widerrufen';
-  static String courseEnroll(int id) => '${courses}/$id/enroll';
-  static String courseComplete(int id) => '${courses}/$id/complete';
-  static String courseLessons(int id) => '${courses}/$id/lessons';
-  static String lessonComplete(int id) => '${courses}/lessons/$id/complete';
-  static String lessonQuizAttempt(int id) => '${courses}/lessons/$id/quiz-attempts';
-  static String lessonAssignmentSubmit(int id) => '${courses}/lessons/$id/assignments';
+  static String guardianConsentApproveToken(String token) =>
+      '$guardianConsentPublic/$token/approve';
+  static String guardianConsentRejectToken(String token) =>
+      '$guardianConsentPublic/$token/reject';
+  static String guardianChildApprove(int childId) =>
+      '$guardianChildrenPublic/$childId/zustimmen';
+  static String guardianChildRevoke(int childId) =>
+      '$guardianChildrenPublic/$childId/widerrufen';
+  static String courseEnroll(int id) => '$courses/$id/enroll';
+  static String courseComplete(int id) => '$courses/$id/complete';
+  static String courseLessons(int id) => '$courses/$id/lessons';
+  static String lessonComplete(int id) => '$courses/lessons/$id/complete';
+  static String lessonQuizAttempt(int id) =>
+      '$courses/lessons/$id/quiz-attempts';
+  static String lessonAssignmentSubmit(int id) =>
+      '$courses/lessons/$id/assignments';
   static String sponsorLeadReply(int id) => '$adminSponsors/leads/$id/reply';
   static const sponsorPackages = '/friends/admin/sponsor-packages';
   static const marketplaceCart = '/friends/marketplace/cart';
   static String marketplaceCartItem(int id) => '$marketplaceCart/$id';
-  static const marketplaceSellerApplication = '/friends/marketplace/seller-applications';
-  static String commerceCampaignStatus(int id) => '${commerceCampaigns}/$id/status';
+  static const marketplaceSellerApplication =
+      '/friends/marketplace/seller-applications';
+  static String commerceCampaignStatus(int id) =>
+      '$commerceCampaigns/$id/status';
   static const marketplaceProducts = '/friends/marketplace/products';
   static const marketplaceOrders = '/friends/marketplace/orders';
 }
@@ -489,43 +593,61 @@ class AirmiusApiTodo {
   static const guardianAccountCreate = '/friends/eltern/konto-erstellen';
   static const guardianAccessLogout = '/friends/eltern/logout';
 
-  static String friendInvitationAccept(int id) => '${ApiContract.friendInvitations}/$id/accept';
-  static String friendInvitationDecline(int id) => '${ApiContract.friendInvitations}/$id/decline';
+  static String friendInvitationAccept(int id) =>
+      '${ApiContract.friendInvitations}/$id/accept';
+  static String friendInvitationDecline(int id) =>
+      '${ApiContract.friendInvitations}/$id/decline';
   static String friendRemove(int id) => '${ApiContract.friends}/$id/remove';
   static String friendBlock(int id) => '${ApiContract.friends}/$id/block';
   static String friendReport(int id) => '${ApiContract.friends}/$id/report';
 
-  static String carpoolContactRelease(int id) => '${ApiContract.carpools}/$id/contact-release';
+  static String carpoolContactRelease(int id) =>
+      '${ApiContract.carpools}/$id/contact-release';
   static String carpoolLeave(int id) => '${ApiContract.carpools}/$id/leave';
   static String carpoolReport(int id) => '${ApiContract.carpools}/$id/report';
 
-  static String guardianConsentToken(String token) => '$guardianConsentPublic/$token';
-  static String guardianConsentApproveDirect(String token) => '$guardianConsentPublic/$token/approve';
-  static String guardianConsentRejectDirect(String token) => '$guardianConsentPublic/$token/reject';
-  static String guardianConsentApproveToken(String token) => '$guardianConsentPublic/$token';
-  static String guardianConsentRejectToken(String token) => '$guardianConsentPublic/$token';
-  static String guardianChildApprove(int childId) => '$guardianChildrenPublic/$childId/zustimmen';
-  static String guardianChildRevoke(int childId) => '$guardianChildrenPublic/$childId/widerrufen';
+  static String guardianConsentToken(String token) =>
+      '$guardianConsentPublic/$token';
+  static String guardianConsentApproveDirect(String token) =>
+      '$guardianConsentPublic/$token/approve';
+  static String guardianConsentRejectDirect(String token) =>
+      '$guardianConsentPublic/$token/reject';
+  static String guardianConsentApproveToken(String token) =>
+      '$guardianConsentPublic/$token';
+  static String guardianConsentRejectToken(String token) =>
+      '$guardianConsentPublic/$token';
+  static String guardianChildApprove(int childId) =>
+      '$guardianChildrenPublic/$childId/zustimmen';
+  static String guardianChildRevoke(int childId) =>
+      '$guardianChildrenPublic/$childId/widerrufen';
   static String upload(int id) => '${ApiContract.uploads}/$id';
   static String uploadShare(int id) => '${ApiContract.uploads}/$id/share';
   static String sharedFilePublic(String token) => '/shared-files/$token';
-  static String clubDocument(int clubId, int fileId) => '${ApiContract.clubDocuments(clubId)}/$fileId';
-  static String clubDocumentPurpose(int clubId, int fileId, String purpose) => '${clubDocument(clubId, fileId)}/purpose/$purpose';
-  static String clubMembershipDocument(int clubId, int fileId) => '${ApiContract.clubMembershipDocuments(clubId)}/$fileId';
-  static String teamFile(int teamId, int fileId) => '${ApiContract.teamFiles(teamId)}/$fileId';
+  static String clubDocument(int clubId, int fileId) =>
+      '${ApiContract.clubDocuments(clubId)}/$fileId';
+  static String clubDocumentPurpose(int clubId, int fileId, String purpose) =>
+      '${clubDocument(clubId, fileId)}/purpose/$purpose';
+  static String clubMembershipDocument(int clubId, int fileId) =>
+      '${ApiContract.clubMembershipDocuments(clubId)}/$fileId';
+  static String teamFile(int teamId, int fileId) =>
+      '${ApiContract.teamFiles(teamId)}/$fileId';
   static const gamificationXpLedger = '/friends/gamification/xp-ledger';
   static const gamificationXpAdjust = '/friends/gamification/xp-adjust';
   static const gamificationStreaks = '/friends/gamification/streaks';
   static const gamificationLeaderboard = '/friends/gamification/leaderboard';
-  static const gamificationLeaderboardOptOut = '/friends/gamification/leaderboard/opt-out';
-  static String gamificationStreakRescue(int id) => '${ApiContract.gamificationStreaks}/$id/rescue';
+  static const gamificationLeaderboardOptOut =
+      '/friends/gamification/leaderboard/opt-out';
+  static String gamificationStreakRescue(int id) =>
+      '${ApiContract.gamificationStreaks}/$id/rescue';
   static const adminSponsors = '/friends/admin/sponsors';
   static const sponsorPackages = '/friends/admin/sponsor-packages';
   static const publicActiveAd = '/ads/active';
   static String adminSponsor(int id) => '${ApiContract.adminSponsors}/$id';
-  static String commerceCampaignStatus(int id) => '${ApiContract.commerceCampaigns}/$id/status';
+  static String commerceCampaignStatus(int id) =>
+      '${ApiContract.commerceCampaigns}/$id/status';
   static String publicAdClick(int campaignId) => '/ads/$campaignId/click';
-  static String publicAdConversion(int campaignId) => '/ads/$campaignId/conversion';
+  static String publicAdConversion(int campaignId) =>
+      '/ads/$campaignId/conversion';
   static String sponsorLeadReply(int id) => '$adminSponsors/leads/$id/reply';
   static const sportGoals = '/friends/profile/sport-goals';
   static const sportPerformance = '/friends/profile/sport-performance';
@@ -544,7 +666,8 @@ class AirmiusApiTodo {
   static const legalReporting = '/kontakt-und-melden';
   static const contactStore = '/standort/anlegen';
   static const supportReports = '/friends/support/reports';
-  static String adminModerationReport(int id) => '/friends/admin/moderation/reports/$id';
+  static String adminModerationReport(int id) =>
+      '/friends/admin/moderation/reports/$id';
   static const authLogin = '/auth/login';
   static const authLogout = '/auth/logout';
   static const authRegister = '/register';
@@ -556,26 +679,38 @@ class AirmiusApiTodo {
   static const accountProfile = '/user/profile-information';
   static const accountExport = '/user/export';
   static const accountDelete = '/user';
-  static String authProviderRedirect(String provider) => '/auth/$provider/redirect';
-  static String authProviderCallback(String provider) => '/auth/$provider/callback';
+  static String authProviderRedirect(String provider) =>
+      '/auth/$provider/redirect';
+  static String authProviderCallback(String provider) =>
+      '/auth/$provider/callback';
   static const publicLearning = '/e-learning';
   static String publicCourse(int id) => '/e-learning/courses/$id';
-  static String publicCertificate(String code) => '/e-learning/certificates/$code';
+  static String publicCertificate(String code) =>
+      '/e-learning/certificates/$code';
   static String courseEnroll(int id) => '${ApiContract.courses}/$id/enroll';
   static String courseComplete(int id) => '${ApiContract.courses}/$id/complete';
   static String courseLessons(int id) => '${ApiContract.courses}/$id/lessons';
-  static String lessonComplete(int id) => '${ApiContract.courses}/lessons/$id/complete';
-  static String lessonQuizAttempt(int id) => '${ApiContract.courses}/lessons/$id/quiz-attempts';
-  static String lessonAssignmentSubmit(int id) => '${ApiContract.courses}/lessons/$id/assignments';
-  static String certificateReport(String code) => '${ApiContract.certificates}/$code/report';
+  static String lessonComplete(int id) =>
+      '${ApiContract.courses}/lessons/$id/complete';
+  static String lessonQuizAttempt(int id) =>
+      '${ApiContract.courses}/lessons/$id/quiz-attempts';
+  static String lessonAssignmentSubmit(int id) =>
+      '${ApiContract.courses}/lessons/$id/assignments';
+  static String certificateReport(String code) =>
+      '${ApiContract.certificates}/$code/report';
   static const publicMarketplace = '/marketplace';
   static const marketplaceCart = '/friends/marketplace/cart';
-  static const marketplaceSellerApplication = '/friends/marketplace/seller-applications';
-  static String publicMarketplaceProvider(String type, int id) => '/marketplace/providers/$type/$id';
+  static const marketplaceSellerApplication =
+      '/friends/marketplace/seller-applications';
+  static String publicMarketplaceProvider(String type, int id) =>
+      '/marketplace/providers/$type/$id';
   static String publicMarketplaceProduct(int id) => '/marketplace/products/$id';
-  static String publicMarketplaceProductCheckout(int id) => '/marketplace/products/$id/checkout';
-  static String publicGuestReturn(int orderId, String token) => '/marketplace/orders/$orderId/$token/returns';
-  static String marketplaceCartItem(int id) => '${ApiContract.marketplaceCart}/$id';
+  static String publicMarketplaceProductCheckout(int id) =>
+      '/marketplace/products/$id/checkout';
+  static String publicGuestReturn(int orderId, String token) =>
+      '/marketplace/orders/$orderId/$token/returns';
+  static String marketplaceCartItem(int id) =>
+      '${ApiContract.marketplaceCart}/$id';
   static const publicPricing = '/abos';
   static const publicPricingAlt = '/preise';
   static const publicPricingInterest = '/friends/public/pricing-interest';
@@ -586,22 +721,12 @@ class AirmiusApiTodo {
   static String publicLead(int id) => '${ApiContract.publicLeads}/$id';
   static const adminInactiveUsers = '/friends/admin/inactive-users';
   static const adminOperatingContracts = '/friends/admin/operating-contracts';
-  static String adminInactiveUserNote(int id) => '${ApiContract.adminInactiveUsers}/$id/note';
-  static String adminOperatingContract(int id) => '${ApiContract.adminOperatingContracts}/$id';
-  static String globalSearchType(String type) => '${ApiContract.globalSearch}?type=$type';
-  static String globalSearchSuggest(String query) => '${ApiContract.globalSearch}/suggest?q=$query';}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  static String adminInactiveUserNote(int id) =>
+      '${ApiContract.adminInactiveUsers}/$id/note';
+  static String adminOperatingContract(int id) =>
+      '${ApiContract.adminOperatingContracts}/$id';
+  static String globalSearchType(String type) =>
+      '${ApiContract.globalSearch}?type=$type';
+  static String globalSearchSuggest(String query) =>
+      '${ApiContract.globalSearch}/suggest?q=$query';
+}

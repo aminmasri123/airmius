@@ -334,9 +334,9 @@ class _ProfilePanel extends StatelessWidget {
       if (canManageTeam) ...[
         const Eyebrow('Mobile Teamfunktionen'),
         const SizedBox(height: 8),
-        SwitchListTile(value: joinRequests, onChanged: onJoin, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte können sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
-        SwitchListTile(value: teamChat, onChanged: onChat, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
-        SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
+        SwitchListTile(value: joinRequests, onChanged: onJoin, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte können sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
+        SwitchListTile(value: teamChat, onChanged: onChat, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
+        SwitchListTile(value: guardianGate, onChanged: onGuardian, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
       ],
     ]));
   }
@@ -773,7 +773,7 @@ class _InvitePanelState extends State<_InvitePanel> {
       ),
       const SizedBox(height: 10),
       DropdownButtonFormField<String>(
-        value: _role,
+        initialValue: _role,
         isExpanded: true,
         dropdownColor: AirmiusColors.card,
         decoration: InputDecoration(
@@ -930,7 +930,7 @@ class _MemberRow extends StatelessWidget {
         if (canManageTeam) ...[
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            value: role,
+            initialValue: role,
             isExpanded: true,
             dropdownColor: AirmiusColors.card,
             decoration: InputDecoration(

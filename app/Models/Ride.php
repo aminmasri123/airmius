@@ -19,6 +19,7 @@ class Ride extends Model
     protected $fillable = [
         'club_id',
         'team_id',
+        'event_id',
         'driver_id',
         'visibility',
         'from',

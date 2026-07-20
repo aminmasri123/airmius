@@ -3,8 +3,6 @@ import 'legal_support_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
-import 'legal_support_operations_screen.dart';
 
 class PublicLocationSubmissionScreen extends StatefulWidget {
   const PublicLocationSubmissionScreen({super.key});
@@ -76,8 +74,8 @@ class _PublicLocationSubmissionScreenState extends State<PublicLocationSubmissio
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Datenschutz'),
-            SwitchListTile(value: _publicVisible, onChanged: (value) => setState(() => _publicVisible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich sichtbar vorschlagen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Moderation kann der Standort in Sportkarte/Public-Bereich erscheinen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _privacy, onChanged: (value) => setState(() => _privacy = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutz akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt darf für Rückfragen verarbeitet werden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _publicVisible, onChanged: (value) => setState(() => _publicVisible = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich sichtbar vorschlagen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Moderation kann der Standort in Sportkarte/Public-Bereich erscheinen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _privacy, onChanged: (value) => setState(() => _privacy = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutz akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt darf für Rückfragen verarbeitet werden.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

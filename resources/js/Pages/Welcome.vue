@@ -1,11 +1,12 @@
 ﻿<script setup>
-import { useForm } from '@inertiajs/vue3'
+import { useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { canTrackMarketingEvent } from '@/services/privacyConsent'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -15,6 +16,7 @@ const props = defineProps({
 })
 
 const { t } = useI18n()
+const page = usePage()
 
 const safeRoute = (name, fallback = '') => {
     try {
@@ -49,6 +51,10 @@ onMounted(() => {
 const activeTab = ref('sportler')
 const trackLandingEvent = (eventName, payload = {}) => {
     if (typeof window === 'undefined') {
+        return
+    }
+
+    if (!canTrackMarketingEvent(page.props)) {
         return
     }
 
@@ -546,8 +552,7 @@ const onBannerSecondaryCtaClick = () => {
                     <h1 id="hero-title"
                         class="anim-fade-d1 font-heading font-900 text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
                         {{ heroCopy.title }} <br>
-                        <span
-                            class="bg-gradient-to-r from-air-blue via-air-green to-air-orange bg-clip-text text-transparent">{{ heroCopy.highlight }}</span>
+                        <span class="text-air-blue">{{ heroCopy.highlight }}</span>
                     </h1>
                     <p id="hero-subtitle"
                         class="anim-fade-d2 mt-5 text-secondary text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 leading-relaxed">
@@ -1078,8 +1083,6 @@ details summary {
     }
 }
 </style>
-
-
 
 
 

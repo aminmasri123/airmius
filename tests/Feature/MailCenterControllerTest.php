@@ -96,7 +96,10 @@ class MailCenterControllerTest extends TestCase
     {
         config(['airmius_mail.require_2fa_for_secret_changes' => false]);
 
-        $admin = User::factory()->create();
+        $admin = User::factory()->create([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
         $this->grantPermissions($admin, ['system.manage']);
         $admin->assignRole(Role::findOrCreate('super_admin', 'web'));
 
@@ -112,7 +115,8 @@ class MailCenterControllerTest extends TestCase
                 'scheme' => 'smtp',
                 'active' => true,
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
 
         $setting = MailSenderSetting::query()->where('category', 'system')->firstOrFail();
         $this->assertSame('system@example.test', $setting->from_address);

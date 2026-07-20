@@ -1,95 +1,48 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'access_operations_screen.dart';
 import 'account_operations_screen.dart';
-import 'auth_account_access_center_screen.dart';
 import 'airmius_design_system_screen.dart';
 import 'api_connection_screen.dart';
-import 'api_token_manager_screen.dart';
 import 'app_onboarding_screen.dart';
 import 'billing_operations_screen.dart';
 import 'commerce_operations_screen.dart';
 import 'content_operations_screen.dart';
-import 'data_rights_request_screen.dart';
 import 'club_policy_documents_screen.dart';
 import 'club_profile_editor_screen.dart';
-import 'club_reports_analytics_screen.dart';
 import 'club_request_inbox_screen.dart';
-import 'club_role_permissions_screen.dart';
-import 'club_setup_onboarding_screen.dart';
 import 'club_visibility_settings_screen.dart';
 import 'club_contribution_rules_screen.dart';
-import 'club_communication_center_screen.dart';
-import 'club_document_upload_manager_screen.dart';
 import 'club_finance_cockpit_screen.dart';
 import 'club_member_directory_screen.dart';
-import 'club_membership_form_builder_screen.dart';
 import 'file_operations_screen.dart';
-import 'friends_social_graph_screen.dart';
 import 'gamification_operations_screen.dart';
 import 'learning_operations_screen.dart';
-import 'legal_status_center_screen.dart';
 import 'legal_support_operations_screen.dart';
 import 'marketplace_operations_screen.dart';
-import 'membership_application_form_screen.dart';
 import 'membership_operations_screen.dart';
-import 'membership_request_status_screen.dart';
 import 'notification_chat_operations_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'platform_operations_screen.dart';
-import 'privacy_consent_center_screen.dart';
 import 'public_growth_operations_screen.dart';
 import 'public_top_content_screen.dart';
 import 'release_readiness_screen.dart';
-import 'rides_carpool_planner_screen.dart';
-import 'report_moderation_center_screen.dart';
 import 'safety_community_operations_screen.dart';
 import 'search_operations_screen.dart';
 import 'social_operations_screen.dart';
 import 'sponsor_ads_operations_screen.dart';
 import 'system_admin_operations_screen.dart';
 import 'sports_operations_screen.dart';
-import 'support_helpdesk_screen.dart';
 import 'team_operations_screen.dart';
 import 'club_team_admin_screen.dart';
-import 'club_event_attendance_screen.dart';
 import 'training_operations_screen.dart';
 import 'trust_operations_screen.dart';
 import 'wellbeing_operations_screen.dart';
 import 'web_route_parity_screen.dart';
-import 'workspace_collaboration_screen.dart';
-import 'maturity_media_guidelines_screen.dart';
-import 'guardian_access_portal_screen.dart';
-import 'public_system_pages_screen.dart';
-import 'auth_recovery_security_screen.dart';
-import 'guest_marketplace_flow_screen.dart';
-import 'profile_account_forms_screen.dart';
-import 'public_growth_guest_pages_screen.dart';
-import 'admin_finance_contract_suite_screen.dart';
-import 'dashboard_action_flows_screen.dart';
-import 'content_blog_editorial_suite_screen.dart';
-import 'learning_studio_course_suite_screen.dart';
-import 'sports_training_wellbeing_suite_screen.dart';
-import 'gamification_badges_roles_suite_screen.dart';
-import 'communication_files_notifications_suite_screen.dart';
-import 'trust_moderation_admin_control_suite_screen.dart';
-import 'commerce_subscription_outfit_suite_screen.dart';
-import 'club_membership_lifecycle_suite_screen.dart';
-import 'auth_api_entry_suite_screen.dart';
-import 'app_shell_localization_quality_suite_screen.dart';
-import 'public_interest_ads_sponsor_suite_screen.dart';
-import 'finance_billing_member_payment_suite_screen.dart';
-import 'feed_community_social_suite_screen.dart';
-import 'search_directory_discovery_suite_screen.dart';
-import 'web_parity_release_audit_suite_screen.dart';
-import 'web_route_parity_matrix_suite_screen.dart';
-import 'mobile_state_form_error_suite_screen.dart';
-import 'api_binding_readiness_suite_screen.dart';
-import 'mobile_web_fidelity_accessibility_suite_screen.dart';
-import 'role_based_app_experience_suite_screen.dart';
 import 'store_device_qa_readiness_suite_screen.dart';
 import 'auth_guard_status_suite_screen.dart';
 import 'exact_page_flow_parity_suite_screen.dart';
@@ -191,8 +144,11 @@ class _OperationsHubScreenState extends State<OperationsHubScreen> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final items = _items.where((item) {
-      final areaMatch = _filter == 'Alle' || item.area == _filter;
+    final visibleItems = _items.where((item) => AirmiusMvpSurface.isOperationVisible(item.title)).toList();
+    final areas = ['Alle', ...{for (final item in visibleItems) item.area}];
+    final effectiveFilter = areas.contains(_filter) ? _filter : 'Alle';
+    final items = visibleItems.where((item) {
+      final areaMatch = effectiveFilter == 'Alle' || item.area == effectiveFilter;
       final text = '${item.title} ${item.body} ${item.area}'.toLowerCase();
       return areaMatch && (_query.isEmpty || text.contains(_query.toLowerCase()));
     }).toList();
@@ -227,15 +183,15 @@ class _OperationsHubScreenState extends State<OperationsHubScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final area in _areas)
+                      for (final area in areas)
                         ChoiceChip(
                           label: Text(area),
-                          selected: _filter == area,
+                          selected: effectiveFilter == area,
                           onSelected: (_) => setState(() => _filter = area),
                           selectedColor: AirmiusColors.blue.withValues(alpha: .22),
                           backgroundColor: AirmiusColors.panelSoft,
-                          side: BorderSide(color: _filter == area ? AirmiusColors.blue : AirmiusColors.border),
-                          labelStyle: TextStyle(color: _filter == area ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                          side: BorderSide(color: effectiveFilter == area ? AirmiusColors.blue : AirmiusColors.border),
+                          labelStyle: TextStyle(color: effectiveFilter == area ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
                         ),
                     ],
                   ),
@@ -243,7 +199,13 @@ class _OperationsHubScreenState extends State<OperationsHubScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(children: const [Expanded(child: MetricCard(value: '190', label: 'Ops')), SizedBox(width: 10), Expanded(child: MetricCard(value: '99%', label: 'Fertig')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1%', label: 'Rest'))]),
+            Row(children: [
+              Expanded(child: MetricCard(value: '${visibleItems.length}', label: 'Ops')),
+              const SizedBox(width: 10),
+              Expanded(child: MetricCard(value: AirmiusMvpSurface.showDeveloperSuites ? 'Dev' : 'MVP', label: 'Modus')),
+              const SizedBox(width: 10),
+              Expanded(child: MetricCard(value: '${_items.length - visibleItems.length}', label: 'Ausgeblendet')),
+            ]),
             const SizedBox(height: 16),
             for (final item in items) ...[
               _OpsHubCard(item: item),
@@ -304,8 +266,6 @@ class _OpsHubItem {
   final Color color;
   final Widget screen;
 }
-
-const _areas = ['Alle', 'Core', 'API', 'Forms', 'Store', 'Member', 'Verein', 'Events', 'Social', 'Commerce', 'Public', 'Admin', 'Sport'];
 
 final _items = <_OpsHubItem>[
   _OpsHubItem(area: 'Core', title: 'Konto & Sicherheit', body: 'Login, Registrierung, OAuth, Passwort, 2FA, Export und Kontolöschung.', icon: Icons.manage_accounts_outlined, color: AirmiusColors.blue, screen: AccountOperationsScreen()),
@@ -434,7 +394,6 @@ final _items = <_OpsHubItem>[
   _OpsHubItem(area: 'Sport', title: 'Learning', body: 'Kurse, Lektionen, Quiz, Aufgaben, Zertifikate und Quality-Gates.', icon: Icons.school_outlined, color: AirmiusColors.green, screen: LearningOperationsScreen()),
   _OpsHubItem(area: 'Sport', title: 'Gamification', body: 'Badges, Regeln, XP, Streaks, Leaderboard und Datenschutz.', icon: Icons.workspace_premium_outlined, color: AirmiusColors.amber, screen: GamificationOperationsScreen()),
 ];
-
 
 
 

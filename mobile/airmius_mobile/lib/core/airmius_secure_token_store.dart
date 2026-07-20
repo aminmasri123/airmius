@@ -9,15 +9,20 @@ import 'airmius_persistent_token_store.dart';
 class AirmiusSecureTokenStore implements AirmiusTokenStore {
   AirmiusSecureTokenStore({
     FlutterSecureStorage? storage,
+    AirmiusSecureSessionStorage? secureStorage,
     AirmiusTokenStore? fallback,
-  })  : _storage = storage ??
-            FlutterSecureStorage(
-              aOptions: AndroidOptions(migrateWithBackup: true),
-            ),
-        _fallback = fallback ?? AirmiusPersistentTokenStore();
+  }) : _storage =
+           secureStorage ??
+           AirmiusFlutterSecureSessionStorage(
+             storage ??
+                 FlutterSecureStorage(
+                   aOptions: AndroidOptions(migrateWithBackup: true),
+                 ),
+           ),
+       _legacyMigrationStore = fallback ?? AirmiusPersistentTokenStore();
 
-  final FlutterSecureStorage _storage;
-  final AirmiusTokenStore _fallback;
+  final AirmiusSecureSessionStorage _storage;
+  final AirmiusTokenStore _legacyMigrationStore;
 
   @override
   Future<AirmiusSession?> read() async {
@@ -28,13 +33,15 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
         return secureSession;
       }
 
-      final fallbackSession = await _fallback.read();
-      if (fallbackSession != null) {
-        await write(fallbackSession);
+      final legacySession = await _legacyMigrationStore.read();
+      if (legacySession != null) {
+        await _storage.write(key: _sessionKey, value: _encode(legacySession));
+        await _legacyMigrationStore.clear();
       }
-      return fallbackSession;
+      return legacySession;
     } catch (_) {
-      return _fallback.read();
+      await _legacyMigrationStore.clear();
+      return null;
     }
   }
 
@@ -43,9 +50,8 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
     final payload = _encode(session);
     try {
       await _storage.write(key: _sessionKey, value: payload);
-      await _fallback.clear();
-    } catch (_) {
-      await _fallback.write(session);
+    } finally {
+      await _legacyMigrationStore.clear();
     }
   }
 
@@ -54,7 +60,7 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
     try {
       await _storage.delete(key: _sessionKey);
     } finally {
-      await _fallback.clear();
+      await _legacyMigrationStore.clear();
     }
   }
 
@@ -103,7 +109,10 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
       final locale = decoded['locale'];
       final user = decoded['user'];
       final expiresAt = decoded['expires_at'];
-      if (token is! String || token.isEmpty || locale is! String || locale.isEmpty) {
+      if (token is! String ||
+          token.isEmpty ||
+          locale is! String ||
+          locale.isEmpty) {
         return null;
       }
 
@@ -111,7 +120,9 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
         token: token,
         locale: locale,
         user: user is JsonMap ? AirmiusUser.fromJson(user) : null,
-        expiresAt: expiresAt is String && expiresAt.isNotEmpty ? DateTime.tryParse(expiresAt) : null,
+        expiresAt: expiresAt is String && expiresAt.isNotEmpty
+            ? DateTime.tryParse(expiresAt)
+            : null,
       );
     } catch (_) {
       return null;
@@ -119,4 +130,29 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
   }
 
   static const _sessionKey = 'airmius.auth.session';
+}
+
+abstract class AirmiusSecureSessionStorage {
+  Future<String?> read({required String key});
+
+  Future<void> write({required String key, required String value});
+
+  Future<void> delete({required String key});
+}
+
+class AirmiusFlutterSecureSessionStorage
+    implements AirmiusSecureSessionStorage {
+  const AirmiusFlutterSecureSessionStorage(this.storage);
+
+  final FlutterSecureStorage storage;
+
+  @override
+  Future<String?> read({required String key}) => storage.read(key: key);
+
+  @override
+  Future<void> write({required String key, required String value}) =>
+      storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete({required String key}) => storage.delete(key: key);
 }

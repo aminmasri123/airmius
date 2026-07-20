@@ -1,4 +1,7 @@
 ﻿<script setup>
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
+
 defineProps({
     clubForm: { type: Object, required: true },
     clubProfile: { type: Object, required: true },
@@ -122,11 +125,13 @@ defineEmits(['update-club-profile'])
             </div>
 
             <div class="md:col-span-2">
-                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="clubForm.processing">
-                    Vereinsdaten speichern
-                </button>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <AppButton type="submit" :loading="clubForm.processing" :disabled="clubForm.processing">
+                        {{ clubForm.processing ? 'Speichert...' : 'Vereinsdaten speichern' }}
+                    </AppButton>
+                    <AppLoadingState v-if="clubForm.processing" label="Vereinsdaten werden gespeichert..." inline />
+                </div>
             </div>
         </form>
     </section>
 </template>
-

@@ -1,0 +1,1 @@
+import{_ as a}from"./AppButton-Cajnaxel.js";import{A as r,y as o,m as n,o as s}from"./vendor-vue-DzErvHCd.js";const m={__name:"DangerButton",props:{type:{type:String,default:"button"}},setup(t){return(e,p)=>(s(),r(a,{type:t.type,variant:"danger"},{default:o(()=>[n(e.$slots,"default")]),_:3},8,["type"]))}};export{m as _};

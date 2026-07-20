@@ -9,6 +9,18 @@ class Invoice extends Model
 {
     use HasFactory;
 
+    public const PAYMENT_STATUSES = ['open', 'paid', 'overdue', 'cancelled'];
+
+    public const STATUS_LABELS = [
+        'open' => 'Offen',
+        'pending' => 'Ausstehend',
+        'awaiting_transfer' => 'Warte auf Überweisung',
+        'paid' => 'Bezahlt',
+        'overdue' => 'Überfällig',
+        'cancelled' => 'Storniert',
+        'failed' => 'Fehlgeschlagen',
+    ];
+
     protected $fillable = [
         'club_id',
         'user_id',
@@ -61,5 +73,21 @@ class Invoice extends Model
     public function bankTransactions()
     {
         return $this->hasMany(BankTransaction::class);
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status] ?? ($this->status ?: 'Unbekannt');
+    }
+
+    public static function statusOptions(?array $statuses = null): array
+    {
+        return collect($statuses ?: self::PAYMENT_STATUSES)
+            ->map(fn (string $status) => [
+                'value' => $status,
+                'label' => self::STATUS_LABELS[$status] ?? $status,
+            ])
+            ->values()
+            ->all();
     }
 }

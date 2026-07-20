@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 
 class AirmiusExternalAuthLauncher {
   const AirmiusExternalAuthLauncher({
-    MethodChannel channel = const MethodChannel('com.airmius.app/browser'),
-  }) : _channel = channel;
+    this._channel = const MethodChannel('com.airmius.app/browser'),
+  });
 
   final MethodChannel _channel;
 

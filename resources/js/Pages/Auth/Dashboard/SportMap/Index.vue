@@ -1,2318 +1,262 @@
-﻿<script setup>
-import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { useForm } from '@inertiajs/vue3'
-import { computed, onUnmounted, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+<script setup>
+import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
+import { useSportMapWorkspace } from "@/composables/useSportMapWorkspace"
 
 const props = defineProps({
-    sportTypes: {
-        type: Array,
-        default: () => [],
-    },
-    placeTypes: {
-        type: Array,
-        default: () => [],
-    },
-    routes: {
-        type: Array,
-        default: () => [],
-    },
-    tracks: {
-        type: Array,
-        default: () => [],
-    },
-    places: {
-        type: Array,
-        default: () => [],
-    },
-    sportCatalog: {
-        type: Array,
-        default: () => [],
-    },
-    teams: {
-        type: Array,
-        default: () => [],
-    },
-    mapConfig: {
-        type: Object,
-        default: () => ({}),
-    },
-    sportMapAccess: {
-        type: Object,
-        default: () => ({}),
-    },
+    sportTypes: { type: Array, default: () => [] },
+    placeTypes: { type: Array, default: () => [] },
+    routes: { type: Array, default: () => [] },
+    tracks: { type: Array, default: () => [] },
+    places: { type: Array, default: () => [] },
+    sportCatalog: { type: Array, default: () => [] },
+    teams: { type: Array, default: () => [] },
+    mapConfig: { type: Object, default: () => ({}) },
+    sportMapAccess: { type: Object, default: () => ({}) },
 })
 
-const { t, te } = useI18n()
-const activeTab = ref('landing')
-const selectedRouteId = ref(props.routes[0]?.id || null)
-const trackingPoints = ref([])
-const trackingStartedAt = ref(null)
-const trackingError = ref('')
-const activeTrackingSlide = ref(0)
-const trackingFullscreen = ref(false)
-const editingTrackId = ref(null)
-const placeLocationError = ref('')
-const placeLocationStatus = ref('')
-const draftRouteGeometryPoints = ref([])
-const mapIsDragging = ref(false)
-const mapWasDragged = ref(false)
-const manualMapPointStatus = ref('')
-const currentLocationPoint = ref(null)
-const routeGeneratorStep = ref(1)
-const routeGeneratorStatus = ref('')
-const generatedRoutePoints = ref([])
-const generatedRouteGeometryPoints = ref([])
-const generatedRouteMetrics = ref(null)
-const generatedRouteNavigationCues = ref([])
-const isGeneratingRoute = ref(false)
-const routeGeneratorVariantSeed = ref(Date.now())
-const routeGeneratorMapTarget = ref('start')
-const activeMapLayer = ref('standard')
-const activeTileSourceIndex = ref(0)
-const visibleMapTileCount = ref(0)
-const failedMapTileCount = ref(0)
-const isTracking = ref(false)
-const trackingNow = ref(Date.now())
-const routePlaybackState = ref('idle')
-const routePlaybackProgressMeters = ref(0)
-const routePlaybackSpeed = ref(16)
-const routePlaybackStatus = ref('')
-let watchId = null
-let trackingTimer = null
-let mapDragStart = null
-let mapDragFrame = null
-let mapPendingDragEvent = null
-let routePlaybackFrame = null
-let routePlaybackLastTimestamp = null
-let trackingTouchStartX = null
-let trackingPointerStartX = null
-
-const TILE_SIZE = 256
-const MAP_WIDTH = 1000
-const MAP_HEIGHT = 560
-const DEFAULT_CENTER = { latitude: 51.1657, longitude: 10.4515 }
-const DEFAULT_ZOOM = 6
-const PLAYBACK_SPEED_OPTIONS = [8, 16, 32]
-const mapView = ref({
-    latitude: DEFAULT_CENTER.latitude,
-    longitude: DEFAULT_CENTER.longitude,
-    zoom: DEFAULT_ZOOM,
-    userChanged: false,
-})
-
-const createDefaultWaypoints = () => [
-    { name: t('sport_map.routes.start_point'), latitude: '', longitude: '', elevation_m: '' },
-    { name: t('sport_map.routes.finish_point'), latitude: '', longitude: '', elevation_m: '' },
-]
-
-const routeForm = useForm({
-    title: '',
-    description: '',
-    sport_type: 'running',
-    visibility: 'private',
-    team_id: null,
-    difficulty: 'moderate',
-    surface: '',
-    waypoints: [],
-    route_geometry: null,
-    navigation_cues: [],
-    distance_meters: null,
-    estimated_duration_seconds: null,
-    elevation_gain_meters: null,
-    elevation_loss_meters: null,
-    metrics: null,
-})
-
-const waypointRows = ref(createDefaultWaypoints())
-
-const routeGeneratorForm = reactive({
-    title: '',
-    sport_type: 'running',
-    start_mode: 'map_center',
-    start_latitude: '',
-    start_longitude: '',
-    destination_latitude: '',
-    destination_longitude: '',
-    route_type: 'roundtrip',
-    target_mode: 'distance',
-    distance_km: 5,
-    duration_minutes: 45,
-    pace_mode: 'pace',
-    pace_min_per_km: 6,
-    speed_kmh: 10,
-    surface: 'firm',
-    environment: 'any',
-    elevation: 'mixed',
-    difficulty: 'easy',
-    low_traffic: true,
-    lit: false,
-    water_breaks: false,
-    include_places: '',
-    avoid_places: '',
-})
-
-const trackForm = useForm({
-    title: '',
-    sport_route_id: null,
-    sport_type: 'running',
-    status: 'completed',
-    started_at: null,
-    ended_at: null,
-    track_points: [],
-})
-
-const editTrackForm = useForm({
-    title: '',
-    sport_type: 'running',
-})
-
-const placeForm = useForm({
-    name: '',
-    type: 'football_pitch',
-    description: '',
-    latitude: '',
-    longitude: '',
-    address: '',
-    city: '',
-    country_code: 'DE',
-    visibility: 'public',
-    team_id: null,
-    sport_types: [],
-    amenities: [],
-    surfaces: [],
-    opening_hours: '',
-    gallery_images: [],
-    image_uploads: [],
-})
-
-const placeSportTypesText = ref('')
-const placeAmenitiesText = ref('')
-const placeSurfacesText = ref('')
-const placeImageUrlsText = ref('')
-const placeImageUploads = ref([])
-
-const clearMapTextSelection = () => {
-    if (typeof window === 'undefined' || typeof window.getSelection !== 'function') return
-
-    window.getSelection()?.removeAllRanges()
-}
-
-const routeGeneratorSteps = [
-    { step: 1, label: 'Basis' },
-    { step: 2, label: 'Stil' },
-    { step: 3, label: 'Vorschlag' },
-]
-
-const routeGeneratorStartModes = [
-    { key: 'map_center', label: 'Kartenmitte', icon: 'las la-crosshairs' },
-    { key: 'current_location', label: 'Mein Standort', icon: 'las la-location-arrow' },
-    { key: 'manual', label: 'Koordinaten', icon: 'las la-keyboard' },
-]
-
-const routeGeneratorRouteTypes = [
-    { key: 'roundtrip', label: 'Rundroute', icon: 'las la-sync', description: 'Start und Ziel sind gleich.' },
-    { key: 'point_to_point', label: 'Einmal zum Ziel', icon: 'las la-long-arrow-alt-right', description: 'Keine Rückstrecke.' },
-]
-
-const routeGeneratorSurfaceOptions = [
-    { key: 'any', label: 'Egal' },
-    { key: 'asphalt', label: 'Asphalt' },
-    { key: 'firm', label: 'Fester Boden' },
-    { key: 'forest', label: 'Waldweg' },
-    { key: 'gravel', label: 'Schotter' },
-    { key: 'trail', label: 'Trail' },
-]
-
-const routeGeneratorEnvironmentOptions = [
-    { key: 'any', label: 'Egal' },
-    { key: 'nature', label: 'Natur' },
-    { key: 'forest', label: 'Wald' },
-    { key: 'park', label: 'Park/Stadt' },
-    { key: 'water', label: 'Am Wasser' },
-]
-
-const routeGeneratorElevationOptions = [
-    { key: 'flat', label: 'Flach' },
-    { key: 'mixed', label: 'Gemischt' },
-    { key: 'hilly', label: 'Hügelig' },
-]
-
-const routeGeneratorDifficultyOptions = [
-    { key: 'easy', label: 'Leicht' },
-    { key: 'moderate', label: 'Mittel' },
-    { key: 'hard', label: 'Schwer' },
-]
-
-const routeGeneratorSpeedsKmh = {
-    running: 9,
-    trail_running: 7,
-    walking: 5,
-    wandern: 4.5,
-    cycling: 20,
-    mountainbike: 15,
-    skateboard: 10,
-    fitness: 6,
-    football: 6,
-    other: 7,
-}
-
-const isValidMapCoordinate = (point) => {
-    const latitude = Number(point?.latitude)
-    const longitude = Number(point?.longitude)
-
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false
-    if (Math.abs(latitude) > 85.05112878 || Math.abs(longitude) > 180) return false
-
-    return !(Math.abs(latitude) < 0.000001 && Math.abs(longitude) < 0.000001)
-}
-
-const draftPlacePoint = computed(() => {
-    const latitude = Number(placeForm.latitude)
-    const longitude = Number(placeForm.longitude)
-
-    if (!isValidMapCoordinate({ latitude, longitude })) return null
-
-    return {
-        latitude,
-        longitude,
-        name: placeForm.name || 'Neuer Sportplatz',
-        kind: 'place',
-        source: 'place_draft',
-        removable: true,
-    }
-})
-
-const activeGeneratorPoints = computed(() => {
-    if (activeTab.value !== 'generator') return []
-
-    if (generatedRoutePoints.value.length) {
-        return generatedRoutePoints.value
-            .filter(isValidMapCoordinate)
-            .map((point, index) => ({ ...point, source: 'generator_draft', sourceIndex: index }))
-    }
-
-    return [
-        routeGeneratorStartPoint.value ? {
-            ...routeGeneratorStartPoint.value,
-            name: 'Start',
-            source: 'generator_setup',
-        } : null,
-        routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorDestinationPoint.value ? {
-            ...routeGeneratorDestinationPoint.value,
-            name: 'Ziel',
-            source: 'generator_setup',
-        } : null,
-    ]
-        .filter(isValidMapCoordinate)
-        .map((point, index) => ({ ...point, sourceIndex: index }))
-})
-
-const selectedRoute = computed(() => props.routes.find((item) => item.id === selectedRouteId.value) || props.routes[0] || null)
-const routePreviewPoints = computed(() => {
-    if (activeTab.value === 'generator') {
-        return activeGeneratorPoints.value
-    }
-
-    const formPoints = waypointRows.value
-        .map((point, index) => ({
-            name: point.name || t('sport_map.routes.point_name', { number: index + 1 }),
-            latitude: point.latitude === '' ? null : Number(point.latitude),
-            longitude: point.longitude === '' ? null : Number(point.longitude),
-            elevation_m: point.elevation_m === '' ? null : Number(point.elevation_m),
-            source: 'route_draft',
-            sourceIndex: index,
-            removable: true,
-        }))
-        .filter(isValidMapCoordinate)
-
-    if (formPoints.length) return formPoints
-
-    return (selectedRoute.value?.waypoints || []).filter(isValidMapCoordinate)
-})
-const routeGeometryPoints = computed(() => {
-    const coordinates = selectedRoute.value?.route_geometry?.coordinates
-
-    if (!Array.isArray(coordinates)) return []
-
-    return coordinates
-        .filter((coordinate) => Array.isArray(coordinate) && coordinate.length >= 2)
-        .map((coordinate) => ({
-            latitude: Number(coordinate[1]),
-            longitude: Number(coordinate[0]),
-            elevation_m: coordinate[2] ?? null,
-        }))
-        .filter(isValidMapCoordinate)
-})
-
-const cleanedWaypoints = () => waypointRows.value
-    .map((point) => ({
-        name: point.name,
-        latitude: point.latitude === '' ? null : Number(point.latitude),
-        longitude: point.longitude === '' ? null : Number(point.longitude),
-        elevation_m: point.elevation_m === '' ? null : Number(point.elevation_m),
-    }))
-    .filter(isValidMapCoordinate)
-
-const haversine = (from, to) => {
-    const radius = 6371000
-    const lat1 = Number(from.latitude) * Math.PI / 180
-    const lat2 = Number(to.latitude) * Math.PI / 180
-    const dLat = (Number(to.latitude) - Number(from.latitude)) * Math.PI / 180
-    const dLon = (Number(to.longitude) - Number(from.longitude)) * Math.PI / 180
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
-
-    return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-const anchorRouteLinePoints = (linePoints, waypointPoints = []) => {
-    const points = linePoints.filter(isValidMapCoordinate)
-    const waypoints = waypointPoints.filter(isValidMapCoordinate)
-    const start = waypoints[0]
-    const finish = waypoints[waypoints.length - 1]
-    const anchored = [...points]
-
-    if (start && (!anchored.length || haversine(start, anchored[0]) > 8)) {
-        anchored.unshift(start)
-    }
-
-    if (finish && (!anchored.length || haversine(finish, anchored[anchored.length - 1]) > 8)) {
-        anchored.push(finish)
-    }
-
-    return anchored
-}
-
-const routeLinePoints = computed(() => {
-    if (activeTab.value === 'generator') {
-        return generatedRouteGeometryPoints.value.length >= 2
-            ? anchorRouteLinePoints(generatedRouteGeometryPoints.value, activeGeneratorPoints.value)
-            : activeGeneratorPoints.value
-    }
-
-    const formPoints = cleanedWaypoints()
-
-    if (formPoints.length >= 2) {
-        return draftRouteGeometryPoints.value.length >= 2
-            ? anchorRouteLinePoints(draftRouteGeometryPoints.value, formPoints)
-            : formPoints
-    }
-    if (routeGeometryPoints.value.length >= 2) return anchorRouteLinePoints(routeGeometryPoints.value, selectedRoute.value?.waypoints || [])
-
-    return (selectedRoute.value?.waypoints || []).filter(isValidMapCoordinate)
-})
-const activeTrackPoints = computed(() => (trackingPoints.value.length ? trackingPoints.value : (props.tracks[0]?.track_points || [])).filter(isValidMapCoordinate))
-const mapPoints = computed(() => [
-    ...routePreviewPoints.value.map((point) => ({ ...point, kind: 'route' })),
-    ...activeTrackPoints.value.map((point, index) => ({
-        ...point,
-        kind: 'track',
-        source: trackingPoints.value.length ? 'track_draft' : 'track_saved',
-        sourceIndex: index,
-        removable: Boolean(trackingPoints.value.length),
-    })),
-    ...(draftPlacePoint.value ? [draftPlacePoint.value] : []),
-    ...props.places.map((place) => ({ latitude: place.latitude, longitude: place.longitude, name: place.name, kind: 'place', source: 'place_saved' })),
-].filter(isValidMapCoordinate))
-const mapBoundsPoints = computed(() => [
-    ...routeLinePoints.value,
-    ...routePreviewPoints.value,
-    ...activeTrackPoints.value,
-    ...(draftPlacePoint.value ? [draftPlacePoint.value] : []),
-    ...props.places.map((place) => ({ latitude: place.latitude, longitude: place.longitude })),
-].filter(isValidMapCoordinate))
-const bounds = computed(() => {
-    if (!mapBoundsPoints.value.length) return null
-
-    const latitudes = mapBoundsPoints.value.map((point) => Number(point.latitude))
-    const longitudes = mapBoundsPoints.value.map((point) => Number(point.longitude))
-
-    return {
-        north: Math.max(...latitudes),
-        south: Math.min(...latitudes),
-        east: Math.max(...longitudes),
-        west: Math.min(...longitudes),
-    }
-})
-const routePolyline = computed(() => polylinePoints(routeLinePoints.value))
-const trackPolyline = computed(() => polylinePoints(activeTrackPoints.value))
-const trackingDistance = computed(() => distanceMeters(trackingPoints.value))
-const trackingElapsedSeconds = computed(() => {
-    if (!trackingStartedAt.value) return 0
-
-    const start = new Date(trackingStartedAt.value).getTime()
-    const lastPointTime = trackingPoints.value.length
-        ? new Date(trackingPoints.value[trackingPoints.value.length - 1].recorded_at || trackingStartedAt.value).getTime()
-        : start
-    const end = isTracking.value ? trackingNow.value : lastPointTime
-
-    return Math.max(0, Math.round((end - start) / 1000))
-})
-const trackingAverageSpeedKmh = computed(() => {
-    if (!trackingElapsedSeconds.value || !trackingDistance.value) return 0
-
-    return (trackingDistance.value / 1000) / (trackingElapsedSeconds.value / 3600)
-})
-const trackingAveragePaceSeconds = computed(() => {
-    if (!trackingDistance.value) return 0
-
-    return trackingElapsedSeconds.value / (trackingDistance.value / 1000)
-})
-const trackingAverageSpeedLabel = computed(() => trackingAverageSpeedKmh.value > 0 ? `${trackingAverageSpeedKmh.value.toFixed(1)} km/h` : '-')
-const trackingAveragePaceLabel = computed(() => formatPace(trackingAveragePaceSeconds.value))
-const trackingElapsedLabel = computed(() => formatClockDuration(trackingElapsedSeconds.value))
-const trackingLiveStatusLabel = computed(() => isTracking.value ? 'Live' : (trackingPoints.value.length ? 'Pausiert' : 'Bereit'))
-const trackingLastAccuracyLabel = computed(() => {
-    const lastPoint = trackingPoints.value[trackingPoints.value.length - 1]
-    const accuracy = Number(lastPoint?.accuracy_m || 0)
-
-    return accuracy > 0 ? `GPS +/- ${Math.round(accuracy)} m` : 'GPS bereit'
-})
-const routePlaybackPath = computed(() => routeLinePoints.value.filter(isValidMapCoordinate))
-const routePlaybackTotalDistance = computed(() => distanceMeters(routePlaybackPath.value))
-const routePlaybackCanStart = computed(() => routePlaybackPath.value.length >= 2 && routePlaybackTotalDistance.value > 10)
-const activeRouteSportType = computed(() => {
-    if (activeTab.value === 'generator') return routeGeneratorForm.sport_type
-    if (activeTab.value === 'routes' && cleanedWaypoints().length >= 2) return routeForm.sport_type
-
-    return selectedRoute.value?.sport_type || routeForm.sport_type || 'running'
-})
-const activeRouteEstimatedDurationSeconds = computed(() => {
-    if (activeTab.value === 'generator' && generatedRouteMetrics.value?.estimated_duration_seconds) {
-        return Number(generatedRouteMetrics.value.estimated_duration_seconds)
-    }
-
-    if (activeTab.value === 'routes' && cleanedWaypoints().length < 2 && selectedRoute.value?.estimated_duration_seconds) {
-        return Number(selectedRoute.value.estimated_duration_seconds)
-    }
-
-    const speedKmh = routeGeneratorSpeedsKmh[activeRouteSportType.value] || routeGeneratorSpeedsKmh.other
-
-    return Math.max(60, Math.round((routePlaybackTotalDistance.value / 1000) / speedKmh * 3600))
-})
-const routePlaybackMarker = computed(() => {
-    if (!routePlaybackCanStart.value) return null
-
-    return interpolateRoutePoint(routePlaybackPath.value, routePlaybackProgressMeters.value)
-})
-const routePlaybackProgressPercent = computed(() => {
-    if (!routePlaybackTotalDistance.value) return 0
-
-    return clamp((routePlaybackProgressMeters.value / routePlaybackTotalDistance.value) * 100, 0, 100)
-})
-const routePlaybackElapsedSeconds = computed(() => {
-    if (!routePlaybackTotalDistance.value) return 0
-
-    return Math.round((routePlaybackProgressMeters.value / routePlaybackTotalDistance.value) * activeRouteEstimatedDurationSeconds.value)
-})
-const routePlaybackRemainingSeconds = computed(() => Math.max(0, activeRouteEstimatedDurationSeconds.value - routePlaybackElapsedSeconds.value))
-const activeMapPointCount = computed(() => {
-    if (activeTab.value === 'generator') return generatedRoutePoints.value.length
-    if (activeTab.value === 'routes') return waypointRows.value.filter((point) => point.latitude !== '' && point.longitude !== '').length
-    if (activeTab.value === 'tracks') return trackingPoints.value.length
-    if (activeTab.value === 'places') return draftPlacePoint.value ? 1 : 0
-
-    return 0
-})
-const mapLayerOptions = computed(() => {
-    const standardUrl = String(props.mapConfig?.tile_url || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
-    const standardAttribution = String(props.mapConfig?.attribution || '(c) OpenStreetMap contributors')
-    const satelliteUrl = String(props.mapConfig?.satellite_tile_url || '')
-    const satelliteAttribution = String(props.mapConfig?.satellite_attribution || '(c) Satellite imagery provider')
-    const standardSources = [
-        {
-            url: standardUrl,
-            attribution: standardAttribution,
-        },
-        {
-            url: 'https://a.tile.openstreetmap.de/{z}/{x}/{y}.png',
-            attribution: '(c) OpenStreetMap contributors',
-        },
-        {
-            url: 'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-            attribution: '(c) OpenStreetMap contributors, HOT',
-        },
-        {
-            url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-            attribution: '(c) OpenStreetMap contributors, CARTO',
-        },
-    ]
-
-    return [
-        {
-            key: 'standard',
-            label: 'Karte',
-            icon: 'las la-map',
-            sources: standardSources,
-        },
-        {
-            key: 'outdoor',
-            label: 'Outdoor',
-            icon: 'las la-mountain',
-            sources: [
-                {
-                    url: 'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-                    attribution: '(c) OpenStreetMap contributors, HOT',
-                },
-                ...standardSources,
-            ],
-        },
-        {
-            key: 'satellite',
-            label: 'Satellit',
-            icon: 'las la-satellite',
-            sources: satelliteUrl
-                ? [
-                    {
-                        url: satelliteUrl,
-                        attribution: satelliteAttribution,
-                    },
-                    ...standardSources,
-                ]
-                : standardSources,
-        },
-        {
-            key: 'hybrid',
-            label: 'Hybrid',
-            icon: 'las la-layer-group',
-            sources: satelliteUrl
-                ? [
-                    {
-                        url: satelliteUrl,
-                        attribution: satelliteAttribution,
-                    },
-                    ...standardSources,
-                ]
-                : standardSources,
-            overlay: satelliteUrl
-                ? {
-                    url: 'https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
-                    attribution: '(c) OpenStreetMap contributors, CARTO',
-                }
-                : null,
-        },
-    ]
-})
-const activeMapLayerOption = computed(() => mapLayerOptions.value.find((layer) => layer.key === activeMapLayer.value) || mapLayerOptions.value[0])
-const tileSources = computed(() => activeMapLayerOption.value?.sources || [])
-const defaultTileSource = computed(() => ({
-    url: String(props.mapConfig?.tile_url || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
-    attribution: String(props.mapConfig?.attribution || '(c) OpenStreetMap contributors'),
-}))
-const activeTileSource = computed(() => tileSources.value[activeTileSourceIndex.value] || tileSources.value[0] || defaultTileSource.value)
-const tileTemplate = computed(() => activeTileSource.value?.url || defaultTileSource.value.url)
-const mapOverlaySource = computed(() => activeMapLayerOption.value?.overlay || null)
-const mapAttribution = computed(() => mapOverlaySource.value
-    ? `${activeTileSource.value?.attribution || defaultTileSource.value.attribution} - ${mapOverlaySource.value.attribution}`
-    : (activeTileSource.value?.attribution || defaultTileSource.value.attribution))
-const mapHasRealTiles = computed(() => visibleMapTileCount.value > 0)
-const mapStatusText = computed(() => {
-    if (manualMapPointStatus.value) return manualMapPointStatus.value
-    if (!mapPoints.value.length) return 'Karte bereit. Plane eine Route, starte Tracking oder füge einen Sportplatz hinzu.'
-
-    return 'Karte bereit.'
-})
-const placePreviewImages = computed(() => [
-    ...splitList(placeImageUrlsText.value),
-    ...placeImageUploads.value.map((file) => URL.createObjectURL(file)),
-].slice(0, 8))
-
-const fallbackMapLabels = [
-    { name: 'Hamburg', latitude: 53.5511, longitude: 9.9937 },
-    { name: 'Berlin', latitude: 52.52, longitude: 13.405 },
-    { name: 'Hannover', latitude: 52.3759, longitude: 9.732 },
-    { name: 'Dortmund', latitude: 51.5136, longitude: 7.4653 },
-    { name: 'Köln', latitude: 50.9375, longitude: 6.9603 },
-    { name: 'Frankfurt', latitude: 50.1109, longitude: 8.6821 },
-    { name: 'Leipzig', latitude: 51.3397, longitude: 12.3731 },
-    { name: 'Nürnberg', latitude: 49.4521, longitude: 11.0767 },
-    { name: 'Stuttgart', latitude: 48.7758, longitude: 9.1829 },
-    { name: 'München', latitude: 48.1351, longitude: 11.582 },
-]
-
-const tabs = [
-    { key: 'landing', label: 'Start', icon: 'las la-compass' },
-    { key: 'generator', label: 'Route generieren', icon: 'las la-magic' },
-    { key: 'routes', label: 'sport_map.tabs.routes', icon: 'las la-route' },
-    { key: 'tracks', label: 'sport_map.tabs.tracks', icon: 'las la-location-arrow' },
-    { key: 'places', label: 'sport_map.tabs.places', icon: 'las la-map-marker-alt' },
-]
-
-const landingActions = [
-    {
-        key: 'generator',
-        title: 'Route generieren',
-        description: 'Parameter wählen und direkt einen passenden Routenvorschlag erzeugen.',
-        icon: 'las la-magic',
-        color: 'border-indigo-400/40 bg-indigo-500/10 text-indigo-100',
-    },
-    {
-        key: 'routes',
-        title: 'Route planen',
-        description: 'Start und Ziel setzen, Sportart wählen und Strecke mit Vorschau speichern.',
-        icon: 'las la-route',
-        color: 'border-sky-400/40 bg-sky-500/10 text-sky-100',
-    },
-    {
-        key: 'tracks',
-        title: 'Strecke tracken',
-        description: 'Live mit GPS aufzeichnen, Distanz sammeln und Training danach speichern.',
-        icon: 'las la-location-arrow',
-        color: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-100',
-    },
-    {
-        key: 'places',
-        title: 'Sportplatz finden',
-        description: 'Plätze in deiner Umgebung ansehen und schneller Trainingsorte entdecken.',
-        icon: 'las la-search-location',
-        color: 'border-amber-400/40 bg-amber-500/10 text-amber-100',
-    },
-    {
-        key: 'places',
-        title: 'Sportplatz eintragen',
-        description: 'Adresse, Bilder, Ausstattung und Sportarten für andere hinzufügen.',
-        icon: 'las la-map-pin',
-        color: 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100',
-    },
-]
-
-watch(() => props.routes, (routes) => {
-    const nextRoutes = Array.isArray(routes) ? routes : []
-
-    if (!nextRoutes.some((item) => item.id === selectedRouteId.value)) {
-        selectedRouteId.value = nextRoutes[0]?.id || null
-    }
-}, { deep: true })
-
-const catalogLabel = (item, fallback = '') => {
-    if (!item) return fallback
-
-    return item.label_key && te(item.label_key) ? t(item.label_key) : (item.label || fallback)
-}
-
-const labelFromCatalog = (items, key, fallback = '') => {
-    if (!key) return fallback
-
-    const item = items.find((entry) => entry.key === key)
-
-    return catalogLabel(item, fallback || key)
-}
-
-const translatedOrFallback = (key, fallback) => te(key) ? t(key) : fallback
-const tabLabel = (tab) => tab.label.startsWith('sport_map.') ? t(tab.label) : tab.label
-const sportLabel = (key) => labelFromCatalog(props.sportTypes, key, t('sport_map.any_sport'))
-const placeTypeLabel = (key) => labelFromCatalog(props.placeTypes, key, key || '-')
-const visibilityLabel = (value) => value ? translatedOrFallback(`sport_map.visibility.${value}`, value) : '-'
-const trackStatusLabel = (value) => value ? translatedOrFallback(`sport_map.tracks.statuses.${value}`, value) : '-'
-
-const formatDistance = (meters) => {
-    const value = Number(meters || 0)
-
-    if (value < 1000) return `${Math.round(value)} m`
-
-    return `${(value / 1000).toFixed(2)} km`
-}
-
-const formatDuration = (seconds) => {
-    const value = Number(seconds || 0)
-    const hours = Math.floor(value / 3600)
-    const minutes = Math.round((value % 3600) / 60)
-
-    if (hours <= 0) return `${minutes} min`
-
-    return `${hours} h ${String(minutes).padStart(2, '0')} min`
-}
-
-const formatClockDuration = (seconds) => {
-    const value = Math.max(0, Math.floor(Number(seconds || 0)))
-    const hours = Math.floor(value / 3600)
-    const minutes = Math.floor((value % 3600) / 60)
-    const secs = value % 60
-
-    return hours > 0
-        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-        : `${minutes}:${String(secs).padStart(2, '0')}`
-}
-
-const formatPace = (secondsPerKm) => {
-    const value = Number(secondsPerKm || 0)
-
-    if (!Number.isFinite(value) || value <= 0) return '-'
-
-    const minutes = Math.floor(value / 60)
-    const seconds = Math.round(value % 60)
-
-    return `${minutes}:${String(seconds).padStart(2, '0')} /km`
-}
-
-const trackAverageSpeedLabel = (track) => {
-    const distance = Number(track?.distance_meters || 0)
-    const duration = Number(track?.duration_seconds || 0)
-
-    if (distance <= 0 || duration <= 0) return '-'
-
-    return `${((distance / 1000) / (duration / 3600)).toFixed(1)} km/h`
-}
-
-const trackAveragePaceLabel = (track) => {
-    const distance = Number(track?.distance_meters || 0)
-    const duration = Number(track?.duration_seconds || 0)
-
-    if (distance <= 0 || duration <= 0) return '-'
-
-    return formatPace(duration / (distance / 1000))
-}
-
-const defaultTrackTitle = () => {
-    const now = new Date()
-
-    return `Training ${now.toLocaleDateString('de-DE')} ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
-}
-
-const setTrackingSlide = (index) => {
-    activeTrackingSlide.value = clamp(index, 0, 2)
-}
-
-const nextTrackingSlide = () => {
-    setTrackingSlide(activeTrackingSlide.value + 1)
-}
-
-const previousTrackingSlide = () => {
-    setTrackingSlide(activeTrackingSlide.value - 1)
-}
-
-const openTrackingFullscreen = () => {
-    trackingFullscreen.value = true
-}
-
-const closeTrackingFullscreen = () => {
-    trackingFullscreen.value = false
-}
-
-const startTrackingFromMobile = () => {
-    openTrackingFullscreen()
-    setTrackingSlide(0)
-    startTracking()
-}
-
-const startTrackingSwipe = (event) => {
-    trackingTouchStartX = event.touches?.[0]?.clientX ?? null
-}
-
-const endTrackingSwipe = (event) => {
-    if (trackingTouchStartX === null) return
-
-    const endX = event.changedTouches?.[0]?.clientX ?? trackingTouchStartX
-    const delta = endX - trackingTouchStartX
-    trackingTouchStartX = null
-
-    if (Math.abs(delta) < 45) return
-
-    if (delta < 0) {
-        nextTrackingSlide()
-        return
-    }
-
-    previousTrackingSlide()
-}
-
-const startTrackingPointerSwipe = (event) => {
-    if (event.pointerType === 'mouse' && event.buttons !== 1) return
-
-    trackingPointerStartX = event.clientX
-}
-
-const endTrackingPointerSwipe = (event) => {
-    if (trackingPointerStartX === null) return
-
-    const delta = event.clientX - trackingPointerStartX
-    trackingPointerStartX = null
-
-    if (Math.abs(delta) < 45) return
-
-    if (delta < 0) {
-        nextTrackingSlide()
-        return
-    }
-
-    previousTrackingSlide()
-}
-
-const cancelTrackingPointerSwipe = () => {
-    trackingPointerStartX = null
-}
-
-const formatPercent = (value) => `${Number(value || 0).toFixed(1)} %`
-
-const cueText = (cue, index) => {
-    const type = String(cue?.type || cue?.maneuver_type || 'continue')
-    const road = cue?.road_name ? ` auf ${cue.road_name}` : ''
-    const distance = cue?.distance_meters ? ` • ${formatDistance(cue.distance_meters)}` : ''
-    const label = {
-        start: 'Start',
-        finish: 'Ziel erreicht',
-        turn: 'Abbiegen',
-        new_name: 'Weiter',
-        continue: 'Geradeaus',
-        roundabout: 'Kreisverkehr',
-        merge: 'Einfaedeln',
-        fork: 'Gabelung',
-    }[type] || `Hinweis ${index + 1}`
-
-    return `${label}${road}${distance}`
-}
-
-const qualityBadgeClass = (score) => {
-    const value = Number(score || 0)
-
-    if (value >= 85) return 'border-emerald-400/50 bg-emerald-500/10 text-emerald-400'
-    if (value >= 70) return 'border-air-blue/50 bg-air-blue/10 text-air-blue'
-    if (value >= 50) return 'border-amber-400/50 bg-amber-500/10 text-amber-400'
-
-    return 'border-red-400/50 bg-red-500/10 text-red-400'
-}
-
-const splitList = (value) => String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-
-const optionLabel = (options, key, fallback = '-') => options.find((option) => option.key === key)?.label || fallback
-
-const routeGeneratorTargetDistanceKm = computed(() => {
-    if (routeGeneratorForm.target_mode === 'duration') {
-        const speed = routeGeneratorTargetSpeedKmh.value
-        return clamp((Number(routeGeneratorForm.duration_minutes) || 45) / 60 * speed, 1, 80)
-    }
-
-    return clamp(Number(routeGeneratorForm.distance_km) || 5, 1, 80)
-})
-
-const routeGeneratorEstimatedMinutes = computed(() => {
-    const speed = routeGeneratorTargetSpeedKmh.value
-
-    return Math.max(10, Math.round((routeGeneratorTargetDistanceKm.value / speed) * 60))
-})
-
-const routeGeneratorDefaultSpeedKmh = computed(() => routeGeneratorSpeedsKmh[routeGeneratorForm.sport_type] || routeGeneratorSpeedsKmh.other)
-const routeGenerationAccess = computed(() => props.sportMapAccess?.route_generation || {
-    available: true,
-    label: 'Free Routing',
-    monthly_limit: 10,
-    monthly_used: 0,
-    monthly_remaining: 10,
-    reason: null,
-})
-const routeGenerationLimitLabel = computed(() => {
-    const access = routeGenerationAccess.value
-
-    if (access.monthly_limit === null) {
-        return `${access.label || 'Routing'}: unbegrenzt`
-    }
-
-    return `${access.label || 'Routing'}: ${access.monthly_remaining ?? 0}/${access.monthly_limit} Vorschläge diesen Monat offen`
-})
-
-const routeGeneratorTargetSpeedKmh = computed(() => {
-    if (routeGeneratorForm.pace_mode === 'pace' && Number(routeGeneratorForm.pace_min_per_km) > 0) {
-        return clamp(60 / Number(routeGeneratorForm.pace_min_per_km), 1, 60)
-    }
-
-    if (Number(routeGeneratorForm.speed_kmh) > 0) {
-        return clamp(Number(routeGeneratorForm.speed_kmh), 1, 80)
-    }
-
-    return routeGeneratorDefaultSpeedKmh.value
-})
-
-const routeGeneratorPaceLabel = computed(() => {
-    const pace = 60 / routeGeneratorTargetSpeedKmh.value
-
-    return `${pace.toFixed(pace < 10 ? 1 : 0)} min/km`
-})
-
-const routeGeneratorStartPoint = computed(() => {
-    if (routeGeneratorForm.start_mode === 'current_location') {
-        return currentLocationPoint.value && isValidMapCoordinate(currentLocationPoint.value)
-            ? currentLocationPoint.value
-            : null
-    }
-
-    if (routeGeneratorForm.start_mode === 'manual') {
-        const latitude = Number(routeGeneratorForm.start_latitude)
-        const longitude = Number(routeGeneratorForm.start_longitude)
-
-        if (isValidMapCoordinate({ latitude, longitude })) {
-            return { latitude, longitude, name: 'Startpunkt' }
-        }
-    }
-
-    return {
-        latitude: safeMapView.value.latitude,
-        longitude: safeMapView.value.longitude,
-        name: 'Kartenmitte',
-    }
-})
-
-const routeGeneratorDestinationPoint = computed(() => {
-    const latitude = Number(routeGeneratorForm.destination_latitude)
-    const longitude = Number(routeGeneratorForm.destination_longitude)
-
-    if (!isValidMapCoordinate({ latitude, longitude })) {
-        return null
-    }
-
-    return { latitude, longitude, name: 'Ziel' }
-})
-
-const routeGeneratorSummary = computed(() => ({
-    distance: `${routeGeneratorTargetDistanceKm.value.toFixed(routeGeneratorTargetDistanceKm.value < 10 ? 1 : 0)} km`,
-    duration: routeGeneratorForm.target_mode === 'duration'
-        ? `${Number(routeGeneratorForm.duration_minutes) || 45} min`
-        : `ca. ${routeGeneratorEstimatedMinutes.value} min`,
-    durationLabel: routeGeneratorForm.target_mode === 'duration' ? 'Ziel-Dauer' : 'Geschätzte Dauer',
-    distanceLabel: routeGeneratorForm.target_mode === 'duration' ? 'Geschätzte Distanz' : 'Ziel-Distanz',
-    speed: `${routeGeneratorTargetSpeedKmh.value.toFixed(1)} km/h`,
-    pace: routeGeneratorPaceLabel.value,
-    surface: optionLabel(routeGeneratorSurfaceOptions, routeGeneratorForm.surface, 'Egal'),
-    environment: optionLabel(routeGeneratorEnvironmentOptions, routeGeneratorForm.environment, 'Egal'),
-    elevation: optionLabel(routeGeneratorElevationOptions, routeGeneratorForm.elevation, 'Gemischt'),
-    difficulty: optionLabel(routeGeneratorDifficultyOptions, routeGeneratorForm.difficulty, 'Leicht'),
-}))
-
-const generatedRouteActualSummary = computed(() => {
-    if (!generatedRouteMetrics.value) {
-        return null
-    }
-
-    const quality = generatedRouteMetrics.value.quality || {}
-    const fallbackBacktrackPercent = Number(generatedRouteMetrics.value.route_shape?.backtrack_ratio || 0) * 100
-
-    return {
-        distance: formatDistance(generatedRouteMetrics.value.distance_meters),
-        duration: formatDuration(generatedRouteMetrics.value.estimated_duration_seconds),
-        status: generatedRouteMetrics.value.routing_status || 'estimated',
-        provider: generatedRouteMetrics.value.routing_provider || 'local',
-        geometryPoints: generatedRouteMetrics.value.geometry_point_count || generatedRouteGeometryPoints.value.length,
-        qualityScore: quality.score ?? null,
-        qualityLabel: quality.label || '-',
-        targetDelta: formatDistance(quality.target_delta_meters || generatedRouteMetrics.value.target_delta_meters || 0),
-        backtrackPercent: quality.backtrack_percent ?? fallbackBacktrackPercent,
-        shapeAcceptable: quality.shape_acceptable ?? generatedRouteMetrics.value.route_shape?.acceptable ?? false,
-    }
-})
-
-const generatedRouteCuePreview = computed(() => generatedRouteNavigationCues.value.slice(0, 6))
-
-const setActiveTab = (key) => {
-    activeTab.value = key
-}
-
-const handlePlaceImageUploads = (event) => {
-    placeImageUploads.value = Array.from(event.target.files || []).slice(0, 6)
-}
-
-const addWaypoint = () => {
-    draftRouteGeometryPoints.value = []
-    waypointRows.value.push({
-        name: t('sport_map.routes.point_name', { number: waypointRows.value.length + 1 }),
-        latitude: '',
-        longitude: '',
-        elevation_m: '',
-    })
-}
-
-const removeWaypoint = (index) => {
-    if (waypointRows.value.length <= 2) return
-
-    draftRouteGeometryPoints.value = []
-    waypointRows.value.splice(index, 1)
-}
-
-const setWaypointFromMap = (coordinate) => {
-    draftRouteGeometryPoints.value = []
-    const emptyIndex = waypointRows.value.findIndex((point) => point.latitude === '' || point.longitude === '')
-    const nextIndex = emptyIndex >= 0 ? emptyIndex : waypointRows.value.length
-
-    if (emptyIndex < 0) {
-        addWaypoint()
-    }
-
-    waypointRows.value[nextIndex].latitude = coordinate.latitude.toFixed(7)
-    waypointRows.value[nextIndex].longitude = coordinate.longitude.toFixed(7)
-    waypointRows.value[nextIndex].name = waypointRows.value[nextIndex].name || t('sport_map.routes.point_name', { number: nextIndex + 1 })
-    manualMapPointStatus.value = `Routenpunkt ${nextIndex + 1} wurde aus der Karte übernommen.`
-}
-
-const removeRouteWaypointFromMap = (index) => {
-    if (!waypointRows.value[index]) return
-
-    draftRouteGeometryPoints.value = []
-
-    if (waypointRows.value.length > 2) {
-        waypointRows.value.splice(index, 1)
-    } else {
-        waypointRows.value[index].latitude = ''
-        waypointRows.value[index].longitude = ''
-        waypointRows.value[index].elevation_m = ''
-    }
-
-    manualMapPointStatus.value = 'Routenpunkt wurde entfernt.'
-}
-
-const removeLastRouteWaypoint = () => {
-    const lastIndex = [...waypointRows.value]
-        .map((point, index) => ({ point, index }))
-        .filter(({ point }) => point.latitude !== '' && point.longitude !== '')
-        .at(-1)?.index
-
-    if (lastIndex === undefined) return
-
-    removeRouteWaypointFromMap(lastIndex)
-}
-
-const resetRouteWaypoints = () => {
-    waypointRows.value = createDefaultWaypoints()
-    draftRouteGeometryPoints.value = []
-    manualMapPointStatus.value = 'Routenpunkte wurden zurückgesetzt.'
-}
-
-const setGeneratorStep = (step) => {
-    routeGeneratorStep.value = clamp(step, 1, 3)
-}
-
-const setRouteGeneratorStartMode = (mode) => {
-    routeGeneratorForm.start_mode = mode
-
-    if (mode === 'current_location') {
-        useCurrentLocationForGenerator()
-    }
-}
-
-const setRouteGeneratorType = (type) => {
-    routeGeneratorForm.route_type = type
-    routeGeneratorMapTarget.value = type === 'point_to_point' ? 'destination' : 'start'
-    generatedRoutePoints.value = []
-    generatedRouteGeometryPoints.value = []
-    generatedRouteMetrics.value = null
-    generatedRouteNavigationCues.value = []
-    routeGeneratorStatus.value = type === 'point_to_point'
-        ? 'Setze jetzt den Zielpunkt auf der Karte oder per Koordinaten.'
-        : 'Rundroute aktiv: Kartenklick setzt den Startpunkt.'
-}
-
-const setGeneratorStartFromCoordinate = (coordinate, label = 'Startpunkt') => {
-    routeGeneratorForm.start_mode = 'manual'
-    routeGeneratorForm.start_latitude = Number(coordinate.latitude).toFixed(7)
-    routeGeneratorForm.start_longitude = Number(coordinate.longitude).toFixed(7)
-    routeGeneratorStatus.value = `${label} wurde gesetzt.`
-    manualMapPointStatus.value = `${label} wurde für den Routengenerator übernommen.`
-
-    if (routeGeneratorForm.route_type === 'point_to_point') {
-        routeGeneratorMapTarget.value = 'destination'
-    }
-}
-
-const setGeneratorDestinationFromCoordinate = (coordinate, label = 'Zielpunkt') => {
-    routeGeneratorForm.destination_latitude = Number(coordinate.latitude).toFixed(7)
-    routeGeneratorForm.destination_longitude = Number(coordinate.longitude).toFixed(7)
-    routeGeneratorStatus.value = `${label} wurde gesetzt.`
-    manualMapPointStatus.value = `${label} wurde für die Zielroute übernommen.`
-}
-
-const setGeneratorDestinationFromMapCenter = () => {
-    setGeneratorDestinationFromCoordinate(safeMapView.value, 'Kartenmitte als Ziel')
-}
-
-const clearGeneratorDestination = () => {
-    routeGeneratorForm.destination_latitude = ''
-    routeGeneratorForm.destination_longitude = ''
-    routeGeneratorStatus.value = 'Zielpunkt wurde entfernt.'
-    manualMapPointStatus.value = routeGeneratorStatus.value
-}
-
-const useCurrentLocationForGenerator = () => {
-    routeGeneratorStatus.value = 'Standort wird ermittelt...'
-
-    if (!navigator.geolocation) {
-        routeGeneratorStatus.value = 'Standort ist in diesem Browser nicht verfügbar.'
-        return
-    }
-
-    navigator.geolocation.getCurrentPosition((position) => {
-        const point = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy_m: Math.round(position.coords.accuracy || 0),
-            name: 'Mein Standort',
-        }
-
-        if (!isValidMapCoordinate(point)) {
-            routeGeneratorStatus.value = 'Standort konnte nicht verwendet werden.'
-            return
-        }
-
-        currentLocationPoint.value = point
-        routeGeneratorForm.start_mode = 'current_location'
-        mapView.value.latitude = point.latitude
-        mapView.value.longitude = point.longitude
-        mapView.value.zoom = Math.max(safeMapView.value.zoom, 15)
-        mapView.value.userChanged = true
-        routeGeneratorStatus.value = point.accuracy_m
-            ? `Startpunkt gesetzt. Genauigkeit ca. ${point.accuracy_m} m.`
-            : 'Startpunkt wurde auf deinen Standort gesetzt.'
-    }, () => {
-        routeGeneratorStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung prüfen.'
-    }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 15000,
-    })
-}
-
-const generatedRouteTitle = () => routeGeneratorForm.title
-    || `${optionLabel(routeGeneratorRouteTypes, routeGeneratorForm.route_type, 'Route')} ${routeGeneratorSummary.value.distance}`
-
-const routeGeometryToPoints = (geometry) => {
-    const coordinates = geometry?.coordinates
-
-    if (!Array.isArray(coordinates)) {
-        return []
-    }
-
-    return coordinates
-        .filter((coordinate) => Array.isArray(coordinate) && coordinate.length >= 2)
-        .map((coordinate, index) => ({
-            longitude: Number(coordinate[0]),
-            latitude: Number(coordinate[1]),
-            name: `Wegpunkt ${index + 1}`,
-            source: 'generator_geometry',
-        }))
-        .filter(isValidMapCoordinate)
-}
-
-const generatorWaypointName = (index, isLast) => {
-    if (index === 0) return 'Start'
-    if (isLast && routeGeneratorForm.route_type === 'roundtrip') return 'Zurück zum Start'
-
-    return `Routenpunkt ${index + 1}`
-}
-
-const routeProposalPayload = (waypoints = null) => {
-    const start = routeGeneratorStartPoint.value
-    const destination = routeGeneratorDestinationPoint.value
-    const effectiveWaypoints = waypoints || (
-        routeGeneratorForm.route_type === 'point_to_point' && isValidMapCoordinate(start) && isValidMapCoordinate(destination)
-            ? [
-                {
-                    name: start.name || 'Start',
-                    latitude: start.latitude,
-                    longitude: start.longitude,
-                },
-                {
-                    name: destination.name || 'Ziel',
-                    latitude: destination.latitude,
-                    longitude: destination.longitude,
-                },
-            ]
-            : null
-    )
-
-    return {
-        title: routeGeneratorForm.title,
-        sport_type: routeGeneratorForm.sport_type,
-        route_type: routeGeneratorForm.route_type,
-        target_mode: routeGeneratorForm.target_mode,
-        distance_km: routeGeneratorTargetDistanceKm.value,
-        duration_minutes: routeGeneratorForm.duration_minutes,
-        surface: routeGeneratorForm.surface,
-        environment: routeGeneratorForm.environment,
-        elevation: routeGeneratorForm.elevation,
-        difficulty: routeGeneratorForm.difficulty,
-        low_traffic: routeGeneratorForm.low_traffic,
-        lit: routeGeneratorForm.lit,
-        water_breaks: routeGeneratorForm.water_breaks,
-        include_places: routeGeneratorForm.include_places,
-        avoid_places: routeGeneratorForm.avoid_places,
-        variant_seed: routeGeneratorVariantSeed.value,
-        start: isValidMapCoordinate(start) ? {
-            name: start.name || 'Start',
-            latitude: start.latitude,
-            longitude: start.longitude,
-        } : null,
-        waypoints: effectiveWaypoints,
-    }
-}
-
-const refreshRouteGeneratorVariant = () => {
-    routeGeneratorVariantSeed.value = Date.now() + Math.floor(Math.random() * 1000000)
-}
-
-const applyRouteProposal = (proposal) => {
-    const waypoints = Array.isArray(proposal?.waypoints) ? proposal.waypoints : []
-    const geometryPoints = routeGeometryToPoints(proposal?.route_geometry)
-    const metrics = proposal?.metrics || {}
-
-    generatedRoutePoints.value = waypoints
-        .filter(isValidMapCoordinate)
-        .map((point, index, allPoints) => ({
-            ...point,
-            name: point.name || generatorWaypointName(index, index === allPoints.length - 1),
-            source: 'generator_draft',
-            sourceIndex: index,
-            removable: index > 0 && index < allPoints.length - 1,
-        }))
-
-    generatedRouteGeometryPoints.value = geometryPoints
-    generatedRouteMetrics.value = {
-        ...metrics,
-        distance_meters: proposal?.distance_meters || 0,
-        estimated_duration_seconds: proposal?.estimated_duration_seconds || 0,
-        geometry_point_count: metrics.geometry_point_count || geometryPoints.length,
-    }
-    generatedRouteNavigationCues.value = Array.isArray(proposal?.navigation_cues) ? proposal.navigation_cues : []
-
-    routeGeneratorStep.value = 3
-
-    if (metrics.routing_status === 'routed' && geometryPoints.length > 2) {
-        routeGeneratorStatus.value = `Route wurde auf echten Wegen berechnet: ${formatDistance(proposal.distance_meters)}, ${formatDuration(proposal.estimated_duration_seconds)}.`
-    } else {
-        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz ändern oder Routing-Konfiguration prüfen.'
-    }
-
-    manualMapPointStatus.value = routeGeneratorStatus.value
-}
-
-const requestRouteProposal = async (waypoints = null) => {
-    isGeneratingRoute.value = true
-    routeGeneratorStatus.value = 'Route wird auf echten Wegen berechnet...'
-
-    try {
-        const response = await window.axios.post(route('auth.sport-route-proposals.store'), routeProposalPayload(waypoints))
-        applyRouteProposal(response.data?.data)
-    } catch (error) {
-        routeGeneratorStatus.value = error.response?.data?.errors?.route_generation?.[0]
-            || error.response?.data?.message
-            || 'Route konnte nicht berechnet werden. Bitte prüfe Startpunkt, Distanz und Internetverbindung.'
-    } finally {
-        isGeneratingRoute.value = false
-    }
-}
-
-const generateRouteProposal = () => {
-    if (isGeneratingRoute.value) return
-
-    if (!routeGenerationAccess.value.available) {
-        routeGeneratorStatus.value = routeGenerationAccess.value.reason || 'Automatische Routengenerierung ist in deinem aktuellen Plan nicht verfügbar.'
-        return
-    }
-
-    if (!isValidMapCoordinate(routeGeneratorStartPoint.value)) {
-        routeGeneratorStatus.value = 'Bitte zuerst einen gültigen Startpunkt wählen.'
-        return
-    }
-
-    if (routeGeneratorForm.route_type === 'point_to_point' && !isValidMapCoordinate(routeGeneratorDestinationPoint.value)) {
-        routeGeneratorStatus.value = 'Bitte für "Einmal zum Ziel" zuerst einen Zielpunkt auf der Karte oder per Koordinaten setzen.'
-        routeGeneratorStep.value = 1
-        routeGeneratorMapTarget.value = 'destination'
-        return
-    }
-
-    refreshRouteGeneratorVariant()
-    requestRouteProposal()
-}
-
-const removeGeneratedRoutePoint = (index) => {
-    if (!generatedRoutePoints.value[index]) return
-
-    if (generatedRoutePoints.value.length <= 2) {
-        generatedRoutePoints.value = []
-        generatedRouteGeometryPoints.value = []
-        generatedRouteMetrics.value = null
-        routeGeneratorStatus.value = 'Routenvorschlag wurde entfernt.'
-        return
-    }
-
-    generatedRoutePoints.value.splice(index, 1)
-    requestRouteProposal(generatedRoutePoints.value.map((point, waypointIndex, allPoints) => ({
-        name: point.name || generatorWaypointName(waypointIndex, waypointIndex === allPoints.length - 1),
-        latitude: point.latitude,
-        longitude: point.longitude,
-        elevation_m: point.elevation_m ?? '',
-    })))
-}
-
-const resetGeneratedRoute = () => {
-    generatedRoutePoints.value = []
-    generatedRouteGeometryPoints.value = []
-    generatedRouteMetrics.value = null
-    generatedRouteNavigationCues.value = []
-    refreshRouteGeneratorVariant()
-    routeGeneratorStatus.value = 'Routenvorschlag wurde zurückgesetzt.'
-    manualMapPointStatus.value = routeGeneratorStatus.value
-}
-
-const applyGeneratedRouteToPlanner = () => {
-    if (generatedRoutePoints.value.length < 2) {
-        routeGeneratorStatus.value = 'Bitte zuerst eine Route generieren.'
-        return
-    }
-
-    routeForm.title = generatedRouteTitle()
-    routeForm.sport_type = routeGeneratorForm.sport_type
-    routeForm.difficulty = routeGeneratorForm.difficulty === 'hard' ? 'hard' : routeGeneratorForm.difficulty === 'moderate' ? 'moderate' : 'easy'
-    routeForm.surface = routeGeneratorForm.surface === 'any' ? '' : routeGeneratorForm.surface
-    routeForm.description = [
-        generatedRouteActualSummary.value
-            ? `Generiert mit Airmius auf echten Wegen: ${generatedRouteActualSummary.value.distance}, ca. ${generatedRouteActualSummary.value.duration}.`
-            : `Generiert mit Airmius: ${routeGeneratorSummary.value.distance}, ca. ${routeGeneratorSummary.value.duration}.`,
-        `Untergrund: ${routeGeneratorSummary.value.surface}; Umgebung: ${routeGeneratorSummary.value.environment}; Steigung: ${routeGeneratorSummary.value.elevation}.`,
-        routeGeneratorForm.low_traffic ? 'Verkehrsarme Strecke bevorzugt.' : '',
-        routeGeneratorForm.lit ? 'Beleuchtete Wege bevorzugt.' : '',
-        routeGeneratorForm.water_breaks ? 'Trink- und Pausenpunkte gewünscht.' : '',
-        routeGeneratorForm.include_places ? `Lieblingsorte: ${routeGeneratorForm.include_places}.` : '',
-        routeGeneratorForm.avoid_places ? `Vermeiden: ${routeGeneratorForm.avoid_places}.` : '',
-    ].filter(Boolean).join('\n')
-    waypointRows.value = generatedRoutePoints.value.map((point, index) => ({
-        name: point.name || generatorWaypointName(index, index === generatedRoutePoints.value.length - 1),
-        latitude: Number(point.latitude).toFixed(7),
-        longitude: Number(point.longitude).toFixed(7),
-        elevation_m: point.elevation_m ?? '',
-    }))
-    draftRouteGeometryPoints.value = generatedRouteGeometryPoints.value
-    routeForm.route_geometry = generatedRouteGeometryPoints.value.length >= 2
-        ? {
-            type: 'LineString',
-            coordinates: generatedRouteGeometryPoints.value.map((point) => [
-                Number(point.longitude),
-                Number(point.latitude),
-            ]),
-        }
-        : null
-    routeForm.navigation_cues = generatedRouteNavigationCues.value
-    routeForm.distance_meters = generatedRouteMetrics.value?.distance_meters || null
-    routeForm.estimated_duration_seconds = generatedRouteMetrics.value?.estimated_duration_seconds || null
-    routeForm.elevation_gain_meters = generatedRouteMetrics.value?.elevation_gain_meters || 0
-    routeForm.elevation_loss_meters = generatedRouteMetrics.value?.elevation_loss_meters || 0
-    routeForm.metrics = generatedRouteMetrics.value
-    activeTab.value = 'routes'
-    manualMapPointStatus.value = 'Routenvorschlag wurde in die Routenplanung übernommen.'
-}
-
-const saveRoute = () => {
-    routeForm.waypoints = cleanedWaypoints()
-
-    if (draftRouteGeometryPoints.value.length < 2) {
-        routeForm.route_geometry = null
-        routeForm.navigation_cues = []
-        routeForm.distance_meters = null
-        routeForm.estimated_duration_seconds = null
-        routeForm.elevation_gain_meters = null
-        routeForm.elevation_loss_meters = null
-        routeForm.metrics = null
-    } else if (!routeForm.route_geometry) {
-        routeForm.route_geometry = {
-            type: 'LineString',
-            coordinates: draftRouteGeometryPoints.value.map((point) => [
-                Number(point.longitude),
-                Number(point.latitude),
-            ]),
-        }
-    }
-
-    routeForm.post(route('auth.sport-routes.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            routeForm.reset()
-            routeForm.sport_type = 'running'
-            routeForm.visibility = 'private'
-            routeForm.difficulty = 'moderate'
-            routeForm.route_geometry = null
-            routeForm.navigation_cues = []
-            routeForm.distance_meters = null
-            routeForm.estimated_duration_seconds = null
-            routeForm.elevation_gain_meters = null
-            routeForm.elevation_loss_meters = null
-            routeForm.metrics = null
-            waypointRows.value = createDefaultWaypoints()
-            draftRouteGeometryPoints.value = []
-        },
-    })
-}
-
-const clearTrackingTimer = () => {
-    if (trackingTimer !== null) {
-        window.clearInterval(trackingTimer)
-        trackingTimer = null
-    }
-}
-
-const startTrackingTimer = () => {
-    clearTrackingTimer()
-    trackingNow.value = Date.now()
-    trackingTimer = window.setInterval(() => {
-        trackingNow.value = Date.now()
-    }, 1000)
-}
-
-const startTracking = () => {
-    trackingError.value = ''
-
-    if (isTracking.value) return
-
-    if (!navigator.geolocation) {
-        trackingError.value = t('sport_map.tracks.location_unsupported')
-        return
-    }
-
-    trackForm.title = trackForm.title || defaultTrackTitle()
-    trackingStartedAt.value = trackingStartedAt.value || new Date().toISOString()
-    isTracking.value = true
-    startTrackingTimer()
-
-    watchId = navigator.geolocation.watchPosition((position) => {
-        trackingPoints.value.push({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            elevation_m: position.coords.altitude,
-            accuracy_m: position.coords.accuracy,
-            recorded_at: new Date(position.timestamp || Date.now()).toISOString(),
-        })
-    }, () => {
-        trackingError.value = t('sport_map.tracks.location_error')
-        stopTracking()
-    }, {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 20000,
-    })
-}
-
-const stopTracking = () => {
-    if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId)
-        watchId = null
-    }
-
-    isTracking.value = false
-    clearTrackingTimer()
-}
-
-const addManualTrackPoint = (coordinate) => {
-    trackingPoints.value.push({
-        latitude: coordinate.latitude,
-        longitude: coordinate.longitude,
-        elevation_m: null,
-        accuracy_m: null,
-        recorded_at: new Date().toISOString(),
-    })
-    trackingStartedAt.value = trackingStartedAt.value || new Date().toISOString()
-    manualMapPointStatus.value = `Trackpunkt ${trackingPoints.value.length} wurde manuell gesetzt.`
-}
-
-const removeTrackPointFromMap = (index) => {
-    if (!trackingPoints.value[index]) return
-
-    trackingPoints.value.splice(index, 1)
-    manualMapPointStatus.value = 'Trackpunkt wurde entfernt.'
-
-    if (!trackingPoints.value.length && !isTracking.value) {
-        trackingStartedAt.value = null
-    }
-}
-
-const resetTrackPoints = () => {
-    stopTracking()
-    trackingPoints.value = []
-    trackingStartedAt.value = null
-    trackingError.value = ''
-    manualMapPointStatus.value = 'Track wurde zurückgesetzt.'
-}
-
-const deleteCurrentTrackDraft = () => {
-    resetTrackPoints()
-    closeTrackingFullscreen()
-}
-
-const startTrackEdit = (track) => {
-    editingTrackId.value = track.id
-    editTrackForm.title = track.title || ''
-    editTrackForm.sport_type = track.sport_type || 'running'
-    editTrackForm.clearErrors()
-}
-
-const cancelTrackEdit = () => {
-    editingTrackId.value = null
-    editTrackForm.reset()
-    editTrackForm.clearErrors()
-}
-
-const updateSavedTrack = (track) => {
-    editTrackForm.put(route('auth.sport-tracks.update', track.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            editingTrackId.value = null
-            editTrackForm.reset()
-        },
-    })
-}
-
-const saveTrack = () => {
-    stopTracking()
-
-    trackForm.title = trackForm.title || defaultTrackTitle()
-    trackForm.track_points = trackingPoints.value
-    trackForm.started_at = trackingStartedAt.value
-    trackForm.ended_at = new Date().toISOString()
-    trackForm.status = 'completed'
-    trackForm.post(route('auth.sport-tracks.store'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            trackForm.reset()
-            trackForm.sport_type = 'running'
-            trackForm.status = 'completed'
-            trackingPoints.value = []
-            trackingStartedAt.value = null
-            trackingFullscreen.value = false
-        },
-    })
-}
-
-const useCurrentLocationForPlace = () => {
-    placeLocationError.value = ''
-    placeLocationStatus.value = 'Standort wird ermittelt...'
-
-    if (!navigator.geolocation) {
-        placeLocationError.value = t('sport_map.places.location_error')
-        placeLocationStatus.value = ''
-        return
-    }
-
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        placeForm.latitude = position.coords.latitude.toFixed(7)
-        placeForm.longitude = position.coords.longitude.toFixed(7)
-
-        try {
-            placeLocationStatus.value = 'Adresse wird gesucht...'
-            const params = new URLSearchParams({
-                format: 'jsonv2',
-                lat: placeForm.latitude,
-                lon: placeForm.longitude,
-                addressdetails: '1',
-            })
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
-                headers: { Accept: 'application/json' },
-            })
-
-            if (!response.ok) {
-                throw new Error('reverse geocode failed')
-            }
-
-            const result = await response.json()
-            const address = result.address || {}
-            placeForm.city = address.city || address.town || address.village || address.municipality || placeForm.city
-            placeForm.address = [
-                address.road,
-                address.house_number,
-            ].filter(Boolean).join(' ') || result.display_name || placeForm.address
-            placeForm.country_code = String(address.country_code || placeForm.country_code || 'DE').toUpperCase()
-            placeLocationStatus.value = 'Standort und Adresse wurden übernommen.'
-        } catch (error) {
-            placeLocationStatus.value = 'Standort wurde übernommen, Adresse bitte manuell ergänzen.'
-        }
-    }, () => {
-        placeLocationError.value = t('sport_map.places.location_error')
-        placeLocationStatus.value = ''
-    }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 15000,
-    })
-}
-
-const showCurrentLocationOnMap = () => {
-    manualMapPointStatus.value = 'Standort wird ermittelt...'
-
-    if (!navigator.geolocation) {
-        manualMapPointStatus.value = 'Standort ist in diesem Browser nicht verfügbar.'
-        return
-    }
-
-    navigator.geolocation.getCurrentPosition((position) => {
-        const point = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy_m: Math.round(position.coords.accuracy || 0),
-            name: 'Mein Standort',
-        }
-
-        if (!isValidMapCoordinate(point)) {
-            manualMapPointStatus.value = 'Standort konnte nicht auf der Karte angezeigt werden.'
-            return
-        }
-
-        currentLocationPoint.value = point
-        mapView.value.latitude = point.latitude
-        mapView.value.longitude = point.longitude
-        mapView.value.zoom = Math.max(safeMapView.value.zoom, 15)
-        mapView.value.userChanged = true
-        manualMapPointStatus.value = point.accuracy_m
-            ? `Dein Standort wird angezeigt. Genauigkeit ca. ${point.accuracy_m} m.`
-            : 'Dein Standort wird auf der Karte angezeigt.'
-
-        if (activeTab.value === 'generator') {
-            routeGeneratorForm.start_mode = 'current_location'
-            routeGeneratorStatus.value = 'Dein Standort ist jetzt der Startpunkt für die Routengenerierung.'
-        }
-    }, () => {
-        manualMapPointStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung prüfen.'
-    }, {
-        enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 15000,
-    })
-}
-
-const setPlaceFromMap = (coordinate) => {
-    placeForm.latitude = coordinate.latitude.toFixed(7)
-    placeForm.longitude = coordinate.longitude.toFixed(7)
-    placeLocationStatus.value = 'Koordinaten wurden aus der Karte übernommen.'
-    placeLocationError.value = ''
-    manualMapPointStatus.value = 'Sportplatz-Position wurde aus der Karte übernommen.'
-}
-
-const clearPlaceMapPoint = () => {
-    placeForm.latitude = ''
-    placeForm.longitude = ''
-    placeLocationStatus.value = 'Sportplatz-Position wurde entfernt.'
-    manualMapPointStatus.value = 'Sportplatz-Position wurde entfernt.'
-}
-
-const removeMapPoint = (point) => {
-    if (point.source === 'generator_draft') {
-        removeGeneratedRoutePoint(point.sourceIndex)
-        return
-    }
-
-    if (point.source === 'route_draft') {
-        removeRouteWaypointFromMap(point.sourceIndex)
-        return
-    }
-
-    if (point.source === 'track_draft') {
-        removeTrackPointFromMap(point.sourceIndex)
-        return
-    }
-
-    if (point.source === 'place_draft') {
-        clearPlaceMapPoint()
-    }
-}
-
-const removeLastActiveMapPoint = () => {
-    if (activeMapPointCount.value === 0) {
-        manualMapPointStatus.value = 'Kein Punkt zum Entfernen vorhanden.'
-        return
-    }
-
-    if (activeTab.value === 'generator') {
-        removeGeneratedRoutePoint(generatedRoutePoints.value.length - 2)
-        return
-    }
-
-    if (activeTab.value === 'routes') {
-        removeLastRouteWaypoint()
-        return
-    }
-
-    if (activeTab.value === 'tracks') {
-        removeTrackPointFromMap(trackingPoints.value.length - 1)
-        return
-    }
-
-    if (activeTab.value === 'places') {
-        clearPlaceMapPoint()
-    }
-}
-
-const resetActiveMapPoints = () => {
-    if (activeMapPointCount.value === 0) {
-        resetMapView()
-        manualMapPointStatus.value = 'Karte wurde zentriert. Es gibt aktuell keine Einträge zum Zurücksetzen.'
-        return
-    }
-
-    if (activeTab.value === 'generator') {
-        resetGeneratedRoute()
-        return
-    }
-
-    if (activeTab.value === 'routes') {
-        resetRouteWaypoints()
-        return
-    }
-
-    if (activeTab.value === 'tracks') {
-        resetTrackPoints()
-        return
-    }
-
-    if (activeTab.value === 'places') {
-        clearPlaceMapPoint()
-    }
-}
-
-const savePlace = () => {
-    placeForm.sport_types = splitList(placeSportTypesText.value)
-    placeForm.amenities = splitList(placeAmenitiesText.value)
-    placeForm.surfaces = splitList(placeSurfacesText.value)
-    placeForm.gallery_images = splitList(placeImageUrlsText.value)
-    placeForm.image_uploads = placeImageUploads.value
-    placeForm.post(route('auth.sport-places.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            placeForm.reset()
-            placeForm.type = 'football_pitch'
-            placeForm.country_code = 'DE'
-            placeForm.visibility = 'public'
-            placeSportTypesText.value = ''
-            placeAmenitiesText.value = ''
-            placeSurfacesText.value = ''
-            placeImageUrlsText.value = ''
-            placeImageUploads.value = []
-            placeLocationError.value = ''
-            placeLocationStatus.value = ''
-        },
-    })
-}
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
-
-const normalizeLongitude = (longitude) => {
-    const value = Number(longitude)
-
-    if (!Number.isFinite(value)) return DEFAULT_CENTER.longitude
-
-    return ((((value + 180) % 360) + 360) % 360) - 180
-}
-
-const lonToWorldX = (longitude, zoom) => ((normalizeLongitude(longitude) + 180) / 360) * TILE_SIZE * (2 ** zoom)
-
-const latToWorldY = (latitude, zoom) => {
-    const safeLatitude = clamp(Number(latitude), -85.05112878, 85.05112878)
-    const sine = Math.sin((safeLatitude * Math.PI) / 180)
-
-    return (0.5 - Math.log((1 + sine) / (1 - sine)) / (4 * Math.PI)) * TILE_SIZE * (2 ** zoom)
-}
-
-const autoMapCenter = computed(() => {
-    if (!bounds.value) return DEFAULT_CENTER
-
-    return {
-        latitude: (Number(bounds.value.north) + Number(bounds.value.south)) / 2,
-        longitude: (Number(bounds.value.east) + Number(bounds.value.west)) / 2,
-    }
-})
-
-const autoMapZoom = computed(() => {
-    if (!bounds.value) return DEFAULT_ZOOM
-
-    const latitudeSpan = Math.abs(Number(bounds.value.north) - Number(bounds.value.south))
-    const longitudeSpan = Math.abs(Number(bounds.value.east) - Number(bounds.value.west))
-
-    if (latitudeSpan < 0.0001 && longitudeSpan < 0.0001) return 12
-
-    const worldLonSpan = Math.max(((Number(bounds.value.east) - Number(bounds.value.west)) / 360) * TILE_SIZE, 0.0001)
-    const worldLatSpan = Math.max(Math.abs(latToWorldY(bounds.value.south, 0) - latToWorldY(bounds.value.north, 0)), 0.0001)
-    const zoomX = Math.floor(Math.log2((MAP_WIDTH * 0.74) / worldLonSpan))
-    const zoomY = Math.floor(Math.log2((MAP_HEIGHT * 0.72) / worldLatSpan))
-
-    return clamp(Math.min(zoomX, zoomY), 2, 17)
-})
-
-const safeMapView = computed(() => ({
-    latitude: Number.isFinite(Number(mapView.value.latitude)) ? Number(mapView.value.latitude) : DEFAULT_CENTER.latitude,
-    longitude: Number.isFinite(Number(mapView.value.longitude)) ? Number(mapView.value.longitude) : DEFAULT_CENTER.longitude,
-    zoom: clamp(Math.round(Number(mapView.value.zoom) || DEFAULT_ZOOM), 2, 17),
-}))
-
-const mapProjection = computed(() => {
-    const zoom = safeMapView.value.zoom
-    const center = safeMapView.value
-
-    return {
-        zoom,
-        left: lonToWorldX(center.longitude, zoom) - MAP_WIDTH / 2,
-        top: latToWorldY(center.latitude, zoom) - MAP_HEIGHT / 2,
-    }
-})
-
-const tileUrlFromTemplate = (template, zoom, x, y) => template
-    .replace('{z}', String(zoom))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y))
-
-const tileUrl = (zoom, x, y) => tileUrlFromTemplate(tileTemplate.value, zoom, x, y)
-
-const handleTileLoad = () => {
-    visibleMapTileCount.value += 1
-}
-
-const handleTileError = (event) => {
-    event.currentTarget.style.display = 'none'
-    failedMapTileCount.value += 1
-
-    if (mapHasRealTiles.value) return
-
-    const visibleTileCount = Math.max(mapTiles.value.length, 1)
-    const currentSourceFailed = failedMapTileCount.value >= Math.min(visibleTileCount, 8)
-
-    if (!currentSourceFailed || activeTileSourceIndex.value >= tileSources.value.length - 1) return
-
-    activeTileSourceIndex.value += 1
-    failedMapTileCount.value = 0
-}
-
-const mapTiles = computed(() => {
-    const projection = mapProjection.value
-    const zoom = projection.zoom
-    const tilesPerAxis = 2 ** zoom
-    const startX = Math.floor(projection.left / TILE_SIZE) - 1
-    const endX = Math.floor((projection.left + MAP_WIDTH) / TILE_SIZE) + 1
-    const startY = Math.floor(projection.top / TILE_SIZE) - 1
-    const endY = Math.floor((projection.top + MAP_HEIGHT) / TILE_SIZE) + 1
-    const tiles = []
-
-    for (let rawX = startX; rawX <= endX; rawX += 1) {
-        const x = ((rawX % tilesPerAxis) + tilesPerAxis) % tilesPerAxis
-
-        for (let y = startY; y <= endY; y += 1) {
-            if (y < 0 || y >= tilesPerAxis) continue
-
-            tiles.push({
-                key: `${activeMapLayer.value}-${activeTileSourceIndex.value}-${zoom}-${rawX}-${y}`,
-                url: tileUrl(zoom, x, y),
-                style: {
-                    left: `${((rawX * TILE_SIZE - projection.left) / MAP_WIDTH) * 100}%`,
-                    top: `${((y * TILE_SIZE - projection.top) / MAP_HEIGHT) * 100}%`,
-                    width: `${(TILE_SIZE / MAP_WIDTH) * 100}%`,
-                    height: `${(TILE_SIZE / MAP_HEIGHT) * 100}%`,
-                },
-            })
-        }
-    }
-
-    return tiles
-})
-
-const mapOverlayTiles = computed(() => {
-    if (!mapOverlaySource.value?.url) return []
-
-    const projection = mapProjection.value
-    const zoom = projection.zoom
-    const tilesPerAxis = 2 ** zoom
-    const startX = Math.floor(projection.left / TILE_SIZE) - 1
-    const endX = Math.floor((projection.left + MAP_WIDTH) / TILE_SIZE) + 1
-    const startY = Math.floor(projection.top / TILE_SIZE) - 1
-    const endY = Math.floor((projection.top + MAP_HEIGHT) / TILE_SIZE) + 1
-    const tiles = []
-
-    for (let rawX = startX; rawX <= endX; rawX += 1) {
-        const x = ((rawX % tilesPerAxis) + tilesPerAxis) % tilesPerAxis
-
-        for (let y = startY; y <= endY; y += 1) {
-            if (y < 0 || y >= tilesPerAxis) continue
-
-            tiles.push({
-                key: `overlay-${activeMapLayer.value}-${zoom}-${rawX}-${y}`,
-                url: tileUrlFromTemplate(mapOverlaySource.value.url, zoom, x, y),
-                style: {
-                    left: `${((rawX * TILE_SIZE - projection.left) / MAP_WIDTH) * 100}%`,
-                    top: `${((y * TILE_SIZE - projection.top) / MAP_HEIGHT) * 100}%`,
-                    width: `${(TILE_SIZE / MAP_WIDTH) * 100}%`,
-                    height: `${(TILE_SIZE / MAP_HEIGHT) * 100}%`,
-                },
-            })
-        }
-    }
-
-    return tiles
-})
-
-const worldXToLon = (x, zoom) => normalizeLongitude((x / (TILE_SIZE * (2 ** zoom))) * 360 - 180)
-
-const worldYToLat = (y, zoom) => {
-    const n = Math.PI - (2 * Math.PI * y) / (TILE_SIZE * (2 ** zoom))
-
-    return (180 / Math.PI) * Math.atan(Math.sinh(n))
-}
-
-const coordinateFromMapEvent = (event) => {
-    const target = event.currentTarget
-    const rect = target.getBoundingClientRect()
-    const projection = mapProjection.value
-    const x = projection.left + ((event.clientX - rect.left) / rect.width) * MAP_WIDTH
-    const y = projection.top + ((event.clientY - rect.top) / rect.height) * MAP_HEIGHT
-
-    return {
-        latitude: clamp(worldYToLat(y, projection.zoom), -85.05112878, 85.05112878),
-        longitude: worldXToLon(x, projection.zoom),
-    }
-}
-
-const setMapCenterFromWorld = (worldX, worldY, zoom) => {
-    const nextZoom = clamp(Math.round(Number(zoom) || DEFAULT_ZOOM), 2, 17)
-    const nextLatitude = clamp(worldYToLat(worldY, nextZoom), -85.05112878, 85.05112878)
-    const nextLongitude = worldXToLon(worldX, nextZoom)
-
-    if (!Number.isFinite(nextLatitude) || !Number.isFinite(nextLongitude)) return
-
-    mapView.value.latitude = nextLatitude
-    mapView.value.longitude = nextLongitude
-    mapView.value.zoom = nextZoom
-    mapView.value.userChanged = true
-}
-
-const zoomMap = (direction, anchorEvent = null) => {
-    const currentZoom = safeMapView.value.zoom
-    const nextZoom = clamp(currentZoom + direction, 2, 17)
-
-    if (nextZoom === currentZoom) return
-
-    if (!anchorEvent) {
-        setMapCenterFromWorld(
-            lonToWorldX(mapView.value.longitude, nextZoom),
-            latToWorldY(mapView.value.latitude, nextZoom),
-            nextZoom,
-        )
-        return
-    }
-
-    const rect = anchorEvent.currentTarget.getBoundingClientRect()
-    const projection = mapProjection.value
-    const pointerXRatio = (anchorEvent.clientX - rect.left) / rect.width
-    const pointerYRatio = (anchorEvent.clientY - rect.top) / rect.height
-    const anchorWorldX = projection.left + pointerXRatio * MAP_WIDTH
-    const anchorWorldY = projection.top + pointerYRatio * MAP_HEIGHT
-    const scale = 2 ** (nextZoom - currentZoom)
-    const nextLeft = anchorWorldX * scale - pointerXRatio * MAP_WIDTH
-    const nextTop = anchorWorldY * scale - pointerYRatio * MAP_HEIGHT
-
-    setMapCenterFromWorld(nextLeft + MAP_WIDTH / 2, nextTop + MAP_HEIGHT / 2, nextZoom)
-}
-
-const resetMapView = () => {
-    mapView.value.latitude = autoMapCenter.value.latitude
-    mapView.value.longitude = autoMapCenter.value.longitude
-    mapView.value.zoom = autoMapZoom.value
-    mapView.value.userChanged = false
-    manualMapPointStatus.value = ''
-}
-
-const startMapDrag = (event) => {
-    if (event.button !== undefined && event.button !== 0) return
-
-    event.preventDefault()
-    clearMapTextSelection()
-
-    const projection = mapProjection.value
-    mapIsDragging.value = true
-    mapWasDragged.value = false
-    mapDragStart = {
-        clientX: event.clientX,
-        clientY: event.clientY,
-        centerX: projection.left + MAP_WIDTH / 2,
-        centerY: projection.top + MAP_HEIGHT / 2,
-        width: event.currentTarget.getBoundingClientRect().width,
-        height: event.currentTarget.getBoundingClientRect().height,
-        zoom: projection.zoom,
-    }
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-}
-
-const moveMapDrag = (event) => {
-    if (!mapIsDragging.value || !mapDragStart) return
-
-    event.preventDefault()
-    clearMapTextSelection()
-
-    mapPendingDragEvent = {
-        clientX: event.clientX,
-        clientY: event.clientY,
-    }
-
-    if (mapDragFrame !== null) return
-
-    mapDragFrame = requestAnimationFrame(() => {
-        mapDragFrame = null
-
-        if (!mapIsDragging.value || !mapDragStart || !mapPendingDragEvent) return
-
-        const deltaX = ((mapPendingDragEvent.clientX - mapDragStart.clientX) / mapDragStart.width) * MAP_WIDTH
-        const deltaY = ((mapPendingDragEvent.clientY - mapDragStart.clientY) / mapDragStart.height) * MAP_HEIGHT
-
-        if (Math.abs(deltaX) + Math.abs(deltaY) > 3) {
-            mapWasDragged.value = true
-        }
-
-        setMapCenterFromWorld(mapDragStart.centerX - deltaX, mapDragStart.centerY - deltaY, mapDragStart.zoom)
-    })
-}
-
-const endMapDrag = () => {
-    mapIsDragging.value = false
-    mapDragStart = null
-    mapPendingDragEvent = null
-    clearMapTextSelection()
-}
-
-const handleMapClick = (event) => {
-    if (mapWasDragged.value) {
-        mapWasDragged.value = false
-        return
-    }
-
-    const coordinate = coordinateFromMapEvent(event)
-
-    if (activeTab.value === 'generator') {
-        if (routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget.value === 'destination') {
-            setGeneratorDestinationFromCoordinate(coordinate, 'Zielpunkt')
-            return
-        }
-
-        setGeneratorStartFromCoordinate(coordinate, 'Startpunkt')
-        return
-    }
-
-    if (activeTab.value === 'routes') {
-        setWaypointFromMap(coordinate)
-        return
-    }
-
-    if (activeTab.value === 'tracks') {
-        addManualTrackPoint(coordinate)
-        return
-    }
-
-    if (activeTab.value === 'places') {
-        setPlaceFromMap(coordinate)
-    }
-}
-
-const markerStyle = (point) => {
-    const projection = mapProjection.value
-    const x = lonToWorldX(point.longitude, projection.zoom)
-    const y = latToWorldY(point.latitude, projection.zoom)
-
-    return {
-        left: `${((x - projection.left) / MAP_WIDTH) * 100}%`,
-        top: `${((y - projection.top) / MAP_HEIGHT) * 100}%`,
-    }
-}
-
-const fallbackMapLabelStyle = (label) => {
-    const style = markerStyle(label)
-    const left = Number(String(style.left).replace('%', ''))
-    const top = Number(String(style.top).replace('%', ''))
-    const visible = left > -10 && left < 110 && top > -10 && top < 110
-
-    return {
-        ...style,
-        opacity: visible ? 1 : 0,
-    }
-}
-
-const svgPoint = (point) => {
-    const style = markerStyle(point)
-
-    return [
-        Number(String(style.left).replace('%', '')),
-        Number(String(style.top).replace('%', '')),
-    ]
-}
-
-const polylinePoints = (points) => points
-    .filter((point) => Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude)))
-    .map((point) => svgPoint(point).join(','))
-    .join(' ')
-
-const distanceMeters = (points) => {
-    let distance = 0
-
-    for (let index = 1; index < points.length; index += 1) {
-        distance += haversine(points[index - 1], points[index])
-    }
-
-    return Math.round(distance)
-}
-
-const interpolateRoutePoint = (points, progressMeters) => {
-    const path = points.filter(isValidMapCoordinate)
-
-    if (!path.length) return null
-    if (path.length === 1 || progressMeters <= 0) return path[0]
-
-    let walked = 0
-
-    for (let index = 1; index < path.length; index += 1) {
-        const from = path[index - 1]
-        const to = path[index]
-        const segmentDistance = haversine(from, to)
-
-        if (walked + segmentDistance >= progressMeters) {
-            const ratio = segmentDistance <= 0 ? 0 : (progressMeters - walked) / segmentDistance
-
-            return {
-                latitude: Number(from.latitude) + ((Number(to.latitude) - Number(from.latitude)) * ratio),
-                longitude: Number(from.longitude) + ((Number(to.longitude) - Number(from.longitude)) * ratio),
-                name: 'Route-Vorschau',
-            }
-        }
-
-        walked += segmentDistance
-    }
-
-    return path[path.length - 1]
-}
-
-const cancelRoutePlaybackFrame = () => {
-    if (routePlaybackFrame !== null) {
-        cancelAnimationFrame(routePlaybackFrame)
-        routePlaybackFrame = null
-    }
-
-    routePlaybackLastTimestamp = null
-}
-
-const centerRoutePlaybackOnMap = (point) => {
-    if (!isValidMapCoordinate(point)) return
-
-    mapView.value.latitude = point.latitude
-    mapView.value.longitude = point.longitude
-    mapView.value.zoom = Math.max(safeMapView.value.zoom, 15)
-    mapView.value.userChanged = true
-}
-
-const routePlaybackMetersPerSecond = () => {
-    const speedKmh = routeGeneratorSpeedsKmh[activeRouteSportType.value] || routeGeneratorSpeedsKmh.other
-
-    return Math.max(0.4, speedKmh / 3.6) * routePlaybackSpeed.value
-}
-
-const tickRoutePlayback = (timestamp) => {
-    if (routePlaybackState.value !== 'playing') {
-        cancelRoutePlaybackFrame()
-        return
-    }
-
-    if (routePlaybackLastTimestamp === null) {
-        routePlaybackLastTimestamp = timestamp
-    }
-
-    const deltaSeconds = Math.min((timestamp - routePlaybackLastTimestamp) / 1000, 0.25)
-    routePlaybackLastTimestamp = timestamp
-    routePlaybackProgressMeters.value = Math.min(
-        routePlaybackTotalDistance.value,
-        routePlaybackProgressMeters.value + (routePlaybackMetersPerSecond() * deltaSeconds),
-    )
-
-    if (routePlaybackMarker.value) {
-        centerRoutePlaybackOnMap(routePlaybackMarker.value)
-    }
-
-    if (routePlaybackProgressMeters.value >= routePlaybackTotalDistance.value) {
-        routePlaybackState.value = 'finished'
-        routePlaybackStatus.value = 'Route-Vorschau beendet.'
-        cancelRoutePlaybackFrame()
-        return
-    }
-
-    routePlaybackFrame = requestAnimationFrame(tickRoutePlayback)
-}
-
-const startRoutePlayback = () => {
-    if (!routePlaybackCanStart.value) {
-        routePlaybackStatus.value = 'Bitte zuerst eine Route mit mindestens zwei Punkten planen oder generieren.'
-        return
-    }
-
-    if (routePlaybackState.value === 'finished' || routePlaybackProgressMeters.value >= routePlaybackTotalDistance.value) {
-        routePlaybackProgressMeters.value = 0
-    }
-
-    routePlaybackState.value = 'playing'
-    routePlaybackStatus.value = 'Route-Vorschau läuft.'
-    cancelRoutePlaybackFrame()
-
-    if (routePlaybackMarker.value) {
-        centerRoutePlaybackOnMap(routePlaybackMarker.value)
-    }
-
-    routePlaybackFrame = requestAnimationFrame(tickRoutePlayback)
-}
-
-const pauseRoutePlayback = () => {
-    if (routePlaybackState.value !== 'playing') return
-
-    routePlaybackState.value = 'paused'
-    routePlaybackStatus.value = 'Route-Vorschau pausiert.'
-    cancelRoutePlaybackFrame()
-}
-
-const resetRoutePlayback = (status = '') => {
-    cancelRoutePlaybackFrame()
-    routePlaybackState.value = 'idle'
-    routePlaybackProgressMeters.value = 0
-    routePlaybackStatus.value = status
-}
-
-const toggleRoutePlayback = () => {
-    if (routePlaybackState.value === 'playing') {
-        pauseRoutePlayback()
-        return
-    }
-
-    startRoutePlayback()
-}
-
-watch(routePlaybackPath, () => {
-    resetRoutePlayback()
-}, { deep: true })
-
-watch([autoMapCenter, autoMapZoom], ([center, zoom]) => {
-    if (mapView.value.userChanged) return
-
-    mapView.value.latitude = center.latitude
-    mapView.value.longitude = center.longitude
-    mapView.value.zoom = zoom
-}, { immediate: true })
-
-watch(activeMapLayer, () => {
-    activeTileSourceIndex.value = 0
-})
-
-watch([activeMapLayer, activeTileSourceIndex], () => {
-    visibleMapTileCount.value = 0
-    failedMapTileCount.value = 0
-})
-
-watch(trackingFullscreen, (isOpen) => {
-    if (typeof document === 'undefined') return
-
-    document.body.style.overflow = isOpen ? 'hidden' : ''
-})
-
-onUnmounted(() => {
-    stopTracking()
-    cancelRoutePlaybackFrame()
-    document.body.style.overflow = ''
-
-    if (mapDragFrame !== null) {
-        cancelAnimationFrame(mapDragFrame)
-    }
-})
+const {
+    t,
+    te,
+    catalogLabel,
+    cueText,
+    defaultTrackTitle,
+    estimateCalories,
+    formatCalories,
+    formatClockDuration,
+    formatDistance,
+    formatDuration,
+    formatPace,
+    formatPercent,
+    optionLabel,
+    placeTypeLabel,
+    qualityBadgeClass,
+    splitList,
+    sportLabel,
+    tabLabel,
+    trackAveragePaceLabel,
+    trackAverageSpeedLabel,
+    trackCaloriesLabel,
+    trackStatusLabel,
+    visibilityLabel,
+    activeTab,
+    selectedRouteId,
+    placeLocationError,
+    placeLocationStatus,
+    mapIsDragging,
+    mapWasDragged,
+    manualMapPointStatus,
+    currentLocationPoint,
+    routeGeneratorStep,
+    routeGeneratorStatus,
+    generatedRoutePoints,
+    generatedRouteGeometryPoints,
+    generatedRouteMetrics,
+    generatedRouteNavigationCues,
+    isGeneratingRoute,
+    routeGeneratorVariantSeed,
+    routeGeneratorMapTarget,
+    activeMapLayer,
+    activeTileSourceIndex,
+    visibleMapTileCount,
+    failedMapTileCount,
+    activeTrackingSlide,
+    addManualTrackPoint,
+    cancelTrackEdit,
+    cancelTrackingPointerSwipe,
+    cleanupTrackingSession,
+    closeTrackingFullscreen,
+    deleteCurrentTrackDraft,
+    editTrackForm,
+    editingTrackId,
+    endTrackingPointerSwipe,
+    endTrackingSwipe,
+    importTrackGpx,
+    isTracking,
+    nextTrackingSlide,
+    previousTrackingSlide,
+    removeTrackPointFromMap,
+    resetTrackPoints,
+    saveTrack,
+    selectTrackGpxFile,
+    setTrackingSlide,
+    startTrackEdit,
+    startTracking,
+    startTrackingFromMobile,
+    startTrackingPointerSwipe,
+    startTrackingSwipe,
+    stopTracking,
+    trackForm,
+    trackGpxImportForm,
+    trackingAnalysisMetrics,
+    trackingAveragePaceLabel,
+    trackingAverageSpeedLabel,
+    trackingCaloriesLabel,
+    trackingCompactMetrics,
+    trackingDesktopMetrics,
+    trackingDistance,
+    trackingElapsedLabel,
+    trackingError,
+    trackingFullscreen,
+    trackingLastAccuracyLabel,
+    trackingLiveStatusLabel,
+    trackingMobileMetrics,
+    trackingPoints,
+    trackingStartActionLabel,
+    trackingStartActionLongLabel,
+    updateSavedTrack,
+    TILE_SIZE,
+    MAP_WIDTH,
+    MAP_HEIGHT,
+    DEFAULT_CENTER,
+    DEFAULT_ZOOM,
+    mapView,
+    routeGeneratorForm,
+    placeForm,
+    placeSportTypesText,
+    placeAmenitiesText,
+    placeSurfacesText,
+    placeImageUrlsText,
+    placeImageUploads,
+    clearMapTextSelection,
+    isValidMapCoordinate,
+    addWaypoint,
+    cleanedWaypoints,
+    draftRouteGeometryPoints,
+    importRouteGpx,
+    removeLastRouteWaypoint,
+    removeRouteWaypointFromMap,
+    removeWaypoint,
+    resetRouteWaypoints,
+    routeForm,
+    routeGpxImportForm,
+    saveRoute,
+    selectRouteGpxFile,
+    setWaypointFromMap,
+    waypointRows,
+    draftPlacePoint,
+    activeGeneratorPoints,
+    selectedRoute,
+    routePreviewPoints,
+    routeGeometryPoints,
+    anchorRouteLinePoints,
+    routeLinePoints,
+    activeTrackPoints,
+    mapPoints,
+    mapBoundsPoints,
+    bounds,
+    routePolyline,
+    trackPolyline,
+    routePlaybackPath,
+    routePlaybackTotalDistance,
+    activeRouteSportType,
+    activeRouteEstimatedDurationSeconds,
+    routePlaybackBaseMetersPerSecond,
+    activeMapPointCount,
+    mapLayerOptions,
+    activeMapLayerOption,
+    tileSources,
+    defaultTileSource,
+    activeTileSource,
+    tileTemplate,
+    mapOverlaySource,
+    mapAttribution,
+    mapHasRealTiles,
+    mapStatusText,
+    activeMapInteractionHint,
+    placePreviewImages,
+    fallbackMapLabels,
+    tabs,
+    landingActions,
+    routeGeneratorTargetDistanceKm,
+    routeGeneratorEstimatedMinutes,
+    routeGeneratorDefaultSpeedKmh,
+    routeGenerationAccess,
+    routeGenerationLimitLabel,
+    routeGeneratorTargetSpeedKmh,
+    routeGeneratorPaceLabel,
+    routeGeneratorStartPoint,
+    routeGeneratorDestinationPoint,
+    routeGeneratorSummary,
+    generatedRouteActualSummary,
+    generatedRouteCuePreview,
+    setActiveTab,
+    handlePlaceImageUploads,
+    setGeneratorStep,
+    setRouteGeneratorStartMode,
+    setRouteGeneratorType,
+    setGeneratorStartFromCoordinate,
+    setGeneratorDestinationFromCoordinate,
+    setGeneratorDestinationFromMapCenter,
+    clearGeneratorDestination,
+    useCurrentLocationForGenerator,
+    generatedRouteTitle,
+    routeGeometryToPoints,
+    generatorWaypointName,
+    routeProposalPayload,
+    refreshRouteGeneratorVariant,
+    applyRouteProposal,
+    requestRouteProposal,
+    generateRouteProposal,
+    removeGeneratedRoutePoint,
+    resetGeneratedRoute,
+    applyGeneratedRouteToPlanner,
+    useCurrentLocationForPlace,
+    showCurrentLocationOnMap,
+    setPlaceFromMap,
+    clearPlaceMapPoint,
+    removeMapPoint,
+    removeLastActiveMapPoint,
+    resetActiveMapPoints,
+    savePlace,
+    autoMapCenter,
+    autoMapZoom,
+    safeMapView,
+    cleanupRoutePlayback,
+    resetRoutePlayback,
+    routePlaybackCanStart,
+    routePlaybackElapsedSeconds,
+    routePlaybackMarker,
+    routePlaybackProgressMeters,
+    routePlaybackProgressPercent,
+    routePlaybackRemainingSeconds,
+    routePlaybackSpeed,
+    routePlaybackState,
+    routePlaybackStatus,
+    toggleRoutePlayback,
+    mapProjection,
+    tileUrl,
+    handleTileLoad,
+    handleTileError,
+    mapTiles,
+    mapOverlayTiles,
+    coordinateFromMapEvent,
+    setMapCenterFromWorld,
+    zoomMap,
+    resetMapView,
+    startMapDrag,
+    moveMapDrag,
+    endMapDrag,
+    handleMapClick,
+    markerStyle,
+    fallbackMapLabelStyle,
+    svgPoint,
+    polylinePoints,
+    routeGeneratorDifficultyOptions,
+    routeGeneratorElevationOptions,
+    routeGeneratorEnvironmentOptions,
+    routeGeneratorRouteTypes,
+    routeGeneratorSpeedsKmh,
+    routeGeneratorStartModes,
+    routeGeneratorSteps,
+    routeGeneratorSurfaceOptions,
+    defaultSportMapTileSource,
+    PLAYBACK_SPEED_OPTIONS,
+    sportMapFallbackLabels,
+    sportMapLandingActions,
+    sportMapMapLayerOptions,
+    sportMapPlaybackSpeedOptions,
+    sportMapTabs,
+} = useSportMapWorkspace(props)
 </script>
 
 <template>

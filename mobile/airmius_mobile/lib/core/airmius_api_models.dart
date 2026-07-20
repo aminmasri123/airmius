@@ -70,42 +70,54 @@ class AirmiusUser {
     if (date == null) return false;
     final today = DateTime.now();
     var age = today.year - date.year;
-    if (today.month < date.month || (today.month == date.month && today.day < date.day)) {
+    if (today.month < date.month ||
+        (today.month == date.month && today.day < date.day)) {
       age--;
     }
     return age < 16;
   }
 
-  bool get requiresGuardianConsent => role.toLowerCase() == 'minor_pending_consent';
+  bool get requiresGuardianConsent =>
+      role.toLowerCase() == 'minor_pending_consent';
 
   factory AirmiusUser.fromJson(JsonMap json) => AirmiusUser(
-        id: _int(json['id']),
-        name: _string(json['name']),
-        email: _string(json['email']),
-        role: _userRole(json),
-        firstName: _nullableString(json['first_name']),
-        lastName: _nullableString(json['last_name']),
-        birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
-        gender: _nullableString(json['gender']),
-        guardianEmail: _nullableString(json['guardian_email']),
-        country: _nullableString(json['country']),
-        street: _nullableString(json['street']),
-        houseNumber: _nullableString(json['house_number']),
-        postalCode: _nullableString(json['postal_code']),
-        city: _nullableString(json['city']),
-        state: _nullableString(json['state']),
-        avatarUrl: _userAvatarUrl(json),
-        bio: _nullableString(json['bio']),
-        profileVisibility: _nullableString(json['profile_visibility']),
-        followersCount: json.containsKey('followers_count') ? _int(json['followers_count']) : null,
-        followingCount: json.containsKey('following_count') ? _int(json['following_count']) : null,
-        postsCount: json.containsKey('posts_count') ? _int(json['posts_count']) : null,
-        clubs: _jsonList(json['clubs']).map(AirmiusNamedItem.fromJson).toList(),
-        teams: _jsonList(json['teams']).map(AirmiusNamedItem.fromJson).toList(),
-        sportProfiles: _jsonList(json['sport_profiles']).map(AirmiusUserSportProfile.fromJson).toList(),
-        badges: _jsonList(json['badges']).map(AirmiusUserBadge.fromJson).toList(),
-        gamification: json['gamification'] is JsonMap ? AirmiusGamification.fromJson(json['gamification'] as JsonMap) : null,
-      );
+    id: _int(json['id']),
+    name: _string(json['name']),
+    email: _string(json['email']),
+    role: _userRole(json),
+    firstName: _nullableString(json['first_name']),
+    lastName: _nullableString(json['last_name']),
+    birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
+    gender: _nullableString(json['gender']),
+    guardianEmail: _nullableString(json['guardian_email']),
+    country: _nullableString(json['country']),
+    street: _nullableString(json['street']),
+    houseNumber: _nullableString(json['house_number']),
+    postalCode: _nullableString(json['postal_code']),
+    city: _nullableString(json['city']),
+    state: _nullableString(json['state']),
+    avatarUrl: _userAvatarUrl(json),
+    bio: _nullableString(json['bio']),
+    profileVisibility: _nullableString(json['profile_visibility']),
+    followersCount: json.containsKey('followers_count')
+        ? _int(json['followers_count'])
+        : null,
+    followingCount: json.containsKey('following_count')
+        ? _int(json['following_count'])
+        : null,
+    postsCount: json.containsKey('posts_count')
+        ? _int(json['posts_count'])
+        : null,
+    clubs: _jsonList(json['clubs']).map(AirmiusNamedItem.fromJson).toList(),
+    teams: _jsonList(json['teams']).map(AirmiusNamedItem.fromJson).toList(),
+    sportProfiles: _jsonList(
+      json['sport_profiles'],
+    ).map(AirmiusUserSportProfile.fromJson).toList(),
+    badges: _jsonList(json['badges']).map(AirmiusUserBadge.fromJson).toList(),
+    gamification: json['gamification'] is JsonMap
+        ? AirmiusGamification.fromJson(json['gamification'] as JsonMap)
+        : null,
+  );
 }
 
 String _userRole(JsonMap json) {
@@ -128,10 +140,12 @@ class AirmiusNamedItem {
   final String? subtitle;
 
   factory AirmiusNamedItem.fromJson(JsonMap json) => AirmiusNamedItem(
-        id: _int(json['id']),
-        name: _string(json['name'] ?? json['title'], fallback: 'Eintrag'),
-        subtitle: _nullableString(json['sport_type'] ?? json['city'] ?? json['description']),
-      );
+    id: _int(json['id']),
+    name: _string(json['name'] ?? json['title'], fallback: 'Eintrag'),
+    subtitle: _nullableString(
+      json['sport_type'] ?? json['city'] ?? json['description'],
+    ),
+  );
 }
 
 class AirmiusUserSportProfile {
@@ -153,16 +167,25 @@ class AirmiusUserSportProfile {
     final sport = json['sport'];
     return AirmiusUserSportProfile(
       id: _int(json['id']),
-      sportName: sport is JsonMap ? _string(sport['name'] ?? sport['slug'], fallback: 'Sportart') : _string(json['sport'], fallback: 'Sportart'),
+      sportName: sport is JsonMap
+          ? _string(sport['name'] ?? sport['slug'], fallback: 'Sportart')
+          : _string(json['sport'], fallback: 'Sportart'),
       status: _nullableString(json['status']),
       experienceLevel: _nullableString(json['experience_level']),
-      metrics: json['performance_metrics'] is JsonMap ? json['performance_metrics'] as JsonMap : const {},
+      metrics: json['performance_metrics'] is JsonMap
+          ? json['performance_metrics'] as JsonMap
+          : const {},
     );
   }
 }
 
 class AirmiusUserBadge {
-  const AirmiusUserBadge({required this.id, required this.name, this.description, this.icon});
+  const AirmiusUserBadge({
+    required this.id,
+    required this.name,
+    this.description,
+    this.icon,
+  });
 
   final int id;
   final String name;
@@ -170,11 +193,11 @@ class AirmiusUserBadge {
   final String? icon;
 
   factory AirmiusUserBadge.fromJson(JsonMap json) => AirmiusUserBadge(
-        id: _int(json['id']),
-        name: _string(json['name'] ?? json['key'], fallback: 'Badge'),
-        description: _nullableString(json['description']),
-        icon: _nullableString(json['icon']),
-      );
+    id: _int(json['id']),
+    name: _string(json['name'] ?? json['key'], fallback: 'Badge'),
+    description: _nullableString(json['description']),
+    icon: _nullableString(json['icon']),
+  );
 }
 
 class AirmiusGamification {
@@ -205,18 +228,18 @@ class AirmiusGamification {
   final String? healthLabel;
 
   factory AirmiusGamification.fromJson(JsonMap json) => AirmiusGamification(
-        xp: _int(json['xp']),
-        level: _int(json['level'], fallback: 1),
-        nextLevelXp: _int(json['next_level_xp']),
-        currentLevelXp: _int(json['current_level_xp']),
-        progress: _int(json['progress']),
-        xpToNextLevel: _int(json['xp_to_next_level']),
-        earnedToday: _int(json['earned_today']),
-        trustScore: json['trust_score'] == null ? null : _int(json['trust_score']),
-        streakDays: _int(json['streak_days']),
-        title: _nullableString(json['title'] ?? json['rank']),
-        healthLabel: _nullableString(json['health_label']),
-      );
+    xp: _int(json['xp']),
+    level: _int(json['level'], fallback: 1),
+    nextLevelXp: _int(json['next_level_xp']),
+    currentLevelXp: _int(json['current_level_xp']),
+    progress: _int(json['progress']),
+    xpToNextLevel: _int(json['xp_to_next_level']),
+    earnedToday: _int(json['earned_today']),
+    trustScore: json['trust_score'] == null ? null : _int(json['trust_score']),
+    streakDays: _int(json['streak_days']),
+    title: _nullableString(json['title'] ?? json['rank']),
+    healthLabel: _nullableString(json['health_label']),
+  );
 }
 
 class AirmiusClub {
@@ -259,28 +282,44 @@ class AirmiusClub {
   final AirmiusClubManagement? management;
 
   factory AirmiusClub.fromJson(JsonMap json) => AirmiusClub(
-        id: _int(json['id']),
-        name: _string(json['name'] ?? json['title'], fallback: 'Verein'),
-        city: _string(json['city'] ?? json['subtitle'] ?? json['description']),
-        membersCount: _int(json['members_count'], fallback: _int(json['users_count'])),
-        teamsCount: _int(json['teams_count'], fallback: _clubTeams(json['teams']).length),
-        acceptsMembershipApplications: _bool(json['accepts_membership_applications']) || _bool(json['membership_requests_enabled']),
-        hasPendingMembershipRequest: _bool(json['has_pending_membership_request']),
-        isMember: _bool(json['is_member']),
-        teams: _clubTeams(json['teams']),
-        logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
-        bannerUrl: _mediaUrl(json['banner_url'] ?? json['cover_image_url'] ?? json['cover_image'] ?? json['cover']),
-        sportType: _nullableString(json['sport_type']),
-        postalCode: _nullableString(json['postal_code']),
-        country: _nullableString(json['country']),
-        canManage: _bool(json['can_manage']) || _bool(json['can_update']),
-        canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
-        management: json['management'] is JsonMap ? AirmiusClubManagement.fromJson(json['management'] as JsonMap) : null,
-      );
+    id: _int(json['id']),
+    name: _string(json['name'] ?? json['title'], fallback: 'Verein'),
+    city: _string(json['city'] ?? json['subtitle'] ?? json['description']),
+    membersCount: _int(
+      json['members_count'],
+      fallback: _int(json['users_count']),
+    ),
+    teamsCount: _int(
+      json['teams_count'],
+      fallback: _clubTeams(json['teams']).length,
+    ),
+    acceptsMembershipApplications:
+        _bool(json['accepts_membership_applications']) ||
+        _bool(json['membership_requests_enabled']),
+    hasPendingMembershipRequest: _bool(json['has_pending_membership_request']),
+    isMember: _bool(json['is_member']),
+    teams: _clubTeams(json['teams']),
+    logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
+    bannerUrl: _mediaUrl(
+      json['banner_url'] ??
+          json['cover_image_url'] ??
+          json['cover_image'] ??
+          json['cover'],
+    ),
+    sportType: _nullableString(json['sport_type']),
+    postalCode: _nullableString(json['postal_code']),
+    country: _nullableString(json['country']),
+    canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+    canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
+    management: json['management'] is JsonMap
+        ? AirmiusClubManagement.fromJson(json['management'] as JsonMap)
+        : null,
+  );
 }
 
-List<AirmiusTeam> _clubTeams(Object? value) =>
-    value is List ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList() : const [];
+List<AirmiusTeam> _clubTeams(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList()
+    : const [];
 
 class AirmiusClubManagement {
   const AirmiusClubManagement({
@@ -325,22 +364,35 @@ class AirmiusClubManagement {
   final List<String> teamRoles;
   final List<AirmiusTeam> teams;
 
-  int get pendingMembershipRequestsCount =>
-      _int(summary['pending_membership_requests_count'], fallback: membershipRequests.where((request) => request.status == 'pending').length);
+  int get pendingMembershipRequestsCount => _int(
+    summary['pending_membership_requests_count'],
+    fallback: membershipRequests
+        .where((request) => request.status == 'pending')
+        .length,
+  );
 
-  int get pendingTeamJoinRequestsCount => _int(summary['pending_team_join_requests_count'], fallback: pendingTeamJoinRequests.length);
+  int get pendingTeamJoinRequestsCount => _int(
+    summary['pending_team_join_requests_count'],
+    fallback: pendingTeamJoinRequests.length,
+  );
 
-  int get activeMembersCount => _int(summary['active_members_count'], fallback: members.length);
+  int get activeMembersCount =>
+      _int(summary['active_members_count'], fallback: members.length);
 
-  int get linkedPeopleCount => _int(summary['linked_people_count'], fallback: members.length + externalMembers.length);
+  int get linkedPeopleCount => _int(
+    summary['linked_people_count'],
+    fallback: members.length + externalMembers.length,
+  );
 
   double get openInvoiceAmount => _double(summary['open_invoice_amount']);
 
-  int get openInvoicesCount => _int(summary['open_invoices_count'], fallback: invoices.length);
+  int get openInvoicesCount =>
+      _int(summary['open_invoices_count'], fallback: invoices.length);
 
   int get sepaReadyMembersCount => _int(summary['sepa_ready_members_count']);
 
-  double get recurringContributionTotal => _double(summary['recurring_contribution_total']);
+  double get recurringContributionTotal =>
+      _double(summary['recurring_contribution_total']);
 
   double get cashBalance => _double(summary['cash_balance']);
 
@@ -354,35 +406,52 @@ class AirmiusClubManagement {
 
   double get expenseTotal => _double(summary['expense_total']);
 
-  bool get hasFinancePeriodTotals => summary.containsKey('income_period_total') && summary.containsKey('expense_period_total');
+  bool get hasFinancePeriodTotals =>
+      summary.containsKey('income_period_total') &&
+      summary.containsKey('expense_period_total');
 
-  double get incomePeriodTotal => _double(summary['income_period_total'], fallback: incomeTotal);
+  double get incomePeriodTotal =>
+      _double(summary['income_period_total'], fallback: incomeTotal);
 
-  double get expensePeriodTotal => _double(summary['expense_period_total'], fallback: expenseTotal);
+  double get expensePeriodTotal =>
+      _double(summary['expense_period_total'], fallback: expenseTotal);
 
-  String get financePeriodLabel => _string(summary['finance_period_label'], fallback: 'Dieses Jahr');
+  String get financePeriodLabel =>
+      _string(summary['finance_period_label'], fallback: 'Dieses Jahr');
 
   factory AirmiusClubManagement.fromJson(JsonMap json) => AirmiusClubManagement(
-        canManage: _bool(json['can_manage']),
-        summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},
-        settings: json['settings'] is JsonMap ? json['settings'] as JsonMap : const {},
-        subscription: json['subscription'] is JsonMap ? json['subscription'] as JsonMap : const {},
-        capabilities: json['capabilities'] is JsonMap ? json['capabilities'] as JsonMap : const {},
-        members: _jsonList(json['members']).map(AirmiusClubMember.fromJson).toList(),
-        externalMembers: _jsonList(json['external_members']),
-        membershipRequests: _jsonList(json['membership_requests'] ?? json['club_requests']).map(AirmiusClubMembershipRequest.fromJson).toList(),
-        pendingTeamJoinRequests: _jsonList(json['pending_team_join_requests'] ?? json['pending_requests']),
-        membershipTypes: _jsonList(json['membership_types']),
-        contributionRules: _jsonList(json['contribution_rules']),
-        invoices: _jsonList(json['invoices']),
-        payments: _jsonList(json['payments']),
-        financeEntries: _jsonList(json['finance_entries']),
-        bankTransactions: _jsonList(json['bank_transactions']),
-        membershipStatuses: _stringList(json['membership_statuses']),
-        contributionIntervals: _stringList(json['contribution_intervals']),
-        teamRoles: _stringList(json['team_roles']),
-        teams: _clubTeams(json['teams']),
-      );
+    canManage: _bool(json['can_manage']),
+    summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},
+    settings: json['settings'] is JsonMap
+        ? json['settings'] as JsonMap
+        : const {},
+    subscription: json['subscription'] is JsonMap
+        ? json['subscription'] as JsonMap
+        : const {},
+    capabilities: json['capabilities'] is JsonMap
+        ? json['capabilities'] as JsonMap
+        : const {},
+    members: _jsonList(
+      json['members'],
+    ).map(AirmiusClubMember.fromJson).toList(),
+    externalMembers: _jsonList(json['external_members']),
+    membershipRequests: _jsonList(
+      json['membership_requests'] ?? json['club_requests'],
+    ).map(AirmiusClubMembershipRequest.fromJson).toList(),
+    pendingTeamJoinRequests: _jsonList(
+      json['pending_team_join_requests'] ?? json['pending_requests'],
+    ),
+    membershipTypes: _jsonList(json['membership_types']),
+    contributionRules: _jsonList(json['contribution_rules']),
+    invoices: _jsonList(json['invoices']),
+    payments: _jsonList(json['payments']),
+    financeEntries: _jsonList(json['finance_entries']),
+    bankTransactions: _jsonList(json['bank_transactions']),
+    membershipStatuses: _stringList(json['membership_statuses']),
+    contributionIntervals: _stringList(json['contribution_intervals']),
+    teamRoles: _stringList(json['team_roles']),
+    teams: _clubTeams(json['teams']),
+  );
 }
 
 class AirmiusClubMember {
@@ -413,15 +482,19 @@ class AirmiusClubMember {
   String? get memberNumber => _nullableString(membership['member_number']);
 
   factory AirmiusClubMember.fromJson(JsonMap json) => AirmiusClubMember(
-        id: _int(json['id']),
-        name: _string(json['name'], fallback: 'Mitglied'),
-        email: _string(json['email']),
-        licenseNumber: _nullableString(json['athlete_license_number']),
-        avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['profile_photo_thumb']),
-        membership: json['membership'] is JsonMap ? json['membership'] as JsonMap : const {},
-        invoicesCount: _int(json['invoices_count']),
-        paymentsCount: _int(json['payments_count']),
-      );
+    id: _int(json['id']),
+    name: _string(json['name'], fallback: 'Mitglied'),
+    email: _string(json['email']),
+    licenseNumber: _nullableString(json['athlete_license_number']),
+    avatarUrl: _mediaUrl(
+      json['profile_photo_url'] ?? json['profile_photo_thumb'],
+    ),
+    membership: json['membership'] is JsonMap
+        ? json['membership'] as JsonMap
+        : const {},
+    invoicesCount: _int(json['invoices_count']),
+    paymentsCount: _int(json['payments_count']),
+  );
 }
 
 class AirmiusTeam {
@@ -473,25 +546,40 @@ class AirmiusTeam {
       id: _int(json['id']),
       clubId: _int(json['club_id']),
       name: _string(json['name'] ?? json['title'], fallback: 'Team'),
-      clubName: (club is JsonMap ? _nullableString(club['name']) : null) ?? _nullableString(json['club_name']),
+      clubName:
+          (club is JsonMap ? _nullableString(club['name']) : null) ??
+          _nullableString(json['club_name']),
       description: _nullableString(json['description'] ?? json['subtitle']),
       sportType: _nullableString(json['sport_type']),
       ageGroup: _nullableString(json['age_group']),
       visibility: _nullableString(json['visibility']),
       logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
-      attendanceStats: json['attendance_stats'] is JsonMap ? AirmiusTeamAttendanceStats.fromJson(json['attendance_stats'] as JsonMap) : null,
+      attendanceStats: json['attendance_stats'] is JsonMap
+          ? AirmiusTeamAttendanceStats.fromJson(
+              json['attendance_stats'] as JsonMap,
+            )
+          : null,
       users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
       canManage: _bool(json['can_manage']) || _bool(json['can_update']),
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       viewerIsMember: _bool(json['viewer_is_member']),
       canRequestJoin: _bool(json['can_request_join']),
-      viewerPendingJoinRequestId: _nullableInt(json['viewer_pending_join_request_id']),
-      pendingJoinRequests: _jsonList(json['pending_join_requests'] ?? json['pending_team_join_requests'] ?? json['pending_requests']).map(AirmiusTeamJoinRequest.fromJson).toList(),
-      usersCount: json.containsKey('users_count') ? _int(json['users_count']) : null,
-      eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
+      viewerPendingJoinRequestId: _nullableInt(
+        json['viewer_pending_join_request_id'],
+      ),
+      pendingJoinRequests: _jsonList(
+        json['pending_join_requests'] ??
+            json['pending_team_join_requests'] ??
+            json['pending_requests'],
+      ).map(AirmiusTeamJoinRequest.fromJson).toList(),
+      usersCount: json.containsKey('users_count')
+          ? _int(json['users_count'])
+          : null,
+      eventsCount: json.containsKey('events_count')
+          ? _int(json['events_count'])
+          : null,
     );
   }
-
 }
 
 class AirmiusTeamJoinRequest {
@@ -516,12 +604,17 @@ class AirmiusTeamJoinRequest {
   final String? requestedAt;
 
   factory AirmiusTeamJoinRequest.fromJson(JsonMap json) {
-    final user = json['user'] is JsonMap ? json['user'] as JsonMap : const <String, dynamic>{};
+    final user = json['user'] is JsonMap
+        ? json['user'] as JsonMap
+        : const <String, dynamic>{};
     return AirmiusTeamJoinRequest(
       id: _int(json['id']),
       teamId: _int(json['team_id']),
       userId: _int(json['user_id'] ?? user['id']),
-      name: _string(json['name'] ?? json['user_name'] ?? user['name'], fallback: 'Mitglied'),
+      name: _string(
+        json['name'] ?? json['user_name'] ?? user['name'],
+        fallback: 'Mitglied',
+      ),
       email: _string(json['email'] ?? json['user_email'] ?? user['email']),
       status: _string(json['status'], fallback: 'pending'),
       roleHint: _nullableString(json['role'] ?? json['role_hint']),
@@ -558,9 +651,15 @@ class AirmiusTeamInvitation {
   final String? createdAt;
 
   factory AirmiusTeamInvitation.fromJson(JsonMap json) {
-    final team = json['team'] is JsonMap ? json['team'] as JsonMap : const <String, dynamic>{};
-    final club = team['club'] is JsonMap ? team['club'] as JsonMap : const <String, dynamic>{};
-    final inviter = json['inviter'] is JsonMap ? json['inviter'] as JsonMap : const <String, dynamic>{};
+    final team = json['team'] is JsonMap
+        ? json['team'] as JsonMap
+        : const <String, dynamic>{};
+    final club = team['club'] is JsonMap
+        ? team['club'] as JsonMap
+        : const <String, dynamic>{};
+    final inviter = json['inviter'] is JsonMap
+        ? json['inviter'] as JsonMap
+        : const <String, dynamic>{};
 
     return AirmiusTeamInvitation(
       id: _int(json['id']),
@@ -589,10 +688,13 @@ class AirmiusTeamAttendanceStats {
   final int membersTotal;
   final List<AirmiusTeamAttendanceMember> members;
 
-  factory AirmiusTeamAttendanceStats.fromJson(JsonMap json) => AirmiusTeamAttendanceStats(
+  factory AirmiusTeamAttendanceStats.fromJson(JsonMap json) =>
+      AirmiusTeamAttendanceStats(
         trainingsTotal: _int(json['trainings_total']),
         membersTotal: _int(json['members_total']),
-        members: _jsonList(json['members']).map(AirmiusTeamAttendanceMember.fromJson).toList(),
+        members: _jsonList(
+          json['members'],
+        ).map(AirmiusTeamAttendanceMember.fromJson).toList(),
       );
 }
 
@@ -625,11 +727,16 @@ class AirmiusTeamAttendanceMember {
   final int noResponse;
   final double attendanceRate;
 
-  factory AirmiusTeamAttendanceMember.fromJson(JsonMap json) => AirmiusTeamAttendanceMember(
+  factory AirmiusTeamAttendanceMember.fromJson(JsonMap json) =>
+      AirmiusTeamAttendanceMember(
         userId: _int(json['user_id'] ?? json['id']),
         name: _string(json['name'], fallback: 'Mitglied'),
         email: _nullableString(json['email']),
-        avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['avatar_url'] ?? json['profile_photo_path']),
+        avatarUrl: _mediaUrl(
+          json['profile_photo_url'] ??
+              json['avatar_url'] ??
+              json['profile_photo_path'],
+        ),
         trainingsTotal: _int(json['trainings_total']),
         attended: _int(json['attended']),
         yes: _int(json['yes']),
@@ -660,24 +767,23 @@ class AirmiusSport {
       id: _int(json['id']),
       name: _string(json['name'], fallback: 'Sportart'),
       slug: _string(json['slug']),
-      skills: skills is List ? skills.whereType<JsonMap>().map(AirmiusSportSkill.fromJson).toList() : const [],
+      skills: skills is List
+          ? skills.whereType<JsonMap>().map(AirmiusSportSkill.fromJson).toList()
+          : const [],
     );
   }
 }
 
 class AirmiusSportSkill {
-  const AirmiusSportSkill({
-    required this.id,
-    required this.name,
-  });
+  const AirmiusSportSkill({required this.id, required this.name});
 
   final int id;
   final String name;
 
   factory AirmiusSportSkill.fromJson(JsonMap json) => AirmiusSportSkill(
-        id: _int(json['id']),
-        name: _string(json['name'], fallback: 'Skill'),
-      );
+    id: _int(json['id']),
+    name: _string(json['name'], fallback: 'Skill'),
+  );
 }
 
 class AirmiusMembershipApplication {
@@ -695,12 +801,15 @@ class AirmiusMembershipApplication {
   final DateTime submittedAt;
   final DateTime? withdrawnAt;
 
-  factory AirmiusMembershipApplication.fromJson(JsonMap json) => AirmiusMembershipApplication(
+  factory AirmiusMembershipApplication.fromJson(JsonMap json) =>
+      AirmiusMembershipApplication(
         id: _int(json['id']),
         clubId: _int(json['club_id']),
         status: _string(json['status'], fallback: 'pending'),
         submittedAt: _date(json['submitted_at'] ?? json['created_at']),
-        withdrawnAt: json['withdrawn_at'] == null ? null : _date(json['withdrawn_at']),
+        withdrawnAt: json['withdrawn_at'] == null
+            ? null
+            : _date(json['withdrawn_at']),
       );
 }
 
@@ -741,16 +850,28 @@ class AirmiusClubMembershipRequest {
       status: _string(json['status'], fallback: 'pending'),
       message: _nullableString(json['message']),
       reviewNote: _nullableString(json['review_note']),
-      applicantName: (user is JsonMap ? _nullableString(user['name']) : null) ?? _nullableString(json['applicant_name']),
-      applicantEmail: (user is JsonMap ? _nullableString(user['email']) : null) ?? _nullableString(json['applicant_email']),
-      clubName: (club is JsonMap ? _nullableString(club['name']) : null) ?? _nullableString(json['club_name']),
-      membershipTypeName: membershipType is JsonMap ? _nullableString(membershipType['name']) : _nullableString(json['membership_type_name']),
+      applicantName:
+          (user is JsonMap ? _nullableString(user['name']) : null) ??
+          _nullableString(json['applicant_name']),
+      applicantEmail:
+          (user is JsonMap ? _nullableString(user['email']) : null) ??
+          _nullableString(json['applicant_email']),
+      clubName:
+          (club is JsonMap ? _nullableString(club['name']) : null) ??
+          _nullableString(json['club_name']),
+      membershipTypeName: membershipType is JsonMap
+          ? _nullableString(membershipType['name'])
+          : _nullableString(json['membership_type_name']),
       preferredPaymentMethod: _nullableString(json['preferred_payment_method']),
-      requestedBillingInterval: _nullableString(json['requested_billing_interval']),
+      requestedBillingInterval: _nullableString(
+        json['requested_billing_interval'],
+      ),
       previewAmount: _nullableString(json['preview_amount']),
       previewInterval: _nullableString(json['preview_interval']),
       applicationData: applicationData is JsonMap ? applicationData : const {},
-      acceptedDocuments: acceptedDocuments is List ? acceptedDocuments.map((item) => '$item').toList() : const [],
+      acceptedDocuments: acceptedDocuments is List
+          ? acceptedDocuments.map((item) => '$item').toList()
+          : const [],
       createdAt: _date(json['created_at']),
     );
   }
@@ -793,13 +914,13 @@ class AirmiusFileAsset {
   final String? purpose;
 
   factory AirmiusFileAsset.fromJson(JsonMap json) => AirmiusFileAsset(
-        id: _int(json['id']),
-        name: _string(json['name']),
-        mimeType: _string(json['mime_type']),
-        size: _int(json['size']),
-        url: _string(json['url']),
-        purpose: json['purpose'] as String?,
-      );
+    id: _int(json['id']),
+    name: _string(json['name']),
+    mimeType: _string(json['mime_type']),
+    size: _int(json['size']),
+    url: _string(json['url']),
+    purpose: json['purpose'] as String?,
+  );
 }
 
 class AirmiusEvent {
@@ -877,32 +998,31 @@ class AirmiusEvent {
     bool? canJoin,
     bool? usesPenaltyCatalog,
     List<AirmiusEventParticipant>? participants,
-  }) =>
-      AirmiusEvent(
-        id: id ?? this.id,
-        title: title ?? this.title,
-        startsAt: startsAt ?? this.startsAt,
-        endsAt: endsAt ?? this.endsAt,
-        type: type ?? this.type,
-        status: status ?? this.status,
-        visibility: visibility ?? this.visibility,
-        clubId: clubId ?? this.clubId,
-        teamId: teamId ?? this.teamId,
-        clubName: clubName ?? this.clubName,
-        teamName: teamName ?? this.teamName,
-        notes: notes ?? this.notes,
-        location: location ?? this.location,
-        maxParticipants: maxParticipants ?? this.maxParticipants,
-        participantsCount: participantsCount ?? this.participantsCount,
-        commentsCount: commentsCount ?? this.commentsCount,
-        yesCount: yesCount ?? this.yesCount,
-        maybeCount: maybeCount ?? this.maybeCount,
-        noCount: noCount ?? this.noCount,
-        myParticipationStatus: myParticipationStatus ?? this.myParticipationStatus,
-        canJoin: canJoin ?? this.canJoin,
-        usesPenaltyCatalog: usesPenaltyCatalog ?? this.usesPenaltyCatalog,
-        participants: participants ?? this.participants,
-      );
+  }) => AirmiusEvent(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    startsAt: startsAt ?? this.startsAt,
+    endsAt: endsAt ?? this.endsAt,
+    type: type ?? this.type,
+    status: status ?? this.status,
+    visibility: visibility ?? this.visibility,
+    clubId: clubId ?? this.clubId,
+    teamId: teamId ?? this.teamId,
+    clubName: clubName ?? this.clubName,
+    teamName: teamName ?? this.teamName,
+    notes: notes ?? this.notes,
+    location: location ?? this.location,
+    maxParticipants: maxParticipants ?? this.maxParticipants,
+    participantsCount: participantsCount ?? this.participantsCount,
+    commentsCount: commentsCount ?? this.commentsCount,
+    yesCount: yesCount ?? this.yesCount,
+    maybeCount: maybeCount ?? this.maybeCount,
+    noCount: noCount ?? this.noCount,
+    myParticipationStatus: myParticipationStatus ?? this.myParticipationStatus,
+    canJoin: canJoin ?? this.canJoin,
+    usesPenaltyCatalog: usesPenaltyCatalog ?? this.usesPenaltyCatalog,
+    participants: participants ?? this.participants,
+  );
 
   factory AirmiusEvent.fromJson(JsonMap json) {
     final club = json['club'];
@@ -917,7 +1037,9 @@ class AirmiusEvent {
       id: _int(json['id']),
       title: _string(json['title']),
       startsAt: _date(json['starts_at'] ?? json['start_time']),
-      endsAt: json['ends_at'] == null && json['end_time'] == null ? null : _date(json['ends_at'] ?? json['end_time']),
+      endsAt: json['ends_at'] == null && json['end_time'] == null
+          ? null
+          : _date(json['ends_at'] ?? json['end_time']),
       type: _string(json['type'], fallback: 'event'),
       status: _string(json['status'], fallback: 'open'),
       visibility: _string(json['visibility'], fallback: 'public'),
@@ -927,7 +1049,9 @@ class AirmiusEvent {
       teamName: team is JsonMap ? _nullableString(team['name']) : null,
       notes: _nullableString(json['notes']),
       location: locationParts.isEmpty ? null : locationParts.join(' - '),
-      maxParticipants: json['max_participants'] == null ? null : _int(json['max_participants']),
+      maxParticipants: json['max_participants'] == null
+          ? null
+          : _int(json['max_participants']),
       participantsCount: _int(json['participants_count']),
       commentsCount: _int(json['comments_count']),
       yesCount: _int(json['yes_count']),
@@ -962,14 +1086,21 @@ class AirmiusEventParticipant {
       id: _int(json['id']),
       name: _string(json['name'], fallback: 'Spieler'),
       email: _nullableString(json['email']),
-      avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['avatar_url'] ?? json['profile_photo_path']),
-      status: pivot is JsonMap ? _string(pivot['status'], fallback: 'yes') : _string(json['status'], fallback: 'yes'),
+      avatarUrl: _mediaUrl(
+        json['profile_photo_url'] ??
+            json['avatar_url'] ??
+            json['profile_photo_path'],
+      ),
+      status: pivot is JsonMap
+          ? _string(pivot['status'], fallback: 'yes')
+          : _string(json['status'], fallback: 'yes'),
     );
   }
 }
 
-List<AirmiusEventParticipant> _eventParticipants(Object? value) =>
-    value is List ? value.whereType<JsonMap>().map(AirmiusEventParticipant.fromJson).toList() : const [];
+List<AirmiusEventParticipant> _eventParticipants(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusEventParticipant.fromJson).toList()
+    : const [];
 
 class AirmiusInvoice {
   const AirmiusInvoice({
@@ -987,12 +1118,12 @@ class AirmiusInvoice {
   final String currency;
 
   factory AirmiusInvoice.fromJson(JsonMap json) => AirmiusInvoice(
-        id: _int(json['id']),
-        number: _string(json['number']),
-        status: _string(json['status'], fallback: 'open'),
-        amountCents: _int(json['amount_cents']),
-        currency: _string(json['currency'], fallback: 'EUR'),
-      );
+    id: _int(json['id']),
+    number: _string(json['number']),
+    status: _string(json['status'], fallback: 'open'),
+    amountCents: _int(json['amount_cents']),
+    currency: _string(json['currency'], fallback: 'EUR'),
+  );
 }
 
 class AirmiusNotification {
@@ -1013,12 +1144,20 @@ class AirmiusNotification {
     return AirmiusNotification(
       id: json['id'] as int? ?? int.tryParse('${json['id'] ?? 0}') ?? 0,
       type: '${json['type'] ?? json['category'] ?? 'System'}',
-      title: '${json['title'] ?? dataMap['title'] ?? json['subject'] ?? 'Benachrichtigung'}',
-      body: '${json['body'] ?? dataMap['body'] ?? dataMap['message'] ?? json['message'] ?? json['description'] ?? ''}',
-      timeLabel: '${json['time_label'] ?? json['time'] ?? json['created_at'] ?? 'Jetzt'}',
-      unread: json['unread'] as bool? ?? !(json['read'] as bool? ?? json['read_at'] != null),
+      title:
+          '${json['title'] ?? dataMap['title'] ?? json['subject'] ?? 'Benachrichtigung'}',
+      body:
+          '${json['body'] ?? dataMap['body'] ?? dataMap['message'] ?? json['message'] ?? json['description'] ?? ''}',
+      timeLabel:
+          '${json['time_label'] ?? json['time'] ?? json['created_at'] ?? 'Jetzt'}',
+      unread:
+          json['unread'] as bool? ??
+          !(json['read'] as bool? ?? json['read_at'] != null),
       data: dataMap,
-      actionUrl: json['action_url'] as String? ?? json['url'] as String? ?? dataMap['url'] as String?,
+      actionUrl:
+          json['action_url'] as String? ??
+          json['url'] as String? ??
+          dataMap['url'] as String?,
     );
   }
 
@@ -1032,15 +1171,15 @@ class AirmiusNotification {
   final String? actionUrl;
 
   AirmiusNotification copyWith({bool? unread}) => AirmiusNotification(
-        id: id,
-        type: type,
-        title: title,
-        body: body,
-        timeLabel: timeLabel,
-        unread: unread ?? this.unread,
-        data: data,
-        actionUrl: actionUrl,
-      );
+    id: id,
+    type: type,
+    title: title,
+    body: body,
+    timeLabel: timeLabel,
+    unread: unread ?? this.unread,
+    data: data,
+    actionUrl: actionUrl,
+  );
 }
 
 class AirmiusConversation {
@@ -1056,14 +1195,35 @@ class AirmiusConversation {
   factory AirmiusConversation.fromJson(JsonMap json) {
     final latest = json['latest_message'];
     final users = json['users'];
-    final fallbackUser = users is List && users.isNotEmpty && users.first is JsonMap ? _string((users.first as JsonMap)['name']) : '';
+    final fallbackUser =
+        users is List && users.isNotEmpty && users.first is JsonMap
+        ? _string((users.first as JsonMap)['name'])
+        : '';
     return AirmiusConversation(
       id: _int(json['id']),
-      title: _string(json['title'] ?? json['name'] ?? json['subject'], fallback: fallbackUser.isEmpty ? 'Konversation' : fallbackUser),
-      kind: _string(json['kind'] ?? json['type'] ?? json['scope'], fallback: 'Chat'),
-      lastMessage: latest is JsonMap ? _string(latest['message']) : _string(json['last_message'] ?? json['lastMessage'] ?? json['preview']),
-      timeLabel: _string(json['time_label'] ?? json['time'] ?? json['updated_at'] ?? json['created_at'], fallback: 'Jetzt'),
-      unreadCount: _int(json['unread_messages_count'] ?? json['unread_count'] ?? json['unread']),
+      title: _string(
+        json['title'] ?? json['name'] ?? json['subject'],
+        fallback: fallbackUser.isEmpty ? 'Konversation' : fallbackUser,
+      ),
+      kind: _string(
+        json['kind'] ?? json['type'] ?? json['scope'],
+        fallback: 'Chat',
+      ),
+      lastMessage: latest is JsonMap
+          ? _string(latest['message'])
+          : _string(
+              json['last_message'] ?? json['lastMessage'] ?? json['preview'],
+            ),
+      timeLabel: _string(
+        json['time_label'] ??
+            json['time'] ??
+            json['updated_at'] ??
+            json['created_at'],
+        fallback: 'Jetzt',
+      ),
+      unreadCount: _int(
+        json['unread_messages_count'] ?? json['unread_count'] ?? json['unread'],
+      ),
     );
   }
 
@@ -1084,6 +1244,7 @@ class AirmiusMessage {
     required this.createdAt,
     required this.mine,
     required this.status,
+    required this.read,
     this.reactions = const [],
   });
 
@@ -1092,15 +1253,35 @@ class AirmiusMessage {
     final senderId = _int(json['sender_id']);
     final currentUserId = _int(json['current_user_id'], fallback: -1);
     final reactions = json['reactions'];
+    final receipts = json['receipts'];
+    final read =
+        _nullableString(json['read_at']) != null ||
+        (receipts is List &&
+            receipts.whereType<JsonMap>().any(
+              (receipt) => _nullableString(receipt['read_at']) != null,
+            ));
     return AirmiusMessage(
       id: _int(json['id']),
       conversationId: _int(json['conversation_id']),
       message: _string(json['message']),
-      senderName: sender is JsonMap ? _string(sender['name'], fallback: 'Airmius') : 'Airmius',
+      senderName: sender is JsonMap
+          ? _string(sender['name'], fallback: 'Airmius')
+          : 'Airmius',
       createdAt: _date(json['created_at']),
-      mine: currentUserId >= 0 ? senderId == currentUserId : _bool(json['mine'] ?? json['is_mine']),
-      status: _string(json['status'] ?? json['delivery_status'], fallback: 'sent'),
-      reactions: reactions is List ? reactions.whereType<JsonMap>().map(AirmiusMessageReaction.fromJson).toList() : const [],
+      mine: currentUserId >= 0
+          ? senderId == currentUserId
+          : _bool(json['mine'] ?? json['is_mine']),
+      status: _string(
+        json['status'] ?? json['delivery_status'],
+        fallback: 'sent',
+      ),
+      read: read,
+      reactions: reactions is List
+          ? reactions
+                .whereType<JsonMap>()
+                .map(AirmiusMessageReaction.fromJson)
+                .toList()
+          : const [],
     );
   }
 
@@ -1110,6 +1291,7 @@ class AirmiusMessage {
     DateTime? createdAt,
     bool? mine,
     String? status,
+    bool? read,
     List<AirmiusMessageReaction>? reactions,
   }) => AirmiusMessage(
     id: id,
@@ -1119,6 +1301,7 @@ class AirmiusMessage {
     createdAt: createdAt ?? this.createdAt,
     mine: mine ?? this.mine,
     status: status ?? this.status,
+    read: read ?? this.read,
     reactions: reactions ?? this.reactions,
   );
 
@@ -1129,6 +1312,7 @@ class AirmiusMessage {
   final DateTime createdAt;
   final bool mine;
   final String status;
+  final bool read;
   final List<AirmiusMessageReaction> reactions;
 }
 
@@ -1139,11 +1323,12 @@ class AirmiusMessageReaction {
     required this.reaction,
   });
 
-  factory AirmiusMessageReaction.fromJson(JsonMap json) => AirmiusMessageReaction(
-    id: _int(json['id']),
-    userId: _int(json['user_id']),
-    reaction: _string(json['reaction'] ?? json['emoji']),
-  );
+  factory AirmiusMessageReaction.fromJson(JsonMap json) =>
+      AirmiusMessageReaction(
+        id: _int(json['id']),
+        userId: _int(json['user_id']),
+        reaction: _string(json['reaction'] ?? json['emoji']),
+      );
 
   final int id;
   final int userId;
@@ -1192,19 +1377,29 @@ class AirmiusPost {
       imageProxyUrl: json['image_proxy_url'],
       uploadsBaseUrl: json['uploads_base_url'],
     );
-    final fallbackImageUrl = _firstImageAttachmentUrl(json['attachments']) ?? _firstImageAttachmentUrl(json['files']);
+    final fallbackImageUrl =
+        _firstImageAttachmentUrl(json['attachments']) ??
+        _firstImageAttachmentUrl(json['files']);
     return AirmiusPost(
       id: _int(json['id']),
-      userId: _int(json['user_id'], fallback: user is JsonMap ? _int(user['id']) : 0),
+      userId: _int(
+        json['user_id'],
+        fallback: user is JsonMap ? _int(user['id']) : 0,
+      ),
       content: _string(json['content']),
       visibility: _string(json['visibility'], fallback: 'public'),
-      moderationStatus: _string(json['moderation_status'], fallback: 'approved'),
+      moderationStatus: _string(
+        json['moderation_status'],
+        fallback: 'approved',
+      ),
       postType: _string(json['post_type'], fallback: 'normal'),
       contentOrigin: _string(json['content_origin'], fallback: 'self'),
       clubId: _nullableInt(json['club_id']),
       teamId: _nullableInt(json['team_id']),
       sportId: _nullableInt(json['sport_id']),
-      authorName: user is JsonMap ? _string(user['name'], fallback: 'Airmius') : 'Airmius',
+      authorName: user is JsonMap
+          ? _string(user['name'], fallback: 'Airmius')
+          : 'Airmius',
       authorAvatarUrl: user is JsonMap ? _userAvatarUrl(user) : null,
       clubName: club is JsonMap ? _nullableString(club['name']) : null,
       teamName: team is JsonMap ? _nullableString(team['name']) : null,
@@ -1218,9 +1413,15 @@ class AirmiusPost {
         ..._postAttachments(json['files']),
       ],
       createdAt: _date(json['created_at']),
-      commentsCount: _int(json['comments_count'], fallback: _int(json['comments'])),
+      commentsCount: _int(
+        json['comments_count'],
+        fallback: _int(json['comments']),
+      ),
       likesCount: _int(json['likes_count'], fallback: _int(json['likes'])),
-      helpfulsCount: _int(json['helpfuls_count'], fallback: _int(json['helpful_count'])),
+      helpfulsCount: _int(
+        json['helpfuls_count'],
+        fallback: _int(json['helpful_count']),
+      ),
       likedByMe: _bool(json['liked_by_me']) || _bool(json['is_liked']),
       helpfulByMe: _bool(json['helpful_by_me']) || _bool(json['is_helpful']),
       canUpdate: _bool(json['can_update']) || _bool(json['can_delete']),
@@ -1333,7 +1534,9 @@ class AirmiusComment {
       id: _int(json['id']),
       postId: _int(json['post_id']),
       content: _string(json['content']),
-      authorName: user is JsonMap ? _string(user['name'], fallback: 'Airmius') : 'Airmius',
+      authorName: user is JsonMap
+          ? _string(user['name'], fallback: 'Airmius')
+          : 'Airmius',
       authorAvatarUrl: user is JsonMap ? _userAvatarUrl(user) : null,
       likesCount: _int(json['likes_count']),
       mine: _bool(json['mine']),
@@ -1374,18 +1577,40 @@ class AirmiusStory {
 
   factory AirmiusStory.fromJson(JsonMap json) {
     final actor = json['actor'];
-    final mediaUrl = _mediaUrl(json['media_url']) ?? _mediaUrl(json['media_path']) ?? _mediaUrl(json['url']) ?? _mediaUrl(json['path']) ?? '';
+    final mediaUrl =
+        _mediaUrl(json['media_url']) ??
+        _mediaUrl(json['media_path']) ??
+        _mediaUrl(json['url']) ??
+        _mediaUrl(json['path']) ??
+        '';
     return AirmiusStory(
       id: _int(json['id']),
-      actorId: actor is JsonMap ? _int(actor['id']) : _int(json['user_id'] ?? json['actor_id']),
-      actorType: actor is JsonMap ? _string(actor['type'], fallback: 'user') : _string(json['actor_type'] ?? json['publisher_type'], fallback: 'user'),
-      actorName: actor is JsonMap ? _string(actor['name'], fallback: 'Airmius') : 'Airmius',
+      actorId: actor is JsonMap
+          ? _int(actor['id'])
+          : _int(json['user_id'] ?? json['actor_id']),
+      actorType: actor is JsonMap
+          ? _string(actor['type'], fallback: 'user')
+          : _string(
+              json['actor_type'] ?? json['publisher_type'],
+              fallback: 'user',
+            ),
+      actorName: actor is JsonMap
+          ? _string(actor['name'], fallback: 'Airmius')
+          : 'Airmius',
       actorAvatarUrl: actor is JsonMap ? _userAvatarUrl(actor) : null,
       visibility: _string(json['visibility'], fallback: 'public'),
       caption: _nullableString(json['caption']),
       mediaUrl: mediaUrl,
-      thumbnailUrl: _mediaUrl(json['media_thumbnail_url']) ?? _mediaUrl(json['media_thumbnail_path']) ?? _mediaUrl(json['thumbnail_url']) ?? _mediaUrl(json['thumbnail_path']),
-      mediaKind: _storyMediaKind(json['media_kind'], json['media_type'], mediaUrl),
+      thumbnailUrl:
+          _mediaUrl(json['media_thumbnail_url']) ??
+          _mediaUrl(json['media_thumbnail_path']) ??
+          _mediaUrl(json['thumbnail_url']) ??
+          _mediaUrl(json['thumbnail_path']),
+      mediaKind: _storyMediaKind(
+        json['media_kind'],
+        json['media_type'],
+        mediaUrl,
+      ),
       viewedByMe: _bool(json['viewed_by_me']),
       canDelete: _bool(json['can_delete']),
       myReaction: _nullableString(json['my_reaction']),
@@ -1423,25 +1648,37 @@ class AirmiusSearchResult {
   });
 
   factory AirmiusSearchResult.fromJson(JsonMap json) {
-    final type = _string(json['type'] ?? json['result_type'], fallback: 'Person');
+    final type = _string(
+      json['type'] ?? json['result_type'],
+      fallback: 'Person',
+    );
     final clubJson = json['club'];
     final teamJson = json['team'];
     return AirmiusSearchResult(
       id: _int(json['id']),
       type: type,
       title: _string(json['title'] ?? json['name']),
-      subtitle: _string(json['subtitle'] ?? json['description'] ?? json['city']),
-      imageUrl: _mediaUrl(json['avatar_url'] ?? json['profile_photo_url'] ?? json['profile_photo_path'] ?? json['image_url'] ?? json['logo_url'] ?? json['logo']),
+      subtitle: _string(
+        json['subtitle'] ?? json['description'] ?? json['city'],
+      ),
+      imageUrl: _mediaUrl(
+        json['avatar_url'] ??
+            json['profile_photo_url'] ??
+            json['profile_photo_path'] ??
+            json['image_url'] ??
+            json['logo_url'] ??
+            json['logo'],
+      ),
       club: clubJson is JsonMap
           ? AirmiusClub.fromJson(clubJson)
           : _isClubType(type)
-              ? AirmiusClub.fromJson(json)
-              : null,
+          ? AirmiusClub.fromJson(json)
+          : null,
       team: teamJson is JsonMap
           ? AirmiusTeam.fromJson(teamJson)
           : _isTeamType(type)
-              ? AirmiusTeam.fromJson(json)
-              : null,
+          ? AirmiusTeam.fromJson(json)
+          : null,
     );
   }
 
@@ -1469,13 +1706,21 @@ class AirmiusPage<T> {
 
   factory AirmiusPage.fromJson(JsonMap json, T Function(JsonMap json) map) {
     final rawItems = json['data'];
-    final list = rawItems is List ? rawItems.whereType<JsonMap>().map(map).toList() : <T>[];
+    final list = rawItems is List
+        ? rawItems.whereType<JsonMap>().map(map).toList()
+        : <T>[];
     final meta = json['meta'];
     return AirmiusPage<T>(
       items: list,
-      currentPage: meta is JsonMap ? _int(meta['current_page'], fallback: 1) : _int(json['current_page'], fallback: 1),
-      lastPage: meta is JsonMap ? _int(meta['last_page'], fallback: 1) : _int(json['last_page'], fallback: 1),
-      unreadCount: meta is JsonMap && meta.containsKey('unread_count') ? _int(meta['unread_count']) : null,
+      currentPage: meta is JsonMap
+          ? _int(meta['current_page'], fallback: 1)
+          : _int(json['current_page'], fallback: 1),
+      lastPage: meta is JsonMap
+          ? _int(meta['last_page'], fallback: 1)
+          : _int(json['last_page'], fallback: 1),
+      unreadCount: meta is JsonMap && meta.containsKey('unread_count')
+          ? _int(meta['unread_count'])
+          : null,
     );
   }
 }
@@ -1534,13 +1779,17 @@ class AirmiusEventWorkspace {
       events: _eventList(json['data']),
       calendarEvents: _eventList(json['calendar_events']),
       stats: AirmiusEventStats.fromJson(json['event_stats']),
-      nextEvent: json['next_event'] is JsonMap ? AirmiusEvent.fromJson(json['next_event'] as JsonMap) : null,
+      nextEvent: json['next_event'] is JsonMap
+          ? AirmiusEvent.fromJson(json['next_event'] as JsonMap)
+          : null,
       eventTypes: _stringList(json['event_types']),
       visibilities: _stringList(json['visibilities']),
       clubs: _clubList(json['clubs']),
       teams: _teamList(json['teams']),
       sports: _sportList(json['sports']),
-      currentPage: meta is JsonMap ? _int(meta['current_page'], fallback: 1) : 1,
+      currentPage: meta is JsonMap
+          ? _int(meta['current_page'], fallback: 1)
+          : 1,
       lastPage: meta is JsonMap ? _int(meta['last_page'], fallback: 1) : 1,
     );
   }
@@ -1550,31 +1799,43 @@ class AirmiusEventWorkspace {
     List<AirmiusEvent>? calendarEvents,
     AirmiusEventStats? stats,
     AirmiusEvent? nextEvent,
-  }) =>
-      AirmiusEventWorkspace(
-        events: events ?? this.events,
-        calendarEvents: calendarEvents ?? this.calendarEvents,
-        stats: stats ?? this.stats,
-        nextEvent: nextEvent ?? this.nextEvent,
-        eventTypes: eventTypes,
-        visibilities: visibilities,
-        clubs: clubs,
-        teams: teams,
-        sports: sports,
-        currentPage: currentPage,
-        lastPage: lastPage,
-      );
+  }) => AirmiusEventWorkspace(
+    events: events ?? this.events,
+    calendarEvents: calendarEvents ?? this.calendarEvents,
+    stats: stats ?? this.stats,
+    nextEvent: nextEvent ?? this.nextEvent,
+    eventTypes: eventTypes,
+    visibilities: visibilities,
+    clubs: clubs,
+    teams: teams,
+    sports: sports,
+    currentPage: currentPage,
+    lastPage: lastPage,
+  );
 }
 
-List<AirmiusEvent> _eventList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusEvent.fromJson).toList() : const [];
+List<AirmiusEvent> _eventList(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusEvent.fromJson).toList()
+    : const [];
 
-List<AirmiusClub> _clubList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusClub.fromJson).toList() : const [];
+List<AirmiusClub> _clubList(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusClub.fromJson).toList()
+    : const [];
 
-List<AirmiusTeam> _teamList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList() : const [];
+List<AirmiusTeam> _teamList(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList()
+    : const [];
 
-List<AirmiusSport> _sportList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusSport.fromJson).toList() : const [];
+List<AirmiusSport> _sportList(Object? value) => value is List
+    ? value.whereType<JsonMap>().map(AirmiusSport.fromJson).toList()
+    : const [];
 
-List<String> _stringList(Object? value) => value is List ? value.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() : const [];
+List<String> _stringList(Object? value) => value is List
+    ? value
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .toList()
+    : const [];
 
 abstract class AirmiusAuthRepository {
   Future<AirmiusUser> currentUser();
@@ -1582,31 +1843,77 @@ abstract class AirmiusAuthRepository {
 }
 
 abstract class AirmiusClubRepository {
-  Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1, bool mine = false});
+  Future<AirmiusPage<AirmiusClub>> searchClubs({
+    String? query,
+    int page = 1,
+    bool mine = false,
+  });
   Future<AirmiusClub> club(int id);
   Future<AirmiusClub> createClub(JsonMap payload);
-  Future<AirmiusClubManagement> updateMembershipSettings(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> createMembershipType(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> updateMembershipType(int clubId, int typeId, JsonMap payload);
-  Future<AirmiusClubManagement> createContributionRule(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> updateContributionRule(int clubId, int ruleId, JsonMap payload);
-  Future<AirmiusClubManagement> recordMembershipPayment(int clubId, int invoiceId, JsonMap payload);
+  Future<AirmiusClub> updateClub(int id, JsonMap payload);
+  Future<AirmiusClubManagement> updateMembershipSettings(
+    int clubId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> createMembershipType(
+    int clubId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> updateMembershipType(
+    int clubId,
+    int typeId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> createContributionRule(
+    int clubId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> updateContributionRule(
+    int clubId,
+    int ruleId,
+    JsonMap payload,
+  );
+  Future<AirmiusClubManagement> recordMembershipPayment(
+    int clubId,
+    int invoiceId,
+    JsonMap payload,
+  );
   Future<AirmiusClubManagement> recordDonation(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> recordPrepayment(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> updatePayment(int clubId, int paymentId, JsonMap payload);
+  Future<AirmiusClubManagement> updatePayment(
+    int clubId,
+    int paymentId,
+    JsonMap payload,
+  );
   Future<AirmiusClubManagement> createFinanceEntry(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> updateFinanceEntry(int clubId, int entryId, JsonMap payload);
+  Future<AirmiusClubManagement> updateFinanceEntry(
+    int clubId,
+    int entryId,
+    JsonMap payload,
+  );
   Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload);
-  Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role);
+  Future<AirmiusClubManagement> updateClubMemberRole(
+    int clubId,
+    int userId,
+    String role,
+  );
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
   Future<AirmiusTeam> team(int id);
   Future<AirmiusTeam> createTeam(JsonMap payload);
   Future<AirmiusTeam> updateTeam(int id, JsonMap payload);
   Future<void> deleteTeam(int id);
   Future<AirmiusTeam> requestTeamJoin(int id);
-  Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'});
+  Future<AirmiusTeam> approveTeamJoinRequest(
+    int teamId,
+    int requestId, {
+    String role = 'Player',
+  });
   Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId);
-  Future<AirmiusTeamInvitation> inviteTeamMember(int teamId, {required String email, required String role});
+  Future<AirmiusTeamInvitation> inviteTeamMember(
+    int teamId, {
+    required String email,
+    required String role,
+  });
   Future<List<AirmiusTeamInvitation>> teamInvitations();
   Future<AirmiusTeamInvitation> teamInvitation(int invitationId);
   Future<AirmiusTeam> acceptTeamInvitation(int invitationId);
@@ -1622,10 +1929,21 @@ abstract class AirmiusMembershipRepository {
   Future<AirmiusClubMembershipRequest> applyToClub(int clubId, JsonMap payload);
   Future<AirmiusMembershipApplication> application(int applicationId);
   Future<AirmiusMembershipApplication> withdraw(int applicationId);
-  Future<AirmiusPage<AirmiusClubMembershipRequest>> clubRequests(int clubId, {int page = 1});
+  Future<AirmiusPage<AirmiusClubMembershipRequest>> clubRequests(
+    int clubId, {
+    int page = 1,
+  });
   Future<AirmiusClubMembershipRequest> withdrawClubRequest(int clubId);
-  Future<AirmiusClubMembershipRequest> approveClubRequest(int clubId, int requestId, {String? reviewNote});
-  Future<AirmiusClubMembershipRequest> declineClubRequest(int clubId, int requestId, {String? reviewNote});
+  Future<AirmiusClubMembershipRequest> approveClubRequest(
+    int clubId,
+    int requestId, {
+    String? reviewNote,
+  });
+  Future<AirmiusClubMembershipRequest> declineClubRequest(
+    int clubId,
+    int requestId, {
+    String? reviewNote,
+  });
 }
 
 class AirmiusFileWorkspace {
@@ -1656,13 +1974,29 @@ class AirmiusFileWorkspace {
     final scope = data['scope'];
     final currentFolder = data['current_folder'];
     return AirmiusFileWorkspace(
-      scope: scope is JsonMap ? _string(scope['type'], fallback: 'user') : 'user',
-      currentFolder: currentFolder is JsonMap ? AirmiusFolder.fromJson(currentFolder) : null,
+      scope: scope is JsonMap
+          ? _string(scope['type'], fallback: 'user')
+          : 'user',
+      currentFolder: currentFolder is JsonMap
+          ? AirmiusFolder.fromJson(currentFolder)
+          : null,
       folders: _jsonList(data['folders']).map(AirmiusFolder.fromJson).toList(),
       files: _jsonList(data['files']).map(AirmiusManagedFile.fromJson).toList(),
-      storage: AirmiusStorageUsage.fromJson(data['storage_usage'] is JsonMap ? data['storage_usage'] as JsonMap : const {}),
-      filesPagination: AirmiusPagination.fromJson(data['files_pagination'] is JsonMap ? data['files_pagination'] as JsonMap : const {}),
-      foldersPagination: AirmiusPagination.fromJson(data['folders_pagination'] is JsonMap ? data['folders_pagination'] as JsonMap : const {}),
+      storage: AirmiusStorageUsage.fromJson(
+        data['storage_usage'] is JsonMap
+            ? data['storage_usage'] as JsonMap
+            : const {},
+      ),
+      filesPagination: AirmiusPagination.fromJson(
+        data['files_pagination'] is JsonMap
+            ? data['files_pagination'] as JsonMap
+            : const {},
+      ),
+      foldersPagination: AirmiusPagination.fromJson(
+        data['folders_pagination'] is JsonMap
+            ? data['folders_pagination'] as JsonMap
+            : const {},
+      ),
       search: _string(data['search']),
       sort: _string(data['sort'], fallback: 'name-asc'),
     );
@@ -1683,11 +2017,11 @@ class AirmiusFolder {
   final int? parentId;
 
   factory AirmiusFolder.fromJson(JsonMap json) => AirmiusFolder(
-        id: _int(json['id']),
-        name: _string(json['name'], fallback: 'Ordner'),
-        filesCount: _int(json['files_count']),
-        parentId: _nullableInt(json['parent_id']),
-      );
+    id: _int(json['id']),
+    name: _string(json['name'], fallback: 'Ordner'),
+    filesCount: _int(json['files_count']),
+    parentId: _nullableInt(json['parent_id']),
+  );
 }
 
 class AirmiusManagedFile {
@@ -1708,13 +2042,13 @@ class AirmiusManagedFile {
   final int? folderId;
 
   factory AirmiusManagedFile.fromJson(JsonMap json) => AirmiusManagedFile(
-        id: _int(json['id']),
-        name: _string(json['display_name'] ?? json['name'], fallback: 'Datei'),
-        type: _string(json['type'], fallback: 'Datei'),
-        size: _int(json['size']),
-        url: _string(json['url'] ?? json['path']),
-        folderId: _nullableInt(json['folder_id']),
-      );
+    id: _int(json['id']),
+    name: _string(json['display_name'] ?? json['name'], fallback: 'Datei'),
+    type: _string(json['type'], fallback: 'Datei'),
+    size: _int(json['size']),
+    url: _string(json['url'] ?? json['path']),
+    folderId: _nullableInt(json['folder_id']),
+  );
 }
 
 class AirmiusStorageUsage {
@@ -1733,12 +2067,12 @@ class AirmiusStorageUsage {
   final bool isFull;
 
   factory AirmiusStorageUsage.fromJson(JsonMap json) => AirmiusStorageUsage(
-        limitGb: _int(json['limit_gb'], fallback: 1),
-        usedBytes: _int(json['used_bytes']),
-        remainingBytes: _int(json['remaining_bytes'], fallback: 1024 * 1024 * 1024),
-        usedPercent: _double(json['used_percent']),
-        isFull: _bool(json['is_full']),
-      );
+    limitGb: _int(json['limit_gb'], fallback: 1),
+    usedBytes: _int(json['used_bytes']),
+    remainingBytes: _int(json['remaining_bytes'], fallback: 1024 * 1024 * 1024),
+    usedPercent: _double(json['used_percent']),
+    isFull: _bool(json['is_full']),
+  );
 }
 
 class AirmiusPagination {
@@ -1757,18 +2091,32 @@ class AirmiusPagination {
   final int? to;
 
   factory AirmiusPagination.fromJson(JsonMap json) => AirmiusPagination(
-        currentPage: _int(json['current_page'], fallback: 1),
-        lastPage: _int(json['last_page'], fallback: 1),
-        total: _int(json['total']),
-        from: _nullableInt(json['from']),
-        to: _nullableInt(json['to']),
-      );
+    currentPage: _int(json['current_page'], fallback: 1),
+    lastPage: _int(json['last_page'], fallback: 1),
+    total: _int(json['total']),
+    from: _nullableInt(json['from']),
+    to: _nullableInt(json['to']),
+  );
 }
 
 abstract class AirmiusFileRepository {
-  Future<JsonMap> createUploadIntent({required String scope, required String fileName, required String mimeType});
-  Future<AirmiusFileWorkspace> workspace({String scope = 'user', int? folderId, String? search, String sort = 'name-asc', int page = 1});
-  Future<AirmiusFolder> createFolder({required String scope, required String name, int? parentId});
+  Future<JsonMap> createUploadIntent({
+    required String scope,
+    required String fileName,
+    required String mimeType,
+  });
+  Future<AirmiusFileWorkspace> workspace({
+    String scope = 'user',
+    int? folderId,
+    String? search,
+    String sort = 'name-asc',
+    int page = 1,
+  });
+  Future<AirmiusFolder> createFolder({
+    required String scope,
+    required String name,
+    int? parentId,
+  });
   Future<AirmiusFolder> renameFolder(int folderId, String name);
   Future<void> deleteFolder(int folderId);
   Future<AirmiusManagedFile> renameFile(int fileId, String name);
@@ -1776,7 +2124,11 @@ abstract class AirmiusFileRepository {
 }
 
 abstract class AirmiusEventRepository {
-  Future<AirmiusPage<AirmiusEvent>> events({int page = 1, DateTime? from, DateTime? to});
+  Future<AirmiusPage<AirmiusEvent>> events({
+    int page = 1,
+    DateTime? from,
+    DateTime? to,
+  });
   Future<AirmiusEventWorkspace> workspace({
     int page = 1,
     String? search,
@@ -1809,14 +2161,30 @@ abstract class AirmiusNotificationRepository {
 
 abstract class AirmiusConversationRepository {
   Future<AirmiusPage<AirmiusConversation>> conversations({int page = 1});
+  Future<AirmiusConversation> createConversation({
+    required String type,
+    List<int> participantIds,
+    int? teamId,
+    String? name,
+    String? description,
+    String? message,
+  });
   Future<AirmiusConversation> conversation(int conversationId);
-  Future<AirmiusPage<AirmiusMessage>> messages(int conversationId, {int page = 1});
+  Future<AirmiusPage<AirmiusMessage>> messages(
+    int conversationId, {
+    int page = 1,
+  });
   Future<AirmiusMessage> sendMessage(int conversationId, String message);
+  Future<void> markRead(int conversationId);
+  Future<void> sendTyping(int conversationId, bool typing);
 }
 
 abstract class AirmiusFeedRepository {
   Future<AirmiusPage<AirmiusPost>> feed({int page = 1});
-  Future<AirmiusPost> create({required String content, required String visibility});
+  Future<AirmiusPost> create({
+    required String content,
+    required String visibility,
+  });
   Future<AirmiusPost> toggleLike(int postId);
   Future<AirmiusPost> toggleHelpful(int postId);
   Future<AirmiusPost> updatePost(
@@ -1831,8 +2199,17 @@ abstract class AirmiusFeedRepository {
     List<int> sportSkillIds = const [],
   });
   Future<void> deletePost(int postId);
-  Future<void> reportContent({required String type, required int id, String reason = 'other', String? details});
-  Future<AirmiusPage<AirmiusComment>> comments(int postId, {int page = 1, int perPage = 20});
+  Future<void> reportContent({
+    required String type,
+    required int id,
+    String reason = 'other',
+    String? details,
+  });
+  Future<AirmiusPage<AirmiusComment>> comments(
+    int postId, {
+    int page = 1,
+    int perPage = 20,
+  });
   Future<AirmiusComment> createComment(int postId, String content);
   Future<AirmiusComment> updateComment(int commentId, String content);
   Future<void> deleteComment(int commentId);
@@ -1843,7 +2220,10 @@ abstract class AirmiusFeedRepository {
 }
 
 abstract class AirmiusSearchRepository {
-  Future<AirmiusPage<AirmiusSearchResult>> search({required String query, int page = 1});
+  Future<AirmiusPage<AirmiusSearchResult>> search({
+    required String query,
+    int page = 1,
+  });
 }
 
 int _int(Object? value, {int fallback = 0}) {
@@ -1885,9 +2265,15 @@ bool _blank(String? value) => value == null || value.trim().isEmpty;
 String _storyMediaKind(Object? kind, Object? mediaType, String mediaUrl) {
   final explicit = (_nullableString(kind) ?? '').toLowerCase();
   final type = (_nullableString(mediaType) ?? '').toLowerCase();
-  final path = Uri.tryParse(mediaUrl)?.path.toLowerCase() ?? mediaUrl.toLowerCase();
+  final path =
+      Uri.tryParse(mediaUrl)?.path.toLowerCase() ?? mediaUrl.toLowerCase();
 
-  if (explicit.contains('video') || type.startsWith('video/') || path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.ogg') || path.endsWith('.mov')) {
+  if (explicit.contains('video') ||
+      type.startsWith('video/') ||
+      path.endsWith('.mp4') ||
+      path.endsWith('.webm') ||
+      path.endsWith('.ogg') ||
+      path.endsWith('.mov')) {
     return 'video';
   }
 
@@ -1904,12 +2290,24 @@ String? _firstImageAttachmentUrl(Object? attachments) {
     if (attachment is! JsonMap) continue;
     final nestedFile = attachment['file'];
     final file = nestedFile is JsonMap ? nestedFile : attachment;
-    final type = _nullableString(file['mime_type']) ?? _nullableString(file['type']) ?? '';
-    final candidate = _uploadFileUrl(file['url']) ?? _uploadFileUrl(file['path']) ?? _uploadFileUrl(file['thumbnail_url']) ?? _uploadFileUrl(file['thumbnail_path']);
+    final type =
+        _nullableString(file['mime_type']) ??
+        _nullableString(file['type']) ??
+        '';
+    final candidate =
+        _uploadFileUrl(file['url']) ??
+        _uploadFileUrl(file['path']) ??
+        _uploadFileUrl(file['thumbnail_url']) ??
+        _uploadFileUrl(file['thumbnail_path']);
     if (candidate == null) continue;
     final lowerCandidate = candidate.toLowerCase();
     final lowerType = type.toLowerCase();
-    if (lowerType.startsWith('image/') || lowerCandidate.endsWith('.jpg') || lowerCandidate.endsWith('.jpeg') || lowerCandidate.endsWith('.png') || lowerCandidate.endsWith('.webp') || lowerCandidate.endsWith('.gif')) {
+    if (lowerType.startsWith('image/') ||
+        lowerCandidate.endsWith('.jpg') ||
+        lowerCandidate.endsWith('.jpeg') ||
+        lowerCandidate.endsWith('.png') ||
+        lowerCandidate.endsWith('.webp') ||
+        lowerCandidate.endsWith('.gif')) {
       return candidate;
     }
   }
@@ -1931,12 +2329,16 @@ List<String> _postImageUrls({
 
   final raw = _nullableString(image);
   if (raw != null) {
-    if (raw.startsWith('data:image/') || raw.startsWith('http://') || raw.startsWith('https://')) {
+    if (raw.startsWith('data:image/') ||
+        raw.startsWith('http://') ||
+        raw.startsWith('https://')) {
       add(raw);
     } else {
       final base = _nullableString(uploadsBaseUrl);
       if (base != null && base.isNotEmpty) {
-        add('${base.replaceFirst(RegExp(r'/+$'), '')}/${raw.replaceFirst(RegExp(r'^/+'), '')}');
+        add(
+          '${base.replaceFirst(RegExp(r'/+$'), '')}/${raw.replaceFirst(RegExp(r'^/+'), '')}',
+        );
       }
 
       add('https://cdn.airmius.com/${raw.replaceFirst(RegExp(r'^/+'), '')}');
@@ -1947,8 +2349,18 @@ List<String> _postImageUrls({
         add(_mediaUrl(raw));
       } else {
         final cleanPath = raw.replaceFirst(RegExp(r'^/+'), '');
-        add(cleanPath.startsWith('storage/') ? '/$cleanPath' : '/storage/$cleanPath');
-        add(_mediaUrl(cleanPath.startsWith('storage/') ? '/$cleanPath' : '/storage/$cleanPath'));
+        add(
+          cleanPath.startsWith('storage/')
+              ? '/$cleanPath'
+              : '/storage/$cleanPath',
+        );
+        add(
+          _mediaUrl(
+            cleanPath.startsWith('storage/')
+                ? '/$cleanPath'
+                : '/storage/$cleanPath',
+          ),
+        );
       }
     }
   }
@@ -1957,11 +2369,6 @@ List<String> _postImageUrls({
   add(_mediaUrl(imageProxyUrl));
 
   return urls;
-}
-
-String? _postImageUrl(Object? image, Object? imageUrl, Object? uploadsBaseUrl) {
-  final urls = _postImageUrls(image: image, imageUrl: imageUrl, imageProxyUrl: null, uploadsBaseUrl: uploadsBaseUrl);
-  return urls.isEmpty ? null : urls.first;
 }
 
 List<AirmiusPostAttachment> _postAttachments(Object? attachments) {
@@ -1973,26 +2380,46 @@ List<AirmiusPostAttachment> _postAttachments(Object? attachments) {
     final file = nestedFile is JsonMap ? nestedFile : attachment;
     final url = _uploadFileUrl(file['url']) ?? _uploadFileUrl(file['path']);
     if (url == null) continue;
-    final type = (_nullableString(file['type']) ?? _nullableString(file['mime_type']) ?? '').toLowerCase();
+    final type =
+        (_nullableString(file['type']) ??
+                _nullableString(file['mime_type']) ??
+                '')
+            .toLowerCase();
     final lowerUrl = url.toLowerCase();
-    final kind = type.startsWith('image/') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg') || lowerUrl.endsWith('.png') || lowerUrl.endsWith('.webp') || lowerUrl.endsWith('.gif')
+    final kind =
+        type.startsWith('image/') ||
+            lowerUrl.endsWith('.jpg') ||
+            lowerUrl.endsWith('.jpeg') ||
+            lowerUrl.endsWith('.png') ||
+            lowerUrl.endsWith('.webp') ||
+            lowerUrl.endsWith('.gif')
         ? 'image'
-        : type.startsWith('video/') || lowerUrl.endsWith('.mp4') || lowerUrl.endsWith('.mov') || lowerUrl.endsWith('.webm') || lowerUrl.endsWith('.ogg')
-            ? 'video'
-            : 'file';
-    mapped.add(AirmiusPostAttachment(
-      name: _string(file['display_name'] ?? file['name'], fallback: 'Datei'),
-      url: url,
-      kind: kind,
-      thumbnailUrl: _uploadFileUrl(file['thumbnail_url']) ?? _uploadFileUrl(file['thumbnail_path']),
-    ));
+        : type.startsWith('video/') ||
+              lowerUrl.endsWith('.mp4') ||
+              lowerUrl.endsWith('.mov') ||
+              lowerUrl.endsWith('.webm') ||
+              lowerUrl.endsWith('.ogg')
+        ? 'video'
+        : 'file';
+    mapped.add(
+      AirmiusPostAttachment(
+        name: _string(file['display_name'] ?? file['name'], fallback: 'Datei'),
+        url: url,
+        kind: kind,
+        thumbnailUrl:
+            _uploadFileUrl(file['thumbnail_url']) ??
+            _uploadFileUrl(file['thumbnail_path']),
+      ),
+    );
   }
   return mapped;
 }
 
 String? _postSportName(Object? sport) {
   if (sport is JsonMap) {
-    return _nullableString(sport['name']) ?? _nullableString(sport['title']) ?? _nullableString(sport['slug']);
+    return _nullableString(sport['name']) ??
+        _nullableString(sport['title']) ??
+        _nullableString(sport['slug']);
   }
   return _nullableString(sport);
 }
@@ -2001,7 +2428,10 @@ List<String> _postSportSkills(Object? skills) {
   if (skills is! List) return const [];
   return skills
       .map((skill) {
-        if (skill is JsonMap) return _nullableString(skill['name']) ?? _nullableString(skill['title']);
+        if (skill is JsonMap) {
+          return _nullableString(skill['name']) ??
+              _nullableString(skill['title']);
+        }
         return _nullableString(skill);
       })
       .whereType<String>()
@@ -2023,27 +2453,43 @@ List<int> _postSportSkillIds(Object? skills) {
 String? _mediaUrl(Object? value) {
   final string = _nullableString(value);
   if (string == null) return null;
-  if (string.startsWith('data:image/') || string.startsWith('http://') || string.startsWith('https://')) {
+  if (string.startsWith('data:image/') ||
+      string.startsWith('http://') ||
+      string.startsWith('https://')) {
     return string;
   }
 
-  const origin = String.fromEnvironment('AIRMIUS_API_BASE_URL', defaultValue: 'https://airmius.com');
+  const origin = String.fromEnvironment(
+    'AIRMIUS_API_BASE_URL',
+    defaultValue: 'https://airmius.com',
+  );
   final base = Uri.tryParse(origin);
   if (base == null || !base.hasScheme || base.host.isEmpty) return string;
 
   if (string.startsWith('/')) {
-    return base.replace(path: _withBasePath(base, string), query: null, fragment: null).toString();
+    return base
+        .replace(path: _withBasePath(base, string), query: null, fragment: null)
+        .toString();
   }
 
   final cleanPath = string.replaceFirst(RegExp(r'^/+'), '');
-  final path = cleanPath.startsWith('storage/') || cleanPath.startsWith('build/') || cleanPath.startsWith('images/') ? '/$cleanPath' : '/storage/$cleanPath';
-  return base.replace(path: _withBasePath(base, path), query: null, fragment: null).toString();
+  final path =
+      cleanPath.startsWith('storage/') ||
+          cleanPath.startsWith('build/') ||
+          cleanPath.startsWith('images/')
+      ? '/$cleanPath'
+      : '/storage/$cleanPath';
+  return base
+      .replace(path: _withBasePath(base, path), query: null, fragment: null)
+      .toString();
 }
 
 String? _uploadFileUrl(Object? value) {
   final string = _nullableString(value);
   if (string == null) return null;
-  if (string.startsWith('data:image/') || string.startsWith('http://') || string.startsWith('https://')) {
+  if (string.startsWith('data:image/') ||
+      string.startsWith('http://') ||
+      string.startsWith('https://')) {
     return string;
   }
 
@@ -2056,7 +2502,9 @@ String? _uploadFileUrl(Object? value) {
 }
 
 String _withBasePath(Uri base, String path) {
-  final cleanBase = base.path == '/' ? '' : base.path.replaceFirst(RegExp(r'/$'), '');
+  final cleanBase = base.path == '/'
+      ? ''
+      : base.path.replaceFirst(RegExp(r'/$'), '');
   if (cleanBase.isEmpty || path.startsWith('$cleanBase/')) return path;
   return '$cleanBase$path';
 }
@@ -2085,7 +2533,9 @@ bool _bool(Object? value) {
 
 DateTime _date(Object? value) {
   if (value is DateTime) return value;
-  if (value is String) return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
   return DateTime.fromMillisecondsSinceEpoch(0);
 }
 

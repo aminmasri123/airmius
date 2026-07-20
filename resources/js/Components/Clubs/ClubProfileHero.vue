@@ -21,6 +21,11 @@ const logoInput = ref(null)
                 v-if="clubProfile.cover_image"
                 :src="storageUrl(clubProfile.cover_image)"
                 :alt="clubProfile.name"
+                width="1200"
+                height="320"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
                 class="h-full w-full object-cover"
             />
             <button
@@ -47,6 +52,10 @@ const logoInput = ref(null)
                             v-if="clubProfile.logo"
                             :src="storageUrl(clubProfile.logo)"
                             :alt="clubProfile.name"
+                            width="96"
+                            height="96"
+                            loading="eager"
+                            decoding="async"
                             class="h-full w-full object-cover"
                         />
                         <span v-else>{{ initials(clubProfile.name) }}</span>
@@ -87,4 +96,3 @@ const logoInput = ref(null)
         </div>
     </section>
 </template>
-

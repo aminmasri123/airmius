@@ -10,7 +10,6 @@ import 'badge_detail_screen.dart';
 import 'edit_form_screen.dart';
 import 'feed_center_screen.dart';
 import 'sport_profile_detail_screen.dart';
-import 'ui_action_result_screen.dart';
 import 'user_profile_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -326,7 +325,7 @@ class _ProfilePhoto extends StatelessWidget {
               resolvedImageUrl,
               fit: BoxFit.cover,
               webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-              errorBuilder: (_, __, ___) => Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900))),
+              errorBuilder: (_, _, _) => Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900))),
             ),
     );
   }

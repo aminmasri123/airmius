@@ -132,12 +132,12 @@ class AirmiusLogo extends StatelessWidget {
         height: resolvedSize,
         width: selectedVariant == AirmiusLogoVariant.mark ? resolvedSize : null,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           fallbackAssetPath,
           height: resolvedSize,
           width: selectedVariant == AirmiusLogoVariant.mark ? resolvedSize : null,
           fit: BoxFit.contain,
-          errorBuilder: (context, __, ___) => Icon(Icons.auto_awesome, color: _themeAccent(context)),
+          errorBuilder: (context, _, _) => Icon(Icons.auto_awesome, color: _themeAccent(context)),
         ),
       ),
     );
@@ -282,11 +282,11 @@ class PageFrame extends StatelessWidget {
     final text = _themeText(context);
     final muted = _themeMuted(context);
     final trailingWidgets = <Widget>[
-      if (trailing != null) trailing!,
+      ?trailing,
       if (actions != null)
         ...actions!
             .map((action) => Padding(padding: const EdgeInsets.only(left: 8), child: action))
-            .toList(),
+            ,
     ];
 
     return ColoredBox(
@@ -586,7 +586,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
               SwitchListTile.adaptive(
                 value: _saveAsDraft,
                 onChanged: (value) => setState(() => _saveAsDraft = value),
-                activeColor: accent,
+                activeThumbColor: accent,
                 contentPadding: EdgeInsets.zero,
                 title: Text('Als Entwurf vormerken', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
                 subtitle: Text('UI bleibt lokal sichtbar, Server-Sync ist später geplant.', style: TextStyle(color: muted)),
@@ -594,7 +594,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
               SwitchListTile.adaptive(
                 value: _notify,
                 onChanged: (value) => setState(() => _notify = value),
-                activeColor: AirmiusColors.amber,
+                activeThumbColor: AirmiusColors.amber,
                 contentPadding: EdgeInsets.zero,
                 title: Text('Benachrichtigung ausloesen', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
                 subtitle: Text('Push/Inbox-Signal optional vormerken.', style: TextStyle(color: muted)),
@@ -783,7 +783,7 @@ class UserBubble extends StatelessWidget {
               imageUrl,
               fit: BoxFit.cover,
               webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-              errorBuilder: (_, __, ___) => Center(child: initials),
+              errorBuilder: (_, _, _) => Center(child: initials),
             ),
     );
     if (onTap == null) return bubble;
@@ -952,7 +952,7 @@ class Eyebrow extends StatelessWidget {
 }
 
 class AirmiusButton extends StatelessWidget {
-  AirmiusButton({
+  const AirmiusButton({
     super.key,
     required this.label,
     required this.icon,
@@ -1140,7 +1140,7 @@ class AirmiusAvatar extends StatelessWidget {
                 resolvedImageUrl,
                 fit: BoxFit.cover,
                 webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-                errorBuilder: (_, __, ___) => Center(
+                errorBuilder: (_, _, _) => Center(
                   child: Text(
                     initials,
                     style: TextStyle(
@@ -1235,7 +1235,7 @@ class _AirmiusNetworkImageWithFallbacksState extends State<_AirmiusNetworkImageW
       height: double.infinity,
       fit: BoxFit.cover,
       webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-      errorBuilder: (_, __, ___) {
+      errorBuilder: (_, _, _) {
         if (_index + 1 < _candidates.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) setState(() => _index += 1);

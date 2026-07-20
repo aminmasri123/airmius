@@ -2,6 +2,7 @@
 
 namespace App\Support\Api\V1;
 
+use App\Support\PermissionDeniedMessage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -18,12 +19,16 @@ class ApiErrorResponse
 {
     public static function validation(ValidationException $exception, Request $request): JsonResponse
     {
+        $errors = $exception->errors();
+
         return self::make(
             $request,
             'validation_failed',
             $exception->getMessage() ?: 'The given data was invalid.',
             $exception->status,
-            ['fields' => $exception->errors()],
+            ['fields' => $errors],
+            [],
+            $errors,
         );
     }
 
@@ -44,7 +49,7 @@ class ApiErrorResponse
         return self::make(
             $request,
             'forbidden',
-            $message && $message !== 'This action is unauthorized.' ? $message : 'This action is forbidden.',
+            PermissionDeniedMessage::normalize($message),
             Response::HTTP_FORBIDDEN,
         );
     }
@@ -97,10 +102,14 @@ class ApiErrorResponse
 
     public static function serverError(Throwable $exception, Request $request): JsonResponse
     {
+        $message = config('app.debug') && trim((string) $exception->getMessage()) !== ''
+            ? trim((string) $exception->getMessage())
+            : 'An unexpected error occurred.';
+
         return self::make(
             $request,
             'server_error',
-            'An unexpected error occurred.',
+            $message,
             Response::HTTP_INTERNAL_SERVER_ERROR,
         );
     }
@@ -112,8 +121,14 @@ class ApiErrorResponse
         int $status,
         array $error = [],
         array $headers = [],
+        ?array $errors = null,
     ): JsonResponse {
+        $errors ??= $error['fields'] ?? [];
+
         return response()->json([
+            'message' => $message,
+            'errors' => $errors === [] ? (object) [] : $errors,
+            'code' => $code,
             'error' => array_merge([
                 'code' => $code,
                 'message' => $message,
@@ -132,7 +147,7 @@ class ApiErrorResponse
             Response::HTTP_METHOD_NOT_ALLOWED => 'method_not_allowed',
             Response::HTTP_CONFLICT => 'conflict',
             Response::HTTP_UNPROCESSABLE_ENTITY => 'unprocessable_entity',
-            Response::HTTP_TOO_MANY_REQUESTS => 'too_many_requests',
+            Response::HTTP_TOO_MANY_REQUESTS => 'rate_limited',
             default => $status >= Response::HTTP_INTERNAL_SERVER_ERROR ? 'server_error' : 'http_error',
         };
     }
@@ -140,6 +155,10 @@ class ApiErrorResponse
     private static function messageFor(Throwable $exception, int $status): string
     {
         $message = trim((string) $exception->getMessage());
+
+        if ($status === Response::HTTP_FORBIDDEN) {
+            return PermissionDeniedMessage::normalize($message);
+        }
 
         if ($message !== '') {
             return $message;

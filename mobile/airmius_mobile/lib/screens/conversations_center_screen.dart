@@ -99,7 +99,6 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   }
 
   Widget _buildInbox(BuildContext context) {
-    final scope = AirmiusScope.of(context);
     return RefreshIndicator(
       color: AirmiusColors.blue,
       backgroundColor: AirmiusColors.card,

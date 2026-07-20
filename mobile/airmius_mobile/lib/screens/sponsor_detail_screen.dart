@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class SponsorDetailScreen extends StatefulWidget {
   const SponsorDetailScreen({super.key, required this.title, required this.status});
@@ -46,7 +45,7 @@ class _SponsorDetailScreenState extends State<SponsorDetailScreen> {
             const Eyebrow('Paket & Pipeline'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _package,
+              initialValue: _package,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Sponsor-Paket'),
               items: const ['Bronze', 'Silber', 'Gold', 'Individuell'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -54,7 +53,7 @@ class _SponsorDetailScreenState extends State<SponsorDetailScreen> {
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _stage,
+              initialValue: _stage,
               dropdownColor: AirmiusColors.card,
               decoration: _fieldDecoration('Anfrage-Status'),
               items: const ['Kontakt', 'Angebot', 'Vertrag', 'Aktiv', 'Abgelehnt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
@@ -65,9 +64,9 @@ class _SponsorDetailScreenState extends State<SponsorDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Kampagne'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _publicLogo, onChanged: (value) => setState(() => _publicLogo = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Logo öffentlich zeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gastseite, Vereinsprofil und Kampagnenbereich.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _campaignActive, onChanged: (value) => setState(() => _campaignActive = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Kampagne aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Banner und Sponsorhinweise im Vereinsbereich zeigen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _reporting, onChanged: (value) => setState(() => _reporting = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Reporting senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Monatliche Reichweiten- und Lead-Zahlen vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _publicLogo, onChanged: (value) => setState(() => _publicLogo = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Logo öffentlich zeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gastseite, Vereinsprofil und Kampagnenbereich.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _campaignActive, onChanged: (value) => setState(() => _campaignActive = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Kampagne aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Banner und Sponsorhinweise im Vereinsbereich zeigen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _reporting, onChanged: (value) => setState(() => _reporting = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Reporting senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Monatliche Reichweiten- und Lead-Zahlen vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: 0.45), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

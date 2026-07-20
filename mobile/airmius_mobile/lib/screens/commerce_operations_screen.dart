@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class CommerceOperationsScreen extends StatefulWidget {
   const CommerceOperationsScreen({super.key});
@@ -65,8 +64,8 @@ class _CommerceOperationsScreenState extends State<CommerceOperationsScreen> {
                 children: [
                   const Eyebrow('Ausfuehrungsregeln'),
                   const SizedBox(height: 8),
-                  SwitchListTile(value: _notifySeller, onChanged: (value) => setState(() => _notifySeller = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Entscheidungen erzeugen später Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _audit, onChanged: (value) => setState(() => _audit = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Admin-Commerce-Aktionen werden nachvollziehbar protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notifySeller, onChanged: (value) => setState(() => _notifySeller = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Entscheidungen erzeugen später Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _audit, onChanged: (value) => setState(() => _audit = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Admin-Commerce-Aktionen werden nachvollziehbar protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -128,7 +127,7 @@ class _OperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _CommerceOperation item) {
-    final action = () => openUiAction(context, title: item.primaryLabel, body: '${item.primaryLabel} für ${item.title}: ${item.body}', status: item.status, icon: item.icon);
+    void action() => openUiAction(context, title: item.primaryLabel, body: '${item.primaryLabel} für ${item.title}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
       confirmDanger(context, '${item.primaryLabel}?', 'Diese Commerce-Aktion kann Zahlungen, Rückgaben oder Sichtbarkeit beeinflussen. Sie wird später mit Audit gespeichert.', item.primaryLabel, action);
       return;

@@ -34,6 +34,12 @@ $RequiredGateFiles = @{
         "expected_files.md",
         "api-qa-notes.md"
     )
+    "real_device_smoke" = @(
+        "signoff.md",
+        "expected_files.md",
+        "android-real-device-smoke.md",
+        "ios-real-device-smoke.md"
+    )
     "legal_privacy_approval" = @(
         "signoff.md",
         "expected_files.md"

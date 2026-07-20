@@ -25,6 +25,16 @@ Use this file for the final release-candidate evidence package.
   - `scripts/run_android_debug.ps1`
 - Local release prerequisites script:
   - `scripts/assert_local_release_prerequisites.ps1`
+- Linux Android user SDK installer:
+  - `scripts/install_android_sdk_user.sh`
+- Linux Android prerequisite script:
+  - `scripts/assert_linux_android_release_prerequisites.sh`
+- Android real-device smoke script:
+  - `scripts/run_android_real_device_smoke.sh`
+- iOS/TestFlight smoke script:
+  - `scripts/run_ios_real_device_smoke.sh`
+- Real device evidence validator:
+  - `scripts/assert_real_device_smoke_evidence.sh`
 - Evidence status script:
   - `scripts/show_release_evidence_status.ps1`
 - Next release steps script:
@@ -65,13 +75,40 @@ Use this file for the final release-candidate evidence package.
   - `store_listing/release/final_command_cheatsheet.md`
 - Windows Android setup runbook:
   - `store_listing/release/windows_android_setup_runbook.md`
+- Linux Android setup runbook:
+  - `store_listing/release/linux_android_setup_runbook.md`
+- Real device smoke test runbook:
+  - `store_listing/release/real_device_smoke_test_runbook.md`
 - Store submission readiness runbook:
   - `store_listing/release/store_submission_readiness_runbook.md`
+
+## Gate: Android and iOS Real Device Smoke
+
+- Manifest gate ID:
+  - `real_device_smoke`
+- Android command:
+  - `scripts/run_android_real_device_smoke.sh --build-release`
+- iOS/macOS command:
+  - `scripts/run_ios_real_device_smoke.sh --build-ipa`
+- Manual evidence files:
+  - `release_evidence/manual/real_device_smoke/android-real-device-smoke.md`
+  - `release_evidence/manual/real_device_smoke/ios-real-device-smoke.md`
+- Required outcome:
+  - Android and iOS both pass login, push, upload and deep-link checks before the AIRMIUS MVP checklist item is marked done.
+- Validator:
+  - `scripts/assert_real_device_smoke_evidence.sh`
 
 ## Gate 1: Flutter Analyze
 
 - Prerequisite command:
   - `.\scripts\assert_local_release_prerequisites.ps1`
+- Linux Android device prerequisite command:
+  - `scripts/install_android_sdk_user.sh --accept-licenses`
+  - `scripts/assert_linux_android_release_prerequisites.sh --require-android-device`
+- Android real-device evidence command:
+  - `scripts/run_android_real_device_smoke.sh --build-release`
+- iOS/TestFlight evidence command:
+  - `scripts/run_ios_real_device_smoke.sh --build-ipa`
 - Prerequisite evidence artifact:
   - `release_evidence/local-release-prerequisites.log`
 - Command:

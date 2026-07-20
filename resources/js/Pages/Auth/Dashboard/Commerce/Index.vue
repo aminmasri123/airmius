@@ -1,9 +1,9 @@
-﻿<script setup>
-import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
-import { confirmDialog } from '@/services/dialogService'
+<script setup>
+import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
+import AppButton from "@/Components/UI/AppButton.vue"
+import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
+import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
+import { Head, Link } from "@inertiajs/vue3"
 
 defineOptions({ layout: AppLayout })
 
@@ -34,1421 +34,209 @@ const props = defineProps({
     marketplaceCategoryCommissions: { type: Array, default: () => [] },
 })
 
-const page = usePage()
-const selectedClubId = ref(props.clubs[0]?.id || '')
-const provider = ref('bank_transfer')
-const adProvider = ref('bank_transfer')
-const interval = ref('monthly')
-const adAcceptedTerms = ref(false)
-const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
-const showCartCheckout = ref(false)
-const checkoutConfirmation = ref({ open: false, type: null, item: null, provider: 'bank_transfer', accepted: false })
-const productCreateModal = ref(false)
-const websiteRequestModal = ref(false)
-const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
-const queryOrderId = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('order')
-const activeTab = ref(queryTab === 'marketplace' || !queryTab ? 'shop' : queryTab)
-const focusedOrderId = ref(queryOrderId || '')
-const shopView = ref('all')
-const campaignActionError = ref('')
-const campaignCreateError = ref('')
-const deleteCampaignModal = ref({ open: false, campaign: null, confirmation: '' })
-const editCampaignModal = ref({ open: false, campaign: null })
-const adGroupModal = ref({ open: false, campaign: null })
-const adCreativeModal = ref({ open: false, campaign: null, group: null })
-const editCampaignUploadPreviewUrl = ref('')
-const adGroupSportQuery = ref('')
-const productForm = useForm({
-    club_id: '',
-    title: '',
-    description: '',
-    attributes_text: '',
-    attribute_options: [],
-    variants: [],
-    image_url: '',
-    image_urls_text: '',
-    image_upload: null,
-    image_uploads: [],
-    learning_course_id: '',
-    offer_type: 'physical_product',
-    category: 'equipment',
-    product_type: 'single',
-    sku: '',
-    is_shippable: true,
-    manages_stock: true,
-    stock_quantity: 1,
-    inventories: [
-        { country_code: 'DE', stock_quantity: 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' },
-    ],
-    tax_class: 'standard',
-    digital_delivery_note: '',
-    course_outline_text: '',
-    learning_goals_text: '',
-    coaching_enabled: false,
-    coach_feedback_instructions: '',
-    price_cents: '',
-})
-const productImportForm = useForm({
-    import_file: null,
-})
-const sellerApplicationForm = useForm({
-    applicant_type: props.sellerApplication?.applicant_type || 'private',
-    business_name: props.sellerApplication?.business_name || '',
-    notes: props.sellerApplication?.notes || '',
-    rule_product_truth: false,
-    rule_rights: false,
-    rule_shipping_returns: false,
-    rule_commission: false,
-    rule_data_privacy: false,
-})
-const productAttributeRows = ref([{ name: '', values: [] }])
-const productVariantRows = ref([])
-const editProductModal = ref({ open: false, product: null })
-const deleteProductModal = ref({ open: false, product: null, confirmation: '' })
-const editProductForm = useForm({
-    title: '',
-    description: '',
-    image_url: '',
-    image_upload: null,
-    sku: '',
-    price_cents: '',
-    manages_stock: false,
-    stock_quantity: '',
-    inventories: [],
-})
-const campaignForm = useForm({
-    club_id: '',
-    name: '',
-    headline: '',
-    description: '',
-    primary_text: '',
-    target_url: '',
-    cta_label: 'Mehr erfahren',
-    objective: 'traffic',
-    placement: 'marketplace_card',
-    creative_format: 'feed_square',
-    creative_image_url: '',
-    creative_image_upload: null,
-    creatives: [],
-    audience_locations: '',
-    audience_interests: '',
-    audience_age_min: '',
-    audience_age_max: '',
-    budget_cents: '',
-    daily_budget_cents: '',
-    starts_at: '',
-    ends_at: '',
-    provider: 'bank_transfer',
-    accepted_terms: false,
-    client_reference: '',
-    start_payment: false,
-})
-const adGroupForm = useForm({
-    name: '',
-    placement: 'feed',
-    sports: [],
-    interests: '',
-    gender: 'all',
-    age_min: '',
-    age_max: '',
-    locations: '',
-    zones: '',
-    daily_budget_cents: '',
-    starts_at: '',
-    ends_at: '',
-})
-const adCreativeForm = useForm({
-    ad_name: '',
-    creatives: [],
-})
-const editCampaignForm = useForm({
-    name: '',
-    headline: '',
-    description: '',
-    primary_text: '',
-    target_url: '',
-    cta_label: '',
-    objective: 'traffic',
-    placement: 'feed',
-    creative_format: 'feed_square',
-    creative_image_url: '',
-    creative_image_upload: null,
-    creatives: [],
-    audience_locations: '',
-    audience_interests: '',
-    audience_age_min: '',
-    audience_age_max: '',
-    budget_cents: '',
-    daily_budget_cents: '',
-    starts_at: '',
-    ends_at: '',
-})
-const websiteForm = useForm({
-    club_id: '',
-    domain: '',
-    goals: '',
-    notes: '',
-})
-const payoutForm = useForm({
-    account_holder: props.payoutProfile?.account_holder || '',
-    iban: props.payoutProfile?.iban || '',
-    bic: props.payoutProfile?.bic || '',
-    paypal_email: props.payoutProfile?.paypal_email || '',
-    tax_number: props.payoutProfile?.tax_number || '',
-    notes: props.payoutProfile?.notes || '',
-})
-const payoutRequestForm = useForm({
-    method: 'bank_transfer',
-    notes: '',
-})
-const providerProfileForm = useForm({
-    display_name: props.providerProfile?.display_name || page.props.auth?.user?.name || '',
-    legal_name: props.providerProfile?.legal_name || '',
-    provider_type: props.providerProfile?.provider_type || 'private',
-    support_email: props.providerProfile?.support_email || page.props.auth?.user?.email || '',
-    phone: props.providerProfile?.phone || '',
-    website: props.providerProfile?.website || '',
-    logo_url: props.providerProfile?.logo_url || '',
-    public_description: props.providerProfile?.public_description || '',
-    legal_country: props.providerProfile?.legal_country || 'DE',
-    legal_state: props.providerProfile?.legal_state || '',
-    legal_postal_code: props.providerProfile?.legal_postal_code || '',
-    legal_city: props.providerProfile?.legal_city || '',
-    legal_street: props.providerProfile?.legal_street || '',
-    legal_house_number: props.providerProfile?.legal_house_number || '',
-    show_public_address: Boolean(props.providerProfile?.show_public_address),
-    show_support_email: props.providerProfile?.show_support_email ?? true,
-    show_phone: Boolean(props.providerProfile?.show_phone),
-})
-const providerLocationForm = useForm({
-    name: '',
-    type: 'pickup',
-    country: 'DE',
-    state: '',
-    postal_code: '',
-    city: '',
-    street: '',
-    house_number: '',
-    opening_hours: '',
-    note: '',
-    phone: '',
-    email: '',
-    image_url: '',
-    latitude: '',
-    longitude: '',
-    pickup_enabled: true,
-    returns_enabled: false,
-    is_public: true,
-})
-const editingProviderLocation = ref(null)
-const cartCheckoutForm = useForm({
-    provider: 'bank_transfer',
-    accepted_terms: false,
-    shipping_country: props.checkoutAddress.country || 'DE',
-    shipping_state: props.checkoutAddress.state || '',
-    shipping_postal_code: props.checkoutAddress.postal_code || '',
-    shipping_city: props.checkoutAddress.city || '',
-    shipping_street: props.checkoutAddress.street || '',
-    shipping_house_number: props.checkoutAddress.house_number || '',
-    customer_type: 'consumer',
-    customer_company: '',
-    customer_vat_id: '',
-})
-
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency,
-}).format(Number(cents || 0) / 100)
-
-const formatDateTime = (value) => value
-    ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
-    : '-'
-
-const productStatusLabel = (status) => ({
-    draft: 'Entwurf',
-    review: 'In Prüfung',
-    published: 'Online',
-    rejected: 'Abgelehnt',
-    archived: 'Archiviert',
-}[status] || status || 'Unbekannt')
-
-const sellerApplicationStatusLabel = (status) => ({
-    pending: 'Wartet auf Prüfung',
-    approved: 'Freigegeben',
-    rejected: 'Abgelehnt',
-}[status] || 'Noch kein Antrag')
-
-const offerTypeLabel = (offerType, category) => ({
-    physical_product: 'Produkt',
-    online_course: 'Kurs',
-    training_plan: 'Trainingsplan',
-    camp: 'Camp',
-    service: 'Service',
-}[offerType] || ({
-    product: 'Produkt',
-    course: 'Kurs',
-    camp: 'Camp',
-    service: 'Service',
-    outfit_subscription: 'Outfit-Abo',
-}[category] || 'Angebot'))
-
-const isLearningOffer = computed(() => ['online_course', 'training_plan'].includes(productForm.offer_type))
-const productStockRequired = computed(() => productForm.offer_type === 'physical_product' && productForm.product_type !== 'digital')
-const productCommissionCategory = computed(() => productForm.category || 'product')
-const sellerMarketplaceCategories = computed(() => props.marketplaceCategoryCommissions
-    .filter((row) => !['service', 'outfit_subscription'].includes(row.category))
-    .filter((row) => productForm.offer_type === 'physical_product'
-        ? !['course', 'camp'].includes(row.category)
-        : productForm.offer_type === 'camp'
-            ? row.category === 'camp'
-            : ['online_course', 'training_plan'].includes(productForm.offer_type)
-                ? row.category === 'course' || row.category === 'digital_products'
-                : false))
-const selectedProductCommission = computed(() => props.marketplaceCategoryCommissions.find((row) => row.category === productCommissionCategory.value) || {
-    category: productCommissionCategory.value,
-    label: offerTypeLabel(productForm.offer_type, productForm.category),
-    commission_percent: 10,
-})
-const productPricePreviewCents = computed(() => majorToCents(productForm.price_cents))
-const productCommissionPreviewCents = computed(() => Math.floor(productPricePreviewCents.value * (Number(selectedProductCommission.value.commission_percent || 0) / 100)))
-const productSellerPayoutPreviewCents = computed(() => Math.max(0, productPricePreviewCents.value - productCommissionPreviewCents.value))
-const inventoryCountries = computed(() => {
-    const countries = props.pricingCountries.map((country) => country.country).filter(Boolean)
-    return [...new Set(['DE', ...countries])]
-})
-const inventoryTotalStock = computed(() => normalizeInventoryRows(productForm.inventories).reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0))
-
-watch(() => productForm.offer_type, (offerType) => {
-    const map = {
-        physical_product: [sellerMarketplaceCategories.value[0]?.category || 'equipment', 'single', true],
-        online_course: ['course', 'digital', false],
-        training_plan: ['course', 'digital', false],
-        camp: ['camp', 'single', false],
-        service: ['service', 'digital', false],
-    }
-    const [category, productType, shippable] = map[offerType] || map.physical_product
-    productForm.category = category
-    productForm.product_type = productType
-    productForm.is_shippable = shippable
-    if (offerType === 'physical_product' && productType !== 'digital') {
-        productForm.manages_stock = true
-        productForm.stock_quantity = productForm.stock_quantity || 1
-        if (!productForm.inventories.length) {
-            productForm.inventories = [{ country_code: 'DE', stock_quantity: productForm.stock_quantity || 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
-        }
-    }
-    if (productType === 'digital') {
-        productForm.manages_stock = false
-        productForm.stock_quantity = ''
-        productForm.inventories = []
-    }
-    if (offerType === 'training_plan') {
-        productForm.coaching_enabled = true
-    }
-    if (offerType !== 'online_course') {
-        productForm.learning_course_id = ''
-    }
-})
-
-watch(sellerMarketplaceCategories, (categories) => {
-    if (categories.length && !categories.some((category) => category.category === productForm.category)) {
-        productForm.category = categories[0].category
-    }
-})
-
-watch(() => productForm.product_type, (productType) => {
-    if (productForm.offer_type === 'physical_product' && productType !== 'digital') {
-        productForm.manages_stock = true
-        productForm.stock_quantity = productForm.stock_quantity || 1
-        if (!productForm.inventories.length) {
-            productForm.inventories = [{ country_code: 'DE', stock_quantity: productForm.stock_quantity || 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
-        }
-    }
-    if (productType === 'digital') {
-        productForm.manages_stock = false
-        productForm.stock_quantity = ''
-        productForm.inventories = []
-    }
-})
-
-watch(() => campaignForm.placement, (placement) => {
-    const formats = formatsForPlacement(placement)
-    if (! formats.some((format) => format.key === campaignForm.creative_format)) {
-        campaignForm.creative_format = formats[0]?.key || 'feed_square'
-    }
-})
-
-watch(() => editCampaignForm.placement, (placement) => {
-    const formats = formatsForPlacement(placement)
-    if (! formats.some((format) => format.key === editCampaignForm.creative_format)) {
-        editCampaignForm.creative_format = formats[0]?.key || 'feed_square'
-    }
-})
-
-const orderPaymentLabel = (order) => {
-    if (order.status === 'completed') {
-        return order.shipping_status === 'delivered' ? 'Abgeschlossen' : 'Bezahlt'
-    }
-
-    return {
-        pending: 'Offen',
-        awaiting_transfer: 'Wartet auf Überweisung',
-        cancelled: 'Storniert',
-        refunded: 'Erstattet',
-    }[order.status] || order.status
-}
-
-const orderPaymentHint = (order) => {
-    if (order.status === 'completed') {
-        return order.shipping_status === 'delivered'
-            ? 'Deine Bestellung wurde zugestellt.'
-            : 'Zahlung eingegangen, deine Bestellung wird bearbeitet.'
-    }
-
-    return {
-        pending: 'Zahlung noch offen',
-        awaiting_transfer: 'Wir warten auf den Zahlungseingang.',
-        cancelled: 'Diese Bestellung wurde storniert.',
-        refunded: 'Diese Bestellung wurde erstattet.',
-    }[order.status] || ''
-}
-
-const orderShippingLabel = (status) => ({
-    open: 'Offen',
-    prepared: 'Wird vorbereitet',
-    shipped: 'Versendet',
-    delivered: 'Zugestellt',
-}[status || 'open'] || status)
-
-const orderIssueLabel = (status) => ({
-    reported: 'Problem gemeldet',
-    reviewing: 'In Prüfung',
-    resolved: 'Gelöst',
-    refunded: 'Erstattet',
-    cancelled: 'Storniert',
-}[status] || status)
-
-const payoutStatusLabel = (status) => ({
-    requested: 'Angefordert',
-    prepared: 'In Prüfung',
-    paid: 'Ausgezahlt',
-    cancelled: 'Storniert',
-}[status] || status || '-')
-
-const orderIsDelivered = (order) => order.status === 'completed' && order.shipping_status === 'delivered'
-const orderHasShippableItems = (order) => (order.items || []).some((item) => item.is_shippable)
-const orderCanCancel = (order) => ['marketplace_product', 'marketplace_cart'].includes(order.type)
-    && orderHasShippableItems(order)
-    && ['pending', 'awaiting_transfer', 'completed'].includes(order.status)
-    && !['shipped', 'delivered'].includes(order.shipping_status || 'open')
-const orderCanReturn = (order) => orderIsDelivered(order) && orderHasShippableItems(order)
-
-const formatPercent = (value) => `${Number(value || 0).toFixed(2).replace('.', ',')} %`
-
-const cartItems = computed(() => props.cart?.items || [])
-const cartItemCount = computed(() => cartItems.value.length)
-const selectedAddonActor = computed(() => selectedClubId.value ? 'verein' : 'sportler')
-const visibleAddons = computed(() => props.addons.filter((addon) => (addon.target_actor || 'verein') === selectedAddonActor.value))
-const isProductLearningOffer = (product) => product?.category === 'course' || ['online_course', 'training_plan'].includes(product?.offer_type)
-const courseProducts = computed(() => props.products.filter((product) => isProductLearningOffer(product)))
-const marketplaceProducts = computed(() => props.products.filter((product) => !isProductLearningOffer(product)))
-const visibleShopProducts = computed(() => {
-    if (shopView.value === 'all' || shopView.value === 'courses') {
-        return courseProducts.value
-    }
-
-    return []
-})
-const visibleShopProductTitle = computed(() => 'Kurse und E-Learning')
-const visibleShopProductDescription = computed(() => 'Online-Kurse, Trainingspläne und digitale Lernangebote kaufen.')
-const showAccountShop = computed(() => ['all', 'account'].includes(shopView.value))
-const showOutfitShop = computed(() => ['all', 'outfit'].includes(shopView.value))
-const showProductShop = computed(() => ['all', 'courses'].includes(shopView.value))
-const shopCategoryTabs = computed(() => [
-    { key: 'all', label: 'Alle', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
-    { key: 'courses', label: 'Kurse / E-Learning', count: courseProducts.value.length },
-    { key: 'outfit', label: 'Outfit-Abo', count: props.outfitPlans.length },
-    { key: 'account', label: 'Konto-Abo & Add-ons', count: props.accountPlans.length + visibleAddons.value.length },
-])
-
-const attributePresets = [
-    { name: 'Farbe', values: ['Schwarz', 'Weiß', 'Rot', 'Blau', 'Grün', 'Gelb', 'Orange', 'Grau'] },
-    { name: 'Größe', values: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'] },
-    { name: 'Material', values: ['Baumwolle', 'Polyester', 'Leder', 'Mesh', 'Kunststoff', 'Metall'] },
-    { name: 'Dauer', values: ['30 Minuten', '60 Minuten', '90 Minuten', '1 Tag', '2 Tage', 'Wochenende'] },
-    { name: 'Lieferart', values: ['E-Mail', 'Download', 'Online-Zugang', 'Vor Ort', 'Versand'] },
-]
-
-const adFormats = [
-    { key: 'feed_square', label: 'Feed Quadrat', size: '1080 x 1080 px', ratio: '1:1', hint: 'Ideal für Marketplace-Karten und Feed.' },
-    { key: 'feed_portrait', label: 'Feed Portrait', size: '1080 x 1350 px', ratio: '4:5', hint: 'Mehr Flaeche im mobilen Feed.' },
-    { key: 'story_vertical', label: 'Story/Reel', size: '1080 x 1920 px', ratio: '9:16', hint: 'Vollbildformat für mobile Kampagnen.' },
-    { key: 'banner_wide', label: 'Wide Banner', size: '1200 x 628 px', ratio: '1.91:1', hint: 'Gut für breite Sponsor- und Websitebereiche.' },
-]
-const adPlacements = [
-    { key: 'marketplace_card', label: 'Marketplace Karte', formats: ['feed_square', 'banner_wide'], hint: 'Wird auf Marketplace-Karten und passenden Angebotsflaechen ausgespielt.' },
-    { key: 'feed', label: 'Feed', formats: ['feed_square', 'feed_portrait'], hint: 'Wird im Feed mit anderen aktiven Feed-Kampagnen rotiert. Budget, Tageslimit und Freigabe steuern die Ausspielung.' },
-    { key: 'sidebar', label: 'Sidebar', formats: ['banner_wide', 'feed_square'], hint: 'Schmale Anzeige in passenden Seitenbereichen.' },
-    { key: 'sponsor_section', label: 'Sponsor-Bereich', formats: ['banner_wide', 'feed_square'], hint: 'Anzeige in Sponsor- und Partnerbereichen.' },
-]
-const formatsForPlacement = (placementKey) => {
-    const placement = adPlacements.find((item) => item.key === placementKey) || adPlacements[0]
-    return adFormats.filter((format) => placement.formats.includes(format.key))
-}
-const campaignAdFormats = computed(() => formatsForPlacement(campaignForm.placement))
-const editCampaignAdFormats = computed(() => formatsForPlacement(editCampaignForm.placement))
-const selectedAdFormat = computed(() => adFormats.find((format) => format.key === campaignForm.creative_format) || adFormats[0])
-const selectedAdPlacement = computed(() => adPlacements.find((placement) => placement.key === campaignForm.placement) || adPlacements[0])
-const selectedEditAdFormat = computed(() => adFormats.find((format) => format.key === editCampaignForm.creative_format) || adFormats[0])
-const selectedEditAdPlacement = computed(() => adPlacements.find((placement) => placement.key === editCampaignForm.placement) || adPlacements[0])
-const adPlacementLabel = (placementKey) => adPlacements.find((placement) => placement.key === placementKey)?.label || placementKey
-const sportLabel = (value) => props.sports.find((sport) => sport.slug === value || sport.name === value || String(sport.id) === String(value))?.name || value
-const selectedAdGroupSports = computed(() => Array.isArray(adGroupForm.sports) ? adGroupForm.sports : [])
-const filteredAdGroupSports = computed(() => {
-    const selected = new Set(selectedAdGroupSports.value)
-    const query = adGroupSportQuery.value.trim().toLowerCase()
-
-    return props.sports
-        .filter((sport) => !selected.has(sport.slug))
-        .filter((sport) => {
-            if (!query) {
-                return true
-            }
-
-            return [sport.name, sport.slug, sport.category]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query))
-        })
-        .slice(0, 30)
-})
-const campaignCreativeRows = ref([
-    { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-    { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-])
-const adCreativeRows = ref([
-    { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-    { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-])
-const editCampaignCreativeRows = ref([])
-
-const newClientReference = () => {
-    if (window.crypto?.randomUUID) {
-        return window.crypto.randomUUID()
-    }
-
-    return `ads-${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-const presetValuesFor = (name) => attributePresets.find((preset) => preset.name === name)?.values || []
-
-const normalizeAttributeRows = (rows) => rows
-    .map((row) => ({
-        name: String(row.name || '').trim(),
-        values: Array.isArray(row.values)
-            ? row.values.map((value) => String(value || '').trim()).filter(Boolean)
-            : String(row.values || '').split(/[|,]/).map((value) => value.trim()).filter(Boolean),
-    }))
-    .filter((row) => row.name && row.values.length)
-
-const normalizeVariantRows = (rows) => rows
-    .map((row) => ({
-        sku: String(row.sku || '').trim(),
-        price_cents: row.price_cents === '' || row.price_cents === null ? null : majorToCents(row.price_cents),
-        stock_quantity: row.stock_quantity === '' || row.stock_quantity === null ? null : Number(row.stock_quantity),
-        image_url: String(row.image_url || '').trim(),
-        attributes: Object.entries(row.attributes || {})
-            .map(([name, value]) => ({ name, value: String(value || '').trim() }))
-            .filter((attribute) => attribute.name && attribute.value),
-    }))
-    .filter((row) => row.attributes.length)
-
-const ctr = (clicks, impressions) => {
-    if (!Number(impressions || 0)) {
-        return 0
-    }
-
-    return (Number(clicks || 0) / Number(impressions || 0)) * 100
-}
-
-const addonPrice = (addon) => interval.value === 'yearly' ? addon.yearly_price_cents : addon.monthly_price_cents
-
-const checkoutAddon = (addon) => {
-    checkoutConfirmation.value = { open: true, type: 'addon', item: addon, provider: provider.value, accepted: false }
-}
-
-const confirmAddonCheckout = (addon, selectedProvider) => {
-    router.post(route('auth.commerce.addons.checkout', addon.id), {
-        provider: selectedProvider,
-        billing_interval: interval.value,
-        club_id: selectedClubId.value || null,
-        accepted_terms: true,
-    })
-}
-
-const checkoutAccountPlan = (plan, selectedProvider) => {
-    if (plan.is_owned || !Number(plan.monthly_price_cents || 0)) {
-        return
-    }
-
-    checkoutConfirmation.value = { open: true, type: 'account_plan', item: plan, provider: selectedProvider, accepted: false }
-}
-
-const confirmAccountPlanCheckout = (plan, selectedProvider) => {
-    if (!plan || plan.is_owned || !Number(plan.monthly_price_cents || 0)) {
-        return
-    }
-
-    const url = new URL(`/checkout/subscriptions/${plan.id}/start`, window.location.origin)
-    url.searchParams.set('provider', selectedProvider)
-    url.searchParams.set('billing_interval', interval.value)
-    url.searchParams.set('accepted_terms', '1')
-    window.location.href = url.toString()
-}
-
-const checkoutProduct = (product) => {
-    checkoutConfirmation.value = { open: true, type: 'product', item: product, provider: provider.value, accepted: false }
-}
-
-const confirmProductCheckout = (product, selectedProvider) => {
-    router.post(route('auth.commerce.products.checkout', product.id), {
-        provider: selectedProvider,
-        accepted_terms: true,
-    })
-}
-
-const closeCheckoutConfirmation = () => {
-    checkoutConfirmation.value = { open: false, type: null, item: null, provider: 'bank_transfer', accepted: false }
-}
-
-const providerLabel = (value) => ({
-    bank_transfer: 'Überweisung',
-    stripe: 'Stripe',
-    paypal: 'PayPal',
-})[value] || value
-
-const checkoutConfirmationTitle = computed(() => {
-    const item = checkoutConfirmation.value.item
-
-    if (!item) {
-        return 'Checkout bestätigen'
-    }
-
-    if (checkoutConfirmation.value.type === 'account_plan') {
-        return item.name
-    }
-
-    return item.name || item.title || 'Checkout bestätigen'
-})
-
-const checkoutConfirmationPrice = computed(() => {
-    const item = checkoutConfirmation.value.item
-
-    if (!item) {
-        return ''
-    }
-
-    if (checkoutConfirmation.value.type === 'addon') {
-        return formatMoney(addonPrice(item), 'EUR')
-    }
-
-    if (checkoutConfirmation.value.type === 'account_plan') {
-        return formatMoney(item.monthly_price_cents, item.currency)
-    }
-
-    return formatMoney(item.price_cents, item.currency)
-})
-
-const confirmCheckout = () => {
-    const checkout = checkoutConfirmation.value
-
-    if (!checkout.accepted || !checkout.item) {
-        return
-    }
-
-    if (checkout.type === 'addon') {
-        confirmAddonCheckout(checkout.item, checkout.provider)
-    } else if (checkout.type === 'account_plan') {
-        confirmAccountPlanCheckout(checkout.item, checkout.provider)
-    } else if (checkout.type === 'product') {
-        confirmProductCheckout(checkout.item, checkout.provider)
-    }
-
-    closeCheckoutConfirmation()
-}
-
-const addToCart = (product, quantity = 1) => {
-    router.post(route('auth.commerce.cart.items.store', product.id), { quantity }, { preserveScroll: true })
-}
-
-const updateCartItem = (item, quantity) => {
-    const stock = Number(item.product?.stock_quantity || 1)
-    const nextQuantity = Math.min(Math.max(1, Number(quantity || 1)), stock)
-
-    router.put(route('auth.commerce.cart.items.update', item.id), { quantity: nextQuantity }, { preserveScroll: true })
-}
-
-const removeCartItem = (item) => {
-    router.delete(route('auth.commerce.cart.items.destroy', item.id), { preserveScroll: true })
-}
-
-const checkoutCart = () => {
-    cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showCartCheckout.value = false
-        },
-    })
-}
-
-const activeOrders = computed(() => props.orders.filter((order) => ['pending', 'awaiting_transfer', 'completed', 'cancelled', 'refunded'].includes(order.status)))
-const commerceTabs = computed(() => [
-    { key: 'shop', label: 'Shop', icon: 'las la-th-large', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
-    { key: 'cart', label: 'Warenkorb', icon: 'las la-shopping-cart', count: cartItemCount.value },
-    { key: 'invoices', label: 'Rechnungen', icon: 'las la-file-invoice', count: props.purchaseHistory.length },
-    { key: 'ads', label: 'Ads', icon: 'las la-bullhorn', count: props.myCampaigns.length },
-    { key: 'create', label: 'Verkaufen', icon: 'las la-plus-circle', count: props.myProducts.length + props.websiteRequests.length },
-    { key: 'provider', label: 'Anbieterprofil', icon: 'las la-store', count: props.providerLocations.length },
-    { key: 'payouts', label: 'Auszahlung', icon: 'las la-wallet', count: props.payoutSummary.pending_orders || 0 },
-])
-
-const productAttributesText = () => productAttributeRows.value
-    .map((row) => ({
-        name: String(row.name || '').trim(),
-        values: Array.isArray(row.values) ? row.values.join(' | ') : String(row.values || '').trim(),
-    }))
-    .filter((row) => row.name && row.values)
-    .map((row) => `${row.name}: ${row.values}`)
-    .join('\n')
-
-const addProductAttributeRow = () => {
-    productAttributeRows.value.push({ name: '', values: [] })
-}
-
-const campaignCreateErrors = computed(() => Object.values(campaignForm.errors || {})
-    .flatMap((message) => Array.isArray(message) ? message : [message])
-    .filter(Boolean))
-
-const removeProductAttributeRow = (index) => {
-    productAttributeRows.value.splice(index, 1)
-    if (!productAttributeRows.value.length) {
-        addProductAttributeRow()
-    }
-}
-
-const addProductVariantRow = () => {
-    productVariantRows.value.push({ sku: '', price_cents: productForm.price_cents || '', stock_quantity: '', image_url: '', attributes: {} })
-}
-
-const removeProductVariantRow = (index) => {
-    productVariantRows.value.splice(index, 1)
-}
-
-const setProductImageUpload = (event) => {
-    productForm.image_upload = event.target.files?.[0] || null
-}
-
-const setProductGalleryUploads = (event) => {
-    productForm.image_uploads = Array.from(event.target.files || [])
-}
-
-const setProductImportFile = (event) => {
-    productImportForm.import_file = event.target.files?.[0] || null
-}
-
-const setCampaignCreativeUpload = (event) => {
-    campaignForm.creative_image_upload = event.target.files?.[0] || null
-}
-
-const setEditCampaignCreativeUpload = (event) => {
-    if (editCampaignUploadPreviewUrl.value) {
-        URL.revokeObjectURL(editCampaignUploadPreviewUrl.value)
-        editCampaignUploadPreviewUrl.value = ''
-    }
-
-    const file = event.target.files?.[0] || null
-    editCampaignForm.creative_image_upload = file
-    editCampaignUploadPreviewUrl.value = file ? URL.createObjectURL(file) : ''
-}
-
-const addCampaignCreativeRow = () => {
-    campaignCreativeRows.value.push({
-        name: `Variante ${String.fromCharCode(65 + campaignCreativeRows.value.length)}`,
-        headline: '',
-        primary_text: '',
-        description: '',
-        target_url: '',
-        cta_label: '',
-        creative_image_url: '',
-        weight: 100,
-        is_active: true,
-    })
-}
-
-const removeCampaignCreativeRow = (index) => {
-    campaignCreativeRows.value.splice(index, 1)
-    if (!campaignCreativeRows.value.length) {
-        addCampaignCreativeRow()
-    }
-}
-
-const addAdCreativeRow = () => {
-    adCreativeRows.value.push({
-        name: `Variante ${String.fromCharCode(65 + adCreativeRows.value.length)}`,
-        headline: '',
-        primary_text: '',
-        description: '',
-        target_url: '',
-        cta_label: '',
-        creative_image_url: '',
-        weight: 100,
-        is_active: true,
-    })
-}
-
-const removeAdCreativeRow = (index) => {
-    adCreativeRows.value.splice(index, 1)
-    if (!adCreativeRows.value.length) {
-        addAdCreativeRow()
-    }
-}
-
-const addEditCampaignCreativeRow = () => {
-    editCampaignCreativeRows.value.push({
-        name: `Variante ${String.fromCharCode(65 + editCampaignCreativeRows.value.length)}`,
-        headline: '',
-        primary_text: '',
-        description: '',
-        target_url: '',
-        cta_label: '',
-        creative_image_url: '',
-        weight: 100,
-        is_active: true,
-    })
-}
-
-const removeEditCampaignCreativeRow = (index) => {
-    editCampaignCreativeRows.value.splice(index, 1)
-    if (!editCampaignCreativeRows.value.length) {
-        addEditCampaignCreativeRow()
-    }
-}
-
-const addAdGroupSport = (sport) => {
-    const value = sport.slug || sport.name
-
-    if (!selectedAdGroupSports.value.includes(value)) {
-        adGroupForm.sports = [...selectedAdGroupSports.value, value]
-    }
-
-    adGroupSportQuery.value = ''
-}
-
-const removeAdGroupSport = (sport) => {
-    adGroupForm.sports = selectedAdGroupSports.value.filter((value) => value !== sport)
-}
-
-const normalizeCampaignCreatives = () => campaignCreativeRows.value
-    .map((creative) => ({
-        name: String(creative.name || '').trim(),
-        headline: String(creative.headline || '').trim(),
-        primary_text: String(creative.primary_text || '').trim(),
-        description: String(creative.description || '').trim(),
-        target_url: String(creative.target_url || '').trim(),
-        cta_label: String(creative.cta_label || '').trim(),
-        creative_image_url: String(creative.creative_image_url || '').trim(),
-        weight: Number(creative.weight || 100),
-        is_active: Boolean(creative.is_active),
-    }))
-    .filter((creative) => creative.headline || creative.primary_text || creative.creative_image_url)
-
-const normalizeAdCreatives = () => adCreativeRows.value
-    .map((creative) => ({
-        name: String(creative.name || '').trim(),
-        headline: String(creative.headline || '').trim(),
-        primary_text: String(creative.primary_text || '').trim(),
-        description: String(creative.description || '').trim(),
-        target_url: String(creative.target_url || '').trim(),
-        cta_label: String(creative.cta_label || '').trim(),
-        creative_image_url: String(creative.creative_image_url || '').trim(),
-        weight: Number(creative.weight || 100),
-        is_active: Boolean(creative.is_active),
-    }))
-    .filter((creative) => creative.headline || creative.primary_text || creative.creative_image_url)
-
-const normalizeEditCampaignCreatives = () => editCampaignCreativeRows.value
-    .map((creative) => ({
-        name: String(creative.name || '').trim(),
-        headline: String(creative.headline || '').trim(),
-        primary_text: String(creative.primary_text || '').trim(),
-        description: String(creative.description || '').trim(),
-        target_url: String(creative.target_url || '').trim(),
-        cta_label: String(creative.cta_label || '').trim(),
-        creative_image_url: String(creative.creative_image_url || '').trim(),
-        weight: Number(creative.weight || 100),
-        is_active: Boolean(creative.is_active),
-    }))
-    .filter((creative) => creative.headline || creative.primary_text || creative.creative_image_url)
-
-const campaignAudienceText = (campaign, key) => Array.isArray(campaign.audience?.[key])
-    ? campaign.audience[key].join(', ')
-    : ''
-
-const adGroupAudienceText = (group, key) => Array.isArray(group.audience?.[key])
-    ? group.audience[key].join(', ')
-    : ''
-const adGroupAudienceSportsText = (group) => Array.isArray(group.audience?.sports)
-    ? group.audience.sports.map((sport) => sportLabel(sport)).join(', ')
-    : ''
-const campaignRootCreatives = (campaign) => (campaign.creatives || []).filter((creative) => !creative.ad_group_id)
-
-const firstCreativePreviewUrl = (campaign) => campaign?.creatives?.find((creative) => creative.preview_image_url || creative.creative_image_url)?.preview_image_url
-    || campaign?.creatives?.find((creative) => creative.preview_image_url || creative.creative_image_url)?.creative_image_url
-    || ''
-
-const editCampaignPreviewUrl = computed(() => editCampaignUploadPreviewUrl.value
-    || editCampaignForm.creative_image_url
-    || editCampaignModal.value.campaign?.preview_image_url
-    || editCampaignModal.value.campaign?.creative_image_url
-    || firstCreativePreviewUrl(editCampaignModal.value.campaign))
-
-const creativePreviewUrl = (creative) => creative.creative_image_url || creative.preview_image_url || ''
-
-const toLocalDateTimeInput = (value) => {
-    if (!value) {
-        return ''
-    }
-
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-        return ''
-    }
-
-    const pad = (number) => String(number).padStart(2, '0')
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-const normalizeInventoryRows = (rows = []) => rows
-    .map((row) => ({
-        country_code: String(row.country_code || '').toUpperCase().slice(0, 2),
-        stock_quantity: Math.max(0, Number(row.stock_quantity || 0)),
-        low_stock_threshold: Math.max(0, Number(row.low_stock_threshold || 0)),
-        lead_time_days: row.lead_time_days === '' || row.lead_time_days === null ? '' : Math.max(0, Number(row.lead_time_days || 0)),
-        city: row.city || '',
-        postal_code: row.postal_code || '',
-    }))
-    .filter((row) => row.country_code.length === 2)
-
-const addProductInventoryRow = () => {
-    productForm.inventories.push({ country_code: 'DE', stock_quantity: 0, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' })
-}
-
-const removeProductInventoryRow = (index) => {
-    if (productForm.inventories.length <= 1) {
-        return
-    }
-
-    productForm.inventories.splice(index, 1)
-}
-
-const addEditProductInventoryRow = () => {
-    editProductForm.inventories.push({ country_code: 'DE', stock_quantity: 0, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' })
-}
-
-const removeEditProductInventoryRow = (index) => {
-    editProductForm.inventories.splice(index, 1)
-}
-
-const storeProduct = () => {
-    productForm.attributes_text = productAttributesText()
-    productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
-    productForm.variants = normalizeVariantRows(productVariantRows.value)
-    productForm.inventories = productForm.manages_stock ? normalizeInventoryRows(productForm.inventories) : []
-    if (productForm.manages_stock && productForm.inventories.length) {
-        productForm.stock_quantity = productForm.inventories.reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0) || productForm.stock_quantity || 1
-    }
-
-    productForm
-        .transform((data) => transformMoneyFields(data, ['price_cents']))
-        .post(route('auth.commerce.products.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => {
-            productForm.reset('title', 'description', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'learning_course_id', 'sku', 'digital_delivery_note', 'course_outline_text', 'learning_goals_text', 'coach_feedback_instructions')
-            productForm.offer_type = 'physical_product'
-            productForm.category = sellerMarketplaceCategories.value[0]?.category || 'equipment'
-            productForm.product_type = 'single'
-            productForm.is_shippable = true
-            productForm.manages_stock = true
-            productForm.stock_quantity = 1
-            productForm.inventories = [{ country_code: 'DE', stock_quantity: 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
-            productForm.coaching_enabled = false
-            productAttributeRows.value = [{ name: '', values: [] }]
-            productVariantRows.value = []
-            productCreateModal.value = false
-        },
-        })
-}
-
-const importProducts = () => {
-    productImportForm.post(route('auth.commerce.products.import'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onSuccess: () => productImportForm.reset('import_file'),
-    })
-}
-
-const storeSellerApplication = () => {
-    sellerApplicationForm.post(route('auth.commerce.seller-application.store'), {
-        preserveScroll: true,
-    })
-}
-
-const openEditProductModal = (product) => {
-    editProductForm.title = product.title || ''
-    editProductForm.description = product.description || ''
-    editProductForm.image_url = product.image_url || ''
-    editProductForm.image_upload = null
-    editProductForm.sku = product.sku || ''
-    editProductForm.price_cents = centsToMajor(product.price_cents)
-    editProductForm.manages_stock = Boolean(product.manages_stock)
-    editProductForm.stock_quantity = product.stock_quantity ?? ''
-    editProductForm.inventories = normalizeInventoryRows(product.inventories || []).map((inventory) => ({
-        country_code: inventory.country_code,
-        stock_quantity: inventory.stock_quantity,
-        low_stock_threshold: inventory.low_stock_threshold || 0,
-        lead_time_days: inventory.lead_time_days ?? '',
-        city: inventory.warehouse?.city || '',
-        postal_code: inventory.warehouse?.postal_code || '',
-    }))
-    editProductModal.value = { open: true, product }
-}
-
-const closeEditProductModal = () => {
-    editProductModal.value = { open: false, product: null }
-    editProductForm.clearErrors()
-}
-
-const submitEditProduct = () => {
-    const product = editProductModal.value.product
-
-    if (!product) {
-        return
-    }
-
-    editProductForm.inventories = editProductForm.manages_stock ? normalizeInventoryRows(editProductForm.inventories) : []
-    if (editProductForm.manages_stock && editProductForm.inventories.length) {
-        editProductForm.stock_quantity = editProductForm.inventories.reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0)
-    }
-
-    editProductForm
-        .transform((data) => transformMoneyFields(data, ['price_cents']))
-        .post(route('auth.commerce.my-products.update', product.id), {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: closeEditProductModal,
-        })
-}
-
-const updateOwnProductStatus = (product, status) => {
-    router.put(route('auth.commerce.my-products.status.update', product.id), { status }, {
-        preserveScroll: true,
-    })
-}
-
-const openDeleteProductModal = (product) => {
-    deleteProductModal.value = { open: true, product, confirmation: '' }
-}
-
-const closeDeleteProductModal = () => {
-    deleteProductModal.value = { open: false, product: null, confirmation: '' }
-}
-
-const destroyOwnProduct = () => {
-    const product = deleteProductModal.value.product
-
-    if (!product || deleteProductModal.value.confirmation !== 'delete') {
-        return
-    }
-
-    router.delete(route('auth.commerce.my-products.destroy', product.id), {
-        preserveScroll: true,
-        onSuccess: closeDeleteProductModal,
-    })
-}
-
-const storeCampaign = () => {
-    if (campaignForm.processing) {
-        return
-    }
-
-    campaignForm.creatives = normalizeCampaignCreatives()
-    campaignForm.provider = adProvider.value
-    campaignForm.accepted_terms = adAcceptedTerms.value
-    campaignForm.start_payment = false
-    campaignForm.client_reference ||= newClientReference()
-    campaignActionError.value = ''
-    campaignCreateError.value = ''
-
-    campaignForm
-        .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents']))
-        .post(route('auth.commerce.campaigns.store'), {
-        preserveScroll: true,
-        forceFormData: true,
-        onError: () => {
-            campaignCreateError.value = 'Die Ads-Kampagne konnte nicht zur Zahlung vorbereitet werden. Bitte prüfe die Angaben unten.'
-        },
-        onSuccess: () => {
-            campaignCreateError.value = ''
-            campaignForm.reset('name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at', 'budget_cents', 'daily_budget_cents')
-            campaignForm.client_reference = ''
-            campaignCreativeRows.value = [
-                { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-                { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-            ]
-        },
-        })
-}
-
-const openAdGroupModal = (campaign) => {
-    adGroupModal.value = { open: true, campaign }
-    adGroupForm.clearErrors()
-    adGroupForm.reset()
-    adGroupForm.name = `${campaign.name || 'Kampagne'} - Zielgruppe 1`
-    adGroupForm.placement = campaign.placement || 'feed'
-    adGroupForm.sports = []
-    adGroupSportQuery.value = ''
-}
-
-const closeAdGroupModal = () => {
-    adGroupModal.value = { open: false, campaign: null }
-    adGroupForm.reset()
-    adGroupSportQuery.value = ''
-}
-
-const storeAdGroup = () => {
-    const campaign = adGroupModal.value.campaign
-
-    if (!campaign || adGroupForm.processing) {
-        return
-    }
-
-    adGroupForm
-        .transform((data) => transformMoneyFields(data, ['daily_budget_cents']))
-        .post(route('auth.commerce.campaigns.groups.store', campaign.id), {
-            preserveScroll: true,
-            onSuccess: closeAdGroupModal,
-        })
-}
-
-const openAdCreativeModal = (campaign, group) => {
-    adCreativeModal.value = { open: true, campaign, group }
-    adCreativeForm.clearErrors()
-    adCreativeForm.reset()
-    adCreativeForm.ad_name = `${group.name || 'Anzeigegruppe'} - Anzeige 1`
-    adCreativeRows.value = [
-        { name: 'Variante A', headline: campaign.headline || campaign.name || '', primary_text: campaign.primary_text || '', description: campaign.description || '', target_url: campaign.target_url || '', cta_label: campaign.cta_label || '', creative_image_url: campaign.creative_image_url || '', weight: 100, is_active: true },
-        { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: campaign.target_url || '', cta_label: campaign.cta_label || '', creative_image_url: '', weight: 100, is_active: true },
-    ]
-}
-
-const closeAdCreativeModal = () => {
-    adCreativeModal.value = { open: false, campaign: null, group: null }
-    adCreativeForm.reset()
-    adCreativeRows.value = [
-        { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-        { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
-    ]
-}
-
-const storeAdCreatives = () => {
-    const campaign = adCreativeModal.value.campaign
-    const group = adCreativeModal.value.group
-
-    if (!campaign || !group || adCreativeForm.processing) {
-        return
-    }
-
-    adCreativeForm.creatives = normalizeAdCreatives()
-    adCreativeForm.post(route('auth.commerce.campaigns.groups.creatives.store', [campaign.id, group.id]), {
-        preserveScroll: true,
-        onSuccess: closeAdCreativeModal,
-    })
-}
-
-const updateOwnCampaignStatus = (campaign, status) => {
-    campaignActionError.value = ''
-
-    router.put(route('auth.commerce.campaigns.status.update', campaign.id), { status }, {
-        preserveScroll: true,
-        onError: (errors) => {
-            campaignActionError.value = errors.campaign_status || errors.status || 'Kampagne konnte nicht aktualisiert werden.'
-        },
-    })
-}
-
-const openEditCampaignModal = (campaign) => {
-    campaignActionError.value = ''
-    if (editCampaignUploadPreviewUrl.value) {
-        URL.revokeObjectURL(editCampaignUploadPreviewUrl.value)
-        editCampaignUploadPreviewUrl.value = ''
-    }
-    editCampaignModal.value = { open: true, campaign }
-    editCampaignForm.clearErrors()
-    editCampaignForm.name = campaign.name || ''
-    editCampaignForm.headline = campaign.headline || ''
-    editCampaignForm.description = campaign.description || ''
-    editCampaignForm.primary_text = campaign.primary_text || ''
-    editCampaignForm.target_url = campaign.target_url || ''
-    editCampaignForm.cta_label = campaign.cta_label || ''
-    editCampaignForm.objective = campaign.objective || 'traffic'
-    editCampaignForm.placement = campaign.placement || 'feed'
-    editCampaignForm.creative_format = campaign.creative_format || 'feed_square'
-    editCampaignForm.creative_image_url = campaign.creative_image_url || ''
-    editCampaignForm.creative_image_upload = null
-    editCampaignForm.audience_locations = campaignAudienceText(campaign, 'locations')
-    editCampaignForm.audience_interests = campaignAudienceText(campaign, 'interests')
-    editCampaignForm.audience_age_min = campaign.audience?.age_min || ''
-    editCampaignForm.audience_age_max = campaign.audience?.age_max || ''
-    editCampaignForm.budget_cents = Number(campaign.budget_cents || 0) / 100
-    editCampaignForm.daily_budget_cents = campaign.daily_budget_cents ? Number(campaign.daily_budget_cents || 0) / 100 : ''
-    editCampaignForm.starts_at = toLocalDateTimeInput(campaign.starts_at)
-    editCampaignForm.ends_at = toLocalDateTimeInput(campaign.ends_at)
-    editCampaignCreativeRows.value = (campaign.creatives?.length ? campaign.creatives : [{ name: 'Variante A' }]).map((creative, index) => ({
-        name: creative.name || `Variante ${String.fromCharCode(65 + index)}`,
-        headline: creative.headline || '',
-        primary_text: creative.primary_text || '',
-        description: creative.description || '',
-        target_url: creative.target_url || '',
-        cta_label: creative.cta_label || '',
-        creative_image_url: creative.creative_image_url || '',
-        preview_image_url: creative.preview_image_url || '',
-        weight: Number(creative.weight || 100),
-        is_active: creative.is_active !== false,
-    }))
-}
-
-const closeEditCampaignModal = () => {
-    if (editCampaignUploadPreviewUrl.value) {
-        URL.revokeObjectURL(editCampaignUploadPreviewUrl.value)
-        editCampaignUploadPreviewUrl.value = ''
-    }
-    editCampaignModal.value = { open: false, campaign: null }
-    editCampaignForm.reset()
-    editCampaignCreativeRows.value = []
-}
-
-const submitEditCampaign = () => {
-    const campaign = editCampaignModal.value.campaign
-
-    if (!campaign || editCampaignForm.processing) {
-        return
-    }
-
-    editCampaignForm.creatives = normalizeEditCampaignCreatives()
-
-    editCampaignForm
-        .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents']))
-        .post(route('auth.commerce.campaigns.update', campaign.id), {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: closeEditCampaignModal,
-            onError: (errors) => {
-                campaignActionError.value = errors.campaign_status || errors.name || 'Kampagne konnte nicht gespeichert werden.'
-            },
-        })
-}
-
-const deleteOwnCampaign = (campaign) => {
-    campaignActionError.value = ''
-    deleteCampaignModal.value = { open: true, campaign, confirmation: '' }
-}
-
-const closeDeleteCampaignModal = () => {
-    deleteCampaignModal.value = { open: false, campaign: null, confirmation: '' }
-}
-
-const confirmDeleteOwnCampaign = () => {
-    const campaign = deleteCampaignModal.value.campaign
-
-    if (!campaign || deleteCampaignModal.value.confirmation !== 'delete') {
-        return
-    }
-
-    router.delete(route('auth.commerce.campaigns.destroy', campaign.id), {
-        preserveScroll: true,
-        data: {
-            confirmation: deleteCampaignModal.value.confirmation,
-        },
-        onSuccess: closeDeleteCampaignModal,
-        onError: (errors) => {
-            campaignActionError.value = errors.confirmation || errors.campaign_status || 'Kampagne konnte nicht gelöscht werden.'
-        },
-    })
-}
-
-const storeWebsiteRequest = () => websiteForm.post(route('auth.commerce.website-requests.store'), {
-    preserveScroll: true,
-    onSuccess: () => {
-        websiteForm.reset('domain', 'goals', 'notes')
-        websiteRequestModal.value = false
-    },
-})
-
-const openWebsiteRequestModal = () => {
-    websiteForm.club_id ||= props.clubs[0]?.id || ''
-    websiteRequestModal.value = true
-}
-
-const storePayoutProfile = () => payoutForm.post(route('auth.commerce.payout-profile.store'), {
-    preserveScroll: true,
-})
-
-const storeProviderProfile = () => providerProfileForm.post(route('auth.commerce.provider-profile.store'), {
-    preserveScroll: true,
-})
-
-const resetProviderLocationForm = () => {
-    providerLocationForm.reset()
-    providerLocationForm.type = 'pickup'
-    providerLocationForm.country = 'DE'
-    providerLocationForm.pickup_enabled = true
-    providerLocationForm.returns_enabled = false
-    providerLocationForm.is_public = true
-    providerLocationForm.clearErrors()
-    editingProviderLocation.value = null
-}
-
-const editProviderLocation = (location) => {
-    editingProviderLocation.value = location
-    Object.assign(providerLocationForm, {
-        name: location.name || '',
-        type: location.type || 'pickup',
-        country: location.country || 'DE',
-        state: location.state || '',
-        postal_code: location.postal_code || '',
-        city: location.city || '',
-        street: location.street || '',
-        house_number: location.house_number || '',
-        opening_hours: location.opening_hours || '',
-        note: location.note || '',
-        phone: location.phone || '',
-        email: location.email || '',
-        image_url: location.image_url || '',
-        latitude: location.latitude || '',
-        longitude: location.longitude || '',
-        pickup_enabled: Boolean(location.pickup_enabled),
-        returns_enabled: Boolean(location.returns_enabled),
-        is_public: Boolean(location.is_public),
-    })
-}
-
-const saveProviderLocation = () => {
-    const options = {
-        preserveScroll: true,
-        onSuccess: resetProviderLocationForm,
-    }
-
-    if (editingProviderLocation.value) {
-        providerLocationForm.put(route('auth.commerce.provider-locations.update', editingProviderLocation.value.id), options)
-        return
-    }
-
-    providerLocationForm.post(route('auth.commerce.provider-locations.store'), options)
-}
-
-const destroyProviderLocation = async (location) => {
-    const confirmed = await confirmDialog({
-        title: 'Standort entfernen',
-        message: `${location.name} wirklich aus deinem Anbieterprofil entfernen?`,
-        confirmLabel: 'Entfernen',
-        danger: true,
-    })
-
-    if (!confirmed) return
-
-    router.delete(route('auth.commerce.provider-locations.destroy', location.id), {
-        preserveScroll: true,
-    })
-}
-
-const requestPayout = () => {
-    payoutRequestForm.post(route('auth.commerce.payouts.request'), {
-        preserveScroll: true,
-        onSuccess: () => payoutRequestForm.reset('notes'),
-    })
-}
-
-const openIssueModal = (order, mode = 'issue') => {
-    issueModal.value = { open: true, order, note: '', mode }
-}
-
-const closeIssueModal = () => {
-    issueModal.value = { open: false, order: null, note: '', mode: 'issue' }
-}
-
-const submitOrderRequest = () => {
-    if (!issueModal.value.order || !issueModal.value.note.trim()) {
-        return
-    }
-
-    const url = issueModal.value.mode === 'return'
-        ? route('auth.commerce.orders.returns.store', issueModal.value.order.id)
-        : route('auth.commerce.orders.issue', issueModal.value.order.id)
-
-    router.post(url, {
-        reason: issueModal.value.note,
-        issue_note: issueModal.value.note,
-    }, {
-        preserveScroll: true,
-        onSuccess: closeIssueModal,
-    })
-}
-
-const orderRowId = (orderId) => `commerce-order-${orderId}`
-
-const focusOrder = async (orderId) => {
-    if (!orderId) return
-
-    activeTab.value = 'invoices'
-    focusedOrderId.value = String(orderId)
-    await nextTick()
-    document.getElementById(orderRowId(orderId))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
-
-const openPurchaseDetails = (purchase) => {
-    if (purchase.order_id) {
-        focusOrder(purchase.order_id)
-        return
-    }
-
-    if (purchase.detail_url) {
-        router.visit(purchase.detail_url)
-    }
-}
-
-const cancelOrder = async (order) => {
-    if (!orderCanCancel(order)) return
-    const confirmed = await confirmDialog({
-        title: 'Bestellung stornieren',
-        message: 'Bestellung wirklich stornieren? Das ist nur möglich, solange sie noch nicht versendet wurde.',
-        confirmLabel: 'Stornieren',
-        danger: true,
-    })
-
-    if (!confirmed) return
-
-    router.post(route('auth.commerce.orders.cancel', order.id), {}, {
-        preserveScroll: true,
-    })
-}
-
-onMounted(() => {
-    if (focusedOrderId.value) {
-        focusOrder(focusedOrderId.value)
-    }
-})
+const {
+    page,
+    moneyInputAttrs,
+    selectedClubId,
+    provider,
+    adProvider,
+    interval,
+    adAcceptedTerms,
+    issueModal,
+    showCartCheckout,
+    checkoutConfirmation,
+    checkoutProcessing,
+    queryTab,
+    queryOrderId,
+    activeTab,
+    focusedOrderId,
+    shopView,
+    campaignActionError,
+    campaignCreateError,
+    deleteCampaignModal,
+    editCampaignModal,
+    adGroupModal,
+    adCreativeModal,
+    editCampaignUploadPreviewUrl,
+    adGroupSportQuery,
+    addEditProductInventoryRow,
+    addProductAttributeRow,
+    addProductInventoryRow,
+    addProductVariantRow,
+    attributePresets,
+    closeDeleteProductModal,
+    closeEditProductModal,
+    deleteProductModal,
+    destroyOwnProduct,
+    editProductForm,
+    editProductModal,
+    importProducts,
+    inventoryCountries,
+    inventoryTotalStock,
+    isLearningOffer,
+    normalizeAttributeRows,
+    offerTypeLabel,
+    openDeleteProductModal,
+    openEditProductModal,
+    openWebsiteRequestModal,
+    presetValuesFor,
+    productAttributeRows,
+    productCommissionPreviewCents,
+    productCreateModal,
+    productForm,
+    productImportForm,
+    productSellerPayoutPreviewCents,
+    productStatusLabel,
+    productStockRequired,
+    productVariantRows,
+    removeEditProductInventoryRow,
+    removeProductAttributeRow,
+    removeProductInventoryRow,
+    removeProductVariantRow,
+    selectedProductCommission,
+    sellerApplicationForm,
+    sellerApplicationStatusLabel,
+    sellerMarketplaceCategories,
+    setDeleteProductConfirmation,
+    setEditProductImageUpload,
+    setProductGalleryUploads,
+    setProductImageUpload,
+    setProductImportFile,
+    storeProduct,
+    storeSellerApplication,
+    storeWebsiteRequest,
+    submitEditProduct,
+    updateOwnProductStatus,
+    websiteForm,
+    websiteRequestModal,
+    campaignForm,
+    adGroupForm,
+    adCreativeForm,
+    editCampaignForm,
+    payoutForm,
+    payoutRequestForm,
+    providerProfileForm,
+    providerLocationForm,
+    editingProviderLocation,
+    cartCheckoutForm,
+    formatMoney,
+    formatDateTime,
+    orderPaymentLabel,
+    orderPaymentHint,
+    orderShippingLabel,
+    orderIssueLabel,
+    orderSupport,
+    payoutStatusLabel,
+    orderIsDelivered,
+    orderHasShippableItems,
+    orderCanCancel,
+    orderCanReportIssue,
+    orderCanReturn,
+    formatPercent,
+    cartItems,
+    cartItemCount,
+    selectedAddonActor,
+    visibleAddons,
+    isProductLearningOffer,
+    courseProducts,
+    marketplaceProducts,
+    visibleShopProducts,
+    visibleShopProductTitle,
+    visibleShopProductDescription,
+    showAccountShop,
+    showOutfitShop,
+    showProductShop,
+    shopCategoryTabs,
+    adFormats,
+    adPlacements,
+    formatsForPlacement,
+    campaignAdFormats,
+    editCampaignAdFormats,
+    selectedAdFormat,
+    selectedAdPlacement,
+    selectedEditAdFormat,
+    selectedEditAdPlacement,
+    adPlacementLabel,
+    sportLabel,
+    selectedAdGroupSports,
+    filteredAdGroupSports,
+    campaignCreativeRows,
+    adCreativeRows,
+    editCampaignCreativeRows,
+    newClientReference,
+    ctr,
+    addonPrice,
+    checkoutAddon,
+    confirmAddonCheckout,
+    checkoutAccountPlan,
+    confirmAccountPlanCheckout,
+    checkoutProduct,
+    confirmProductCheckout,
+    closeCheckoutConfirmation,
+    setCheckoutAccepted,
+    providerLabel,
+    checkoutConfirmationTitle,
+    checkoutConfirmationPrice,
+    confirmCheckout,
+    addToCart,
+    updateCartItem,
+    removeCartItem,
+    checkoutCart,
+    activeOrders,
+    commerceTabs,
+    campaignCreateErrors,
+    setCampaignCreativeUpload,
+    setEditCampaignCreativeUpload,
+    addCampaignCreativeRow,
+    removeCampaignCreativeRow,
+    addAdCreativeRow,
+    removeAdCreativeRow,
+    addEditCampaignCreativeRow,
+    removeEditCampaignCreativeRow,
+    addAdGroupSport,
+    removeAdGroupSport,
+    normalizeCampaignCreatives,
+    normalizeAdCreatives,
+    normalizeEditCampaignCreatives,
+    campaignAudienceText,
+    adGroupAudienceText,
+    adGroupAudienceSportsText,
+    campaignRootCreatives,
+    firstCreativePreviewUrl,
+    editCampaignPreviewUrl,
+    creativePreviewUrl,
+    toLocalDateTimeInput,
+    storeCampaign,
+    openAdGroupModal,
+    closeAdGroupModal,
+    storeAdGroup,
+    openAdCreativeModal,
+    closeAdCreativeModal,
+    storeAdCreatives,
+    updateOwnCampaignStatus,
+    openEditCampaignModal,
+    closeEditCampaignModal,
+    submitEditCampaign,
+    deleteOwnCampaign,
+    closeDeleteCampaignModal,
+    setDeleteCampaignConfirmation,
+    confirmDeleteOwnCampaign,
+    storePayoutProfile,
+    storeProviderProfile,
+    resetProviderLocationForm,
+    editProviderLocation,
+    saveProviderLocation,
+    destroyProviderLocation,
+    requestPayout,
+    openIssueModal,
+    closeIssueModal,
+    setIssueNote,
+    submitOrderRequest,
+    orderRowId,
+    focusOrder,
+    openPurchaseDetails,
+    cancelOrder,
+} = useCommerceWorkspace(props)
 </script>
 
 <template>
@@ -1517,7 +305,7 @@ onMounted(() => {
             <div class="divide-y divide-border">
                 <div v-for="item in cartItems" :key="item.id" class="grid gap-4 p-5 md:grid-cols-[5rem_minmax(0,1fr)_8rem_auto] md:items-center">
                     <Link :href="item.product?.show_url || route('auth.commerce.products.show', item.product?.id)" class="block overflow-hidden rounded-lg border border-border bg-inputBg">
-                        <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" class="aspect-square h-full w-full object-cover">
+                        <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" width="160" height="160" loading="lazy" decoding="async" class="aspect-square h-full w-full object-cover">
                         <div v-else class="flex aspect-square items-center justify-center">
                             <i class="las la-store text-3xl text-air-blue"></i>
                         </div>
@@ -1682,7 +470,7 @@ onMounted(() => {
             <div class="grid gap-4 p-5 lg:grid-cols-3">
                 <article v-for="product in visibleShopProducts" :key="product.id" class="overflow-hidden rounded-lg border border-border bg-bg">
                     <div class="aspect-[4/3] bg-inputBg">
-                        <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                        <img v-if="product.image_url" :src="product.image_url" :alt="product.title" width="480" height="360" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                         <div v-else class="flex h-full items-center justify-center">
                             <i class="las la-store text-5xl text-air-blue"></i>
                         </div>
@@ -2561,9 +1349,12 @@ onMounted(() => {
                             <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
                         </span>
                     </label>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="campaignForm.processing">
-                        Kampagne speichern
-                    </button>
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <AppButton type="submit" :loading="campaignForm.processing" :disabled="campaignForm.processing">
+                            {{ campaignForm.processing ? 'Speichert...' : 'Kampagne speichern' }}
+                        </AppButton>
+                        <AppLoadingState v-if="campaignForm.processing" label="Kampagne wird gespeichert..." inline />
+                    </div>
                     <div v-if="campaignCreateError || campaignCreateErrors.length" class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
                         <p v-if="campaignCreateError" class="font-semibold">{{ campaignCreateError }}</p>
                         <ul v-if="campaignCreateErrors.length" class="mt-2 list-disc space-y-1 pl-5">
@@ -3248,6 +2039,10 @@ onMounted(() => {
                             v-if="editCampaignPreviewUrl"
                             :src="editCampaignPreviewUrl"
                             :alt="editCampaignForm.headline || editCampaignForm.name || 'Ads Vorschau'"
+                            width="640"
+                            height="360"
+                            loading="eager"
+                            decoding="async"
                             class="max-h-64 w-full bg-inputBg object-contain"
                         >
                         <div v-else class="flex min-h-36 items-center justify-center px-4 py-8 text-center text-sm text-secondary">
@@ -3289,7 +2084,7 @@ onMounted(() => {
                                 <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante">
                                 <div v-if="creativePreviewUrl(creative)" class="overflow-hidden rounded-lg border border-border bg-bg">
                                     <p class="border-b border-border px-3 py-2 text-xs font-semibold uppercase text-secondary">Variantenbild</p>
-                                    <img :src="creativePreviewUrl(creative)" :alt="creative.name || 'Variantenbild'" class="max-h-40 w-full bg-inputBg object-contain">
+                                    <img :src="creativePreviewUrl(creative)" :alt="creative.name || 'Variantenbild'" width="480" height="270" loading="lazy" decoding="async" class="max-h-40 w-full bg-inputBg object-contain">
                                 </div>
                                 <button v-if="editCampaignCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="removeEditCampaignCreativeRow(index)">
                                     Variante entfernen
@@ -3373,9 +2168,18 @@ onMounted(() => {
                             <span> · {{ providerLabel(checkoutConfirmation.provider) }}</span>
                         </p>
                     </div>
-                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCheckoutConfirmation">
+                    <AppButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        icon-only
+                        :disabled="checkoutProcessing"
+                        aria-label="Checkout schliessen"
+                        title="Checkout schliessen"
+                        @click="closeCheckoutConfirmation"
+                    >
                         <i class="las la-times text-xl"></i>
-                    </button>
+                    </AppButton>
                 </div>
 
                 <label class="mt-5 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -3388,18 +2192,30 @@ onMounted(() => {
                     </span>
                 </label>
 
+                <AppLoadingState
+                    v-if="checkoutProcessing"
+                    class="mt-4"
+                    label="Zahlung wird vorbereitet..."
+                    inline
+                />
+
                 <div class="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCheckoutConfirmation">
-                        Abbrechen
-                    </button>
-                    <button
+                    <AppButton
                         type="button"
-                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="!checkoutConfirmation.accepted"
+                        variant="secondary"
+                        :disabled="checkoutProcessing"
+                        @click="closeCheckoutConfirmation"
+                    >
+                        Abbrechen
+                    </AppButton>
+                    <AppButton
+                        type="button"
+                        :disabled="!checkoutConfirmation.accepted || checkoutProcessing"
+                        :loading="checkoutProcessing"
                         @click="confirmCheckout"
                     >
-                        Zahlungspflichtig fortfahren
-                    </button>
+                        {{ checkoutProcessing ? 'Bereitet Zahlung vor...' : 'Zahlungspflichtig fortfahren' }}
+                    </AppButton>
                 </div>
             </div>
         </div>
@@ -3415,7 +2231,7 @@ onMounted(() => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Ausgewählte Produkte</p>
                     <div class="mt-3 space-y-3">
                         <div v-for="item in cartItems" :key="`checkout-${item.id}`" class="flex items-center gap-3">
-                            <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" class="h-12 w-12 rounded-lg object-cover">
+                            <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" width="48" height="48" loading="lazy" decoding="async" class="h-12 w-12 rounded-lg object-cover">
                             <div v-else class="flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-inputBg">
                                 <i class="las la-store text-xl text-air-blue"></i>
                             </div>
@@ -3462,5 +2278,3 @@ onMounted(() => {
         </div>
     </div>
 </template>
-
-

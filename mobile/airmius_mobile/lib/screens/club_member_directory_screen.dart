@@ -183,7 +183,7 @@ class _DirectorySwitch extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => SwitchListTile(value: value, onChanged: onChanged, activeColor: color, contentPadding: EdgeInsets.zero, secondary: Icon(icon, color: color), title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3)));
+  Widget build(BuildContext context) => SwitchListTile(value: value, onChanged: onChanged, activeThumbColor: color, contentPadding: EdgeInsets.zero, secondary: Icon(icon, color: color), title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3)));
 }
 
 class _ClubMember {

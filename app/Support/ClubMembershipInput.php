@@ -8,16 +8,12 @@ class ClubMembershipInput
 {
     public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'paused', 'former'];
 
-    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'yearly', 'once'];
+    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'];
 
     public static function normalizeKey(mixed $value): string
     {
         $key = strtolower(trim((string) $value));
         $key = strtr($key, [
-            'ä' => 'ae',
-            'ö' => 'oe',
-            'ü' => 'ue',
-            'ß' => 'ss',
             'ä' => 'ae',
             'ö' => 'oe',
             'ü' => 'ue',
@@ -41,8 +37,8 @@ class ClubMembershipInput
             'pause' => 'paused',
             'kein_mitglied' => 'non_member',
             'nichtmitglied' => 'non_member',
-            'Prüfung' => 'pending',
-            'in_Prüfung' => 'pending',
+            'pruefung' => 'pending',
+            'in_pruefung' => 'pending',
             'wartend' => 'pending',
             'ehemalig' => 'former',
         ];
@@ -60,6 +56,10 @@ class ClubMembershipInput
             'monat' => 'monthly',
             'quartal' => 'quarterly',
             'vierteljaehrlich' => 'quarterly',
+            'viermonatlich' => 'four_monthly',
+            'alle_4_monate' => 'four_monthly',
+            'halbjaehrlich' => 'semi_yearly',
+            'halbjahr' => 'semi_yearly',
             'jaehrlich' => 'yearly',
             'jahr' => 'yearly',
             'einmalig' => 'once',

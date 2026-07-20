@@ -15,7 +15,7 @@ class AthleteMotivationService
     public function forUser(User $user): array
     {
         $now = now();
-        $weekStart = $now->copy()->startOfWeek();
+        $weekStart = $now->copy()->subDays(6)->startOfDay();
         $teamIds = $user->teams()->pluck('teams.id')->map(fn ($id) => (int) $id)->all();
         $clubIds = $user->clubs()->pluck('clubs.id')->map(fn ($id) => (int) $id)->all();
 

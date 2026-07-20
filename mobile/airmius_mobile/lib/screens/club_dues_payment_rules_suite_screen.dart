@@ -233,7 +233,7 @@ class _OptionSwitch extends StatelessWidget {
       title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
       subtitle: Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
       value: value,
-      activeColor: color,
+      activeThumbColor: color,
       onChanged: onChanged,
     );
   }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\NotificationResource;
 use App\Models\Notification;
+use App\Support\Api\V1\ApiPagination;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -22,24 +23,17 @@ class NotificationController extends Controller
 
         $notifications = $query->paginate($this->perPage($request));
 
-        return response()->json([
-            'data' => NotificationResource::collection($notifications)->resolve($request),
-            'meta' => [
+        return response()->json(ApiPagination::payload(
+            $notifications,
+            NotificationResource::collection($notifications)->resolve($request),
+            [
                 'unread_count' => $request->user()
                     ->appNotifications()
                     ->where('type', '!=', 'chat.message')
                     ->where('read', false)
                     ->count(),
-                'current_page' => $notifications->currentPage(),
-                'last_page' => $notifications->lastPage(),
-                'per_page' => $notifications->perPage(),
-                'total' => $notifications->total(),
             ],
-            'links' => [
-                'next' => $notifications->nextPageUrl(),
-                'prev' => $notifications->previousPageUrl(),
-            ],
-        ]);
+        ));
     }
 
     public function show(Request $request, Notification $notification)

@@ -38,6 +38,10 @@ defineProps({
         <img
             :src="fileUrl(activeMediaAttachment.file)"
             :alt="attachmentLabel(activeMediaAttachment)"
+            width="1200"
+            height="900"
+            loading="eager"
+            decoding="async"
             class="max-h-[82dvh] max-w-full rounded-lg object-contain"
         />
         <button
@@ -58,4 +62,3 @@ defineProps({
         </a>
     </div>
 </template>
-

@@ -12,6 +12,8 @@ use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
+use App\Support\BillingOverview;
+use App\Support\MinorSafety;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +22,24 @@ class SettingsController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
+        $clubInvoices = Invoice::query()
+            ->where('user_id', $user->id)
+            ->with('club')
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $payments = Payment::query()
+            ->where('user_id', $user->id)
+            ->with(['club', 'invoice'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
+        $subscriptionInvoices = SubscriptionInvoice::query()
+            ->where('user_id', $user->id)
+            ->with(['club', 'plan', 'checkout'])
+            ->latest('id')
+            ->limit(30)
+            ->get();
 
         return response()->json([
             'data' => [
@@ -50,41 +70,152 @@ class SettingsController extends Controller
                     ->orderBy('name')
                     ->get(['id', 'name', 'slug', 'category']),
                 'billing_history' => [
+                    'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices, $payments),
                     'airmius_bank' => [
                         'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
                         'bank_name' => Setting::valueFor('billing_bank_name', ''),
                         'iban' => Setting::valueFor('billing_iban', ''),
                         'bic' => Setting::valueFor('billing_bic', ''),
                     ],
-                    'invoices' => InvoiceResource::collection(
-                        Invoice::query()
-                            ->where('user_id', $user->id)
-                            ->with('club')
-                            ->latest('id')
-                            ->limit(30)
-                            ->get()
-                    ),
-                    'payments' => PaymentResource::collection(
-                        Payment::query()
-                            ->where('user_id', $user->id)
-                            ->with(['club', 'invoice'])
-                            ->latest('id')
-                            ->limit(30)
-                            ->get()
-                    ),
-                    'subscription_invoices' => SubscriptionInvoiceResource::collection(
-                        SubscriptionInvoice::query()
-                            ->where('user_id', $user->id)
-                            ->with(['club', 'plan', 'checkout'])
-                            ->latest('id')
-                            ->limit(30)
-                            ->get()
-                    ),
+                    'invoices' => InvoiceResource::collection($clubInvoices),
+                    'payments' => PaymentResource::collection($payments),
+                    'subscription_invoices' => SubscriptionInvoiceResource::collection($subscriptionInvoices),
                 ],
             ],
         ]);
     }
 
+    public function invoices(Request $request)
+    {
+        $perPage = min(max((int) $request->integer('per_page', 20), 1), 50);
+        $page = max((int) $request->integer('page', 1), 1);
+        $clubInvoices = Invoice::query()
+            ->where('user_id', $request->user()->id)
+            ->with('club')
+            ->latest('id')
+            ->get();
+        $subscriptionInvoices = SubscriptionInvoice::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['club', 'plan', 'checkout'])
+            ->latest('id')
+            ->get();
+
+        $items = collect()
+            ->merge($clubInvoices->map(fn (Invoice $invoice) => $this->invoicePayload($invoice)))
+            ->merge($subscriptionInvoices->map(fn (SubscriptionInvoice $invoice) => $this->subscriptionInvoicePayload($invoice)))
+            ->sortByDesc('sort_at')
+            ->values();
+
+        $total = $items->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $data = $items
+            ->slice(($page - 1) * $perPage, $perPage)
+            ->map(fn (array $item) => \Illuminate\Support\Arr::except($item, ['sort_at']))
+            ->values();
+
+        return response()->json([
+            'data' => $data,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'per_page' => $perPage,
+            'total' => $total,
+            'from' => $total === 0 ? null : (($page - 1) * $perPage) + 1,
+            'to' => $total === 0 ? null : min($page * $perPage, $total),
+            'meta' => [
+                'sources' => ['club_invoices', 'subscription_invoices'],
+                'summary' => BillingOverview::memberBillingSummary($clubInvoices, $subscriptionInvoices),
+            ],
+        ]);
+    }
+
+    public function invoice(Request $request, int $invoice)
+    {
+        $clubInvoice = Invoice::query()
+            ->where('user_id', $request->user()->id)
+            ->with('club')
+            ->find($invoice);
+
+        if ($clubInvoice) {
+            return response()->json([
+                'data' => \Illuminate\Support\Arr::except($this->invoicePayload($clubInvoice), ['sort_at']),
+            ]);
+        }
+
+        $subscriptionInvoice = SubscriptionInvoice::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['club', 'plan', 'checkout'])
+            ->findOrFail($invoice);
+
+        return response()->json([
+            'data' => \Illuminate\Support\Arr::except($this->subscriptionInvoicePayload($subscriptionInvoice), ['sort_at']),
+        ]);
+    }
+
+    private function invoicePayload(Invoice $invoice): array
+    {
+        return [
+            'id' => $invoice->id,
+            'kind' => 'club_invoice',
+            'club_id' => $invoice->club_id,
+            'user_id' => $invoice->user_id,
+            'number' => $invoice->number,
+            'title' => $invoice->title,
+            'description' => $invoice->description,
+            'amount' => $invoice->amount,
+            'amount_cents' => (int) round(((float) $invoice->amount) * 100),
+            'currency' => 'EUR',
+            'status' => $invoice->status,
+            'status_label' => $invoice->statusLabel(),
+            'source' => $invoice->source,
+            'billing_period_start' => $invoice->billing_period_start?->toDateString(),
+            'billing_period_end' => $invoice->billing_period_end?->toDateString(),
+            'issued_at' => $invoice->issued_at?->toJSON(),
+            'due_at' => $invoice->due_date?->toJSON(),
+            'paid_at' => $invoice->paid_at?->toJSON(),
+            'club' => $invoice->relationLoaded('club') && $invoice->club ? [
+                'id' => $invoice->club->id,
+                'name' => $invoice->club->name,
+            ] : null,
+            'created_at' => $invoice->created_at?->toJSON(),
+            'updated_at' => $invoice->updated_at?->toJSON(),
+            'sort_at' => ($invoice->issued_at ?? $invoice->created_at)?->timestamp ?? 0,
+        ];
+    }
+
+    private function subscriptionInvoicePayload(SubscriptionInvoice $invoice): array
+    {
+        return [
+            'id' => $invoice->id,
+            'kind' => 'subscription_invoice',
+            'payment_checkout_id' => $invoice->payment_checkout_id,
+            'user_id' => $invoice->user_id,
+            'club_id' => $invoice->club_id,
+            'subscription_plan_id' => $invoice->subscription_plan_id,
+            'subscription_type' => $invoice->subscription_type,
+            'subscription_id' => $invoice->subscription_id,
+            'number' => $invoice->number,
+            'title' => $invoice->title,
+            'description' => $invoice->description,
+            'amount_cents' => $invoice->amount_cents,
+            'currency' => $invoice->currency,
+            'status' => $invoice->status,
+            'status_label' => BillingOverview::statusLabel($invoice->status),
+            'payment_method' => $invoice->payment_method,
+            'payment_reference' => $invoice->payment_reference,
+            'billing_period_start' => $invoice->billing_period_start?->toDateString(),
+            'billing_period_end' => $invoice->billing_period_end?->toDateString(),
+            'issued_at' => $invoice->issued_at?->toJSON(),
+            'due_at' => $invoice->due_at?->toJSON(),
+            'paid_at' => $invoice->paid_at?->toJSON(),
+            'club' => $invoice->relationLoaded('club') && $invoice->club ? [
+                'id' => $invoice->club->id,
+                'name' => $invoice->club->name,
+            ] : null,
+            'created_at' => $invoice->created_at?->toJSON(),
+            'updated_at' => $invoice->updated_at?->toJSON(),
+            'sort_at' => ($invoice->issued_at ?? $invoice->created_at)?->timestamp ?? 0,
+        ];
+    }
     public function update(Request $request)
     {
         $data = $request->validate([
@@ -107,6 +238,10 @@ class SettingsController extends Controller
 
         if (empty($data['theme'])) {
             unset($data['theme']);
+        }
+
+        if (MinorSafety::isUnderConsentAge($request->user())) {
+            $data = array_merge($data, MinorSafety::privacyDefaults());
         }
 
         $eventSportIds = collect($data['event_default_sport_ids'] ?? [])

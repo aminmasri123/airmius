@@ -240,7 +240,7 @@ class _SwitchRow extends StatelessWidget {
               ],
             ),
           ),
-          Switch.adaptive(value: value, onChanged: onChanged, activeColor: AirmiusColors.blue),
+          Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
         ],
       ),
     );

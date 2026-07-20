@@ -165,7 +165,7 @@ class _AuditSwitch extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
       value: value,
-      activeColor: color,
+      activeThumbColor: color,
       onChanged: onChanged,
     );
   }

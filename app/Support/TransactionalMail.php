@@ -32,6 +32,17 @@ class TransactionalMail
 
     public function transportFor(string $category): array
     {
+        if (app()->environment('testing')) {
+            $sender = config("airmius_mail.senders.{$category}") ?: config('airmius_mail.senders.system', []);
+
+            return [
+                'category' => $category,
+                'mailer' => config('mail.default', 'array'),
+                'address' => $sender['address'] ?? config('mail.from.address'),
+                'name' => $sender['name'] ?? config('mail.from.name'),
+            ];
+        }
+
         if ($this->categoryDisabled($category) && $category !== 'system') {
             return $this->transportFor('system');
         }

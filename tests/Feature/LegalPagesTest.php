@@ -3,27 +3,50 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class LegalPagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_legal_pages_do_not_expose_placeholder_todos(): void
+    public function test_required_legal_pages_render_with_content(): void
     {
-        foreach ([
-            '/impressum',
-            '/datenschutz',
-            '/agb',
-            '/community-richtlinien',
-            '/jugendschutz',
-            '/cookies',
-            '/widerruf',
-            '/kontakt-und-melden',
-        ] as $url) {
-            $this->get($url)
+        $pages = [
+            'legal.imprint' => 'Impressum',
+            'policy.show' => 'Datenschutzerklärung',
+            'terms.show' => 'Allgemeine Nutzungsbedingungen',
+            'legal.community' => 'Community-Richtlinien',
+            'legal.minors' => 'Jugendschutz und Elternzustimmung',
+            'legal.cookies' => 'Cookie-Hinweise',
+            'legal.withdrawal' => 'Widerrufsbelehrung',
+            'legal.reporting' => 'Kontakt, Support und Inhalte melden',
+        ];
+
+        foreach ($pages as $routeName => $title) {
+            $this->get(route($routeName))
                 ->assertOk()
-                ->assertDontSee('TODO', false);
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('Legal/Show')
+                    ->where('title', $title)
+                    ->has('sections.0.title')
+                    ->has('sections.0.body.0')
+                );
         }
+    }
+
+    public function test_sitemap_contains_required_legal_pages(): void
+    {
+        $response = $this->get(route('sitemap'));
+
+        $response->assertOk()
+            ->assertSee(route('legal.imprint'), false)
+            ->assertSee(route('policy.show'), false)
+            ->assertSee(route('terms.show'), false)
+            ->assertSee(route('legal.community'), false)
+            ->assertSee(route('legal.minors'), false)
+            ->assertSee(route('legal.cookies'), false)
+            ->assertSee(route('legal.withdrawal'), false)
+            ->assertSee(route('legal.reporting'), false);
     }
 }

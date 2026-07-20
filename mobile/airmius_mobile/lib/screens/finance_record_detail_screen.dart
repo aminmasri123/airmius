@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class FinanceRecordDetailScreen extends StatefulWidget {
   const FinanceRecordDetailScreen({super.key, required this.title, required this.body, required this.trailing, required this.icon});
@@ -43,17 +42,17 @@ class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Beitrag & Zahlung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _rhythm, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlrhythmus'), items: const ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _rhythm = value ?? _rhythm)),
+            DropdownButtonFormField<String>(initialValue: _rhythm, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlrhythmus'), items: const ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _rhythm = value ?? _rhythm)),
             const SizedBox(height: 10),
-            DropdownButtonFormField<String>(value: _method, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Extern'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _method = value ?? _method)),
+            DropdownButtonFormField<String>(initialValue: _method, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Extern'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _method = value ?? _method)),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Abgleich & Export'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _matched, onChanged: (value) => setState(() => _matched = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zahlung zugeordnet', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Banktransfer oder Barzahlung mit Rechnung verbinden.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _sepa, onChanged: (value) => setState(() => _sepa = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('In SEPA Export aufnehmen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nur bei Mandat und faelligem Beitrag.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('DATEV relevant', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Buchhaltungsdaten vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _matched, onChanged: (value) => setState(() => _matched = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zahlung zugeordnet', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Banktransfer oder Barzahlung mit Rechnung verbinden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _sepa, onChanged: (value) => setState(() => _sepa = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('In SEPA Export aufnehmen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nur bei Mandat und faelligem Beitrag.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('DATEV relevant', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Buchhaltungsdaten vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

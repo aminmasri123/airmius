@@ -1,6 +1,9 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
+import AppButton from '@/Components/UI/AppButton.vue'
+import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
+import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
@@ -224,7 +227,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
             <section class="overflow-hidden rounded-lg border border-border bg-card">
                 <div class="relative h-40 bg-gradient-to-r from-buttonPrimary to-borderHover">
                     <img v-if="clubProfile.cover_image" :src="storageUrl(clubProfile.cover_image)"
-                        :alt="clubProfile.name" class="h-full w-full object-cover" />
+                        :alt="clubProfile.name" width="1200" height="320" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover" />
                     <button v-if="viewer.can_manage" type="button"
                         class="absolute bottom-3 right-3 rounded-lg bg-card/90 px-3 py-2 text-sm font-semibold text-primary shadow hover:bg-card"
                         @click="coverInput?.click()">
@@ -239,7 +242,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                             <div
                                 class="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border-4 border-card bg-inputBg text-3xl font-bold text-primary">
                                 <img v-if="clubProfile.logo" :src="storageUrl(clubProfile.logo)" :alt="clubProfile.name"
-                                    class="h-full w-full object-cover" />
+                                    width="96" height="96" loading="eager" decoding="async" class="h-full w-full object-cover" />
                                 <span v-else>{{ initials(clubProfile.name) }}</span>
                                 <button v-if="viewer.can_manage" type="button"
                                     class="absolute inset-0 flex items-center justify-center bg-black/50 text-sm font-semibold text-white opacity-0 transition group-hover:opacity-100"
@@ -447,9 +450,12 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     </div>
 
                     <div class="md:col-span-2">
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="clubForm.processing">
-                            Vereinsdaten speichern
-                        </button>
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <AppButton type="submit" :loading="clubForm.processing" :disabled="clubForm.processing">
+                                {{ clubForm.processing ? 'Speichert...' : 'Vereinsdaten speichern' }}
+                            </AppButton>
+                            <AppLoadingState v-if="clubForm.processing" label="Vereinsdaten werden gespeichert..." inline />
+                        </div>
                     </div>
                 </form>
             </section>
@@ -459,6 +465,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     <article v-for="post in posts" :key="post.id" class="rounded-lg border border-border bg-card p-4">
                         <div class="flex items-center gap-3">
                             <img :src="post.user.profile_photo_url" :alt="post.user.name"
+                                width="40" height="40" loading="lazy" decoding="async"
                                 class="h-10 w-10 rounded-full object-cover">
                             <div>
                                 <Link :href="route('auth.users.show', post.user.id)"
@@ -482,7 +489,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                 </section>
 
                 <aside class="space-y-4">
-                    <section v-if="clubProfile.teams.length" class="rounded-lg border border-border bg-card p-4">
+                    <section class="rounded-lg border border-border bg-card p-4">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Teams</h2>
                         <div class="mt-4 space-y-2">
                             <Link v-for="team in clubProfile.teams" :key="team.id"
@@ -496,6 +503,16 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                     <p class="text-xs text-secondary">{{ team.users_count }} Mitglieder</p>
                                 </div>
                             </Link>
+                            <AppEmptyState
+                                v-if="!clubProfile.teams.length"
+                                title="Noch keine Teams"
+                                description="Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden."
+                                compact
+                            >
+                                <template #icon>
+                                    <i class="las la-users text-xl" aria-hidden="true"></i>
+                                </template>
+                            </AppEmptyState>
                         </div>
                     </section>
 
@@ -505,7 +522,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                             <Link v-for="admin in clubProfile.admins" :key="admin.id"
                                 :href="route('auth.users.show', admin.id)"
                                 class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-                                <img v-if="admin.profile_photo_thumb" :src="admin.profile_photo_thumb" :alt="admin.name"
+                                <img v-if="admin.profile_photo_thumb" :src="admin.profile_photo_thumb" :alt="admin.name" width="32" height="32" loading="lazy" decoding="async"
                                     class="h-8 w-8 rounded-full object-cover" />
                                 <div v-else
                                     class="flex h-8 w-8 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
@@ -525,7 +542,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                     <Link :href="route('auth.users.show', member.id)"
                                         class="flex min-w-0 items-center gap-3 hover:underline">
                                         <img v-if="member.profile_photo_thumb" :src="member.profile_photo_thumb"
-                                            :alt="member.name" class="h-8 w-8 rounded-full object-cover" />
+                                            :alt="member.name" width="32" height="32" loading="lazy" decoding="async" class="h-8 w-8 rounded-full object-cover" />
                                         <div v-else
                                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
                                             {{ initials(member?.name) }}
@@ -557,6 +574,16 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                     </button>
                                 </div>
                             </div>
+                            <AppEmptyState
+                                v-if="!clubProfile.members.length"
+                                title="Noch keine Mitglieder"
+                                description="Angenommene Mitglieder werden in dieser Liste sichtbar."
+                                compact
+                            >
+                                <template #icon>
+                                    <i class="las la-id-badge text-xl" aria-hidden="true"></i>
+                                </template>
+                            </AppEmptyState>
                         </div>
                     </section>
                 </aside>

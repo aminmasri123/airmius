@@ -63,6 +63,7 @@ defineProps({
     confirmDeleteOwnCampaign: { type: Function, required: true },
     setDeleteCampaignConfirmation: { type: Function, required: true },
     checkoutConfirmation: { type: Object, required: true },
+    checkoutProcessing: { type: Boolean, default: false },
     interval: { type: String, default: 'monthly' },
     checkoutConfirmationPrice: { type: String, default: '' },
     providerLabel: { type: Function, required: true },
@@ -164,6 +165,7 @@ const emit = defineEmits(['update:adGroupSportQuery', 'update:showCartCheckout']
         :confirmation="checkoutConfirmation"
         :interval="interval"
         :price="checkoutConfirmationPrice"
+        :processing="checkoutProcessing"
         :provider-label="providerLabel"
         :title="checkoutConfirmationTitle"
         @close="closeCheckoutConfirmation"

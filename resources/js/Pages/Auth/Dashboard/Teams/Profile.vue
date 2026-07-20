@@ -1,6 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
+import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -305,7 +306,7 @@ const uploadImage = (field, event) => {
 
             <section class="overflow-hidden rounded-lg border border-border bg-card">
                 <div class="relative h-40 bg-gradient-to-r from-buttonPrimary to-borderHover">
-                    <img v-if="teamProfile.cover_image" :src="storageUrl(teamProfile.cover_image)" :alt="teamProfile.name" class="h-full w-full object-cover" />
+                    <img v-if="teamProfile.cover_image" :src="storageUrl(teamProfile.cover_image)" :alt="teamProfile.name" width="1200" height="320" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover" />
                     <button
                         v-if="viewer.can_manage"
                         type="button"
@@ -320,7 +321,7 @@ const uploadImage = (field, event) => {
                     <div class="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div class="flex items-end gap-4">
                             <div class="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border-4 border-card bg-inputBg text-3xl font-bold text-primary">
-                                <img v-if="teamProfile.logo" :src="storageUrl(teamProfile.logo)" :alt="teamProfile.name" class="h-full w-full object-cover" />
+                                <img v-if="teamProfile.logo" :src="storageUrl(teamProfile.logo)" :alt="teamProfile.name" width="96" height="96" loading="eager" decoding="async" class="h-full w-full object-cover" />
                                 <span v-else>{{ initials(teamProfile.name) }}</span>
                                 <button
                                     v-if="viewer.can_manage"
@@ -654,7 +655,7 @@ const uploadImage = (field, event) => {
                 <section class="space-y-4">
                     <article v-for="post in posts" :key="post.id" class="rounded-lg border border-border bg-card p-4">
                         <div class="flex items-center gap-3">
-                            <img :src="post.user.profile_photo_url" :alt="post.user.name" class="h-10 w-10 rounded-full object-cover">
+                            <img :src="post.user.profile_photo_url" :alt="post.user.name" width="40" height="40" loading="lazy" decoding="async" class="h-10 w-10 rounded-full object-cover">
                             <div>
                                 <Link :href="route('auth.users.show', post.user.id)" class="text-sm font-semibold text-primary hover:underline">
                                     {{ post.user.name }}
@@ -677,16 +678,25 @@ const uploadImage = (field, event) => {
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
                     <div class="mt-4 space-y-3">
                         <Link v-for="member in teamProfile.members" :key="member.id" :href="route('auth.users.show', member.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-                            <img :src="member.profile_photo_url" :alt="member.name" class="h-9 w-9 rounded-full object-cover">
+                            <img :src="member.profile_photo_url" :alt="member.name" width="36" height="36" loading="lazy" decoding="async" class="h-9 w-9 rounded-full object-cover">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
                                 <p class="text-xs text-secondary">{{ member.pivot?.role || 'Mitglied' }}</p>
                             </div>
                         </Link>
+                        <AppEmptyState
+                            v-if="!teamProfile.members.length"
+                            title="Noch keine Mitglieder"
+                            description="Teammitglieder erscheinen hier, sobald sie dem Team zugeordnet wurden."
+                            compact
+                        >
+                            <template #icon>
+                                <i class="las la-user-friends text-xl" aria-hidden="true"></i>
+                            </template>
+                        </AppEmptyState>
                     </div>
                 </aside>
             </div>
         </div>
     </AppLayout>
 </template>
-

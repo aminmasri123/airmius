@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'public_location_submission_screen.dart';
-import 'ui_action_result_screen.dart';
 import 'legal_support_operations_screen.dart';
 import 'public_growth_operations_screen.dart';
 
@@ -70,7 +69,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
             const SizedBox(height: 10),
             const AirmiusTextField(label: 'E-Mail', hint: 'kontakt@example.com'),
             const SizedBox(height: 10),
-            DropdownButtonFormField<String>(value: _contactType, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Kontaktart'), items: const ['E-Mail', 'Telefon', 'Rückruf', 'Demo-Termin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _contactType = value ?? _contactType)),
+            DropdownButtonFormField<String>(initialValue: _contactType, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Kontaktart'), items: const ['E-Mail', 'Telefon', 'Rückruf', 'Demo-Termin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _contactType = value ?? _contactType)),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -82,7 +81,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
           AirmiusPanel(child: SwitchListTile(
             value: _privacyAccepted,
             onChanged: (value) => setState(() => _privacyAccepted = value),
-            activeColor: AirmiusColors.blue,
+            activeThumbColor: AirmiusColors.blue,
             contentPadding: EdgeInsets.zero,
             title: const Text('Datenschutz akzeptieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
             subtitle: const Text('Die Anfrage darf zur Bearbeitung gespeichert werden.', style: TextStyle(color: AirmiusColors.muted)),

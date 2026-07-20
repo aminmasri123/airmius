@@ -33,7 +33,7 @@ const safeRoute = (name, fallback, params) => {
         <div class="mx-auto max-w-6xl">
             <div class="grid grid-cols-1 gap-4 sm:gap-8 min-[420px]:grid-cols-2 lg:gap-10 xl:grid-cols-4">
                 <div class="rounded-2xl border border-border bg-bg/60 p-4 shadow-sm min-[420px]:col-span-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none xl:col-span-1">
-                    <button @click="scrollTo('hero')" class="inline-flex items-center text-left font-heading text-xl font-900 tracking-tight sm:block">
+                    <button type="button" aria-label="Airmius Start" @click="scrollTo('hero')" class="inline-flex items-center text-left font-heading text-xl font-900 tracking-tight sm:block">
                         <ApplicationLogo class="h-12 w-auto max-w-[12rem] shrink-0 sm:h-14 sm:max-w-[14rem]" />
                     </button>
                     <p class="mt-3 max-w-xl text-sm leading-6 text-secondary sm:mt-4 xl:max-w-none">
@@ -47,9 +47,9 @@ const safeRoute = (name, fallback, params) => {
                         {{ $t('guest.footer.product') }}
                     </h4>
                     <div class="grid grid-cols-2 gap-2 text-sm text-secondary sm:grid-cols-1 sm:gap-1">
-                        <button @click="scrollTo('funktionen')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.features') }}</button>
-                        <button @click="scrollTo('vorteile')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.benefits') }}</button>
-                        <button @click="scrollTo('sportarten')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.sports') }}</button>
+                        <button type="button" @click="scrollTo('funktionen')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.features') }}</button>
+                        <button type="button" @click="scrollTo('vorteile')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.benefits') }}</button>
+                        <button type="button" @click="scrollTo('sportarten')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.sports') }}</button>
                         <Link :href="safeRoute('guest.werbeagentur', '/werbeagentur-für-vereine')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.agency_for_clubs') }}</Link>
                         <Link :href="safeRoute('guest.marketplace', '/marketplace')" class="col-span-2 flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:col-span-1 sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.shop') }}</Link>
                     </div>
@@ -61,10 +61,10 @@ const safeRoute = (name, fallback, params) => {
                         {{ $t('guest.footer.company') }}
                     </h4>
                     <div class="grid grid-cols-2 gap-2 text-sm text-secondary sm:grid-cols-1 sm:gap-1">
-                        <button @click="scrollTo('über')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.about') }}</button>
+                        <button type="button" @click="scrollTo('über')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.about') }}</button>
                         <Link :href="safeRoute('guest.blog.index', '/blog')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.blog') }}</Link>
                         <Link :href="safeRoute('guest.sponsors', '/sponsoren')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.sponsors') }}</Link>
-                        <button @click="scrollTo('kontakt')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.contact') }}</button>
+                        <button type="button" @click="scrollTo('kontakt')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.contact') }}</button>
                         <Link :href="safeRoute('guest.jobs', '/jobs')" class="col-span-2 flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:col-span-1 sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.subnav.jobs') }}</Link>
                     </div>
                 </div>
@@ -95,4 +95,3 @@ const safeRoute = (name, fallback, params) => {
         </div>
     </footer>
 </template>
-

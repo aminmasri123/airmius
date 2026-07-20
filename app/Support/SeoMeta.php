@@ -48,6 +48,16 @@ class SeoMeta
                 'description' => 'Finde Sportvereine nach Sportart, Standort und Teamangeboten. Entdecke Vereine auf Airmius und vernetze dich digital.',
                 'canonical' => route('guest.vereine'),
             ],
+            'Guest/Events' => [
+                'title' => 'Sportevents entdecken',
+                'description' => 'Finde oeffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius.',
+                'canonical' => route('guest.events'),
+            ],
+            'Guest/Sportarten' => [
+                'title' => 'Sportarten auf Airmius',
+                'description' => 'Entdecke aktive Sportarten auf Airmius und finde passende Vereine, Teams, Events und digitale Sportangebote.',
+                'canonical' => route('guest.sports'),
+            ],
             'Guest/Pricing' => [
                 'title' => 'Airmius Preise für Sportler, Trainer, Vereine, Partner und Werbeagentur',
                 'description' => 'Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine.',

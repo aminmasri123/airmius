@@ -49,7 +49,7 @@ defineEmits(['checkout', 'remove-item', 'update-item'])
         <div class="divide-y divide-border">
             <div v-for="item in cartItems" :key="item.id" class="grid gap-4 p-5 md:grid-cols-[5rem_minmax(0,1fr)_8rem_auto] md:items-center">
                 <Link :href="item.product?.show_url || route('auth.commerce.products.show', item.product?.id)" class="block overflow-hidden rounded-lg border border-border bg-inputBg">
-                    <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" class="aspect-square h-full w-full object-cover">
+                    <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product.title" width="160" height="160" loading="lazy" decoding="async" class="aspect-square h-full w-full object-cover">
                     <div v-else class="flex aspect-square items-center justify-center">
                         <i class="las la-store text-3xl text-air-blue"></i>
                     </div>
@@ -101,4 +101,3 @@ defineEmits(['checkout', 'remove-item', 'update-item'])
         </div>
     </section>
 </template>
-

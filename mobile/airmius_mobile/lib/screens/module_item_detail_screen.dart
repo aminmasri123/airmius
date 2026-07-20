@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 
 class ModuleItemDetailScreen extends StatefulWidget {
   const ModuleItemDetailScreen({super.key, required this.title, required this.body, required this.trailing, required this.icon});
@@ -45,9 +44,9 @@ class _ModuleItemDetailScreenState extends State<ModuleItemDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Mobile Modulsteuerung'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _visible, onChanged: (value) => setState(() => _visible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Modul sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Karte bleibt im mobilen Modulkontext sichtbar.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigung aktivieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push/Inbox-Regeln werden später an API gekoppelt.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _requiresReview, onChanged: (value) => setState(() => _requiresReview = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Review erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sensible Modulaktionen können Freigabe verlangen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _visible, onChanged: (value) => setState(() => _visible = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Modul sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Karte bleibt im mobilen Modulkontext sichtbar.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigung aktivieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push/Inbox-Regeln werden später an API gekoppelt.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _requiresReview, onChanged: (value) => setState(() => _requiresReview = value), activeThumbColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Review erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sensible Modulaktionen können Freigabe verlangen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.blue.withValues(alpha: 0.45), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

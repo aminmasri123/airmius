@@ -44,7 +44,7 @@ defineEmits(['toggle-member-role', 'update-member-role'])
                     :href="route('auth.users.show', admin.id)"
                     class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg"
                 >
-                    <img v-if="admin.profile_photo_thumb" :src="admin.profile_photo_thumb" :alt="admin.name" class="h-8 w-8 rounded-full object-cover" />
+                    <img v-if="admin.profile_photo_thumb" :src="admin.profile_photo_thumb" :alt="admin.name" width="32" height="32" loading="lazy" decoding="async" class="h-8 w-8 rounded-full object-cover" />
                     <div v-else class="flex h-8 w-8 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
                         {{ initials(admin?.name) }}
                     </div>
@@ -63,7 +63,7 @@ defineEmits(['toggle-member-role', 'update-member-role'])
                 >
                     <div class="flex min-w-0 items-center gap-3">
                         <Link :href="route('auth.users.show', member.id)" class="flex min-w-0 items-center gap-3 hover:underline">
-                            <img v-if="member.profile_photo_thumb" :src="member.profile_photo_thumb" :alt="member.name" class="h-8 w-8 rounded-full object-cover" />
+                            <img v-if="member.profile_photo_thumb" :src="member.profile_photo_thumb" :alt="member.name" width="32" height="32" loading="lazy" decoding="async" class="h-8 w-8 rounded-full object-cover" />
                             <div v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
                                 {{ initials(member?.name) }}
                             </div>

@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ClubMembershipAccessTest extends TestCase
@@ -28,7 +29,12 @@ class ClubMembershipAccessTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('auth.club-memberships.index'))
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Errors/Forbidden')
+                ->where('title', 'Du hast dafür keine Berechtigung')
+                ->where('message', 'Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.')
+            );
     }
 
     public function test_team_coach_without_club_management_role_cannot_open_membership_management(): void
@@ -52,7 +58,12 @@ class ClubMembershipAccessTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('auth.club-memberships.index'))
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Errors/Forbidden')
+                ->where('title', 'Du hast dafür keine Berechtigung')
+                ->where('message', 'Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.')
+            );
     }
 
     public function test_club_manager_can_open_membership_management(): void

@@ -20,7 +20,20 @@ class LocalizationReadinessReport
         $vue = self::vueReadiness();
         $php = self::phpReadiness();
         $rtlQa = self::rtlQa($languageFiles);
+        $translationIntegrity = self::translationIntegrity();
         $warnings = self::warnings($languageFiles, $vue, $php, $rtlQa);
+
+        if (! $translationIntegrity['source_key_parity']) {
+            $warnings[] = 'translations:source_key_parity_failed';
+        }
+
+        if (! $translationIntegrity['automatic_ui_key_parity']) {
+            $warnings[] = 'translations:automatic_ui_key_parity_failed';
+        }
+
+        if ($translationIntegrity['corrupt_target_values'] > 0) {
+            $warnings[] = 'translations:corrupt_target_values_present';
+        }
 
         return [
             'version' => self::VERSION,
@@ -30,6 +43,7 @@ class LocalizationReadinessReport
             'fallback_locale' => config('app.fallback_locale', 'de'),
             'language_files' => $languageFiles,
             'rtl_qa' => $rtlQa,
+            'translation_integrity' => $translationIntegrity,
             'vue' => $vue,
             'php' => $php,
             'quality_gates' => [
@@ -38,6 +52,10 @@ class LocalizationReadinessReport
                 'arabic_json_valid' => $rtlQa['arabic_json_valid'],
                 'arabic_has_arabic_glyphs' => $rtlQa['arabic_has_arabic_glyphs'],
                 'arabic_mojibake_risk_status' => $rtlQa['mojibake_risk_status'],
+                'source_key_parity' => $translationIntegrity['source_key_parity'],
+                'automatic_ui_key_parity' => $translationIntegrity['automatic_ui_key_parity'],
+                'placeholder_parity' => $translationIntegrity['placeholder_parity'],
+                'corrupt_target_values' => $translationIntegrity['corrupt_target_values'],
                 'rtl_manual_qa_required' => $rtlQa['manual_qa_required'],
                 'mobile_contract_exports_rtl' => true,
                 'hardcoded_text_total_candidates' => self::hardcodedTextTotal($vue, $php),
@@ -48,6 +66,107 @@ class LocalizationReadinessReport
         ];
     }
 
+    protected static function translationIntegrity(): array
+    {
+        $folder = resource_path('js/lang');
+        $messages = [];
+
+        foreach (self::SUPPORTED_LOCALES as $locale) {
+            $decoded = json_decode((string) file_get_contents($folder.DIRECTORY_SEPARATOR.$locale.'.json'), true);
+            $messages[$locale] = is_array($decoded) ? $decoded : [];
+        }
+
+        $sourceKeys = array_keys($messages['de']);
+        $sourceAutoKeys = array_keys(is_array($messages['de']['auto'] ?? null) ? $messages['de']['auto'] : []);
+        $locales = [];
+        $corruptTotal = 0;
+
+        foreach (['en', 'fr', 'ar'] as $locale) {
+            $missing = array_values(array_diff($sourceKeys, array_keys($messages[$locale])));
+            $extra = array_values(array_diff(array_keys($messages[$locale]), $sourceKeys));
+            $corrupt = self::corruptValueCount($messages[$locale], $locale === 'ar');
+            $placeholderMismatches = self::placeholderMismatchCount($messages['de'], $messages[$locale]);
+            $targetAuto = is_array($messages[$locale]['auto'] ?? null) ? $messages[$locale]['auto'] : [];
+            $missingAuto = array_values(array_diff($sourceAutoKeys, array_keys($targetAuto)));
+            $extraAuto = array_values(array_diff(array_keys($targetAuto), $sourceAutoKeys));
+            $corruptTotal += $corrupt;
+
+            $locales[$locale] = [
+                'missing_source_keys' => $missing,
+                'extra_keys' => $extra,
+                'corrupt_values' => $corrupt,
+                'placeholder_mismatches' => $placeholderMismatches,
+                'missing_automatic_ui_keys' => $missingAuto,
+                'extra_automatic_ui_keys' => $extraAuto,
+            ];
+        }
+
+        return [
+            'source_locale' => 'de',
+            'source_key_count' => count($sourceKeys),
+            'source_key_parity' => collect($locales)->every(
+                fn (array $item) => $item['missing_source_keys'] === [] && $item['extra_keys'] === [],
+            ),
+            'automatic_ui_source_count' => count($sourceAutoKeys),
+            'automatic_ui_key_parity' => collect($locales)->every(
+                fn (array $item) => $item['missing_automatic_ui_keys'] === [] && $item['extra_automatic_ui_keys'] === [],
+            ),
+            'corrupt_target_values' => $corruptTotal,
+            'placeholder_parity' => collect($locales)->every(fn (array $item) => $item['placeholder_mismatches'] === 0),
+            'locales' => $locales,
+            'back_translation_note' => 'German is authoritative; generated UI translations are checked against it by a separate semantic back-translation audit.',
+        ];
+    }
+
+    protected static function placeholderMismatchCount(array $source, array $target): int
+    {
+        $count = 0;
+        $walk = function ($sourceValue, $targetValue) use (&$walk, &$count): void {
+            if (is_array($sourceValue)) {
+                foreach ($sourceValue as $key => $value) {
+                    if (is_array($targetValue) && array_key_exists($key, $targetValue)) {
+                        $walk($value, $targetValue[$key]);
+                    }
+                }
+
+                return;
+            }
+
+            if (! is_string($sourceValue) || ! is_string($targetValue)) {
+                return;
+            }
+
+            preg_match_all('/(\{[^{}]+\}|:[A-Za-z_][A-Za-z0-9_]*|%[sd]|\$\d+)/', $sourceValue, $sourceMatches);
+            preg_match_all('/(\{[^{}]+\}|:[A-Za-z_][A-Za-z0-9_]*|%[sd]|\$\d+)/', $targetValue, $targetMatches);
+            sort($sourceMatches[0]);
+            sort($targetMatches[0]);
+
+            if ($sourceMatches[0] !== $targetMatches[0]) {
+                $count++;
+            }
+        };
+
+        $walk($source, $target);
+
+        return $count;
+    }
+
+    protected static function corruptValueCount(array $messages, bool $questionMarksAreCorrupt): int
+    {
+        $count = 0;
+        array_walk_recursive($messages, function ($value) use (&$count, $questionMarksAreCorrupt): void {
+            if (! is_string($value)) {
+                return;
+            }
+
+            if (str_contains($value, '�') || ($questionMarksAreCorrupt && preg_match('/\?{2,}/', $value))) {
+                $count++;
+            }
+        });
+
+        return $count;
+    }
+
     protected static function rtlQa(array $languageFiles): array
     {
         $arabicPath = resource_path('js/lang/ar.json');
@@ -55,17 +174,15 @@ class LocalizationReadinessReport
         $decoded = $contents !== '' ? json_decode($contents, true) : null;
         $jsonValid = is_array($decoded) && json_last_error() === JSON_ERROR_NONE;
         $arabicGlyphs = $contents !== '' ? preg_match_all('/\p{Arabic}/u', $contents) : 0;
-        $mojibakeMarkers = $contents !== '' ? preg_match_all('/[�f�,�~�T]/u', $contents) : 0;
-        $maturityKeysPresent = $jsonValid && isset($decoded['maturity']) && is_array($decoded['maturity']);
+        $mojibakeMarkers = $contents !== '' ? preg_match_all('/�|\?{2,}/u', $contents) : 0;
 
         return [
-            'status' => $jsonValid && $arabicGlyphs > 0 && $maturityKeysPresent ? 'ready_for_manual_qa' : 'needs_translation_fix',
+            'status' => $jsonValid && $arabicGlyphs > 0 && $mojibakeMarkers === 0 ? 'ready_for_manual_qa' : 'needs_translation_fix',
             'arabic_json_valid' => $jsonValid,
             'arabic_has_arabic_glyphs' => $arabicGlyphs > 0,
             'arabic_glyph_count' => $arabicGlyphs,
             'mojibake_marker_count' => $mojibakeMarkers,
             'mojibake_risk_status' => $mojibakeMarkers > 0 ? 'review_existing_legacy_strings' : 'clean',
-            'maturity_keys_present' => $maturityKeysPresent,
             'direction_contract' => [
                 'locale' => 'ar',
                 'dir' => 'rtl',

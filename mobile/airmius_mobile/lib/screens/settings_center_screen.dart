@@ -1,17 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'account_operations_screen.dart';
-import 'auth_account_access_center_screen.dart';
-import 'admin_club_verification_screen.dart';
-import 'admin_commerce_center_screen.dart';
-import 'admin_finance_billing_center_screen.dart';
-import 'admin_mail_center_screen.dart';
-import 'admin_platform_settings_screen.dart';
-import 'admin_provider_contracts_screen.dart';
-import 'admin_subscription_outfit_center_screen.dart';
-import 'admin_user_management_screen.dart';
 import 'data_rights_request_screen.dart';
 import 'airmius_design_system_screen.dart';
 import 'app_onboarding_screen.dart';
@@ -24,12 +16,10 @@ import 'club_setup_onboarding_screen.dart';
 import 'club_visibility_settings_screen.dart';
 import 'club_contribution_rules_screen.dart';
 import 'club_communication_center_screen.dart';
-import 'club_document_upload_manager_screen.dart';
 import 'club_finance_cockpit_screen.dart';
 import 'club_member_directory_screen.dart';
 import 'club_membership_form_builder_screen.dart';
 import 'club_team_admin_screen.dart';
-import 'club_event_attendance_screen.dart';
 import 'localization_center_screen.dart';
 import 'membership_application_form_screen.dart';
 import 'membership_request_status_screen.dart';
@@ -47,42 +37,11 @@ import 'guest_sponsors_gamification_screen.dart';
 import 'guest_ad_agency_screen.dart';
 import 'release_readiness_screen.dart';
 import 'report_moderation_center_screen.dart';
-import 'rides_carpool_planner_screen.dart';
 import 'settings_detail_screen.dart';
 import 'support_helpdesk_screen.dart';
 import 'system_admin_operations_screen.dart';
 import 'ui_coverage_screen.dart';
 import 'web_route_parity_screen.dart';
-import 'workspace_collaboration_screen.dart';
-import 'maturity_media_guidelines_screen.dart';
-import 'guardian_access_portal_screen.dart';
-import 'public_system_pages_screen.dart';
-import 'auth_recovery_security_screen.dart';
-import 'guest_marketplace_flow_screen.dart';
-import 'profile_account_forms_screen.dart';
-import 'public_growth_guest_pages_screen.dart';
-import 'admin_finance_contract_suite_screen.dart';
-import 'dashboard_action_flows_screen.dart';
-import 'content_blog_editorial_suite_screen.dart';
-import 'learning_studio_course_suite_screen.dart';
-import 'sports_training_wellbeing_suite_screen.dart';
-import 'gamification_badges_roles_suite_screen.dart';
-import 'communication_files_notifications_suite_screen.dart';
-import 'trust_moderation_admin_control_suite_screen.dart';
-import 'commerce_subscription_outfit_suite_screen.dart';
-import 'club_membership_lifecycle_suite_screen.dart';
-import 'auth_api_entry_suite_screen.dart';
-import 'app_shell_localization_quality_suite_screen.dart';
-import 'public_interest_ads_sponsor_suite_screen.dart';
-import 'finance_billing_member_payment_suite_screen.dart';
-import 'feed_community_social_suite_screen.dart';
-import 'search_directory_discovery_suite_screen.dart';
-import 'web_parity_release_audit_suite_screen.dart';
-import 'web_route_parity_matrix_suite_screen.dart';
-import 'mobile_state_form_error_suite_screen.dart';
-import 'api_binding_readiness_suite_screen.dart';
-import 'mobile_web_fidelity_accessibility_suite_screen.dart';
-import 'role_based_app_experience_suite_screen.dart';
 import 'store_device_qa_readiness_suite_screen.dart';
 import 'auth_guard_status_suite_screen.dart';
 import 'exact_page_flow_parity_suite_screen.dart';
@@ -285,10 +244,14 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
                 AirmiusButton(label: 'Vereinskommunikation', icon: Icons.campaign_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubCommunicationCenterScreen()))),
               AirmiusButton(label: 'Mitgliederverwaltung', icon: Icons.people_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMemberDirectoryScreen()))),
               AirmiusButton(label: 'Teamverwaltung', icon: Icons.diversity_3_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubTeamAdminScreen()))),
-              AirmiusButton(label: 'Operations Hub', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
-              AirmiusButton(label: 'Onboarding', icon: Icons.rocket_launch_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AppOnboardingScreen()))),
-              AirmiusButton(label: 'UI Coverage', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiCoverageScreen()))),
-              AirmiusButton(label: 'Design System', icon: Icons.palette_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AirmiusDesignSystemScreen()))),
+              if (AirmiusMvpSurface.isOperationsHubVisible)
+                AirmiusButton(label: 'Operations Hub', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
+              if (AirmiusMvpSurface.showDeveloperSuites)
+                AirmiusButton(label: 'Onboarding', icon: Icons.rocket_launch_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AppOnboardingScreen()))),
+              if (AirmiusMvpSurface.showDeveloperSuites)
+                AirmiusButton(label: 'UI Coverage', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiCoverageScreen()))),
+              if (AirmiusMvpSurface.showDeveloperSuites)
+                AirmiusButton(label: 'Design System', icon: Icons.palette_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AirmiusDesignSystemScreen()))),
                 AirmiusButton(label: 'Datenschutz & Einwilligungen', icon: Icons.privacy_tip_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PrivacyConsentCenterScreen()))),
                 AirmiusButton(label: 'Recht & Systemstatus', icon: Icons.gavel_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalStatusCenterScreen()))),
                 AirmiusButton(label: 'Guardian & Elternfreigaben', icon: Icons.family_restroom_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GuardianFamilyConsentScreen()))),
@@ -421,7 +384,6 @@ class _SettingLine extends StatelessWidget {
     ]));
   }
 }
-
 
 
 

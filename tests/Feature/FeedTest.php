@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\Comment;
+use App\Models\ContentReport;
+use App\Models\ModerationFlag;
 use App\Models\Post;
 use App\Models\Story;
 use App\Models\StoryView;
@@ -112,6 +114,83 @@ class FeedTest extends TestCase
         $this->actingAs($viewer)
             ->getJson(route('auth.comments.index', $post))
             ->assertForbidden();
+    }
+
+    public function test_feed_reports_posts_and_comments_and_hides_reported_content(): void
+    {
+        $author = User::factory()->create();
+        $reporter = User::factory()->create();
+        $viewer = User::factory()->create();
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Meldbarer Feedpost',
+        ]);
+        $comment = Comment::query()->create([
+            'post_id' => $post->id,
+            'user_id' => $author->id,
+            'moderation_status' => 'approved',
+            'content' => 'Meldbarer Kommentar',
+        ]);
+
+        $this->actingAs($reporter)
+            ->post(route('auth.reports.store'), [
+                'type' => 'comment',
+                'id' => $comment->id,
+                'reason' => 'spam',
+                'details' => 'Wirkt automatisiert.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Danke. Die Meldung wurde an die Moderation gesendet.');
+
+        $this->assertDatabaseHas('comments', [
+            'id' => $comment->id,
+            'moderation_status' => 'reported',
+        ]);
+
+        $this->actingAs($reporter)
+            ->getJson(route('auth.comments.index', $post))
+            ->assertOk()
+            ->assertJsonCount(0, 'comments');
+
+        $this->actingAs($reporter)
+            ->post(route('auth.reports.store'), [
+                'type' => 'post',
+                'id' => $post->id,
+                'reason' => 'other',
+                'details' => 'Bitte pruefen.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Danke. Die Meldung wurde an die Moderation gesendet.');
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'moderation_status' => 'reported',
+        ]);
+        $this->assertDatabaseHas('content_reports', [
+            'reportable_type' => Post::class,
+            'reportable_id' => $post->id,
+            'reason' => 'other',
+        ]);
+        $this->assertDatabaseHas('moderation_flags', [
+            'flaggable_type' => Comment::class,
+            'flaggable_id' => $comment->id,
+            'source' => 'user_report',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('auth.feed.index'))
+            ->assertOk()
+            ->assertDontSee('Meldbarer Feedpost');
+
+        $this->actingAs($author)
+            ->get(route('auth.feed.index'))
+            ->assertOk()
+            ->assertSee('Meldbarer Feedpost');
+
+        $this->assertSame(2, ContentReport::query()->count());
+        $this->assertSame(2, ModerationFlag::query()->where('source', 'user_report')->count());
     }
 
     public function test_feed_shows_active_visible_stories_and_hides_expired_or_reported_stories(): void

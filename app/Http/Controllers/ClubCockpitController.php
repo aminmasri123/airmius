@@ -104,6 +104,15 @@ class ClubCockpitController extends Controller
             ->count();
         $capabilities = $this->planFeatures->capabilities($club);
         $plan = $club->subscriptionPlan();
+        $roleCoverage = $this->roleCoverage($club);
+        $governance = $this->governance(
+            $club,
+            $roleCoverage,
+            $openInvoices->count(),
+            $overdueInvoices->count(),
+            $sepaMissing,
+            $pendingMembershipRequests + $pendingTeamRequests,
+        );
 
         return [
             'id' => $club->id,
@@ -117,6 +126,8 @@ class ClubCockpitController extends Controller
             ],
             'locked' => ! ($capabilities['club_cockpit'] ?? false),
             'capabilities' => $capabilities,
+            'role_coverage' => $roleCoverage,
+            'governance' => $governance,
             'stats' => [
                 'members' => $memberUsage,
                 'member_limit' => $plan?->member_limit,
@@ -143,6 +154,94 @@ class ClubCockpitController extends Controller
         ];
     }
 
+    private function roleCoverage(Club $club): array
+    {
+        $members = DB::table('club_user')
+            ->where('club_id', $club->id)
+            ->get(['role', 'roles', 'membership_status']);
+
+        $elevatedMembers = $members->filter(function ($member) {
+            $roles = ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles));
+
+            return collect($roles)->intersect(ClubRoles::ELEVATED)->isNotEmpty();
+        });
+
+        return [
+            'members_count' => $members->count(),
+            'active_members_count' => $members->where('membership_status', 'active')->count(),
+            'elevated_count' => $elevatedMembers->count(),
+            'has_owner' => $elevatedMembers->contains(fn ($member) => in_array('owner', ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles)), true)),
+            'has_admin' => $elevatedMembers->contains(fn ($member) => in_array('admin', ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles)), true)),
+        ];
+    }
+
+    private function governance(Club $club, array $roleCoverage, int $openInvoices, int $overdueInvoices, int $sepaMissing, int $pendingRequests): array
+    {
+        $privacyOpen = (bool) $club->is_listed
+            || (bool) $club->teams_are_listed
+            || (bool) $club->members_can_post_to_club
+            || (bool) $club->members_can_post_to_teams;
+
+        $signals = [
+            [
+                'key' => 'verification',
+                'state' => $club->verification_status === 'verified' ? 'strong' : ($club->verification_status === 'rejected' ? 'risk' : 'watch'),
+            ],
+            [
+                'key' => 'roles',
+                'state' => ((int) ($roleCoverage['elevated_count'] ?? 0)) >= 2 ? 'strong' : (((int) ($roleCoverage['elevated_count'] ?? 0)) === 1 ? 'watch' : 'risk'),
+            ],
+            [
+                'key' => 'billing',
+                'state' => $overdueInvoices > 0 ? 'risk' : ($openInvoices > 0 ? 'watch' : 'strong'),
+            ],
+            [
+                'key' => 'sepa',
+                'state' => $sepaMissing > 0 ? 'risk' : 'strong',
+            ],
+            [
+                'key' => 'privacy',
+                'state' => $privacyOpen ? 'watch' : 'strong',
+            ],
+            [
+                'key' => 'requests',
+                'state' => $pendingRequests > 0 ? 'watch' : 'strong',
+            ],
+        ];
+
+        $stateScores = ['strong' => 90, 'watch' => 67, 'risk' => 25];
+        $score = (int) round(collect($signals)->avg(fn (array $signal) => $stateScores[$signal['state']] ?? 50));
+
+        return [
+            'version' => '2026-06-03.club_governance.v1',
+            'score' => $score,
+            'level' => $score >= 80 ? 'strong' : ($score >= 50 ? 'watch' : 'risk'),
+            'signals' => $signals,
+            'tasks' => collect($signals)
+                ->filter(fn (array $signal) => $signal['state'] !== 'strong')
+                ->map(fn (array $signal) => [
+                    'key' => $signal['key'],
+                    'state' => $signal['state'],
+                    'label_key' => 'clubs.governance.tasks.'.$signal['key'],
+                ])
+                ->values(),
+        ];
+    }
+
+    private function decodePivotRoles(mixed $roles): array
+    {
+        if (is_array($roles)) {
+            return $roles;
+        }
+
+        if (! is_string($roles) || trim($roles) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($roles, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
     private function actions(Club $club, int $membershipRequests, int $teamRequests, int $openInvoices, int $sepaMissing, int $upcomingEvents): array
     {
         return [

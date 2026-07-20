@@ -1,0 +1,56 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Support\AirmiusRoleMatrix;
+use App\Support\ClubRoles;
+use App\Support\Roles;
+use App\Support\TeamRoles;
+use PHPUnit\Framework\TestCase;
+
+class AirmiusRoleMatrixTest extends TestCase
+{
+    public function test_matrix_contains_required_mvp_personas(): void
+    {
+        $this->assertSame([
+            AirmiusRoleMatrix::SPORTLER,
+            AirmiusRoleMatrix::TRAINER,
+            AirmiusRoleMatrix::VEREIN_ADMIN,
+            AirmiusRoleMatrix::ELTERNTEIL,
+            AirmiusRoleMatrix::PLATTFORM_ADMIN,
+        ], AirmiusRoleMatrix::keys());
+    }
+
+    public function test_matrix_references_existing_role_sources(): void
+    {
+        $platformRoles = array_unique(Roles::all());
+        $clubRoles = ClubRoles::ALL;
+        $teamRoles = TeamRoles::all();
+
+        foreach (AirmiusRoleMatrix::all() as $entry) {
+            $this->assertNotEmpty($entry['label']);
+            $this->assertNotEmpty($entry['capabilities']);
+
+            foreach ($entry['platform_roles'] as $role) {
+                $this->assertContains($role, $platformRoles, "Unknown platform role [{$role}] in {$entry['key']}");
+            }
+
+            foreach ($entry['club_roles'] as $role) {
+                $this->assertContains($role, $clubRoles, "Unknown club role [{$role}] in {$entry['key']}");
+            }
+
+            foreach ($entry['team_roles'] as $role) {
+                $this->assertContains($role, $teamRoles, "Unknown team role [{$role}] in {$entry['key']}");
+            }
+        }
+    }
+
+    public function test_platform_admin_includes_full_access_roles(): void
+    {
+        $platformAdmin = AirmiusRoleMatrix::get(AirmiusRoleMatrix::PLATTFORM_ADMIN);
+
+        foreach (Roles::FULL_ACCESS as $role) {
+            $this->assertContains($role, $platformAdmin['platform_roles']);
+        }
+    }
+}
