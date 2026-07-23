@@ -13,10 +13,13 @@ class MobilePushDelivery extends Model
         'channel',
         'provider',
         'status',
+        'attempts',
         'payload',
         'provider_message_id',
         'error',
         'queued_at',
+        'last_attempt_at',
+        'next_attempt_at',
         'sent_at',
         'failed_at',
     ];
@@ -26,6 +29,8 @@ class MobilePushDelivery extends Model
         return [
             'payload' => 'array',
             'queued_at' => 'datetime',
+            'last_attempt_at' => 'datetime',
+            'next_attempt_at' => 'datetime',
             'sent_at' => 'datetime',
             'failed_at' => 'datetime',
         ];

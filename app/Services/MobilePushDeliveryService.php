@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use Firebase\JWT\JWT;
 use App\Models\MobileDeviceToken;
 use App\Models\MobilePushDelivery;
 use App\Models\Notification;
 use App\Support\Api\V1\MobileSyncContract;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Http\Client\RequestException;
+use RuntimeException;
 
 class MobilePushDeliveryService
 {
@@ -63,10 +67,12 @@ class MobilePushDeliveryService
             'sent' => 0,
             'skipped' => 0,
             'failed' => 0,
+            'retrying' => 0,
         ];
 
         MobilePushDelivery::query()
             ->where('status', 'queued')
+            ->where(fn ($query) => $query->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', now()))
             ->oldest('queued_at')
             ->limit($limit)
             ->with('device')
@@ -96,13 +102,33 @@ class MobilePushDeliveryService
                     return;
                 }
 
-                $delivery->update([
-                    'status' => 'sent',
-                    'provider_message_id' => $this->providerMessageId($delivery),
-                    'sent_at' => now(),
-                    'error' => null,
-                ]);
-                $summary['sent']++;
+                try {
+                    $delivery->increment('attempts');
+                    $delivery->forceFill(['last_attempt_at' => now(), 'next_attempt_at' => null])->save();
+                    $messageId = $this->sendToProvider($delivery);
+                    $delivery->update([
+                        'status' => 'sent',
+                        'provider_message_id' => $messageId,
+                        'sent_at' => now(),
+                        'failed_at' => null,
+                        'error' => null,
+                    ]);
+                    $summary['sent']++;
+                } catch (\Throwable $error) {
+                    if ($this->isPermanentDeviceError($error)) {
+                        $delivery->device->update(['disabled_at' => now()]);
+                    }
+
+                    $maxAttempts = max(1, (int) config('services.mobile_push.max_attempts', 5));
+                    $willRetry = ! $this->isPermanentDeviceError($error) && $delivery->attempts < $maxAttempts;
+                    $delivery->update([
+                        'status' => $willRetry ? 'queued' : 'failed',
+                        'error' => Str::limit($error->getMessage(), 1000, ''),
+                        'next_attempt_at' => $willRetry ? now()->addSeconds($this->retryDelay($delivery->attempts)) : null,
+                        'failed_at' => $willRetry ? null : now(),
+                    ]);
+                    $summary[$willRetry ? 'retrying' : 'failed']++;
+                }
             });
 
         return $summary;
@@ -175,13 +201,141 @@ class MobilePushDeliveryService
         };
     }
 
-    protected function providerMessageId(MobilePushDelivery $delivery): string
+    protected function sendToProvider(MobilePushDelivery $delivery): string
     {
-        return implode('-', [
-            'airmius',
-            $delivery->provider,
-            $delivery->id,
-            substr(hash('sha256', json_encode($delivery->payload ?? []) ?: ''), 0, 10),
+        return match ($delivery->provider) {
+            'fcm', 'apns' => $this->sendWithFcm($delivery),
+            'expo' => $this->sendWithExpo($delivery),
+            default => throw new RuntimeException("Unsupported push provider: {$delivery->provider}"),
+        };
+    }
+
+    protected function sendWithFcm(MobilePushDelivery $delivery): string
+    {
+        $credentials = $this->firebaseCredentials();
+        $projectId = (string) (config('services.mobile_push.fcm.project_id') ?: ($credentials['project_id'] ?? ''));
+
+        if ($projectId === '') {
+            throw new RuntimeException('FIREBASE_PROJECT_ID is not configured.');
+        }
+
+        $tokenResponse = Http::asForm()->timeout(10)->post(
+            (string) ($credentials['token_uri'] ?? 'https://oauth2.googleapis.com/token'),
+            [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $this->firebaseAssertion($credentials),
+            ],
+        )->throw()->json();
+
+        $accessToken = (string) Arr::get($tokenResponse, 'access_token', '');
+        if ($accessToken === '') {
+            throw new RuntimeException('Firebase OAuth response did not contain an access token.');
+        }
+
+        $payload = $delivery->payload ?? [];
+        $data = collect($payload)->mapWithKeys(function ($value, $key) {
+            return [(string) $key => is_scalar($value) || $value === null
+                ? (string) $value
+                : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)];
+        })->all();
+
+        $response = Http::withToken($accessToken)->acceptJson()->timeout(15)->post(
+            "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send",
+            [
+                'message' => [
+                    'token' => $delivery->device->token,
+                    'notification' => [
+                        'title' => (string) ($payload['title'] ?? 'Airmius'),
+                        'body' => (string) ($payload['body'] ?? ''),
+                    ],
+                    'data' => $data,
+                    'android' => ['priority' => ($payload['importance'] ?? 'default') === 'high' ? 'high' : 'normal'],
+                    'apns' => ['payload' => ['aps' => ['sound' => 'default']]],
+                ],
+            ],
+        )->throw()->json();
+
+        $messageId = (string) Arr::get($response, 'name', '');
+        if ($messageId === '') {
+            throw new RuntimeException('Firebase response did not contain a message ID.');
+        }
+
+        return $messageId;
+    }
+
+    protected function sendWithExpo(MobilePushDelivery $delivery): string
+    {
+        $payload = $delivery->payload ?? [];
+        $request = Http::acceptJson()->timeout(15);
+        if (filled(config('services.mobile_push.expo.access_token'))) {
+            $request = $request->withToken((string) config('services.mobile_push.expo.access_token'));
+        }
+
+        $response = $request->post('https://exp.host/--/api/v2/push/send', [
+            'to' => $delivery->device->token,
+            'title' => (string) ($payload['title'] ?? 'Airmius'),
+            'body' => (string) ($payload['body'] ?? ''),
+            'data' => $payload,
+            'sound' => 'default',
+        ])->throw()->json();
+
+        $status = (string) Arr::get($response, 'data.status', '');
+        if ($status !== 'ok') {
+            throw new RuntimeException((string) Arr::get($response, 'data.message', 'Expo rejected the push notification.'));
+        }
+
+        return (string) Arr::get($response, 'data.id', 'expo-accepted');
+    }
+
+    protected function firebaseCredentials(): array
+    {
+        $path = (string) config('services.mobile_push.fcm.credentials');
+        if ($path === '' || ! is_file($path) || ! is_readable($path)) {
+            throw new RuntimeException('FIREBASE_CREDENTIALS must point to a readable service-account JSON file.');
+        }
+
+        $credentials = json_decode((string) file_get_contents($path), true);
+        if (! is_array($credentials) || blank($credentials['client_email'] ?? null) || blank($credentials['private_key'] ?? null)) {
+            throw new RuntimeException('Firebase service-account JSON is invalid.');
+        }
+
+        return $credentials;
+    }
+
+    protected function firebaseAssertion(array $credentials): string
+    {
+        $now = time();
+
+        return JWT::encode([
+            'iss' => $credentials['client_email'],
+            'sub' => $credentials['client_email'],
+            'aud' => $credentials['token_uri'] ?? 'https://oauth2.googleapis.com/token',
+            'iat' => $now,
+            'exp' => $now + 3600,
+            'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+        ], $credentials['private_key'], 'RS256');
+    }
+
+    protected function retryDelay(int $attempt): int
+    {
+        $base = max(10, (int) config('services.mobile_push.retry_base_seconds', 60));
+        return min(3600, $base * (2 ** max(0, $attempt - 1)));
+    }
+
+    protected function isPermanentDeviceError(\Throwable $error): bool
+    {
+        $text = Str::upper($error->getMessage());
+        if ($error instanceof RequestException) {
+            $text .= ' '.Str::upper($error->response->body());
+        }
+
+        return Str::contains($text, [
+            'UNREGISTERED',
+            'SENDER_ID_MISMATCH',
+            'DEVICE_NOT_REGISTERED',
+            'REGISTRATION-TOKEN-NOT-REGISTERED',
+            'BADDEVICETOKEN',
+            'UNREGISTERED DEVICE',
         ]);
     }
 }

@@ -185,7 +185,7 @@ class SocialAuthController extends Controller
         $androidIntent = 'intent://app.airmius.com/auth/callback?'.$query.'#Intent;scheme=https;package=com.airmius.app;S.browser_fallback_url='.rawurlencode($customSchemeLink).';end';
         $dashboardUrl = route('auth.dashboard');
 
-        return response($this->mobileCallbackHtml($deepLink, $customSchemeLink, $androidIntent, $dashboardUrl))
+        return response($this->mobileCallbackHtml($provider, $deepLink, $customSchemeLink, $androidIntent, $dashboardUrl))
             ->header('Content-Type', 'text/html; charset=UTF-8')
             ->header('Referrer-Policy', 'no-referrer')
             ->header('X-Robots-Tag', 'noindex, nofollow');
@@ -272,6 +272,11 @@ class SocialAuthController extends Controller
         $parts = parse_url($url);
         $scheme = $parts['scheme'] ?? null;
         $host = $parts['host'] ?? null;
+        $path = $parts['path'] ?? '';
+
+        if ($scheme === 'airmius') {
+            return $host === 'auth' && $path === '/callback';
+        }
 
         if (! in_array($scheme, ['http', 'https'], true) || ! is_string($host)) {
             return false;
@@ -294,8 +299,9 @@ class SocialAuthController extends Controller
         return $url.$separator.http_build_query($query).$fragment;
     }
 
-    private function mobileCallbackHtml(string $deepLink, string $customSchemeLink, string $androidIntent, string $dashboardUrl): string
+    private function mobileCallbackHtml(string $provider, string $deepLink, string $customSchemeLink, string $androidIntent, string $dashboardUrl): string
     {
+        $providerName = $provider === 'microsoft' ? 'Microsoft' : 'Google';
         $deepLinkAttribute = e($deepLink);
         $customSchemeAttribute = e($customSchemeLink);
         $androidIntentAttribute = e($androidIntent);
@@ -327,7 +333,7 @@ class SocialAuthController extends Controller
 <body>
     <main>
         <h1>Login bestaetigt</h1>
-        <p>Google hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
+        <p>{$providerName} hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
         <div class="actions">
             <a class="primary" id="open-app" href="$deepLinkAttribute" data-intent-link="$androidIntentAttribute" data-custom-link="$customSchemeAttribute">Airmius App oeffnen</a>
             <a href="$dashboardUrl">Im Browser weiter</a>
@@ -344,14 +350,14 @@ class SocialAuthController extends Controller
             if (openApp && isAndroid) {
                 openApp.addEventListener("click", function (event) {
                     event.preventDefault();
-                    window.location.href = androidIntent;
+                    window.location.href = customSchemeLink;
                     setTimeout(function () {
-                        window.location.href = customSchemeLink;
+                        window.location.href = androidIntent;
                     }, 900);
                 });
             }
             setTimeout(function () {
-                window.location.href = isAndroid ? androidIntent : deepLink;
+                window.location.href = isAndroid ? customSchemeLink : deepLink;
             }, 250);
         })();
     </script>

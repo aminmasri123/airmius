@@ -75,6 +75,18 @@ return [
         'mode' => env('PAYPAL_MODE', 'sandbox'),
     ],
 
+    'mobile_push' => [
+        'fcm' => [
+            'credentials' => env('FIREBASE_CREDENTIALS'),
+            'project_id' => env('FIREBASE_PROJECT_ID'),
+        ],
+        'expo' => [
+            'access_token' => env('EXPO_ACCESS_TOKEN'),
+        ],
+        'max_attempts' => (int) env('MOBILE_PUSH_MAX_ATTEMPTS', 5),
+        'retry_base_seconds' => (int) env('MOBILE_PUSH_RETRY_BASE_SECONDS', 60),
+    ],
+
     'geoip' => [
         'url' => env('GEOIP_API_URL'),
     ],

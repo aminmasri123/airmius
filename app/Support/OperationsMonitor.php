@@ -3,11 +3,13 @@
 namespace App\Support;
 
 use App\Models\MailDelivery;
+use App\Models\MobilePushDelivery;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class OperationsMonitor
@@ -29,6 +31,8 @@ class OperationsMonitor
             $this->jobChecks(),
             $this->webhookChecks(),
             $this->mailChecks($since, $databaseAvailable),
+            $this->backupChecks(),
+            $this->mobilePushChecks($since, $databaseAvailable),
         );
 
         $failures = collect($checks)->where('status', 'fail')->count();
@@ -291,6 +295,99 @@ class OperationsMonitor
             );
         }
 
+        return $checks;
+    }
+
+    private function backupChecks(): array
+    {
+        if (! (bool) config('airmius_monitoring.backup.enabled', false)) return [];
+
+        $disk = (string) config('airmius_backup.disk', 'local');
+        $path = trim((string) config('airmius_backup.path', 'backups/database'), '/');
+        try {
+            $manifests = collect(Storage::disk($disk)->files($path))
+                ->filter(fn (string $file) => str_ends_with($file, '.json'))
+                ->map(function (string $file) use ($disk) {
+                    $decoded = json_decode(Storage::disk($disk)->get($file), true);
+                    return is_array($decoded) ? $decoded : null;
+                })
+                ->filter()
+                ->sortByDesc('created_at');
+            $latest = $manifests->first();
+        } catch (Throwable $error) {
+            return [$this->check('backup', 'storage_access', 'fail', 0, $error->getMessage())];
+        }
+
+        $createdAt = isset($latest['created_at']) ? Carbon::parse($latest['created_at']) : null;
+        $ageHours = $createdAt ? $createdAt->diffInHours(now()) : null;
+        $maxAge = max(1, (int) config('airmius_monitoring.backup.max_age_hours', 30));
+        $checks = [
+            $this->check(
+                'backup', 'latest_backup',
+                $createdAt && $ageHours <= $maxAge ? 'ok' : 'fail',
+                $ageHours ?? -1,
+                $createdAt ? "Latest backup is {$ageHours} hours old; maximum {$maxAge}." : 'No valid backup manifest found.'
+            ),
+        ];
+
+        if (app()->environment('production') && (bool) config('airmius_monitoring.backup.fail_local_disk_in_production', true)) {
+            $checks[] = $this->check('backup', 'offsite_disk', $disk === 'local' ? 'fail' : 'ok', $disk, 'Production backups must use private offsite storage.');
+        }
+        return $checks;
+    }
+
+    private function mobilePushChecks(Carbon $since, bool $databaseAvailable): array
+    {
+        if (! (bool) config('airmius_monitoring.mobile_push.enabled', false)) return [];
+
+        $credentials = (string) config('services.mobile_push.fcm.credentials');
+        $projectId = (string) config('services.mobile_push.fcm.project_id');
+        $firebaseReason = 'ready';
+        $firebaseReady = true;
+
+        if ($credentials === '' || ! is_file($credentials) || ! is_readable($credentials)) {
+            $firebaseReady = false;
+            $firebaseReason = 'Service-account file is missing or not readable.';
+        } else {
+            try {
+                $serviceAccount = json_decode((string) file_get_contents($credentials), true, flags: JSON_THROW_ON_ERROR);
+                $required = ['type', 'project_id', 'private_key', 'client_email', 'token_uri'];
+                if (! is_array($serviceAccount) || collect($required)->contains(fn (string $key) => blank($serviceAccount[$key] ?? null))) {
+                    $firebaseReady = false;
+                    $firebaseReason = 'Service-account JSON is missing required fields.';
+                } elseif (($serviceAccount['type'] ?? null) !== 'service_account') {
+                    $firebaseReady = false;
+                    $firebaseReason = 'Credential JSON is not a Google service account.';
+                } elseif ($projectId === '' || ! hash_equals((string) $serviceAccount['project_id'], $projectId)) {
+                    $firebaseReady = false;
+                    $firebaseReason = 'Service-account project_id does not match FIREBASE_PROJECT_ID.';
+                }
+            } catch (Throwable) {
+                $firebaseReady = false;
+                $firebaseReason = 'Service-account file is not valid JSON.';
+            }
+        }
+        $checks = [
+            $this->check(
+                'mobile_push', 'firebase_configuration',
+                ! config('airmius_monitoring.mobile_push.require_firebase', true) || $firebaseReady ? 'ok' : 'fail',
+                $firebaseReady ? 1 : 0,
+                $firebaseReady
+                    ? 'Firebase service-account JSON is readable, structurally valid, and matches FIREBASE_PROJECT_ID.'
+                    : $firebaseReason
+            ),
+        ];
+        if (! $databaseAvailable || ! Schema::hasTable('mobile_push_deliveries')) {
+            $checks[] = $this->check('mobile_push', 'delivery_table', 'fail', 0, 'Push delivery state cannot be queried.');
+            return $checks;
+        }
+
+        $staleMinutes = max(1, (int) config('airmius_monitoring.mobile_push.stale_queued_minutes', 30));
+        $stale = MobilePushDelivery::query()->where('status', 'queued')->where('queued_at', '<=', now()->subMinutes($staleMinutes))->count();
+        $failed = MobilePushDelivery::query()->where('status', 'failed')->where('failed_at', '>=', $since)->count();
+        $maxFailed = max(0, (int) config('airmius_monitoring.mobile_push.max_recent_failures', 0));
+        $checks[] = $this->check('mobile_push', 'stale_deliveries', $stale === 0 ? 'ok' : 'fail', $stale, "Queued longer than {$staleMinutes} minutes.");
+        $checks[] = $this->check('mobile_push', 'failed_deliveries', $failed <= $maxFailed ? 'ok' : 'fail', $failed, "Maximum allowed: {$maxFailed}");
         return $checks;
     }
 

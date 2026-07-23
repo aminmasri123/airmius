@@ -60,8 +60,21 @@ Zusaetzlich muessen die Billing-/Rechnungsdaten in den Admin-Settings bzw. `conf
 - Freigegebene Version/Commit: offen
 - Offene Auflagen: offen
 
+Die Freigabe wird versionsgebunden in der Produktionsumgebung hinterlegt:
+
+```dotenv
+LEGAL_APPROVED_BY="Name/Kanzlei"
+LEGAL_APPROVED_AT=2026-07-20
+LEGAL_APPROVED_VERSION="Git-Commit oder Release-Tag"
+LEGAL_EXPECTED_VERSION="Git-Commit oder Release-Tag"
+LEGAL_APPROVAL_CONDITIONS="Keine"
+```
+
+`LEGAL_APPROVED_VERSION` und `LEGAL_EXPECTED_VERSION` müssen identisch sein. Bei jeder rechtlich relevanten Änderung an Produkt, Tracking, Anbietern, Minderjährigen-, Zahlungs- oder Marketplace-Prozessen ist eine neue Freigabe erforderlich.
+
 ## Technische Verifikation
 
 - `php artisan test tests/Feature/LegalPagesTest.php`
 - `php artisan test --compact`
 - `npm run build`
+- `php artisan airmius:audit-legal-readiness` (muss in der Release-Pipeline Exit-Code 0 liefern)

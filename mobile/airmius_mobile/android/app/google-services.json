@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "793847679796",
+    "project_id": "airmius-app",
+    "storage_bucket": "airmius-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793847679796:android:c17f03a16f62c55da03361",
+        "android_client_info": {
+          "package_name": "com.airmius.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcQaGTGsvTCxyI5HA-Z2kcIahxNWFmiqk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

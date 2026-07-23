@@ -186,7 +186,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
       queryParameters: {
         'mobile': '1',
         'locale': _language.code.toLowerCase(),
-        if (kIsWeb) 'return_url': _webReturnUrl(),
+        'return_url': kIsWeb ? _webReturnUrl() : 'airmius://auth/callback',
       },
     );
 

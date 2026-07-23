@@ -584,7 +584,7 @@ class AirmiusApiClient {
     body: {
       'type': type,
       if (participantIds.isNotEmpty) 'participant_ids': participantIds,
-      if (teamId != null) 'team_id': teamId,
+      'team_id': ?teamId,
       if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
       if (description != null && description.trim().isNotEmpty)
         'description': description.trim(),

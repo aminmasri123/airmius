@@ -16,9 +16,10 @@ class DispatchMobilePushDeliveries extends Command
         $summary = $service->dispatchQueued((int) $this->option('limit'));
 
         $this->info(sprintf(
-            'Processed %d mobile push deliveries: %d sent, %d skipped, %d failed.',
+            'Processed %d mobile push deliveries: %d sent, %d retrying, %d skipped, %d failed.',
             $summary['processed'],
             $summary['sent'],
+            $summary['retrying'],
             $summary['skipped'],
             $summary['failed'],
         ));

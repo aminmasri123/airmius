@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'airmius_api_client.dart';
+import 'airmius_firebase_push_token_provider.dart';
 import 'airmius_api_repositories.dart';
 import 'airmius_auth_state.dart';
 import 'airmius_preferences_store.dart';
@@ -31,12 +32,12 @@ class AirmiusServiceContainer {
     AirmiusPreferencesStore? pushDeviceStore,
     AirmiusPushTokenProvider? pushTokenProvider,
   }) : tokenStore = tokenStore ?? AirmiusSecureTokenStore(),
-       pushDevices = AirmiusPushDeviceRegistry(
-         store: pushDeviceStore ?? createAirmiusPreferencesStore(),
-         tokenProvider:
-             pushTokenProvider ?? const AirmiusNoopPushTokenProvider(),
-         locale: environment.locale,
-       ),
+         pushDevices = AirmiusPushDeviceRegistry(
+           store: pushDeviceStore ?? createAirmiusPreferencesStore(),
+           tokenProvider:
+               pushTokenProvider ?? AirmiusFirebasePushTokenProvider(),
+           locale: environment.locale,
+         ),
        transport = environment.enableOfflineQueue
            ? AirmiusQueuedTransport(
                inner: transport,

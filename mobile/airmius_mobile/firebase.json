@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"airmius-app","appId":"1:793847679796:android:c17f03a16f62c55da03361","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"airmius-app","configurations":{"android":"1:793847679796:android:c17f03a16f62c55da03361","ios":"1:793847679796:ios:a865a7f1d7dfaa78a03361"}}}}}}

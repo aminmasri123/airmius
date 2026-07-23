@@ -266,6 +266,7 @@ class PageFrame extends StatelessWidget {
     this.trailing,
     this.actions,
     this.showHeader = false,
+    this.onRefresh,
   })  : child = child ?? body ?? const SizedBox.shrink(),
         assert(child == null || body == null, 'Provide exactly one of child or body to PageFrame.'),
         assert(child != null || body != null, 'Provide either child or body to PageFrame.');
@@ -276,6 +277,7 @@ class PageFrame extends StatelessWidget {
   final Widget? trailing;
   final List<Widget>? actions;
   final bool showHeader;
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -284,67 +286,80 @@ class PageFrame extends StatelessWidget {
     final trailingWidgets = <Widget>[
       ?trailing,
       if (actions != null)
-        ...actions!
-            .map((action) => Padding(padding: const EdgeInsets.only(left: 8), child: action))
-            ,
+        ...actions!.map(
+          (action) => Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: action,
+          ),
+        ),
     ];
 
-    return ColoredBox(
-      color: _themeBackground(context),
-      child: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            sliver: SliverToBoxAdapter(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 740),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (showHeader) ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: TextStyle(
-                                      color: text,
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w900,
-                                      height: 1.05,
-                                    ),
+    final scrollView = CustomScrollView(
+      physics: onRefresh == null ? null : const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          sliver: SliverToBoxAdapter(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 740),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showHeader) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: TextStyle(
+                                    color: text,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.05,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    subtitle,
-                                    style: TextStyle(
-                                      color: muted,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    color: muted,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            if (trailingWidgets.isNotEmpty)
-                              Row(mainAxisSize: MainAxisSize.min, children: trailingWidgets),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      child,
+                          ),
+                          if (trailingWidgets.isNotEmpty)
+                            Row(mainAxisSize: MainAxisSize.min, children: trailingWidgets),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                     ],
-                  ),
+                    child,
+                  ],
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    return ColoredBox(
+      color: _themeBackground(context),
+      child: onRefresh == null
+          ? scrollView
+          : RefreshIndicator(
+              color: AirmiusColors.blue,
+              backgroundColor: AirmiusColors.card,
+              onRefresh: onRefresh!,
+              child: scrollView,
+            ),
     );
   }
 }
@@ -1505,4 +1520,3 @@ Future<bool> confirmDanger(
   }
   return confirmed;
 }
-

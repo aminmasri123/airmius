@@ -4,6 +4,9 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Symfony\Component\Process\Process;
 
 class CreateDatabaseBackup extends Command
 {
@@ -11,81 +14,128 @@ class CreateDatabaseBackup extends Command
         {--disk= : Filesystem disk for the backup}
         {--path= : Backup path inside the selected disk}';
 
-    protected $description = 'Create a database backup with a JSON manifest.';
+    protected $description = 'Create a consistent SQLite or MySQL database backup with a verified JSON manifest.';
 
     public function handle(): int
     {
-        $connection = config('database.default');
-        $driver = config("database.connections.{$connection}.driver");
+        $connection = (string) config('database.default');
+        $driver = (string) config("database.connections.{$connection}.driver");
 
-        if ($driver !== 'sqlite') {
-            $this->components->error("Database backup currently supports sqlite only; current driver is {$driver}.");
-
-            return self::FAILURE;
-        }
-
-        $database = (string) config("database.connections.{$connection}.database");
-
-        if ($database === '' || $database === ':memory:' || ! is_file($database)) {
-            $this->components->error('SQLite database file was not found and cannot be backed up.');
-
+        if (! in_array($driver, ['sqlite', 'mysql'], true)) {
+            $this->components->error("Database backup does not support driver {$driver}.");
             return self::FAILURE;
         }
 
         $disk = (string) ($this->option('disk') ?: config('airmius_backup.disk', 'local'));
-        $path = (string) ($this->option('path') ?: $this->defaultPath($connection));
+        $path = (string) ($this->option('path') ?: $this->defaultPath($connection, $driver));
+        $temporary = tempnam(sys_get_temp_dir(), 'airmius-db-');
 
-        $stream = fopen($database, 'rb');
-
-        if ($stream === false) {
-            $this->components->error('SQLite database file could not be opened for reading.');
-
+        if ($temporary === false) {
+            $this->components->error('A temporary backup file could not be created.');
             return self::FAILURE;
         }
 
         try {
-            Storage::disk($disk)->put($path, $stream);
+            $source = $driver === 'sqlite'
+                ? $this->copySqlite($connection, $temporary)
+                : $this->dumpMysql($connection, $temporary);
+
+            $stream = fopen($temporary, 'rb');
+            if ($stream === false) {
+                throw new RuntimeException('Temporary backup could not be opened.');
+            }
+            try {
+                Storage::disk($disk)->put($path, $stream);
+            } finally {
+                fclose($stream);
+            }
+
+            $manifest = [
+                'schema' => 'airmius.database-backup.v2',
+                'created_at' => now()->toJSON(),
+                'app' => ['name' => config('app.name'), 'environment' => app()->environment()],
+                'database' => ['connection' => $connection, 'driver' => $driver, 'source' => $source],
+                'backup' => [
+                    'disk' => $disk,
+                    'path' => $path,
+                    'size_bytes' => filesize($temporary) ?: 0,
+                    'sha256' => hash_file('sha256', $temporary),
+                ],
+                'retention_days' => (int) config('airmius_backup.retention_days', 30),
+            ];
+            Storage::disk($disk)->put($path.'.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
+        } catch (\Throwable $error) {
+            $this->components->error($error->getMessage());
+            return self::FAILURE;
         } finally {
-            fclose($stream);
+            @unlink($temporary);
         }
-
-        $manifest = [
-            'schema' => 'airmius.database-backup.v1',
-            'created_at' => now()->toJSON(),
-            'app' => [
-                'name' => config('app.name'),
-                'environment' => app()->environment(),
-            ],
-            'database' => [
-                'connection' => $connection,
-                'driver' => $driver,
-                'source_file' => basename($database),
-            ],
-            'backup' => [
-                'disk' => $disk,
-                'path' => $path,
-                'size_bytes' => filesize($database) ?: 0,
-                'sha256' => hash_file('sha256', $database),
-            ],
-            'retention_days' => (int) config('airmius_backup.retention_days', 30),
-        ];
-
-        Storage::disk($disk)->put(
-            $path.'.json',
-            json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL,
-        );
 
         $this->components->info("Database backup created at {$disk}:{$path}");
         $this->line("Manifest: {$disk}:{$path}.json");
-
         return self::SUCCESS;
     }
 
-    private function defaultPath(string $connection): string
+    protected function dumpMysql(string $connection, string $target): string
     {
-        $basePath = trim((string) config('airmius_backup.path', 'backups/database'), '/');
-        $timestamp = now()->format('Ymd-His');
+        $config = config("database.connections.{$connection}");
+        $database = (string) ($config['database'] ?? '');
+        if ($database === '') {
+            throw new RuntimeException('MySQL database name is missing.');
+        }
 
-        return "{$basePath}/airmius-{$connection}-{$timestamp}.sqlite";
+        $defaults = $this->mysqlDefaultsFile((array) $config);
+        try {
+            $arguments = [
+                (string) config('airmius_backup.mysqldump_binary', 'mysqldump'),
+                "--defaults-extra-file={$defaults}",
+                '--single-transaction', '--quick', '--routines', '--triggers', '--events',
+                '--hex-blob', '--set-gtid-purged=OFF', '--no-tablespaces',
+                "--result-file={$target}", $database,
+            ];
+            $process = new Process($arguments);
+            $process->setTimeout((int) config('airmius_backup.process_timeout', 900));
+            $process->mustRun();
+        } finally {
+            @unlink($defaults);
+        }
+
+        if (! is_file($target) || filesize($target) === 0) {
+            throw new RuntimeException('mysqldump produced an empty backup.');
+        }
+
+        return $database;
+    }
+
+    protected function copySqlite(string $connection, string $target): string
+    {
+        $database = (string) config("database.connections.{$connection}.database");
+        if ($database === '' || $database === ':memory:' || ! is_file($database) || ! copy($database, $target)) {
+            throw new RuntimeException('SQLite database file was not found or could not be copied.');
+        }
+        return basename($database);
+    }
+
+    protected function mysqlDefaultsFile(array $config): string
+    {
+        $path = sys_get_temp_dir().'/airmius-mysql-'.Str::uuid().'.cnf';
+        $lines = ['[client]'];
+        foreach (['host', 'port', 'username', 'password', 'unix_socket'] as $key) {
+            $value = $config[$key] ?? null;
+            if ($value !== null && $value !== '') {
+                $name = $key === 'username' ? 'user' : $key;
+                $lines[] = $name.'="'.addcslashes((string) $value, "\\\"").'"';
+            }
+        }
+        file_put_contents($path, implode(PHP_EOL, $lines).PHP_EOL, LOCK_EX);
+        chmod($path, 0600);
+        return $path;
+    }
+
+    private function defaultPath(string $connection, string $driver): string
+    {
+        $base = trim((string) config('airmius_backup.path', 'backups/database'), '/');
+        $extension = $driver === 'mysql' ? 'sql' : 'sqlite';
+        return "{$base}/airmius-{$connection}-".now()->format('Ymd-His').".{$extension}";
     }
 }

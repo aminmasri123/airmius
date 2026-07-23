@@ -65,4 +65,17 @@ return [
         'max_failed_deliveries' => (int) env('OPERATIONS_MAX_FAILED_MAIL_DELIVERIES', 0),
         'fail_log_mailer_in_production' => env('OPERATIONS_FAIL_LOG_MAILER_IN_PRODUCTION', true),
     ],
+
+    'backup' => [
+        'enabled' => env('OPERATIONS_MONITOR_BACKUPS', false),
+        'max_age_hours' => (int) env('OPERATIONS_BACKUP_MAX_AGE_HOURS', 30),
+        'fail_local_disk_in_production' => env('OPERATIONS_FAIL_LOCAL_BACKUP_IN_PRODUCTION', true),
+    ],
+
+    'mobile_push' => [
+        'enabled' => env('OPERATIONS_MONITOR_MOBILE_PUSH', false),
+        'stale_queued_minutes' => (int) env('OPERATIONS_PUSH_STALE_MINUTES', 30),
+        'max_recent_failures' => (int) env('OPERATIONS_MAX_FAILED_PUSH', 0),
+        'require_firebase' => env('OPERATIONS_REQUIRE_FIREBASE', true),
+    ],
 ];

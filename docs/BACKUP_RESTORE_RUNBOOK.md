@@ -1,37 +1,69 @@
-# Backup- und Restore-Runbook
+# Datenbank-Backup und Wiederherstellung
 
-Stand: 2026-07-17
+Stand: 20.07.2026
 
-## Ziel
+## Produktionsstandard
 
-AIRMIUS braucht einen wiederholbaren Restore-Test. Ein Backup gilt erst als brauchbar, wenn mindestens eine Wiederherstellung in eine separate Zieldatenbank erfolgreich war und die Daten lesbar sind.
+Airmius unterstützt konsistente SQLite- und MySQL-Backups. In Produktion muss `BACKUP_DISK` auf einen externen, privaten Objektspeicher wie Cloudflare R2 oder S3 zeigen. Der Scheduler erstellt täglich um 02:30 Uhr ein Backup. MySQL wird mit `mysqldump --single-transaction` einschließlich Routinen, Triggern und Events gesichert.
 
-## MVP-Implementierung
+Jedes Backup besitzt ein JSON-Manifest (`airmius.database-backup.v2`) mit SHA-256-Prüfsumme, Größe, Datenbanktreiber, Umgebung und Aufbewahrungsdauer. Datenbankpasswörter werden nur über eine temporäre Datei mit Modus `0600` an die MySQL-Werkzeuge übergeben und erscheinen nicht in der Prozessliste.
 
-- `php artisan airmius:backup-database` erstellt fuer die aktuelle SQLite-Datenbank ein Backup auf `BACKUP_DISK`.
-- `php artisan airmius:restore-database <backup> --target=/absolute/path/restore.sqlite` stellt ein Backup in eine separate SQLite-Datei wieder her.
-- Zu jedem Backup wird ein Manifest `<backup>.json` mit Schema `airmius.database-backup.v1`, SHA-256-Hash, Groesse, Quelle, Ziel-Disk und Retention geschrieben.
-- Restore verifiziert den Manifest-Hash, wenn das Manifest vorhanden ist.
+Erforderliche Produktionswerte:
 
-## Lokaler Restore-Test
-
-```bash
-php artisan airmius:backup-database --disk=local --path=backups/database/manual-restore-test.sqlite
-php artisan airmius:restore-database backups/database/manual-restore-test.sqlite --disk=local --target=/tmp/airmius-restore-test.sqlite --force
+```dotenv
+BACKUP_DISK=r2
+BACKUP_PATH=backups/database
+BACKUP_RETENTION_DAYS=30
+BACKUP_PROCESS_TIMEOUT=900
+MYSQLDUMP_BINARY=mysqldump
+MYSQL_BINARY=mysql
 ```
 
-Danach die Restore-Datei separat pruefen, niemals direkt die Live-Datei ueberschreiben.
+Der R2-/S3-Bucket muss privat, serverseitig verschlüsselt, versioniert und mit einer Lifecycle-Regel versehen sein. Empfohlen werden 30 tägliche, 12 monatliche und mindestens eine jährliche unveränderliche Kopie. Der Produktionsserver benötigt nur Schreib- und Leserechte auf das Backup-Präfix, keine öffentlichen Rechte.
 
-## Produktivregeln
+## Backup ausführen
 
-- `BACKUP_DISK=r2` und `BACKUP_PATH=backups/database` sind in `.env.example` vorbereitet.
-- Produktive Restore-Tests muessen in eine isolierte Datenbank oder einen isolierten Server laufen.
-- Vor Produktivbetrieb mit MySQL/MariaDB muss ein datenbankgerechter Dump/Restore-Pfad ergaenzt werden, z. B. `mysqldump`/`mariadb-dump` oder ein geprueftes Backup-Paket.
-- Backups muessen verschluesselt oder zugriffsbeschraenkt gespeichert werden.
-- Retention aktuell: `BACKUP_RETENTION_DAYS=30`.
-- Mindestens monatlich einen Restore-Test dokumentieren.
+```bash
+php artisan airmius:backup-database
+```
 
-## Verifizierter Stand
+Für einen manuellen Pfad:
 
-- Automatischer Restore-Test: `php artisan test tests/Feature/DatabaseBackupRestoreTest.php`
-- Der Test erstellt eine echte SQLite-Quelldatenbank, schreibt ein Backup mit Manifest, restored in eine separate SQLite-Datei und liest den Testdatensatz aus der Restore-Datei.
+```bash
+php artisan airmius:backup-database --disk=r2 --path=backups/database/manual.sql
+```
+
+Ein erfolgreicher Exit-Code allein genügt nicht. Monitoring muss zusätzlich Existenz, Größe und Alter des letzten Manifests kontrollieren.
+
+## MySQL-Restore-Drill
+
+Ein Restore darf niemals direkt in die aktuell konfigurierte Anwendungsdatenbank erfolgen. Zuerst eine leere, getrennte Datenbank anlegen und dann:
+
+```bash
+php artisan airmius:restore-database backups/database/airmius-mysql-TIMESTAMP.sql \
+  --disk=r2 \
+  --connection=mysql \
+  --target-database=airmius_restore_drill \
+  --force
+```
+
+Der Befehl verweigert die Wiederherstellung, wenn das Ziel dem aktuell konfigurierten Datenbanknamen entspricht. Vor einem Recovery-Cutover sind mindestens folgende Prüfungen nötig:
+
+1. Migrationstabelle und Tabellenanzahl vergleichen.
+2. Benutzer-, Vereins-, Rechnungs- und Zahlungsanzahlen plausibilisieren.
+3. Stichproben für Dateien, Beziehungen und verschlüsselte Felder ausführen.
+4. Anwendung mit der Restore-Datenbank in einer isolierten Umgebung starten.
+5. Erst nach Freigabe einen dokumentierten Cutover durchführen.
+
+Ein Restore-Drill ist mindestens monatlich sowie vor jedem größeren Release auszuführen und mit RPO, RTO, Backup-ID, Prüfsumme und verantwortlicher Person zu protokollieren.
+
+## SQLite-Restore
+
+```bash
+php artisan airmius:restore-database backups/database/test.sqlite \
+  --disk=local \
+  --target=/tmp/airmius-restore-test.sqlite \
+  --force
+```
+
+Auch hierbei wird die Manifest-Prüfsumme vor Abschluss kontrolliert.

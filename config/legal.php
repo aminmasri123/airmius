@@ -15,4 +15,11 @@ return [
     'vat_id' => env('LEGAL_VAT_ID', 'Keine Umsatzsteuer-ID angegeben.'),
     'supervisory_authority' => env('LEGAL_SUPERVISORY_AUTHORITY', 'Keine besondere Aufsichtsbehoerde angegeben.'),
     'content_responsible' => env('LEGAL_CONTENT_RESPONSIBLE', env('LEGAL_PROVIDER_NAME', env('APP_NAME', 'Airmius')).', '.env('LEGAL_COUNTRY', 'Deutschland')),
+    'release' => [
+        'approved_by' => env('LEGAL_APPROVED_BY'),
+        'approved_at' => env('LEGAL_APPROVED_AT'),
+        'approved_version' => env('LEGAL_APPROVED_VERSION'),
+        'expected_version' => env('LEGAL_EXPECTED_VERSION'),
+        'conditions' => env('LEGAL_APPROVAL_CONDITIONS'),
+    ],
 ];

@@ -44,6 +44,10 @@ Schedule::command('airmius:send-event-reminders')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('airmius:mobile-push-dispatch --limit=500')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 Schedule::command('airmius:send-learning-drip-notifications')
     ->hourly()
     ->withoutOverlapping();
@@ -62,6 +66,10 @@ Schedule::command('airmius:check-ai-provider-tokens')
 
 Schedule::command('airmius:process-inactive-accounts')
     ->dailyAt('03:30')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:backup-database')
+    ->dailyAt('02:30')
     ->withoutOverlapping();
 
 Schedule::command('airmius:prune-ad-events')

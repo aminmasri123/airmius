@@ -326,55 +326,51 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
       title: scope.t('feed.title'),
       subtitle: scope.t('feed.subtitle'),
       showHeader: !isCompactFeedLayout,
-      child: RefreshIndicator(
-        color: AirmiusColors.blue,
-        backgroundColor: AirmiusColors.card,
-        onRefresh: () async {
-          _reload();
-          await _feedFuture;
-        },
-        child: FutureBuilder<AirmiusPage<AirmiusPost>>(
-          future: _feedFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: const _LoadingFeed());
-            }
-            if (snapshot.hasError) {
-              return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: _ErrorFeed(onRetry: _reload));
-            }
+      onRefresh: () async {
+        _reload();
+        await _feedFuture;
+      },
+      child: FutureBuilder<AirmiusPage<AirmiusPost>>(
+        future: _feedFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: const _LoadingFeed());
+          }
+          if (snapshot.hasError) {
+            return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: _ErrorFeed(onRetry: _reload));
+          }
 
-            final loadedPosts = snapshot.data?.items ?? const <AirmiusPost>[];
-            final localPostIds = _localPosts.map((post) => post.id).toSet();
-            final posts = [
-              ..._localPosts,
-              ...loadedPosts.where((post) => !localPostIds.contains(post.id)),
-            ]
-                .where((post) => !_removedPostIds.contains(post.id))
-                .map((post) => _postOverrides[post.id] ?? post)
-                .toList();
-            return _FeedListScaffold(
-              composer: _ComposerTrigger(onTap: _openComposer),
-              child: posts.isEmpty
-                  ? EmptyPanel(scope.t('feed.empty'))
-                  : Column(
-                      children: [
-                        _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reloadStories),
-                        const SizedBox(height: 14),
-                        for (final post in posts) ...[
-                          _PostCard(
-                            post: post,
-                            onChanged: _reload,
-                            onDeleted: _removePostLocally,
-                            onDeleteFailed: _restorePostLocally,
-                            onPostChanged: (nextPost) => setState(() => _postOverrides[nextPost.id] = nextPost),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
+          final loadedPosts = snapshot.data?.items ?? const <AirmiusPost>[];
+          final localPostIds = _localPosts.map((post) => post.id).toSet();
+          final posts = [
+            ..._localPosts,
+            ...loadedPosts.where((post) => !localPostIds.contains(post.id)),
+          ]
+              .where((post) => !_removedPostIds.contains(post.id))
+              .map((post) => _postOverrides[post.id] ?? post)
+              .toList();
+          return _FeedListScaffold(
+            composer: _ComposerTrigger(onTap: _openComposer),
+            child: posts.isEmpty
+                ? EmptyPanel(scope.t('feed.empty'))
+                : Column(
+                    children: [
+                      _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reloadStories),
+                      const SizedBox(height: 14),
+                      for (final post in posts) ...[
+                        _PostCard(
+                          post: post,
+                          onChanged: _reload,
+                          onDeleted: _removePostLocally,
+                          onDeleteFailed: _restorePostLocally,
+                          onPostChanged: (nextPost) => setState(() => _postOverrides[nextPost.id] = nextPost),
+                        ),
+                        const SizedBox(height: 12),
                       ],
-                    ),
-            );
-          },
-        ),
+                    ],
+                  ),
+          );
+        },
       ),
     );
   }
@@ -538,16 +534,13 @@ class _FeedListScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          composer,
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        composer,
+        const SizedBox(height: 14),
+        child,
+      ],
     );
   }
 }
