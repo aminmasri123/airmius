@@ -343,7 +343,7 @@ const badges = [
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <span class="font-semibold text-primary">{{ tx(action.label) }}</span>
-                                    <p class="mt-1 text-xs text-secondary">+{{ action.xp }} XP {{ tx('guest.gamification.per_action') }} - {{ tx('guest.gamification.cap') }} {{ action.limit }}x</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ tx('guest.gamification.xp_action_summary', { xp: action.xp, per_action: tx('guest.gamification.per_action'), cap: tx('guest.gamification.cap'), limit: action.limit }) }}</p>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <input

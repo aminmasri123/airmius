@@ -262,6 +262,9 @@ const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
 }
+
+const generatorLabel = (option) => option?.labelKey ? tx(option.labelKey, option.label || option.key) : (option?.label || option?.key || '')
+const generatorDescription = (option) => option?.descriptionKey ? tx(option.descriptionKey, option.description || '') : (option?.description || '')
 </script>
 
 <template>
@@ -273,8 +276,8 @@ const tx = (key, fallback, values = {}) => {
         >
             <header class="flex shrink-0 items-center justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-air-blue">Airmius Track</p>
-                    <h2 class="truncate text-xl font-black text-primary">Live-Tracking</h2>
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-air-blue">{{ tx('auto.Airmius Track', 'Airmius Track') }}</p>
+                    <h2 class="truncate text-xl font-black text-primary">{{ tx('auto.Live-Tracking', 'Live-Tracking') }}</h2>
                 </div>
                 <div class="flex items-center gap-2">
                     <span
@@ -286,7 +289,7 @@ const tx = (key, fallback, values = {}) => {
                     <button
                         type="button"
                         class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-primary shadow-lg"
-                        aria-label="Tracking schließen"
+                        :aria-label="tx('auto.Tracking schließen', 'Tracking schließen')"
                         @click="closeTrackingFullscreen"
                     >
                         <i class="las la-times text-2xl"></i>
@@ -309,9 +312,9 @@ const tx = (key, fallback, values = {}) => {
                     <section class="flex min-w-full flex-col justify-between p-5">
                         <div class="space-y-5">
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">Aktueller Lauf</p>
+                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">{{ tx('auto.Aktueller Lauf', 'Aktueller Lauf') }}</p>
                                 <label class="mt-3 block">
-                                    <span class="sr-only">Bezeichnung</span>
+                                    <span class="sr-only">{{ tx('auto.Bezeichnung', 'Bezeichnung') }}</span>
                                     <input
                                         v-model="trackForm.title"
                                         class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-base font-black text-primary placeholder:text-secondary"
@@ -319,7 +322,7 @@ const tx = (key, fallback, values = {}) => {
                                     >
                                 </label>
                                 <label class="mt-3 block">
-                                    <span class="sr-only">Sportart</span>
+                                    <span class="sr-only">{{ tx('auto.Sportart', 'Sportart') }}</span>
                                     <select v-model="trackForm.sport_type" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm font-bold text-primary">
                                         <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
                                     </select>
@@ -334,7 +337,7 @@ const tx = (key, fallback, values = {}) => {
 
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                                    <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                    <p class="text-xs font-bold uppercase text-secondary">{{ tx('auto.Pace', 'Pace') }}</p>
                                     <p class="mt-1 text-2xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
                                 </div>
                                 <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
@@ -388,10 +391,10 @@ const tx = (key, fallback, values = {}) => {
                     <section class="flex min-w-full flex-col overflow-hidden bg-card">
                         <div class="flex shrink-0 items-center justify-between gap-3 px-5 py-4">
                             <div>
-                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">Karte</p>
-                                <h3 class="text-lg font-black text-primary">Live-Position</h3>
-                            </div>
-                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">Live</span>
+                            <p class="text-xs font-black uppercase tracking-wide text-air-blue">{{ tx('auto.Karte', 'Karte') }}</p>
+                            <h3 class="text-lg font-black text-primary">{{ tx('auto.Live-Position', 'Live-Position') }}</h3>
+                        </div>
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ tx('auto.Live', 'Live') }}</span>
                         </div>
                         <div
                             class="relative min-h-0 flex-1 select-none overflow-hidden"
@@ -444,7 +447,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="absolute left-4 top-4 z-[80] inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-white/95 text-blue-600 shadow-lg"
-                                aria-label="Mein Standort anzeigen"
+                                :aria-label="tx('auto.Mein Standort anzeigen', 'Mein Standort anzeigen')"
                                 @click.stop.prevent="showCurrentLocationOnMap"
                             >
                                 <i class="las la-location-arrow text-xl"></i>
@@ -453,19 +456,19 @@ const tx = (key, fallback, values = {}) => {
                     </section>
 
                     <section class="flex min-w-full flex-col p-5">
-                        <p class="text-xs font-black uppercase tracking-wide text-air-blue">Analyse</p>
-                        <h3 class="mt-1 text-2xl font-black text-primary">Live-Werte</h3>
+                        <p class="text-xs font-black uppercase tracking-wide text-air-blue">{{ tx('auto.Analyse', 'Analyse') }}</p>
+                        <h3 class="mt-1 text-2xl font-black text-primary">{{ tx('auto.Live-Werte', 'Live-Werte') }}</h3>
                         <div class="mt-5 grid flex-1 grid-cols-2 content-start gap-3">
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                                <p class="text-xs font-bold uppercase text-secondary">Distanz</p>
+                                <p class="text-xs font-bold uppercase text-secondary">{{ tx('auto.Distanz', 'Distanz') }}</p>
                                 <p class="mt-2 text-3xl font-black text-primary">{{ formatDistance(trackingDistance) }}</p>
                             </div>
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                                <p class="text-xs font-bold uppercase text-secondary">Zeit</p>
+                                <p class="text-xs font-bold uppercase text-secondary">{{ tx('auto.Zeit', 'Zeit') }}</p>
                                 <p class="mt-2 text-3xl font-black text-primary">{{ trackingElapsedLabel }}</p>
                             </div>
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                                <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                <p class="text-xs font-bold uppercase text-secondary">{{ tx('auto.Pace', 'Pace') }}</p>
                                 <p class="mt-2 text-3xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
                             </div>
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
@@ -518,13 +521,13 @@ const tx = (key, fallback, values = {}) => {
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="max-w-3xl">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
-                            Schritt 1: Sportkarte starten
+                            {{ tx('sport_map_ui.hero_step', 'Schritt 1: Sportkarte starten') }}
                         </p>
                         <h2 class="mt-2 text-2xl font-bold text-primary sm:text-3xl">
                             {{ $t('sport_map.title') }}
                         </h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Plane Routen, tracke deine Strecke live oder finde und teile Sportplätze in deiner Umgebung.
+                            {{ tx('sport_map_ui.hero_hint', 'Plane Routen, tracke deine Strecke live oder finde und teile Sportplätze in deiner Umgebung.') }}
                         </p>
                     </div>
 
@@ -560,7 +563,7 @@ const tx = (key, fallback, values = {}) => {
                     <h3 class="mt-4 text-base font-bold text-primary group-hover:text-white">{{ action.title }}</h3>
                     <p class="mt-2 text-sm leading-6 text-secondary group-hover:text-white/80">{{ action.description }}</p>
                     <span class="mt-4 inline-flex items-center gap-2 text-sm font-semibold">
-                        Loslegen
+                        {{ tx('sport_map_ui.get_started', 'Loslegen') }}
                         <i class="las la-arrow-right"></i>
                     </span>
                 </button>
@@ -584,7 +587,7 @@ const tx = (key, fallback, values = {}) => {
                                     type="button"
                                     class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold transition"
                                     :class="activeMapLayer === layer.key ? 'bg-buttonPrimary text-buttonTextPrimary shadow-sm' : 'text-secondary hover:bg-card hover:text-primary'"
-                                    :aria-label="`${layer.label} anzeigen`"
+                                    :aria-label="tx('sport_map_ui.layer_show', '{label} anzeigen', { label: layer.label })"
                                     @click="activeMapLayer = layer.key"
                                 >
                                     <i :class="layer.icon"></i>
@@ -592,7 +595,7 @@ const tx = (key, fallback, values = {}) => {
                                 </button>
                             </div>
                             <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                                Interaktive Karte
+                                {{ tx('auto.Interaktive Karte', 'Interaktive Karte') }}
                             </span>
                         </div>
                     </div>
@@ -602,7 +605,7 @@ const tx = (key, fallback, values = {}) => {
                         :class="mapIsDragging ? 'cursor-grabbing' : 'cursor-crosshair'"
                         style="background-color: #efe6d1; user-select: none; -webkit-user-select: none;"
                         role="application"
-                        aria-label="Interaktive Sportkarte"
+                        :aria-label="tx('auto.Interaktive Karte', 'Interaktive Sportkarte')"
                         @pointerdown="startMapDrag"
                         @pointermove="moveMapDrag"
                         @pointerup="endMapDrag"
@@ -684,7 +687,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center text-lg font-black text-slate-950 transition hover:bg-air-blue hover:text-white"
-                                aria-label="Karte vergrößern"
+                                :aria-label="tx('sport_map_ui.zoom_in', 'Karte vergrößern')"
                                 @click.stop.prevent="zoomMap(1)"
                             >
                                 +
@@ -692,7 +695,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-lg font-black text-slate-950 transition hover:bg-air-blue hover:text-white"
-                                aria-label="Karte verkleinern"
+                                :aria-label="tx('sport_map_ui.zoom_out', 'Karte verkleinern')"
                                 @click.stop.prevent="zoomMap(-1)"
                             >
                                 -
@@ -700,7 +703,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-slate-800 transition hover:bg-slate-900 hover:text-white"
-                                aria-label="Karte zentrieren"
+                                :aria-label="tx('sport_map_ui.center_map', 'Karte zentrieren')"
                                 @click.stop.prevent="resetMapView"
                             >
                                 <i class="las la-crosshairs"></i>
@@ -708,8 +711,8 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-blue-600 transition hover:bg-blue-600 hover:text-white"
-                                aria-label="Mein Standort anzeigen"
-                                title="Mein Standort"
+                                :aria-label="tx('auto.Mein Standort anzeigen', 'Mein Standort anzeigen')"
+                                :title="tx('sport_map_ui.my_location', 'Mein Standort')"
                                 @click.stop.prevent="showCurrentLocationOnMap"
                             >
                                 <i class="las la-location-arrow"></i>
@@ -717,7 +720,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-slate-700 transition hover:bg-slate-900 hover:text-white"
-                                aria-label="Letzten Punkt entfernen"
+                                :aria-label="tx('sport_map_ui.remove_last_point', 'Letzten Punkt entfernen')"
                                 @click.stop.prevent="removeLastActiveMapPoint"
                             >
                                 <i class="las la-undo-alt"></i>
@@ -725,7 +728,7 @@ const tx = (key, fallback, values = {}) => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-red-600 transition hover:bg-red-600 hover:text-white"
-                                aria-label="Punkte zurücksetzen"
+                                :aria-label="tx('sport_map_ui.reset_points', 'Punkte zurücksetzen')"
                                 @click.stop.prevent="resetActiveMapPoints"
                             >
                                 <i class="las la-trash"></i>
@@ -734,11 +737,11 @@ const tx = (key, fallback, values = {}) => {
 
                         <div class="pointer-events-none absolute right-3 top-3 z-20 max-w-xs rounded-lg border border-border bg-card/95 px-3 py-2 text-xs font-semibold text-secondary shadow-sm">
                             <span v-if="activeTab === 'generator'">
-                                Karte ziehen/zoomen. Klick setzt {{ routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget === 'destination' ? 'den Zielpunkt' : 'den Startpunkt' }}.
+                                {{ tx('sport_map_ui.map_hint_generator', 'Karte ziehen/zoomen. Klick setzt {target}.', { target: routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget === 'destination' ? 'den Zielpunkt' : 'den Startpunkt' }) }}
                             </span>
-                            <span v-else-if="activeTab === 'routes'">Karte ziehen/zoomen. Klick setzt den nächsten Routenpunkt.</span>
-                            <span v-else-if="activeTab === 'tracks'">Karte ziehen/zoomen. Klick setzt einen manuellen Trackpunkt.</span>
-                            <span v-else>Karte ziehen/zoomen. Klick setzt die Sportplatz-Position.</span>
+                            <span v-else-if="activeTab === 'routes'">{{ tx('sport_map_ui.map_hint_route', 'Karte ziehen/zoomen. Klick setzt den nächsten Routenpunkt.') }}</span>
+                            <span v-else-if="activeTab === 'tracks'">{{ tx('sport_map_ui.map_hint_track', 'Karte ziehen/zoomen. Klick setzt einen manuellen Trackpunkt.') }}</span>
+                            <span v-else>{{ tx('sport_map_ui.map_hint_place', 'Karte ziehen/zoomen. Klick setzt die Sportplatz-Position.') }}</span>
                         </div>
 
                         <svg class="absolute inset-0 z-20 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -787,7 +790,7 @@ const tx = (key, fallback, values = {}) => {
                             v-if="routePlaybackMarker && routePlaybackState !== 'idle'"
                             class="absolute z-[55] flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-orange-400 text-slate-950 shadow-xl"
                             :style="markerStyle(routePlaybackMarker)"
-                            title="Route-Vorschau"
+                            :title="tx('sport_map_ui.route_preview', 'Route-Vorschau')"
                             @pointerdown.stop
                         >
                             <span class="absolute h-14 w-14 rounded-full bg-orange-400/25"></span>
@@ -811,7 +814,7 @@ const tx = (key, fallback, values = {}) => {
                                 v-if="point.removable"
                                 type="button"
                                 class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border border-card bg-red-500 text-[10px] leading-none text-white shadow hover:bg-red-600"
-                                aria-label="Punkt entfernen"
+                                :aria-label="tx('sport_map_ui.remove_point', 'Punkt entfernen')"
                                 @click.stop="removeMapPoint(point)"
                                 @pointerdown.stop
                             >
@@ -822,7 +825,7 @@ const tx = (key, fallback, values = {}) => {
                         </div>
 
                         <div v-if="!mapPoints.length" class="absolute bottom-10 left-4 z-30 max-w-xs rounded-lg border border-border bg-card/95 px-3 py-2 text-xs font-semibold text-secondary shadow-sm">
-                            Karte bereit. Wähle unten Route planen, Tracking oder Sportplatz eintragen.
+                            {{ tx('sport_map_ui.map_ready', 'Karte bereit. Wähle unten Route planen, Tracking oder Sportplatz eintragen.') }}
                         </div>
 
                         <div
@@ -837,7 +840,7 @@ const tx = (key, fallback, values = {}) => {
                             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center justify-between gap-3">
-                                        <p class="text-sm font-bold text-primary">Route-Vorschau</p>
+                                        <p class="text-sm font-bold text-primary">{{ tx('sport_map_ui.route_preview', 'Route-Vorschau') }}</p>
                                         <p class="shrink-0 text-xs font-semibold text-secondary">
                                             {{ formatDistance(routePlaybackProgressMeters) }} / {{ formatDistance(routePlaybackTotalDistance) }}
                                         </p>
@@ -858,15 +861,15 @@ const tx = (key, fallback, values = {}) => {
                                         @click="toggleRoutePlayback"
                                     >
                                         <i :class="routePlaybackState === 'playing' ? 'las la-pause' : 'las la-play'"></i>
-                                        {{ routePlaybackState === 'playing' ? 'Pause' : routePlaybackState === 'paused' ? 'Weiter' : 'Start' }}
+                                        {{ routePlaybackState === 'playing' ? tx('auto.Pause', 'Pause') : routePlaybackState === 'paused' ? tx('auto.Weiter', 'Weiter') : tx('auto.Start', 'Start') }}
                                     </button>
                                     <button
                                         type="button"
                                         class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="resetRoutePlayback('Route-Vorschau zurückgesetzt.')"
+                                        @click="resetRoutePlayback(tx('sport_map_ui.route_preview_reset', 'Route-Vorschau zurückgesetzt.'))"
                                     >
                                         <i class="las la-redo-alt"></i>
-                                        Reset
+                                        {{ tx('sport_map_ui.reset', 'Reset') }}
                                     </button>
                                     <div class="flex overflow-hidden rounded-lg border border-border">
                                         <button
@@ -938,8 +941,8 @@ const tx = (key, fallback, values = {}) => {
                             :class="routeGeneratorStep === item.step ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
                             @click="setGeneratorStep(item.step)"
                         >
-                            <span class="text-xs font-bold uppercase text-air-blue">Schritt {{ item.step }}</span>
-                            <p class="mt-1 text-sm font-bold">{{ item.label }}</p>
+                        <span class="text-xs font-bold uppercase text-air-blue">{{ tx('sport_map_ui.step', 'Schritt') }} {{ item.step }}</span>
+                            <p class="mt-1 text-sm font-bold">{{ generatorLabel(item) }}</p>
                         </button>
                     </div>
 
@@ -953,17 +956,17 @@ const tx = (key, fallback, values = {}) => {
                     <div v-if="routeGeneratorStep === 1" class="grid gap-5 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)]">
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-bold text-primary">Route generieren</h3>
-                                <p class="mt-1 text-sm leading-6 text-secondary">Wähle nur die wichtigsten Daten. Die Details kannst du danach in der normalen Routenplanung speichern.</p>
+                                <h3 class="text-lg font-bold text-primary">{{ tx('sport_map_ui.route_generate', 'Route generieren') }}</h3>
+                                <p class="mt-1 text-sm leading-6 text-secondary">{{ tx('sport_map_ui.route_generate_hint', 'Wähle nur die wichtigsten Daten. Die Details kannst du danach in der normalen Routenplanung speichern.') }}</p>
                             </div>
 
                             <label class="space-y-1">
-                                <span class="text-xs font-semibold text-secondary">Routenname optional</span>
-                                <input v-model="routeGeneratorForm.title" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" placeholder="z. B. Waldlauf nach Feierabend">
+                                <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.route_name_optional', 'Routenname optional') }}</span>
+                                <input v-model="routeGeneratorForm.title" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.route_name_placeholder', 'z. B. Waldlauf nach Feierabend')">
                             </label>
 
                             <label class="space-y-1">
-                                <span class="text-xs font-semibold text-secondary">Sportart</span>
+                                <span class="text-xs font-semibold text-secondary">{{ tx('auto.Sportart', 'Sportart') }}</span>
                                 <select v-model="routeGeneratorForm.sport_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm">
                                     <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
                                 </select>
@@ -979,18 +982,18 @@ const tx = (key, fallback, values = {}) => {
                                     @click="setRouteGeneratorStartMode(mode.key)"
                                 >
                                     <i :class="mode.icon"></i>
-                                    <span class="ml-2">{{ mode.label }}</span>
+                                    <span class="ml-2">{{ generatorLabel(mode) }}</span>
                                 </button>
                             </div>
 
                             <div v-if="routeGeneratorForm.start_mode === 'manual'" class="grid gap-3 sm:grid-cols-2">
-                                <input v-model="routeGeneratorForm.start_latitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" placeholder="Latitude">
-                                <input v-model="routeGeneratorForm.start_longitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" placeholder="Longitude">
+                                <input v-model="routeGeneratorForm.start_latitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.latitude', 'Latitude')">
+                                <input v-model="routeGeneratorForm.start_longitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.longitude', 'Longitude')">
                             </div>
 
                             <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" @click="useCurrentLocationForGenerator">
                                 <i class="las la-location-arrow"></i>
-                                Mein Standort als Startpunkt
+                                {{ tx('sport_map_ui.use_location_start', 'Mein Standort als Startpunkt') }}
                             </button>
                         </div>
 
@@ -1005,16 +1008,16 @@ const tx = (key, fallback, values = {}) => {
                                     @click="setRouteGeneratorType(type.key)"
                                 >
                                     <i :class="type.icon"></i>
-                                    <span class="ml-2 text-sm font-bold">{{ type.label }}</span>
-                                    <span class="mt-2 block text-xs text-secondary">{{ type.description }}</span>
+                                    <span class="ml-2 text-sm font-bold">{{ generatorLabel(type) }}</span>
+                                    <span class="mt-2 block text-xs text-secondary">{{ generatorDescription(type) }}</span>
                                 </button>
                             </div>
 
                             <div v-if="routeGeneratorForm.route_type === 'point_to_point'" class="rounded-xl border border-border bg-inputBg p-3">
                                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                        <p class="text-sm font-bold text-primary">Zielpunkt</p>
-                                        <p class="text-xs text-secondary">Kartenklick kann Start oder Ziel setzen. Für Zielroute brauchst du ein echtes Ziel.</p>
+                                        <p class="text-sm font-bold text-primary">{{ tx('sport_map_ui.destination', 'Zielpunkt') }}</p>
+                                        <p class="text-xs text-secondary">{{ tx('sport_map_ui.destination_hint', 'Kartenklick kann Start oder Ziel setzen. Für Zielroute brauchst du ein echtes Ziel.') }}</p>
                                     </div>
                                     <div class="flex overflow-hidden rounded-lg border border-border">
                                         <button
@@ -1023,7 +1026,7 @@ const tx = (key, fallback, values = {}) => {
                                             :class="routeGeneratorMapTarget === 'start' ? 'bg-air-blue text-white' : 'bg-card text-secondary hover:text-primary'"
                                             @click="routeGeneratorMapTarget = 'start'"
                                         >
-                                            Start setzen
+                                            {{ tx('sport_map_ui.set_start', 'Start setzen') }}
                                         </button>
                                         <button
                                             type="button"
@@ -1031,25 +1034,25 @@ const tx = (key, fallback, values = {}) => {
                                             :class="routeGeneratorMapTarget === 'destination' ? 'bg-air-blue text-white' : 'bg-card text-secondary hover:text-primary'"
                                             @click="routeGeneratorMapTarget = 'destination'"
                                         >
-                                            Ziel setzen
+                                            {{ tx('sport_map_ui.set_destination', 'Ziel setzen') }}
                                         </button>
                                     </div>
                                 </div>
 
                                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                    <input v-model="routeGeneratorForm.destination_latitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="Ziel Latitude">
-                                    <input v-model="routeGeneratorForm.destination_longitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="Ziel Longitude">
+                                    <input v-model="routeGeneratorForm.destination_latitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.destination_latitude', 'Ziel Latitude')">
+                                    <input v-model="routeGeneratorForm.destination_longitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.destination_longitude', 'Ziel Longitude')">
                                 </div>
 
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" @click="setGeneratorDestinationFromMapCenter">
-                                        Kartenmitte als Ziel
+                                        {{ tx('sport_map_ui.center_as_destination', 'Kartenmitte als Ziel') }}
                                     </button>
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" @click="clearGeneratorDestination">
-                                        Ziel entfernen
+                                        {{ tx('sport_map_ui.remove_destination', 'Ziel entfernen') }}
                                     </button>
                                     <span v-if="routeGeneratorDestinationPoint" class="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-500">
-                                        Ziel gesetzt: {{ Number(routeGeneratorDestinationPoint.latitude).toFixed(5) }}, {{ Number(routeGeneratorDestinationPoint.longitude).toFixed(5) }}
+                                        {{ tx('sport_map_ui.destination_set', 'Ziel gesetzt: {latitude}, {longitude}', { latitude: Number(routeGeneratorDestinationPoint.latitude).toFixed(5), longitude: Number(routeGeneratorDestinationPoint.longitude).toFixed(5) }) }}
                                     </span>
                                 </div>
                             </div>
@@ -1062,7 +1065,7 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.target_mode === 'distance' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-card text-secondary'"
                                         @click="routeGeneratorForm.target_mode = 'distance'"
                                     >
-                                        Distanz
+                                        {{ tx('auto.Distanz', 'Distanz') }}
                                     </button>
                                     <button
                                         type="button"
@@ -1070,44 +1073,44 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.target_mode === 'duration' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-card text-secondary'"
                                         @click="routeGeneratorForm.target_mode = 'duration'"
                                     >
-                                        Dauer
+                                        {{ tx('auto.Dauer', 'Dauer') }}
                                     </button>
                                 </div>
 
                                 <div class="mt-3 grid gap-3" :class="routeGeneratorForm.target_mode === 'duration' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                                     <label v-if="routeGeneratorForm.target_mode === 'distance'" class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Distanz in km</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('auto.Distanz in km', 'Distanz in km') }}</span>
                                         <input v-model="routeGeneratorForm.distance_km" type="number" min="1" max="80" step="0.5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
                                     <label v-if="routeGeneratorForm.target_mode === 'duration'" class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Dauer in Minuten</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('auto.Dauer in Minuten', 'Dauer in Minuten') }}</span>
                                         <input v-model="routeGeneratorForm.duration_minutes" type="number" min="10" max="360" step="5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
                                     <label v-if="routeGeneratorForm.target_mode === 'duration'" class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Tempo</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.pace_mode', 'Tempo') }}</span>
                                         <select v-model="routeGeneratorForm.pace_mode" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
-                                            <option value="pace">Pace min/km</option>
-                                            <option value="speed">km/h</option>
+                                            <option value="pace">{{ tx('sport_map_ui.pace_min_per_km', 'Pace min/km') }}</option>
+                                            <option value="speed">{{ tx('sport_map_ui.speed_kmh', 'km/h') }}</option>
                                         </select>
                                     </label>
                                     <label v-if="routeGeneratorForm.target_mode === 'duration' && routeGeneratorForm.pace_mode === 'pace'" class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Pace min/km</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.pace_min_per_km', 'Pace min/km') }}</span>
                                         <input v-model="routeGeneratorForm.pace_min_per_km" type="number" min="2.5" max="30" step="0.1" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
                                     <label v-if="routeGeneratorForm.target_mode === 'duration' && routeGeneratorForm.pace_mode === 'speed'" class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Geschwindigkeit km/h</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.speed_kmh', 'Geschwindigkeit km/h') }}</span>
                                         <input v-model="routeGeneratorForm.speed_kmh" type="number" min="1" max="80" step="0.5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
                                 </div>
                             </div>
 
                             <div class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-4">
-                                <p class="text-sm font-bold text-primary">Aktuelle Planung</p>
+                                <p class="text-sm font-bold text-primary">{{ tx('sport_map_ui.current_plan', 'Aktuelle Planung') }}</p>
                                 <div class="mt-3 grid grid-cols-2 gap-2 text-sm text-secondary sm:grid-cols-4">
                                     <span>{{ routeGeneratorSummary.distance }}</span>
                                     <span>{{ routeGeneratorSummary.duration }}</span>
                                     <span>{{ routeGeneratorSummary.pace }}</span>
-                                    <span>{{ routeGeneratorForm.route_type === 'roundtrip' ? 'Rundroute' : 'Einmal zum Ziel' }}</span>
+                                    <span>{{ routeGeneratorForm.route_type === 'roundtrip' ? generatorLabel(routeGeneratorRouteTypes[0]) : generatorLabel(routeGeneratorRouteTypes[1]) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -1116,12 +1119,12 @@ const tx = (key, fallback, values = {}) => {
                     <div v-else-if="routeGeneratorStep === 2" class="grid gap-5 lg:grid-cols-2">
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-bold text-primary">Route-Stil</h3>
-                                <p class="mt-1 text-sm leading-6 text-secondary">Diese Parameter bestimmen, wie der Vorschlag wirken soll: Untergrund, Umgebung, Steigung und Schwierigkeit.</p>
+                                <h3 class="text-lg font-bold text-primary">{{ tx('sport_map_ui.route_style', 'Route-Stil') }}</h3>
+                                <p class="mt-1 text-sm leading-6 text-secondary">{{ tx('sport_map_ui.route_style_hint', 'Diese Parameter bestimmen, wie der Vorschlag wirken soll: Untergrund, Umgebung, Steigung und Schwierigkeit.') }}</p>
                             </div>
 
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">Untergrund</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('sport_map_ui.surface', 'Untergrund') }}</p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <button
                                         v-for="surface in routeGeneratorSurfaceOptions"
@@ -1131,13 +1134,13 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.surface === surface.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
                                         @click="routeGeneratorForm.surface = surface.key"
                                     >
-                                        {{ surface.label }}
+                                        {{ generatorLabel(surface) }}
                                     </button>
                                 </div>
                             </div>
 
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">Umgebung</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('sport_map_ui.environment', 'Umgebung') }}</p>
                                 <div class="mt-2 grid gap-2 sm:grid-cols-2">
                                     <button
                                         v-for="environment in routeGeneratorEnvironmentOptions"
@@ -1147,7 +1150,7 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.environment === environment.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
                                         @click="routeGeneratorForm.environment = environment.key"
                                     >
-                                        {{ environment.label }}
+                                        {{ generatorLabel(environment) }}
                                     </button>
                                 </div>
                             </div>
@@ -1155,7 +1158,7 @@ const tx = (key, fallback, values = {}) => {
 
                         <div class="space-y-4">
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">Steigung</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('sport_map_ui.elevation', 'Steigung') }}</p>
                                 <div class="mt-2 grid gap-2 sm:grid-cols-3">
                                     <button
                                         v-for="elevation in routeGeneratorElevationOptions"
@@ -1165,13 +1168,13 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.elevation === elevation.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
                                         @click="routeGeneratorForm.elevation = elevation.key"
                                     >
-                                        {{ elevation.label }}
+                                        {{ generatorLabel(elevation) }}
                                     </button>
                                 </div>
                             </div>
 
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">Schwierigkeit</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('sport_map_ui.difficulty', 'Schwierigkeit') }}</p>
                                 <div class="mt-2 grid gap-2 sm:grid-cols-3">
                                     <button
                                         v-for="difficulty in routeGeneratorDifficultyOptions"
@@ -1181,7 +1184,7 @@ const tx = (key, fallback, values = {}) => {
                                         :class="routeGeneratorForm.difficulty === difficulty.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
                                         @click="routeGeneratorForm.difficulty = difficulty.key"
                                     >
-                                        {{ difficulty.label }}
+                                        {{ generatorLabel(difficulty) }}
                                     </button>
                                 </div>
                             </div>
@@ -1189,21 +1192,21 @@ const tx = (key, fallback, values = {}) => {
                             <div class="grid gap-3 sm:grid-cols-3">
                                 <label class="flex items-center gap-3 rounded-xl border border-border bg-inputBg p-3 text-sm font-semibold text-primary">
                                     <input v-model="routeGeneratorForm.low_traffic" type="checkbox" class="rounded border-border">
-                                    Verkehrsarm
+                                    {{ tx('sport_map_ui.low_traffic', 'Verkehrsarm') }}
                                 </label>
                                 <label class="flex items-center gap-3 rounded-xl border border-border bg-inputBg p-3 text-sm font-semibold text-primary">
                                     <input v-model="routeGeneratorForm.lit" type="checkbox" class="rounded border-border">
-                                    Beleuchtet
+                                    {{ tx('sport_map_ui.lit', 'Beleuchtet') }}
                                 </label>
                                 <label class="flex items-center gap-3 rounded-xl border border-border bg-inputBg p-3 text-sm font-semibold text-primary">
                                     <input v-model="routeGeneratorForm.water_breaks" type="checkbox" class="rounded border-border">
-                                    Trinkpunkte
+                                    {{ tx('sport_map_ui.water_breaks', 'Trinkpunkte') }}
                                 </label>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <input v-model="routeGeneratorForm.include_places" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" placeholder="Lieblingsorte optional">
-                                <input v-model="routeGeneratorForm.avoid_places" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" placeholder="Orte vermeiden optional">
+                                <input v-model="routeGeneratorForm.include_places" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.include_places', 'Lieblingsorte optional')">
+                                <input v-model="routeGeneratorForm.avoid_places" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.avoid_places', 'Orte vermeiden optional')">
                             </div>
                         </div>
                     </div>
@@ -1211,8 +1214,8 @@ const tx = (key, fallback, values = {}) => {
                     <div v-else class="grid gap-5 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-bold text-primary">Vorschlag prüfen</h3>
-                                <p class="mt-1 text-sm leading-6 text-secondary">Der Vorschlag erscheint auf der Karte. Danach kannst du ihn in die normale Routenplanung übernehmen.</p>
+                                <h3 class="text-lg font-bold text-primary">{{ tx('sport_map_ui.review_proposal', 'Vorschlag prüfen') }}</h3>
+                                <p class="mt-1 text-sm leading-6 text-secondary">{{ tx('sport_map_ui.review_proposal_hint', 'Der Vorschlag erscheint auf der Karte. Danach kannst du ihn in die normale Routenplanung übernehmen.') }}</p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
@@ -1225,34 +1228,34 @@ const tx = (key, fallback, values = {}) => {
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.duration }}</p>
                                 </div>
                                 <div class="rounded-xl border border-border bg-inputBg p-3">
-                                    <p class="text-xs font-semibold text-secondary">Untergrund</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.surface', 'Untergrund') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.surface }}</p>
                                 </div>
                                 <div class="rounded-xl border border-border bg-inputBg p-3">
-                                    <p class="text-xs font-semibold text-secondary">Tempo</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.pace_mode', 'Tempo') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.pace }}</p>
                                 </div>
                             </div>
 
                             <div v-if="generatedRouteActualSummary" class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                                    <p class="text-xs font-semibold text-secondary">Berechnet</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.calculated', 'Berechnet') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.distance }}</p>
                                 </div>
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                                    <p class="text-xs font-semibold text-secondary">Zeit</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('auto.Zeit', 'Zeit') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.duration }}</p>
                                 </div>
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                                    <p class="text-xs font-semibold text-secondary">Routing</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.routing', 'Routing') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.status }}</p>
                                 </div>
                                 <div class="rounded-xl border p-3" :class="qualityBadgeClass(generatedRouteActualSummary.qualityScore)">
-                                    <p class="text-xs font-semibold opacity-80">Qualität</p>
+                                    <p class="text-xs font-semibold opacity-80">{{ tx('sport_map_ui.quality', 'Qualität') }}</p>
                                     <p class="mt-1 font-bold">{{ generatedRouteActualSummary.qualityScore ?? '-' }}%</p>
                                 </div>
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                                    <p class="text-xs font-semibold text-secondary">Wegpunkte</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.waypoints', 'Wegpunkte') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.geometryPoints }}</p>
                                 </div>
                             </div>
@@ -1260,17 +1263,17 @@ const tx = (key, fallback, values = {}) => {
                             <div v-if="generatedRouteActualSummary" class="rounded-xl border border-border bg-inputBg p-3 text-sm">
                                 <div class="grid gap-2 sm:grid-cols-3">
                                     <div>
-                                        <p class="text-xs font-semibold text-secondary">Abweichung vom Ziel</p>
+                                        <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.target_deviation', 'Abweichung vom Ziel') }}</p>
                                         <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.targetDelta }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-xs font-semibold text-secondary">Rücklauf</p>
+                                        <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.backtrack', 'Rücklauf') }}</p>
                                         <p class="mt-1 font-bold text-primary">{{ formatPercent(generatedRouteActualSummary.backtrackPercent) }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-xs font-semibold text-secondary">Routenform</p>
+                                        <p class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.route_shape', 'Routenform') }}</p>
                                         <p class="mt-1 font-bold" :class="generatedRouteActualSummary.shapeAcceptable ? 'text-emerald-400' : 'text-amber-400'">
-                                            {{ generatedRouteActualSummary.shapeAcceptable ? 'passt' : 'prüfen' }}
+                                            {{ generatedRouteActualSummary.shapeAcceptable ? tx('sport_map_ui.acceptable', 'passt') : tx('sport_map_ui.check', 'prüfen') }}
                                         </p>
                                     </div>
                                 </div>
@@ -1279,11 +1282,11 @@ const tx = (key, fallback, values = {}) => {
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute || !routeGenerationAccess.available" @click="generateRouteProposal">
                                     <i class="las la-magic"></i>
-                                    {{ isGeneratingRoute ? 'Berechnet...' : 'Vorschlag generieren' }}
+                                    {{ isGeneratingRoute ? tx('sport_map_ui.calculating', 'Berechnet...') : tx('sport_map_ui.generate_proposal', 'Vorschlag generieren') }}
                                 </button>
                                 <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60" :disabled="generatedRoutePoints.length < 2 || isGeneratingRoute" @click="applyGeneratedRouteToPlanner">
                                     <i class="las la-route"></i>
-                                    In Routenplanung übernehmen
+                                    {{ tx('sport_map_ui.apply_to_planner', 'In Routenplanung übernehmen') }}
                                 </button>
                             </div>
 
@@ -1298,7 +1301,7 @@ const tx = (key, fallback, values = {}) => {
                                     <p class="text-sm font-bold text-primary">{{ generatedRouteTitle() }}</p>
                                     <p class="mt-1 text-xs text-secondary">{{ routeGeneratorSummary.environment }} - {{ routeGeneratorSummary.elevation }} - {{ routeGeneratorSummary.difficulty }}</p>
                                 </div>
-                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary">Vorschlag bereit</span>
+                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary">{{ tx('sport_map_ui.proposal_ready', 'Vorschlag bereit') }}</span>
                             </div>
 
                             <div class="mt-4 space-y-2">
@@ -1311,19 +1314,19 @@ const tx = (key, fallback, values = {}) => {
                                         <p class="font-semibold text-primary">{{ point.name }}</p>
                                         <p class="text-xs text-secondary">{{ Number(point.latitude).toFixed(5) }}, {{ Number(point.longitude).toFixed(5) }}</p>
                                     </div>
-                                    <button v-if="point.removable" type="button" class="text-red-400 hover:text-red-300" aria-label="Punkt entfernen" @click="removeGeneratedRoutePoint(index)">
+                                    <button v-if="point.removable" type="button" class="text-red-400 hover:text-red-300" :aria-label="tx('sport_map_ui.remove_point', 'Punkt entfernen')" @click="removeGeneratedRoutePoint(index)">
                                         <i class="las la-times"></i>
                                     </button>
                                 </div>
 
                                 <p v-if="!generatedRoutePoints.length" class="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-secondary">
-                                    Noch kein Vorschlag. Klicke auf "Vorschlag generieren".
+                                    {{ tx('sport_map_ui.no_proposal', 'Noch kein Vorschlag. Klicke auf „Vorschlag generieren“.') }}
                                 </p>
                             </div>
 
                             <div v-if="generatedRouteCuePreview.length" class="mt-5 rounded-xl border border-border bg-card p-3">
                                 <div class="flex items-center justify-between gap-3">
-                                    <p class="text-sm font-bold text-primary">Abbiegehinweise</p>
+                                    <p class="text-sm font-bold text-primary">{{ tx('sport_map_ui.navigation_cues', 'Abbiegehinweise') }}</p>
                                     <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ generatedRouteNavigationCues.length }}</span>
                                 </div>
                                 <ol class="mt-3 space-y-2">
@@ -1342,17 +1345,17 @@ const tx = (key, fallback, values = {}) => {
 
                     <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" :disabled="routeGeneratorStep === 1" @click="setGeneratorStep(routeGeneratorStep - 1)">
-                            Zurück
+                            {{ tx('sport_map_ui.back', 'Zurück') }}
                         </button>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" @click="resetGeneratedRoute">
-                                Zurücksetzen
+                                {{ tx('sport_map_ui.reset_all', 'Zurücksetzen') }}
                             </button>
                             <button v-if="routeGeneratorStep < 3" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="setGeneratorStep(routeGeneratorStep + 1)">
-                                Weiter
+                                {{ tx('auto.Weiter', 'Weiter') }}
                             </button>
                             <button v-else type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute || !routeGenerationAccess.available" @click="generateRouteProposal">
-                                {{ isGeneratingRoute ? 'Berechnet...' : 'Neu generieren' }}
+                                {{ isGeneratingRoute ? tx('sport_map_ui.calculating', 'Berechnet...') : tx('sport_map_ui.regenerate', 'Neu generieren') }}
                             </button>
                         </div>
                     </div>
@@ -1574,9 +1577,9 @@ const tx = (key, fallback, values = {}) => {
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Live-Tracking</p>
-                                    <h3 class="mt-1 text-lg font-bold text-primary sm:text-xl">Strecke aufzeichnen</h3>
-                                    <p class="mt-1 hidden text-sm leading-5 text-secondary sm:block">Starten, Handy einstecken und nach dem Training speichern.</p>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('auto.Live-Tracking', 'Live-Tracking') }}</p>
+                                    <h3 class="mt-1 text-lg font-bold text-primary sm:text-xl">{{ tx('sport_map_ui.track_title', 'Strecke aufzeichnen') }}</h3>
+                                    <p class="mt-1 hidden text-sm leading-5 text-secondary sm:block">{{ tx('sport_map_ui.track_hint', 'Starten, Handy einstecken und nach dem Training speichern.') }}</p>
                                 </div>
                                 <span
                                     class="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
@@ -1588,7 +1591,7 @@ const tx = (key, fallback, values = {}) => {
                                     v-if="trackingFullscreen"
                                     type="button"
                                     class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-primary sm:hidden"
-                                    aria-label="Tracking Vollbild schließen"
+                                    :aria-label="tx('auto.Tracking schließen', 'Tracking Vollbild schließen')"
                                     @click="closeTrackingFullscreen"
                                 >
                                     <i class="las la-times text-lg"></i>
@@ -1621,31 +1624,31 @@ const tx = (key, fallback, values = {}) => {
                                     <div class="mt-5 grid gap-2" :class="trackingPoints.length ? 'grid-cols-2' : 'grid-cols-1'">
                                         <button v-if="!isTracking" type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary shadow-sm" @click="startTrackingFromMobile">
                                             <i class="las la-play text-xl"></i>
-                                            {{ trackingPoints.length ? 'Weiter' : 'Starten' }}
+                                            {{ trackingPoints.length ? tx('auto.Weiter', 'Weiter') : tx('auto.Starten', 'Starten') }}
                                         </button>
                                         <button v-else type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-200" @click="stopTracking">
                                             <i class="las la-pause text-xl"></i>
-                                            Pause
+                                            {{ tx('auto.Pause', 'Pause') }}
                                         </button>
                                         <button v-if="trackingPoints.length" type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-black text-emerald-200 disabled:opacity-50" :disabled="trackForm.processing || trackingPoints.length < 1" @click="saveTrack">
                                             <i class="las la-save text-xl"></i>
-                                            Speichern
+                                            {{ tx('auto.Speichern', 'Speichern') }}
                                         </button>
                                         <button v-if="trackingPoints.length" type="button" class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-black text-red-300" @click="deleteCurrentTrackDraft">
                                             <i class="las la-trash"></i>
-                                            Lauf löschen
+                                            {{ tx('sport_map_ui.delete_run', 'Lauf löschen') }}
                                         </button>
                                     </div>
-                                    <p class="mt-4 text-center text-xs font-semibold text-secondary">Nach links swipen für Karte</p>
+                                    <p class="mt-4 text-center text-xs font-semibold text-secondary">{{ tx('sport_map_ui.swipe_map', 'Nach links wischen für die Karte') }}</p>
                                 </article>
 
                                 <article class="min-h-[380px] min-w-full overflow-hidden bg-card">
                                     <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
                                         <div>
-                                            <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Slide 2</p>
-                                            <h4 class="text-base font-black text-primary">Karte</h4>
+                                            <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('sport_map_ui.slide', 'Ansicht {number}', { number: 2 }) }}</p>
+                                            <h4 class="text-base font-black text-primary">{{ tx('auto.Karte', 'Karte') }}</h4>
                                         </div>
-                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">Karte</span>
+                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ tx('auto.Karte', 'Karte') }}</span>
                                     </div>
                                     <div
                                         class="relative h-72 touch-pan-x select-none overflow-hidden"
@@ -1695,16 +1698,16 @@ const tx = (key, fallback, values = {}) => {
                                             <span class="absolute h-11 w-11 rounded-full bg-air-blue/25"></span>
                                             <i class="las la-location-arrow relative text-base"></i>
                                         </div>
-                                        <button type="button" class="absolute left-3 top-3 z-[80] inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-blue-600 shadow-lg" aria-label="Mein Standort anzeigen" @click.stop.prevent="showCurrentLocationOnMap">
+                                        <button type="button" class="absolute left-3 top-3 z-[80] inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-blue-600 shadow-lg" :aria-label="tx('auto.Mein Standort anzeigen', 'Mein Standort anzeigen')" @click.stop.prevent="showCurrentLocationOnMap">
                                             <i class="las la-location-arrow text-lg"></i>
                                         </button>
                                     </div>
-                                    <p class="px-4 py-3 text-center text-xs font-semibold text-secondary">Nochmals swipen für Pace und km/h</p>
+                                    <p class="px-4 py-3 text-center text-xs font-semibold text-secondary">{{ tx('sport_map_ui.swipe_metrics', 'Nochmals wischen für Pace und km/h') }}</p>
                                 </article>
 
                                 <article class="flex min-h-[380px] min-w-full flex-col p-5">
-                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Slide 3</p>
-                                    <h4 class="mt-1 text-lg font-black text-primary">Live-Werte</h4>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('sport_map_ui.slide', 'Ansicht {number}', { number: 3 }) }}</p>
+                                    <h4 class="mt-1 text-lg font-black text-primary">{{ tx('sport_map_ui.live_values', 'Live-Werte') }}</h4>
                                     <div class="mt-4 grid grid-cols-2 gap-3">
                                         <div class="rounded-2xl border border-border bg-inputBg p-4">
                                             <p class="text-xs font-bold uppercase text-secondary">Pace</p>
@@ -1780,15 +1783,15 @@ const tx = (key, fallback, values = {}) => {
                             <div class="mt-4 hidden gap-2 lg:grid" :class="trackingPoints.length ? 'grid-cols-2' : 'grid-cols-1'">
                                 <button v-if="!isTracking" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary shadow-sm" @click="startTracking">
                                     <i class="las la-play text-lg"></i>
-                                    {{ trackingPoints.length ? 'Weiter tracken' : 'Tracking starten' }}
+                                    {{ trackingPoints.length ? tx('sport_map_ui.continue_tracking', 'Weiter tracken') : tx('sport_map_ui.start_tracking', 'Tracking starten') }}
                                 </button>
                                 <button v-else type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200" @click="stopTracking">
                                     <i class="las la-pause text-lg"></i>
-                                    Pause
+                                    {{ tx('auto.Pause', 'Pause') }}
                                 </button>
                                 <button v-if="trackingPoints.length" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-bold text-emerald-200 disabled:opacity-50" :disabled="trackForm.processing || trackingPoints.length < 1" @click="saveTrack">
                                     <i class="las la-save text-lg"></i>
-                                    Speichern
+                                    {{ tx('auto.Speichern', 'Speichern') }}
                                 </button>
                                 <button v-if="trackingPoints.length && !isTracking" type="button" class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-bold text-secondary hover:bg-muted" @click="resetTrackPoints">
                                     <i class="las la-trash"></i>
@@ -1800,8 +1803,8 @@ const tx = (key, fallback, values = {}) => {
                         <details class="rounded-2xl border border-border bg-inputBg p-4">
                             <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <span>
-                                    <span class="block text-xs font-bold uppercase tracking-wide text-secondary">Vorbereitung</span>
-                                    <span class="block text-base font-bold text-primary">Bezeichnung & Sportart</span>
+                                    <span class="block text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('sport_map_ui.preparation', 'Vorbereitung') }}</span>
+                                    <span class="block text-base font-bold text-primary">{{ tx('sport_map_ui.label_and_sport', 'Bezeichnung & Sportart') }}</span>
                                 </span>
                                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-secondary">
                                     <i class="las la-sliders-h"></i>
@@ -1811,7 +1814,7 @@ const tx = (key, fallback, values = {}) => {
                             <div class="mt-4 grid gap-3 border-t border-border pt-4">
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.title') }}</span>
-                                    <input v-model="trackForm.title" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm" placeholder="z. B. Morgenlauf, 5-km-Runde, Intervalltraining">
+                                    <input v-model="trackForm.title" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm" :placeholder="tx('sport_map_ui.track_title_placeholder', 'z. B. Morgenlauf, 5-km-Runde, Intervalltraining')">
                                 </label>
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.sport') }}</span>
@@ -1833,7 +1836,7 @@ const tx = (key, fallback, values = {}) => {
                     <div class="rounded-2xl border border-border bg-inputBg p-4">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Historie</p>
+                                <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('sport_map_ui.history', 'Historie') }}</p>
                                 <h3 class="text-lg font-bold text-primary">{{ $t('sport_map.tracks.saved_title') }}</h3>
                             </div>
                             <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ tracks.length }} Tracks</span>
@@ -1843,16 +1846,16 @@ const tx = (key, fallback, values = {}) => {
                             <article v-for="track in tracks" :key="track.id" class="rounded-xl border border-border bg-card p-4">
                                 <div v-if="editingTrackId === track.id" class="grid gap-3">
                                     <label class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Bezeichnung</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('auto.Bezeichnung', 'Bezeichnung') }}</span>
                                         <input
                                             v-model="editTrackForm.title"
                                             class="w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-sm font-semibold text-primary"
-                                            placeholder="z. B. Morgenlauf, 5-km-Runde"
+                                            :placeholder="tx('sport_map_ui.track_title_placeholder_short', 'z. B. Morgenlauf, 5-km-Runde')"
                                         >
                                         <span v-if="editTrackForm.errors.title" class="text-xs font-semibold text-red-500">{{ editTrackForm.errors.title }}</span>
                                     </label>
                                     <label class="space-y-1">
-                                        <span class="text-xs font-semibold text-secondary">Sportart</span>
+                                        <span class="text-xs font-semibold text-secondary">{{ tx('auto.Sportart', 'Sportart') }}</span>
                                         <select v-model="editTrackForm.sport_type" class="w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-sm font-semibold text-primary">
                                             <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
                                         </select>
@@ -1865,7 +1868,7 @@ const tx = (key, fallback, values = {}) => {
                                             :disabled="editTrackForm.processing || !editTrackForm.title"
                                             @click="updateSavedTrack(track)"
                                         >
-                                            Speichern
+                                            {{ tx('auto.Speichern', 'Speichern') }}
                                         </button>
                                         <button
                                             type="button"
@@ -1873,7 +1876,7 @@ const tx = (key, fallback, values = {}) => {
                                             :disabled="editTrackForm.processing"
                                             @click="cancelTrackEdit"
                                         >
-                                            Abbrechen
+                                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                                         </button>
                                     </div>
                                 </div>
@@ -1889,7 +1892,7 @@ const tx = (key, fallback, values = {}) => {
                                             v-if="track.can_edit"
                                             type="button"
                                             class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-inputBg text-primary hover:bg-muted"
-                                            aria-label="Track bearbeiten"
+                                            :aria-label="tx('sport_map_ui.edit_track', 'Track bearbeiten')"
                                             @click="startTrackEdit(track)"
                                         >
                                             <i class="las la-pen"></i>
@@ -1903,8 +1906,8 @@ const tx = (key, fallback, values = {}) => {
                                 </div>
                             </article>
                             <div v-if="!tracks.length" class="rounded-xl border border-dashed border-border bg-card/60 p-5 text-center">
-                                <p class="text-sm font-bold text-primary">Noch kein Track gespeichert.</p>
-                                <p class="mt-1 text-sm text-secondary">Starte dein erstes Tracking direkt links.</p>
+                                <p class="text-sm font-bold text-primary">{{ tx('sport_map_ui.no_track', 'Noch kein Track gespeichert.') }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ tx('sport_map_ui.no_track_hint', 'Starte dein erstes Tracking direkt links.') }}</p>
                             </div>
                         </div>
                     </div>
@@ -1966,16 +1969,16 @@ const tx = (key, fallback, values = {}) => {
                         </div>
 
                         <div class="rounded-xl border border-border bg-inputBg/60 p-3">
-                            <p class="text-sm font-semibold text-primary">Bilder vom Sportplatz</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">Füge Fotos vom Platz, Eingang, Belag oder Ausstattung hinzu. Du kannst Dateien hochladen oder Bild-URLs eintragen.</p>
+                            <p class="text-sm font-semibold text-primary">{{ tx('sport_map_ui.images_title', 'Bilder vom Sportplatz') }}</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">{{ tx('sport_map_ui.images_hint', 'Füge Fotos vom Platz, Eingang, Belag oder Ausstattung hinzu. Du kannst Dateien hochladen oder Bild-URLs eintragen.') }}</p>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label class="block">
-                                    <span class="text-xs font-semibold text-secondary">Bilder hochladen</span>
+                                    <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.upload_images', 'Bilder hochladen') }}</span>
                                     <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" @change="handlePlaceImageUploads">
                                 </label>
                                 <label class="block">
-                                    <span class="text-xs font-semibold text-secondary">Bild-URLs optional</span>
-                                    <input v-model="placeImageUrlsText" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="https://... , https://...">
+                                    <span class="text-xs font-semibold text-secondary">{{ tx('sport_map_ui.image_urls_optional', 'Bild-URLs optional') }}</span>
+                                    <input v-model="placeImageUrlsText" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" :placeholder="tx('sport_map_ui.image_urls_placeholder', 'https://... , https://...')">
                                 </label>
                             </div>
                             <div v-if="placePreviewImages.length" class="mt-3 grid grid-cols-4 gap-2">
@@ -2026,5 +2029,3 @@ const tx = (key, fallback, values = {}) => {
         </div>
     </AppLayout>
 </template>
-
-

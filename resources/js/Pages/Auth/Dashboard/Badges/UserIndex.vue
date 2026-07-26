@@ -40,7 +40,7 @@ defineProps({
                             {{ award.badge?.actor_type }} - {{ award.reason || award.badge?.trigger }}
                         </p>
                         <p v-if="award.meta?.xp !== undefined" class="mt-1 text-xs text-secondary">
-                            {{ award.meta.xp }} XP - {{ tx('Level') }} {{ award.meta.level }}
+                            {{ tx('guest.badges.xp_level', { xp: award.meta.xp, level: award.meta.level }) }}
                         </p>
                     </div>
                 </div>

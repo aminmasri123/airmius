@@ -47,6 +47,7 @@ Technische Basis: **gruen**. Produkt-, Lokalisierungs-, Provider-, Realgeraete-,
 - Die Sponsorverwaltung nutzt aktive Sprach-/Währungs-/Datumsformate, lokalisierte Scope-, Formular- und Löschzustände sowie eine sichere Pagination; Logo-Vorschauen berücksichtigen weiterhin helle und dunkle Paletten.
 - Das Outfit-Abo-Dashboard lokalisiert Style-Profil, Liefer-/Zahlungsdaten, Vertrags- und Kündigungsdialoge sowie Lieferprobleme in DE/EN/FR/AR; Geld-/Datumswerte und Warnfarben folgen Sprache und Theme.
 - Die Nutzerverwaltung übernimmt für Warnungen, Inaktivitäts-/DSGVO-Filter, Tabellenköpfe und Leerzustände einen gemeinsamen DE/EN/FR/AR-Katalog; Pagination und Suchfelder bleiben sicher und mobil bedienbar.
+- Die Sportkarte führt Routengenerator, Kartenlayer, Tracking, Routen-Vorschau und Sportplatz-Bilder in einer ergonomischen Oberfläche zusammen; sichtbare Routengenerator-/Trackingtexte, Kartenbedienhilfen und Fehlbedienungs-Labels sind in DE/EN/FR/AR übersetzt und die serverseitigen Routing-/Geometrie-Featuretests bleiben grün.
 - Fahrgemeinschaften zeigen Fahrer-/Anfrage-/Sitzplatz- und Datenschutzstatus lokalisiert, formatieren Abfahrtsdaten regional und machen private Treffpunkt-/Kontaktdaten erst nach Freigabe sichtbar; der Outfit-Checkout verwendet dieselben regionalen Geld-/Datumsformate und verständliche Liefer-/Problemstatus.
 - Die Admin-Moderation bestätigt das dauerhafte Entfernen gemeldeter Inhalte, übermittelt die Entfernung explizit an den Server und zeigt Meldungs-, Flag- und Warnzustände regional formatiert in DE/EN/FR/AR.
 - Events verwenden für Freikontingent, Wizard-Schritte, Validierungsfehler, Kalenderwochentage und Datumsformate nun aktive Übersetzungen statt fest verdrahteter deutscher Texte.
@@ -92,7 +93,7 @@ Die deutsche Datei `resources/js/lang/de.json` ist die alleinige fachliche Refer
 
 Aktueller Befund nach der Umsetzung:
 
-- Schluesselparitaet ist repariert: DE/EN/FR/AR jeweils 964 Schluessel.
+- Schluesselparitaet ist repariert: DE/EN/FR/AR besitzen jeweils 7.227 flach aufgelöste Schluessel.
 - Das automatische sichtbare UI-Inventar hat in DE/EN/FR/AR jeweils 3.540 Schluessel; das statische Audit findet unter 3.003 aktuell sichtbaren Vue-Texten jeweils 0 fehlende EN-/FR-/AR-Uebersetzungen.
 - Die defekten franzoesischen und arabischen Mojibake-Schluessel wurden auf die deutschen Originalschluessel zurueckgefuehrt.
 - Platzhalter-, HTML-Entitaets-, E-Mail-/Pfad- und Korruptionspruefungen sind gruen. Arabisch enthaelt keine `????`- oder Ersatzzeichenfolgen mehr; die Sportartenliste ist ebenfalls repariert.

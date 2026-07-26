@@ -141,18 +141,18 @@ const paymentStatusLabel = (status) => ({
 const paymentProviderLabel = (provider) => tx(`outfit_workspace.payment.${provider}`, provider === 'stripe' ? 'Karte / Stripe' : provider || 'Nicht gesetzt')
 
 const badgeClass = (status) => ({
-    pending: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
-    pending_payment: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
-    paid: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
-    active: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
-    cancels_at_period_end: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
-    payment_paused: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
-    cancelled: 'border-red-400/50 bg-red-400/10 text-red-200',
-    failed: 'border-red-400/50 bg-red-400/10 text-red-200',
-    planned: 'border-sky-400/50 bg-sky-400/10 text-sky-200',
-    preparing: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
-    shipped: 'border-blue-400/50 bg-blue-400/10 text-blue-200',
-    delivered: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
+    pending: 'border-warning/50 bg-warning/10 text-warning',
+    pending_payment: 'border-warning/50 bg-warning/10 text-warning',
+    paid: 'border-success/50 bg-success/10 text-success',
+    active: 'border-success/50 bg-success/10 text-success',
+    cancels_at_period_end: 'border-warning/50 bg-warning/10 text-warning',
+    payment_paused: 'border-warning/50 bg-warning/10 text-warning',
+    cancelled: 'border-error/50 bg-error/10 text-error',
+    failed: 'border-error/50 bg-error/10 text-error',
+    planned: 'border-accent/50 bg-accent/10 text-accent',
+    preparing: 'border-warning/50 bg-warning/10 text-warning',
+    shipped: 'border-accent/50 bg-accent/10 text-accent',
+    delivered: 'border-success/50 bg-success/10 text-success',
 })[status] || 'border-border bg-inputBg text-secondary'
 
 const toList = (value) => String(value || '')
@@ -587,41 +587,41 @@ const deleteSubscription = () => {
 </script>
 
 <template>
-    <Head title="Admin Outfit-Abos" />
+    <Head :title="tx('outfit_admin.page_title', 'Admin Outfit-Abos')" />
 
     <div class="space-y-6 p-4 sm:p-6">
         <section class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase text-accent">Sportkleidung-Abo Modul</p>
-                    <h1 class="mt-2 text-2xl font-bold text-primary">Outfit-Abo Pläne</h1>
+                    <p class="text-sm font-semibold uppercase text-accent">{{ tx('Sportkleidung-Abo Modul', 'Sportkleidung-Abo Modul') }}</p>
+                    <h1 class="mt-2 text-2xl font-bold text-primary">{{ tx('Outfit-Abo Pläne', 'Outfit-Abo Pläne') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschätzt.
+                        {{ tx('Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschützt.', 'Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschützt.') }}
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Pläne</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Pläne', 'Pläne') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.plans || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Aktiv</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Aktiv', 'Aktiv') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.activePlans || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Sponsor</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Sponsor', 'Sponsor') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.sponsoredPlans || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Abos</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Abos', 'Abos') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.subscriptions || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Offen</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Offen', 'Offen') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.pendingPayments || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Bezahlt</p>
+                        <p class="text-xs uppercase text-secondary">{{ tx('Bezahlt', 'Bezahlt') }}</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.paidSubscriptions || 0 }}</p>
                     </div>
                 </div>
@@ -668,8 +668,8 @@ const deleteSubscription = () => {
                         </div>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo Bild</p>
-                        <h2 class="mt-1 text-lg font-bold text-primary">Dashboard-Hero</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('auto.Outfit-Abo Bild', 'Outfit-Abo Bild') }}</p>
+                        <h2 class="mt-1 text-lg font-bold text-primary">{{ tx('auto.Dashboard-Hero', 'Dashboard-Hero') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
                             {{ visuals.hero?.recommended_size || '1920 x 1080 px' }} - {{ visuals.hero?.ratio || '16:9' }}
                         </p>
@@ -683,7 +683,7 @@ const deleteSubscription = () => {
                     @click="openVisualModal"
                 >
                     <i class="las la-image text-lg"></i>
-                    Bild anpassen
+                    {{ tx('auto.Bild anpassen', 'Bild anpassen') }}
                 </button>
             </div>
         </section>
@@ -693,8 +693,8 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
                     <div class="flex items-start justify-between gap-4 border-b border-border p-5">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo Bild</p>
-                            <h2 class="mt-1 text-xl font-bold text-primary">Dashboard-Hero anpassen</h2>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('auto.Outfit-Abo Bild', 'Outfit-Abo Bild') }}</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ tx('auto.Dashboard-Hero anpassen', 'Dashboard-Hero anpassen') }}</h2>
                             <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">
                                 Dieses Bild erscheint oben auf der Outfit-Abo Dashboardseite. Du kannst eine URL/Pfad eintragen oder ein neues Bild hochladen.
                             </p>
@@ -758,7 +758,7 @@ const deleteSubscription = () => {
 
                     <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeVisualModal">
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button
                             type="button"
@@ -766,7 +766,7 @@ const deleteSubscription = () => {
                             :disabled="visualForm.processing"
                             @click="updateVisuals"
                         >
-                            Bild speichern
+                            {{ tx('auto.Bild speichern', 'Bild speichern') }}
                         </button>
                     </div>
                 </div>
@@ -776,8 +776,8 @@ const deleteSubscription = () => {
         <section v-if="activeTab === 'deliveries'" class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase text-accent">Lieferungen</p>
-                    <h2 class="mt-1 text-lg font-bold text-primary">Outfit-Abo Lieferungen verwalten</h2>
+                    <p class="text-sm font-semibold uppercase text-accent">{{ tx('auto.Lieferungen', 'Lieferungen') }}</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">{{ tx('auto.Outfit-Abo Lieferungen verwalten', 'Outfit-Abo Lieferungen verwalten') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
                         Plane Boxen, pflege Paketdienst und Trackingnummer und markiere Lieferungen als versendet oder geliefert.
                     </p>
@@ -798,8 +798,8 @@ const deleteSubscription = () => {
                             <p v-if="delivery.subscription?.shipping_address" class="mt-2 text-xs text-secondary">
                                 {{ delivery.subscription.shipping_address.name || 'Lieferadresse' }} - {{ shippingAddressLine(delivery.subscription.shipping_address) || '-' }}
                             </p>
-                            <div v-if="delivery.issue" class="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3">
-                                <p class="text-xs font-semibold uppercase text-amber-200">{{ issueTypeLabel(delivery.issue.type) }}</p>
+                            <div v-if="delivery.issue" class="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+                                <p class="text-xs font-semibold uppercase text-warning">{{ issueTypeLabel(delivery.issue.type) }}</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(delivery.issue.status) }}</p>
                                 <p class="mt-1 text-xs text-secondary">{{ delivery.issue.description }}</p>
                                 <p v-if="delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Grüße: {{ delivery.issue.exchange_size }}</p>
@@ -862,10 +862,10 @@ const deleteSubscription = () => {
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryDelivered(delivery)">
                                 Geliefert
                             </button>
-                            <button v-if="delivery.issue" type="button" class="rounded-lg border border-amber-400/50 px-3 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10" @click="saveDeliveryIssue(delivery)">
+                            <button v-if="delivery.issue" type="button" class="rounded-lg border border-warning/50 px-3 py-2 text-sm font-semibold text-warning hover:bg-warning/10" @click="saveDeliveryIssue(delivery)">
                                 Support speichern
                             </button>
-                            <button type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10" @click="openDeleteDeliveryModal(delivery)">
+                            <button type="button" class="rounded-lg border border-error/50 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10" @click="openDeleteDeliveryModal(delivery)">
                                 Löschen
                             </button>
                         </div>
@@ -881,8 +881,8 @@ const deleteSubscription = () => {
         <section v-if="activeTab === 'payments'" class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase text-accent">Zahlungen</p>
-                    <h2 class="mt-1 text-lg font-bold text-primary">Outfit-Abos verwalten</h2>
+                    <p class="text-sm font-semibold uppercase text-accent">{{ tx('auto.Zahlungen', 'Zahlungen') }}</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">{{ tx('auto.Outfit-Abos verwalten', 'Outfit-Abos verwalten') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
                         Hier sehen Marketplace- und Abo-Verantwortliche, wer bezahlt hat und welche Zahlungen noch offen sind.
                     </p>
@@ -940,7 +940,7 @@ const deleteSubscription = () => {
                         <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
                             {{ subscription.payment_reminders_sent || 0 }}/3 gesendet
                         </p>
-                        <p v-if="subscription.dunning_level" class="mt-1 text-xs text-amber-200">
+                        <p v-if="subscription.dunning_level" class="mt-1 text-xs text-warning">
                             Mahnstufe {{ subscription.dunning_level }}/3
                         </p>
                         <p v-if="subscription.last_dunning_sent_at" class="mt-1 text-xs text-secondary">
@@ -949,7 +949,7 @@ const deleteSubscription = () => {
                     </div>
 
                     <div>
-                        <button
+                            <button
                             type="button"
                             class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
                             :class="badgeClass(subscription.latest_delivery?.status)"
@@ -967,7 +967,7 @@ const deleteSubscription = () => {
                         <a v-if="subscription.latest_delivery?.tracking_url" :href="subscription.latest_delivery.tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex break-all text-xs font-semibold text-accent underline underline-offset-2">
                             Tracking öffnen
                         </a>
-                        <p v-if="subscription.latest_delivery?.issue" class="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-200">
+                        <p v-if="subscription.latest_delivery?.issue" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
                             {{ issueTypeLabel(subscription.latest_delivery.issue.type) }}: {{ issueStatusLabel(subscription.latest_delivery.issue.status) }}
                         </p>
                     </div>
@@ -990,7 +990,7 @@ const deleteSubscription = () => {
                             class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90"
                             @click="openPaymentModal(subscription)"
                         >
-                            Bezahlt markieren
+                            {{ tx('auto.Bezahlt markieren', 'Bezahlt markieren') }}
                         </button>
                         <button
                             v-if="subscription.payment_status !== 'paid'"
@@ -999,34 +999,34 @@ const deleteSubscription = () => {
                             :disabled="!subscription.can_send_payment_reminder"
                             @click="remindPayment(subscription)"
                         >
-                            Erinnern
+                            {{ tx('auto.Erinnern', 'Erinnern') }}
                         </button>
                         <button
                             type="button"
                             class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                             @click="openShippingAddressModal(subscription)"
                         >
-                            Adresse
+                            {{ tx('auto.Adresse', 'Adresse') }}
                         </button>
                         <button
                             v-if="subscription.payment_status === 'paid' && subscription.status === 'active'"
                             type="button"
-                            class="rounded-lg border border-amber-400/50 px-3 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10"
+                            class="rounded-lg border border-warning/50 px-3 py-2 text-sm font-semibold text-warning hover:bg-warning/10"
                             @click="markPaymentOpen(subscription)"
                         >
-                            Zahlung offen
+                            {{ tx('auto.Zahlung offen', 'Zahlung offen') }}
                         </button>
                         <button
                             v-if="subscription.status !== 'cancelled'"
                             type="button"
-                            class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
+                            class="rounded-lg border border-error/50 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10"
                             @click="openCancelSubscriptionModal(subscription)"
                         >
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button
                             type="button"
-                            class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
+                            class="rounded-lg border border-error/50 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10"
                             @click="openDeleteSubscriptionModal(subscription)"
                         >
                             Löschen
@@ -1101,16 +1101,16 @@ const deleteSubscription = () => {
                             <textarea v-model="formForDelivery(deliveryModal.delivery).notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Interne Notiz"></textarea>
                         </label>
 
-                        <div v-if="deliveryModal.delivery?.issue" class="rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 md:col-span-2">
+                        <div v-if="deliveryModal.delivery?.issue" class="rounded-lg border border-warning/30 bg-warning/10 p-4 md:col-span-2">
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase text-amber-200">{{ issueTypeLabel(deliveryModal.delivery.issue.type) }}</p>
+                                    <p class="text-xs font-semibold uppercase text-warning">{{ issueTypeLabel(deliveryModal.delivery.issue.type) }}</p>
                                     <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(deliveryModal.delivery.issue.status) }}</p>
                                     <p class="mt-2 text-sm text-secondary">{{ deliveryModal.delivery.issue.description }}</p>
                                     <p v-if="deliveryModal.delivery.issue.requested_resolution" class="mt-1 text-xs text-secondary">Wunsch: {{ deliveryModal.delivery.issue.requested_resolution }}</p>
                                     <p v-if="deliveryModal.delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Grüße: {{ deliveryModal.delivery.issue.exchange_size }}</p>
                                 </div>
-                                <span class="rounded-full border border-amber-400/40 px-3 py-1 text-xs font-semibold text-amber-200">
+                                <span class="rounded-full border border-warning/40 px-3 py-1 text-xs font-semibold text-warning">
                                     {{ formatDate(deliveryModal.delivery.issue.requested_at) }}
                                 </span>
                             </div>
@@ -1157,7 +1157,7 @@ const deleteSubscription = () => {
                             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeDeliveryModal">
                                 Abbrechen
                             </button>
-                            <button v-if="deliveryModal.delivery?.issue" type="button" class="rounded-lg border border-amber-400/50 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10" @click="saveDeliveryIssue(deliveryModal.delivery)">
+                            <button v-if="deliveryModal.delivery?.issue" type="button" class="rounded-lg border border-warning/50 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/10" @click="saveDeliveryIssue(deliveryModal.delivery)">
                                 Support speichern
                             </button>
                             <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForDelivery(deliveryModal.delivery).processing" @click="saveDeliveryModal">
@@ -1242,13 +1242,13 @@ const deleteSubscription = () => {
                         <label class="block md:col-span-2">
                             <span class="text-sm font-semibold text-primary">Name</span>
                             <input v-model="shippingAddressForm.shipping_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Vor- und Nachname">
-                            <span v-if="shippingAddressForm.errors.shipping_name" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_name }}</span>
+                            <span v-if="shippingAddressForm.errors.shipping_name" class="mt-1 block text-xs text-error">{{ shippingAddressForm.errors.shipping_name }}</span>
                         </label>
 
                         <label class="block md:col-span-2">
                             <span class="text-sm font-semibold text-primary">Straße</span>
                             <input v-model="shippingAddressForm.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Straße">
-                            <span v-if="shippingAddressForm.errors.shipping_street" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_street }}</span>
+                            <span v-if="shippingAddressForm.errors.shipping_street" class="mt-1 block text-xs text-error">{{ shippingAddressForm.errors.shipping_street }}</span>
                         </label>
 
                         <label class="block">
@@ -1259,19 +1259,19 @@ const deleteSubscription = () => {
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">Land</span>
                             <input v-model="shippingAddressForm.shipping_country" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary" placeholder="DE">
-                            <span v-if="shippingAddressForm.errors.shipping_country" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_country }}</span>
+                            <span v-if="shippingAddressForm.errors.shipping_country" class="mt-1 block text-xs text-error">{{ shippingAddressForm.errors.shipping_country }}</span>
                         </label>
 
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">PLZ</span>
                             <input v-model="shippingAddressForm.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="12345">
-                            <span v-if="shippingAddressForm.errors.shipping_postal_code" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_postal_code }}</span>
+                            <span v-if="shippingAddressForm.errors.shipping_postal_code" class="mt-1 block text-xs text-error">{{ shippingAddressForm.errors.shipping_postal_code }}</span>
                         </label>
 
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">Stadt</span>
                             <input v-model="shippingAddressForm.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Berlin">
-                            <span v-if="shippingAddressForm.errors.shipping_city" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_city }}</span>
+                            <span v-if="shippingAddressForm.errors.shipping_city" class="mt-1 block text-xs text-error">{{ shippingAddressForm.errors.shipping_city }}</span>
                         </label>
 
                         <label class="block md:col-span-2">
@@ -1302,7 +1302,7 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Abo-Anfrage abbrechen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-error">Abo-Anfrage abbrechen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ cancelSubscriptionModal.subscription?.plan?.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 Die Anfrage wird beendet und der Kunde bekommt eine In-App-Benachrichtigung.
@@ -1327,7 +1327,7 @@ const deleteSubscription = () => {
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCancelSubscriptionModal">
                             Zurück
                         </button>
-                        <button type="button" class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90" @click="cancelSubscription">
+                        <button type="button" class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white hover:bg-error/90" @click="cancelSubscription">
                             Anfrage abbrechen
                         </button>
                     </div>
@@ -1340,7 +1340,7 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Outfit-Abo löschen</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-error">Outfit-Abo löschen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteSubscriptionModal.subscription?.plan?.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                             Das Abo von {{ deleteSubscriptionModal.subscription?.user?.name || 'diesem Kunden' }} wird dauerhaft entfernt. Zugehörige Lieferungen werden ebenfalls gelöscht.
@@ -1366,7 +1366,7 @@ const deleteSubscription = () => {
                         </button>
                         <button
                             type="button"
-                            class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90 disabled:opacity-50"
+                            class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white hover:bg-error/90 disabled:opacity-50"
                             :disabled="deleteSubscriptionModal.confirmation !== 'delete'"
                             @click="deleteSubscription"
                         >
@@ -1382,7 +1382,7 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Lieferung löschen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-error">Lieferung löschen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteDeliveryModal.delivery?.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 Diese Lieferung wird dauerhaft entfernt. Das Outfit-Abo selbst bleibt bestehen.
@@ -1408,7 +1408,7 @@ const deleteSubscription = () => {
                         </button>
                         <button
                             type="button"
-                            class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90 disabled:opacity-50"
+                            class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white hover:bg-error/90 disabled:opacity-50"
                             :disabled="deleteDeliveryModal.confirmation !== 'delete'"
                             @click="deleteDelivery"
                         >
@@ -1616,7 +1616,7 @@ const deleteSubscription = () => {
                         </div>
                         <div class="flex gap-2">
                             <button class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-inputBg" @click="editingPlanId = plan.id">Bearbeiten</button>
-                            <button class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="destroyPlan(plan)">Entfernen</button>
+                            <button class="rounded-lg border border-error/50 px-3 py-2 text-sm text-error hover:bg-error/10" @click="destroyPlan(plan)">Entfernen</button>
                         </div>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
