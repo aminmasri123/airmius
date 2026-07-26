@@ -1592,67 +1592,67 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Lizenznummer</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license', 'Lizenznummer') }}</label>
                                 <input
                                     v-model="formFor(member).athlete_license_number"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                    placeholder="z. B. Spielerpass- oder Verbandsnummer"
+                                    :placeholder="tx('auto.z. B. Spielerpass- oder Verbandsnummer', 'z. B. Spielerpass- oder Verbandsnummer')"
                                 >
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Beitrag</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
                                 <input v-model="formFor(member).contribution_amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Intervall</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
                                 <select v-model="formFor(member).contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Zahlmethode</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.payment_method_label', 'Zahlmethode') }}</label>
                                 <select v-model="formFor(member).payment_method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                    <option value="">Offen</option>
+                                    <option value="">{{ tx('auto.Offen', 'Offen') }}</option>
                                     <option v-for="method in selectedClub.membership_payment_method_options" :key="method.value" :value="method.value">{{ method.label }}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Nächste automatische Rechnung</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
                                 <input v-model="formFor(member).contribution_next_invoice_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <p class="mt-1 text-xs text-secondary">Automatik wird ab Pro/Elite ausgeführt.</p>
+                                <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.automation_hint', 'Automatik wird ab Pro/Elite ausgeführt.') }}</p>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">SEPA IBAN</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                 <input v-model="formFor(member).sepa_iban" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE...">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">SEPA BIC optional</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC optional') }}</label>
                                 <input v-model="formFor(member).sepa_bic" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="GENODE...">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Mandatsreferenz</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
                                 <input v-model="formFor(member).sepa_mandate_reference" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="MANDAT-1001">
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Mandatsdatum</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
                                 <input v-model="formFor(member).sepa_mandate_signed_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
                             <label class="flex items-center gap-2 self-end rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <input v-model="formFor(member).sepa_mandate_active" type="checkbox" class="rounded border-border bg-bg">
-                                SEPA-Mandat aktiv
+                                {{ tx('auto.SEPA-Mandat aktiv', 'SEPA-Mandat aktiv') }}
                             </label>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Eintritt</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.joined', 'Eintritt') }}</label>
                                 <input v-model="formFor(member).joined_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </div>
 
@@ -1902,29 +1902,29 @@ const inviteExternalMember = (member) => {
             <section v-if="activeTab === 'payments'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Bankabgleich</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.bank_reconciliation', 'Bankabgleich') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            CSV-Umsätze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestätigen.
+                            {{ tx('club_memberships.workspace.bank_intro', 'CSV-Umsätze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestätigen.') }}
                         </p>
                     </div>
                     <button
                         type="button"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="capabilities.bank_reconciliation === false"
-                        :title="capabilities.bank_reconciliation === false ? 'Bankabgleich ist ab Pro verfügbar' : ''"
+                        :title="capabilities.bank_reconciliation === false ? tx('club_memberships.workspace.bank_unavailable', 'Bankabgleich ist ab Pro verfügbar') : ''"
                         @click="showBankImportModal = true"
                     >
-                        Bank-CSV importieren
+                        {{ tx('club_memberships.workspace.import_bank_csv', 'Bank-CSV importieren') }}
                     </button>
                 </div>
 
                 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm text-secondary">{{ filteredBankTransactions.length }} von {{ bankTransactions.length }} Umsätzen sichtbar.</p>
                     <select v-model="transactionStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                        <option value="all">Alle Status</option>
-                        <option value="matched">Verbucht</option>
-                        <option value="suggested">Vorschlag</option>
-                        <option value="unmatched">Offen</option>
+                        <option value="all">{{ tx('auto.Alle Status', 'Alle Status') }}</option>
+                        <option value="matched">{{ tx('club_memberships.workspace.matched', 'Verbucht') }}</option>
+                        <option value="suggested">{{ tx('club_memberships.workspace.suggested', 'Vorschlag') }}</option>
+                        <option value="unmatched">{{ tx('auto.Offen', 'Offen') }}</option>
                     </select>
                 </div>
 
@@ -1932,12 +1932,12 @@ const inviteExternalMember = (member) => {
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
-                                <th class="py-2 pr-4">Datum</th>
-                                <th class="py-2 pr-4">Zahler</th>
-                                <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Rechnung</th>
-                                <th class="py-2 pr-4">Status</th>
-                                <th class="py-2 pr-4">Aktion</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Datum', 'Datum') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Zahler', 'Zahler') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Betrag', 'Betrag') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Rechnung', 'Rechnung') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Status', 'Status') }}</th>
+                                <th class="py-2 pr-4">{{ tx('auto.Aktion', 'Aktion') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -1958,7 +1958,7 @@ const inviteExternalMember = (member) => {
                                         'bg-air-blue/15 text-air-blue': transaction.status === 'suggested',
                                         'bg-muted text-secondary': transaction.status === 'unmatched',
                                     }">
-                                        {{ transaction.status === 'matched' ? 'Verbucht' : transaction.status === 'suggested' ? 'Vorschlag' : 'Offen' }}
+                                        {{ transaction.status === 'matched' ? tx('club_memberships.workspace.matched', 'Verbucht') : transaction.status === 'suggested' ? tx('club_memberships.workspace.suggested', 'Vorschlag') : tx('auto.Offen', 'Offen') }}
                                     </span>
                                     <div class="mt-1 text-xs text-secondary">{{ transaction.match_reason }}</div>
                                 </td>
@@ -1969,22 +1969,22 @@ const inviteExternalMember = (member) => {
                                         class="rounded border border-border px-2 py-1 text-xs text-primary"
                                         @click="confirmBankTransaction(transaction)"
                                     >
-                                        Bestätigen
+                                        {{ tx('club_memberships.workspace.confirm', 'Bestätigen') }}
                                     </button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                    <p v-if="!filteredBankTransactions.length" class="py-6 text-sm text-secondary">Keine passenden Bankumsätze.</p>
+                    <p v-if="!filteredBankTransactions.length" class="py-6 text-sm text-secondary">{{ tx('club_memberships.workspace.no_bank_transactions', 'Keine passenden Bankumsätze.') }}</p>
                 </div>
             </section>
 
             <section v-if="activeTab === 'exports'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
-                        <h2 class="text-lg font-semibold text-primary">DATEV / SKR42</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.datev_title', 'DATEV / SKR42') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Exportiere bezahlte Mitgliedsbeiträge als CSV-Buchungsstapel. Konten bitte mit Steuerberatung abstimmen.
+                            {{ tx('club_memberships.workspace.datev_intro', 'Exportiere bezahlte Mitgliedsbeiträge als CSV-Buchungsstapel. Konten bitte mit Steuerberatung abstimmen.') }}
                         </p>
                     </div>
 
@@ -1992,28 +1992,28 @@ const inviteExternalMember = (member) => {
                         :href="datevExportUrl"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                         :class="{ 'pointer-events-none opacity-50': capabilities.datev_export === false }"
-                        :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfügbar' : ''"
+                        :title="capabilities.datev_export === false ? tx('club_memberships.workspace.datev_unavailable', 'DATEV-Export ist ab Pro verfügbar') : ''"
                     >
-                        DATEV-CSV exportieren
+                        {{ tx('club_memberships.workspace.datev_export', 'DATEV-CSV exportieren') }}
                     </a>
                 </div>
 
                 <div class="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
                     <form class="grid gap-3 md:grid-cols-2" @submit.prevent="saveDatevSettings">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Beraternummer</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.advisor_number', 'Beraternummer') }}</label>
                             <input v-model="datevSettingsFor(selectedClub).datev_consultant_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Mandantennummer</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.client_number', 'Mandantennummer') }}</label>
                             <input v-model="datevSettingsFor(selectedClub).datev_client_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Erlöskonto SKR42</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.revenue_account', 'Erlöskonto SKR42') }}</label>
                             <input v-model="datevSettingsFor(selectedClub).datev_revenue_account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="z. B. 2110">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Bankkonto SKR42</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.bank_account', 'Bankkonto SKR42') }}</label>
                             <input v-model="datevSettingsFor(selectedClub).datev_bank_account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="z. B. 1200">
                         </div>
                         <div class="md:col-span-2">
@@ -2046,25 +2046,25 @@ const inviteExternalMember = (member) => {
 
         <Modal :show="showAddMemberModal" max-width="2xl" @close="showAddMemberModal = false">
             <div class="p-2">
-                <h2 class="text-xl font-bold text-primary">Mitglieder per E-Mail hinzufügen</h2>
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.email_add_title', 'Mitglieder per E-Mail hinzufügen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknüpft, sonst geht eine Einladung per E-Mail raus.
+                    {{ tx('club_memberships.workspace.email_add_intro', 'Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknüpft, sonst geht eine Einladung per E-Mail raus.') }}
                 </p>
                 <p
                     v-if="capabilities.member_invitation_daily_limit"
                     class="mt-2 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-semibold text-secondary"
                 >
-                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute übrig.
+                    {{ tx('club_memberships.workspace.free_limit', 'Free-Limit: {remaining} von {limit} Einladungen heute übrig.', { remaining: capabilities.member_invitation_remaining_today, limit: capabilities.member_invitation_daily_limit }) }}
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="addEmailMember">
                     <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary">
                         <input v-model="emailMemberForm.send_invitation" type="checkbox" class="rounded border-border bg-inputBg">
-                        Einladung zu Airmius verschicken
+                        {{ tx('club_memberships.workspace.send_invitation', 'Einladung zu Airmius verschicken') }}
                     </label>
 
                     <div v-if="emailMemberForm.send_invitation">
-                        <label class="text-xs font-semibold uppercase text-secondary">Einladung gültig bis</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.invitation_expires', 'Einladung gültig bis') }}</label>
                         <input
                             v-model="emailMemberForm.invitation_expires_at"
                             type="date"
@@ -2079,28 +2079,28 @@ const inviteExternalMember = (member) => {
                             class="rounded-lg border border-border bg-bg p-4"
                         >
                             <div class="mb-3 flex items-center justify-between gap-3">
-                                <h3 class="text-sm font-semibold text-primary">Mitglied {{ index + 1 }}</h3>
+                                <h3 class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.member_numbered', 'Mitglied {number}', { number: index + 1 }) }}</h3>
                                 <button
                                     type="button"
                                     class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-inputBg"
                                     @click="removeEmailMemberRow(index)"
                                 >
-                                    Entfernen
+                                    {{ tx('club_memberships.workspace.remove_row', 'Entfernen') }}
                                 </button>
                             </div>
 
                             <div class="grid gap-3 md:grid-cols-2">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Name</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.name', 'Name') }}</label>
                                     <input
                                         v-model="member.name"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">E-Mail</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.email', 'E-Mail') }}</label>
                                     <input
                                         v-model="member.email"
                                         type="email"
@@ -2111,39 +2111,39 @@ const inviteExternalMember = (member) => {
                                 </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedschaft</label>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Mitgliedschaft', 'Mitgliedschaft') }}</label>
 	                                    <select v-model="member.membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 	                                        <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
 	                                    </select>
 	                                </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">Vereinsrolle</label>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.club_role', 'Vereinsrolle') }}</label>
 	                                    <select v-model="member.role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 	                                        <option v-for="role in clubRoles" :key="role.value" :value="role.value">{{ role.label }}</option>
 	                                    </select>
 	                                </div>
 
 	                                <div>
-	                                    <label class="text-xs font-semibold uppercase text-secondary">Mitgliedsnummer</label>
+	                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.member_number', 'Mitgliedsnummer') }}</label>
                                     <input
                                         v-model="member.member_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Lizenznummer</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.license_number', 'Lizenznummer') }}</label>
                                     <input
                                         v-model="member.athlete_license_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Beitrag</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution', 'Beitrag') }}</label>
                                     <input
                                         v-model="member.contribution_amount"
                                         type="number"
@@ -2155,14 +2155,14 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Intervall</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.interval_label', 'Intervall') }}</label>
                                     <select v-model="member.contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                         <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Nächste automatische Rechnung</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.next_invoice', 'Nächste automatische Rechnung') }}</label>
                                     <input
                                         v-model="member.contribution_next_invoice_on"
                                         type="date"
@@ -2171,34 +2171,34 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">SEPA IBAN</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                     <input
                                         v-model="member.sepa_iban"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">SEPA BIC</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_bic', 'SEPA BIC') }}</label>
                                     <input
                                         v-model="member.sepa_bic"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Mandatsreferenz</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_reference', 'Mandatsreferenz') }}</label>
                                     <input
                                         v-model="member.sepa_mandate_reference"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                        placeholder="Optional"
+                                        :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                                     >
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Mandatsdatum</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.mandate_date', 'Mandatsdatum') }}</label>
                                     <input
                                         v-model="member.sepa_mandate_signed_on"
                                         type="date"
@@ -2208,11 +2208,11 @@ const inviteExternalMember = (member) => {
 
                                 <label class="flex items-center gap-2 self-end rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <input v-model="member.sepa_mandate_active" type="checkbox" class="rounded border-border bg-bg">
-                                    SEPA aktiv
+                                    {{ tx('club_memberships.workspace.sepa_active', 'SEPA aktiv') }}
                                 </label>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Ende der Mitgliedschaft</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_end', 'Ende der Mitgliedschaft') }}</label>
                                     <input
                                         v-model="member.membership_ends_on"
                                         type="date"
@@ -2228,15 +2228,15 @@ const inviteExternalMember = (member) => {
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg"
                         @click="addEmailMemberRow"
                     >
-                        Weiteres Mitglied
+                        {{ tx('club_memberships.workspace.add_another_member', 'Weiteres Mitglied') }}
                     </button>
 
                     <div class="flex justify-end gap-2">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showAddMemberModal = false">
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                            Mitglieder speichern
+                            {{ tx('club_memberships.workspace.save_members', 'Mitglieder speichern') }}
                         </button>
                     </div>
                 </form>
@@ -2245,27 +2245,27 @@ const inviteExternalMember = (member) => {
 
         <Modal :show="showImportModal" max-width="2xl" @close="showImportModal = false">
             <div class="p-2">
-                <h2 class="text-xl font-bold text-primary">Mitglieder importieren</h2>
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.import_title', 'Mitglieder importieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Importiere Excel- oder CSV-Listen mit Name, E-Mail, Mitgliedsnummer, Lizenznummer, Beitrag, Eintritts- und Enddatum.
+                    {{ tx('club_memberships.workspace.import_intro', 'Importiere Excel- oder CSV-Listen mit Name, E-Mail, Mitgliedsnummer, Lizenznummer, Beitrag, Eintritts- und Enddatum.') }}
                 </p>
 
                 <div class="mt-4 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                    <p class="font-semibold text-primary">Empfohlen</p>
+                    <p class="font-semibold text-primary">{{ tx('club_memberships.workspace.recommended', 'Empfohlen') }}</p>
                     <p class="mt-1">
-                        Lade zuerst die Airmius Excel-Vorlage herunter. Die erste Beispielzeile kannst du ersetzen oder entfernen.
+                        {{ tx('club_memberships.workspace.template_intro', 'Lade zuerst die Airmius Excel-Vorlage herunter. Die erste Beispielzeile kannst du ersetzen oder entfernen.') }}
                     </p>
                     <a
                         :href="route('auth.club-memberships.import-template')"
                         class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-inputBg"
                     >
-                        Vorlage herunterladen
+                        {{ tx('club_memberships.workspace.download_template', 'Vorlage herunterladen') }}
                     </a>
                 </div>
 
                 <form class="mt-5 space-y-4" @submit.prevent="importEmailMembers">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Datei</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.file', 'Datei') }}</label>
                         <input
                             type="file"
                             accept=".xlsx,.csv,.txt"
@@ -2279,19 +2279,19 @@ const inviteExternalMember = (member) => {
                     <label class="flex items-start gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary">
                         <input v-model="importForm.send_invitation" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            Einladung/Verknüpfung direkt aktivieren
+                            {{ tx('club_memberships.workspace.invitation_link_direct', 'Einladung/Verknüpfung direkt aktivieren') }}
                             <span class="block text-xs text-secondary">
-                                Bestehende Airmius-Konten werden verbunden, sonst wird eine Einladung an die E-Mail-Adresse gesendet.
+                                {{ tx('club_memberships.workspace.invitation_link_hint', 'Bestehende Airmius-Konten werden verbunden, sonst wird eine Einladung an die E-Mail-Adresse gesendet.') }}
                             </span>
                         </span>
                     </label>
 
                     <div class="flex justify-end gap-2">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showImportModal = false">
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="importForm.processing">
-                            Import starten
+                        {{ tx('club_memberships.workspace.start_import', 'Import starten') }}
                         </button>
                     </div>
                 </form>
@@ -2301,58 +2301,58 @@ const inviteExternalMember = (member) => {
         <Modal :show="showFinanceEntryModal" max-width="2xl" @close="showFinanceEntryModal = false">
             <div class="p-2">
                 <h2 class="text-xl font-bold text-primary">
-                    {{ editingFinanceEntryId ? 'Buchung bearbeiten' : financeTypeLabel(financeEntryForm.type) + ' buchen' }}
+                    {{ editingFinanceEntryId ? tx('club_memberships.workspace.finance_edit_title', 'Buchung bearbeiten') : tx('club_memberships.workspace.finance_add_title', '{type} buchen', { type: financeTypeLabel(financeEntryForm.type) }) }}
                 </h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Erfasse freie Einnahmen und Ausgaben für Kasse oder Bank. Mitgliedszahlungen werden weiterhin über Rechnungen, Spenden oder Vorauszahlungen gebucht.
+                    {{ tx('club_memberships.workspace.finance_intro', 'Erfasse freie Einnahmen und Ausgaben für Kasse oder Bank. Mitgliedszahlungen werden weiterhin über Rechnungen, Spenden oder Vorauszahlungen gebucht.') }}
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="saveFinanceEntry">
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Typ</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Typ', 'Typ') }}</label>
                             <select
                                 v-model="financeEntryForm.type"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                 @change="syncFinanceEntryCategoryForType"
                             >
-                                <option value="income">Einnahme</option>
-                                <option value="expense">Ausgabe</option>
+                                <option value="income">{{ tx('club_memberships.finance.type.income', 'Einnahme') }}</option>
+                                <option value="expense">{{ tx('club_memberships.finance.type.expense', 'Ausgabe') }}</option>
                             </select>
                             <p v-if="financeEntryForm.errors.type" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.type }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Konto</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.account', 'Konto') }}</label>
                             <select v-model="financeEntryForm.account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <option value="cash">Bar</option>
-                                <option value="bank">Bank</option>
+                                <option value="cash">{{ tx('club_memberships.finance.account.cash', 'Bar') }}</option>
+                                <option value="bank">{{ tx('club_memberships.finance.account.bank', 'Bank') }}</option>
                             </select>
                             <p v-if="financeEntryForm.errors.account" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.account }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Titel</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Titel', 'Titel') }}</label>
                             <input
                                 v-model="financeEntryForm.title"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                placeholder="z. B. Hallenmiete"
+                                :placeholder="tx('club_memberships.workspace.category_placeholder', 'z. B. Hallenmiete')"
                                 required
                             >
                             <p v-if="financeEntryForm.errors.title" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.title }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Kategorie</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.category', 'Kategorie') }}</label>
                             <SearchableSelect
                                 v-model="financeEntryForm.category"
                                 :options="financeCategoryOptions"
-                                placeholder="Kategorie suchen oder auswählen"
-                                empty-text="Keine Kategorie gefunden."
+                                :placeholder="tx('club_memberships.workspace.category_placeholder', 'Kategorie suchen oder auswählen')"
+                                :empty-text="tx('club_memberships.workspace.category_empty', 'Keine Kategorie gefunden.')"
                                 :allow-custom="false"
                                 class="mt-1"
                             />
                             <p v-if="financeEntryForm.errors.category" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.category }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Betrag EUR</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.amount_eur', 'Betrag EUR') }}</label>
                             <input
                                 v-model="financeEntryForm.amount"
                                 type="number"
@@ -2364,7 +2364,7 @@ const inviteExternalMember = (member) => {
                             <p v-if="financeEntryForm.errors.amount" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.amount }}</p>
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Datum</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Datum', 'Datum') }}</label>
                             <input
                                 v-model="financeEntryForm.booked_on"
                                 type="date"
@@ -2372,30 +2372,30 @@ const inviteExternalMember = (member) => {
                             >
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="text-xs font-semibold uppercase text-secondary">Referenz</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.reference', 'Referenz') }}</label>
                             <input
                                 v-model="financeEntryForm.reference"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                placeholder="Belegnummer, Kontoauszug, Notiz"
+                                :placeholder="tx('club_memberships.workspace.reference_placeholder', 'Belegnummer, Kontoauszug, Notiz')"
                             >
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="text-xs font-semibold uppercase text-secondary">Beschreibung</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.description', 'Beschreibung') }}</label>
                             <textarea
                                 v-model="financeEntryForm.description"
                                 rows="3"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                placeholder="Optional"
+                                :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
                             />
                         </div>
                     </div>
 
                     <div class="flex justify-end gap-2">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showFinanceEntryModal = false">
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="financeEntryForm.processing">
-                            Speichern
+                            {{ tx('auto.Speichern', 'Speichern') }}
                         </button>
                     </div>
                 </form>
@@ -2404,14 +2404,14 @@ const inviteExternalMember = (member) => {
 
         <Modal :show="showBankImportModal" max-width="2xl" @close="showBankImportModal = false">
             <div class="p-2">
-                <h2 class="text-xl font-bold text-primary">Bankumsätze importieren</h2>
+                <h2 class="text-xl font-bold text-primary">{{ tx('club_memberships.workspace.bank_import_title', 'Bankumsätze importieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Lade eine CSV aus dem Online-Banking hoch. Erkannt werden typische Spalten wie Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.
+                    {{ tx('club_memberships.workspace.bank_import_intro', 'Lade eine CSV aus dem Online-Banking hoch. Erkannt werden typische Spalten wie Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.') }}
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="importBankTransactions">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">CSV-Datei</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.csv_file', 'CSV-Datei') }}</label>
                         <input
                             type="file"
                             accept=".csv,.txt"
@@ -2423,15 +2423,15 @@ const inviteExternalMember = (member) => {
                     </div>
 
                     <p class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                        Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen.
+                        {{ tx('club_memberships.workspace.bank_import_hint', 'Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen.') }}
                     </p>
 
                     <div class="flex justify-end gap-2">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showBankImportModal = false">
-                            Abbrechen
+                            {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="bankImportForm.processing">
-                            Import starten
+                            {{ tx('club_memberships.workspace.start_import', 'Import starten') }}
                         </button>
                     </div>
                 </form>
