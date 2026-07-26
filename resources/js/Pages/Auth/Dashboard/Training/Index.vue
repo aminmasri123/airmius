@@ -7,7 +7,14 @@ import { useI18n } from 'vue-i18n'
 defineOptions({ layout: AppLayout })
 
 const { t } = useI18n()
-const tx = (key, params = {}) => t(key, params)
+const tx = (key, fallback = key, params = {}) => {
+    if (fallback && typeof fallback === 'object') {
+        params = fallback
+        fallback = key
+    }
+    const translated = t(key, params)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     plans: { type: Array, default: () => [] },
@@ -283,12 +290,12 @@ const {
                     </span>
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Training fortsetzen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Training fortsetzen', 'Training fortsetzen') }}</p>
                             <span class="rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
-                                Entwurf automatisch gespeichert
+                                {{ tx('auto.Entwurf automatisch gespeichert', 'Entwurf automatisch gespeichert') }}
                             </span>
                         </div>
-                        <h2 class="mt-1 truncate text-lg font-semibold text-primary">{{ activeDraftLog.title || 'Training-Entwurf' }}</h2>
+                        <h2 class="mt-1 truncate text-lg font-semibold text-primary">{{ activeDraftLog.title || tx('auto.Training-Entwurf', 'Training-Entwurf') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
                             {{ sportLabel(activeDraftLog.sport_type) }} &middot; zuletzt gespeichert {{ formatDate(activeDraftLog.updated_at) }} {{ formatTime(activeDraftLog.updated_at) }} &middot; {{ activeDraftLog.entries?.length || 0 }} Einträge
                         </p>
@@ -296,10 +303,10 @@ const {
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openLogPage">
-                        Weiter trainieren
+                        {{ tx('auto.Weiter trainieren', 'Weiter trainieren') }}
                     </button>
                     <button type="button" class="rounded-xl border border-danger/40 px-4 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="openDraftDelete">
-                        Entwurf verwerfen
+                        {{ tx('auto.Entwurf verwerfen', 'Entwurf verwerfen') }}
                     </button>
                 </div>
             </div>
@@ -348,11 +355,11 @@ const {
             <div v-if="upcomingItems.length" class="rounded-2xl border border-border bg-card p-3 sm:p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Start</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary sm:text-xl">Was steht als Nächstes an?</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Start', 'Start') }}</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary sm:text-xl">{{ tx('auto.Was steht als Nächstes an?', 'Was steht als Nächstes an?') }}</h2>
                     </div>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:px-4" @click="activeTrainingSection = 'plans'">
-                        Zu den Plänen
+                        {{ tx('auto.Zu den Plänen', 'Zu den Plänen') }}
                     </button>
                 </div>
                 <div class="mt-3 grid gap-2.5 md:grid-cols-2">
@@ -366,10 +373,10 @@ const {
                                 <p class="mt-1 text-xs text-secondary">{{ item.plan.title }} &middot; {{ formatDate(item.scheduled_at) }} {{ formatTime(item.scheduled_at) }}</p>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     <button type="button" class="rounded-lg border border-success/40 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/10" @click="documentPlanItem(item)">
-                                        Dokumentieren
+                                        {{ tx('auto.Dokumentieren', 'Dokumentieren') }}
                                     </button>
                                     <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="openPlanItem(item)">
-                                        Details
+                                        {{ tx('auto.Details', 'Details') }}
                                     </button>
                                 </div>
                             </div>
@@ -381,20 +388,20 @@ const {
             <div v-else class="rounded-2xl border border-border bg-card p-2 sm:hidden">
                 <div class="grid grid-cols-2 gap-2">
                     <button type="button" class="rounded-xl bg-buttonPrimary px-3 py-2.5 text-sm font-semibold text-buttonTextPrimary" @click="activeTrainingSection = 'plans'">
-                        Pläne öffnen
+                        {{ tx('auto.Pläne öffnen', 'Pläne öffnen') }}
                     </button>
                     <button type="button" class="rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-primary" @click="activeTrainingSection = 'week'">
-                        Woche
+                        {{ tx('auto.Woche', 'Woche') }}
                     </button>
                 </div>
             </div>
 
             <aside class="hidden space-y-3 sm:block">
                 <section class="rounded-2xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aufmerksamkeit</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Aufmerksamkeit', 'Aufmerksamkeit') }}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
-                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>überfällig</span>
-                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.feedbackOpen.length }}</b>Feedback offen</span>
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>{{ tx('auto.überfällig', 'überfällig') }}</span>
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.feedbackOpen.length }}</b>{{ tx('auto.Feedback offen', 'Feedback offen') }}</span>
                     </div>
                 </section>
             </aside>
@@ -403,11 +410,11 @@ const {
         <section v-if="activeTrainingSection === 'logs'" class="rounded-2xl border border-border bg-card">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Trainingsdokumentation</p>
-                    <h2 class="text-xl font-semibold text-primary">Ist-Einheiten</h2>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('auto.Trainingsdokumentation', 'Trainingsdokumentation') }}</p>
+                    <h2 class="text-xl font-semibold text-primary">{{ tx('auto.Ist-Einheiten', 'Ist-Einheiten') }}</h2>
                 </div>
                 <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openLogPage">
-                    Training dokumentieren
+                    {{ tx('training_workspace.log_create.title', 'Training dokumentieren') }}
                 </button>
             </div>
             <div class="divide-y divide-border">
@@ -436,18 +443,18 @@ const {
                     <div class="grid grid-cols-3 gap-2 text-xs text-secondary">
                         <span class="rounded-lg border border-border px-2 py-1">{{ formatDuration(log.duration_minutes) }}</span>
                         <span class="rounded-lg border border-border px-2 py-1">{{ formatDistance(log.distance_meters) }}</span>
-                        <span class="rounded-lg border border-border px-2 py-1">{{ log.entries?.length || 0 }} Übungen</span>
+                        <span class="rounded-lg border border-border px-2 py-1">{{ log.entries?.length || 0 }} {{ tx('auto.Übungen', 'Übungen') }}</span>
                     </div>
                     <div class="text-sm text-secondary lg:text-right">
-                        <p class="font-semibold text-primary">{{ log.athlete?.name || 'Ich' }}</p>
-                        <p v-if="log.trainer">durch {{ log.trainer.name }}</p>
-                        <p v-else>{{ log.plan_item ? `Plan: ${log.plan_item.title}` : 'Spontan' }}</p>
+                        <p class="font-semibold text-primary">{{ log.athlete?.name || tx('auto.Ich', 'Ich') }}</p>
+                        <p v-if="log.trainer">{{ tx('auto.durch', 'durch') }} {{ log.trainer.name }}</p>
+                        <p v-else>{{ log.plan_item ? `${tx('auto.Plan', 'Plan')}: ${log.plan_item.title}` : tx('auto.Spontan', 'Spontan') }}</p>
                         <button v-if="log.status === 'draft'" type="button" class="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="openLogPage">
                             Weiter bearbeiten
                         </button>
                     </div>
                 </article>
-                <p v-if="!visibleLogs.length" class="p-4 text-sm text-secondary">Noch keine Trainings dokumentiert.</p>
+                <p v-if="!visibleLogs.length" class="p-4 text-sm text-secondary">{{ tx('auto.Noch keine Trainings dokumentiert.', 'Noch keine Trainings dokumentiert.') }}</p>
             </div>
         </section>
 
@@ -455,10 +462,10 @@ const {
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Wochenansicht</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary">Diese Trainingswoche</h2>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Wochenansicht', 'Wochenansicht') }}</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('auto.Diese Trainingswoche', 'Diese Trainingswoche') }}</h2>
                     </div>
-                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ plannedLogItems.length }} geplante Einheiten</span>
+                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ plannedLogItems.length }} {{ tx('auto.geplante Einheiten', 'geplante Einheiten') }}</span>
                 </div>
                 <div class="mt-4 grid gap-2 md:grid-cols-7">
                     <div v-for="day in weekDays" :key="day.key" class="min-h-32 rounded-xl border border-border bg-inputBg/40 p-2 transition hover:border-air-blue/50" @dragover.prevent @drop="dropItemOnDay(day)">
@@ -482,31 +489,31 @@ const {
                                     </button>
                                 </div>
                             </div>
-                            <p v-if="!day.items.length" class="text-xs text-secondary">frei</p>
+                            <p v-if="!day.items.length" class="text-xs text-secondary">{{ tx('frei', 'frei') }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Trainer-Dashboard</p>
-                <h2 class="mt-1 text-lg font-semibold text-primary">Aufmerksamkeit</h2>
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Trainer-Dashboard', 'Trainer-Dashboard') }}</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('auto.Aufmerksamkeit', 'Aufmerksamkeit') }}</h2>
                 <div class="mt-4 grid grid-cols-2 gap-2">
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.overdue.length }}</p>
-                        <p class="text-xs text-secondary">überfällig</p>
+                        <p class="text-xs text-secondary">{{ tx('auto.überfällig', 'überfällig') }}</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.missed.length }}</p>
-                        <p class="text-xs text-secondary">Ausfälle</p>
+                        <p class="text-xs text-secondary">{{ tx('auto.Ausfälle', 'Ausfälle') }}</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.feedbackOpen.length }}</p>
-                        <p class="text-xs text-secondary">Feedback offen</p>
+                        <p class="text-xs text-secondary">{{ tx('auto.Feedback offen', 'Feedback offen') }}</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.painSignals.length }}</p>
-                        <p class="text-xs text-secondary">Schmerzsignal</p>
+                        <p class="text-xs text-secondary">{{ tx('auto.Schmerzsignal', 'Schmerzsignal') }}</p>
                     </div>
                 </div>
                 <div class="mt-4 space-y-2">
@@ -514,7 +521,7 @@ const {
                         <p class="text-sm font-semibold text-primary">{{ item.title }}</p>
                         <p class="text-xs text-secondary">{{ item.plan.title }} · {{ formatDate(item.scheduled_at) }}</p>
                     </div>
-                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">Keine überfälligen Einheiten.</p>
+                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">{{ tx('auto.Keine überfälligen Einheiten.', 'Keine überfälligen Einheiten.') }}</p>
                 </div>
             </div>
         </section>
@@ -523,38 +530,38 @@ const {
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Athleten-Cockpit</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary">Belastung, Signale und letzte Aktivität</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Athleten-Cockpit', 'Athleten-Cockpit') }}</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('auto.Belastung, Signale und letzte Aktivität', 'Belastung, Signale und letzte Aktivität') }}</h2>
                     </div>
-                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ athleteCockpit.length }} Profile</span>
+                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ athleteCockpit.length }} {{ tx('Profile', 'Profile') }}</span>
                 </div>
                 <div class="mt-4 grid gap-3 lg:grid-cols-2">
                     <article v-for="entry in athleteCockpit.slice(0, 6)" :key="entry.athlete.id || entry.athlete.name" class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold text-primary">{{ entry.athlete.name }}</p>
-                                <p class="mt-1 text-xs text-secondary">{{ entry.latest?.title || 'Keine letzte Einheit' }} · {{ formatDate(entry.latest?.performed_at || entry.latest?.created_at) }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ entry.latest?.title || tx('auto.Keine letzte Einheit', 'Keine letzte Einheit') }} · {{ formatDate(entry.latest?.performed_at || entry.latest?.created_at) }}</p>
                             </div>
-                            <span class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">{{ entry.sessions }} Logs</span>
+                            <span class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">{{ entry.sessions }} {{ tx('auto.Logs', 'Logs') }}</span>
                         </div>
                         <div class="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
-                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ formatDuration(entry.minutes) }}</b>Zeit</span>
-                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ formatDistance(entry.meters) }}</b>Distanz</span>
+                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ formatDuration(entry.minutes) }}</b>{{ tx('auto.Zeit', 'Zeit') }}</span>
+                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ formatDistance(entry.meters) }}</b>{{ tx('auto.Distanz', 'Distanz') }}</span>
                             <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ entry.avgRpe }}</b>RPE</span>
-                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ entry.avgPain }}</b>Schmerz</span>
+                            <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ entry.avgPain }}</b>{{ tx('auto.Schmerz', 'Schmerz') }}</span>
                         </div>
                     </article>
-                    <p v-if="!athleteCockpit.length" class="text-sm text-secondary">Noch keine dokumentierten Einheiten für das Cockpit.</p>
+                    <p v-if="!athleteCockpit.length" class="text-sm text-secondary">{{ tx('auto.Noch keine dokumentierten Einheiten für das Cockpit.', 'Noch keine dokumentierten Einheiten für das Cockpit.') }}</p>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">KI-Coach</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary">Tipps aus generierten Plänen</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.KI-Coach', 'KI-Coach') }}</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('auto.Tipps aus generierten Plänen', 'Tipps aus generierten Plänen') }}</h2>
                     </div>
-                    <span class="rounded-full border border-air-blue/30 px-3 py-1 text-xs font-semibold text-air-blue">{{ aiGeneratedPlans.length }} Pläne</span>
+                    <span class="rounded-full border border-air-blue/30 px-3 py-1 text-xs font-semibold text-air-blue">{{ aiGeneratedPlans.length }} {{ tx('auto.Pläne', 'Pläne') }}</span>
                 </div>
                 <div class="mt-4 space-y-2">
                     <article v-for="insight in aiGeneratedPlanInsights" :key="`${insight.plan.id}-${insight.label}-${insight.text}`" class="rounded-xl border border-air-blue/25 bg-bg/50 p-3">
@@ -568,13 +575,13 @@ const {
                             </div>
                         </div>
                     </article>
-                    <p v-if="!aiGeneratedPlanInsights.length" class="text-sm text-secondary">Sobald ein KI-Plan gespeichert ist, erscheinen hier konkrete Analyse- und Verbesserungsvorschläge.</p>
+                    <p v-if="!aiGeneratedPlanInsights.length" class="text-sm text-secondary">{{ tx('auto.Sobald ein KI-Plan gespeichert ist, erscheinen hier konkrete Analyse- und Verbesserungsvorschläge.', 'Sobald ein KI-Plan gespeichert ist, erscheinen hier konkrete Analyse- und Verbesserungsvorschläge.') }}</p>
                 </div>
             </div>
 
             <div class="rounded-2xl border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Statistik</p>
-                <h2 class="mt-1 text-lg font-semibold text-primary">Sportarten-Verteilung</h2>
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('auto.Statistik', 'Statistik') }}</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('auto.Sportarten-Verteilung', 'Sportarten-Verteilung') }}</h2>
                 <div class="mt-4 space-y-3">
                     <div v-for="row in sportStats.slice(0, 6)" :key="row.key">
                         <div class="flex items-center justify-between text-xs font-semibold">
@@ -585,7 +592,7 @@ const {
                             <div class="h-full rounded-full bg-air-blue" :style="{ width: `${Math.min(100, row.sessions * 18)}%` }"></div>
                         </div>
                     </div>
-                    <p v-if="!sportStats.length" class="text-sm text-secondary">Sobald Trainings gespeichert sind, erscheinen hier Trends.</p>
+                    <p v-if="!sportStats.length" class="text-sm text-secondary">{{ tx('auto.Sobald Trainings gespeichert sind, erscheinen hier Trends.', 'Sobald Trainings gespeichert sind, erscheinen hier Trends.') }}</p>
                 </div>
             </div>
         </section>
@@ -595,7 +602,7 @@ const {
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ selectedSport.label }}</p>
-                        <h2 class="text-xl font-semibold text-primary">Trainingspläne</h2>
+                        <h2 class="text-xl font-semibold text-primary">{{ tx('Trainingspläne', 'Trainingspläne') }}</h2>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
@@ -627,7 +634,7 @@ const {
                                         </span>
                                     </div>
                                     <h3 class="mt-3 truncate text-lg font-semibold text-primary">{{ plan.title }}</h3>
-                                    <p class="mt-1 hidden line-clamp-2 text-sm text-secondary md:block">{{ plan.description || 'Keine Beschreibung hinterlegt.' }}</p>
+                                    <p class="mt-1 hidden line-clamp-2 text-sm text-secondary md:block">{{ plan.description || tx('auto.Keine Beschreibung hinterlegt.', 'Keine Beschreibung hinterlegt.') }}</p>
                                     <p v-if="plan.settings?.ai_generation?.convincing_explanation" class="mt-2 hidden line-clamp-2 rounded-xl border border-air-blue/25 bg-air-blue/10 px-3 py-2 text-xs text-primary md:block">
                                         Warum so: {{ plan.settings.ai_generation.convincing_explanation }}
                                     </p>

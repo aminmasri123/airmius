@@ -114,9 +114,9 @@ const submitMembershipRequest = () => {
                 </div>
 
                 <form class="mt-8 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-4" @submit.prevent="search">
-                    <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Verein')" />
-                    <SearchableSelect v-model="form.sport_type" :options="sports" value-key="slug" translation-prefix="sports" category-translation-prefix="sport_categories" :placeholder="$t('Sportart suchen')" />
-                    <input v-model="form.location" class="rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Stadt, PLZ oder Land')" />
+                    <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Verein')" :placeholder="$t('Verein')" />
+                    <SearchableSelect v-model="form.sport_type" :options="sports" value-key="slug" translation-prefix="sports" category-translation-prefix="sport_categories" :aria-label="$t('Sportart suchen')" :placeholder="$t('Sportart suchen')" />
+                    <input v-model="form.location" class="rounded-lg border-border bg-inputBg text-primary" :aria-label="$t('Stadt, PLZ oder Land')" :placeholder="$t('Stadt, PLZ oder Land')" />
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary">{{ $t('Suchen') }}</button>
                 </form>
             </section>
@@ -168,7 +168,7 @@ const submitMembershipRequest = () => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t('Mitgliedsantrag') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedClub.name }}</h2>
                     </div>
-                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="selectedClub = null">
+                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" :aria-label="$t('Schließen')" :title="$t('Schließen')" @click="selectedClub = null">
                         <i class="las la-times text-xl"></i>
                     </button>
                 </div>

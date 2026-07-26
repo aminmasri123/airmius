@@ -92,7 +92,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
                     </div>
 
                     <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_10rem_auto]" method="get" :action="route('guest.e-learning')">
-                        <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Kurse suchen')">
+                        <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Kurse suchen')" :placeholder="$t('Kurse suchen')">
                         <select name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="">{{ $t('Alle Kategorien') }}</option>
                             <option v-for="category in facets.categories" :key="category" :value="category" :selected="filters.category === category">{{ category }}</option>

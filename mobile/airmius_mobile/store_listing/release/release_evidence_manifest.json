@@ -1,9 +1,9 @@
 ﻿{
     "product":  "Airmius Mobile",
-    "version":  "1.0.0+1",
+    "version":  "1.0.12+13",
     "overall_preparation_percent":  99,
     "remaining_percent_requires_evidence":  1,
-    "api_base_url":  "https://app.airmius.com",
+    "api_base_url":  "https://airmius.com",
     "android_application_id":  "com.airmius.app",
     "ios_bundle_id":  "com.airmius.app",
     "gates":  [
