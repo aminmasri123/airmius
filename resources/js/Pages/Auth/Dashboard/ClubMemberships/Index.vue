@@ -1919,7 +1919,7 @@ const inviteExternalMember = (member) => {
                 </div>
 
                 <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-sm text-secondary">{{ filteredBankTransactions.length }} von {{ bankTransactions.length }} Umsätzen sichtbar.</p>
+                        <p class="text-sm text-secondary">{{ tx('club_memberships.workspace.visible_transactions', '{visible} von {total} Umsätzen sichtbar.', { visible: filteredBankTransactions.length, total: bankTransactions.length }) }}</p>
                     <select v-model="transactionStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         <option value="all">{{ tx('auto.Alle Status', 'Alle Status') }}</option>
                         <option value="matched">{{ tx('club_memberships.workspace.matched', 'Verbucht') }}</option>
@@ -2002,11 +2002,11 @@ const inviteExternalMember = (member) => {
                     <form class="grid gap-3 md:grid-cols-2" @submit.prevent="saveDatevSettings">
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.advisor_number', 'Beraternummer') }}</label>
-                            <input v-model="datevSettingsFor(selectedClub).datev_consultant_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
+                            <input v-model="datevSettingsFor(selectedClub).datev_consultant_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('club_memberships.workspace.optional', 'Optional')">
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.client_number', 'Mandantennummer') }}</label>
-                            <input v-model="datevSettingsFor(selectedClub).datev_client_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
+                            <input v-model="datevSettingsFor(selectedClub).datev_client_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('club_memberships.workspace.optional', 'Optional')">
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.revenue_account', 'Erlöskonto SKR42') }}</label>
@@ -2029,15 +2029,15 @@ const inviteExternalMember = (member) => {
 
                     <div class="grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-2">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Von</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Von', 'Von') }}</label>
                             <input v-model="datevExportFor(selectedClub).from" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Bis</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Bis', 'Bis') }}</label>
                             <input v-model="datevExportFor(selectedClub).to" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         </div>
                         <p class="text-xs text-secondary md:col-span-2">
-                            Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten.
+                            {{ tx('club_memberships.workspace.datev_period_hint', 'Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten.') }}
                         </p>
                     </div>
                 </div>
@@ -2386,7 +2386,7 @@ const inviteExternalMember = (member) => {
                                 rows="3"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                                 :placeholder="tx('club_memberships.workspace.optional', 'Optional')"
-                            />
+                            ></textarea>
                         </div>
                     </div>
 

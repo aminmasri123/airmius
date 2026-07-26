@@ -43,4 +43,23 @@ void main() {
       expect(response.statusCode, HttpStatus.ok);
     },
   );
+
+  test('maps native connection failures to a readable API exception', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final port = server.port;
+    await server.close(force: true);
+
+    await expectLater(
+      AirmiusHttpTransport(baseUrl: 'http://127.0.0.1:$port').send(
+        const AirmiusApiRequest(method: 'POST', path: '/api/v1/auth/login'),
+      ),
+      throwsA(
+        isA<AirmiusApiException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          599,
+        ),
+      ),
+    );
+  });
 }

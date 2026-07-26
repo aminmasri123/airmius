@@ -8426,7 +8426,9 @@
       "bank_import_title": "Importer des opérations bancaires",
       "bank_import_intro": "Importez un CSV de votre banque en ligne. La date, le montant, le payeur, l'IBAN et le motif sont détectés.",
       "csv_file": "Fichier CSV",
-      "bank_import_hint": "Les correspondances sûres avec numéro de facture et montant sont marquées comme payées. Confirmez ensuite les suggestions."
+      "bank_import_hint": "Les correspondances sûres avec numéro de facture et montant sont marquées comme payées. Confirmez ensuite les suggestions.",
+      "visible_transactions": "{visible} opérations sur {total} visibles.",
+      "datev_period_hint": "Les paiements réglés sur la période sont exportés. Le format CSV bêta reste volontairement simple et vérifiable."
     },
     "finance": {
       "type": {

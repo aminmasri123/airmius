@@ -8426,7 +8426,9 @@
       "bank_import_title": "Import bank transactions",
       "bank_import_intro": "Upload a CSV from online banking. Date, amount, payer, IBAN and reference are detected.",
       "csv_file": "CSV file",
-      "bank_import_hint": "Strong matches with invoice number and amount are marked paid automatically. You can confirm suggestions afterwards."
+      "bank_import_hint": "Strong matches with invoice number and amount are marked paid automatically. You can confirm suggestions afterwards.",
+      "visible_transactions": "{visible} of {total} transactions visible.",
+      "datev_period_hint": "Paid transactions in the selected period are exported. The beta CSV format is intentionally simple and easy to review."
     },
     "finance": {
       "type": {

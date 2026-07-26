@@ -39,8 +39,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
 
 <template>
     <SeoHead
-        title="E-Learning für Sportorganisation"
-        description="Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklaert."
+        :title="$t('E-Learning für Sportorganisation')"
+        :description="$t('Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklaert.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -62,7 +62,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
                             :href="canLogin ? route('auth.learning.studio.index') : route('register')"
                             class="inline-flex rounded-full bg-air-orange px-6 py-3 font-bold text-white transition hover:bg-orange-600"
                         >
-                            Sportschule starten
+                            {{ $t('Sportschule starten') }}
                         </Link>
                     </div>
                 </div>
@@ -83,30 +83,30 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
                 <div v-if="learningCourses.length" class="mb-12">
                     <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <h2 class="text-2xl font-bold text-primary">Online-Sportschule</h2>
-                            <p class="mt-2 text-secondary">Strukturierte Kurse mit Kapiteln, Lektionen, Quiz, Notizen und Tutor-Betreuung.</p>
+                            <h2 class="text-2xl font-bold text-primary">{{ $t('Online-Sportschule') }}</h2>
+                            <p class="mt-2 text-secondary">{{ $t('Strukturierte Kurse mit Kapiteln, Lektionen, Quiz, Notizen und Tutor-Betreuung.') }}</p>
                         </div>
                         <Link :href="canLogin ? route('auth.learning.studio.index') : route('register')" class="text-sm font-semibold text-air-orange">
-                            Tutor-Studio öffnen
+                            {{ $t('Tutor-Studio öffnen') }}
                         </Link>
                     </div>
 
                     <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_10rem_auto]" method="get" :action="route('guest.e-learning')">
-                        <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurse suchen">
+                        <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Kurse suchen')">
                         <select name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="">Alle Kategorien</option>
+                            <option value="">{{ $t('Alle Kategorien') }}</option>
                             <option v-for="category in facets.categories" :key="category" :value="category" :selected="filters.category === category">{{ category }}</option>
                         </select>
                         <select name="level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="">Alle Level</option>
+                            <option value="">{{ $t('Alle Level') }}</option>
                             <option v-for="level in facets.levels" :key="level" :value="level" :selected="filters.level === level">{{ level }}</option>
                         </select>
                         <select name="price" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="">Alle Preise</option>
-                            <option value="free" :selected="filters.price === 'free'">Kostenlos</option>
-                            <option value="paid" :selected="filters.price === 'paid'">Kostenpflichtig</option>
+                            <option value="">{{ $t('Alle Preise') }}</option>
+                            <option value="free" :selected="filters.price === 'free'">{{ $t('Kostenlos') }}</option>
+                            <option value="paid" :selected="filters.price === 'paid'">{{ $t('Kostenpflichtig') }}</option>
                         </select>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Filtern</button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ $t('Filtern') }}</button>
                     </form>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -134,12 +134,12 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
                                 </ul>
                                 <div class="mt-5 flex items-center justify-between gap-3">
                                     <div>
-                                        <p class="text-xs uppercase text-secondary">Umfang</p>
-                                        <p class="text-xl font-black text-primary">{{ course.lessons_count }} Lektionen</p>
-                                        <p class="text-xs text-secondary">{{ course.estimated_minutes }} Minuten</p>
+                                        <p class="text-xs uppercase text-secondary">{{ $t('Umfang') }}</p>
+                                        <p class="text-xl font-black text-primary">{{ course.lessons_count }} {{ $t('Lektionen') }}</p>
+                                        <p class="text-xs text-secondary">{{ course.estimated_minutes }} {{ $t('Minuten') }}</p>
                                     </div>
                                     <Link :href="course.show_url" class="rounded-full bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">
-                                        Ansehen
+                                        {{ $t('Ansehen') }}
                                     </Link>
                                 </div>
                             </div>
@@ -149,8 +149,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
 
                 <div v-else-if="learningProducts.length" class="mb-12">
                     <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-primary">Aktuelle Kurse und Trainingspläne</h2>
-                        <p class="mt-2 text-secondary">Bestehende digitale Angebote, bis die Sportschule vollständig befüllt ist.</p>
+                        <h2 class="text-2xl font-bold text-primary">{{ $t('Aktuelle Kurse und Trainingspläne') }}</h2>
+                        <p class="mt-2 text-secondary">{{ $t('Bestehende digitale Angebote, bis die Sportschule vollständig befüllt ist.') }}</p>
                     </div>
                 </div>
 

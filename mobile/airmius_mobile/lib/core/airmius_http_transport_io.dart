@@ -8,17 +8,21 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
 
   final String baseUrl;
 
+  static const _requestTimeout = Duration(seconds: 20);
+
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
-    final client = HttpClient();
+    final client = HttpClient()..connectionTimeout = _requestTimeout;
+    final uri = _uri(request);
     try {
-      final uri = _uri(request);
-      final ioRequest = await client.openUrl(request.method, uri);
+      final ioRequest = await client
+          .openUrl(request.method, uri)
+          .timeout(_requestTimeout);
       request.headers.forEach(ioRequest.headers.set);
       if (request.body != null) {
         ioRequest.write(jsonEncode(request.body));
       }
-      final response = await ioRequest.close();
+      final response = await ioRequest.close().timeout(_requestTimeout);
       final body = await utf8.decodeStream(response);
       final headers = <String, String>{};
       response.headers.forEach(
@@ -28,6 +32,16 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
         statusCode: response.statusCode,
         body: body,
         headers: headers,
+      );
+    } catch (error) {
+      if (error is AirmiusApiException) rethrow;
+      throw AirmiusApiException(
+        statusCode: 599,
+        body: jsonEncode({
+          'error': 'connection_failed',
+          'message': 'The API connection could not be completed.',
+        }),
+        path: request.path,
       );
     } finally {
       client.close(force: true);

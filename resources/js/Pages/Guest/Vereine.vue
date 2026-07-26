@@ -32,7 +32,7 @@ const requestForm = useForm({
 })
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const sportLabel = (value) => {
-    if (!value) return 'Sportart offen'
+    if (!value) return t('Sportart offen')
 
     const sport = props.sports.find((sport) => sport.slug === value || sport.name === value)
     const slug = sport?.slug || value
@@ -53,11 +53,11 @@ const search = () => {
 }
 
 const intervalLabel = (interval) => ({
-    monthly: 'Monat',
-    quarterly: 'Quartal',
-    yearly: 'Jahr',
-    once: 'einmalig',
-    none: 'kein Beitrag',
+    monthly: t('Monat'),
+    quarterly: t('Quartal'),
+    yearly: t('Jahr'),
+    once: t('einmalig'),
+    none: t('kein Beitrag'),
 }[interval] || interval)
 
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
@@ -71,9 +71,6 @@ const openMembershipRequest = (club) => {
         router.visit(route('login'))
         return
     }
-
-    router.visit(route('auth.clubs.show', club.id))
-    return
 
     selectedClub.value = club
     requestForm.club_membership_type_id = club.membership_types?.[0]?.id || ''
@@ -93,8 +90,8 @@ const submitMembershipRequest = () => {
 
 <template>
     <SeoHead
-        title="Vereine finden"
-        description="Finde Sportvereine nach Sportart, Standort und Teamangeboten. Entdecke Vereine auf Airmius und vernetze dich digital."
+        :title="$t('Vereine finden')"
+        :description="$t('Finde Sportvereine nach Sportart, Standort und Teamangeboten. Entdecke Vereine auf Airmius und vernetze dich digital.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -106,21 +103,21 @@ const submitMembershipRequest = () => {
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ $t('Vereine') }}</p>
                 <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <h1 class="max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                        Finde Vereine nach Sportart und Standort.
+                        {{ $t('Finde Vereine nach Sportart und Standort.') }}
                     </h1>
                     <Link
                         :href="page.props.auth?.user ? route('auth.teams.index') : (canRegister ? route('register') : route('login'))"
                         class="inline-flex w-fit items-center justify-center rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                     >
-                        Verein registrieren
+                        {{ $t('Verein registrieren') }}
                     </Link>
                 </div>
 
                 <form class="mt-8 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-4" @submit.prevent="search">
-                    <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" placeholder="Verein" />
-                    <SearchableSelect v-model="form.sport_type" :options="sports" value-key="slug" translation-prefix="sports" category-translation-prefix="sport_categories" placeholder="Sportart suchen" />
-                    <input v-model="form.location" class="rounded-lg border-border bg-inputBg text-primary" placeholder="Stadt, PLZ oder Land" />
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary">Suchen</button>
+                    <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Verein')" />
+                    <SearchableSelect v-model="form.sport_type" :options="sports" value-key="slug" translation-prefix="sports" category-translation-prefix="sport_categories" :placeholder="$t('Sportart suchen')" />
+                    <input v-model="form.location" class="rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Stadt, PLZ oder Land')" />
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary">{{ $t('Suchen') }}</button>
                 </form>
             </section>
 
@@ -134,14 +131,14 @@ const submitMembershipRequest = () => {
                         <div class="min-w-0">
                             <div class="flex min-w-0 items-center gap-2">
                                 <h2 class="truncate text-lg font-bold text-primary">{{ club.name }}</h2>
-                                <span v-if="club.is_official" class="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Offiziell</span>
+                                <span v-if="club.is_official" class="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">{{ $t('Offiziell') }}</span>
                             </div>
                             <p class="text-sm text-secondary">{{ sportLabel(club.sport_type) }}</p>
-                            <p class="mt-1 text-xs text-secondary">{{ club.postal_code }} {{ club.city }} · {{ club.country || 'Land offen' }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ club.postal_code }} {{ club.city }} · {{ club.country || $t('Land offen') }}</p>
                         </div>
                     </div>
                     <div class="mt-4 flex items-center justify-between">
-                        <span class="text-sm text-secondary">{{ club.teams_count }} Teams</span>
+                        <span class="text-sm text-secondary">{{ club.teams_count }} {{ $t('Teams') }}</span>
                         <div class="flex gap-2">
                             <button
                                 v-if="club.membership_requests_enabled"
@@ -149,17 +146,17 @@ const submitMembershipRequest = () => {
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                                 @click="openMembershipRequest(club)"
                             >
-                                Mitgliedschaft anfragen
+                                {{ $t('Mitgliedschaft anfragen') }}
                             </button>
                             <Link :href="page.props.auth?.user ? route('auth.clubs.show', club.id) : route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                Ansehen
+                                {{ $t('Ansehen') }}
                             </Link>
                         </div>
                     </div>
                 </article>
 
                 <div v-if="!clubs.length" class="surface-card p-8 text-center text-sm text-secondary md:col-span-2 xl:col-span-3">
-                    Keine Vereine zu diesen Suchkriterien gefunden.
+                    {{ $t('Keine Vereine zu diesen Suchkriterien gefunden') }}
                 </div>
             </section>
         </main>
@@ -168,7 +165,7 @@ const submitMembershipRequest = () => {
             <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl" @submit.prevent="submitMembershipRequest">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Mitgliedsantrag</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t('Mitgliedsantrag') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedClub.name }}</h2>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="selectedClub = null">
@@ -178,9 +175,9 @@ const submitMembershipRequest = () => {
 
                 <div class="mt-4 space-y-3">
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Mitgliedschaftstyp</span>
+                        <span class="text-sm font-semibold text-primary">{{ $t('Mitgliedschaftstyp') }}</span>
                         <select v-model="requestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option value="">Allgemeine Anfrage</option>
+                            <option value="">{{ $t('Allgemeine Anfrage') }}</option>
                             <option v-for="type in selectedClub.membership_types" :key="type.id" :value="type.id">
                                 {{ type.name }}
                                 <template v-if="type.amount !== null && type.amount !== undefined">
@@ -194,18 +191,18 @@ const submitMembershipRequest = () => {
                         <p v-for="type in selectedClub.membership_types" :key="type.id" class="py-1">
                             <span class="font-semibold text-primary">{{ type.name }}:</span>
                             <span v-if="type.amount !== null && type.amount !== undefined">{{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</span>
-                            <span v-else>Beitrag nach Rücksprache</span>
+                            <span v-else>{{ $t('Beitrag nach Rücksprache') }}</span>
                         </p>
                     </div>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Nachricht</span>
-                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum möchtest du Mitglied werden?"></textarea>
+                        <span class="text-sm font-semibold text-primary">{{ $t('Nachricht') }}</span>
+                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('Warum möchtest du Mitglied werden?')"></textarea>
                     </label>
                 </div>
 
                 <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="requestForm.processing">
-                    Anfrage senden
+                    {{ $t('Anfrage senden') }}
                 </button>
             </form>
         </div>
@@ -213,4 +210,3 @@ const submitMembershipRequest = () => {
         <Footer />
     </div>
 </template>
-

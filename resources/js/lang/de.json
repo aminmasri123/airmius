@@ -8086,7 +8086,9 @@
       "bank_import_title": "Bankumsätze importieren",
       "bank_import_intro": "Lade eine CSV aus dem Online-Banking hoch. Erkannt werden Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.",
       "csv_file": "CSV-Datei",
-      "bank_import_hint": "Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen."
+      "bank_import_hint": "Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen.",
+      "visible_transactions": "{visible} von {total} Umsätzen sichtbar.",
+      "datev_period_hint": "Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten."
     },
     "finance": {
       "type": {
