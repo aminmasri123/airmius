@@ -417,6 +417,95 @@ class TeamController extends Controller
         ]);
     }
 
+    public function invitationByToken(Request $request, string $token)
+    {
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertInvitationTokenRecipient($request, $invitation);
+
+        return response()->json([
+            'data' => $this->teamInvitationPayload($invitation),
+        ]);
+    }
+
+    public function acceptInvitationByToken(Request $request, string $token)
+    {
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertInvitationTokenRecipient($request, $invitation);
+        abort_if(
+            ! $invitation->team->club->users()->where('users.id', $request->user()->id)->exists()
+            && ! $invitation->team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
+
+        DB::transaction(function () use ($invitation, $request) {
+            $invitation->team->users()->syncWithoutDetaching([
+                $request->user()->id => ['role' => $invitation->role],
+            ]);
+
+            $invitation->team->club->users()->syncWithoutDetaching([
+                $request->user()->id => [
+                    'role' => 'member',
+                    'roles' => ['member'],
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
+            ]);
+
+            $invitation->update([
+                'recipient_id' => $request->user()->id,
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+        });
+
+        $this->markTeamInvitationNotificationResponded(
+            $invitation->fresh(['team.club']),
+            $request->user(),
+            'accepted'
+        );
+        $this->notifyTeamInvitationResponse(
+            $invitation->fresh(['team.club', 'inviter']),
+            $request->user(),
+            'accepted'
+        );
+
+        return new TeamResource(
+            $invitation->team->fresh()
+                ->load(['club.users', 'users', 'joinRequests.user'])
+                ->loadCount(['users', 'events'])
+        );
+    }
+
+    public function declineInvitationByToken(Request $request, string $token)
+    {
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertInvitationTokenRecipient($request, $invitation);
+
+        $invitation->update([
+            'recipient_id' => $request->user()->id,
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        $this->markTeamInvitationNotificationResponded(
+            $invitation->fresh(['team.club']),
+            $request->user(),
+            'declined'
+        );
+        $this->notifyTeamInvitationResponse(
+            $invitation->fresh(['team.club', 'inviter']),
+            $request->user(),
+            'declined'
+        );
+
+        return response()->json([
+            'data' => $this->teamInvitationPayload(
+                $invitation->fresh()->load(['team.club:id,name', 'inviter:id,name,email'])
+            ),
+        ]);
+    }
+
     public function acceptInvitation(Request $request, TeamInvitation $invitation)
     {
         abort_unless($invitation->recipient_id === $request->user()->id, 403);
@@ -687,6 +776,26 @@ class TeamController extends Controller
                 'email' => $invitation->inviter->email,
             ] : null,
         ];
+    }
+
+    private function pendingInvitationByToken(string $token): TeamInvitation
+    {
+        return TeamInvitation::query()
+            ->where('token', $token)
+            ->where('status', 'pending')
+            ->with(['team.club', 'inviter:id,name,email'])
+            ->firstOrFail();
+    }
+
+    private function assertInvitationTokenRecipient(
+        Request $request,
+        TeamInvitation $invitation
+    ): void {
+        abort_unless(
+            filled($invitation->email) &&
+                strtolower((string) $invitation->email) === strtolower((string) $request->user()->email),
+            403
+        );
     }
 
     private function notifyTeamInvitationResponse(TeamInvitation $invitation, User $responder, string $status): void

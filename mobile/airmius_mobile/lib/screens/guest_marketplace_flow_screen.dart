@@ -8,10 +8,12 @@ class GuestMarketplaceFlowScreen extends StatefulWidget {
   const GuestMarketplaceFlowScreen({super.key});
 
   @override
-  State<GuestMarketplaceFlowScreen> createState() => _GuestMarketplaceFlowScreenState();
+  State<GuestMarketplaceFlowScreen> createState() =>
+      _GuestMarketplaceFlowScreenState();
 }
 
-class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen> {
+class _GuestMarketplaceFlowScreenState
+    extends State<GuestMarketplaceFlowScreen> {
   String _filter = 'Alle';
   bool _showProducts = true;
   bool _showCheckout = true;
@@ -22,7 +24,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Marketplace Start',
       area: 'Shop',
       status: 'Guest',
-      body: 'Öffentliche Produktübersicht mit Kategorien, Suche, Badges, Preisen und schnellen Produktkarten.',
+      body:
+          'Öffentliche Produktübersicht mit Kategorien, Suche, Badges, Preisen und schnellen Produktkarten.',
       icon: Icons.storefront_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +33,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Produkt ansehen',
       area: 'Shop',
       status: 'Detail',
-      body: 'Mobile Produktdetailseite mit Galerie, Anbieter, Varianten, Beschreibung und Kaufaktion.',
+      body:
+          'Mobile Produktdetailseite mit Galerie, Anbieter, Varianten, Beschreibung und Kaufaktion.',
       icon: Icons.inventory_2_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +42,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Anbieterprofil',
       area: 'Provider',
       status: 'Partner',
-      body: 'Profil für Marketplace-Anbieter mit Sortiment, Standort, Bewertung, Kontakt und Vertrauen.',
+      body:
+          'Profil für Marketplace-Anbieter mit Sortiment, Standort, Bewertung, Kontakt und Vertrauen.',
       icon: Icons.verified_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -46,7 +51,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Wishlist',
       area: 'Shop',
       status: 'Merken',
-      body: 'Merkliste für Gäste und User mit gespeicherten Produkten und späterer Account-Verknuepfung.',
+      body:
+          'Merkliste für Gäste und User mit gespeicherten Produkten und späterer Account-Verknuepfung.',
       icon: Icons.favorite_border_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -54,7 +60,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Warenkorb',
       area: 'Checkout',
       status: 'Cart',
-      body: 'Warenkorb mit Mengen, Zwischensumme, Versandhinweisen, Gutscheinen und sicherer Weiterleitung.',
+      body:
+          'Warenkorb mit Mengen, Zwischensumme, Versandhinweisen, Gutscheinen und sicherer Weiterleitung.',
       icon: Icons.shopping_cart_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -62,7 +69,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Banküberweisung',
       area: 'Checkout',
       status: 'Transfer',
-      body: 'Gastfreundliche Zahlungsseite für Banktransfer, Referenznummer und Zahlungsstatus.',
+      body:
+          'Gastfreundliche Zahlungsseite für Banktransfer, Referenznummer und Zahlungsstatus.',
       icon: Icons.account_balance_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -70,7 +78,8 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Bestellstatus',
       area: 'Checkout',
       status: 'Order',
-      body: 'Statusseite für Bestellung, Zahlung, Versand, Abholung, Rechnung und Supportkontakt.',
+      body:
+          'Statusseite für Bestellung, Zahlung, Versand, Abholung, Rechnung und Supportkontakt.',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -100,11 +109,17 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _MetricCard(value: '7', label: 'Flows')),
+                        Expanded(
+                          child: _MetricCard(value: '7', label: 'Flows'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '3', label: 'Shop')),
+                        Expanded(
+                          child: _MetricCard(value: '3', label: 'Shop'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '3', label: 'Checkout')),
+                        Expanded(
+                          child: _MetricCard(value: '3', label: 'Checkout'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
@@ -118,9 +133,12 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
                       showProducts: _showProducts,
                       showCheckout: _showCheckout,
                       showProvider: _showProvider,
-                      onProducts: (value) => setState(() => _showProducts = value),
-                      onCheckout: (value) => setState(() => _showCheckout = value),
-                      onProvider: (value) => setState(() => _showProvider = value),
+                      onProducts: (value) =>
+                          setState(() => _showProducts = value),
+                      onCheckout: (value) =>
+                          setState(() => _showCheckout = value),
+                      onProvider: (value) =>
+                          setState(() => _showProvider = value),
                     ),
                     const SizedBox(height: 14),
                     for (final flow in _visibleFlows.where(_isVisible)) ...[
@@ -131,12 +149,14 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
                       onCart: () => openUiAction(
                         context,
                         title: 'Warenkorb',
-                        message: 'Die mobile Warenkorb-UI ist vorbereitet; Produktdaten kommen später über die Laravel-API.',
+                        message:
+                            'Die mobile Warenkorb-UI ist vorbereitet; Produktdaten kommen später über die Laravel-API.',
                       ),
                       onOrder: () => openUiAction(
                         context,
                         title: 'Bestellstatus',
-                        message: 'Hier wird später Order-Status, Zahlung und Versand aus der API geladen.',
+                        message:
+                            'Hier wird später Order-Status, Zahlung und Versand aus der API geladen.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -157,7 +177,9 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -190,8 +212,23 @@ class _TopBar extends StatelessWidget {
       children: [
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        const Expanded(
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -207,18 +244,40 @@ class _IntroPanel extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF26364D)),
-        gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('GUEST MARKETPLACE', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'GUEST MARKETPLACE',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Shop, Wishlist & Checkout', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Shop, Wishlist & Checkout',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für Gast-Marketplace, Produkte, Anbieter, Wishlist, Warenkorb, Banktransfer und Bestellstatus.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -236,13 +295,30 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -250,7 +326,11 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _FilterTabs extends StatelessWidget {
-  const _FilterTabs({required this.value, required this.values, required this.onChanged});
+  const _FilterTabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -271,10 +351,16 @@ class _FilterTabs extends StatelessWidget {
             label: Text(item),
             selected: active,
             onSelected: (_) => onChanged(item),
-            labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -305,9 +391,21 @@ class _VisibilityPanel extends StatelessWidget {
       title: 'Mobile Kaufstrecke',
       child: Column(
         children: [
-          _SwitchRow(label: 'Produkte anzeigen', value: showProducts, onChanged: onProducts),
-          _SwitchRow(label: 'Checkout anzeigen', value: showCheckout, onChanged: onCheckout),
-          _SwitchRow(label: 'Anbieter anzeigen', value: showProvider, onChanged: onProvider),
+          _SwitchRow(
+            label: 'Produkte anzeigen',
+            value: showProducts,
+            onChanged: onProducts,
+          ),
+          _SwitchRow(
+            label: 'Checkout anzeigen',
+            value: showCheckout,
+            onChanged: onCheckout,
+          ),
+          _SwitchRow(
+            label: 'Anbieter anzeigen',
+            value: showProvider,
+            onChanged: onProvider,
+          ),
         ],
       ),
     );
@@ -323,14 +421,22 @@ class _MarketFlowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
             height: 54,
-            decoration: BoxDecoration(color: flow.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: flow.color.withValues(alpha: .45))),
+            decoration: BoxDecoration(
+              color: flow.color.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: flow.color.withValues(alpha: .45)),
+            ),
             child: Icon(flow.icon, color: flow.color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -340,12 +446,28 @@ class _MarketFlowCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(flow.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        flow.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: flow.status, color: flow.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(flow.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  flow.body,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -356,7 +478,11 @@ class _MarketFlowCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onCart, required this.onOrder, required this.onSupport});
+  const _ActionPanel({
+    required this.onCart,
+    required this.onOrder,
+    required this.onSupport,
+  });
 
   final VoidCallback onCart;
   final VoidCallback onOrder;
@@ -368,11 +494,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.shopping_cart_outlined, label: 'Warenkorb Vorschau', onTap: onCart),
+          _ActionButton(
+            icon: Icons.shopping_cart_outlined,
+            label: 'Warenkorb Vorschau',
+            onTap: onCart,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.receipt_long_outlined, label: 'Bestellstatus prüfen', onTap: onOrder),
+          _ActionButton(
+            icon: Icons.receipt_long_outlined,
+            label: 'Bestellstatus prüfen',
+            onTap: onOrder,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -389,11 +527,21 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D131D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -403,7 +551,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -417,13 +569,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -436,12 +598,24 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111A27),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF26364D)),
+        ),
         child: Row(
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -460,8 +634,19 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: .55)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

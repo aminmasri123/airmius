@@ -30,9 +30,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
+    'admin.harden',
     'verified',
     'throttle:admin-area',
-    'admin.harden',
 ])->group(function () {
 
     

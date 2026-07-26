@@ -3,8 +3,15 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     rides: { type: Array, default: () => [] },
@@ -23,56 +30,56 @@ const requestMessage = ref('')
 const removeMemberTarget = ref(null)
 const showPastRides = ref(false)
 
-const joinBlockLabels = {
-    driver: 'Du bist der Fahrer dieser Fahrt.',
-    already_joined: 'Du bist bereits beigetreten.',
-    pending_request: 'Anfrage ausstehend.',
-    full: 'Diese Fahrgemeinschaft ist voll.',
-    past: 'Die Abfahrtszeit liegt in der Vergangenheit.',
-    not_allowed: 'Du hast keinen Zugriff auf diese Fahrt.',
-    unavailable: 'Diese Fahrt ist aktuell nicht buchbar.',
-}
+const joinBlockLabels = computed(() => ({
+    driver: tx('rides.blocks.driver', 'Du bist der Fahrer dieser Fahrt.'),
+    already_joined: tx('rides.blocks.already_joined', 'Du bist bereits beigetreten.'),
+    pending_request: tx('rides.blocks.pending_request', 'Anfrage ausstehend.'),
+    full: tx('rides.blocks.full', 'Diese Fahrgemeinschaft ist voll.'),
+    past: tx('rides.blocks.past', 'Die Abfahrtszeit liegt in der Vergangenheit.'),
+    not_allowed: tx('rides.blocks.not_allowed', 'Du hast keinen Zugriff auf diese Fahrt.'),
+    unavailable: tx('rides.blocks.unavailable', 'Diese Fahrt ist aktuell nicht buchbar.'),
+}))
 
-const joinStateMeta = {
+const joinStateMeta = computed(() => ({
     driver: {
         icon: 'la-user-check',
-        label: 'Eigene Fahrt',
+        label: tx('rides.states.driver', 'Eigene Fahrt'),
         statusClass: 'border border-air-blue/40 bg-air-blue/10 text-air-blue',
     },
     pending_request: {
         icon: 'la-hourglass-half',
-        label: 'Anfrage offen',
+        label: tx('rides.states.pending', 'Anfrage offen'),
         statusClass: 'border border-air-blue/40 bg-air-blue/10 text-air-blue',
     },
     full: {
         icon: 'la-exclamation-triangle',
-        label: 'Voll',
+        label: tx('rides.states.full', 'Voll'),
         statusClass: 'border border-error/40 bg-error/10 text-error',
     },
     past: {
         icon: 'la-calendar-times',
-        label: 'Vergangenheit',
+        label: tx('rides.states.past', 'Vergangenheit'),
         statusClass: 'border border-border bg-muted text-secondary',
     },
     not_allowed: {
         icon: 'la-lock',
-        label: 'Nicht sichtbar',
+        label: tx('rides.states.not_visible', 'Nicht sichtbar'),
         statusClass: 'border border-border bg-muted text-secondary',
     },
     unavailable: {
         icon: 'la-ban',
-        label: 'Nicht buchbar',
+        label: tx('rides.states.unavailable', 'Nicht buchbar'),
         statusClass: 'border border-border bg-muted text-secondary',
     },
-}
+}))
 
-const joinStateFor = (reason) => joinStateMeta[reason] || joinStateMeta.unavailable
-const joinBlockLegend = [
-    { reason: 'not_allowed', label: 'Kein Zugriff (Sichtbarkeit/Status).' },
-    { reason: 'full', label: 'Volle Fahrt.' },
-    { reason: 'past', label: 'Vergangene Fahrt.' },
-    { reason: 'pending_request', label: 'Anfrage ausstehend.' },
-]
+const joinStateFor = (reason) => joinStateMeta.value[reason] || joinStateMeta.value.unavailable
+const joinBlockLegend = computed(() => [
+    { reason: 'not_allowed', label: tx('rides.legend.not_allowed', 'Kein Zugriff (Sichtbarkeit/Status).') },
+    { reason: 'full', label: tx('rides.legend.full', 'Volle Fahrt.') },
+    { reason: 'past', label: tx('rides.legend.past', 'Vergangene Fahrt.') },
+    { reason: 'pending_request', label: tx('rides.legend.pending', 'Anfrage ausstehend.') },
+])
 
 const form = useForm({
     visibility: 'friends',
@@ -93,9 +100,10 @@ const form = useForm({
 })
 
 const formatDateTime = (value) => {
-    if (!value) return 'Nicht gesetzt'
+    if (!value) return tx('rides.not_set', 'Nicht gesetzt')
 
-    return new Intl.DateTimeFormat('de-DE', {
+    const localeCode = ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE'
+    return new Intl.DateTimeFormat(localeCode, {
         dateStyle: 'medium',
         timeStyle: 'short',
     }).format(new Date(value))
@@ -191,8 +199,8 @@ const submit = () => {
     form.post(route('auth.rides.store'), options)
 }
 
-const visibilityLabel = (value) => props.visibilities.find((visibility) => visibility.value === value)?.label || value
-const joinBlockLabel = (reason) => joinBlockLabels[reason] || 'Nicht verfügbar.'
+const visibilityLabel = (value) => tx(props.visibilities.find((visibility) => visibility.value === value)?.label || value, value)
+const joinBlockLabel = (reason) => joinBlockLabels.value[reason] || tx('Nicht verfügbar.', 'Nicht verfügbar.')
 const rideIsFull = (ride) => Number(ride.participants_count) >= Number(ride.seats)
 const joinStatusMeta = (ride) => {
     if (ride.can_join) {
@@ -206,7 +214,7 @@ const roleBadgeMeta = (ride) => {
     if (ride.is_driver) {
         return {
             icon: 'la-steering-wheel',
-            label: 'Fahrer',
+            label: tx('rides.role.driver', 'Fahrer'),
             className: 'border border-air-blue/40 bg-air-blue/10 text-air-blue',
         }
     }
@@ -214,7 +222,7 @@ const roleBadgeMeta = (ride) => {
     if (ride.is_joined) {
         return {
             icon: 'la-check-circle',
-            label: 'Dabei',
+            label: tx('rides.role.joined', 'Dabei'),
             className: 'border border-success/40 bg-success/10 text-success',
         }
     }
@@ -222,7 +230,7 @@ const roleBadgeMeta = (ride) => {
     if (ride.has_pending_request) {
         return {
             icon: 'la-hourglass-half',
-            label: 'Anfrage offen',
+            label: tx('rides.states.pending', 'Anfrage offen'),
             className: 'border border-air-blue/40 bg-air-blue/10 text-air-blue',
         }
     }
@@ -244,21 +252,21 @@ const rideCardClass = (ride) => {
 
 const rideActionHint = (ride) => {
     if (ride.can_join) {
-        return 'Du kannst eine Anfrage senden. Private Treffpunkt- und Kontaktdaten werden erst nach Annahme sichtbar.'
+        return tx('rides.hints.can_join', 'Du kannst eine Anfrage senden. Private Treffpunkt- und Kontaktdaten werden erst nach Annahme sichtbar.')
     }
 
     if (ride.has_pending_request) {
-        return 'Deine Anfrage wartet auf Rückmeldung. Du kannst sie jederzeit zurückziehen.'
+        return tx('rides.hints.pending', 'Deine Anfrage wartet auf Rückmeldung. Du kannst sie jederzeit zurückziehen.')
     }
 
     if (ride.is_joined) {
-        return 'Du bist dabei und siehst die freigegebenen Treffpunkt- und Kontaktdaten.'
+        return tx('rides.hints.joined', 'Du bist dabei und siehst die freigegebenen Treffpunkt- und Kontaktdaten.')
     }
 
     if (ride.is_driver) {
         return ride.pending_requests?.length
-            ? 'Prüfe offene Anfragen und halte die Sitzplaetze aktuell.'
-            : 'Du verwaltest diese Fahrt.'
+            ? tx('rides.hints.driver_pending', 'Prüfe offene Anfragen und halte die Sitzplätze aktuell.')
+            : tx('rides.hints.driver', 'Du verwaltest diese Fahrt.')
     }
 
     return joinBlockLabel(ride.join_block_reason)
@@ -268,16 +276,16 @@ const seatBadgeMeta = (ride) => {
     if (rideIsFull(ride)) {
         return {
             icon: 'la-exclamation-circle',
-            label: `${ride.participants_count}/${ride.seats} Plätze - Voll`,
+            label: `${ride.participants_count}/${ride.seats} ${tx('rides.seats', 'Plätze')} - ${tx('rides.states.full', 'Voll')}`,
             className: 'border border-error/40 bg-error/10 text-error',
-            hint: 'Diese Fahrgemeinschaft ist voll.',
+            hint: tx('rides.blocks.full', 'Diese Fahrgemeinschaft ist voll.'),
         }
     }
 
     if (ride.join_block_reason === 'past') {
         return {
             icon: 'la-calendar-times',
-            label: `${ride.participants_count}/${ride.seats} Plätze - Vergangen`,
+            label: `${ride.participants_count}/${ride.seats} ${tx('rides.seats', 'Plätze')} - ${tx('rides.states.past_short', 'Vergangen')}`,
             className: 'border border-border bg-muted text-secondary',
             hint: joinBlockLabel(ride.join_block_reason),
         }
@@ -285,9 +293,9 @@ const seatBadgeMeta = (ride) => {
 
     return {
         icon: 'la-users',
-        label: `${ride.participants_count}/${ride.seats} Plätze`,
+        label: `${ride.participants_count}/${ride.seats} ${tx('rides.seats', 'Plätze')}`,
         className: 'border border-border bg-inputBg text-secondary',
-        hint: 'Platzbelegung',
+        hint: tx('rides.seat_hint', 'Platzbelegung'),
     }
 }
 
@@ -367,19 +375,19 @@ const confirmDeleteRide = () => {
 </script>
 
 <template>
-    <Head title="Fahrgemeinschaften" />
+    <Head :title="tx('Fahrgemeinschaften', 'Fahrgemeinschaften')" />
 
     <div class="mx-auto max-w-6xl space-y-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-primary">Fahrgemeinschaften</h1>
-                <p class="mt-1 text-sm text-secondary">Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitaeten.</p>
+                <h1 class="text-2xl font-bold text-primary">{{ tx('Fahrgemeinschaften', 'Fahrgemeinschaften') }}</h1>
+                <p class="mt-1 text-sm text-secondary">{{ tx('Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitaeten.', 'Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitäten.') }}</p>
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:items-start">
                 <label class="inline-flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-secondary">
                     <input v-model="showPastRides" type="checkbox" class="h-4 w-4 rounded border-border" />
-                    Vergangene Fahrten anzeigen
+                    {{ tx('Vergangene Fahrten anzeigen', 'Vergangene Fahrten anzeigen') }}
                 </label>
 
                 <button
@@ -388,13 +396,13 @@ const confirmDeleteRide = () => {
                     @click="openCreateModal"
                 >
                     <i class="las la-plus text-lg"></i>
-                    Fahrt anbieten
+                    {{ tx('Fahrt anbieten', 'Fahrt anbieten') }}
                 </button>
             </div>
         </div>
 
         <div class="rounded-lg border border-border bg-card p-3 text-xs text-secondary">
-            <p class="font-semibold text-primary">Anzeige-Hinweise:</p>
+            <p class="font-semibold text-primary">{{ tx('Anzeige-Hinweise:', 'Anzeige-Hinweise:') }}</p>
             <ul class="mt-2 space-y-1">
                 <li v-for="item in joinBlockLegend" :key="item.reason" class="flex items-start gap-2">
                     <span class="mt-0.5 inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold" :class="joinStateFor(item.reason).statusClass">
@@ -410,10 +418,10 @@ const confirmDeleteRide = () => {
                 <div class="sticky top-0 z-10 border-b border-border bg-card pb-4 pr-8">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Fahrgemeinschaft</p>
-                            <h2 class="mt-1 text-lg font-semibold text-primary">{{ editTarget ? 'Fahrt bearbeiten' : 'Neue Fahrt anbieten' }}</h2>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('Fahrgemeinschaft', 'Fahrgemeinschaft') }}</p>
+                            <h2 class="mt-1 text-lg font-semibold text-primary">{{ editTarget ? tx('Fahrt bearbeiten', 'Fahrt bearbeiten') : tx('Neue Fahrt anbieten', 'Neue Fahrt anbieten') }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                Erstelle eine datenschutzfreundliche Fahrt mit öffentlichem Treffpunkt statt privater Adresse.
+                                {{ tx('Erstelle eine datenschutzfreundliche Fahrt mit öffentlichem Treffpunkt statt privater Adresse.', 'Erstelle eine datenschutzfreundliche Fahrt mit öffentlichem Treffpunkt statt privater Adresse.') }}
                             </p>
                         </div>
                         <button

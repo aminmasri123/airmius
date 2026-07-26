@@ -72,7 +72,7 @@ defineProps({
 
         <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
             <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinkziel heute') }}</p>
-            <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+            <div class="mt-3 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                 <p class="text-3xl font-black text-primary">{{ formatWater(waterTargetMl) }}</p>
                 <p class="mt-2 text-sm leading-6 text-secondary">
                     {{ tAuto('Basis') }} {{ formatWater(waterBaseMl) }} + {{ tAuto('Training') }} {{ formatWater(waterTrainingExtraMl) }}.
@@ -100,4 +100,3 @@ defineProps({
         </section>
     </section>
 </template>
-

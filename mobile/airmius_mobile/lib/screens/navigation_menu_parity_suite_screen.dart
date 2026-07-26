@@ -7,10 +7,12 @@ class NavigationMenuParitySuiteScreen extends StatefulWidget {
   const NavigationMenuParitySuiteScreen({super.key});
 
   @override
-  State<NavigationMenuParitySuiteScreen> createState() => _NavigationMenuParitySuiteScreenState();
+  State<NavigationMenuParitySuiteScreen> createState() =>
+      _NavigationMenuParitySuiteScreenState();
 }
 
-class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySuiteScreen> {
+class _NavigationMenuParitySuiteScreenState
+    extends State<NavigationMenuParitySuiteScreen> {
   String _role = 'Player';
   String _workspace = 'ZBB';
   int _bottomIndex = 0;
@@ -31,9 +33,11 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
     }).toList();
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
         actions: [
@@ -41,7 +45,8 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
             onPressed: () => openUiAction(
               context,
               title: 'Header Suche',
-              body: 'Personen, Vereine, Teams, Dateien, Kurse, Events und Marketplace-Objekte werden später über Laravel API gesucht.',
+              body:
+                  'Personen, Vereine, Teams, Dateien, Kurse, Events und Marketplace-Objekte werden später über Laravel API gesucht.',
               status: 'Search',
               icon: Icons.search_outlined,
             ),
@@ -51,7 +56,8 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
             onPressed: () => openUiAction(
               context,
               title: 'Benachrichtigungen',
-              body: 'Chat, Vereinsanfragen, Events, Zahlungen, Guardian-Freigaben und Systemhinweise als Header-Icon.',
+              body:
+                  'Chat, Vereinsanfragen, Events, Zahlungen, Guardian-Freigaben und Systemhinweise als Header-Icon.',
               status: 'Notify',
               icon: Icons.notifications_none_outlined,
             ),
@@ -81,7 +87,8 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
                 onOpen: () => openUiAction(
                   context,
                   title: 'Globale Suche',
-                  body: 'Header-Suche zeigt später Vorschläge für Personen, Teams, Vereine, Dateien, Events, Kurse und Produkte.',
+                  body:
+                      'Header-Suche zeigt später Vorschläge für Personen, Teams, Vereine, Dateien, Events, Kurse und Produkte.',
                   status: 'Header',
                   icon: Icons.manage_search_outlined,
                 ),
@@ -109,13 +116,17 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
                 _MenuGroupCard(group: group, compactMode: _compactMode),
                 const SizedBox(height: 12),
               ],
-              if (visibleGroups.isEmpty) const EmptyPanel('Keine Menübereiche für diese Rolle sichtbar.'),
+              if (visibleGroups.isEmpty)
+                const EmptyPanel(
+                  'Keine Menübereiche für diese Rolle sichtbar.',
+                ),
               const SizedBox(height: 4),
               _NavigationChecklist(
                 onOpen: () => openUiAction(
                   context,
                   title: 'Navigation Parity',
-                  body: 'Header, Suche, Sidebar/Drawer, Modulgruppen, Rollenfilter, Workspace-Kontext und Bottom-Navigation sind als mobile UI-Struktur vorbereitet.',
+                  body:
+                      'Header, Suche, Sidebar/Drawer, Modulgruppen, Rollenfilter, Workspace-Kontext und Bottom-Navigation sind als mobile UI-Struktur vorbereitet.',
                   status: 'Navigation',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -150,14 +161,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('APP SHELL'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Die Web-App Navigation bleibt wiedererkennbar.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter bekommt dieselbe Logik für Logo, Header-Suche, Workspace, Rollen, Modulgruppen, Bottom Navigation, Badges und mobile Drawer-Struktur.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -167,7 +186,10 @@ class _Hero extends StatelessWidget {
               _Metric(value: role, label: 'Rolle'),
               _Metric(value: workspace, label: 'Workspace'),
               _Metric(value: '$groupCount', label: 'Menuegruppen'),
-              _Metric(value: compactMode ? 'Kompakt' : 'Detail', label: 'Mobile Modus'),
+              _Metric(
+                value: compactMode ? 'Kompakt' : 'Detail',
+                label: 'Mobile Modus',
+              ),
             ],
           ),
         ],
@@ -186,19 +208,34 @@ class _SearchPreview extends StatelessWidget {
     return AirmiusPanel(
       child: Row(
         children: [
-          const Icon(Icons.search_outlined, color: AirmiusColors.blue),
+          Icon(Icons.search_outlined, color: airmiusAccentColor(context)),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Suche nach Personen, Teams, Vereine', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  'Suche nach Personen, Teams, Vereine',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 SizedBox(height: 4),
-                Text('Header-Suche mit Typeahead, Result-Typen und leerem Zustand.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                Text(
+                  'Header-Suche mit Typeahead, Result-Typen und leerem Zustand.',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
-          IconButton(onPressed: onOpen, icon: const Icon(Icons.chevron_right, color: AirmiusColors.muted)),
+          IconButton(
+            onPressed: onOpen,
+            icon: Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+          ),
         ],
       ),
     );
@@ -226,7 +263,8 @@ class _ContextPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Rollen- und Workspace-Kontext',
-      subtitle: 'So entscheidet die App später, welche Module im Menue sichtbar sind.',
+      subtitle:
+          'So entscheidet die App später, welche Module im Menue sichtbar sind.',
       children: [
         const Eyebrow('Rolle'),
         const SizedBox(height: 8),
@@ -239,10 +277,21 @@ class _ContextPanel extends StatelessWidget {
                   selected: role == item,
                   label: Text(item),
                   onSelected: (_) => onRole(item),
-                  selectedColor: AirmiusColors.blue.withValues(alpha: .25),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: role == item ? AirmiusColors.blue : AirmiusColors.border),
-                  labelStyle: TextStyle(color: role == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  selectedColor: airmiusAccentColor(
+                    context,
+                  ).withValues(alpha: .25),
+                  backgroundColor: airmiusSurfaceSoftColor(context),
+                  side: BorderSide(
+                    color: role == item
+                        ? airmiusAccentColor(context)
+                        : airmiusBorderColor(context),
+                  ),
+                  labelStyle: TextStyle(
+                    color: role == item
+                        ? airmiusTextColor(context)
+                        : airmiusMutedColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -259,10 +308,21 @@ class _ContextPanel extends StatelessWidget {
                   selected: workspace == item,
                   label: Text(item),
                   onSelected: (_) => onWorkspace(item),
-                  selectedColor: AirmiusColors.green.withValues(alpha: .2),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: workspace == item ? AirmiusColors.green : AirmiusColors.border),
-                  labelStyle: TextStyle(color: workspace == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  selectedColor: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withValues(alpha: .2),
+                  backgroundColor: airmiusSurfaceSoftColor(context),
+                  side: BorderSide(
+                    color: workspace == item
+                        ? Theme.of(context).colorScheme.secondary
+                        : airmiusBorderColor(context),
+                  ),
+                  labelStyle: TextStyle(
+                    color: workspace == item
+                        ? airmiusTextColor(context)
+                        : airmiusMutedColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -293,11 +353,24 @@ class _SwitchPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Menue-Sichtbarkeit',
-      subtitle: 'Rollen, Vereinskontext und Mobile-Modus steuern die Navigation.',
+      subtitle:
+          'Rollen, Vereinskontext und Mobile-Modus steuern die Navigation.',
       children: [
-        _SwitchLine(title: 'Vereinsmodule anzeigen', value: showClubTools, onChanged: onClub),
-        _SwitchLine(title: 'Adminmodule anzeigen', value: showAdminTools, onChanged: onAdmin),
-        _SwitchLine(title: 'Kompakte Mobile-Liste', value: compactMode, onChanged: onCompact),
+        _SwitchLine(
+          title: 'Vereinsmodule anzeigen',
+          value: showClubTools,
+          onChanged: onClub,
+        ),
+        _SwitchLine(
+          title: 'Adminmodule anzeigen',
+          value: showAdminTools,
+          onChanged: onAdmin,
+        ),
+        _SwitchLine(
+          title: 'Kompakte Mobile-Liste',
+          value: compactMode,
+          onChanged: onCompact,
+        ),
       ],
     );
   }
@@ -320,14 +393,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -335,18 +420,16 @@ class _SwitchLine extends StatelessWidget {
 }
 
 class _MenuGroupCard extends StatelessWidget {
-  const _MenuGroupCard({
-    required this.group,
-    required this.compactMode,
-  });
+  const _MenuGroupCard({required this.group, required this.compactMode});
 
   final _MenuGroup group;
   final bool compactMode;
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, group.color);
     return AirmiusPanel(
-      borderColor: group.color.withValues(alpha: .5),
+      borderColor: color.withValues(alpha: .5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -356,24 +439,37 @@ class _MenuGroupCard extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: group.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: group.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(group.icon, color: group.color),
+                child: Icon(group.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(group.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      group.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(group.body, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    Text(
+                      group.body,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill('${group.items.length}', color: group.color),
+              StatusPill('${group.items.length}', color: color),
             ],
           ),
           const SizedBox(height: 12),
@@ -381,10 +477,12 @@ class _MenuGroupCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: group.items.map((item) => StatusPill(item, color: group.color)).toList(),
+              children: group.items
+                  .map((item) => StatusPill(item, color: color))
+                  .toList(),
             )
           else
-            ...group.items.map((item) => _MenuLine(label: item, color: group.color)),
+            ...group.items.map((item) => _MenuLine(label: item, color: color)),
           const SizedBox(height: 14),
           AirmiusButton(
             label: '${group.title} öffnen',
@@ -393,7 +491,8 @@ class _MenuGroupCard extends StatelessWidget {
             onPressed: () => openUiAction(
               context,
               title: group.title,
-              body: 'Navigationsgruppe ${group.title}: ${group.items.join(', ')}. Später verbunden mit Laravel-Routen, Rollen und Deep Links.',
+              body:
+                  'Navigationsgruppe ${group.title}: ${group.items.join(', ')}. Später verbunden mit Laravel-Routen, Rollen und Deep Links.',
               status: 'Navigation',
               icon: group.icon,
             ),
@@ -405,10 +504,7 @@ class _MenuGroupCard extends StatelessWidget {
 }
 
 class _MenuLine extends StatelessWidget {
-  const _MenuLine({
-    required this.label,
-    required this.color,
-  });
+  const _MenuLine({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -419,16 +515,24 @@ class _MenuLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
           Icon(Icons.circle, size: 8, color: color),
           const SizedBox(width: 10),
-          Expanded(child: Text(label, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800))),
-          const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
         ],
       ),
     );
@@ -436,10 +540,7 @@ class _MenuLine extends StatelessWidget {
 }
 
 class _BottomPreview extends StatelessWidget {
-  const _BottomPreview({
-    required this.currentIndex,
-    required this.onChanged,
-  });
+  const _BottomPreview({required this.currentIndex, required this.onChanged});
 
   final int currentIndex;
   final ValueChanged<int> onChanged;
@@ -447,15 +548,29 @@ class _BottomPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      backgroundColor: AirmiusColors.header,
-      indicatorColor: AirmiusColors.blue.withValues(alpha: .25),
+      backgroundColor:
+          Theme.of(context).appBarTheme.backgroundColor ??
+          airmiusSurfaceColor(context),
+      indicatorColor: airmiusAccentColor(context).withValues(alpha: .25),
       selectedIndex: currentIndex,
       onDestinationSelected: onChanged,
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.groups_outlined), label: 'Vereine'),
-        NavigationDestination(icon: Icon(Icons.notifications_none_outlined), label: 'Updates'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
+        NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.groups_outlined),
+          label: 'Vereine',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.notifications_none_outlined),
+          label: 'Updates',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          label: 'Profil',
+        ),
       ],
     );
   }
@@ -472,12 +587,24 @@ class _NavigationChecklist extends StatelessWidget {
       title: 'Navigation-Paritaet',
       subtitle: 'Was von der mobilen Web-App übernommen wird.',
       children: [
-        const _CheckLine('Airmius-Logo, dunkler Header, Suchfeld und Benachrichtigungen bleiben sichtbar.'),
-        const _CheckLine('Sidebar/Drawer-Gruppen werden als mobile Karten und später als Drawer-Struktur abgebildet.'),
-        const _CheckLine('Bottom Navigation bleibt auf die häufigsten Mobile-Aktionen reduziert.'),
-        const _CheckLine('Rollen und Workspaces steuern Sichtbarkeit, Badges, Deep Links und Empty States.'),
+        const _CheckLine(
+          'Airmius-Logo, dunkler Header, Suchfeld und Benachrichtigungen bleiben sichtbar.',
+        ),
+        const _CheckLine(
+          'Sidebar/Drawer-Gruppen werden als mobile Karten und später als Drawer-Struktur abgebildet.',
+        ),
+        const _CheckLine(
+          'Bottom Navigation bleibt auf die häufigsten Mobile-Aktionen reduziert.',
+        ),
+        const _CheckLine(
+          'Rollen und Workspaces steuern Sichtbarkeit, Badges, Deep Links und Empty States.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Navigation prüfen', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Navigation prüfen',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -495,9 +622,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -505,10 +645,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -518,16 +655,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -567,7 +717,13 @@ const _groups = <_MenuGroup>[
   _MenuGroup(
     title: 'Vereine & Teams',
     body: 'Club-Profil, Teams, Mitglieder, Rollen, Antraege und Kommunikation.',
-    items: ['Vereine & Teams', 'Mitgliedsantrag', 'Teams', 'Mitglieder', 'Rollen'],
+    items: [
+      'Vereine & Teams',
+      'Mitgliedsantrag',
+      'Teams',
+      'Mitglieder',
+      'Rollen',
+    ],
     icon: Icons.groups_outlined,
     color: AirmiusColors.green,
     clubOnly: true,
@@ -575,14 +731,21 @@ const _groups = <_MenuGroup>[
   _MenuGroup(
     title: 'Training & Sport',
     body: 'Events, Trainingsplaene, Logs, Sportkarte und Coach-Kontext.',
-    items: ['Events & Training', 'Trainingsplaene', 'Training Logs', 'Sportkarte', 'Sportprofil'],
+    items: [
+      'Events & Training',
+      'Trainingsplaene',
+      'Training Logs',
+      'Sportkarte',
+      'Sportprofil',
+    ],
     icon: Icons.fitness_center_outlined,
     color: AirmiusColors.green,
     roles: ['Player', 'Trainer', 'Verein'],
   ),
   _MenuGroup(
     title: 'Community',
-    body: 'Feed, Freunde, Fahrgemeinschaften, Nachrichten und Benachrichtigungen.',
+    body:
+        'Feed, Freunde, Fahrgemeinschaften, Nachrichten und Benachrichtigungen.',
     items: ['Feed', 'Freunde', 'Fahrgemeinschaften', 'Nachrichten', 'Updates'],
     icon: Icons.forum_outlined,
     color: AirmiusColors.blue,
@@ -590,14 +753,26 @@ const _groups = <_MenuGroup>[
   _MenuGroup(
     title: 'Dateien & Lernen',
     body: 'Dateimanager, Badges, Kurse, Zertifikate und Content.',
-    items: ['Dateien', 'Meine Badges', 'Meine Kurse', 'Zertifikate', 'Top Inhalte'],
+    items: [
+      'Dateien',
+      'Meine Badges',
+      'Meine Kurse',
+      'Zertifikate',
+      'Top Inhalte',
+    ],
     icon: Icons.folder_outlined,
     color: AirmiusColors.amber,
   ),
   _MenuGroup(
     title: 'Commerce',
     body: 'Marketplace, Warenkorb, Bestellungen, Abos und Zahlungen.',
-    items: ['Marketplace', 'Warenkorb', 'Bestellungen', 'Outfit-Abos', 'Zahlungen'],
+    items: [
+      'Marketplace',
+      'Warenkorb',
+      'Bestellungen',
+      'Outfit-Abos',
+      'Zahlungen',
+    ],
     icon: Icons.storefront_outlined,
     color: AirmiusColors.green,
   ),

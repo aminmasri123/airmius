@@ -646,6 +646,49 @@ class LearningStudioTest extends TestCase
             ->assertSee('AIR-LEARN-VERIFY');
     }
 
+    public function test_public_certificate_api_returns_only_safe_verification_data(): void
+    {
+        $tutor = User::factory()->create(['name' => 'Kursleitung']);
+        $student = User::factory()->create(['name' => 'Teilnehmende Person']);
+        $course = LearningCourse::query()->create([
+            'user_id' => $tutor->id,
+            'title' => 'API Verify Kurs',
+            'subtitle' => 'Öffentliche Kursbeschreibung',
+            'slug' => 'api-verify-kurs',
+            'category' => 'training',
+            'level' => 'beginner',
+            'status' => 'published',
+            'is_public' => true,
+            'published_at' => now(),
+        ]);
+        $enrollment = LearningEnrollment::query()->create([
+            'learning_course_id' => $course->id,
+            'user_id' => $student->id,
+            'status' => 'active',
+            'progress_percent' => 100,
+            'completed_at' => now(),
+        ]);
+        LearningCertificate::query()->create([
+            'learning_course_id' => $course->id,
+            'learning_enrollment_id' => $enrollment->id,
+            'user_id' => $student->id,
+            'code' => 'AIR-API-VERIFY',
+            'issued_at' => now(),
+        ]);
+
+        $this->getJson('/api/v1/public/learning/certificates/air-api-verify')
+            ->assertOk()
+            ->assertJsonPath('data.code', 'AIR-API-VERIFY')
+            ->assertJsonPath('data.student_name', 'Teilnehmende Person')
+            ->assertJsonPath('data.course_title', 'API Verify Kurs')
+            ->assertJsonPath('data.progress_percent', 100)
+            ->assertJsonMissingPath('data.user.email');
+
+        $this->getJson('/api/v1/public/learning/certificates/unknown-code')
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Certificate not found.');
+    }
+
     public function test_learning_studio_contains_sales_analytics_for_linked_products(): void
     {
         $tutor = User::factory()->create();

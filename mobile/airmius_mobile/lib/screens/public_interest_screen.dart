@@ -1,12 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../core/airmius_theme.dart';
+
+import '../core/airmius_api_client.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'public_location_submission_screen.dart';
-import 'legal_support_operations_screen.dart';
-import 'public_growth_operations_screen.dart';
 
+/// Guest-safe interest form backed by the public, rate-limited contact API.
 class PublicInterestScreen extends StatefulWidget {
-  const PublicInterestScreen({super.key, required this.topic, required this.kind, required this.icon});
+  const PublicInterestScreen({
+    super.key,
+    required this.topic,
+    required this.kind,
+    required this.icon,
+  });
 
   final String topic;
   final String kind;
@@ -17,89 +25,237 @@ class PublicInterestScreen extends StatefulWidget {
 }
 
 class _PublicInterestScreenState extends State<PublicInterestScreen> {
-  String _contactType = 'E-Mail';
-  bool _privacyAccepted = true;
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _message = TextEditingController();
+  bool _privacyAccepted = false;
+  bool _sending = false;
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_sending ||
+        !_privacyAccepted ||
+        _form.currentState?.validate() != true) {
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .sendPublicContact({
+            'name': _name.text.trim(),
+            'email': _email.text.trim(),
+            'subject': widget.topic,
+            'category': widget.kind,
+            'message': _message.text.trim(),
+            'privacy_consent': true,
+            'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+          });
+      if (!mounted) return;
+      _name.clear();
+      _email.clear();
+      _message.clear();
+      setState(() => _sent = true);
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+    } catch (_) {
+      if (mounted) {
+        _showError(AirmiusScope.of(context).t('publicInterest.sendFailed'));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _kindLabel(AirmiusScope scope) => switch (widget.kind) {
+    'marketplace_interest' => scope.t('publicInterest.kindMarketplace'),
+    'club_interest' => scope.t('publicInterest.kindClub'),
+    'partner_interest' => scope.t('publicInterest.kindPartner'),
+    'learning_interest' => scope.t('publicInterest.kindLearning'),
+    'Public' => scope.t('publicInterest.kindPublic'),
+    _ => scope.t('publicInterest.kindDefault'),
+  };
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final t = scope.t;
+    final theme = Theme.of(context);
     return Scaffold(
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.extended(
-            backgroundColor: const Color(0xFF1D5FA8),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.campaign_outlined),
-            label: const Text('Lead Ops', style: TextStyle(fontWeight: FontWeight.w900)),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicGrowthOperationsScreen(initialTab: 'Leads'))),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            backgroundColor: const Color(0xFFB88320),
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.gavel_outlined),
-            label: const Text('Support Ops', style: TextStyle(fontWeight: FontWeight.w900)),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LegalSupportOperationsScreen(initialTab: 'Kontakt'))),
-          ),
-        ],
+      appBar: AppBar(
+        title: Text(
+          '${widget.topic}${t('publicInterest.titleSuffix')}',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
-        
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: Text(widget.topic, style: const TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
-        title: '${widget.topic} Anfrage',
-        subtitle: 'Public Lead, Kontakt, Interesse, Datenschutz und spätere Laravel-API-Anbindung',
-        trailing: StatusPill(widget.kind),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          AirmiusPanel(gradient: true, child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(widget.icon, color: AirmiusColors.blue, size: 42),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Eyebrow(widget.kind),
-              const SizedBox(height: 6),
-              Text('Interesse an ${widget.topic}', style: const TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              const Text('Dieser Flow bereitet öffentliche Kontaktformulare, Leads, Bewerbungen, Sponsor-Anfragen und Checkout-Interesse nativ vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
-            ])),
-          ])),
-          const SizedBox(height: 14),
-          AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Kontaktdaten'),
-            const SizedBox(height: 12),
-            const AirmiusTextField(label: 'Name', hint: 'Dein Name oder Organisation'),
-            const SizedBox(height: 10),
-            const AirmiusTextField(label: 'E-Mail', hint: 'kontakt@example.com'),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(initialValue: _contactType, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Kontaktart'), items: const ['E-Mail', 'Telefon', 'Rückruf', 'Demo-Termin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _contactType = value ?? _contactType)),
-          ])),
-          const SizedBox(height: 14),
-          const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Eyebrow('Nachricht'),
-            SizedBox(height: 12),
-            AirmiusTextField(label: 'Worum geht es?', hint: 'Beschreibe kurz dein Interesse...', maxLines: 4),
-          ])),
-          const SizedBox(height: 14),
-          AirmiusPanel(child: SwitchListTile(
-            value: _privacyAccepted,
-            onChanged: (value) => setState(() => _privacyAccepted = value),
-            activeThumbColor: AirmiusColors.blue,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Datenschutz akzeptieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            subtitle: const Text('Die Anfrage darf zur Bearbeitung gespeichert werden.', style: TextStyle(color: AirmiusColors.muted)),
-          )),
-          const SizedBox(height: 14),
-          AirmiusPanel(borderColor: AirmiusColors.blue.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Standort oder Organisation'),
-            const SizedBox(height: 8),
-            const Text('Wenn die Anfrage einen neuen Verein, Sportort oder Anbieter betrifft, kann direkt ein Standortvorschlag vorbereitet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-            const SizedBox(height: 12),
-            AirmiusButton(label: 'Standort vorschlagen', icon: Icons.add_location_alt_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicLocationSubmissionScreen()))),
-          ])),
-          const SizedBox(height: 14),
-          AirmiusButton(label: 'Anfrage senden', icon: Icons.send_outlined, onPressed: _privacyAccepted ? () => openUiAction(context, title: '${widget.topic} Anfrage senden', body: 'Public Lead, Kontaktart $_contactType, Datenschutzprotokoll und spätere Laravel-Bearbeitung vorbereiten.', status: widget.kind, icon: Icons.send_outlined) : null),
-        ]),
+        title: '${widget.topic}${t('publicInterest.titleSuffix')}',
+        subtitle: t('publicInterest.subtitle'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              gradient: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(widget.icon, color: theme.colorScheme.primary, size: 34),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '${widget.topic} · ${_kindLabel(scope)}',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (_sent) ...[
+              AirmiusPanel(
+                borderColor: theme.colorScheme.secondary,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.mark_email_read_outlined,
+                      color: theme.colorScheme.secondary,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t('publicInterest.sent'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(t('publicInterest.sentBody')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            Form(
+              key: _form,
+              child: AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('publicInterest.subtitle'),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 13),
+                    TextFormField(
+                      controller: _name,
+                      textInputAction: TextInputAction.next,
+                      maxLength: 100,
+                      decoration: InputDecoration(
+                        labelText: t('publicInterest.name'),
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? t('publicInterest.required')
+                          : null,
+                    ),
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      maxLength: 150,
+                      decoration: InputDecoration(
+                        labelText: t('publicInterest.email'),
+                      ),
+                      validator: (value) {
+                        final email = value?.trim() ?? '';
+                        if (email.isEmpty) return t('publicInterest.required');
+                        if (!RegExp(
+                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                        ).hasMatch(email)) {
+                          return t('publicInterest.invalidEmail');
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      controller: _message,
+                      minLines: 5,
+                      maxLines: 10,
+                      maxLength: 2000,
+                      decoration: InputDecoration(
+                        labelText: t('publicInterest.message'),
+                        alignLabelWithHint: true,
+                      ),
+                      validator: (value) => (value?.trim().length ?? 0) < 10
+                          ? t('publicInterest.messageTooShort')
+                          : null,
+                    ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: _privacyAccepted,
+                      onChanged: (value) =>
+                          setState(() => _privacyAccepted = value),
+                      title: Text(t('publicInterest.privacy')),
+                    ),
+                    const SizedBox(height: 8),
+                    AirmiusButton(
+                      label: _sending
+                          ? t('publicInterest.sending')
+                          : t('publicInterest.send'),
+                      icon: _sending
+                          ? Icons.hourglass_top_outlined
+                          : Icons.send_outlined,
+                      onPressed: _sending || !_privacyAccepted ? null : _submit,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              child: AirmiusButton(
+                label: t('publicInterest.suggestLocation'),
+                icon: Icons.add_location_alt_outlined,
+                secondary: true,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PublicLocationSubmissionScreen(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-
-

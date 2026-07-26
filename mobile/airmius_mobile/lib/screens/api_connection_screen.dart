@@ -24,6 +24,15 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
         .apiMeta();
   }
 
+  void _refreshMeta() {
+    final services = AirmiusServicesScope.of(context);
+    setState(() {
+      _metaFuture = services
+          .clientForSession(services.authState.session)
+          .apiMeta();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +70,7 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Diese Übersicht ordnet die wichtigsten Laravel-Routen den nativen Flutter-Modulen zu. Später wird daraus der echte API-Client mit Token, Loading, Error, Retry und Offline-State.',
+                    'Diese Übersicht zeigt den aktiven Laravel-Vertrag und die Antwortdaten des echten API-Clients. Token, Lade-, Fehler-, Retry- und Offline-Status werden von den jeweiligen Modulen verarbeitet.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.4),
                   ),
                   const SizedBox(height: 14),
@@ -122,7 +131,7 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Naechster Integrationsschritt'),
+                  const Eyebrow('Sicherheit & Betrieb'),
                   const SizedBox(height: 8),
                   const Text(
                     'Wenn die UI final genug ist, verbinden wir diese Gruppen mit einem AirmiusApiClient: Auth-Token, Request-Queue, Fehlertexte, Refresh, Uploads und Rollenrechte.',
@@ -130,16 +139,9 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
                   ),
                   const SizedBox(height: 12),
                   AirmiusButton(
-                    label: 'API Client vormerken',
-                    icon: Icons.api_outlined,
-                    onPressed: () => openUiAction(
-                      context,
-                      title: 'API Client vormerken',
-                      body:
-                          'AirmiusApiClient für Laravel v1 mit Auth, Uploads, Pagination, Mutationen, Fehlerstatus und Offline/Retry vorbereiten.',
-                      status: 'API',
-                      icon: Icons.api_outlined,
-                    ),
+                    label: 'API-Status aktualisieren',
+                    icon: Icons.refresh_outlined,
+                    onPressed: _refreshMeta,
                   ),
                 ],
               ),

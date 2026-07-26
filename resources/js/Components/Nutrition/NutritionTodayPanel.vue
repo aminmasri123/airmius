@@ -64,10 +64,10 @@ defineEmits(['delete-meal', 'edit-meal', 'set-active-section', 'submit-drink'])
                     </article>
                 </div>
 
-                <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                <div class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinken') }}</p>
                             <h3 class="mt-1 text-xl font-black text-primary">{{ tAuto(`${formatWater(waterConsumedMl)} getrunken`) }}</h3>
                             <p class="mt-1 text-sm text-secondary">
                                 {{ tAuto(`${formatWater(waterLeftMl)} bis zu deinem Tagesziel von ${formatWater(waterTargetMl)}.`) }}
@@ -78,7 +78,7 @@ defineEmits(['delete-meal', 'edit-meal', 'set-active-section', 'submit-drink'])
                                 v-for="amount in quickDrinkAmounts"
                                 :key="amount"
                                 type="button"
-                                class="rounded-xl border border-cyan-300/40 bg-card px-3 py-2 text-sm font-bold text-primary hover:bg-cyan-400/15 disabled:opacity-60"
+                                class="rounded-xl border border-air-blue/40 bg-card px-3 py-2 text-sm font-bold text-primary hover:bg-air-blue/15 disabled:opacity-60"
                                 :disabled="drinkForm.processing"
                                 @click="$emit('submit-drink', amount)"
                             >
@@ -89,7 +89,7 @@ defineEmits(['delete-meal', 'edit-meal', 'set-active-section', 'submit-drink'])
                     <div class="mt-4 h-3 overflow-hidden rounded-full bg-card">
                         <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
                     </div>
-                    <button type="button" class="mt-3 text-sm font-bold text-cyan-200 hover:text-primary" @click="$emit('set-active-section', 'drink')">
+                    <button type="button" class="mt-3 text-sm font-bold text-air-blue hover:text-primary" @click="$emit('set-active-section', 'drink')">
                         {{ tAuto('Trinken genau verwalten') }}
                     </button>
                 </div>
@@ -154,4 +154,3 @@ defineEmits(['delete-meal', 'edit-meal', 'set-active-section', 'submit-drink'])
         </section>
     </section>
 </template>
-

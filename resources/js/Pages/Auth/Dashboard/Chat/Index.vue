@@ -5,6 +5,10 @@ import AppEmptyState from '@/Components/UI/AppEmptyState.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t, locale } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     conversations: {
@@ -77,11 +81,11 @@ let realtimeRefreshTimeout = null
 let messageSearchTimeout = null
 
 const conversationFilters = [
-    { key: 'direct', label: 'Personen', icon: 'las la-user' },
-    { key: 'team', label: 'Teams', icon: 'las la-users' },
-    { key: 'group', label: 'Gruppen', icon: 'las la-comments' },
-    { key: 'event', label: 'Training', icon: 'las la-calendar' },
-    { key: 'all', label: 'Alle', icon: 'las la-inbox' },
+    { key: 'direct', label: tx('chat.filters.direct'), icon: 'las la-user' },
+    { key: 'team', label: tx('chat.filters.team'), icon: 'las la-users' },
+    { key: 'group', label: tx('chat.filters.group'), icon: 'las la-comments' },
+    { key: 'event', label: tx('chat.filters.event'), icon: 'las la-calendar' },
+    { key: 'all', label: tx('chat.filters.all'), icon: 'las la-inbox' },
 ]
 const conversationsByTypeKeys = ['direct', 'team', 'group', 'event']
 
@@ -129,7 +133,7 @@ const initials = (name) => (name || '?')
 const formatTime = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
@@ -138,20 +142,20 @@ const formatTime = (value) => {
 }
 
 const titleFor = (conversation) => {
-    if (!conversation) return 'Chat'
+    if (!conversation) return tx('chat.title')
 
     const others = conversation.users?.filter((user) => user.id !== authUser?.id) || []
 
     if (conversation.type === 'direct') {
-        return others[0]?.name || 'Direktchat'
+        return others[0]?.name || tx('chat.direct_chat')
     }
 
     if (conversation.type === 'team') {
-        return conversation.team?.name || 'Teamchat'
+        return conversation.team?.name || tx('chat.team_chat')
     }
 
     if (conversation.type === 'event') {
-        return conversation.event?.title || 'Eventchat'
+        return conversation.event?.title || tx('chat.event_chat')
     }
 
     if (conversation.type === 'group' && conversation.name) {
@@ -160,24 +164,24 @@ const titleFor = (conversation) => {
 
     return others.length
         ? others.map((user) => user.name).join(', ')
-        : 'Gruppenchat'
+        : tx('chat.group_chat')
 }
 
 const typeLabelFor = (conversation) => ({
-    direct: 'Direkt',
-    group: 'Gruppe',
-    team: 'Team',
-    event: 'Training',
-}[conversation?.type] || 'Chat')
+    direct: tx('chat.types.direct'),
+    group: tx('chat.types.group'),
+    team: tx('chat.types.team'),
+    event: tx('chat.types.event'),
+}[conversation?.type] || tx('chat.title'))
 
 const latestMessagePreviewFor = (conversation) => {
     const message = conversation?.latest_visible_message
 
-    if (!message) return 'Noch keine Nachrichten'
-    if (message.kind === 'system') return message.message || 'Systemhinweis'
+    if (!message) return tx('chat.no_messages')
+    if (message.kind === 'system') return message.message || tx('chat.system_notice')
 
     const prefix = message.sender_id === authUser?.id
-        ? 'Du: '
+        ? `${tx('chat.you')}: `
         : (message.sender?.name ? `${message.sender.name}: ` : '')
 
     if (message.message) {
@@ -187,18 +191,18 @@ const latestMessagePreviewFor = (conversation) => {
     const firstAttachment = message.attachments?.[0]
 
     if (firstAttachment?.file?.type?.startsWith('image/')) {
-        return `${prefix}Bild gesendet`
+        return `${prefix}${tx('chat.image_sent')}`
     }
 
     if (firstAttachment?.file?.type?.startsWith('video/')) {
-        return `${prefix}Video gesendet`
+        return `${prefix}${tx('chat.video_sent')}`
     }
 
     if (firstAttachment?.file) {
-        return `${prefix}${firstAttachment.file.display_name || 'Datei gesendet'}`
+        return `${prefix}${firstAttachment.file.display_name || tx('chat.file_sent')}`
     }
 
-    return `${prefix}Nachricht`
+    return `${prefix}${tx('chat.message')}`
 }
 
 const conversationsByType = computed(() => {
@@ -357,10 +361,10 @@ const postOptimisticMessage = (optimisticMessage, text, attachments) => {
         optimisticMessage.local_status = 'failed'
         optimisticMessage.delivery_status = 'failed'
         optimisticMessage.error_message = error.code === 'ERR_CANCELED'
-            ? 'Upload abgebrochen.'
+            ? tx('chat.errors.upload_cancelled')
             : error.response?.status === 429
-            ? 'Zu viele Nachrichten in kurzer Zeit.'
-            : 'Senden fehlgeschlagen.'
+            ? tx('chat.errors.rate_limited')
+            : tx('chat.errors.send_failed')
     })
 }
 
@@ -782,12 +786,12 @@ const statusIconFor = (message) => {
     const status = message.local_status || message.delivery_status
 
     return {
-        sending: { icon: 'las la-clock', label: 'Wird gesendet' },
-        failed: { icon: 'las la-exclamation-circle', label: 'Nicht gesendet' },
-        sent: { icon: 'las la-check', label: 'Gesendet' },
-        delivered: { icon: 'las la-check-double', label: 'Angekommen' },
-        read: { icon: 'las la-eye', label: 'Gelesen' },
-    }[status] || { icon: 'las la-check', label: 'Gesendet' }
+        sending: { icon: 'las la-clock', label: tx('chat.status.sending') },
+        failed: { icon: 'las la-exclamation-circle', label: tx('chat.status.failed') },
+        sent: { icon: 'las la-check', label: tx('chat.status.sent') },
+        delivered: { icon: 'las la-check-double', label: tx('chat.status.delivered') },
+        read: { icon: 'las la-eye', label: tx('chat.status.read') },
+    }[status] || { icon: 'las la-check', label: tx('chat.status.sent') }
 }
 
 const deliverySummaryFor = (message) => {
@@ -830,7 +834,7 @@ const canDeleteMessage = (message) => {
 const fileUrl = (file) => file?.id ? route('auth.files.preview', file.id) : '#'
 const fileThumbnailUrl = (file) => file?.id ? route('auth.files.preview', { file: file.id, thumbnail: 1 }) : null
 const fileDownloadUrl = (file) => file?.id ? route('auth.files.download', file.id) : fileUrl(file)
-const attachmentLabel = (attachment) => attachment.file?.display_name || attachment.file?.path?.split('/').pop() || 'Datei'
+const attachmentLabel = (attachment) => attachment.file?.display_name || attachment.file?.path?.split('/').pop() || tx('chat.file')
 const isImageMime = (type) => type?.startsWith('image/')
 const isVideoMime = (type) => type?.startsWith('video/')
 const fileExtension = (file) => (file?.path?.split('.').pop() || '').toLowerCase()
@@ -1059,8 +1063,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <AppLayout title="Chat">
-        <Head title="Chat" />
+    <AppLayout :title="tx('chat.title')">
+        <Head :title="tx('chat.title')" />
 
         <div class="grid h-[calc(100dvh-5rem)] min-h-0 grid-cols-1 gap-2 overflow-hidden sm:gap-4 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
             <aside
@@ -1070,15 +1074,15 @@ onUnmounted(() => {
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
-                            <h1 class="text-xl font-semibold text-primary">Chat</h1>
+                            <h1 class="text-xl font-semibold text-primary">{{ tx('chat.title') }}</h1>
                             <p class="mt-1 text-sm text-secondary">
-                                Erst Person oder Gruppe wählen, dann öffnen.
+                                {{ tx('chat.choose_hint') }}
                             </p>
                         </div>
                         <button
                             type="button"
                             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
-                            title="Neue Konversation"
+                            :title="tx('chat.new_conversation')"
                             @click="showNewConversationModal = true"
                         >
                             <i class="las la-plus text-xl"></i>
@@ -1090,7 +1094,7 @@ onUnmounted(() => {
                         <input
                             v-model="conversationSearch"
                             type="search"
-                            placeholder="Person, Team oder Training suchen"
+                            :placeholder="tx('chat.search_placeholder')"
                             class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
                         >
                     </label>
@@ -1118,7 +1122,7 @@ onUnmounted(() => {
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
                     <div v-if="groupInvitations.length" class="mb-3 space-y-2 rounded-lg border border-border bg-inputBg p-2">
-                        <p class="px-1 text-xs font-semibold uppercase text-secondary">Gruppeneinladungen</p>
+                        <p class="px-1 text-xs font-semibold uppercase text-secondary">{{ tx('chat.group_invitations') }}</p>
                         <div
                             v-for="invitation in groupInvitations"
                             :key="invitation.id"
@@ -1128,7 +1132,7 @@ onUnmounted(() => {
                                 {{ titleFor(invitation.conversation) }}
                             </p>
                             <p class="mt-1 truncate text-xs text-secondary">
-                                Von {{ invitation.inviter?.name || 'Mitglied' }}
+                                {{ tx('chat.invited_by') }} {{ invitation.inviter?.name || tx('chat.member') }}
                             </p>
                             <div class="mt-3 flex gap-2">
                                 <button
@@ -1136,14 +1140,14 @@ onUnmounted(() => {
                                     class="flex-1 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
                                     @click="acceptGroupInvitation(invitation)"
                                 >
-                                    Annehmen
+                                    {{ tx('chat.accept') }}
                                 </button>
                                 <button
                                     type="button"
                                     class="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary"
                                     @click="declineGroupInvitation(invitation)"
                                 >
-                                    Ablehnen
+                                    {{ tx('chat.decline') }}
                                 </button>
                             </div>
                         </div>
@@ -1191,8 +1195,8 @@ onUnmounted(() => {
                     <AppEmptyState
                         v-if="conversations.length === 0"
                         class="m-3"
-                        title="Noch keine Chats"
-                        description="Starte eine neue Konversation, damit Nachrichten hier erscheinen."
+                        :title="tx('chat.empty_title')"
+                        :description="tx('chat.empty_description')"
                         compact
                     >
                         <template #icon>
@@ -1203,8 +1207,8 @@ onUnmounted(() => {
                     <AppEmptyState
                         v-else-if="filteredConversations.length === 0"
                         class="m-3"
-                        title="Keine passenden Chats"
-                        description="Aendere den Filter oder suche nach einem anderen Namen."
+                        :title="tx('chat.no_matches_title')"
+                        :description="tx('chat.no_matches_description')"
                         compact
                     >
                         <template #icon>
@@ -1223,7 +1227,7 @@ onUnmounted(() => {
                         <button
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-inputBg lg:hidden"
-                            title="Zurück"
+                            :title="tx('chat.back')"
                             @click="goBackToConversations"
                         >
                             <i class="las la-arrow-left text-xl"></i>
@@ -1231,8 +1235,8 @@ onUnmounted(() => {
                         <div class="min-w-0">
                             <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ typeLabelFor(selectedConversation) }}chat - {{ selectedUsers.length }} Mitglieder
-                                <span v-if="isSelectedConversationMuted"> - stumm</span>
+                                {{ typeLabelFor(selectedConversation) }}{{ tx('chat.chat_suffix') }} · {{ selectedUsers.length }} {{ tx('chat.members') }}
+                                <span v-if="isSelectedConversationMuted"> · {{ tx('chat.muted') }}</span>
                             </p>
                         </div>
                     </div>
@@ -1249,7 +1253,7 @@ onUnmounted(() => {
                         <button
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                            :title="isSelectedConversationMuted ? 'Benachrichtigungen aktivieren' : 'Chat stummschalten'"
+                            :title="isSelectedConversationMuted ? tx('chat.unmute') : tx('chat.mute')"
                             :disabled="muteForm.processing"
                             @click="muteSelectedConversation(isSelectedConversationMuted ? 0 : 480)"
                         >
@@ -1259,7 +1263,7 @@ onUnmounted(() => {
                             v-if="selectedConversation.type === 'group'"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                            title="Gruppenprofil"
+                            :title="tx('chat.group_profile')"
                             @click="openConversationSettingsModal"
                         >
                             <i class="las la-cog text-xl"></i>
@@ -1268,7 +1272,7 @@ onUnmounted(() => {
                             v-if="selectedConversation.type === 'group'"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                            title="Personen hinzufügen"
+                            :title="tx('chat.add_people')"
                             @click="openAddMembersModal"
                         >
                             <i class="las la-user-plus text-xl"></i>
@@ -1277,7 +1281,7 @@ onUnmounted(() => {
                             v-if="canLeaveConversation"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
-                            title="Gruppe verlassen"
+                            :title="tx('chat.leave_group')"
                             @click="openLeaveConversationModal"
                         >
                             <i class="las la-sign-out-alt text-xl"></i>
@@ -1290,14 +1294,14 @@ onUnmounted(() => {
                     <input
                         v-model="chatMessageSearch"
                         type="search"
-                        placeholder="Nachrichten in diesem Chat suchen"
+                        :placeholder="tx('chat.message_search')"
                         class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
                     >
                     <button
                         v-if="chatMessageSearch"
                         type="button"
                         class="text-secondary hover:text-primary"
-                        title="Suche leeren"
+                        :title="tx('chat.clear_search')"
                         @click="chatMessageSearch = ''"
                     >
                         <i class="las la-times"></i>
@@ -1314,7 +1318,7 @@ onUnmounted(() => {
                             :disabled="loadingOlderMessages"
                             @click="loadOlderMessages"
                         >
-                            {{ loadingOlderMessages ? 'Lade ältere Nachrichten...' : 'Ältere Nachrichten laden' }}
+                            {{ loadingOlderMessages ? tx('chat.loading_older') : tx('chat.load_older') }}
                         </AppButton>
                     </div>
 
@@ -1331,7 +1335,7 @@ onUnmounted(() => {
                                 : isOwnMessage(message)
                                 ? 'cursor-pointer bg-buttonPrimary text-buttonTextPrimary'
                                 : 'cursor-pointer bg-inputBg text-primary'"
-                            :title="isSystemMessage(message) ? undefined : 'Nachricht anklicken fuer Reaktionen'"
+                            :title="isSystemMessage(message) ? undefined : tx('chat.reactions_hint')"
                             @click="!isSystemMessage(message) && (openMessageActionsId = openMessageActionsId === message.id ? null : message.id)"
                         >
                             <div v-if="isSystemMessage(message)" class="flex items-center justify-center gap-2 text-center text-xs">

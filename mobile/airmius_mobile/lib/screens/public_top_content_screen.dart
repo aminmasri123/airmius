@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
-import 'public_growth_operations_screen.dart';
 
-import '../core/airmius_theme.dart';
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import 'public_detail_screen.dart';
+import 'blog_media_center_screen.dart';
+import 'sponsors_center_screen.dart';
 
+/// Public discovery page backed by published blog and sponsor records.
 class PublicTopContentScreen extends StatefulWidget {
   const PublicTopContentScreen({super.key});
 
@@ -13,110 +17,273 @@ class PublicTopContentScreen extends StatefulWidget {
 }
 
 class _PublicTopContentScreenState extends State<PublicTopContentScreen> {
-  String _filter = 'Alle';
+  Future<_PublicTopBundle>? _future;
+  String _filter = 'all';
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_PublicTopBundle> _load() async {
+    final responses = await Future.wait([
+      _client.publicBlog(),
+      _client.publicSponsors(),
+    ]);
+    final items = <_PublicTopItem>[];
+    for (final post in _jsonMaps(responses[0]['data'])) {
+      final title = _text(post['title']);
+      if (title.isEmpty) continue;
+      items.add(
+        _PublicTopItem(
+          title: title,
+          body: _text(post['excerpt']).isEmpty
+              ? _text(post['summary'])
+              : _text(post['excerpt']),
+          type: 'blog',
+          icon: Icons.article_outlined,
+        ),
+      );
+    }
+    for (final sponsor in _jsonMaps(responses[1]['data'])) {
+      final title = _text(sponsor['name']).isEmpty
+          ? _text(sponsor['display_name'])
+          : _text(sponsor['name']);
+      if (title.isEmpty) continue;
+      items.add(
+        _PublicTopItem(
+          title: title,
+          body: _text(sponsor['description']),
+          type: 'sponsor',
+          icon: Icons.handshake_outlined,
+        ),
+      );
+    }
+    return _PublicTopBundle(items: items);
+  }
+
+  void _reload() => setState(() => _future = _load());
 
   @override
   Widget build(BuildContext context) {
-    final items = _items.where((item) => _filter == 'Alle' || item.type == _filter).toList();
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.campaign_outlined), label: const Text('Funnel Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicGrowthOperationsScreen(initialTab: 'Leads')))),
-        
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Top-Inhalte', style: TextStyle(fontWeight: FontWeight.w900))),
-      body: PageFrame(
-        title: 'Top-Inhalte',
-        subtitle: 'Kuratierte Public-Inhalte aus Blog, Kursen, Marketplace, Vereinen und Sponsoring',
-        trailing: const StatusPill('Public'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AirmiusPanel(
-              gradient: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('Entdecken'),
-                  SizedBox(height: 8),
-                  Text('Die mobile App bildet die öffentliche Web-App auch für Besucher ab: Inhalte finden, Vertrauen aufbauen und danach registrieren oder Interesse senden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+      appBar: AppBar(
+        title: Text(
+          t('publicTop.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        actions: [
+          IconButton(
+            tooltip: t('publicTop.reload'),
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh_outlined),
+          ),
+        ],
+      ),
+      body: FutureBuilder<_PublicTopBundle>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return _ErrorState(onRetry: _reload);
+          }
+          final all = snapshot.data?.items ?? const <_PublicTopItem>[];
+          final visible = _filter == 'all'
+              ? all
+              : all.where((item) => item.type == _filter).toList();
+          return PageFrame(
+            title: t('publicTop.title'),
+            subtitle: t('publicTop.subtitle'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final filter in const ['Alle', 'Blog', 'Kurs', 'Verein', 'Shop', 'Sponsor'])
-                  ChoiceChip(
-                    selected: _filter == filter,
-                    label: Text(filter),
-                    onSelected: (_) => setState(() => _filter = filter),
-                    selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-                    backgroundColor: AirmiusColors.cardSoft,
-                    side: BorderSide(color: _filter == filter ? AirmiusColors.blue : AirmiusColors.border),
-                    labelStyle: TextStyle(color: _filter == filter ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                AirmiusPanel(
+                  gradient: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Eyebrow(t('publicTop.title')),
+                      const SizedBox(height: 8),
+                      Text(
+                        t('publicTop.hero'),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _FilterChip(
+                      label: t('publicTop.all'),
+                      selected: _filter == 'all',
+                      onTap: () => setState(() => _filter = 'all'),
+                    ),
+                    _FilterChip(
+                      label: t('publicTop.blog'),
+                      selected: _filter == 'blog',
+                      onTap: () => setState(() => _filter = 'blog'),
+                    ),
+                    _FilterChip(
+                      label: t('publicTop.sponsors'),
+                      selected: _filter == 'sponsor',
+                      onTap: () => setState(() => _filter = 'sponsor'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (visible.isEmpty)
+                  AirmiusPanel(
+                    child: Text(
+                      t('publicTop.empty'),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ...visible.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _ContentCard(item: item),
+                    ),
                   ),
               ],
             ),
-            const SizedBox(height: 14),
-            for (final item in items) ...[
-              _TopContentCard(item: item),
-              const SizedBox(height: 12),
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _TopContentCard extends StatelessWidget {
-  const _TopContentCard({required this.item});
+class _ContentCard extends StatelessWidget {
+  const _ContentCard({required this.item});
 
-  final _TopContentItem item;
+  final _PublicTopItem item;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final isBlog = item.type == 'blog';
     return AirmiusPanel(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicDetailScreen(title: item.title, body: item.body, icon: item.icon, kind: item.type))),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => isBlog
+              ? const BlogMediaCenterScreen()
+              : const SponsorsCenterScreen(),
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(width: 54, height: 54, decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.35))), child: Icon(item.icon, color: AirmiusColors.blue)),
+          Icon(
+            item.icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 30,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [Expanded(child: Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))), StatusPill(item.type)]),
-                const SizedBox(height: 5),
-                Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-                const SizedBox(height: 9),
-                Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(item.meta, color: AirmiusColors.green), const StatusPill('Public')]),
+                Text(
+                  item.title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                if (item.body.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(item.body),
+                ],
+                const SizedBox(height: 8),
+                StatusPill(
+                  isBlog ? t('publicTop.blog') : t('publicTop.sponsors'),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+          const Icon(Icons.chevron_right),
         ],
       ),
     );
   }
 }
 
-class _TopContentItem {
-  const _TopContentItem({required this.title, required this.body, required this.type, required this.meta, required this.icon});
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      selected: selected,
+      label: Text(label),
+      onSelected: (_) => onTap(),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: AirmiusButton(
+        label: AirmiusScope.of(context).t('publicTop.reload'),
+        icon: Icons.refresh_outlined,
+        onPressed: onRetry,
+      ),
+    );
+  }
+}
+
+class _PublicTopBundle {
+  const _PublicTopBundle({required this.items});
+
+  final List<_PublicTopItem> items;
+}
+
+class _PublicTopItem {
+  const _PublicTopItem({
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.icon,
+  });
 
   final String title;
   final String body;
   final String type;
-  final String meta;
   final IconData icon;
 }
 
-const _items = [
-  _TopContentItem(title: 'Digitale Mitgliedschaftsanfrage', body: 'Wie Vereine Anfragen, Formulare, Dokumente und Zahlrhythmen mobil verwalten.', type: 'Blog', meta: 'Beliebt', icon: Icons.article_outlined),
-  _TopContentItem(title: 'Trainer-Onboarding', body: 'Kurs mit Zertifikat, Lektionen und Fortschritt für Trainer und Vereinsadmins.', type: 'Kurs', meta: 'Zertifikat', icon: Icons.school_outlined),
-  _TopContentItem(title: 'Airmius Running Club', body: 'Öffentliches Vereinsprofil mit Teams, sichtbaren Beiträgen und Beitritt.', type: 'Verein', meta: 'Verifiziert', icon: Icons.groups_outlined),
-  _TopContentItem(title: 'Starterpaket Verein', body: 'Marketplace-Angebot mit Varianten, Anbieterprofil und Gast-Checkout.', type: 'Shop', meta: 'Neu', icon: Icons.storefront_outlined),
-  _TopContentItem(title: 'Sponsor Sichtbarkeit', body: 'Sponsoring-Kachel mit Kampagne, Kontaktanfrage und Reporting.', type: 'Sponsor', meta: 'Aktiv', icon: Icons.handshake_outlined),
-];
+List<JsonMap> _jsonMaps(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
+}
 
+String _text(dynamic value) => value?.toString().trim() ?? '';

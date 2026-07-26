@@ -1,8 +1,12 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 defineProps({
     status: { type: Number, default: 403 },
@@ -16,7 +20,7 @@ defineProps({
 </script>
 
 <template>
-    <Head :title="title" />
+    <Head :title="tx(title || 'Du hast dafür keine Berechtigung')" />
 
     <div class="flex min-h-[70vh] items-center justify-center px-4 py-10">
         <section class="w-full max-w-2xl rounded-2xl border border-border bg-card p-8 text-center shadow-xl">
@@ -29,20 +33,20 @@ defineProps({
             </p>
 
             <h1 class="mt-2 text-2xl font-bold text-primary">
-                {{ title }}
+                {{ tx(title) }}
             </h1>
 
             <p class="mx-auto mt-3 max-w-xl text-sm leading-6 text-secondary">
-                {{ message }}
+                {{ tx(message) }}
             </p>
 
             <div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link :href="upgradeUrl" class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                    Paket ansehen
+                    {{ tx('Paket ansehen') }}
                 </Link>
 
                 <Link :href="route('auth.dashboard')" class="rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary hover:border-borderHover">
-                    Zurück zum Dashboard
+                    {{ tx('Zurück zum Dashboard') }}
                 </Link>
             </div>
         </section>

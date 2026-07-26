@@ -60,7 +60,8 @@ const form = useForm({
 })
 const addressChoice = ref(props.profileAddress ? 'profile' : (props.shippingAddresses[0] ? `saved:${props.shippingAddresses[0].id}` : 'new'))
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format(Number(cents || 0) / 100)

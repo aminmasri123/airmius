@@ -9,30 +9,76 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pollTypes = [
-      _PollType('Mitgliederfeedback', 'Anonym möglich', 'Zufriedenheit, Trainingszeiten, Vereinsleben', AirmiusColors.blue, Icons.rate_review_outlined),
-      _PollType('Event-Abstimmung', 'Schnell', 'Terminfindung, Helferbedarf, Essensauswahl', AirmiusColors.green, Icons.event_available_outlined),
-      _PollType('Vereinsentscheidung', 'Verbindlich', 'Quorum, Stimmberechtigung, Ergebnisprotokoll', AirmiusColors.amber, Icons.how_to_vote_outlined),
-      _PollType('Team-Check', 'Trainer', 'Belastung, Verfuegbarkeit, Stimmung, Rückmeldung', AirmiusColors.pink, Icons.groups_2_outlined),
+      _PollType(
+        'Mitgliederfeedback',
+        'Anonym möglich',
+        'Zufriedenheit, Trainingszeiten, Vereinsleben',
+        AirmiusColors.blue,
+        Icons.rate_review_outlined,
+      ),
+      _PollType(
+        'Event-Abstimmung',
+        'Schnell',
+        'Terminfindung, Helferbedarf, Essensauswahl',
+        AirmiusColors.green,
+        Icons.event_available_outlined,
+      ),
+      _PollType(
+        'Vereinsentscheidung',
+        'Verbindlich',
+        'Quorum, Stimmberechtigung, Ergebnisprotokoll',
+        AirmiusColors.amber,
+        Icons.how_to_vote_outlined,
+      ),
+      _PollType(
+        'Team-Check',
+        'Trainer',
+        'Belastung, Verfuegbarkeit, Stimmung, Rückmeldung',
+        AirmiusColors.pink,
+        Icons.groups_2_outlined,
+      ),
     ];
 
     final workflow = [
-      _WorkflowStep('1', 'Zielgruppe wählen', 'Verein, Team, Rolle, Mitgliederstatus oder eingeladene Kontakte.'),
-      _WorkflowStep('2', 'Fragen konfigurieren', 'Single Choice, Multiple Choice, Skala, Freitext, Datei und Pflichtfeld.'),
-      _WorkflowStep('3', 'Regeln setzen', 'Anonymitaet, Laufzeit, Quorum, Mehrfachantworten, Guardian-Freigabe und Sichtbarkeit.'),
-      _WorkflowStep('4', 'Auswerten', 'Ergebnis, Export, Kommentar, Entscheidung, Aufgabe und Benachrichtigung.'),
+      _WorkflowStep(
+        '1',
+        'Zielgruppe wählen',
+        'Verein, Team, Rolle, Mitgliederstatus oder eingeladene Kontakte.',
+      ),
+      _WorkflowStep(
+        '2',
+        'Fragen konfigurieren',
+        'Single Choice, Multiple Choice, Skala, Freitext, Datei und Pflichtfeld.',
+      ),
+      _WorkflowStep(
+        '3',
+        'Regeln setzen',
+        'Anonymitaet, Laufzeit, Quorum, Mehrfachantworten, Guardian-Freigabe und Sichtbarkeit.',
+      ),
+      _WorkflowStep(
+        '4',
+        'Auswerten',
+        'Ergebnis, Export, Kommentar, Entscheidung, Aufgabe und Benachrichtigung.',
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Umfragen & Abstimmungen', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Umfragen & Abstimmungen',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Umfragen & Abstimmungen',
-        subtitle: 'Feedback, Abstimmungen, Quorum, Auswertung und Vereinsentscheidungen im mobilen Web-App-Stil.',
-        trailing: const StatusPill('Verein', color: AirmiusColors.blue),
+        subtitle:
+            'Feedback, Abstimmungen, Quorum, Auswertung und Vereinsentscheidungen im mobilen Web-App-Stil.',
+        trailing: StatusPill('Verein', color: airmiusAccentColor(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,29 +86,52 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('CLUB SURVEY SUITE'),
-                  SizedBox(height: 10),
-                  Text('Vereine können Mitglieder wirklich einbeziehen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
-                  SizedBox(height: 8),
-                  Text('Die mobile App bildet Umfragen, Abstimmungen und Feedback so ab, dass Vereinsadmins später mit Rollenrechten, Benachrichtigungen, Export und Audit arbeiten können.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                children: [
+                  const Eyebrow('CLUB SURVEY SUITE'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Vereine können Mitglieder wirklich einbeziehen.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Die mobile App bildet Umfragen, Abstimmungen und Feedback so ab, dass Vereinsadmins später mit Rollenrechten, Benachrichtigungen, Export und Audit arbeiten können.',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '4', label: 'Formate')),
+                Expanded(
+                  child: MetricCard(value: '4', label: 'Formate'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'API', label: 'Ready')),
+                Expanded(
+                  child: MetricCard(value: 'API', label: 'Ready'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'Audit', label: 'Log')),
+                Expanded(
+                  child: MetricCard(value: 'Audit', label: 'Log'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             for (final type in pollTypes) ...[
               AirmiusPanel(
-                borderColor: type.color.withValues(alpha: .44),
+                borderColor: airmiusSemanticColor(
+                  context,
+                  type.color,
+                ).withValues(alpha: .44),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -70,22 +139,59 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: type.color.withValues(alpha: .14),
+                        color: airmiusSemanticColor(
+                          context,
+                          type.color,
+                        ).withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: type.color.withValues(alpha: .45)),
+                        border: Border.all(
+                          color: airmiusSemanticColor(
+                            context,
+                            type.color,
+                          ).withValues(alpha: .45),
+                        ),
                       ),
-                      child: Icon(type.icon, color: type.color),
+                      child: Icon(
+                        type.icon,
+                        color: airmiusSemanticColor(context, type.color),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(type.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(
+                            type.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 5),
-                          Text(type.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                          Text(
+                            type.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
                           const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(type.status, color: type.color), const StatusPill('Mobile UI')]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                type.status,
+                                color: airmiusSemanticColor(
+                                  context,
+                                  type.color,
+                                ),
+                              ),
+                              const StatusPill('Mobile UI'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -114,10 +220,26 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('API & DATENMODELL'),
                   SizedBox(height: 10),
-                  _ApiLine(label: 'survey_schema', value: 'Titel, Beschreibung, Fragen, Optionen, Pflichtfelder, Version'),
-                  _ApiLine(label: 'targeting', value: 'Verein, Team, Rolle, Mitgliedschaft, Guardian, externe Einladung'),
-                  _ApiLine(label: 'response_rules', value: 'Anonym, sichtbar, einmalig, editierbar, Frist, Quorum'),
-                  _ApiLine(label: 'result_actions', value: 'Export, Entscheidung, Aufgabe, Benachrichtigung, Audit Timeline'),
+                  _ApiLine(
+                    label: 'survey_schema',
+                    value:
+                        'Titel, Beschreibung, Fragen, Optionen, Pflichtfelder, Version',
+                  ),
+                  _ApiLine(
+                    label: 'targeting',
+                    value:
+                        'Verein, Team, Rolle, Mitgliedschaft, Guardian, externe Einladung',
+                  ),
+                  _ApiLine(
+                    label: 'response_rules',
+                    value:
+                        'Anonym, sichtbar, einmalig, editierbar, Frist, Quorum',
+                  ),
+                  _ApiLine(
+                    label: 'result_actions',
+                    value:
+                        'Export, Entscheidung, Aufgabe, Benachrichtigung, Audit Timeline',
+                  ),
                 ],
               ),
             ),
@@ -153,28 +275,49 @@ class _StepRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: .18), borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.blue.withValues(alpha: .42))),
-            child: Text(step.number, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: airmiusAccentColor(context).withValues(alpha: .18),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: airmiusAccentColor(context).withValues(alpha: .42),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(step.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(step.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-              ],
+        ),
+        child: Text(
+          step.number,
+          style: TextStyle(
+            color: airmiusAccentColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              step.title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              step.body,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _ApiLine extends StatelessWidget {
@@ -185,13 +328,27 @@ class _ApiLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(width: 128, child: Text(label, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))),
-          ],
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 128,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: airmiusAccentColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
-      );
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
 }

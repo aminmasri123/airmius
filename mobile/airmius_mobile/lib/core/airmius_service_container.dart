@@ -32,12 +32,11 @@ class AirmiusServiceContainer {
     AirmiusPreferencesStore? pushDeviceStore,
     AirmiusPushTokenProvider? pushTokenProvider,
   }) : tokenStore = tokenStore ?? AirmiusSecureTokenStore(),
-         pushDevices = AirmiusPushDeviceRegistry(
-           store: pushDeviceStore ?? createAirmiusPreferencesStore(),
-           tokenProvider:
-               pushTokenProvider ?? AirmiusFirebasePushTokenProvider(),
-           locale: environment.locale,
-         ),
+       pushDevices = AirmiusPushDeviceRegistry(
+         store: pushDeviceStore ?? createAirmiusPreferencesStore(),
+         tokenProvider: pushTokenProvider ?? AirmiusFirebasePushTokenProvider(),
+         locale: environment.locale,
+       ),
        transport = environment.enableOfflineQueue
            ? AirmiusQueuedTransport(
                inner: transport,
@@ -102,6 +101,13 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
     await _restoreQueue();
 
     if (offline) {
+      if (_isSensitiveRequest(request)) {
+        return const AirmiusApiResponse(
+          statusCode: 503,
+          body:
+              '{"error":"offline_sensitive_request","message":"Diese Aktion benötigt eine aktive Verbindung und wird aus Sicherheitsgründen nicht offline gespeichert."}',
+        );
+      }
       final queued = AirmiusQueuedRequest(
         request: request,
         queuedAt: DateTime.now(),
@@ -129,6 +135,21 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         'message': _transportErrorMessage(lastError),
       }),
     );
+  }
+
+  /// Passwords, authentication challenges, account deletion and session
+  /// revocation must never be persisted in the offline queue. Besides being
+  /// non-idempotent, these requests can contain credentials or one-time codes.
+  bool _isSensitiveRequest(AirmiusApiRequest request) {
+    final path = request.path.toLowerCase();
+    return path.startsWith('/api/v1/auth/') ||
+        path.startsWith('/api/v1/account') ||
+        path.contains('/password') ||
+        path.contains('/two-factor') ||
+        path.contains('/two-factor-recovery') ||
+        path.contains('/sessions') ||
+        path.contains('/email/verification') ||
+        path.endsWith('/share');
   }
 
   String _transportErrorMessage(Object? error) {

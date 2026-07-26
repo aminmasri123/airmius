@@ -14,6 +14,7 @@ use App\Models\TrainingBlock;
 use App\Models\TrainingBlockItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,8 @@ use Illuminate\Validation\ValidationException;
 
 class EventCompetitivenessController extends Controller
 {
+    use AuthorizesRequests;
+
     public function participation(Request $request, Event $event)
     {
         $this->authorize('view', $event);
@@ -564,13 +567,16 @@ class EventCompetitivenessController extends Controller
         ]);
     }
 
-    public function decisions(Event $event)
+    public function decisions(Request $request, Event $event)
     {
         $this->authorize('view', $event);
 
         $decisions = EventDecision::query()
             ->where('event_id', $event->id)
-            ->with('options')
+            ->with([
+                'options',
+                'votes' => fn ($query) => $query->where('user_id', $request->user()->id),
+            ])
             ->withCount('votes')
             ->orderByDesc('id')
             ->get();
@@ -582,6 +588,7 @@ class EventCompetitivenessController extends Controller
                 'description' => $decision->description,
                 'status' => $decision->status,
                 'closes_at' => $decision->closes_at?->toDateTimeString(),
+                'my_option_id' => $decision->votes->first()?->event_decision_option_id,
                 'options' => $decision->options->map(fn (EventDecisionOption $option) => [
                     'id' => $option->id,
                     'label' => $option->label,
@@ -636,12 +643,13 @@ class EventCompetitivenessController extends Controller
                     'sort_order' => (int) $option->sort_order,
                 ]),
             ],
-        ]);
+        ], 201);
     }
 
     public function castVote(Request $request, Event $event, EventDecision $decision)
     {
         abort_unless((int) $decision->event_id === (int) $event->id, 404);
+        $this->authorize('view', $event);
 
         if (! $decision->isOpen()) {
             throw ValidationException::withMessages([
@@ -674,6 +682,22 @@ class EventCompetitivenessController extends Controller
                 'vote_id' => $vote->id,
                 'decision_id' => $decision->id,
                 'option_id' => $vote->event_decision_option_id,
+            ],
+        ]);
+    }
+
+    public function closeDecision(Event $event, EventDecision $decision)
+    {
+        abort_unless((int) $decision->event_id === (int) $event->id, 404);
+        $this->authorize('update', $event);
+
+        $decision->update(['status' => 'closed']);
+
+        return response()->json([
+            'message' => 'Abstimmung geschlossen.',
+            'data' => [
+                'id' => $decision->id,
+                'status' => $decision->status,
             ],
         ]);
     }
@@ -1261,4 +1285,3 @@ class EventCompetitivenessController extends Controller
             ->exists();
     }
 }
-

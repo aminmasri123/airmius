@@ -7,10 +7,12 @@ class MobileFormValidationSchemaSuiteScreen extends StatefulWidget {
   const MobileFormValidationSchemaSuiteScreen({super.key});
 
   @override
-  State<MobileFormValidationSchemaSuiteScreen> createState() => _MobileFormValidationSchemaSuiteScreenState();
+  State<MobileFormValidationSchemaSuiteScreen> createState() =>
+      _MobileFormValidationSchemaSuiteScreenState();
 }
 
-class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValidationSchemaSuiteScreen> {
+class _MobileFormValidationSchemaSuiteScreenState
+    extends State<MobileFormValidationSchemaSuiteScreen> {
   String _scope = 'Mitgliedsantrag';
   bool _requiredFields = true;
   bool _conditionalRules = true;
@@ -19,17 +21,30 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = airmiusAccentColor(context);
+    final secondaryColor = Theme.of(context).colorScheme.secondary;
+    final tertiaryColor = Theme.of(context).colorScheme.tertiary;
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Formularvalidierung', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Formularvalidierung',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Mobile Form Validation Schema',
-        subtitle: 'Pflichtfelder, Regeln, Masken, Fehlertexte und API-Payloads für dynamische Vereinsformulare.',
-        trailing: const StatusPill('API-ready', color: AirmiusColors.green),
+        subtitle:
+            'Pflichtfelder, Regeln, Masken, Fehlertexte und API-Payloads für dynamische Vereinsformulare.',
+        trailing: StatusPill('API-ready', color: secondaryColor),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,30 +55,47 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                 children: [
                   const Eyebrow('FORM SCHEMA'),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Jedes Vereinsformular bleibt stabil.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Die App bildet die Web-Logik mobil nach: Vereine können Felder aktivieren, als Pflicht markieren, Bedingungen setzen und die App zeigt sofort klare Fehlermeldungen.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.42),
+                    style: TextStyle(color: mutedColor, height: 1.42),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['Mitgliedsantrag', 'Profil', 'Zahlung', 'Dokumente', 'Guardian'].map((item) {
-                      return ChoiceChip(
-                        selected: _scope == item,
-                        label: Text(item),
-                        onSelected: (_) => setState(() => _scope = item),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                        backgroundColor: AirmiusColors.panelSoft,
-                        side: BorderSide(color: _scope == item ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _scope == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          'Mitgliedsantrag',
+                          'Profil',
+                          'Zahlung',
+                          'Dokumente',
+                          'Guardian',
+                        ].map((item) {
+                          return ChoiceChip(
+                            selected: _scope == item,
+                            label: Text(item),
+                            onSelected: (_) => setState(() => _scope = item),
+                            selectedColor: accentColor.withValues(alpha: .22),
+                            backgroundColor: surfaceColor,
+                            side: BorderSide(
+                              color: _scope == item ? accentColor : borderColor,
+                            ),
+                            labelStyle: TextStyle(
+                              color: _scope == item ? textColor : mutedColor,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -71,11 +103,17 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '42', label: 'Felder')),
+                Expanded(
+                  child: MetricCard(value: '42', label: 'Felder'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '18', label: 'Regeln')),
+                Expanded(
+                  child: MetricCard(value: '18', label: 'Regeln'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'v3', label: 'Schema')),
+                Expanded(
+                  child: MetricCard(value: 'v3', label: 'Schema'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -88,30 +126,37 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                   _ToggleRow(
                     icon: Icons.star_outline,
                     title: 'Pflichtfelder erzwingen',
-                    body: 'Vorname, Nachname, Geburtstag, E-Mail, Adresse und Vereins-spezifische Pflichtfelder werden vor dem Senden geprüft.',
+                    body:
+                        'Vorname, Nachname, Geburtstag, E-Mail, Adresse und Vereins-spezifische Pflichtfelder werden vor dem Senden geprüft.',
                     enabled: _requiredFields,
-                    onChanged: (value) => setState(() => _requiredFields = value),
+                    onChanged: (value) =>
+                        setState(() => _requiredFields = value),
                   ),
                   _ToggleRow(
                     icon: Icons.account_tree_outlined,
                     title: 'Bedingte Felder',
-                    body: 'Guardian-Daten nur bei Minderjaehrigen, SEPA nur bei Lastschrift, Lizenznummer nur bei Sportpflicht.',
+                    body:
+                        'Guardian-Daten nur bei Minderjaehrigen, SEPA nur bei Lastschrift, Lizenznummer nur bei Sportpflicht.',
                     enabled: _conditionalRules,
-                    onChanged: (value) => setState(() => _conditionalRules = value),
+                    onChanged: (value) =>
+                        setState(() => _conditionalRules = value),
                   ),
                   _ToggleRow(
                     icon: Icons.keyboard_outlined,
                     title: 'Eingabemasken',
-                    body: 'IBAN, PLZ, Telefon, Geburtsdatum, Mitgliedsnummer und Preisfelder bekommen passende mobile Tastaturen.',
+                    body:
+                        'IBAN, PLZ, Telefon, Geburtsdatum, Mitgliedsnummer und Preisfelder bekommen passende mobile Tastaturen.',
                     enabled: _inputMasks,
                     onChanged: (value) => setState(() => _inputMasks = value),
                   ),
                   _ToggleRow(
                     icon: Icons.history_outlined,
                     title: 'Schema-Versionen',
-                    body: 'Jede Vereinskonfiguration wird versioniert, damit alte Antraege nachvollziehbar bleiben.',
+                    body:
+                        'Jede Vereinskonfiguration wird versioniert, damit alte Antraege nachvollziehbar bleiben.',
                     enabled: _schemaVersioning,
-                    onChanged: (value) => setState(() => _schemaVersioning = value),
+                    onChanged: (value) =>
+                        setState(() => _schemaVersioning = value),
                     last: true,
                   ),
                 ],
@@ -126,16 +171,32 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                 children: [
                   const Eyebrow('API PAYLOAD PREVIEW'),
                   const SizedBox(height: 10),
-                  _PayloadLine(label: 'form_scope', value: _scope.toLowerCase().replaceAll(' ', '_')),
-                  const _PayloadLine(label: 'required_missing', value: 'gender, street, city'),
-                  const _PayloadLine(label: 'conditional_visible', value: 'guardian_email, sepa_mandate'),
-                  const _PayloadLine(label: 'document_links', value: 'privacy_policy, club_rules, contribution_rules'),
+                  _PayloadLine(
+                    label: 'form_scope',
+                    value: _scope.toLowerCase().replaceAll(' ', '_'),
+                  ),
+                  const _PayloadLine(
+                    label: 'required_missing',
+                    value: 'gender, street, city',
+                  ),
+                  const _PayloadLine(
+                    label: 'conditional_visible',
+                    value: 'guardian_email, sepa_mandate',
+                  ),
+                  const _PayloadLine(
+                    label: 'document_links',
+                    value: 'privacy_policy, club_rules, contribution_rules',
+                  ),
                   const SizedBox(height: 12),
                   Row(
-                    children: const [
-                      Expanded(child: StatusPill('Draft saved', color: AirmiusColors.green)),
+                    children: [
+                      Expanded(
+                        child: StatusPill('Draft saved', color: secondaryColor),
+                      ),
                       SizedBox(width: 8),
-                      Expanded(child: StatusPill('Retry safe', color: AirmiusColors.blue)),
+                      Expanded(
+                        child: StatusPill('Retry safe', color: accentColor),
+                      ),
                     ],
                   ),
                 ],
@@ -143,17 +204,33 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
             ),
             const SizedBox(height: 14),
             AirmiusPanel(
-              borderColor: AirmiusColors.amber.withValues(alpha: .45),
+              borderColor: tertiaryColor.withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('FEHLERTEXTE'),
                   const SizedBox(height: 10),
-                  const _ErrorCard(title: 'Geschlecht fehlt', body: 'Bitte wähle eine Option oder markiere das Feld im Vereins-Builder als optional.'),
-                  const _ErrorCard(title: 'SEPA unvollstaendig', body: 'IBAN und SEPA-Mandat sind erforderlich, wenn Lastschrift aktiv ist.'),
-                  const _ErrorCard(title: 'Dokument fehlt', body: 'Bitte lade das Pflichtdokument hoch oder bestätige die verknuepfte Vereinsregel.'),
+                  const _ErrorCard(
+                    title: 'Geschlecht fehlt',
+                    body:
+                        'Bitte wähle eine Option oder markiere das Feld im Vereins-Builder als optional.',
+                  ),
+                  const _ErrorCard(
+                    title: 'SEPA unvollstaendig',
+                    body:
+                        'IBAN und SEPA-Mandat sind erforderlich, wenn Lastschrift aktiv ist.',
+                  ),
+                  const _ErrorCard(
+                    title: 'Dokument fehlt',
+                    body:
+                        'Bitte lade das Pflichtdokument hoch oder bestätige die verknuepfte Vereinsregel.',
+                  ),
                   const SizedBox(height: 4),
-                  AirmiusButton(label: 'Schema später mit Laravel API verbinden', icon: Icons.api_outlined, onPressed: () {}),
+                  AirmiusButton(
+                    label: 'Schema später mit Laravel API verbinden',
+                    icon: Icons.api_outlined,
+                    onPressed: () {},
+                  ),
                 ],
               ),
             ),
@@ -172,11 +249,27 @@ class _SchemaPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = [
-      _SchemaRow('Personendaten', 'Vorname, Nachname, Geschlecht, Geburtstag', 'Pflicht'),
-      _SchemaRow('Wohndaten', 'Land, Straße, Hausnummer, PLZ, Stadt', 'Pflicht'),
+      _SchemaRow(
+        'Personendaten',
+        'Vorname, Nachname, Geschlecht, Geburtstag',
+        'Pflicht',
+      ),
+      _SchemaRow(
+        'Wohndaten',
+        'Land, Straße, Hausnummer, PLZ, Stadt',
+        'Pflicht',
+      ),
       _SchemaRow('Kontakt', 'E-Mail, Telefon, Notfallkontakt', 'Teilweise'),
-      _SchemaRow('Zahlung', 'Zahlart, Zahlungsrhythmus, IBAN, Mandat', 'Bedingt'),
-      _SchemaRow('Dateien', 'Datenschutz, Satzung, Beitragsordnung, Nachweise', 'Upload'),
+      _SchemaRow(
+        'Zahlung',
+        'Zahlart, Zahlungsrhythmus, IBAN, Mandat',
+        'Bedingt',
+      ),
+      _SchemaRow(
+        'Dateien',
+        'Datenschutz, Satzung, Beitragsordnung, Nachweise',
+        'Upload',
+      ),
     ];
 
     return AirmiusPanel(
@@ -186,7 +279,7 @@ class _SchemaPreview extends StatelessWidget {
           Row(
             children: [
               const Expanded(child: Eyebrow('SCHEMA VORSCHAU')),
-              StatusPill(scope, color: AirmiusColors.blue),
+              StatusPill(scope, color: airmiusAccentColor(context)),
             ],
           ),
           const SizedBox(height: 12),
@@ -215,17 +308,18 @@ class _SchemaTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = row.status == 'Pflicht'
+    final semanticColor = row.status == 'Pflicht'
         ? AirmiusColors.green
         : row.status == 'Upload'
-            ? AirmiusColors.blue
-            : AirmiusColors.amber;
+        ? AirmiusColors.blue
+        : AirmiusColors.amber;
+    final color = airmiusSemanticColor(context, semanticColor);
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,9 +330,21 @@ class _SchemaTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  row.title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(row.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  row.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
@@ -251,7 +357,14 @@ class _SchemaTile extends StatelessWidget {
 }
 
 class _ToggleRow extends StatelessWidget {
-  const _ToggleRow({required this.icon, required this.title, required this.body, required this.enabled, required this.onChanged, this.last = false});
+  const _ToggleRow({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.enabled,
+    required this.onChanged,
+    this.last = false,
+  });
 
   final IconData icon;
   final String title;
@@ -262,6 +375,9 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = Theme.of(context).colorScheme.secondary;
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 12),
       child: Row(
@@ -271,24 +387,40 @@ class _ToggleRow extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: (enabled ? AirmiusColors.green : AirmiusColors.muted).withValues(alpha: .14),
+              color: (enabled ? activeColor : mutedColor).withValues(
+                alpha: .14,
+              ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: enabled ? AirmiusColors.green.withValues(alpha: .45) : AirmiusColors.border),
+              border: Border.all(
+                color: enabled
+                    ? activeColor.withValues(alpha: .45)
+                    : borderColor,
+              ),
             ),
-            child: Icon(icon, color: enabled ? AirmiusColors.green : AirmiusColors.muted),
+            child: Icon(icon, color: enabled ? activeColor : mutedColor),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(body, style: TextStyle(color: mutedColor, height: 1.35)),
               ],
             ),
           ),
-          Switch(value: enabled, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Switch(
+            value: enabled,
+            activeThumbColor: activeColor,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -308,15 +440,32 @@ class _PayloadLine extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AirmiusColors.cardSoft,
+          color: airmiusSurfaceSoftColor(context),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AirmiusColors.border),
+          border: Border.all(color: airmiusBorderColor(context)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 128, child: Text(label, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.text, height: 1.35))),
+            SizedBox(
+              width: 128,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: airmiusAccentColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  height: 1.35,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -337,22 +486,39 @@ class _ErrorCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AirmiusColors.red.withValues(alpha: .08),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: .08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AirmiusColors.red.withValues(alpha: .28)),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.error.withValues(alpha: .28),
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.error_outline, color: AirmiusColors.red),
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    body,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ),
             ),

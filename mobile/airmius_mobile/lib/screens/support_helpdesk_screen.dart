@@ -1,9 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'data_rights_request_screen.dart';
-import 'notification_chat_operations_screen.dart';
+import 'legal_status_center_screen.dart';
+import 'privacy_consent_center_screen.dart';
 
 class SupportHelpdeskScreen extends StatefulWidget {
   const SupportHelpdeskScreen({super.key});
@@ -13,94 +18,410 @@ class SupportHelpdeskScreen extends StatefulWidget {
 }
 
 class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
-  String _category = 'Technik';
-  String _priority = 'Normal';
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _subject = TextEditingController();
+  final _message = TextEditingController();
+  String _category = 'technical';
+  String _priority = 'normal';
   bool _includeDevice = true;
-  bool _includeScreenshot = false;
-  bool _notifyByChat = true;
-
-  final _subject = TextEditingController(text: 'Problem mit Mitgliedsanfrage');
-  final _message = TextEditingController(text: 'Ich brauche Hilfe beim Vereinsbeitritt oder beim Zurückziehen einer Anfrage.');
-
-  final List<_TicketItem> _tickets = const [
-    _TicketItem(title: 'Mitgliedsanfrage haengt', body: 'User sieht Anfrage gesendet, aber keine weiteren Details.', status: 'Offen', owner: 'Support', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.blue),
-    _TicketItem(title: 'Dokument kann nicht geladen werden', body: 'Vereinsdokument ist verknuepft, Upload oder Vorschau fehlt.', status: 'In Prüfung', owner: 'Dateien', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
-    _TicketItem(title: 'Zahlungsintervall unklar', body: 'Verein moechte monatlich, 4 Monate, 6 Monate oder jaehrlich anbieten.', status: 'Rückfrage', owner: 'Finanzen', icon: Icons.payments_outlined, color: AirmiusColors.amber),
-  ];
+  bool _privacyAccepted = false;
+  bool _sending = false;
+  bool _sent = false;
+  bool _ticketsLoading = false;
+  bool _ticketsLoaded = false;
+  String? _ticketsError;
+  List<AirmiusSupportTicket> _tickets = const [];
 
   @override
   void dispose() {
+    _name.dispose();
+    _email.dispose();
     _subject.dispose();
     _message.dispose();
     super.dispose();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = AirmiusServicesScope.of(context).authState.user;
+    if (user != null && !_ticketsLoaded && !_ticketsLoading) _loadTickets();
+  }
+
+  Future<void> _loadTickets() async {
+    setState(() {
+      _ticketsLoading = true;
+      _ticketsError = null;
+    });
+    try {
+      final json = await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .supportTickets();
+      final data = json['data'];
+      final tickets = data is List
+          ? data
+                .whereType<JsonMap>()
+                .map(AirmiusSupportTicket.fromJson)
+                .toList()
+          : const <AirmiusSupportTicket>[];
+      if (mounted) {
+        setState(() {
+          _tickets = tickets;
+          _ticketsLoaded = true;
+          _ticketsLoading = false;
+        });
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        setState(() {
+          _ticketsError = error.userMessage;
+          _ticketsLoaded = true;
+          _ticketsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _ticketsError = AirmiusScope.of(
+            context,
+          ).t('support.ticketsLoadError');
+          _ticketsLoaded = true;
+          _ticketsLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_sending || _form.currentState?.validate() != true) return;
+    final services = AirmiusServicesScope.of(context);
+    final user = services.authState.user;
+    if (user == null && !_privacyAccepted) return;
+    setState(() => _sending = true);
+    try {
+      final payload = {
+        'name': user?.name ?? _name.text.trim(),
+        'email': user?.email ?? _email.text.trim(),
+        'subject': _subject.text.trim(),
+        'message': _message.text.trim(),
+        'category': _category,
+        'priority': _priority,
+        if (_includeDevice) 'platform': _platformName(),
+        if (user == null) 'privacy_consent': true,
+      };
+      final client = services.clientForSession(services.authState.session);
+      if (user == null) {
+        await client.sendPublicContact(payload);
+      } else {
+        final ticket = await client.createSupportTicket({
+          'subject': payload['subject'],
+          'message': payload['message'],
+          'category': payload['category'],
+          'priority': payload['priority'],
+        });
+        final data = ticket['data'];
+        if (data is JsonMap) {
+          _tickets = [AirmiusSupportTicket.fromJson(data), ..._tickets];
+        }
+      }
+      if (!mounted) return;
+      _name.clear();
+      _email.clear();
+      _subject.clear();
+      _message.clear();
+      setState(() => _sent = true);
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+    } catch (_) {
+      if (mounted) {
+        _showError(AirmiusScope.of(context).t('support.sendFailed'));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final theme = Theme.of(context);
+    final isGuest = AirmiusServicesScope.of(context).authState.user == null;
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const PageTitle(title: 'Support & Helpdesk', subtitle: 'Tickets, Rückfragen, Fehler, Vereinsanliegen, Prioritaet, Gerätedaten und Supportchat.'),
-                        const SizedBox(height: 16),
-                        _SupportHero(onSubmit: _submit),
-                        const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Kategorie', value: _category, values: const ['Technik', 'Verein', 'Mitgliedschaft', 'Zahlung', 'Datenschutz'], onChanged: (value) => setState(() => _category = value)),
-                        const SizedBox(height: 12),
-                        _ChoicePanel(title: 'Prioritaet', value: _priority, values: const ['Niedrig', 'Normal', 'Hoch', 'Dringend'], onChanged: (value) => setState(() => _priority = value)),
-                        const SizedBox(height: 12),
-                        AirmiusPanel(
-                          title: 'Ticket erstellen',
-                          child: Column(
-                            children: [
-                              AirmiusTextField(label: 'Betreff', controller: _subject),
-                              const SizedBox(height: 10),
-                              AirmiusTextField(label: 'Nachricht', controller: _message),
-                            ],
+      appBar: AppBar(
+        title: Text(
+          t('support.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      body: PageFrame(
+        title: t('support.title'),
+        subtitle: t('support.subtitle'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('support.eyebrow')),
+                  const SizedBox(height: 7),
+                  Text(
+                    t('support.headline'),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(t('support.body')),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (_sent) ...[
+              AirmiusPanel(
+                borderColor: theme.colorScheme.secondary,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.mark_email_read_outlined,
+                      color: theme.colorScheme.secondary,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t('support.sent'),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: 'Support-Optionen',
-                          child: Column(
-                            children: [
-                              _SwitchRow(title: 'Gerätedaten mitsenden', subtitle: 'Plattform, App-Version und technische Hinweise für Diagnose.', value: _includeDevice, onChanged: (value) => setState(() => _includeDevice = value)),
-                              _SwitchRow(title: 'Screenshot anhaengen', subtitle: 'Screenshot-Upload ist als UI für spätere API vorbereitet.', value: _includeScreenshot, onChanged: (value) => setState(() => _includeScreenshot = value)),
-                              _SwitchRow(title: 'Antwort per Chat', subtitle: 'Support-Rückfragen sollen im Airmius Chat erscheinen.', value: _notifyByChat, onChanged: (value) => setState(() => _notifyByChat = value)),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            t(
+                              isGuest
+                                  ? 'support.guestSentBody'
+                                  : 'support.sentBody',
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        for (final ticket in _tickets) ...[
-                          _TicketCard(ticket: ticket, onOpen: () => _toast('${ticket.title}: Ticketdetail vorbereitet')),
-                          const SizedBox(height: 12),
                         ],
-                        AirmiusPanel(
-                          title: 'Verknuepfte Hilfe',
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              AirmiusButton(label: 'Ticket senden', icon: Icons.send_outlined, onPressed: _submit),
-                              AirmiusButton(label: 'Supportchat', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
-                              AirmiusButton(label: 'Datenrechte', icon: Icons.manage_search_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DataRightsRequestScreen()))),
-                            ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (!isGuest) ...[
+              _SupportTicketList(
+                tickets: _tickets,
+                loading: _ticketsLoading,
+                error: _ticketsError,
+                onRetry: _loadTickets,
+              ),
+              const SizedBox(height: 14),
+            ],
+            Form(
+              key: _form,
+              child: AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('support.formTitle'),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 13),
+                    if (isGuest) ...[
+                      TextFormField(
+                        controller: _name,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: t('support.name'),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? t('support.required')
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: t('support.email'),
+                        ),
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+                          if (email.isEmpty) return t('support.required');
+                          if (!RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          ).hasMatch(email)) {
+                            return t('support.invalidEmail');
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    DropdownButtonFormField<String>(
+                      initialValue: _category,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('support.category'),
+                      ),
+                      items:
+                          const [
+                                'technical',
+                                'club',
+                                'membership',
+                                'payment',
+                                'privacy',
+                              ]
+                              .map(
+                                (value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(t('support.category.$value')),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (value) => setState(() => _category = value!),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _priority,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('support.priority'),
+                      ),
+                      items: const ['low', 'normal', 'high', 'urgent']
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(t('support.priority.$value')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() => _priority = value!),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _subject,
+                      maxLength: 160,
+                      decoration: InputDecoration(
+                        labelText: t('support.subject'),
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? t('support.required')
+                          : null,
+                    ),
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      controller: _message,
+                      minLines: 5,
+                      maxLines: 10,
+                      maxLength: 2000,
+                      decoration: InputDecoration(
+                        labelText: t('support.message'),
+                        alignLabelWithHint: true,
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().length < 10
+                          ? t('support.messageTooShort')
+                          : null,
+                    ),
+                    Material(
+                      type: MaterialType.transparency,
+                      child: SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _includeDevice,
+                        title: Text(t('support.includeDevice')),
+                        subtitle: Text(t('support.includeDeviceBody')),
+                        onChanged: (value) =>
+                            setState(() => _includeDevice = value),
+                      ),
+                    ),
+                    if (isGuest)
+                      Material(
+                        type: MaterialType.transparency,
+                        child: SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          value: _privacyAccepted,
+                          title: Text(t('support.guestPrivacy')),
+                          onChanged: (value) =>
+                              setState(() => _privacyAccepted = value),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: _sending
+                          ? t('support.sending')
+                          : t('support.send'),
+                      icon: Icons.send_outlined,
+                      onPressed: _sending || (isGuest && !_privacyAccepted)
+                          ? null
+                          : _submit,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.privacy_tip_outlined,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t('support.privacyTitle'),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
                           ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(t('support.privacyBody')),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => isGuest
+                                  ? const LegalStatusCenterScreen()
+                                  : const PrivacyConsentCenterScreen(),
+                            ),
+                          ),
+                          icon: const Icon(Icons.manage_search_outlined),
+                          label: Text(t('support.dataRights')),
                         ),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -108,135 +429,84 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
       ),
     );
   }
-
-  void _submit() {
-    _toast('Supportticket vorbereiten: $_category / $_priority');
-  }
-
-  void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
 }
 
-class _SupportHero extends StatelessWidget {
-  const _SupportHero({required this.onSubmit});
+class _SupportTicketList extends StatelessWidget {
+  const _SupportTicketList({
+    required this.tickets,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+  });
 
-  final VoidCallback onSubmit;
+  final List<AirmiusSupportTicket> tickets;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
+
+  String _statusLabel(AirmiusScope scope, String status) => switch (status) {
+    'open' => scope.t('support.ticketStatus.open'),
+    'in_progress' => scope.t('support.ticketStatus.inProgress'),
+    'waiting' => scope.t('support.ticketStatus.waiting'),
+    'resolved' => scope.t('support.ticketStatus.resolved'),
+    'closed' => scope.t('support.ticketStatus.closed'),
+    _ => status,
+  };
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF11243A), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
-      ),
+    final scope = AirmiusScope.of(context);
+    return AirmiusPanel(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const AirmiusLogo(size: 42),
-              const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('HELPDESK'), SizedBox(height: 4), Text('Schnell Hilfe bekommen', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
-              AirmiusButton(label: 'Senden', icon: Icons.send_outlined, onPressed: onSubmit),
+          Eyebrow(scope.t('support.ticketsTitle')),
+          const SizedBox(height: 8),
+          if (loading)
+            const LinearProgressIndicator()
+          else if (error != null)
+            Row(
+              children: [
+                Expanded(child: Text(error!)),
+                IconButton(
+                  tooltip: scope.t('support.ticketsRetry'),
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_outlined),
+                ),
+              ],
+            )
+          else if (tickets.isEmpty)
+            Text(
+              scope.t('support.ticketsEmpty'),
+              style: TextStyle(color: airmiusMutedColor(context)),
+            )
+          else
+            for (final ticket in tickets) ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.confirmation_number_outlined),
+                title: Text(
+                  ticket.subject,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  '${_statusLabel(scope, ticket.status)} · ${ticket.category}',
+                ),
+                trailing: Text('#${ticket.id}'),
+              ),
+              if (ticket != tickets.last) const Divider(height: 1),
             ],
-          ),
-          const SizedBox(height: 14),
-          const Text('Support ist Teil der Plattform-UI: User, Vereinsadmins und Trainer können Fehler, Fragen und Rückfragen strukturiert erfassen.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Kategorien')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Tickets')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Chat'))]),
         ],
       ),
     );
   }
 }
 
-class _ChoicePanel extends StatelessWidget {
-  const _ChoicePanel({required this.title, required this.value, required this.values, required this.onChanged});
-
-  final String title;
-  final String value;
-  final List<String> values;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final item in values)
-            ChoiceChip(
-              label: Text(item),
-              selected: value == item,
-              onSelected: (_) => onChanged(item),
-              selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-              backgroundColor: AirmiusColors.card,
-              labelStyle: TextStyle(color: value == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              side: BorderSide(color: value == item ? AirmiusColors.blue : AirmiusColors.border),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
-
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-        Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
-      ]),
-    );
-  }
-}
-
-class _TicketCard extends StatelessWidget {
-  const _TicketCard({required this.ticket, required this.onOpen});
-
-  final _TicketItem ticket;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: ticket.title,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: ticket.color.withValues(alpha: .18), borderRadius: BorderRadius.circular(16), border: Border.all(color: ticket.color.withValues(alpha: .5))), child: Icon(ticket.icon, color: ticket.color)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [StatusPill(ticket.status, color: ticket.color), const SizedBox(height: 8), Text(ticket.owner, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)), const SizedBox(height: 6), Text(ticket.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700))])),
-          IconButton(onPressed: onOpen, icon: const Icon(Icons.chevron_right, color: AirmiusColors.muted)),
-        ],
-      ),
-    );
-  }
-}
-
-class _TicketItem {
-  const _TicketItem({required this.title, required this.body, required this.status, required this.owner, required this.icon, required this.color});
-
-  final String title;
-  final String body;
-  final String status;
-  final String owner;
-  final IconData icon;
-  final Color color;
-}
+String _platformName() => switch (defaultTargetPlatform) {
+  TargetPlatform.android => 'android',
+  TargetPlatform.iOS => 'ios',
+  TargetPlatform.macOS => 'macos',
+  TargetPlatform.windows => 'windows',
+  TargetPlatform.linux => 'linux',
+  TargetPlatform.fuchsia => 'fuchsia',
+};

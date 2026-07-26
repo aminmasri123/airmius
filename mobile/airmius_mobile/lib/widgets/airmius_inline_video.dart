@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../core/airmius_external_url.dart';
 import '../core/airmius_theme.dart';
 import 'airmius_widgets.dart';
 
@@ -33,7 +34,7 @@ class AirmiusInlineVideo extends StatefulWidget {
 }
 
 class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
-  late final VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   late bool _muted;
   bool _ready = false;
   bool _failed = false;
@@ -43,20 +44,29 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
   void initState() {
     super.initState();
     _muted = widget.muted;
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    _controller.addListener(_handleVideoTick);
-    _controller.initialize().then((_) async {
-      if (!mounted) return;
-      await _controller.setVolume(_muted ? 0 : 1);
-      if (widget.autoPlay) {
-        await _controller.play();
-      }
-      if (!mounted) return;
-      setState(() => _ready = true);
-    }).catchError((_) {
-      if (!mounted) return;
-      setState(() => _failed = true);
-    });
+    final uri = safeExternalHttpUrl(widget.url, httpsOnly: false);
+    if (uri == null) {
+      _failed = true;
+      return;
+    }
+    final controller = VideoPlayerController.networkUrl(uri);
+    _controller = controller;
+    controller.addListener(_handleVideoTick);
+    controller
+        .initialize()
+        .then((_) async {
+          if (!mounted) return;
+          await controller.setVolume(_muted ? 0 : 1);
+          if (widget.autoPlay) {
+            await controller.play();
+          }
+          if (!mounted) return;
+          setState(() => _ready = true);
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() => _failed = true);
+        });
   }
 
   @override
@@ -64,28 +74,39 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.muted != widget.muted && _muted != widget.muted) {
       _muted = widget.muted;
-      if (_ready && !_failed) {
-        _controller.setVolume(_muted ? 0 : 1);
+      final controller = _controller;
+      if (_ready && !_failed && controller != null) {
+        controller.setVolume(_muted ? 0 : 1);
       }
     }
   }
 
   Future<void> _toggleMute() async {
+    final controller = _controller;
+    if (controller == null) return;
     final nextMuted = !_muted;
-    await _controller.setVolume(nextMuted ? 0 : 1);
+    await controller.setVolume(nextMuted ? 0 : 1);
     if (!mounted) return;
     setState(() => _muted = nextMuted);
     widget.onMutedChanged?.call(nextMuted);
   }
 
   void _handleVideoTick() {
-    if (!_ready || _failed || _endedNotified || widget.onEnded == null) return;
+    final controller = _controller;
+    if (controller == null ||
+        !_ready ||
+        _failed ||
+        _endedNotified ||
+        widget.onEnded == null) {
+      return;
+    }
 
-    final value = _controller.value;
+    final value = controller.value;
     final duration = value.duration;
     if (duration.inMilliseconds <= 0) return;
 
-    final nearEnd = value.position.inMilliseconds >= duration.inMilliseconds - 250;
+    final nearEnd =
+        value.position.inMilliseconds >= duration.inMilliseconds - 250;
     if (nearEnd && !value.isPlaying) {
       _endedNotified = true;
       widget.onEnded?.call();
@@ -94,19 +115,38 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
 
   @override
   void dispose() {
-    _controller.removeListener(_handleVideoTick);
-    _controller.dispose();
+    final controller = _controller;
+    controller?.removeListener(_handleVideoTick);
+    controller?.dispose();
     super.dispose();
+  }
+
+  Future<void> _togglePlayback() async {
+    final controller = _controller;
+    if (controller == null) return;
+    if (controller.value.isPlaying) {
+      await controller.pause();
+    } else {
+      await controller.play();
+    }
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final content = _ready && !_failed
+    final controller = _controller;
+    final content = _ready && !_failed && controller != null
         ? AspectRatio(
-            aspectRatio: _controller.value.aspectRatio == 0 ? 16 / 9 : _controller.value.aspectRatio,
-            child: VideoPlayer(_controller),
+            aspectRatio: controller.value.aspectRatio == 0
+                ? 16 / 9
+                : controller.value.aspectRatio,
+            child: VideoPlayer(controller),
           )
-        : _VideoPoster(thumbnailUrl: widget.thumbnailUrl, title: widget.title, failed: _failed);
+        : _VideoPoster(
+            thumbnailUrl: widget.thumbnailUrl,
+            title: widget.title,
+            failed: _failed,
+          );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.borderRadius),
@@ -116,35 +156,42 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (_ready && !_failed)
+            if (_ready && !_failed && controller != null)
               Center(child: content)
             else
               Positioned.fill(child: content),
             if (!_ready && !_failed)
               const Center(
-                child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white)),
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            if (_ready && !_failed)
+            if (_ready && !_failed && controller != null)
               Positioned.fill(
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _controller.value.isPlaying ? _controller.pause() : _controller.play();
-                      });
-                    },
+                    onTap: _togglePlayback,
                     child: Center(
                       child: AnimatedOpacity(
-                        opacity: _controller.value.isPlaying ? 0 : 1,
+                        opacity: controller.value.isPlaying ? 0 : 1,
                         duration: const Duration(milliseconds: 160),
-                        child: const Icon(Icons.play_circle_fill, color: Colors.white, size: 62),
+                        child: const Icon(
+                          Icons.play_circle_fill,
+                          color: Colors.white,
+                          size: 62,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            if (_ready && !_failed)
+            if (_ready && !_failed && controller != null)
               Positioned(
                 left: 10,
                 right: 10,
@@ -152,26 +199,36 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
                 child: Row(
                   children: [
                     IconButton.filled(
-                      onPressed: () {
-                        setState(() {
-                          _controller.value.isPlaying ? _controller.pause() : _controller.play();
-                        });
-                      },
-                      icon: Icon(_controller.value.isPlaying ? Icons.pause : Icons.play_arrow),
+                      onPressed: _togglePlayback,
+                      icon: Icon(
+                        controller.value.isPlaying
+                            ? Icons.pause
+                            : Icons.play_arrow,
+                      ),
                       iconSize: 18,
-                      style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.58), foregroundColor: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.58),
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     IconButton.filled(
                       onPressed: _toggleMute,
-                      icon: Icon(_muted ? Icons.volume_off_outlined : Icons.volume_up_outlined),
+                      icon: Icon(
+                        _muted
+                            ? Icons.volume_off_outlined
+                            : Icons.volume_up_outlined,
+                      ),
                       iconSize: 18,
-                      style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.58), foregroundColor: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.58),
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: VideoProgressIndicator(
-                        _controller,
+                        controller,
                         allowScrubbing: true,
                         colors: const VideoProgressColors(
                           playedColor: AirmiusColors.blue,
@@ -191,7 +248,11 @@ class _AirmiusInlineVideoState extends State<AirmiusInlineVideo> {
 }
 
 class _VideoPoster extends StatelessWidget {
-  const _VideoPoster({required this.thumbnailUrl, required this.title, required this.failed});
+  const _VideoPoster({
+    required this.thumbnailUrl,
+    required this.title,
+    required this.failed,
+  });
 
   final String? thumbnailUrl;
   final String? title;
@@ -203,7 +264,11 @@ class _VideoPoster extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         if (thumbnailUrl != null)
-          AirmiusMediaImage(url: thumbnailUrl!, borderRadius: 0)
+          AirmiusMediaImage(
+            url: thumbnailUrl!,
+            borderRadius: 0,
+            semanticLabel: title,
+          )
         else
           Container(
             decoration: BoxDecoration(
@@ -223,12 +288,25 @@ class _VideoPoster extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(failed ? Icons.error_outline : Icons.play_circle_fill, color: Colors.white, size: 58),
+              Icon(
+                failed ? Icons.error_outline : Icons.play_circle_fill,
+                color: Colors.white,
+                size: 58,
+              ),
               if (title != null) ...[
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(title!, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+                  child: Text(
+                    title!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               ],
             ],

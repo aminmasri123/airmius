@@ -7,6 +7,7 @@ import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     clubProfile: Object,
@@ -15,18 +16,27 @@ const props = defineProps({
     viewer: Object,
 })
 
+const { locale, messages, te, t } = useI18n({ useScope: 'global' })
+const tAuto = (value, params = {}) => {
+    const source = String(value ?? '').trim()
+    if (!source || locale.value === 'de') return source
+    const dictionary = messages.value?.[locale.value]?.auto || {}
+    if (dictionary[source]) return dictionary[source]
+    return te(source) ? t(source, params) : source
+}
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
-const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const page = usePage()
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const clubRoleLabel = (role) => ({
-    owner: 'Owner',
-    admin: 'Verein-Admin',
-    manager: 'Manager',
-    academy_manager: 'Akademie-Manager',
-    financial_controller: 'Kassierer',
-    trainer: 'Trainer',
-    member: 'Mitglied',
+    owner: tAuto('Owner'),
+    admin: tAuto('Verein-Admin'),
+    manager: tAuto('Manager'),
+    academy_manager: tAuto('Akademie-Manager'),
+    financial_controller: tAuto('Kassierer'),
+    trainer: tAuto('Trainer'),
+    member: tAuto('Mitglied'),
 }[role] || role)
 const memberRoles = (member) => Array.isArray(member.pivot.roles) && member.pivot.roles.length
     ? member.pivot.roles
@@ -139,9 +149,9 @@ const submitMembershipRequest = () => {
 
 const withdrawMembershipRequest = async () => {
     const confirmed = await confirmDialog({
-        title: 'Anfrage zurückziehen',
-        message: `Möchtest du deine Mitgliedschaftsanfrage bei "${props.clubProfile.name}" wirklich zurückziehen?`,
-        confirmLabel: 'Zurückziehen',
+        title: tAuto('Anfrage zurückziehen'),
+        message: t('clubs_profile.messages.withdraw_request', { name: props.clubProfile.name }),
+        confirmLabel: tAuto('Zurückziehen'),
         danger: true,
     })
 
@@ -161,9 +171,9 @@ const requestPause = () => {
 
 const leaveClub = async () => {
     const confirmed = await confirmDialog({
-        title: 'Verein verlassen',
-        message: `Möchtest du den Verein "${props.clubProfile.name}" wirklich verlassen? Du wirst auch aus allen Teams dieses Vereins entfernt. Das ist nur möglich, wenn keine offenen Rechnungen bestehen.`,
-        confirmLabel: 'Verlassen',
+        title: tAuto('Verein verlassen'),
+        message: t('clubs_profile.messages.leave_club', { name: props.clubProfile.name }),
+        confirmLabel: tAuto('Verlassen'),
         danger: true,
     })
 
@@ -175,13 +185,13 @@ const leaveClub = async () => {
 }
 
 const intervalLabel = (interval) => ({
-    monthly: 'Monat',
-    quarterly: 'Quartal',
-    four_monthly: '4 Monate',
-    semi_yearly: '6 Monate',
-    yearly: 'Jahr',
-    once: 'einmalig',
-    none: 'kein Beitrag',
+    monthly: tAuto('Monat'),
+    quarterly: tAuto('Quartal'),
+    four_monthly: tAuto('4 Monate'),
+    semi_yearly: tAuto('6 Monate'),
+    yearly: tAuto('Jahr'),
+    once: tAuto('einmalig'),
+    none: tAuto('kein Beitrag'),
 }[interval] || interval)
 
 const paymentMethodLabel = (value) => props.clubProfile.membership_payment_method_options?.find((method) => method.value === value)?.label || value
@@ -207,7 +217,7 @@ const applicationFieldSections = computed(() => {
     return sections
 })
 
-const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(value || 0))
@@ -221,7 +231,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
         <div class="mx-auto max-w-5xl space-y-6">
             <ClubWorkspaceNav
                 active="structure"
-                description="Vereinsprofil, Teams, Rollen und sichtbare Vereinsbeiträge."
+                :description="tAuto('Vereinsprofil, Teams, Rollen und sichtbare Vereinsbeiträge.')"
             />
 
             <section class="overflow-hidden rounded-lg border border-border bg-card">
@@ -231,7 +241,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     <button v-if="viewer.can_manage" type="button"
                         class="absolute bottom-3 right-3 rounded-lg bg-card/90 px-3 py-2 text-sm font-semibold text-primary shadow hover:bg-card"
                         @click="coverInput?.click()">
-                        <i class="las la-camera"></i> Titelbild
+                        <i class="las la-camera"></i> {{ tAuto('Titelbild') }}
                     </button>
                     <input ref="coverInput" type="file" accept="image/*" class="hidden"
                         @change="uploadImage('cover_image', $event)" />
@@ -254,8 +264,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                             </div>
                             <div class="pb-1">
                                 <h1 class="text-2xl font-bold text-primary">{{ clubProfile.name }}</h1>
-                                <p class="text-sm text-secondary">Verein · {{ viewer.is_member ? 'Mitglied' : 'Profil'
-                                    }}</p>
+                                <p class="text-sm text-secondary">{{ tAuto('Verein') }} · {{ viewer.is_member ? tAuto('Mitglied') : tAuto('Profil') }}</p>
                             </div>
                         </div>
 
@@ -266,13 +275,13 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                 class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                                 @click="openMembershipRequest"
                             >
-                                Mitgliedschaft anfragen
+                                {{ tAuto('Mitgliedschaft anfragen') }}
                             </button>
                             <span
                                 v-if="!viewer.is_member && viewer.has_pending_membership_request"
                                 class="rounded-lg border border-success/40 px-4 py-2 text-sm font-semibold text-success"
                             >
-                                Anfrage gesendet
+                                {{ tAuto('Anfrage gesendet') }}
                             </span>
                             <button
                                 v-if="!viewer.is_member && viewer.has_pending_membership_request"
@@ -280,11 +289,11 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                 class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                 @click="withdrawMembershipRequest"
                             >
-                                Anfrage zurückziehen
+                                {{ tAuto('Anfrage zurückziehen') }}
                             </button>
                             <Link :href="route('auth.teams.index')"
                                 class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
-                                Teams ansehen
+                                {{ tAuto('Teams ansehen') }}
                             </Link>
                             <button
                                 v-if="viewer.is_member && !viewer.can_manage"
@@ -292,7 +301,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                 class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                 @click="leaveClub"
                             >
-                                Verein verlassen
+                                {{ tAuto('Verein verlassen') }}
                             </button>
                         </div>
                     </div>
@@ -302,159 +311,159 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
             <section class="grid gap-4 sm:grid-cols-3">
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ clubProfile.users_count }}</div>
-                    <div class="text-sm text-secondary">Mitglieder</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Mitglieder') }}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ clubProfile.teams_count }}</div>
-                    <div class="text-sm text-secondary">Teams</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Teams') }}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ clubProfile.posts_count }}</div>
-                    <div class="text-sm text-secondary">Beiträge</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Beiträge') }}</div>
                 </div>
             </section>
 
             <section v-if="viewer.is_member && clubProfile.member_pause_requests_enabled && !viewer.can_manage" class="rounded-lg border border-border bg-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Mitgliedschaft pausieren</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ tAuto('Mitgliedschaft pausieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Dein Verein erlaubt Pausen-Anfragen. Die Pause wird erst nach Freigabe durch die Vereinsverwaltung aktiv.
+                    {{ tAuto('Dein Verein erlaubt Pausen-Anfragen. Die Pause wird erst nach Freigabe durch die Vereinsverwaltung aktiv.') }}
                 </p>
                 <form class="mt-4 grid gap-3 md:grid-cols-3" @submit.prevent="requestPause">
                     <input v-model="pauseForm.requested_pause_from" type="date" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" required>
                     <input v-model="pauseForm.requested_pause_until" type="date" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                    <input v-model="pauseForm.message" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Grund optional">
+                    <input v-model="pauseForm.message" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tAuto('Grund optional')">
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="pauseForm.processing">
-                        Pause anfragen
+                        {{ tAuto('Pause anfragen') }}
                     </button>
                 </form>
             </section>
 
             <section v-if="viewer.can_manage" class="rounded-lg border border-border bg-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Vereinsdaten</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ tAuto('Vereinsdaten') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Offizielle Vereine müssen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen können das Feld leer lassen.
+                    {{ tAuto('Offizielle Vereine müssen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen können das Feld leer lassen.') }}
                 </p>
 
                 <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="updateClubProfile">
                     <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4 text-sm">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-semibold text-primary">Prüfstatus:</span>
+                            <span class="font-semibold text-primary">{{ tAuto('Prüfstatus:') }}</span>
                             <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
-                                {{ clubProfile.verification_status === 'pending_verification' ? 'Wartet auf Prüfung' : clubProfile.verification_status === 'verified' ? 'Freigegeben' : clubProfile.verification_status === 'rejected' ? 'Abgelehnt' : clubProfile.verification_status }}
+                                {{ clubProfile.verification_status === 'pending_verification' ? tAuto('Wartet auf Prüfung') : clubProfile.verification_status === 'verified' ? tAuto('Freigegeben') : clubProfile.verification_status === 'rejected' ? tAuto('Abgelehnt') : tAuto(clubProfile.verification_status) }}
                             </span>
                             <span v-if="clubProfile.is_official" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">
-                                Offiziell
+                                {{ tAuto('Offiziell') }}
                             </span>
                         </div>
                         <p v-if="clubProfile.official_club_number" class="mt-2 text-secondary">
-                            Vereinsnummer: {{ clubProfile.official_club_number }}
+                            {{ tAuto('Vereinsnummer:') }} {{ clubProfile.official_club_number }}
                         </p>
                         <p v-else-if="clubProfile.requested_official_club_number" class="mt-2 text-secondary">
-                            Beantragte Vereinsnummer: {{ clubProfile.requested_official_club_number }}
+                            {{ tAuto('Beantragte Vereinsnummer:') }} {{ clubProfile.requested_official_club_number }}
                         </p>
                         <p v-if="clubProfile.verification_notes" class="mt-2 text-secondary">
-                            Hinweis: {{ clubProfile.verification_notes }}
+                            {{ tAuto('Hinweis:') }} {{ clubProfile.verification_notes }}
                         </p>
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Vereinsname</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Vereinsname') }}</label>
                         <input v-model="clubForm.name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Sportart</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Sportart') }}</label>
                         <input v-model="clubForm.sport_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                         <input v-model="clubForm.is_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Verein auflisten</span>
-                            <span class="block text-xs text-secondary">Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.</span>
+                            <span class="block font-semibold">{{ tAuto('Verein auflisten') }}</span>
+                            <span class="block text-xs text-secondary">{{ tAuto('Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.') }}</span>
                         </span>
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                         <input v-model="clubForm.teams_are_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Teams auflisten</span>
-                            <span class="block text-xs text-secondary">Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.</span>
+                            <span class="block font-semibold">{{ tAuto('Teams auflisten') }}</span>
+                            <span class="block text-xs text-secondary">{{ tAuto('Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.') }}</span>
                         </span>
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                         <input v-model="clubForm.members_can_post_to_club" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Vereinsbeiträge erlauben</span>
-                            <span class="block text-xs text-secondary">Normale Mitglieder dürfen Beiträge für den Verein erstellen.</span>
+                            <span class="block font-semibold">{{ tAuto('Vereinsbeiträge erlauben') }}</span>
+                            <span class="block text-xs text-secondary">{{ tAuto('Normale Mitglieder dürfen Beiträge für den Verein erstellen.') }}</span>
                         </span>
                     </label>
 
                     <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                         <input v-model="clubForm.members_can_post_to_teams" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Teambeiträge erlauben</span>
-                            <span class="block text-xs text-secondary">Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.</span>
+                            <span class="block font-semibold">{{ tAuto('Teambeiträge erlauben') }}</span>
+                            <span class="block text-xs text-secondary">{{ tAuto('Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.') }}</span>
                         </span>
                     </label>
 
                     <label v-if="false" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary md:col-span-2">
                         <input v-model="clubForm.is_official" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Offizieller Verein</span>
-                            <span class="block text-secondary">Aktivieren, wenn der Verein offiziell registriert oder einem Verband zugeordnet ist.</span>
+                            <span class="block font-semibold">{{ tAuto('Offizieller Verein') }}</span>
+                            <span class="block text-secondary">{{ tAuto('Aktivieren, wenn der Verein offiziell registriert oder einem Verband zugeordnet ist.') }}</span>
                         </span>
                     </label>
 
                     <div class="md:col-span-2">
-                        <label class="text-sm font-semibold text-primary">Vereinsnummer zur Prüfung</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Vereinsnummer zur Prüfung') }}</label>
                         <input
                             v-model="clubForm.official_club_number"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            placeholder="z. B. Vereinsregister- oder Verbandsnummer"
+                            :placeholder="tAuto('z. B. Vereinsregister- oder Verbandsnummer')"
                         >
                         <p class="mt-1 text-xs text-secondary">
-                            Wenn die Nummer neu oder geändert ist, wird sie zur Admin-Prüfung vorgemerkt.
+                            {{ tAuto('Wenn die Nummer neu oder geändert ist, wird sie zur Admin-Prüfung vorgemerkt.') }}
                         </p>
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Land</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Land') }}</label>
                         <input v-model="clubForm.country" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Stadt</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Stadt') }}</label>
                         <input v-model="clubForm.city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">PLZ</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('PLZ') }}</label>
                         <input v-model="clubForm.postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Region</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Region') }}</label>
                         <input v-model="clubForm.state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Straße</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Straße') }}</label>
                         <input v-model="clubForm.street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Hausnummer</label>
+                        <label class="text-sm font-semibold text-primary">{{ tAuto('Hausnummer') }}</label>
                         <input v-model="clubForm.house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
                     <div class="md:col-span-2">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <AppButton type="submit" :loading="clubForm.processing" :disabled="clubForm.processing">
-                                {{ clubForm.processing ? 'Speichert...' : 'Vereinsdaten speichern' }}
+                        {{ clubForm.processing ? tAuto('Speichert...') : tAuto('Vereinsdaten speichern') }}
                             </AppButton>
-                            <AppLoadingState v-if="clubForm.processing" label="Vereinsdaten werden gespeichert..." inline />
+                            <AppLoadingState v-if="clubForm.processing" :label="tAuto('Vereinsdaten werden gespeichert...')" inline />
                         </div>
                     </div>
                 </form>
@@ -478,19 +487,19 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                         </div>
                         <p class="mt-3 whitespace-pre-line text-sm leading-6 text-primary">{{ post.content }}</p>
                         <div class="mt-3 flex gap-4 text-xs text-secondary">
-                            <span>{{ post.likes_count }} Likes</span>
-                            <span>{{ post.comments_count }} Kommentare</span>
+                            <span>{{ post.likes_count }} {{ tAuto('Likes') }}</span>
+                            <span>{{ post.comments_count }} {{ tAuto('Kommentare') }}</span>
                         </div>
                     </article>
                     <div v-if="!posts.length"
                         class="rounded-lg border border-border bg-card p-8 text-center text-sm text-secondary">
-                        Noch keine sichtbaren Beiträge.
+                        {{ tAuto('Noch keine sichtbaren Beiträge.') }}
                     </div>
                 </section>
 
                 <aside class="space-y-4">
                     <section class="rounded-lg border border-border bg-card p-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Teams</h2>
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Teams') }}</h2>
                         <div class="mt-4 space-y-2">
                             <Link v-for="team in clubProfile.teams" :key="team.id"
                                 :href="route('auth.teams.show', team.id)"
@@ -500,13 +509,13 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                     {{ initials(team.name) }}</div>
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-medium text-primary">{{ team.name }}</p>
-                                    <p class="text-xs text-secondary">{{ team.users_count }} Mitglieder</p>
+                                    <p class="text-xs text-secondary">{{ team.users_count }} {{ tAuto('Mitglieder') }}</p>
                                 </div>
                             </Link>
                             <AppEmptyState
                                 v-if="!clubProfile.teams.length"
-                                title="Noch keine Teams"
-                                description="Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden."
+                                :title="tAuto('Noch keine Teams')"
+                                :description="tAuto('Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden.')"
                                 compact
                             >
                                 <template #icon>
@@ -517,7 +526,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     </section>
 
                     <section class="rounded-lg border border-border bg-card p-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Admins</h2>
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Admins') }}</h2>
                         <div class="mt-4 space-y-2">
                             <Link v-for="admin in clubProfile.admins" :key="admin.id"
                                 :href="route('auth.users.show', admin.id)"
@@ -534,7 +543,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     </section>
 
                     <section v-if="viewer.is_member || viewer.can_manage" class="rounded-lg border border-border bg-card p-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Mitglieder') }}</h2>
                         <div class="mt-4 space-y-2">
                             <div v-for="member in clubProfile.members" :key="member.id"
                                 class="flex flex-col gap-3 rounded-lg border border-transparent p-3 hover:border-border hover:bg-inputBg">
@@ -570,14 +579,14 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                     </button>
 
                                     <button type="button" class="ml-auto rounded bg-buttonPrimary px-3 py-1.5 text-xs font-semibold text-buttonTextPrimary" @click="updateMemberRole(member)">
-                                        Speichern
+                                        {{ tAuto('Speichern') }}
                                     </button>
                                 </div>
                             </div>
                             <AppEmptyState
                                 v-if="!clubProfile.members.length"
-                                title="Noch keine Mitglieder"
-                                description="Angenommene Mitglieder werden in dieser Liste sichtbar."
+                                :title="tAuto('Noch keine Mitglieder')"
+                                :description="tAuto('Angenommene Mitglieder werden in dieser Liste sichtbar.')"
                                 compact
                             >
                                 <template #icon>
@@ -594,7 +603,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                     <form class="airmius-modal-scroll max-h-[calc(100vh-3rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl lg:max-w-3xl xl:max-w-4xl" @submit.prevent="submitMembershipRequest">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Mitgliedsantrag</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tAuto('Mitgliedsantrag') }}</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ clubProfile.name }}</h2>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="membershipRequestOpen = false">
@@ -604,9 +613,9 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
 
                     <div class="mt-4 space-y-3">
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Mitgliedschaftstyp</span>
+                            <span class="text-sm font-semibold text-primary">{{ tAuto('Mitgliedschaftstyp') }}</span>
                             <select v-model="membershipRequestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                <option value="">Allgemeine Anfrage</option>
+                                <option value="">{{ tAuto('Allgemeine Anfrage') }}</option>
                                 <option v-for="type in clubProfile.membership_types" :key="type.id" :value="type.id">
                                     {{ type.name }}
                                     <template v-if="type.amount !== null && type.amount !== undefined">
@@ -620,7 +629,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                             <p v-for="type in clubProfile.membership_types" :key="type.id" class="py-1">
                                 <span class="font-semibold text-primary">{{ type.name }}:</span>
                                 <span v-if="type.amount !== null && type.amount !== undefined">{{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</span>
-                                <span v-else>Beitrag nach Rücksprache</span>
+                                <span v-else>{{ tAuto('Beitrag nach Rücksprache') }}</span>
                             </p>
                         </div>
 
@@ -638,7 +647,7 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                         class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
                                         :required="field.mode === 'required'"
                                     >
-                                        <option value="">Bitte wählen</option>
+                                        <option value="">{{ tAuto('Bitte wählen') }}</option>
                                         <option v-for="option in field.options" :key="option.value" :value="option.value">{{ option.label }}</option>
                                     </select>
                                     <label v-else-if="field.type === 'checkbox'" class="mt-2 flex items-start gap-2 rounded-lg border border-border bg-card p-3 text-secondary">
@@ -662,32 +671,32 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
 
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Gewünschte Zahlmethode</span>
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Gewünschte Zahlmethode') }}</span>
                                 <select v-model="membershipRequestForm.preferred_payment_method" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option value="">Nach Rücksprache</option>
+                                    <option value="">{{ tAuto('Nach Rücksprache') }}</option>
                                     <option v-for="method in clubProfile.membership_payment_methods" :key="method" :value="method">
                                         {{ paymentMethodLabel(method) }}
                                     </option>
                                 </select>
                             </label>
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Beitragsintervall</span>
+                                <span class="text-sm font-semibold text-primary">{{ tAuto('Beitragsintervall') }}</span>
                                 <select v-model="membershipRequestForm.requested_billing_interval" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option value="">Wie vom Verein festgelegt</option>
-                                    <option value="monthly">Monatlich</option>
-                                    <option value="quarterly">Quartal</option>
-                                    <option value="four_monthly">Alle 4 Monate</option>
-                                    <option value="semi_yearly">Alle 6 Monate</option>
-                                    <option value="yearly">Jährlich</option>
-                                    <option value="once">Einmalig</option>
+                                    <option value="">{{ tAuto('Wie vom Verein festgelegt') }}</option>
+                                    <option value="monthly">{{ tAuto('Monatlich') }}</option>
+                                    <option value="quarterly">{{ tAuto('Quartal') }}</option>
+                                    <option value="four_monthly">{{ tAuto('Alle 4 Monate') }}</option>
+                                    <option value="semi_yearly">{{ tAuto('Alle 6 Monate') }}</option>
+                                    <option value="yearly">{{ tAuto('Jährlich') }}</option>
+                                    <option value="once">{{ tAuto('Einmalig') }}</option>
                                 </select>
                             </label>
                         </div>
 
                         <div v-if="visibleMembershipDocuments.length" class="rounded-lg border border-border bg-bg p-3">
-                            <h3 class="text-sm font-semibold text-primary">Dokumente des Vereins</h3>
+                            <h3 class="text-sm font-semibold text-primary">{{ tAuto('Dokumente des Vereins') }}</h3>
                             <p class="mt-1 text-xs text-secondary">
-                                Bitte lies die verknüpften Dokumente. Pflichtdokumente müssen vor dem Absenden bestätigt werden.
+                                {{ tAuto('Bitte lies die verknüpften Dokumente. Pflichtdokumente müssen vor dem Absenden bestätigt werden.') }}
                             </p>
                             <div class="mt-3 space-y-3">
                                 <label
@@ -714,9 +723,9 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                                             rel="noreferrer"
                                             class="mt-2 inline-flex text-xs font-semibold text-air-blue hover:underline"
                                         >
-                                            Dokument öffnen
+                                            {{ tAuto('Dokument öffnen') }}
                                         </a>
-                                        <span v-else class="mt-2 block text-xs text-error">Kein Link hinterlegt</span>
+                                        <span v-else class="mt-2 block text-xs text-error">{{ tAuto('Kein Link hinterlegt') }}</span>
                                         <span v-if="membershipRequestForm.errors[`accepted_documents.${document.id}`]" class="mt-1 block text-xs text-error">
                                             {{ membershipRequestForm.errors[`accepted_documents.${document.id}`] }}
                                         </span>
@@ -726,13 +735,13 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
                         </div>
 
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Nachricht</span>
-                            <textarea v-model="membershipRequestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum möchtest du Mitglied werden?"></textarea>
+                            <span class="text-sm font-semibold text-primary">{{ tAuto('Nachricht') }}</span>
+                            <textarea v-model="membershipRequestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tAuto('Warum möchtest du Mitglied werden?')"></textarea>
                         </label>
                     </div>
 
                     <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="membershipRequestForm.processing">
-                        Anfrage senden
+                        {{ tAuto('Anfrage senden') }}
                     </button>
                     </form>
                 </div>

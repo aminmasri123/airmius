@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../core/airmius_chat_attachment_service.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -37,6 +39,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _sending = false;
   bool _markingRead = false;
   bool _typing = false;
+  List<PlatformFile> _attachments = const [];
+
+  String _t(String key) => AirmiusScope.of(context).t(key);
 
   @override
   void initState() {
@@ -169,15 +174,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _send() async {
     final message = _messageController.text.trim();
-    if (message.isEmpty || _sending) return;
+    if ((message.isEmpty && _attachments.isEmpty) || _sending) return;
 
     setState(() => _sending = true);
     try {
-      await AirmiusServicesScope.of(
-        context,
-      ).repositories.conversations.sendMessage(widget.conversationId, message);
+      final services = AirmiusServicesScope.of(context);
+      if (_attachments.isEmpty) {
+        await services.repositories.conversations.sendMessage(
+          widget.conversationId,
+          message,
+        );
+      } else {
+        await AirmiusChatAttachmentService(
+          baseUrl: services.environment.apiBaseUrl,
+          token: services.authState.session?.token,
+          locale:
+              services.authState.session?.locale ?? services.environment.locale,
+        ).send(
+          conversationId: widget.conversationId,
+          message: message.isEmpty ? null : message,
+          attachments: _attachments,
+        );
+      }
       if (!mounted) return;
       _messageController.clear();
+      setState(() => _attachments = const []);
       unawaited(_sendTyping(false));
       setState(() {
         _sending = false;
@@ -190,6 +211,33 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         SnackBar(content: Text(AirmiusScope.of(context).t('messages.error'))),
       );
     }
+  }
+
+  Future<void> _pickAttachments() async {
+    if (_sending) return;
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+      type: FileType.any,
+    );
+    if (result == null || !mounted) return;
+    final accepted = result.files
+        .where((file) => file.size <= 10 * 1024 * 1024)
+        .take(5)
+        .toList();
+    if (accepted.length != result.files.length) {
+      _showActionResult(_t('chat.attachmentTooLarge'));
+    }
+    if (accepted.isEmpty) return;
+    setState(
+      () => _attachments = [..._attachments, ...accepted].take(5).toList(),
+    );
+  }
+
+  void _removeAttachment(PlatformFile file) {
+    setState(
+      () => _attachments = _attachments.where((item) => item != file).toList(),
+    );
   }
 
   void _showActionResult(String message) {
@@ -278,11 +326,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           .clientForSession(AirmiusServicesScope.of(context).authState.session)
           .hideMessage(message.id);
       if (!mounted) return;
-      _showActionResult('Nachricht ausgeblendet.');
+      _showActionResult(_t('chat.messageHidden'));
       _reload();
     } catch (_) {
       if (!mounted) return;
-      _showActionResult('Nachricht konnte nicht ausgeblendet werden.');
+      _showActionResult(_t('chat.messageHideFailed'));
     }
   }
 
@@ -292,16 +340,367 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           .clientForSession(AirmiusServicesScope.of(context).authState.session)
           .deleteMessage(message.id);
       if (!mounted) return;
-      _showActionResult('Nachricht gelöscht.');
+      _showActionResult(_t('chat.messageDeleted'));
       _reload();
     } catch (_) {
       if (!mounted) return;
-      _showActionResult('Nachricht konnte nicht gelöscht werden.');
+      _showActionResult(_t('chat.messageDeleteFailed'));
     }
   }
 
-  void _reportMessage(AirmiusMessage message) {
-    _showActionResult('Meldung vorbereitet.');
+  Future<void> _reportMessage(AirmiusMessage message) async {
+    try {
+      await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .reportContent(type: 'message', id: message.id, reason: 'other');
+      if (mounted) {
+        _showActionResult(_t('chat.reportSent'));
+      }
+    } catch (_) {
+      if (mounted) _showActionResult(_t('chat.reportFailed'));
+    }
+  }
+
+  Future<void> _openConversationSettings() async {
+    final repo = AirmiusServicesScope.of(context).repositories.conversations;
+    try {
+      final conversation = await repo.conversation(widget.conversationId);
+      if (!mounted) return;
+      final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
+      final isGroup = conversation.kind.toLowerCase() == 'group';
+      final isOwner = conversation.ownerId == currentUserId;
+      final action = await showModalBottomSheet<String>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isGroup && isOwner)
+                ListTile(
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text(_t('chat.editGroupProfile')),
+                  onTap: () => Navigator.pop(context, 'edit'),
+                ),
+              if (isGroup && isOwner)
+                ListTile(
+                  leading: Icon(Icons.person_add_alt_outlined),
+                  title: Text(_t('chat.inviteMembers')),
+                  onTap: () => Navigator.pop(context, 'invite'),
+                ),
+              if (isGroup && isOwner)
+                ListTile(
+                  leading: Icon(Icons.manage_accounts_outlined),
+                  title: Text(_t('chat.manageMembers')),
+                  onTap: () => Navigator.pop(context, 'members'),
+                ),
+              ListTile(
+                leading: Icon(Icons.notifications_off_outlined),
+                title: Text(_t('chat.notificationSettings')),
+                onTap: () => Navigator.pop(context, 'mute'),
+              ),
+              if (isGroup)
+                ListTile(
+                  leading: Icon(Icons.logout_outlined),
+                  title: Text(_t('chat.leaveGroup')),
+                  textColor: AirmiusColors.red,
+                  iconColor: AirmiusColors.red,
+                  onTap: () => Navigator.pop(context, 'leave'),
+                ),
+            ],
+          ),
+        ),
+      );
+      if (!mounted || action == null) return;
+      if (action == 'edit') {
+        await _editConversation(conversation);
+      } else if (action == 'invite') {
+        await _inviteMembers(conversation);
+      } else if (action == 'members') {
+        await _manageMembers(conversation);
+      } else if (action == 'mute') {
+        await _muteConversation(conversation);
+      } else if (action == 'leave') {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(_t('chat.leaveGroupTitle')),
+            content: Text(_t('chat.leaveGroupBody')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(_t('common.cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(_t('chat.leave')),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true && mounted) {
+          await repo.leaveConversation(widget.conversationId);
+          if (mounted) Navigator.pop(context);
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        _showActionResult(_t('chat.settingsLoadFailed'));
+      }
+    }
+  }
+
+  Future<void> _editConversation(AirmiusConversation conversation) async {
+    final name = TextEditingController(text: conversation.title);
+    final description = TextEditingController(text: conversation.description);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('chat.groupProfile')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: name,
+              decoration: InputDecoration(labelText: _t('chat.groupName')),
+            ),
+            TextField(
+              controller: description,
+              maxLines: 3,
+              decoration: InputDecoration(labelText: _t('chat.description')),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('common.save')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.conversations.updateConversation(widget.conversationId, {
+        'name': name.text.trim(),
+        'description': description.text.trim(),
+      });
+      if (mounted) _showActionResult(_t('chat.groupProfileSaved'));
+    }
+    name.dispose();
+    description.dispose();
+  }
+
+  Future<void> _inviteMembers(AirmiusConversation conversation) async {
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    try {
+      final response = await client.friends();
+      if (!mounted) return;
+      final data = response['data'];
+      final friends = data is JsonMap && data['friends'] is List
+          ? (data['friends'] as List).whereType<JsonMap>().toList()
+          : const <JsonMap>[];
+      final memberIds = conversation.members
+          .map((member) => _chatInt(member['id']))
+          .toSet();
+      final choices = friends
+          .where((friend) => !memberIds.contains(_chatInt(friend['id'])))
+          .toList();
+      if (choices.isEmpty) {
+        _showActionResult(_t('chat.allFriendsMembers'));
+        return;
+      }
+      final selected = <int>{};
+      final userIds = await showDialog<List<int>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(_t('chat.inviteMembers')),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final friend in choices)
+                    CheckboxListTile(
+                      value: selected.contains(_chatInt(friend['id'])),
+                      title: Text(
+                        friend['name']?.toString() ?? _t('chat.contact'),
+                      ),
+                      onChanged: (checked) => setDialogState(() {
+                        final id = _chatInt(friend['id']);
+                        if (checked == true) {
+                          selected.add(id);
+                        } else {
+                          selected.remove(id);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_t('common.cancel')),
+              ),
+              FilledButton(
+                onPressed: selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(dialogContext, selected.toList()),
+                child: Text(_t('chat.invite')),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (userIds == null || !mounted) return;
+      await services.repositories.conversations.inviteConversationMembers(
+        widget.conversationId,
+        userIds,
+      );
+      if (mounted) _showActionResult(_t('chat.invitationsSent'));
+    } catch (error) {
+      if (mounted) {
+        _showActionResult(_t('chat.invitationsFailed'));
+      }
+    }
+  }
+
+  Future<void> _manageMembers(AirmiusConversation conversation) async {
+    final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
+    final manageable = conversation.members
+        .where((member) => _chatInt(member['id']) != currentUserId)
+        .toList();
+    if (manageable.isEmpty) {
+      _showActionResult(_t('chat.noOtherMembers'));
+      return;
+    }
+    final action = await showModalBottomSheet<(String, int)>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: Text(
+                _t('chat.manageMembers'),
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+            for (final member in manageable)
+              ListTile(
+                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                title: Text(member['name']?.toString() ?? _t('chat.member')),
+                subtitle: Text(member['email']?.toString() ?? ''),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (selected) => Navigator.pop(sheetContext, (
+                    selected,
+                    _chatInt(member['id']),
+                  )),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'transfer',
+                      child: Text(_t('chat.transferOwner')),
+                    ),
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text(_t('chat.removeFromGroup')),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    final member = manageable.firstWhere(
+      (entry) => _chatInt(entry['id']) == action.$2,
+    );
+    final name = member['name']?.toString() ?? _t('chat.member');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          action.$1 == 'transfer'
+              ? _t('chat.transferOwnerTitle')
+              : _t('chat.removeMemberTitle'),
+        ),
+        content: Text(
+          action.$1 == 'transfer'
+              ? '$name ${_t('chat.ownerAfter')}'
+              : '$name ${_t('chat.accessLostAfter')}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_t('common.confirm')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final repo = AirmiusServicesScope.of(context).repositories.conversations;
+    try {
+      if (action.$1 == 'transfer') {
+        await repo.transferConversationOwner(widget.conversationId, action.$2);
+        if (mounted) _showActionResult(_t('chat.ownerTransferred'));
+      } else {
+        await repo.removeConversationMember(widget.conversationId, action.$2);
+        if (mounted) {
+          _showActionResult('$name ${_t('chat.removedFromGroupAfter')}');
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        _showActionResult(_t('chat.memberActionFailed'));
+      }
+    }
+  }
+
+  Future<void> _muteConversation(AirmiusConversation conversation) async {
+    final minutes = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in const [
+              (0, 'chat.mute.enable'),
+              (60, 'chat.mute.hour'),
+              (480, 'chat.mute.eightHours'),
+              (1440, 'chat.mute.day'),
+              (10080, 'chat.mute.week'),
+            ])
+              ListTile(
+                title: Text(_t(option.$2)),
+                onTap: () => Navigator.pop(context, option.$1),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (minutes == null || !mounted) return;
+    await AirmiusServicesScope.of(context).repositories.conversations
+        .muteConversation(widget.conversationId, minutes);
+    if (mounted) {
+      _showActionResult(
+        minutes == 0 ? _t('chat.notificationsActive') : _t('chat.muted'),
+      );
+    }
   }
 
   @override
@@ -319,55 +718,57 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          tooltip: 'Menue',
-          icon: const Icon(Icons.menu, color: AirmiusColors.text),
+          tooltip: scope.t('chat.menu'),
+          icon: Icon(Icons.menu, color: airmiusTextColor(context)),
           onPressed: () => Navigator.maybePop(context),
         ),
         titleSpacing: 0,
-        title: const Text(
-          'Chat',
+        title: Text(
+          scope.t('chat.title'),
           style: TextStyle(
-            color: AirmiusColors.text,
+            color: airmiusTextColor(context),
             fontWeight: FontWeight.w900,
           ),
         ),
         actions: [
           IconButton(
-            tooltip: 'Suche',
+            tooltip: scope.t('chat.search'),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
             ),
-            icon: const Icon(Icons.search, color: AirmiusColors.text),
+            icon: Icon(Icons.search, color: airmiusTextColor(context)),
           ),
           IconButton(
-            tooltip: 'Chats',
+            tooltip: scope.t('chat.chats'),
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(
+            icon: Icon(
               Icons.chat_bubble_outline,
-              color: AirmiusColors.text,
+              color: airmiusTextColor(context),
             ),
           ),
           IconButton(
-            tooltip: 'Benachrichtigungen',
+            tooltip: scope.t('chat.notifications'),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => NotificationsCenterScreen()),
             ),
-            icon: const Icon(
+            icon: Icon(
               Icons.notifications_none,
-              color: AirmiusColors.text,
+              color: airmiusTextColor(context),
             ),
           ),
           UserBubble(
             label: userLabel.isEmpty ? 'ZK' : userLabel,
             imageUrl: authState.user?.avatarUrl,
           ),
-          const Icon(Icons.keyboard_arrow_down, color: AirmiusColors.muted),
+          Icon(Icons.keyboard_arrow_down, color: airmiusMutedColor(context)),
           const SizedBox(width: 8),
         ],
       ),
@@ -377,9 +778,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           child: Container(
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AirmiusColors.card,
+              color: airmiusSurfaceColor(context),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AirmiusColors.border),
+              border: Border.all(color: airmiusBorderColor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -387,8 +788,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 _ConversationHeader(
                   title: widget.title,
                   subtitle: _conversationSubtitle(),
+                  onSettings: _openConversationSettings,
                 ),
-                Container(height: 1, color: AirmiusColors.border),
+                Container(height: 1, color: airmiusBorderColor(context)),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
                   child: _ChatSearchField(),
@@ -423,8 +825,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             child: Text(
                               scope.t('messages.noMessages'),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AirmiusColors.muted,
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -447,11 +849,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     },
                   ),
                 ),
-                Container(height: 1, color: AirmiusColors.border),
+                Container(height: 1, color: airmiusBorderColor(context)),
                 _MessageComposer(
                   controller: _messageController,
                   sending: _sending,
                   onSend: _send,
+                  attachments: _attachments,
+                  onAttach: _pickAttachments,
+                  onRemoveAttachment: _removeAttachment,
                 ),
               ],
             ),
@@ -462,28 +867,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   String _conversationSubtitle() {
-    if (_typingUsers.isEmpty) return '${widget.kind} - 2 Mitglieder';
-    if (_typingUsers.length == 1) return '${_typingUsers.first} schreibt...';
-    return '${_typingUsers.length} Personen schreiben...';
+    if (_typingUsers.isEmpty) {
+      return '${widget.kind} · 2 ${_t('chat.members')}';
+    }
+    if (_typingUsers.length == 1) {
+      return '${_typingUsers.first} ${_t('chat.typingAfter')}';
+    }
+    return '${_typingUsers.length} ${_t('chat.peopleTypingAfter')}';
   }
 }
 
 class _ConversationHeader extends StatelessWidget {
-  const _ConversationHeader({required this.title, required this.subtitle});
+  const _ConversationHeader({
+    required this.title,
+    required this.subtitle,
+    required this.onSettings,
+  });
 
   final String title;
   final String subtitle;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Zurück',
+            tooltip: t('chat.back'),
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: AirmiusColors.text),
+            icon: Icon(Icons.arrow_back, color: airmiusTextColor(context)),
           ),
           const SizedBox(width: 4),
           Expanded(
@@ -494,8 +909,8 @@ class _ConversationHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AirmiusColors.text,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
@@ -505,8 +920,8 @@ class _ConversationHeader extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
@@ -514,18 +929,10 @@ class _ConversationHeader extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AirmiusColors.input,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.notifications_none,
-              color: AirmiusColors.text,
-              size: 22,
-            ),
+          IconButton.filledTonal(
+            tooltip: t('chat.settings'),
+            onPressed: onSettings,
+            icon: Icon(Icons.more_horiz),
           ),
         ],
       ),
@@ -538,29 +945,30 @@ class _ChatSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return SizedBox(
       height: 62,
       child: TextField(
-        style: const TextStyle(
-          color: AirmiusColors.text,
+        style: TextStyle(
+          color: airmiusTextColor(context),
           fontWeight: FontWeight.w700,
         ),
         decoration: InputDecoration(
-          hintText: 'Nachrichten in diesem Chat suchen',
-          prefixIcon: const Icon(Icons.search, color: AirmiusColors.muted),
+          hintText: t('chat.searchMessages'),
+          prefixIcon: Icon(Icons.search, color: airmiusMutedColor(context)),
           filled: true,
-          fillColor: AirmiusColors.input,
+          fillColor: airmiusInputColor(context),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 18,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AirmiusColors.border),
+            borderSide: BorderSide(color: airmiusBorderColor(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AirmiusColors.blue),
+            borderSide: BorderSide(color: airmiusAccentColor(context)),
           ),
         ),
       ),
@@ -573,77 +981,116 @@ class _MessageComposer extends StatelessWidget {
     required this.controller,
     required this.sending,
     required this.onSend,
+    required this.attachments,
+    required this.onAttach,
+    required this.onRemoveAttachment,
   });
 
   final TextEditingController controller;
   final bool sending;
   final VoidCallback onSend;
+  final List<PlatformFile> attachments;
+  final VoidCallback onAttach;
+  final ValueChanged<PlatformFile> onRemoveAttachment;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              minLines: 1,
-              maxLines: 4,
-              style: const TextStyle(
-                color: AirmiusColors.text,
-                fontWeight: FontWeight.w800,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Nachricht schreiben...',
-                filled: true,
-                fillColor: AirmiusColors.input,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 16,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AirmiusColors.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AirmiusColors.blue),
-                ),
-              ),
+          if (attachments.isNotEmpty) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final file in attachments)
+                  InputChip(
+                    avatar: Icon(Icons.attach_file, size: 16),
+                    label: Text(file.name, overflow: TextOverflow.ellipsis),
+                    onDeleted: sending ? null : () => onRemoveAttachment(file),
+                  ),
+              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          _ComposerIconButton(icon: Icons.attach_file, onPressed: () {}),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 56,
-            height: 56,
-            child: FilledButton(
-              onPressed: sending ? null : onSend,
-              style: FilledButton.styleFrom(
-                padding: EdgeInsets.zero,
-                backgroundColor: sending
-                    ? AirmiusColors.mutedSoft
-                    : AirmiusColors.blue,
-                foregroundColor: AirmiusColors.header,
-                disabledBackgroundColor: AirmiusColors.mutedSoft,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: sending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AirmiusColors.header,
+            const SizedBox(height: 8),
+          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  minLines: 1,
+                  maxLines: 4,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: t('chat.writeMessage'),
+                    filled: true,
+                    fillColor: airmiusInputColor(context),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 16,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: airmiusBorderColor(context),
                       ),
-                    )
-                  : const Icon(Icons.send_outlined),
-            ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                        color: airmiusAccentColor(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _ComposerIconButton(
+                icon: Icons.attach_file,
+                tooltip: t('chat.attach'),
+                onPressed: onAttach,
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: FilledButton(
+                  onPressed: sending ? null : onSend,
+                  style: FilledButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    backgroundColor: sending
+                        ? airmiusMutedColor(context)
+                        : airmiusAccentColor(context),
+                    foregroundColor:
+                        Theme.of(context).appBarTheme.backgroundColor ??
+                        airmiusSurfaceColor(context),
+                    disabledBackgroundColor: airmiusMutedColor(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: sending
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color:
+                                Theme.of(context).appBarTheme.backgroundColor ??
+                                airmiusSurfaceColor(context),
+                          ),
+                        )
+                      : Icon(Icons.send_outlined),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -652,25 +1099,39 @@ class _MessageComposer extends StatelessWidget {
 }
 
 class _ComposerIconButton extends StatelessWidget {
-  const _ComposerIconButton({required this.icon, required this.onPressed});
+  const _ComposerIconButton({
+    required this.icon,
+    required this.onPressed,
+    required this.tooltip,
+  });
 
   final IconData icon;
   final VoidCallback onPressed;
+  final String tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      height: 56,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: EdgeInsets.zero,
-          foregroundColor: AirmiusColors.text,
-          side: const BorderSide(color: AirmiusColors.border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        child: SizedBox(
+          width: 48,
+          height: 56,
+          child: OutlinedButton(
+            onPressed: onPressed,
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: airmiusTextColor(context),
+              side: BorderSide(color: airmiusBorderColor(context)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Icon(icon, size: 22),
+          ),
         ),
-        child: Icon(icon, size: 22),
       ),
     );
   }
@@ -694,11 +1155,16 @@ class _ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMine = message.mine;
-    final bubbleColor = isMine ? AirmiusColors.lightCard : AirmiusColors.input;
-    final primaryText = isMine ? AirmiusColors.lightText : AirmiusColors.text;
+    final colors = Theme.of(context).colorScheme;
+    final bubbleColor = isMine
+        ? colors.primaryContainer
+        : airmiusInputColor(context);
+    final primaryText = isMine
+        ? colors.onPrimaryContainer
+        : airmiusTextColor(context);
     final secondaryText = isMine
-        ? AirmiusColors.lightMuted
-        : AirmiusColors.muted;
+        ? colors.onPrimaryContainer.withValues(alpha: .78)
+        : airmiusMutedColor(context);
     final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
     final reactionCounts = _reactionCounts();
     final myReaction = _userReaction(currentUserId);
@@ -721,7 +1187,9 @@ class _ChatBubble extends StatelessWidget {
                 bottomRight: Radius.circular(isMine ? 4 : 14),
               ),
               border: Border.all(
-                color: isMine ? AirmiusColors.lightBorder : AirmiusColors.input,
+                color: isMine
+                    ? colors.primary.withValues(alpha: .46)
+                    : airmiusInputColor(context),
               ),
             ),
             child: Column(
@@ -767,7 +1235,7 @@ class _ChatBubble extends StatelessWidget {
                           builder: (context) {
                             final selected = myReaction == entry.key;
                             final badgeColor = selected
-                                ? AirmiusColors.blue
+                                ? airmiusAccentColor(context)
                                 : secondaryText;
                             return Container(
                               height: 26,
@@ -776,19 +1244,21 @@ class _ChatBubble extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: selected
-                                    ? AirmiusColors.blue.withValues(
-                                        alpha: isMine ? 0.18 : 0.16,
-                                      )
+                                    ? airmiusAccentColor(
+                                        context,
+                                      ).withValues(alpha: isMine ? 0.18 : 0.16)
                                     : (isMine
-                                          ? AirmiusColors.lightInput
-                                          : AirmiusColors.card),
+                                          ? colors.primaryContainer.withValues(
+                                              alpha: .72,
+                                            )
+                                          : airmiusSurfaceColor(context)),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
                                   color: selected
-                                      ? AirmiusColors.blue
+                                      ? airmiusAccentColor(context)
                                       : (isMine
-                                            ? AirmiusColors.lightBorder
-                                            : AirmiusColors.border),
+                                            ? colors.primary.withValues(alpha: .46)
+                                            : airmiusBorderColor(context)),
                                 ),
                               ),
                               child: Row(
@@ -859,12 +1329,13 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _openReactionPicker(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final myReaction = _userReaction(
       AirmiusServicesScope.of(context).authState.user?.id,
     );
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AirmiusColors.card,
+      backgroundColor: airmiusSurfaceColor(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -879,15 +1350,15 @@ class _ChatBubble extends StatelessWidget {
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AirmiusColors.borderStrong,
+                    color: Theme.of(context).colorScheme.outline,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Reaktion auswählen',
+                Text(
+                  t('chat.chooseReaction'),
                   style: TextStyle(
-                    color: AirmiusColors.text,
+                    color: airmiusTextColor(context),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -897,7 +1368,7 @@ class _ChatBubble extends StatelessWidget {
                   children: [
                     _QuickReaction(
                       icon: Icons.thumb_up_alt_outlined,
-                      label: 'Like',
+                      label: t('chat.reaction.like'),
                       selected: myReaction == 'like',
                       onTap: () {
                         Navigator.pop(context);
@@ -906,7 +1377,7 @@ class _ChatBubble extends StatelessWidget {
                     ),
                     _QuickReaction(
                       icon: Icons.favorite_border,
-                      label: 'Herz',
+                      label: t('chat.reaction.heart'),
                       selected: myReaction == 'heart',
                       onTap: () {
                         Navigator.pop(context);
@@ -915,7 +1386,7 @@ class _ChatBubble extends StatelessWidget {
                     ),
                     _QuickReaction(
                       icon: Icons.check_circle_outline,
-                      label: 'OK',
+                      label: t('chat.reaction.ok'),
                       selected: myReaction == 'ok',
                       onTap: () {
                         Navigator.pop(context);
@@ -933,9 +1404,10 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _openMessageActions(BuildContext context, bool isMine) {
+    final t = AirmiusScope.of(context).t;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AirmiusColors.card,
+      backgroundColor: airmiusSurfaceColor(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -950,7 +1422,7 @@ class _ChatBubble extends StatelessWidget {
                   width: 38,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AirmiusColors.borderStrong,
+                    color: Theme.of(context).colorScheme.outline,
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ),
@@ -960,7 +1432,7 @@ class _ChatBubble extends StatelessWidget {
                   children: [
                     _QuickReaction(
                       icon: Icons.thumb_up_alt_outlined,
-                      label: 'Like',
+                      label: t('chat.reaction.like'),
                       onTap: () {
                         Navigator.pop(context);
                         onReact(message, 'like');
@@ -968,7 +1440,7 @@ class _ChatBubble extends StatelessWidget {
                     ),
                     _QuickReaction(
                       icon: Icons.favorite_border,
-                      label: 'Herz',
+                      label: t('chat.reaction.heart'),
                       onTap: () {
                         Navigator.pop(context);
                         onReact(message, 'heart');
@@ -976,7 +1448,7 @@ class _ChatBubble extends StatelessWidget {
                     ),
                     _QuickReaction(
                       icon: Icons.check_circle_outline,
-                      label: 'OK',
+                      label: t('chat.reaction.ok'),
                       onTap: () {
                         Navigator.pop(context);
                         onReact(message, 'ok');
@@ -987,7 +1459,7 @@ class _ChatBubble extends StatelessWidget {
                 const SizedBox(height: 14),
                 _SheetAction(
                   icon: Icons.visibility_off_outlined,
-                  label: 'Nur für mich ausblenden',
+                  label: t('chat.hideForMe'),
                   onTap: () {
                     Navigator.pop(context);
                     onHide(message);
@@ -996,7 +1468,7 @@ class _ChatBubble extends StatelessWidget {
                 if (isMine)
                   _SheetAction(
                     icon: Icons.delete_outline,
-                    label: 'Nachricht löschen',
+                    label: t('chat.deleteMessage'),
                     danger: true,
                     onTap: () {
                       Navigator.pop(context);
@@ -1006,7 +1478,7 @@ class _ChatBubble extends StatelessWidget {
                 else
                   _SheetAction(
                     icon: Icons.flag_outlined,
-                    label: 'Nachricht melden',
+                    label: t('chat.reportMessage'),
                     danger: true,
                     onTap: () {
                       Navigator.pop(context);
@@ -1047,11 +1519,13 @@ class _QuickReaction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: selected
-                ? AirmiusColors.blue.withValues(alpha: 0.16)
-                : AirmiusColors.input,
+                ? airmiusAccentColor(context).withValues(alpha: 0.16)
+                : airmiusInputColor(context),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected ? AirmiusColors.blue : AirmiusColors.border,
+              color: selected
+                  ? airmiusAccentColor(context)
+                  : airmiusBorderColor(context),
             ),
           ),
           alignment: Alignment.center,
@@ -1061,13 +1535,17 @@ class _QuickReaction extends StatelessWidget {
               Icon(
                 icon,
                 size: 17,
-                color: selected ? AirmiusColors.blue : AirmiusColors.text,
+                color: selected
+                    ? airmiusAccentColor(context)
+                    : airmiusTextColor(context),
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected ? AirmiusColors.blue : AirmiusColors.text,
+                  color: selected
+                      ? airmiusAccentColor(context)
+                      : airmiusTextColor(context),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1094,7 +1572,7 @@ class _SheetAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? AirmiusColors.red : AirmiusColors.text;
+    final color = danger ? AirmiusColors.red : airmiusTextColor(context);
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: color),
@@ -1119,19 +1597,19 @@ class _LoadingMessages extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AirmiusColors.blue,
+                color: airmiusAccentColor(context),
               ),
             ),
             const SizedBox(width: 12),
             Text(
               scope.t('status.loading'),
-              style: const TextStyle(
-                color: AirmiusColors.muted,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1154,13 +1632,13 @@ class _ErrorMessages extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
+          Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
           const SizedBox(height: 10),
           Text(
             scope.t('messages.error'),
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1185,3 +1663,6 @@ String _dateTimeLabel(DateTime value) {
   final minute = value.minute.toString().padLeft(2, '0');
   return '$day.$month., $hour:$minute';
 }
+
+int _chatInt(Object? value) =>
+    value is num ? value.toInt() : int.tryParse('$value') ?? 0;

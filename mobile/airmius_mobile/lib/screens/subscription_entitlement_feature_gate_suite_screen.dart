@@ -7,10 +7,12 @@ class SubscriptionEntitlementFeatureGateSuiteScreen extends StatefulWidget {
   const SubscriptionEntitlementFeatureGateSuiteScreen({super.key});
 
   @override
-  State<SubscriptionEntitlementFeatureGateSuiteScreen> createState() => _SubscriptionEntitlementFeatureGateSuiteScreenState();
+  State<SubscriptionEntitlementFeatureGateSuiteScreen> createState() =>
+      _SubscriptionEntitlementFeatureGateSuiteScreenState();
 }
 
-class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<SubscriptionEntitlementFeatureGateSuiteScreen> {
+class _SubscriptionEntitlementFeatureGateSuiteScreenState
+    extends State<SubscriptionEntitlementFeatureGateSuiteScreen> {
   String _plan = 'Verein Pro';
   bool _teamModule = true;
   bool _financeModule = true;
@@ -19,17 +21,30 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = airmiusAccentColor(context);
+    final secondaryColor = Theme.of(context).colorScheme.secondary;
+    final tertiaryColor = Theme.of(context).colorScheme.tertiary;
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Abos & Feature Gates', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Abos & Feature Gates',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Subscription Entitlement Feature Gates',
-        subtitle: 'Mobile UI für Tarife, Vereinslimits, Rollenrechte, Modulzugriff, Upgrade-Hinweise und API-ready Entitlements.',
-        trailing: const StatusPill('Entitlements', color: AirmiusColors.amber),
+        subtitle:
+            'Mobile UI für Tarife, Vereinslimits, Rollenrechte, Modulzugriff, Upgrade-Hinweise und API-ready Entitlements.',
+        trailing: StatusPill('Entitlements', color: tertiaryColor),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,30 +55,46 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                 children: [
                   const Eyebrow('PLATFORM ACCESS'),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Jeder Plan zeigt nur, was wirklich freigeschaltet ist.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Die Flutter-App bereitet Feature-Gates so vor, dass Vereine, Mitglieder, Sponsoren und Admins später klare Limits, Upgrades und gesperrte Module sehen.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.42),
+                    style: TextStyle(color: mutedColor, height: 1.42),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['Free', 'Verein Pro', 'Verein Plus', 'Enterprise'].map((item) {
-                      return ChoiceChip(
-                        selected: _plan == item,
-                        label: Text(item),
-                        onSelected: (_) => setState(() => _plan = item),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                        backgroundColor: AirmiusColors.panelSoft,
-                        side: BorderSide(color: _plan == item ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _plan == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          'Free',
+                          'Verein Pro',
+                          'Verein Plus',
+                          'Enterprise',
+                        ].map((item) {
+                          return ChoiceChip(
+                            selected: _plan == item,
+                            label: Text(item),
+                            onSelected: (_) => setState(() => _plan = item),
+                            selectedColor: accentColor.withValues(alpha: .22),
+                            backgroundColor: surfaceColor,
+                            side: BorderSide(
+                              color: _plan == item ? accentColor : borderColor,
+                            ),
+                            labelStyle: TextStyle(
+                              color: _plan == item ? textColor : mutedColor,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -71,11 +102,17 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '4', label: 'Plaene')),
+                Expanded(
+                  child: MetricCard(value: '4', label: 'Plaene'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '12', label: 'Gates')),
+                Expanded(
+                  child: MetricCard(value: '12', label: 'Gates'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'API', label: 'Sync')),
+                Expanded(
+                  child: MetricCard(value: 'API', label: 'Sync'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -83,13 +120,45 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(children: [const Expanded(child: Eyebrow('AKTIVER PLAN')), StatusPill(_plan, color: AirmiusColors.blue)]),
+                  Row(
+                    children: [
+                      const Expanded(child: Eyebrow('AKTIVER PLAN')),
+                      StatusPill(_plan, color: accentColor),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  _LimitCard(title: 'Mitgliederlimit', value: _plan == 'Free' ? '25' : _plan == 'Verein Pro' ? '250' : 'Unbegrenzt', body: 'Wird für Mitgliederverwaltung, Einladungen und Import/Export angezeigt.'),
+                  _LimitCard(
+                    title: 'Mitgliederlimit',
+                    value: _plan == 'Free'
+                        ? '25'
+                        : _plan == 'Verein Pro'
+                        ? '250'
+                        : 'Unbegrenzt',
+                    body:
+                        'Wird für Mitgliederverwaltung, Einladungen und Import/Export angezeigt.',
+                  ),
                   const SizedBox(height: 10),
-                  _LimitCard(title: 'Teams', value: _plan == 'Free' ? '2' : _plan == 'Verein Pro' ? '12' : 'Unbegrenzt', body: 'Steuert Teamverwaltung, Kader, Rollen und Teamdateien.'),
+                  _LimitCard(
+                    title: 'Teams',
+                    value: _plan == 'Free'
+                        ? '2'
+                        : _plan == 'Verein Pro'
+                        ? '12'
+                        : 'Unbegrenzt',
+                    body:
+                        'Steuert Teamverwaltung, Kader, Rollen und Teamdateien.',
+                  ),
                   const SizedBox(height: 10),
-                  _LimitCard(title: 'Speicher', value: _plan == 'Free' ? '1 GB' : _plan == 'Verein Pro' ? '25 GB' : '100 GB+', body: 'Dateimanager, Uploads, Dokumente und Medienanhaenge nutzen dieses Limit.'),
+                  _LimitCard(
+                    title: 'Speicher',
+                    value: _plan == 'Free'
+                        ? '1 GB'
+                        : _plan == 'Verein Pro'
+                        ? '25 GB'
+                        : '100 GB+',
+                    body:
+                        'Dateimanager, Uploads, Dokumente und Medienanhaenge nutzen dieses Limit.',
+                  ),
                 ],
               ),
             ),
@@ -103,30 +172,37 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                   _GateToggle(
                     icon: Icons.groups_2_outlined,
                     title: 'Teams & Rollen',
-                    body: 'Teamverwaltung, Trainerrollen, Captains, Join-Requests und Teamdateien.',
+                    body:
+                        'Teamverwaltung, Trainerrollen, Captains, Join-Requests und Teamdateien.',
                     enabled: _teamModule,
                     onChanged: (value) => setState(() => _teamModule = value),
                   ),
                   _GateToggle(
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Vereinsfinanzen',
-                    body: 'Beiträge, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Quittungen.',
+                    body:
+                        'Beiträge, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Quittungen.',
                     enabled: _financeModule,
-                    onChanged: (value) => setState(() => _financeModule = value),
+                    onChanged: (value) =>
+                        setState(() => _financeModule = value),
                   ),
                   _GateToggle(
                     icon: Icons.insights_outlined,
                     title: 'Analytics & Reports',
-                    body: 'Mitgliederentwicklung, Beitragsstatus, Events, Support, Ads und Exporte.',
+                    body:
+                        'Mitgliederentwicklung, Beitragsstatus, Events, Support, Ads und Exporte.',
                     enabled: _analyticsModule,
-                    onChanged: (value) => setState(() => _analyticsModule = value),
+                    onChanged: (value) =>
+                        setState(() => _analyticsModule = value),
                   ),
                   _GateToggle(
                     icon: Icons.campaign_outlined,
                     title: 'Sponsoren & Ads',
-                    body: 'Sponsorprofile, Kampagnen, Placements, Budget, Reporting und Club-Targeting.',
+                    body:
+                        'Sponsorprofile, Kampagnen, Placements, Budget, Reporting und Club-Targeting.',
                     enabled: _sponsorModule,
-                    onChanged: (value) => setState(() => _sponsorModule = value),
+                    onChanged: (value) =>
+                        setState(() => _sponsorModule = value),
                     last: true,
                   ),
                 ],
@@ -134,25 +210,32 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
             ),
             const SizedBox(height: 14),
             AirmiusPanel(
-              borderColor: AirmiusColors.amber.withValues(alpha: .45),
+              borderColor: tertiaryColor.withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('UPGRADE HINWEIS'),
                   const SizedBox(height: 8),
-                  const Text('Feature-Locks sollen freundlich sein: Nutzer sehen, warum etwas gesperrt ist, welcher Plan es freischaltet und welche Daten erhalten bleiben.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  Text(
+                    'Feature-Locks sollen freundlich sein: Nutzer sehen, warum etwas gesperrt ist, welcher Plan es freischaltet und welche Daten erhalten bleiben.',
+                    style: TextStyle(color: mutedColor, height: 1.38),
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const [
-                      StatusPill('No data loss', color: AirmiusColors.green),
-                      StatusPill('Plan compare', color: AirmiusColors.blue),
-                      StatusPill('Admin only', color: AirmiusColors.amber),
+                    children: [
+                      StatusPill('No data loss', color: secondaryColor),
+                      StatusPill('Plan compare', color: accentColor),
+                      StatusPill('Admin only', color: tertiaryColor),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'Plan vergleichen', icon: Icons.price_change_outlined, onPressed: () {}),
+                  AirmiusButton(
+                    label: 'Plan vergleichen',
+                    icon: Icons.price_change_outlined,
+                    onPressed: () {},
+                  ),
                 ],
               ),
             ),
@@ -164,9 +247,18 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                   const Eyebrow('API ENTITLEMENT PAYLOAD'),
                   const SizedBox(height: 10),
                   const _PayloadLine(label: 'workspace_type', value: 'club'),
-                  _PayloadLine(label: 'active_plan', value: _plan.toLowerCase().replaceAll(' ', '_')),
-                  const _PayloadLine(label: 'feature_keys', value: 'teams, finance, analytics, sponsors'),
-                  const _PayloadLine(label: 'gate_behavior', value: 'visible_locked, hidden, readonly, upgrade_cta'),
+                  _PayloadLine(
+                    label: 'active_plan',
+                    value: _plan.toLowerCase().replaceAll(' ', '_'),
+                  ),
+                  const _PayloadLine(
+                    label: 'feature_keys',
+                    value: 'teams, finance, analytics, sponsors',
+                  ),
+                  const _PayloadLine(
+                    label: 'gate_behavior',
+                    value: 'visible_locked, hidden, readonly, upgrade_cta',
+                  ),
                 ],
               ),
             ),
@@ -178,7 +270,11 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
 }
 
 class _LimitCard extends StatelessWidget {
-  const _LimitCard({required this.title, required this.value, required this.body});
+  const _LimitCard({
+    required this.title,
+    required this.value,
+    required this.body,
+  });
 
   final String title;
   final String value;
@@ -188,24 +284,55 @@ class _LimitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: .13), borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.blue.withValues(alpha: .38))),
-            child: Center(child: Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900))),
+            decoration: BoxDecoration(
+              color: airmiusAccentColor(context).withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: airmiusAccentColor(context).withValues(alpha: .38),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
@@ -216,7 +343,14 @@ class _LimitCard extends StatelessWidget {
 }
 
 class _GateToggle extends StatelessWidget {
-  const _GateToggle({required this.icon, required this.title, required this.body, required this.enabled, required this.onChanged, this.last = false});
+  const _GateToggle({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.enabled,
+    required this.onChanged,
+    this.last = false,
+  });
 
   final IconData icon;
   final String title;
@@ -227,6 +361,8 @@ class _GateToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = Theme.of(context).colorScheme.secondary;
+    final lockedColor = Theme.of(context).colorScheme.tertiary;
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 12),
       child: Row(
@@ -236,24 +372,49 @@ class _GateToggle extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: (enabled ? AirmiusColors.green : AirmiusColors.amber).withValues(alpha: .14),
+              color: (enabled ? activeColor : lockedColor).withValues(
+                alpha: .14,
+              ),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: enabled ? AirmiusColors.green.withValues(alpha: .45) : AirmiusColors.amber.withValues(alpha: .45)),
+              border: Border.all(
+                color: enabled
+                    ? activeColor.withValues(alpha: .45)
+                    : lockedColor.withValues(alpha: .45),
+              ),
             ),
-            child: Icon(enabled ? icon : Icons.lock_outline, color: enabled ? AirmiusColors.green : AirmiusColors.amber),
+            child: Icon(
+              enabled ? icon : Icons.lock_outline,
+              color: enabled ? activeColor : lockedColor,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
-          Switch(value: enabled, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Switch(
+            value: enabled,
+            activeThumbColor: activeColor,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -272,12 +433,33 @@ class _PayloadLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 120, child: Text(label, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.text, height: 1.35))),
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: airmiusAccentColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  height: 1.35,
+                ),
+              ),
+            ),
           ],
         ),
       ),

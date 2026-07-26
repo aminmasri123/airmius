@@ -9,10 +9,12 @@ class GuardianAccessPortalScreen extends StatefulWidget {
   const GuardianAccessPortalScreen({super.key});
 
   @override
-  State<GuardianAccessPortalScreen> createState() => _GuardianAccessPortalScreenState();
+  State<GuardianAccessPortalScreen> createState() =>
+      _GuardianAccessPortalScreenState();
 }
 
-class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen> {
+class _GuardianAccessPortalScreenState
+    extends State<GuardianAccessPortalScreen> {
   String _active = 'Übersicht';
   bool _guardianVerified = false;
   bool _mailConfirmed = true;
@@ -23,7 +25,8 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Elternkonto erstellen',
       area: 'Create',
       status: 'Start',
-      description: 'Registrierung für Erziehungsberechtigte mit Name, E-Mail, Passwort und Consent-Hinweisen.',
+      description:
+          'Registrierung für Erziehungsberechtigte mit Name, E-Mail, Passwort und Consent-Hinweisen.',
       icon: Icons.person_add_alt_1_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -31,7 +34,8 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Guardian Login',
       area: 'Login',
       status: 'Sicher',
-      description: 'Separater Login für Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschuetzt bleiben.',
+      description:
+          'Separater Login für Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschuetzt bleiben.',
       icon: Icons.login_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -39,7 +43,8 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Verifizierung',
       area: 'Verify',
       status: 'Prüfen',
-      description: 'E-Mail, Token, Identitaetsstatus und offene Freigaben werden vor der Nutzung sichtbar gemacht.',
+      description:
+          'E-Mail, Token, Identitaetsstatus und offene Freigaben werden vor der Nutzung sichtbar gemacht.',
       icon: Icons.verified_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -47,7 +52,8 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Kinder verwalten',
       area: 'Children',
       status: 'Aktiv',
-      description: 'Kindprofile, Vereinsanfragen, Medienfreigaben, Kursfreigaben und Benachrichtigungen verwalten.',
+      description:
+          'Kindprofile, Vereinsanfragen, Medienfreigaben, Kursfreigaben und Benachrichtigungen verwalten.',
       icon: Icons.escalator_warning_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -77,17 +83,29 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _MetricCard(value: '2', label: 'Kinder')),
+                        Expanded(
+                          child: _MetricCard(value: '2', label: 'Kinder'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '5', label: 'Freigaben')),
+                        Expanded(
+                          child: _MetricCard(value: '5', label: 'Freigaben'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '1', label: 'Offen')),
+                        Expanded(
+                          child: _MetricCard(value: '1', label: 'Offen'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
                     _Tabs(
                       active: _active,
-                      values: const ['Übersicht', 'Create', 'Login', 'Verify', 'Children'],
+                      values: const [
+                        'Übersicht',
+                        'Create',
+                        'Login',
+                        'Verify',
+                        'Children',
+                      ],
                       onChanged: (value) => setState(() => _active = value),
                     ),
                     const SizedBox(height: 14),
@@ -95,9 +113,12 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
                       guardianVerified: _guardianVerified,
                       mailConfirmed: _mailConfirmed,
                       childLinked: _childLinked,
-                      onGuardianVerified: (value) => setState(() => _guardianVerified = value),
-                      onMailConfirmed: (value) => setState(() => _mailConfirmed = value),
-                      onChildLinked: (value) => setState(() => _childLinked = value),
+                      onGuardianVerified: (value) =>
+                          setState(() => _guardianVerified = value),
+                      onMailConfirmed: (value) =>
+                          setState(() => _mailConfirmed = value),
+                      onChildLinked: (value) =>
+                          setState(() => _childLinked = value),
                     ),
                     const SizedBox(height: 14),
                     for (final step in _visibleSteps) ...[
@@ -106,12 +127,15 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
                     ],
                     _ActionPanel(
                       onGuardianCenter: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => GuardianCenterScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => GuardianCenterScreen(),
+                        ),
                       ),
                       onVerify: () => openUiAction(
                         context,
                         title: 'Guardian verifizieren',
-                        message: 'Hier wird später die Laravel-API für Guardian-Verify und Consent-Token angebunden.',
+                        message:
+                            'Hier wird später die Laravel-API für Guardian-Verify und Consent-Token angebunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -126,7 +150,9 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -160,9 +186,22 @@ class _Header extends StatelessWidget {
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
         const Expanded(
-          child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -187,13 +226,31 @@ class _HeroPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('GUARDIAN ACCESS', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'GUARDIAN ACCESS',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Elternkonto & Kinderfreigaben', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Elternkonto & Kinderfreigaben',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für Guardian Login, Kontoerstellung, Verifizierung, Kinderverwaltung und offene Einwilligungen.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -219,9 +276,22 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -229,7 +299,11 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.active, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.active,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String active;
   final List<String> values;
@@ -250,10 +324,16 @@ class _Tabs extends StatelessWidget {
             label: Text(value),
             selected: selected,
             onSelected: (_) => onChanged(value),
-            labelStyle: TextStyle(color: selected ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: selected ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -284,9 +364,21 @@ class _StatePanel extends StatelessWidget {
       title: 'Aktueller Status',
       child: Column(
         children: [
-          _SwitchRow(label: 'Guardian verifiziert', value: guardianVerified, onChanged: onGuardianVerified),
-          _SwitchRow(label: 'E-Mail bestätigt', value: mailConfirmed, onChanged: onMailConfirmed),
-          _SwitchRow(label: 'Kind verknuepft', value: childLinked, onChanged: onChildLinked),
+          _SwitchRow(
+            label: 'Guardian verifiziert',
+            value: guardianVerified,
+            onChanged: onGuardianVerified,
+          ),
+          _SwitchRow(
+            label: 'E-Mail bestätigt',
+            value: mailConfirmed,
+            onChanged: onMailConfirmed,
+          ),
+          _SwitchRow(
+            label: 'Kind verknuepft',
+            value: childLinked,
+            onChanged: onChildLinked,
+          ),
         ],
       ),
     );
@@ -327,12 +419,28 @@ class _StepCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(step.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        step.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: step.status, color: step.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(step.description, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  step.description,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -343,7 +451,11 @@ class _StepCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onGuardianCenter, required this.onVerify, required this.onSupport});
+  const _ActionPanel({
+    required this.onGuardianCenter,
+    required this.onVerify,
+    required this.onSupport,
+  });
 
   final VoidCallback onGuardianCenter;
   final VoidCallback onVerify;
@@ -355,11 +467,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.family_restroom_outlined, label: 'Guardian Center', onTap: onGuardianCenter),
+          _ActionButton(
+            icon: Icons.family_restroom_outlined,
+            label: 'Guardian Center',
+            onTap: onGuardianCenter,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.verified_user_outlined, label: 'Verifizierung starten', onTap: onVerify),
+          _ActionButton(
+            icon: Icons.verified_user_outlined,
+            label: 'Verifizierung starten',
+            onTap: onVerify,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -384,7 +508,13 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -394,7 +524,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -408,13 +542,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -436,7 +580,15 @@ class _ActionButton extends StatelessWidget {
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -460,7 +612,14 @@ class _Pill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: .55)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

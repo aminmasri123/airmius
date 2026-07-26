@@ -1,5 +1,6 @@
 ﻿import { router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAiTrainingPlanBuilder } from '@/composables/useAiTrainingPlanBuilder'
 import {
     aiPlanDurationPresets,
@@ -19,6 +20,9 @@ import {
 } from '@/support/trainingOptions'
 
 export function useTrainingWorkspace(props) {
+    const { t, locale } = useI18n()
+    const tx = (key, params = {}) => t(key, params)
+
     const activeSport = ref('all')
     const activeTrainingSection = ref('overview')
     const activeModal = ref(null)
@@ -172,10 +176,45 @@ export function useTrainingWorkspace(props) {
         notes: '',
     })
 
-    const selectedSport = computed(() => sports.find((sport) => sport.key === activeSport.value) || sports[0])
-    const planSport = computed(() => sports.find((sport) => sport.key === planForm.item_sport_type) || sports[1])
-    const itemSport = computed(() => sports.find((sport) => sport.key === itemForm.sport_type) || sports[1])
-    const editItemSport = computed(() => sports.find((sport) => sport.key === editItemForm.sport_type) || sports[1])
+    const localizedSports = computed(() => sports.map((sport) => ({
+        ...sport,
+        label: tx(`training_workspace.sports.${sport.key}`),
+        metrics: (sport.metrics || []).map((metric) => tx(`training_workspace.metrics.${metric}`)),
+    })))
+    const localizedPlanTrainingTypes = computed(() => planTrainingTypes.map((type) => ({
+        ...type,
+        label: tx(`training_workspace.plan_types.${type.key}`),
+    })))
+    const localizedTrainingSections = computed(() => trainingSections.map((section) => ({
+        ...section,
+        label: tx(`training_workspace.sections.${section.key}.label`),
+        hint: tx(`training_workspace.sections.${section.key}.hint`),
+    })))
+    const localizedPlanWizardSteps = computed(() => planWizardSteps.map((step, index) => ({
+        ...step,
+        label: tx(`training_workspace.plan_steps.${index}.label`),
+        hint: tx(`training_workspace.plan_steps.${index}.hint`),
+    })))
+    const localizedAiPlanSteps = computed(() => aiPlanSteps.map((step, index) => ({
+        ...step,
+        label: tx(`training_workspace.ai_steps.${index}.label`),
+        hint: tx(`training_workspace.ai_steps.${index}.hint`),
+    })))
+    const localizedAiPlanDurationPresets = computed(() => aiPlanDurationPresets.map((preset, index) => ({
+        ...preset,
+        label: tx(`training_workspace.duration_presets.${index}.label`),
+        hint: tx(`training_workspace.duration_presets.${index}.hint`),
+    })))
+    const localizedCadenceLabels = computed(() => Object.fromEntries(Object.keys(cadenceLabels).map((key) => [key, tx(`training_workspace.cadence.${key}`)])))
+    const localizedPhaseLabels = computed(() => Object.fromEntries(Object.keys(phaseLabels).map((key) => [key, tx(`training_workspace.phase.${key}`)])))
+    const localizedLevelLabels = computed(() => Object.fromEntries(Object.keys(levelLabels).map((key) => [key, tx(`training_workspace.level.${key}`)])))
+    const localizedLoadLabels = computed(() => Object.fromEntries(Object.keys(loadLabels).map((key) => [key, tx(`training_workspace.load.${key}`)])))
+    const localizedPermissionLabels = computed(() => Object.fromEntries(Object.keys(permissionLabels).map((key) => [key, tx(`training_workspace.permission.${key}`)])))
+
+    const selectedSport = computed(() => localizedSports.value.find((sport) => sport.key === activeSport.value) || localizedSports.value[0])
+    const planSport = computed(() => localizedSports.value.find((sport) => sport.key === planForm.item_sport_type) || localizedSports.value[1])
+    const itemSport = computed(() => localizedSports.value.find((sport) => sport.key === itemForm.sport_type) || localizedSports.value[1])
+    const editItemSport = computed(() => localizedSports.value.find((sport) => sport.key === editItemForm.sport_type) || localizedSports.value[1])
     const visibleLogs = computed(() => (props.logs || []).filter((log) => Number(log.id) !== Number(props.activeDraftLog?.id)))
     const sportChoices = computed(() => {
         const customSports = (props.sportCatalog || [])
@@ -187,7 +226,7 @@ export function useTrainingWorkspace(props) {
             }))
             .filter((sport) => sport.key)
 
-        return [...sports.filter((sport) => sport.key !== 'all'), ...customSports]
+        return [...localizedSports.value.filter((sport) => sport.key !== 'all'), ...customSports]
             .filter((sport, index, list) => list.findIndex((item) => item.key === sport.key) === index)
     })
 
@@ -564,11 +603,11 @@ export function useTrainingWorkspace(props) {
     }
 
     const logStatusLabel = (status) => ({
-        draft: 'Entwurf',
-        planned: 'Geplant',
-        in_progress: 'Läuft gerade',
-        completed: 'Abgeschlossen',
-        missed: 'Nicht gemacht',
+        draft: tx('training_log.status.draft'),
+        planned: tx('training_log.status.planned'),
+        in_progress: tx('training_log.status.in_progress'),
+        completed: tx('training_log.status.completed'),
+        missed: tx('training_workspace.status.missed'),
     }[status] || status)
 
     const applySelectedPlanItem = () => {
@@ -768,33 +807,34 @@ export function useTrainingWorkspace(props) {
         })
     }
 
+    const localeCode = computed(() => locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')))
+
     const formatDate = (value) => {
         if (!value) return '-'
-        return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+        return new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
     }
 
-    const formatWeekday = (value) => new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(value))
+    const formatWeekday = (value) => new Intl.DateTimeFormat(localeCode.value, { weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(value))
 
     const itemStatusLabel = (item) => {
-        if (item.log_statuses?.some((log) => log.status === 'completed')) return 'Erledigt'
-        if (item.log_statuses?.some((log) => log.status === 'missed')) return 'Nicht gemacht'
-        if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return 'Fällig'
+        if (item.log_statuses?.some((log) => log.status === 'completed')) return tx('training_workspace.item_status.completed')
+        if (item.log_statuses?.some((log) => log.status === 'missed')) return tx('training_workspace.item_status.missed')
+        if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return tx('training_workspace.item_status.due')
 
-        return 'Geplant'
+        return tx('training_workspace.item_status.planned')
     }
 
     const itemStatusClass = (item) => {
-        const label = itemStatusLabel(item)
-        if (label === 'Erledigt') return 'bg-success/10 text-success'
-        if (label === 'Nicht gemacht') return 'bg-danger/10 text-danger'
-        if (label === 'Fällig') return 'bg-warning/10 text-warning'
+        if (item.log_statuses?.some((log) => log.status === 'completed')) return 'bg-success/10 text-success'
+        if (item.log_statuses?.some((log) => log.status === 'missed')) return 'bg-danger/10 text-danger'
+        if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return 'bg-warning/10 text-warning'
 
         return 'bg-muted text-secondary'
     }
 
     const formatTime = (value) => {
         if (!value) return ''
-        return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+        return new Intl.DateTimeFormat(localeCode.value, { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
     }
 
     const toLocalDateTime = (value) => {
@@ -811,15 +851,15 @@ export function useTrainingWorkspace(props) {
         if (minutes < 60) return `${minutes} min`
         const hours = Math.floor(minutes / 60)
         const rest = minutes % 60
-        return rest ? `${hours} h ${rest} min` : `${hours} h`
+        return rest ? `${hours} ${tx('training_workspace.units.hours')} ${rest} ${tx('training_workspace.units.minutes')}` : `${hours} ${tx('training_workspace.units.hours')}`
     }
 
     const formatDistance = (meters) => {
         if (!meters) return '-'
-        return `${(Number(meters) / 1000).toFixed(2).replace('.', ',')} km`
+        return `${(Number(meters) / 1000).toLocaleString(localeCode.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km`
     }
 
-    const sportLabel = (key) => sportChoices.value.find((sport) => sport.key === key)?.label || key || 'Training'
+    const sportLabel = (key) => sportChoices.value.find((sport) => sport.key === key)?.label || key || tx('training_workspace.fallback_training')
     const sportIcon = (key) => sports.find((sport) => sport.key === key)?.icon || 'las la-running'
     const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent || 'bg-air-blue'
 
@@ -953,19 +993,19 @@ export function useTrainingWorkspace(props) {
         sportLabel,
         sportIcon,
         sportAccent,
-        aiPlanDurationPresets,
-        aiPlanSteps,
+        aiPlanDurationPresets: localizedAiPlanDurationPresets,
+        aiPlanSteps: localizedAiPlanSteps,
         aiTrainingMethodGroups,
-        cadenceLabels,
+        cadenceLabels: localizedCadenceLabels,
         defaultTrainingTypeForSport,
         exerciseLibrary,
-        levelLabels,
-        loadLabels,
-        permissionLabels,
-        phaseLabels,
-        planTrainingTypes,
-        planWizardSteps,
-        sports,
-        trainingSections,
+        levelLabels: localizedLevelLabels,
+        loadLabels: localizedLoadLabels,
+        permissionLabels: localizedPermissionLabels,
+        phaseLabels: localizedPhaseLabels,
+        planTrainingTypes: localizedPlanTrainingTypes,
+        planWizardSteps: localizedPlanWizardSteps,
+        sports: localizedSports,
+        trainingSections: localizedTrainingSections,
     }
 }

@@ -1,32 +1,37 @@
 import 'package:flutter/material.dart';
-import '../core/airmius_theme.dart';
-import '../widgets/airmius_widgets.dart';
-import 'guest_blog_content_screen.dart';
-import 'guest_learning_certificate_screen.dart';
-import 'guest_marketplace_parity_screen.dart';
-import 'guest_pricing_plans_screen.dart';
-import 'public_detail_screen.dart';
-import 'public_growth_guest_pages_screen.dart';
-import 'public_top_content_screen.dart';
-import 'public_growth_operations_screen.dart';
-import 'support_helpdesk_screen.dart';
 
+import '../core/airmius_l10n.dart';
+import '../widgets/airmius_widgets.dart';
+import 'guest_learning_certificate_screen.dart';
+import 'guest_club_directory_screen.dart';
+import 'guest_marketplace_parity_screen.dart';
+import 'legal_status_center_screen.dart';
+import 'public_detail_screen.dart';
+import 'public_interest_screen.dart';
+import 'public_location_submission_screen.dart';
+import 'public_top_content_screen.dart';
+import 'sponsors_center_screen.dart';
+import 'support_helpdesk_screen.dart';
+import 'blog_media_center_screen.dart';
+
+/// Public entry point. It intentionally contains only guest-safe screens and
+/// never exposes internal operations or private account data.
 class GuestPortalScreen extends StatelessWidget {
   const GuestPortalScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.campaign_outlined), label: const Text('Public Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicGrowthOperationsScreen(initialTab: 'Leads')))),
-        
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
-        surfaceTintColor: Colors.transparent,
-        title: const Text('Gastseite', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          t('guestPortal.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Airmius',
-        subtitle: 'Öffentliche Web-App-Bereiche als native Mobile-UI',
+        subtitle: t('guestPortal.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -34,28 +39,41 @@ class GuestPortalScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  AirmiusLogo(),
-                  SizedBox(height: 18),
-                  Eyebrow('Gastseite'),
-                  SizedBox(height: 8),
-                  Text('Vereine, Kurse, Marketplace, Preise, Jobs und Wissen für Sportorganisationen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.12)),
-                  SizedBox(height: 10),
-                  Text('Dieser Bereich bildet die öffentliche mobile Web-App nativ ab und bleibt später mit Laravel-Inhalten verbunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                children: [
+                  const AirmiusLogo(),
+                  const SizedBox(height: 18),
+                  Eyebrow(t('guestPortal.eyebrow')),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('guestPortal.headline'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(t('guestPortal.body')),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      AirmiusButton(
+                        label: t('guestPortal.clubs'),
+                        icon: Icons.groups_outlined,
+                        onPressed: () =>
+                            _open(context, const GuestClubDirectoryScreen()),
+                      ),
+                      AirmiusButton(
+                        label: t('guestPortal.contact'),
+                        icon: Icons.support_agent_outlined,
+                        secondary: true,
+                        onPressed: () =>
+                            _open(context, const SupportHelpdeskScreen()),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                AirmiusButton(label: 'Vereine entdecken', icon: Icons.groups_outlined, onPressed: () => _open(context, 'Vereine', 'Öffentliche Vereinsliste mit Suche und Beitrittsmöglichkeit.', Icons.groups_outlined, 'Public')),
-                AirmiusButton(label: 'Funktionen', icon: Icons.apps_outlined, secondary: true, onPressed: () => _openScreen(context, const PublicGrowthGuestPagesScreen())),
-                AirmiusButton(label: 'Preise ansehen', icon: Icons.sell_outlined, secondary: true, onPressed: () => _openScreen(context, const GuestPricingPlansScreen())),
-                AirmiusButton(label: 'Kontakt', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => _openScreen(context, const SupportHelpdeskScreen())),
-                AirmiusButton(label: 'Top-Inhalte', icon: Icons.auto_awesome_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicTopContentScreen()))),
-              ],
             ),
             const SizedBox(height: 14),
             _PublicGrid(items: _primaryItems),
@@ -64,7 +82,12 @@ class GuestPortalScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Rechtliches'),
+                  Text(
+                    t('guestPortal.legal'),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   for (final item in _legalItems) ...[
                     _PublicLine(item: item),
@@ -79,38 +102,87 @@ class GuestPortalScreen extends StatelessWidget {
     );
   }
 
-  static void _open(BuildContext context, String title, String body, IconData icon, String trailing) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => PublicDetailScreen(title: title, body: body, icon: icon, kind: trailing)));
+  static void _open(BuildContext context, Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
-  static void _openScreen(BuildContext context, Widget screen) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  static void _openDetail(
+    BuildContext context,
+    String title,
+    String body,
+    IconData icon,
+  ) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PublicDetailScreen(
+          title: title,
+          body: body,
+          icon: icon,
+          kind: 'Public',
+        ),
+      ),
+    );
   }
 
   static void _openItem(BuildContext context, _PublicItem item) {
-    switch (item.title) {
-      case 'Marketplace':
-        _openScreen(context, const GuestMarketplaceParityScreen());
+    switch (item.action) {
+      case _GuestAction.blog:
+        _open(context, const BlogMediaCenterScreen());
         return;
-      case 'Funktionen':
-        _openScreen(context, const PublicGrowthGuestPagesScreen());
+      case _GuestAction.marketplace:
+        _open(context, const GuestMarketplaceParityScreen());
         return;
-      case 'E-Learning':
-        _openScreen(context, const GuestLearningCertificateScreen());
+      case _GuestAction.learning:
+        _open(context, const GuestLearningCertificateScreen());
         return;
-      case 'Blog':
-        _openScreen(context, const GuestBlogContentScreen());
+      case _GuestAction.sponsors:
+        _open(context, const SponsorsCenterScreen());
         return;
-      case 'Top-Inhalte':
-        _openScreen(context, const PublicTopContentScreen());
+      case _GuestAction.topContent:
+        _open(context, const PublicTopContentScreen());
         return;
-      case 'Kontakt & Melden':
-        _openScreen(context, const SupportHelpdeskScreen());
+      case _GuestAction.contact:
+        _open(context, const SupportHelpdeskScreen());
         return;
-      default:
-        _open(context, item.title, item.body, item.icon, 'Public');
+      case _GuestAction.location:
+        _open(context, const PublicLocationSubmissionScreen());
+        return;
+      case _GuestAction.interest:
+        _open(
+          context,
+          PublicInterestScreen(
+            topic: 'Airmius',
+            kind: 'Public',
+            icon: Icons.waving_hand_outlined,
+          ),
+        );
+        return;
+      case _GuestAction.legal:
+        _open(context, const LegalStatusCenterScreen());
+        return;
+      case _GuestAction.detail:
+        _openDetail(
+          context,
+          item.label(context),
+          item.body(context),
+          item.icon,
+        );
+        return;
     }
   }
+}
+
+enum _GuestAction {
+  blog,
+  marketplace,
+  learning,
+  sponsors,
+  topContent,
+  contact,
+  location,
+  interest,
+  legal,
+  detail,
 }
 
 class _PublicGrid extends StatelessWidget {
@@ -120,6 +192,7 @@ class _PublicGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth > 620 ? 3 : 2;
@@ -141,11 +214,25 @@ class _PublicGrid extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(item.icon, color: AirmiusColors.blue, size: 25),
+                  Icon(
+                    item.icon,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 25,
+                  ),
                   const Spacer(),
-                  Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text(
+                    t(item.titleKey),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
                   const SizedBox(height: 5),
-                  Text(item.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.25)),
+                  Text(
+                    t(item.bodyKey),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, height: 1.25),
+                  ),
                 ],
               ),
             );
@@ -163,28 +250,40 @@ class _PublicLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => GuestPortalScreen._openItem(context, item),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-        child: Row(
-          children: [
-            Icon(item.icon, color: AirmiusColors.blue),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 3),
-                  Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3)),
-                ],
+    final t = AirmiusScope.of(context).t;
+    return Semantics(
+      button: true,
+      label: t(item.titleKey),
+      child: InkWell(
+        onTap: () => GuestPortalScreen._openItem(context, item),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: Row(
+            children: [
+              Icon(item.icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t(item.titleKey),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(t(item.bodyKey)),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right, color: AirmiusColors.muted),
-          ],
+              const Icon(Icons.chevron_right),
+            ],
+          ),
         ),
       ),
     );
@@ -192,34 +291,115 @@ class _PublicLine extends StatelessWidget {
 }
 
 class _PublicItem {
-  const _PublicItem({required this.title, required this.body, required this.icon});
+  const _PublicItem({
+    required this.titleKey,
+    required this.bodyKey,
+    required this.icon,
+    required this.action,
+  });
 
-  final String title;
-  final String body;
+  final String titleKey;
+  final String bodyKey;
   final IconData icon;
+  final _GuestAction action;
+
+  String label(BuildContext context) => AirmiusScope.of(context).t(titleKey);
+
+  String body(BuildContext context) => AirmiusScope.of(context).t(bodyKey);
 }
 
 const _primaryItems = [
-  _PublicItem(title: 'Funktionen', body: 'Öffentliche Funktionen und Bereiche der Gastseite im Überblick.', icon: Icons.apps_outlined),
-  _PublicItem(title: 'Vereine', body: 'Vereine suchen, öffentliche Profile ansehen und Beitritt starten.', icon: Icons.groups_outlined),
-  _PublicItem(title: 'Marketplace', body: 'Produkte, Anbieter, Warenkorb und Bestellungen entdecken.', icon: Icons.storefront_outlined),
-  _PublicItem(title: 'E-Learning', body: 'Kurse, Zertifikate und Lerninhalte für Sportorganisationen.', icon: Icons.school_outlined),
-  _PublicItem(title: 'Blog', body: 'Praxiswissen, Updates und Ideen für digitale Sportorganisation.', icon: Icons.article_outlined),
-  _PublicItem(title: 'Jobs', body: 'Organisationen können Stellen und Engagement-Möglichkeiten zeigen.', icon: Icons.work_outline),
-  _PublicItem(title: 'Sponsoren', body: 'Partner, Sponsoring und Sichtbarkeit für Vereine.', icon: Icons.handshake_outlined),
-  _PublicItem(title: 'Gamification', body: 'Badges, Motivation, Fortschritt und Vereinsaktivitaet.', icon: Icons.workspace_premium_outlined),
-  _PublicItem(title: 'Werbeagentur', body: 'Websites, Kampagnen und digitale Praesenz für Vereine.', icon: Icons.campaign_outlined),
-  _PublicItem(title: 'Top-Inhalte', body: 'Kuratierte Inhalte aus Blog, Kursen, Marketplace, Vereinen und Sponsoring.', icon: Icons.auto_awesome_outlined),
+  _PublicItem(
+    titleKey: 'guestPortal.blog',
+    bodyKey: 'guestPortal.blogBody',
+    icon: Icons.article_outlined,
+    action: _GuestAction.blog,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.marketplace',
+    bodyKey: 'guestPortal.marketplaceBody',
+    icon: Icons.storefront_outlined,
+    action: _GuestAction.marketplace,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.learning',
+    bodyKey: 'guestPortal.learningBody',
+    icon: Icons.school_outlined,
+    action: _GuestAction.learning,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.jobs',
+    bodyKey: 'guestPortal.jobsBody',
+    icon: Icons.work_outline,
+    action: _GuestAction.interest,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.sponsors',
+    bodyKey: 'guestPortal.sponsorsBody',
+    icon: Icons.handshake_outlined,
+    action: _GuestAction.sponsors,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.gamification',
+    bodyKey: 'guestPortal.gamificationBody',
+    icon: Icons.workspace_premium_outlined,
+    action: _GuestAction.detail,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.agency',
+    bodyKey: 'guestPortal.agencyBody',
+    icon: Icons.campaign_outlined,
+    action: _GuestAction.interest,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.contact',
+    bodyKey: 'guestPortal.contactBody',
+    icon: Icons.support_agent_outlined,
+    action: _GuestAction.contact,
+  ),
+  _PublicItem(
+    titleKey: 'publicLocation.title',
+    bodyKey: 'publicLocation.subtitle',
+    icon: Icons.add_location_alt_outlined,
+    action: _GuestAction.location,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.topContent',
+    bodyKey: 'guestPortal.body',
+    icon: Icons.auto_awesome_outlined,
+    action: _GuestAction.topContent,
+  ),
 ];
 
 const _legalItems = [
-  _PublicItem(title: 'Impressum', body: 'Anbieterkennzeichnung und Kontaktinformationen.', icon: Icons.badge_outlined),
-  _PublicItem(title: 'Datenschutz', body: 'Datenschutzerklaerung, Rechte und Verarbeitung.', icon: Icons.privacy_tip_outlined),
-  _PublicItem(title: 'AGB', body: 'Allgemeine Geschaeftsbedingungen.', icon: Icons.gavel_outlined),
-  _PublicItem(title: 'Community-Richtlinien', body: 'Regeln für Verhalten, Inhalte und Sicherheit.', icon: Icons.diversity_3_outlined),
-  _PublicItem(title: 'Jugendschutz', body: 'Schutz minderjaehriger Nutzer und Erziehungsberechtigte.', icon: Icons.family_restroom_outlined),
-  _PublicItem(title: 'Cookies', body: 'Cookie-Hinweise und Tracking-Einstellungen.', icon: Icons.cookie_outlined),
-  _PublicItem(title: 'Widerruf', body: 'Widerrufsrecht und Rückabwicklung.', icon: Icons.assignment_return_outlined),
-  _PublicItem(title: 'Kontakt & Melden', body: 'Kontaktformular, Meldungen und Support.', icon: Icons.report_outlined),
+  _PublicItem(
+    titleKey: 'guestPortal.imprint',
+    bodyKey: 'legalHub.imprintBody',
+    icon: Icons.badge_outlined,
+    action: _GuestAction.legal,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.privacy',
+    bodyKey: 'legalHub.privacyBody',
+    icon: Icons.privacy_tip_outlined,
+    action: _GuestAction.legal,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.terms',
+    bodyKey: 'legalHub.termsBody',
+    icon: Icons.gavel_outlined,
+    action: _GuestAction.legal,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.guidelines',
+    bodyKey: 'legalHub.communityBody',
+    icon: Icons.diversity_3_outlined,
+    action: _GuestAction.legal,
+  ),
+  _PublicItem(
+    titleKey: 'guestPortal.youth',
+    bodyKey: 'legalHub.minorsBody',
+    icon: Icons.family_restroom_outlined,
+    action: _GuestAction.legal,
+  ),
 ];
-

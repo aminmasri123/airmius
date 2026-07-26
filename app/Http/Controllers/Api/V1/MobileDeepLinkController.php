@@ -32,12 +32,14 @@ class MobileDeepLinkController extends Controller
 
         return match ($first) {
             'dashboard' => $this->target('dashboard', 'Dashboard', '/api/v1/dashboard/daily-flow', '/dashboard'),
-            'profile' => $this->target('profile', 'ProfileShow', '/api/v1/users/'.($second ?? '{user}'), '/users/'.($second ?? ''), ['user' => $second]),
+            'profile' => $this->profileTarget($second),
             'feed', 'posts' => $this->target('feed_post', 'FeedPost', '/api/v1/feed', '/feed', ['post' => $second]),
             'chat', 'conversations' => $this->target('chat_conversation', 'ChatConversation', '/api/v1/chat/conversations/'.($second ?? '{conversation}'), '/chat?conversation='.($second ?? ''), ['conversation' => $second]),
+            'messages' => $this->target('chat_message', 'ChatMessage', '/api/v1/chat/messages/'.($second ?? '{message}'), '/messages/'.($second ?? ''), ['message' => $second]),
             'events' => $this->target('event_show', 'EventShow', '/api/v1/events/'.($second ?? '{event}'), '/events/'.($second ?? ''), ['event' => $second]),
             'teams' => $this->target('team_show', 'TeamShow', '/api/v1/teams/'.($second ?? '{team}'), '/teams/'.($second ?? ''), ['team' => $second]),
             'invitations', 'team-invitations', 'club-member-invitations' => $this->invitationTarget($segments),
+            'friends' => $this->friendInvitationTarget($segments),
             'training' => $second === 'plans'
                 ? $this->target('training_plan', 'TrainingPlanShow', '/api/v1/training/plans/'.($third ?? '{trainingPlan}'), '/training', ['trainingPlan' => $third])
                 : $this->target('training', 'TrainingHome', '/api/v1/training/plans', '/training'),
@@ -71,6 +73,27 @@ class MobileDeepLinkController extends Controller
         );
     }
 
+    private function profileTarget(?string $value): array
+    {
+        if ($value !== null && ctype_digit($value)) {
+            return $this->target(
+                'profile_show',
+                'ProfileShow',
+                '/api/v1/users/'.$value.'/sport-cv',
+                '/profile/'.$value,
+                ['user' => $value]
+            );
+        }
+
+        return $this->target(
+            'profile',
+            'ProfileShow',
+            '/api/v1/users/me/sport-cv',
+            '/profile/'.($value ?? ''),
+            ['section' => $value]
+        );
+    }
+
     private function invitationToken(array $segments): ?string
     {
         if (($segments[1] ?? null) === 'token') {
@@ -78,6 +101,26 @@ class MobileDeepLinkController extends Controller
         }
 
         return $segments[1] ?? null;
+    }
+
+    private function friendInvitationTarget(array $segments): array
+    {
+        if (($segments[1] ?? null) !== 'invitations') {
+            return $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false);
+        }
+
+        $token = ($segments[2] ?? null) === 'token'
+            ? ($segments[3] ?? null)
+            : ($segments[2] ?? null);
+
+        return $this->target(
+            'friend_invitation',
+            'FriendInvitationAccept',
+            '/api/v1/friends/invitations/token/'.($token ?? '{token}'),
+            '/friends/invitations/token/'.($token ?? '').'/accept',
+            ['token' => $token],
+            $token !== null && $token !== ''
+        );
     }
 
     private function commerceTarget(array $segments): array

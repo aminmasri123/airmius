@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     title: {
@@ -19,6 +20,9 @@ defineProps({
     },
 })
 
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
+
 const legalLinks = [
     { label: 'Impressum', route: 'legal.imprint' },
     { label: 'Datenschutz', route: 'policy.show' },
@@ -33,8 +37,8 @@ const legalLinks = [
 
 <template>
     <SeoHead
-        :title="`${title} | Airmius`"
-        :description="`${title} von Airmius: rechtliche Informationen, Datenschutz, Nutzungsbedingungen und Hinweise für Nutzer, Vereine und Erziehungsberechtigte.`"
+        :title="`${tx(title)} | Airmius`"
+        :description="`${tx(title)} von Airmius: ${tx('rechtliche Informationen, Datenschutz, Nutzungsbedingungen und Hinweise für Nutzer, Vereine und Erziehungsberechtigte.')}`"
     />
 
     <main class="min-h-screen bg-bg text-primary">
@@ -45,15 +49,15 @@ const legalLinks = [
                 </Link>
 
                 <div class="flex items-center gap-2">
-                    <Link :href="route('login')" class="btn">Anmelden</Link>
-                    <Link :href="route('register')" class="btn-primary">Registrieren</Link>
+                    <Link :href="route('login')" class="btn">{{ tx('Anmelden') }}</Link>
+                    <Link :href="route('register')" class="btn-primary">{{ tx('Registrieren') }}</Link>
                 </div>
             </div>
         </header>
 
         <section class="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
             <aside class="h-fit rounded-lg border border-border bg-card p-3">
-                <p class="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Rechtliches</p>
+                <p class="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('Rechtliches') }}</p>
                 <nav class="space-y-1">
                     <Link
                         v-for="item in legalLinks"
@@ -89,4 +93,3 @@ const legalLinks = [
         <Footer />
     </main>
 </template>
-

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'operations_hub_screen.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_api_models.dart';
 import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_services_scope.dart';
@@ -12,6 +13,7 @@ import '../models/app_tab.dart';
 import '../models/club_summary.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
+import 'club_cockpit_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
 import 'dashboard_screen.dart';
@@ -27,6 +29,7 @@ import 'workspace_center_screen.dart';
 import 'teams_center_screen.dart';
 import 'roles_permissions_screen.dart';
 import 'sports_center_screen.dart';
+import 'sport_integrations_screen.dart';
 import 'event_management_screen.dart';
 import 'trainer_cockpit_screen.dart';
 import 'nutrition_center_screen.dart';
@@ -47,7 +50,10 @@ import 'subscription_center_screen.dart';
 import 'guardian_center_screen.dart';
 import 'maturity_center_screen.dart';
 import 'outfit_subscription_center_screen.dart';
+import 'admin_backoffice_screen.dart';
 import 'admin_center_screen.dart';
+import 'outfit_operations_screen.dart';
+import 'platform_admin_screen.dart';
 
 class ShellScreen extends StatefulWidget {
   const ShellScreen({super.key});
@@ -67,8 +73,13 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshNotificationCount());
-    _notificationTimer = Timer.periodic(const Duration(seconds: 45), (_) => _refreshNotificationCount());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _refreshNotificationCount(),
+    );
+    _notificationTimer = Timer.periodic(
+      const Duration(seconds: 45),
+      (_) => _refreshNotificationCount(),
+    );
   }
 
   @override
@@ -79,9 +90,14 @@ class _ShellScreenState extends State<ShellScreen> {
 
   Future<void> _refreshNotificationCount() async {
     try {
-      final page = await AirmiusServicesScope.of(context).repositories.notifications.notifications();
+      final page = await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.notifications();
       if (!mounted) return;
-      setState(() => _notificationCount = page.unreadCount ?? page.items.where((item) => item.unread).length);
+      setState(
+        () => _notificationCount =
+            page.unreadCount ?? page.items.where((item) => item.unread).length,
+      );
     } catch (_) {
       // Badge refresh is best-effort; the notification center still shows its own error state.
     }
@@ -124,7 +140,9 @@ class _ShellScreenState extends State<ShellScreen> {
   void _openModule(ModuleDefinition module) {
     if (!AirmiusMvpSurface.isModuleVisible(module)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dieses Modul ist im MVP ausgeblendet.')),
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('module.hiddenInMvp')),
+        ),
       );
       return;
     }
@@ -134,16 +152,115 @@ class _ShellScreenState extends State<ShellScreen> {
       return;
     }
     if (module.title == 'Nachrichten') {
-      _openTab(AppTab.updates);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ConversationsCenterScreen()),
+      );
       return;
     }
-    if (module.title == 'Vereine & Teams' || module.title == 'Vereins-Cockpit') {
+    if (module.title == 'Vereine & Teams') {
       _openTab(AppTab.clubs);
       return;
     }
     if (module.title == 'Einstellungen') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsCenterScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SettingsCenterScreen()),
+      );
       return;
+    }
+    if (module.title == 'Eltern & Jugendschutz' &&
+        !_canOpenGuardianCenter(
+          AirmiusServicesScope.of(context).authState.user,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('guardian.forbiddenBody')),
+        ),
+      );
+      return;
+    }
+    if (module.title == 'Trainer-Cockpit' &&
+        !_canOpenTrainerCockpit(
+          AirmiusServicesScope.of(context).authState.user,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('coach.forbidden'))),
+      );
+      return;
+    }
+    if (module.title == 'Vereins-Cockpit' &&
+        !_canOpenClubCockpit(AirmiusServicesScope.of(context).authState.user)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('clubHub.forbidden')),
+        ),
+      );
+      return;
+    }
+    if (module.title == 'Admin' &&
+        !_canOpenPlatformAdmin(
+          AirmiusServicesScope.of(context).authState.user,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('adminHub.forbidden')),
+        ),
+      );
+      return;
+    }
+    if (const {
+          'Rollen & Rechte',
+          'Gamification-Regeln',
+          'Nutzer',
+        }.contains(module.title) &&
+        !_canOpenPlatformAdmin(
+          AirmiusServicesScope.of(context).authState.user,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('adminHub.forbiddenBody')),
+        ),
+      );
+      return;
+    }
+    if (module.title == 'Admin') {
+      final user = AirmiusServicesScope.of(context).authState.user!;
+      final canManageCommerce =
+          user.can('subscriptions.manage') || user.can('marketplace.manage');
+      final canManageBackoffice =
+          user.can('subscriptions.manage') ||
+          user.can('billing.manage') ||
+          user.can('finance.view') ||
+          user.can('finance.edit') ||
+          user.can('system.manage');
+      final canManageOutfits = user.can('outfit-subscriptions.manage');
+      if (canManageOutfits &&
+          !canManageCommerce &&
+          !canManageBackoffice &&
+          !user.can('system.manage')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const OutfitOperationsScreen()),
+        );
+        return;
+      }
+      if (canManageBackoffice &&
+          !canManageCommerce &&
+          !user.can('system.manage')) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminBackofficeScreen()),
+        );
+        return;
+      }
+      if (user.can('system.manage') && !canManageCommerce) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PlatformAdminScreen()),
+        );
+        return;
+      }
     }
 
     final screen = _screenForModule(module.title);
@@ -161,14 +278,17 @@ class _ShellScreenState extends State<ShellScreen> {
       'Teams' => const TeamsCenterScreen(),
       'Rollen & Rechte' => const RolesPermissionsScreen(),
       'Sportarten' => const SportsCenterScreen(),
+      'Sport-Apps & Gesundheitsdaten' => SportIntegrationsScreen(),
       'Events & Training' => const EventManagementScreen(),
       'Trainer-Cockpit' => const TrainerCockpitScreen(),
+      'Vereins-Cockpit' => const ClubCockpitScreen(),
       'Ernährung' => const NutritionCenterScreen(),
       'Sportkarte' => const SportMapCenterScreen(),
       'Freunde' => const FriendsSocialGraphScreen(),
       'Fahrgemeinschaften' => const CarpoolCenterScreen(),
       'Dateien' => const FileManagerScreen(),
       'Badges' => const BadgesCenterScreen(),
+      'Altersfreigaben' => const MaturityCenterScreen(),
       'Gamification-Regeln' => const GamificationRulesScreen(),
       'Kurse' => const LearningScreen(),
       'Marketplace' => const MarketplaceScreen(),
@@ -179,7 +299,6 @@ class _ShellScreenState extends State<ShellScreen> {
       'Nutzer' => const UsersCenterScreen(),
       'Abos & Rechnungen' => const SubscriptionCenterScreen(),
       'Eltern & Jugendschutz' => const GuardianCenterScreen(),
-      'Altersfreigaben' => const MaturityCenterScreen(),
       'Outfit-Abos' => const OutfitSubscriptionCenterScreen(),
       'Admin' => const AdminCenterScreen(),
       _ => null,
@@ -214,17 +333,36 @@ class _ShellScreenState extends State<ShellScreen> {
       name: authState.user?.name,
     );
     final page = _openedModule != null
-        ? ModuleScreen(module: _openedModule!, requestedClubIds: _requestedClubIds, onWithdrawClub: _withdrawClub)
+        ? ModuleScreen(
+            module: _openedModule!,
+            requestedClubIds: _requestedClubIds,
+            onRequestClub: _requestClub,
+            onWithdrawClub: _withdrawClub,
+          )
         : switch (_tab) {
-            AppTab.dashboard => DashboardScreen(onOpenTab: _openTab, onOpenModule: _openModule, requestedClubIds: _requestedClubIds),
-            AppTab.clubs => ClubsScreen(requestedClubIds: _requestedClubIds, onRequestClub: _requestClub, onWithdrawClub: _withdrawClub),
+            AppTab.dashboard => DashboardScreen(
+              onOpenTab: _openTab,
+              onOpenModule: _openModule,
+              requestedClubIds: _requestedClubIds,
+            ),
+            AppTab.clubs => ClubsScreen(
+              requestedClubIds: _requestedClubIds,
+              onRequestClub: _requestClub,
+              onWithdrawClub: _withdrawClub,
+            ),
             AppTab.feed => const FeedCenterScreen(),
-            AppTab.updates => UpdatesCenterScreen(requestedClubIds: _requestedClubIds, onWithdrawClub: _withdrawClub),
+            AppTab.updates => UpdatesCenterScreen(
+              requestedClubIds: _requestedClubIds,
+              onWithdrawClub: _withdrawClub,
+            ),
             AppTab.profile => const ProfileScreen(),
           };
 
     return PopScope(
-      canPop: _openedModule == null && _tabHistory.isEmpty && _tab == AppTab.dashboard,
+      canPop:
+          _openedModule == null &&
+          _tabHistory.isEmpty &&
+          _tab == AppTab.dashboard,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackNavigation();
@@ -232,20 +370,38 @@ class _ShellScreenState extends State<ShellScreen> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AirmiusTopBar(
-          title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
+          title: _openedModule == null
+              ? scope.t(_tab.i18nKey)
+              : scope.copy(_openedModule!.title),
           onLogoTap: () => _openTab(AppTab.feed),
-          onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
-          onMessages: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationsCenterScreen())),
+          onSearch: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
+          ),
+          onMessages: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ConversationsCenterScreen()),
+          ),
           onNotifications: () async {
-            await Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen()));
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => NotificationsCenterScreen()),
+            );
             if (mounted) _refreshNotificationCount();
           },
           notificationCount: _notificationCount,
           userLabel: userLabel,
           userImageUrl: authState.user?.avatarUrl,
-          onOpenProfile: authState.isAuthenticated ? () => _openTab(AppTab.profile) : null,
+          onOpenProfile: authState.isAuthenticated
+              ? () => _openTab(AppTab.profile)
+              : null,
           onOpenSettings: authState.isAuthenticated
-              ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsCenterScreen()))
+              ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SettingsCenterScreen(),
+                  ),
+                )
               : null,
           onSignOut: authState.isAuthenticated ? authState.signOut : null,
         ),
@@ -265,7 +421,9 @@ class _ShellScreenState extends State<ShellScreen> {
             border: Border(top: BorderSide(color: theme.dividerColor)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.08),
+                color: Colors.black.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.22 : 0.08,
+                ),
                 blurRadius: 18,
                 offset: const Offset(0, -8),
               ),
@@ -276,15 +434,43 @@ class _ShellScreenState extends State<ShellScreen> {
             elevation: 0,
             backgroundColor: navBackground,
             surfaceTintColor: Colors.transparent,
-            indicatorColor: theme.colorScheme.primary.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
+            indicatorColor: theme.colorScheme.primary.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14,
+            ),
             selectedIndex: AppTab.values.indexOf(_tab),
             onDestinationSelected: (index) => _openTab(AppTab.values[index]),
             destinations: [
-              NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
-              NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
-              NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
-              NavigationDestination(icon: _NavigationBadgeIcon(icon: Icons.notifications_outlined, count: _notificationCount), selectedIcon: _NavigationBadgeIcon(icon: Icons.notifications, count: _notificationCount), label: scope.t('updates')),
-              NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
+              NavigationDestination(
+                icon: const Icon(Icons.grid_view_outlined),
+                selectedIcon: const Icon(Icons.grid_view),
+                label: scope.t('dashboard'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.groups_outlined),
+                selectedIcon: const Icon(Icons.groups),
+                label: scope.t('teams'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.dynamic_feed_outlined),
+                selectedIcon: const Icon(Icons.dynamic_feed),
+                label: scope.t('feed.title'),
+              ),
+              NavigationDestination(
+                icon: _NavigationBadgeIcon(
+                  icon: Icons.notifications_outlined,
+                  count: _notificationCount,
+                ),
+                selectedIcon: _NavigationBadgeIcon(
+                  icon: Icons.notifications,
+                  count: _notificationCount,
+                ),
+                label: scope.t('updates'),
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: scope.t('profile'),
+              ),
             ],
           ),
         ),
@@ -296,7 +482,12 @@ class _ShellScreenState extends State<ShellScreen> {
 Color _bottomNavBackground(BuildContext context) {
   final theme = Theme.of(context);
   final mix = theme.brightness == Brightness.dark ? 0.78 : 0.96;
-  return Color.lerp(theme.scaffoldBackgroundColor, theme.colorScheme.surface, mix) ?? theme.colorScheme.surface;
+  return Color.lerp(
+        theme.scaffoldBackgroundColor,
+        theme.colorScheme.surface,
+        mix,
+      ) ??
+      theme.colorScheme.surface;
 }
 
 Color _drawerBackground(BuildContext context) {
@@ -304,7 +495,12 @@ Color _drawerBackground(BuildContext context) {
   if (theme.brightness == Brightness.dark) {
     return theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
   }
-  return Color.lerp(theme.scaffoldBackgroundColor, theme.colorScheme.surface, 0.92) ?? theme.colorScheme.surface;
+  return Color.lerp(
+        theme.scaffoldBackgroundColor,
+        theme.colorScheme.surface,
+        0.92,
+      ) ??
+      theme.colorScheme.surface;
 }
 
 Color _shellText(BuildContext context) {
@@ -337,12 +533,20 @@ class _NavigationBadgeIcon extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AirmiusColors.red,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: _bottomNavBackground(context), width: 2),
+                border: Border.all(
+                  color: _bottomNavBackground(context),
+                  width: 2,
+                ),
               ),
               alignment: Alignment.center,
               child: Text(
                 count > 99 ? '99+' : '$count',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, height: 1),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
               ),
             ),
           ),
@@ -352,7 +556,11 @@ class _NavigationBadgeIcon extends StatelessWidget {
 }
 
 String? _userInitials({String? firstName, String? lastName, String? name}) {
-  final fullName = [firstName, lastName].whereType<String>().map((part) => part.trim()).where((part) => part.isNotEmpty).join(' ');
+  final fullName = [firstName, lastName]
+      .whereType<String>()
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .join(' ');
   final source = fullName.trim().isNotEmpty ? fullName : name;
   final initials = initialsFromName(source, fallback: '');
   return initials.isEmpty ? null : initials;
@@ -376,6 +584,45 @@ class _ModuleDrawer extends StatelessWidget {
     final scope = AirmiusScope.of(context);
     final drawerModules = appModules
         .where(AirmiusMvpSurface.isModuleVisible)
+        .where(
+          (module) =>
+              module.title != 'Eltern & Jugendschutz' ||
+              _canOpenGuardianCenter(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+        )
+        .where(
+          (module) =>
+              module.title != 'Trainer-Cockpit' ||
+              _canOpenTrainerCockpit(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+        )
+        .where(
+          (module) =>
+              module.title != 'Vereins-Cockpit' ||
+              _canOpenClubCockpit(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+        )
+        .where(
+          (module) =>
+              module.title != 'Admin' ||
+              _canOpenPlatformAdmin(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+        )
+        .where(
+          (module) =>
+              !const {
+                'Rollen & Rechte',
+                'Gamification-Regeln',
+                'Nutzer',
+              }.contains(module.title) ||
+              _canOpenPlatformAdmin(
+                AirmiusServicesScope.of(context).authState.user,
+              ),
+        )
         .where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);
@@ -395,10 +642,16 @@ class _ModuleDrawer extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-                      tooltip: 'Menue schliessen',
+                      constraints: const BoxConstraints.tightFor(
+                        width: 44,
+                        height: 44,
+                      ),
+                      tooltip: scope.t('shell.closeMenu'),
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close_rounded, color: _shellText(context)),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: _shellText(context),
+                      ),
                     ),
                   ],
                 ),
@@ -408,23 +661,69 @@ class _ModuleDrawer extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
                   children: [
-                    _DrawerTab(icon: Icons.home_outlined, label: scope.t('dashboard'), active: currentTab == AppTab.dashboard, onTap: () => _selectTab(context, AppTab.dashboard)),
-                    _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
-                    _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
-                    _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
+                    _DrawerTab(
+                      icon: Icons.home_outlined,
+                      label: scope.t('dashboard'),
+                      active: currentTab == AppTab.dashboard,
+                      onTap: () => _selectTab(context, AppTab.dashboard),
+                    ),
+                    _DrawerTab(
+                      icon: Icons.groups_outlined,
+                      label: scope.t('clubs'),
+                      active: currentTab == AppTab.clubs,
+                      onTap: () => _selectTab(context, AppTab.clubs),
+                    ),
+                    _DrawerTab(
+                      icon: Icons.dynamic_feed_outlined,
+                      label: scope.t('feed.title'),
+                      active: currentTab == AppTab.feed,
+                      onTap: () => _selectTab(context, AppTab.feed),
+                    ),
+                    _DrawerTab(
+                      icon: Icons.notifications_outlined,
+                      label: scope.t('updates'),
+                      active: currentTab == AppTab.updates,
+                      onTap: () => _selectTab(context, AppTab.updates),
+                    ),
                     if (AirmiusMvpSurface.showDeveloperSuites)
-                      _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
+                      _DrawerTab(
+                        icon: Icons.public_outlined,
+                        label: scope.t('shell.guestPage'),
+                        active: false,
+                        onTap: () =>
+                            _openScreen(context, const GuestPortalScreen()),
+                      ),
                     if (AirmiusMvpSurface.isOperationsHubVisible)
-                      _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
+                      _DrawerTab(
+                        icon: Icons.hub_outlined,
+                        label: scope.t('ops.hub'),
+                        active: false,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => OperationsHubScreen(),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 18),
-                    const Eyebrow('Alle Module'),
+                    Eyebrow(scope.t('shell.allModules')),
                     const SizedBox(height: 8),
                     for (final module in drawerModules)
-                      _DrawerTab(icon: module.icon, label: scope.copy(module.title), active: false, onTap: () {
-                        Navigator.pop(context);
-                        onOpenModule(module);
-                      }),
-                    _DrawerTab(icon: Icons.logout_outlined, label: 'Abmelden', active: false, onTap: onSignOut),
+                      _DrawerTab(
+                        icon: module.icon,
+                        label: scope.copy(module.title),
+                        active: false,
+                        onTap: () {
+                          Navigator.pop(context);
+                          onOpenModule(module);
+                        },
+                      ),
+                    _DrawerTab(
+                      icon: Icons.logout_outlined,
+                      label: scope.t('shell.signOut'),
+                      active: false,
+                      onTap: onSignOut,
+                    ),
                   ],
                 ),
               ),
@@ -446,15 +745,92 @@ class _ModuleDrawer extends StatelessWidget {
   }
 }
 
-const _hiddenDrawerModuleTitles = {
-  'Vereins-Cockpit',
-  'Vereine & Teams',
-  'Teams',
-  'Feed',
-};
+const _hiddenDrawerModuleTitles = {'Vereine & Teams', 'Teams', 'Feed'};
+
+bool _canOpenGuardianCenter(AirmiusUser? user) {
+  return user?.hasAnyRole(const ['guardian', 'parent']) == true ||
+      user?.can('guardians.children.view') == true;
+}
+
+bool _canOpenTrainerCockpit(AirmiusUser? user) {
+  if (user == null) return false;
+  const globalRoles = {
+    'super_admin',
+    'admin',
+    'system_admin',
+    'coach',
+    'assistant_coach',
+    'performance_coach',
+    'fitness_coach',
+    'team_manager',
+    'captain',
+    'trainer',
+    'academy_manager',
+    'club_owner',
+    'club_admin',
+    'club_manager',
+  };
+  const teamRoles = {'coach', 'trainer', 'captain', 'admin', 'manager'};
+  return user.hasAnyRole(globalRoles) ||
+      user.teams.any(
+        (team) => teamRoles.contains(team.membershipRole?.toLowerCase()),
+      ) ||
+      user.clubs.any(
+        (club) => globalRoles.contains(club.membershipRole?.toLowerCase()),
+      );
+}
+
+bool _canOpenClubCockpit(AirmiusUser? user) {
+  if (user == null) return false;
+  const globalRoles = {
+    'super_admin',
+    'admin',
+    'system_admin',
+    'club_owner',
+    'club_admin',
+    'club_manager',
+    'academy_manager',
+    'financial_controller',
+  };
+  const clubRoles = {
+    'owner',
+    'admin',
+    'manager',
+    'academy_manager',
+    'financial_controller',
+  };
+  return user.hasAnyRole(globalRoles) ||
+      user.clubs.any(
+        (club) => clubRoles.contains(club.membershipRole?.toLowerCase()),
+      );
+}
+
+bool _canOpenPlatformAdmin(AirmiusUser? user) {
+  if (user == null) return false;
+  final hasCommercePermission =
+      user.can('subscriptions.manage') ||
+      user.can('marketplace.manage') ||
+      user.can('billing.manage') ||
+      user.can('finance.view') ||
+      user.can('finance.edit') ||
+      user.can('outfit-subscriptions.manage') ||
+      user.can('system.manage');
+  final platformAdmin = user.hasAnyRole(const [
+    'super_admin',
+    'admin',
+    'system_admin',
+  ]);
+  if (hasCommercePermission && !platformAdmin) return true;
+  return platformAdmin && user.twoFactorEnabled;
+}
 
 class _DrawerTab extends StatelessWidget {
-  const _DrawerTab({required this.icon, required this.label, required this.active, required this.onTap});
+  const _DrawerTab({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -467,7 +843,9 @@ class _DrawerTab extends StatelessWidget {
     final activeColor = theme.colorScheme.primary;
     final textColor = _shellText(context);
     final mutedColor = _shellMuted(context);
-    final activeBackground = activeColor.withValues(alpha: theme.brightness == Brightness.dark ? 0.16 : 0.11);
+    final activeBackground = activeColor.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.16 : 0.11,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -484,7 +862,15 @@ class _DrawerTab extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: active ? activeColor : mutedColor),
               const SizedBox(width: 12),
-              Expanded(child: Text(label, style: TextStyle(color: active ? textColor : mutedColor, fontWeight: FontWeight.w800))),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: active ? textColor : mutedColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

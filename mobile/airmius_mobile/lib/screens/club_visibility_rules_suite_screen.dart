@@ -7,10 +7,12 @@ class ClubVisibilityRulesSuiteScreen extends StatefulWidget {
   const ClubVisibilityRulesSuiteScreen({super.key});
 
   @override
-  State<ClubVisibilityRulesSuiteScreen> createState() => _ClubVisibilityRulesSuiteScreenState();
+  State<ClubVisibilityRulesSuiteScreen> createState() =>
+      _ClubVisibilityRulesSuiteScreenState();
 }
 
-class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuiteScreen> {
+class _ClubVisibilityRulesSuiteScreenState
+    extends State<ClubVisibilityRulesSuiteScreen> {
   bool publicProfile = true;
   bool showMembers = false;
   bool showTeams = true;
@@ -25,7 +27,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
     final rows = [
       _RuleRow(
         title: 'Öffentliches Vereinsprofil',
-        body: 'Name, Ort, Logo, Beschreibung, Kontakt und Mitgliedschaftsstatus für Besucher sichtbar machen.',
+        body:
+            'Name, Ort, Logo, Beschreibung, Kontakt und Mitgliedschaftsstatus für Besucher sichtbar machen.',
         value: publicProfile,
         onChanged: (value) => setState(() => publicProfile = value),
         icon: Icons.public_outlined,
@@ -33,7 +36,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Mitgliederliste anzeigen',
-        body: 'Verein entscheidet, ob Mitglieder im Profil sichtbar sind oder nur intern angezeigt werden.',
+        body:
+            'Verein entscheidet, ob Mitglieder im Profil sichtbar sind oder nur intern angezeigt werden.',
         value: showMembers,
         onChanged: (value) => setState(() => showMembers = value),
         icon: Icons.people_alt_outlined,
@@ -41,7 +45,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Teams anzeigen',
-        body: 'Teams, Trainingsgruppen und Rollen können auf der Clubseite sichtbar oder verborgen werden.',
+        body:
+            'Teams, Trainingsgruppen und Rollen können auf der Clubseite sichtbar oder verborgen werden.',
         value: showTeams,
         onChanged: (value) => setState(() => showTeams = value),
         icon: Icons.groups_2_outlined,
@@ -49,7 +54,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Beitragsregeln anzeigen',
-        body: 'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, bar oder Überweisung als sichtbare Optionen.',
+        body:
+            'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, bar oder Überweisung als sichtbare Optionen.',
         value: showFees,
         onChanged: (value) => setState(() => showFees = value),
         icon: Icons.payments_outlined,
@@ -57,7 +63,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Datenschutz bestätigen',
-        body: 'Mitgliedsanträge müssen Datenschutzdokumente lesen und aktiv bestätigen.',
+        body:
+            'Mitgliedsanträge müssen Datenschutzdokumente lesen und aktiv bestätigen.',
         value: requirePrivacyConsent,
         onChanged: (value) => setState(() => requirePrivacyConsent = value),
         icon: Icons.privacy_tip_outlined,
@@ -65,7 +72,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Vereinsregeln verknuepfen',
-        body: 'Satzung, Hausordnung, Trainingsregeln oder Teilnahmebedingungen als Link oder Upload verbinden.',
+        body:
+            'Satzung, Hausordnung, Trainingsregeln oder Teilnahmebedingungen als Link oder Upload verbinden.',
         value: requireClubRules,
         onChanged: (value) => setState(() => requireClubRules = value),
         icon: Icons.rule_folder_outlined,
@@ -73,7 +81,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Dokument-Upload erlauben',
-        body: 'PDF, Bild oder Nachweis wird mobil hochgeladen und später automatisch dem Vereins-Dateimanager zugeordnet.',
+        body:
+            'PDF, Bild oder Nachweis wird mobil hochgeladen und später automatisch dem Vereins-Dateimanager zugeordnet.',
         value: allowDocumentUpload,
         onChanged: (value) => setState(() => allowDocumentUpload = value),
         icon: Icons.upload_file_outlined,
@@ -81,7 +90,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Admins informieren',
-        body: 'Neue Anfragen, Rückzuege, Dokumente und Formularänderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
+        body:
+            'Neue Anfragen, Rückzuege, Dokumente und Formularänderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
         value: notifyAdmins,
         onChanged: (value) => setState(() => notifyAdmins = value),
         icon: Icons.notifications_active_outlined,
@@ -94,6 +104,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       subtitle: 'Sichtbarkeit, Formulare und Dokumente',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -102,9 +114,13 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
               children: [
                 const SectionLabel('CLUB CONTROL'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Vereine bekommen eine mobile Steuerzentrale: Was ist öffentlich, welche Daten sind Pflicht, welche Regeln müssen bestätigt werden und welche Dokumente dürfen hochgeladen werden?',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -129,19 +145,35 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
               children: [
                 const SectionLabel('DATEIMANAGER-LOGIK'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Hochgeladene Vereinsdokumente sollen später automatisch im Dateimanager des Vereins landen, mit Kategorie, Sichtbarkeit, Gültigkeit, Version und Zustimmungspflicht.',
-                  style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    StatusPill('Datenschutz', color: AirmiusColors.blue),
-                    StatusPill('Satzung', color: AirmiusColors.green),
-                    StatusPill('Beiträge', color: AirmiusColors.amber),
-                    StatusPill('Nachweise', color: AirmiusColors.pink),
+                    StatusPill(
+                      'Datenschutz',
+                      color: airmiusSemanticColor(context, AirmiusColors.blue),
+                    ),
+                    StatusPill(
+                      'Satzung',
+                      color: airmiusSemanticColor(context, AirmiusColors.green),
+                    ),
+                    StatusPill(
+                      'Beiträge',
+                      color: airmiusSemanticColor(context, AirmiusColors.amber),
+                    ),
+                    StatusPill(
+                      'Nachweise',
+                      color: airmiusSemanticColor(context, AirmiusColors.pink),
+                    ),
                   ],
                 ),
               ],
@@ -182,7 +214,10 @@ class _RuleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(icon: row.icon, color: row.color),
+          IconBadge(
+            icon: row.icon,
+            color: airmiusSemanticColor(context, row.color),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -190,12 +225,35 @@ class _RuleCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900))),
-                    Switch.adaptive(value: row.value, activeThumbColor: row.color, onChanged: row.onChanged),
+                    Expanded(
+                      child: Text(
+                        row.title,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: row.value,
+                      activeThumbColor: airmiusSemanticColor(
+                        context,
+                        row.color,
+                      ),
+                      onChanged: row.onChanged,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(row.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700)),
+                Text(
+                  row.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

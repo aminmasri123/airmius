@@ -9,30 +9,75 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layers = [
-      _LayerItem('Environment', 'Base URL', 'API-Base-URL, Locale, Offline Queue und Timeout werden zentral definiert.', AirmiusColors.blue, Icons.settings_outlined),
-      _LayerItem('Service Container', 'App Core', 'AuthState, TokenStore, ClientFactory und RepositoryBundle werden zusammengefuehrt.', AirmiusColors.green, Icons.hub_outlined),
-      _LayerItem('Queued Transport', 'Retry/Offline', 'Requests können bei Offline-Zustand gesammelt und später geflusht werden.', AirmiusColors.amber, Icons.sync_outlined),
-      _LayerItem('Static Transport', 'Dev/Test', 'Mockbare Responses für lokale Screens, Demos und spätere Contract-Tests.', AirmiusColors.pink, Icons.bug_report_outlined),
+      _LayerItem(
+        'Environment',
+        'Base URL',
+        'API-Base-URL, Locale, Offline Queue und Timeout werden zentral definiert.',
+        AirmiusColors.blue,
+        Icons.settings_outlined,
+      ),
+      _LayerItem(
+        'Service Container',
+        'App Core',
+        'AuthState, TokenStore, ClientFactory und RepositoryBundle werden zusammengefuehrt.',
+        AirmiusColors.green,
+        Icons.hub_outlined,
+      ),
+      _LayerItem(
+        'Queued Transport',
+        'Retry/Offline',
+        'Requests können bei Offline-Zustand gesammelt und später geflusht werden.',
+        AirmiusColors.amber,
+        Icons.sync_outlined,
+      ),
+      _LayerItem(
+        'Static Transport',
+        'Dev/Test',
+        'Mockbare Responses für lokale Screens, Demos und spätere Contract-Tests.',
+        AirmiusColors.pink,
+        Icons.bug_report_outlined,
+      ),
     ];
 
     final gates = [
-      _GateItem('Echten HTTP Transport bauen', 'Package/http oder Dio anschließen, ohne die Repository-Schicht neu zu schreiben.'),
-      _GateItem('Secure Storage haerten', 'Persistenten TokenStore später durch Flutter Secure Storage, Keychain oder Android Keystore absichern.'),
-      _GateItem('App-Shell verdrahten', 'ServiceContainer in main.dart bereitstellen und AuthState in Navigation/Guards nutzen.'),
-      _GateItem('Screens umstellen', 'Clubsuche, Clubdetail, Mitgliedsantrag, Dateien und Billing auf Repositories migrieren.'),
+      _GateItem(
+        'Echten HTTP Transport bauen',
+        'Package/http oder Dio anschließen, ohne die Repository-Schicht neu zu schreiben.',
+      ),
+      _GateItem(
+        'Secure Storage haerten',
+        'Persistenten TokenStore später durch Flutter Secure Storage, Keychain oder Android Keystore absichern.',
+      ),
+      _GateItem(
+        'App-Shell verdrahten',
+        'ServiceContainer in main.dart bereitstellen und AuthState in Navigation/Guards nutzen.',
+      ),
+      _GateItem(
+        'Screens umstellen',
+        'Clubsuche, Clubdetail, Mitgliedsantrag, Dateien und Billing auf Repositories migrieren.',
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Service Container', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Service Container',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Service Container',
-        subtitle: 'Environment, API-Client, Auth-State, TokenStore, Repositories, Offline Queue und Transport-Pipeline.',
-        trailing: const StatusPill('58% API Rest', color: AirmiusColors.amber),
+        subtitle:
+            'Environment, API-Client, Auth-State, TokenStore, Repositories, Offline Queue und Transport-Pipeline.',
+        trailing: StatusPill(
+          '58% API Rest',
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,29 +85,52 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('APP SERVICES'),
-                  SizedBox(height: 10),
-                  Text('Jetzt bekommt die App eine zentrale technische Schaltstelle.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
-                  SizedBox(height: 8),
-                  Text('Der Service Container verbindet Umgebung, Auth, API-Client, Repositories und Transport. Das ist die Stelle, an der später echter HTTP-Transport und Secure Storage eingesteckt werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                children: [
+                  const Eyebrow('APP SERVICES'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Jetzt bekommt die App eine zentrale technische Schaltstelle.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Der Service Container verbindet Umgebung, Auth, API-Client, Repositories und Transport. Das ist die Stelle, an der später echter HTTP-Transport und Secure Storage eingesteckt werden.',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '50%', label: 'Fertig')),
+                Expanded(
+                  child: MetricCard(value: '50%', label: 'Fertig'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '50%', label: 'Rest')),
+                Expanded(
+                  child: MetricCard(value: '50%', label: 'Rest'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '42%', label: 'API')),
+                Expanded(
+                  child: MetricCard(value: '42%', label: 'API'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             for (final layer in layers) ...[
               AirmiusPanel(
-                borderColor: layer.color.withValues(alpha: .44),
+                borderColor: airmiusSemanticColor(
+                  context,
+                  layer.color,
+                ).withValues(alpha: .44),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -70,22 +138,59 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: layer.color.withValues(alpha: .14),
+                        color: airmiusSemanticColor(
+                          context,
+                          layer.color,
+                        ).withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: layer.color.withValues(alpha: .45)),
+                        border: Border.all(
+                          color: airmiusSemanticColor(
+                            context,
+                            layer.color,
+                          ).withValues(alpha: .45),
+                        ),
                       ),
-                      child: Icon(layer.icon, color: layer.color),
+                      child: Icon(
+                        layer.icon,
+                        color: airmiusSemanticColor(context, layer.color),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(layer.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(
+                            layer.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 5),
-                          Text(layer.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                          Text(
+                            layer.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
                           const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(layer.status, color: layer.color), const StatusPill('Core')]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                layer.status,
+                                color: airmiusSemanticColor(
+                                  context,
+                                  layer.color,
+                                ),
+                              ),
+                              const StatusPill('Core'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -138,26 +243,45 @@ class _GateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: .16), borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.blue.withValues(alpha: .42))),
-            child: const Icon(Icons.build_outlined, color: AirmiusColors.blue, size: 19),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: airmiusAccentColor(context).withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: airmiusAccentColor(context).withValues(alpha: .42),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-              ],
+        ),
+        child: Icon(
+          Icons.build_outlined,
+          color: airmiusAccentColor(context),
+          size: 19,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              item.body,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }

@@ -128,8 +128,8 @@ export function useNutritionWorkspace(props) {
             hint: 'Kaffee, Tee oder kurzer Drink',
             title: 'Kleine Tasse Wasser',
             fill: 42,
-            gradient: 'from-cyan-300 to-air-blue',
-            ring: 'border-cyan-300/45 hover:border-cyan-200',
+            gradient: 'from-air-blue to-indigo-400',
+            ring: 'border-air-blue/45 hover:border-air-blue',
         },
         {
             key: 'glass',
@@ -473,12 +473,12 @@ export function useNutritionWorkspace(props) {
         }
 
         if (!aiMealImageFile.value) {
-            aiMealError.value = 'Bitte zuerst ein Essensbild auswählen.'
+        aiMealError.value = tAuto('Bitte zuerst ein Essensbild auswählen.')
             return
         }
 
         if (!aiMealConsent.value) {
-            aiMealError.value = 'Bitte bestätige zuerst die KI-Analyse.'
+        aiMealError.value = tAuto('Bitte bestätige zuerst die KI-Analyse.')
             return
         }
 
@@ -502,7 +502,7 @@ export function useNutritionWorkspace(props) {
                 applyAiMealSuggestion()
             }
         } catch (error) {
-            aiMealError.value = error.response?.data?.message || 'Bildanalyse konnte nicht abgeschlossen werden.'
+        aiMealError.value = error.response?.data?.message || tAuto('Bildanalyse konnte nicht abgeschlossen werden.')
         } finally {
             aiMealAnalyzing.value = false
         }
@@ -578,7 +578,7 @@ export function useNutritionWorkspace(props) {
         const selectedDate = selectedDateValue.value || props.selectedDate
 
         if (!selectedAmount || selectedAmount < 1 || selectedAmount > 5000) {
-            drinkError.value = 'Bitte Menge zwischen 1 und 5000 ml eingeben.'
+        drinkError.value = tAuto('Bitte Menge zwischen 1 und 5000 ml eingeben.')
             return
         }
 
@@ -615,7 +615,7 @@ export function useNutritionWorkspace(props) {
             },
             onError: () => {
                 removePendingDrinkEntry(pendingId)
-                drinkError.value = 'Trinken konnte nicht gespeichert werden. Bitte versuche es erneut.'
+            drinkError.value = tAuto('Trinken konnte nicht gespeichert werden. Bitte versuche es erneut.')
             },
         })
     }
@@ -633,7 +633,7 @@ export function useNutritionWorkspace(props) {
 
         let handled = false
 
-        const restoreDrinkEntry = (message = 'Getränk konnte nicht gelöscht werden. Bitte versuche es erneut.') => {
+    const restoreDrinkEntry = (message = tAuto('Getränk konnte nicht gelöscht werden. Bitte versuche es erneut.')) => {
             handled = true
             removeDeletingDrinkEntry(entry.id)
             drinkError.value = message
@@ -648,7 +648,7 @@ export function useNutritionWorkspace(props) {
                 activeSection.value = 'drink'
             },
             onError: () => restoreDrinkEntry(),
-            onCancel: () => restoreDrinkEntry('Löschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.'),
+        onCancel: () => restoreDrinkEntry(tAuto('Löschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.')),
             onFinish: () => {
                 if (!handled) {
                     restoreDrinkEntry()
@@ -702,7 +702,7 @@ export function useNutritionWorkspace(props) {
         foodSearchResults.value = []
 
         if (foodSearchQuery.value.trim().length < 2) {
-            foodLookupError.value = 'Bitte mindestens 2 Zeichen eingeben.'
+        foodLookupError.value = tAuto('Bitte mindestens 2 Zeichen eingeben.')
             return
         }
 
@@ -714,10 +714,10 @@ export function useNutritionWorkspace(props) {
             })
             foodSearchResults.value = response.data?.data || []
             if (!foodSearchResults.value.length) {
-                foodLookupError.value = 'Keine passenden Lebensmittel gefunden.'
+            foodLookupError.value = tAuto('Keine passenden Lebensmittel gefunden.')
             }
         } catch (error) {
-            foodLookupError.value = error.response?.data?.message || 'Lebensmittel-Suche ist gerade nicht verfügbar.'
+        foodLookupError.value = error.response?.data?.message || tAuto('Lebensmittel-Suche ist gerade nicht verfügbar.')
         } finally {
             foodLookupLoading.value = false
         }
@@ -728,7 +728,7 @@ export function useNutritionWorkspace(props) {
         foodSearchResults.value = []
 
         if (foodBarcode.value.trim().length < 6) {
-            foodLookupError.value = 'Bitte einen gültigen Barcode eingeben.'
+        foodLookupError.value = tAuto('Bitte einen gültigen Barcode eingeben.')
             return
         }
 
@@ -743,7 +743,7 @@ export function useNutritionWorkspace(props) {
                 applyFoodResult(response.data.data)
             }
         } catch (error) {
-            foodLookupError.value = error.response?.data?.message || 'Barcode konnte nicht gefunden werden.'
+        foodLookupError.value = error.response?.data?.message || tAuto('Barcode konnte nicht gefunden werden.')
         } finally {
             foodLookupLoading.value = false
         }

@@ -8,6 +8,8 @@ use App\Models\TrainingPlan;
 use App\Models\User;
 use App\Support\TeamRoles;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -32,6 +34,10 @@ class TrainingPlanApiCrudTest extends TestCase
             'level' => 'intermediate',
             'weeks' => 4,
             'weekly_sessions' => 3,
+            'macrocycle' => 'Herbstaufbau',
+            'mesocycle' => 'Grundlagenausdauer',
+            'deload_week' => 4,
+            'competition_date' => now()->addWeeks(8)->toDateString(),
             'status' => 'draft',
             'share_permission' => 'write',
             'team_id' => $team->id,
@@ -43,7 +49,9 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.can_write', true)
             ->assertJsonPath('data.can_delete', true)
             ->assertJsonPath('data.assignments_count', 2)
-            ->assertJsonPath('data.settings.goal', '10 km stabil laufen');
+            ->assertJsonPath('data.settings.goal', '10 km stabil laufen')
+            ->assertJsonPath('data.settings.macrocycle', 'Herbstaufbau')
+            ->assertJsonPath('data.settings.deload_week', 4);
 
         $planId = $response->json('data.id');
 
@@ -75,6 +83,10 @@ class TrainingPlanApiCrudTest extends TestCase
             'level' => 'advanced',
             'weeks' => 6,
             'weekly_sessions' => 4,
+            'macrocycle' => 'Wettkampfvorbereitung',
+            'mesocycle' => 'Tempo',
+            'deload_week' => 5,
+            'competition_date' => now()->addWeeks(6)->toDateString(),
             'status' => 'published',
             'share_permission' => 'read',
             'team_id' => $team->id,
@@ -85,6 +97,8 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.status', 'published')
             ->assertJsonPath('data.share_permission', 'read')
             ->assertJsonPath('data.settings.phase', 'peak')
+            ->assertJsonPath('data.settings.mesocycle', 'Tempo')
+            ->assertJsonPath('data.settings.deload_week', 5)
             ->assertJsonPath('data.assignments_count', 1);
 
         $this->deleteJson("/api/v1/training/plans/{$planId}")
@@ -149,6 +163,52 @@ class TrainingPlanApiCrudTest extends TestCase
         $this->assertDatabaseMissing('training_plan_items', ['id' => $itemId]);
     }
 
+    public function test_api_plan_item_image_can_be_uploaded_and_replaced(): void
+    {
+        Storage::fake('public');
+        [$coach, , $team] = $this->trainingFixture();
+        $plan = $this->createPlan($coach, $team);
+
+        Sanctum::actingAs($coach);
+
+        $created = $this->post("/api/v1/training/plans/{$plan->id}/items", [
+            'title' => 'Technikeinheit',
+            'sport_type' => 'laufen',
+            'todos_text' => "Mobilisieren\nLauf-ABC",
+            'week' => 2,
+            'calories' => 280,
+            'load' => 'medium',
+            'focus' => 'Lauftechnik',
+            'metrics' => ['Kadenz' => '170 spm'],
+            'image' => UploadedFile::fake()->image('technik.jpg', 900, 600),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.items.0.title', 'Technikeinheit')
+            ->assertJsonPath('data.items.0.todos.1', 'Lauf-ABC')
+            ->assertJsonPath('data.items.0.metrics.Woche', 2)
+            ->assertJsonPath('data.items.0.metrics.Kadenz', '170 spm');
+
+        $itemId = $created->json('data.items.0.id');
+        $firstPath = $plan->items()->findOrFail($itemId)->image_path;
+        Storage::disk('public')->assertExists($firstPath);
+        $this->assertNotEmpty($created->json('data.items.0.image_url'));
+
+        $updated = $this->post("/api/v1/training/plans/{$plan->id}/items/{$itemId}", [
+            '_method' => 'PUT',
+            'title' => 'Technikeinheit aktualisiert',
+            'sport_type' => 'laufen',
+            'image' => UploadedFile::fake()->image('technik-neu.png', 800, 800),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.items.0.title', 'Technikeinheit aktualisiert');
+
+        $secondPath = $plan->items()->findOrFail($itemId)->image_path;
+        $this->assertNotSame($firstPath, $secondPath);
+        Storage::disk('public')->assertMissing($firstPath);
+        Storage::disk('public')->assertExists($secondPath);
+        $this->assertNotEmpty($updated->json('data.items.0.image_url'));
+    }
+
     public function test_read_only_assigned_user_cannot_modify_training_plan_or_items(): void
     {
         [$coach, $athlete, $team] = $this->trainingFixture();
@@ -178,6 +238,93 @@ class TrainingPlanApiCrudTest extends TestCase
 
         $this->deleteJson("/api/v1/training/plans/{$plan->id}")
             ->assertForbidden();
+    }
+
+    public function test_mobile_api_supports_publish_duplicate_and_missed_training_workflow(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $plan = $this->createPlan($coach, $team);
+        $plan->update(['status' => 'draft']);
+        $item = $plan->items()->create([
+            'title' => 'Tempolauf',
+            'sport_type' => 'laufen',
+            'duration_minutes' => 45,
+            'sort_order' => 1,
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->postJson("/api/v1/training/plans/{$plan->id}/publish")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'published');
+
+        $copy = $this->postJson("/api/v1/training/plans/{$plan->id}/duplicate")
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.items.0.title', 'Tempolauf');
+        $this->assertNotSame($plan->id, $copy->json('data.id'));
+
+        $this->postJson("/api/v1/training/plans/{$plan->id}/items/{$item->id}/duplicate")
+            ->assertCreated()
+            ->assertJsonCount(2, 'data.items')
+            ->assertJsonPath('data.items.1.title', 'Tempolauf Kopie');
+
+        Sanctum::actingAs($athlete);
+        $this->postJson("/api/v1/training/plans/{$plan->id}/items/{$item->id}/missed", [
+            'reason' => 'krank',
+            'notes' => 'Heute ist Erholung sicherer.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'missed')
+            ->assertJsonPath('data.user_id', $athlete->id)
+            ->assertJsonPath('data.metrics.missed_reason', 'krank');
+    }
+
+    public function test_mobile_api_can_save_and_instantiate_scoped_training_templates(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $plan = $this->createPlan($coach, $team);
+        $plan->items()->create([
+            'title' => 'Grundlageneinheit',
+            'scheduled_at' => now()->addDay(),
+            'sort_order' => 1,
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $template = $this->postJson("/api/v1/training/plans/{$plan->id}/template", [
+            'title' => 'Grundlagen Vorlage',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Grundlagen Vorlage')
+            ->assertJsonPath('data.is_template', true)
+            ->assertJsonPath('data.items.0.title', 'Grundlageneinheit');
+
+        $templateId = $template->json('data.id');
+
+        $this->getJson('/api/v1/training/templates')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $templateId)
+            ->assertJsonPath('data.0.is_template', true);
+
+        Sanctum::actingAs($athlete);
+
+        $copy = $this->postJson("/api/v1/training/templates/{$templateId}/instantiate", [
+            'title' => 'Neue Grundlagenwoche',
+            'starts_on' => now()->addWeek()->toDateString(),
+            'ends_on' => now()->addWeeks(2)->toDateString(),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Neue Grundlagenwoche')
+            ->assertJsonPath('data.is_template', false)
+            ->assertJsonPath('data.items.0.scheduled_at', null);
+
+        $this->assertNotSame($templateId, $copy->json('data.id'));
+        $this->assertDatabaseHas('training_plans', [
+            'id' => $copy->json('data.id'),
+            'created_by' => $athlete->id,
+            'status' => 'draft',
+        ]);
     }
 
     private function trainingFixture(): array

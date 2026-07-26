@@ -1,8 +1,12 @@
 ﻿<script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 defineProps({
     workspaces: { type: Array, default: () => [] },
@@ -10,14 +14,12 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Arbeitsbereiche" />
+    <Head :title="tx('Arbeitsbereiche')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
-            <h1 class="text-2xl font-bold text-primary">Arbeitsbereiche</h1>
-            <p class="mt-1 text-sm text-secondary">
-                Rollenbasierte Einstiege für deine Aufgaben in Airmius.
-            </p>
+            <h1 class="text-2xl font-bold text-primary">{{ tx('Arbeitsbereiche') }}</h1>
+            <p class="mt-1 text-sm text-secondary">{{ tx('Rollenbasierte Einstiege für deine Aufgaben in Airmius.') }}</p>
         </section>
 
         <section v-if="workspaces.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -41,8 +43,7 @@ defineProps({
         </section>
 
         <section v-else class="surface-card p-6 text-sm text-secondary">
-            Für deine aktuelle Rolle sind noch keine speziellen Arbeitsbereiche sichtbar.
+            {{ tx('Für deine aktuelle Rolle sind noch keine speziellen Arbeitsbereiche sichtbar.') }}
         </section>
     </div>
 </template>
-

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\Api\V1\CommerceOrderResource;
 use App\Models\AdCampaign;
+use App\Models\AdCampaignStat;
 use App\Models\AdCreative;
 use App\Models\AdEvent;
 use App\Models\AdGroup;
-use App\Models\AdCampaignStat;
 use App\Models\Club;
 use App\Models\CommerceCartItem;
 use App\Models\CommerceOrder;
@@ -17,11 +18,11 @@ use App\Models\CommerceStockMovement;
 use App\Models\CommerceWarehouse;
 use App\Models\LearningCourse;
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceProduct;
+use App\Models\MarketplaceProductInventory;
 use App\Models\MarketplaceProviderLocation;
 use App\Models\MarketplaceProviderProfile;
 use App\Models\MarketplaceSellerApplication;
-use App\Models\MarketplaceProduct;
-use App\Models\MarketplaceProductInventory;
 use App\Models\OutfitSubscription;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\PaymentCheckout;
@@ -36,8 +37,8 @@ use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderCompleted;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceCartService;
-use App\Services\CommerceDocumentService;
 use App\Services\CommerceCheckoutPayloadService;
+use App\Services\CommerceDocumentService;
 use App\Services\CommerceLearningOrderService;
 use App\Services\CommercePaymentGatewayService;
 use App\Services\MarketplacePricingService;
@@ -46,16 +47,17 @@ use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
-use App\Support\CommerceOrderSupport;
 use App\Support\CommerceOrderNotifier;
+use App\Support\CommerceOrderSupport;
 use App\Support\MarketplaceProductInput;
 use App\Support\MarketplaceProductQualityGate;
 use App\Support\MarketplaceSellerReadiness;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -215,8 +217,125 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
+    public function sellerDashboard(Request $request)
+    {
+        $user = $request->user();
+        $sellerApplication = MarketplaceSellerApplication::query()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->first();
+
+        $products = MarketplaceProduct::query()
+            ->where('user_id', $user->id)
+            ->with(['inventories.warehouse:id,name,country_code,city,postal_code'])
+            ->withCount('stockMovements')
+            ->latest('id')
+            ->limit(100)
+            ->get();
+
+        $orders = CommerceOrder::query()
+            ->with([
+                'user:id,name,email',
+                'items.orderable',
+                'returnRequests',
+                'orderable',
+            ])
+            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
+            ->where(function ($query) use ($user) {
+                $query
+                    ->whereHasMorph(
+                        'orderable',
+                        [MarketplaceProduct::class],
+                        fn ($product) => $product->where('user_id', $user->id),
+                    )
+                    ->orWhereHas('items', fn ($items) => $items
+                        ->where('orderable_type', MarketplaceProduct::class)
+                        ->whereHasMorph(
+                            'orderable',
+                            [MarketplaceProduct::class],
+                            fn ($product) => $product->where('user_id', $user->id),
+                        ));
+            })
+            ->latest('id')
+            ->limit(100)
+            ->get()
+            ->map(fn (CommerceOrder $order) => $this->sellerOrderResource($order, $user));
+
+        return response()->json([
+            'data' => [
+                'seller_application' => $sellerApplication
+                    ? MarketplaceSellerReadiness::attach($sellerApplication)
+                    : null,
+                'seller_readiness' => $sellerApplication
+                    ? MarketplaceSellerReadiness::forApplication($sellerApplication)
+                    : null,
+                'seller_can_sell' => $this->userCanSellInMarketplace($user),
+                'category_commissions' => $this->marketplaceCategoryCommissionsForSeller(),
+                'products' => $products,
+                'orders' => $orders,
+                'payout_profile' => PayoutProfile::query()
+                    ->where('user_id', $user->id)
+                    ->first(),
+                'payout_summary' => $this->payoutSummaryFor($user->id),
+                'payouts' => MarketplacePayout::query()
+                    ->where('user_id', $user->id)
+                    ->withCount('orders')
+                    ->latest('id')
+                    ->limit(100)
+                    ->get(),
+                'provider_profile' => $this->marketplaceProviderProfileResource(
+                    MarketplaceProviderProfile::query()->where('user_id', $user->id)->first(),
+                    $user,
+                ),
+                'provider_locations' => $this->providerLocationsForUser($user),
+                'campaigns' => AdCampaign::query()
+                    ->where('user_id', $user->id)
+                    ->with([
+                        'creatives',
+                        'groups.creatives',
+                        'stats' => fn ($query) => $query->latest('date')->limit(30),
+                    ])
+                    ->withExists([
+                        'commerceOrders as payment_completed' => fn ($query) => $query
+                            ->where('type', 'ads_campaign')
+                            ->where('status', 'completed'),
+                        'commerceOrders as payment_pending' => fn ($query) => $query
+                            ->where('type', 'ads_campaign')
+                            ->whereIn('status', ['pending', 'awaiting_transfer']),
+                    ])
+                    ->latest('id')
+                    ->limit(100)
+                    ->get()
+                    ->map(fn (AdCampaign $campaign) => $this->campaignResourceWithPreviews($campaign)),
+                'website_requests' => WebsiteRequest::query()
+                    ->with('club:id,name')
+                    ->where('user_id', $user->id)
+                    ->latest('id')
+                    ->limit(50)
+                    ->get(),
+                'clubs' => $this->commerceClubsFor($user)
+                    ->orderBy('name')
+                    ->get(['id', 'name']),
+                'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
+            ],
+        ]);
+    }
+
     public function cart(Request $request)
     {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'cart' => $this->checkoutPayload->cartResource($request),
+                    'pricing_countries' => $this->checkoutPayload->pricingCountries(),
+                    'checkout_address' => $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, []),
+                    'profile_address' => $this->checkoutPayload->profileAddressFor($request->user()),
+                    'shipping_addresses' => $this->checkoutPayload->shippingAddressesFor($request->user()),
+                    'payment_providers' => ['stripe', 'paypal', 'bank_transfer'],
+                ],
+            ]);
+        }
+
         return inertia('Auth/Dashboard/Commerce/Cart', [
             'authUser' => $request->user() ? [
                 'id' => $request->user()->id,
@@ -345,10 +464,17 @@ class CommerceCheckoutController extends Controller
 
         abort_if(blank($data['iban'] ?? null) && blank($data['paypal_email'] ?? null), 422, 'Bitte IBAN oder PayPal-E-Mail angeben.');
 
-        PayoutProfile::query()->updateOrCreate(
+        $profile = PayoutProfile::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
             [...$data, 'status' => 'review'],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Auszahlungsdaten wurden gespeichert und werden geprüft.',
+                'data' => $profile->fresh(),
+            ]);
+        }
 
         return back()->with('success', 'Auszahlungsdaten wurden gespeichert und werden geprüft.');
     }
@@ -364,6 +490,13 @@ class CommerceCheckoutController extends Controller
             'status' => 'active',
         ])->save();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Anbieterprofil wurde gespeichert.',
+                'data' => $this->marketplaceProviderProfileResource($profile->fresh(), $request->user()),
+            ]);
+        }
+
         return back()->with('success', 'Anbieterprofil wurde gespeichert. Öffentliche Daten erscheinen im Marketplace.');
     }
 
@@ -372,13 +505,20 @@ class CommerceCheckoutController extends Controller
         $profile = $this->providerProfileForUser($request->user());
         $data = $request->validate($this->providerLocationRules());
 
-        $profile->locations()->create([
+        $location = $profile->locations()->create([
             ...$data,
             'country' => strtoupper((string) ($data['country'] ?? 'DE')),
             'sort_order' => ((int) MarketplaceProviderLocation::query()
                 ->where('marketplace_provider_profile_id', $profile->id)
                 ->max('sort_order')) + 1,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Standort wurde gespeichert.',
+                'data' => $this->marketplaceProviderLocationResource($location),
+            ], 201);
+        }
 
         return back()->with('success', 'Standort wurde gespeichert und kann im Marketplace angezeigt werden.');
     }
@@ -393,6 +533,13 @@ class CommerceCheckoutController extends Controller
             'country' => strtoupper((string) ($data['country'] ?? 'DE')),
         ])->save();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Standort wurde aktualisiert.',
+                'data' => $this->marketplaceProviderLocationResource($location->fresh()),
+            ]);
+        }
+
         return back()->with('success', 'Standort wurde aktualisiert.');
     }
 
@@ -400,6 +547,12 @@ class CommerceCheckoutController extends Controller
     {
         $this->authorizeProviderLocation($request, $location);
         $location->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Standort wurde entfernt.',
+            ]);
+        }
 
         return back()->with('success', 'Standort wurde entfernt.');
     }
@@ -428,7 +581,7 @@ class CommerceCheckoutController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($orders, $request, $data) {
+        $payout = DB::transaction(function () use ($orders, $request, $data) {
             $payout = MarketplacePayout::create([
                 'user_id' => $request->user()->id,
                 'currency' => 'EUR',
@@ -447,7 +600,16 @@ class CommerceCheckoutController extends Controller
                     'payout_id' => $payout->id,
                     'payout_status' => 'requested',
                 ]);
+
+            return $payout;
         });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Auszahlung wurde angefordert.',
+                'data' => $payout->fresh()->loadCount('orders'),
+            ], 201);
+        }
 
         return back()->with('success', 'Auszahlung wurde angefordert. Airmius prüft und zahlt sie aus.');
     }
@@ -459,6 +621,13 @@ class CommerceCheckoutController extends Controller
             ->first();
 
         if ($existing?->status === 'approved') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Dein Shop-Zugang ist bereits freigegeben.',
+                    'data' => MarketplaceSellerReadiness::attach($existing),
+                ]);
+            }
+
             return back()->with('success', 'Dein Shop-Zugang ist bereits freigegeben.');
         }
 
@@ -473,7 +642,7 @@ class CommerceCheckoutController extends Controller
             'rule_data_privacy' => ['accepted'],
         ]);
 
-        MarketplaceSellerApplication::query()->updateOrCreate(
+        $application = MarketplaceSellerApplication::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
             [
                 'applicant_type' => $data['applicant_type'],
@@ -493,6 +662,13 @@ class CommerceCheckoutController extends Controller
                 'reviewed_at' => null,
             ],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Shop-Antrag wurde eingereicht.',
+                'data' => MarketplaceSellerReadiness::attach($application->fresh()),
+            ], 201);
+        }
 
         return back()->with('success', 'Shop-Antrag wurde eingereicht. Nach Freigabe kannst du Produkte verkaufen.');
     }
@@ -632,7 +808,10 @@ class CommerceCheckoutController extends Controller
 
     public function addCartItem(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published', 404);
+        abort_unless(
+            $product->status === 'published' && $product->moderation_status === 'approved',
+            404,
+        );
         $country = strtoupper((string) ($request->user()?->country ?: 'DE'));
         abort_unless($this->cartService->hasSellableStock($product, $country), 404);
 
@@ -659,6 +838,13 @@ class CommerceCheckoutController extends Controller
             'quantity' => $quantity,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $this->checkoutPayload->cartResource($request),
+                'message' => 'Artikel wurde in den Einkaufswagen gelegt.',
+            ], 201);
+        }
+
         return back()->with('success', 'Artikel wurde in den Einkaufswagen gelegt.');
     }
 
@@ -681,6 +867,13 @@ class CommerceCheckoutController extends Controller
 
         $item->update(['quantity' => (int) $data['quantity']]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $this->checkoutPayload->cartResource($request),
+                'message' => 'Einkaufswagen wurde aktualisiert.',
+            ]);
+        }
+
         return back()->with('success', 'Einkaufswagen wurde aktualisiert.');
     }
 
@@ -688,6 +881,13 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless((int) $item->cart->user_id === (int) $request->user()->id, 403);
         $item->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $this->checkoutPayload->cartResource($request),
+                'message' => 'Artikel wurde aus dem Einkaufswagen entfernt.',
+            ]);
+        }
 
         return back()->with('success', 'Artikel wurde aus dem Einkaufswagen entfernt.');
     }
@@ -706,6 +906,8 @@ class CommerceCheckoutController extends Controller
             'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
             'customer_company' => ['nullable', 'string', 'max:255'],
             'customer_vat_id' => ['nullable', 'string', 'max:40'],
+            'save_shipping_address' => ['nullable', 'boolean'],
+            'shipping_address_label' => ['nullable', 'string', 'max:120'],
         ]);
 
         $cart = $this->cartService->cartFor($request->user())->load('items.product');
@@ -719,7 +921,13 @@ class CommerceCheckoutController extends Controller
         DB::transaction(function () use ($cart, $shippingAddress) {
             foreach ($cart->items as $item) {
                 $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
-                abort_unless($product->status === 'published' && $this->cartService->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfügbar.');
+                abort_unless(
+                    $product->status === 'published'
+                        && $product->moderation_status === 'approved'
+                        && $this->cartService->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity),
+                    422,
+                    $product->title.' ist nicht mehr verfügbar.',
+                );
             }
         });
 
@@ -971,6 +1179,17 @@ class CommerceCheckoutController extends Controller
             ])->save();
         }
 
+        if ($request->expectsJson()) {
+            $product = $product->fresh(['inventories.warehouse:id,name,country_code,city,postal_code']);
+
+            return response()->json([
+                'message' => $product->status === 'published'
+                    ? 'Produkt wurde veröffentlicht.'
+                    : 'Produkt wurde geprüft und abgelehnt.',
+                'data' => $product,
+            ], 201);
+        }
+
         return back()->with('success', $product->fresh()->status === 'published'
             ? 'Produkt wurde automatisch geprüft und im Marketplace veröffentlicht.'
             : 'Produkt wurde automatisch geprüft und abgelehnt.');
@@ -1179,6 +1398,13 @@ class CommerceCheckoutController extends Controller
             $this->syncSellerInventories($product->fresh(), $inventories);
         });
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Produkt wurde aktualisiert und zur Prüfung eingereicht.',
+                'data' => $product->fresh(['inventories.warehouse:id,name,country_code,city,postal_code']),
+            ]);
+        }
+
         return back()->with('success', 'Produkt wurde aktualisiert und zur Prüfung eingereicht.');
     }
 
@@ -1201,6 +1427,13 @@ class CommerceCheckoutController extends Controller
             default => 'Produkt wurde als Entwurf gespeichert.',
         };
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'data' => $product->fresh(),
+            ]);
+        }
+
         return back()->with('success', $message);
     }
 
@@ -1220,10 +1453,23 @@ class CommerceCheckoutController extends Controller
         if ($hasOrders) {
             $product->update(['status' => 'archived']);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.',
+                    'data' => $product->fresh(),
+                ]);
+            }
+
             return back()->with('success', 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.');
         }
 
         $product->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Produkt wurde gelöscht.',
+            ]);
+        }
 
         return back()->with('success', 'Produkt wurde gelöscht.');
     }
@@ -1246,7 +1492,7 @@ class CommerceCheckoutController extends Controller
                 'gallery_images' => $product->gallery_images ?: array_values(array_filter([$product->image_url])),
                 'user' => $product->user,
                 'club' => $product->club,
-            'price' => $quote,
+                'price' => $quote,
             ],
             'pricingCountries' => $this->checkoutPayload->pricingCountries(),
             'checkoutAddress' => $shippingAddress,
@@ -1274,6 +1520,12 @@ class CommerceCheckoutController extends Controller
         ]);
 
         app(CommerceOrderNotifier::class)->notifyIssueReported($order->fresh(['items.orderable', 'orderable', 'user']));
+
+        if ($request->expectsJson()) {
+            return $this->orderJsonResponse(
+                $order->fresh(['club', 'items.orderable', 'returnRequests']),
+            );
+        }
 
         return back()->with('success', 'Problem wurde gemeldet. Airmius prüft den Fall.');
     }
@@ -1316,6 +1568,12 @@ class CommerceCheckoutController extends Controller
 
         app(CommerceOrderNotifier::class)->notifyBuyerCancelled($order->fresh(['items.orderable', 'orderable', 'user']));
 
+        if ($request->expectsJson()) {
+            return $this->orderJsonResponse(
+                $order->fresh(['club', 'items.orderable', 'returnRequests']),
+            );
+        }
+
         return back()->with('success', 'Bestellung wurde storniert. Nach Versand waere nur noch eine Rücksendung möglich.');
     }
 
@@ -1349,6 +1607,13 @@ class CommerceCheckoutController extends Controller
             'requested_at' => now(),
         ]);
 
+        if ($request->expectsJson()) {
+            return $this->orderJsonResponse(
+                $order->fresh(['club', 'items.orderable', 'returnRequests']),
+                201,
+            );
+        }
+
         return back()->with('success', 'Rücksendung wurde angefragt.');
     }
 
@@ -1371,6 +1636,24 @@ class CommerceCheckoutController extends Controller
         return response($this->documents->pdf($order, 'credit_note'), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$order->credit_note_number.'.pdf"',
+        ]);
+    }
+
+    public function downloadSignedDocument(CommerceOrder $order, string $type)
+    {
+        abort_unless(in_array($type, ['invoice', 'credit-note'], true), 404);
+
+        $documentType = $type === 'credit-note' ? 'credit_note' : 'invoice';
+        $documentNumber = $documentType === 'credit_note'
+            ? $order->credit_note_number
+            : $order->invoice_number;
+
+        abort_unless($documentNumber, 404);
+
+        return response($this->documents->pdf($order, $documentType), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$documentNumber.'.pdf"',
+            'Cache-Control' => 'private, no-store, max-age=0',
         ]);
     }
 
@@ -1471,6 +1754,14 @@ class CommerceCheckoutController extends Controller
         $this->syncAdCreatives($campaign, $creativeRows);
 
         if (! $startPayment) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'data' => $this->campaignResourceWithPreviews(
+                        $campaign->fresh(['creatives', 'groups.creatives', 'stats']),
+                    ),
+                ], 201);
+            }
+
             return redirect()
                 ->route('auth.commerce.index', ['tab' => 'ads'])
                 ->with('success', 'Ads-Kampagne wurde als Entwurf erstellt. Jetzt kannst du Anzeigegruppen darunter anlegen.');
@@ -1537,6 +1828,14 @@ class CommerceCheckoutController extends Controller
         $campaign->forceFill([
             'status' => $data['status'],
         ])->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $this->campaignResourceWithPreviews(
+                    $campaign->fresh(['creatives', 'groups.creatives', 'stats']),
+                ),
+            ]);
+        }
 
         return back()->with('success', 'Kampagnenstatus wurde aktualisiert.');
     }
@@ -1725,6 +2024,14 @@ class CommerceCheckoutController extends Controller
             }
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $this->campaignResourceWithPreviews(
+                    $campaign->fresh(['creatives', 'groups.creatives', 'stats']),
+                ),
+            ]);
+        }
+
         return back()->with('success', $paymentCompleted
             ? 'Kampagne wurde bearbeitet und erneut zur Prüfung eingereicht.'
             : 'Kampagne wurde bearbeitet. Zahlung bleibt erforderlich.');
@@ -1750,6 +2057,10 @@ class CommerceCheckoutController extends Controller
 
         $campaign->delete();
 
+        if ($request->expectsJson()) {
+            return response()->json(['data' => ['deleted' => true]]);
+        }
+
         return back()->with('success', 'Ads-Kampagne wurde gelöscht.');
     }
 
@@ -1764,12 +2075,18 @@ class CommerceCheckoutController extends Controller
 
         $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
 
-        WebsiteRequest::create([
+        $websiteRequest = WebsiteRequest::create([
             ...$data,
             'user_id' => $request->user()->id,
             'status' => 'new',
             'package' => 'website_plus',
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => $websiteRequest->fresh('club:id,name'),
+            ], 201);
+        }
 
         return back()->with('success', 'Website-Anfrage wurde gesendet.');
     }
@@ -2678,7 +2995,7 @@ class CommerceCheckoutController extends Controller
         }
 
         try {
-            return now()->diffInDays(\Illuminate\Support\Carbon::parse($timestamp)) <= $days;
+            return now()->diffInDays(Carbon::parse($timestamp)) <= $days;
         } catch (\Throwable) {
             return false;
         }
@@ -3158,6 +3475,88 @@ class CommerceCheckoutController extends Controller
         ];
     }
 
+    private function sellerOrderResource(CommerceOrder $order, User $seller): array
+    {
+        $ownsDirectProduct = $order->orderable instanceof MarketplaceProduct
+            && (int) $order->orderable->user_id === (int) $seller->id;
+        $items = $order->items
+            ->filter(fn (CommerceOrderItem $item) => $item->orderable instanceof MarketplaceProduct
+                && (int) $item->orderable->user_id === (int) $seller->id)
+            ->values();
+        $itemIds = $items->pluck('id');
+        $shippingAddress = collect((array) data_get($order->payload, 'shipping_address'))
+            ->only(['name', 'company', 'street', 'house_number', 'postal_code', 'city', 'state', 'country'])
+            ->all();
+        $hasShippableItem = $ownsDirectProduct
+            ? (bool) $order->orderable->is_shippable
+            : $items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable);
+
+        return [
+            'id' => $order->id,
+            'reference' => $order->invoice_number ?: 'AIR-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
+            'type' => $order->type,
+            'status' => $order->status,
+            'shipping_status' => $order->shipping_status,
+            'shipping_carrier' => $order->shipping_carrier,
+            'tracking_number' => $order->tracking_number,
+            'tracking_url' => $order->tracking_url,
+            'currency' => $order->currency ?: 'EUR',
+            'seller_gross_cents' => $ownsDirectProduct
+                ? (int) $order->amount_cents
+                : (int) $items->sum('total_cents'),
+            'seller_commission_cents' => $ownsDirectProduct
+                ? (int) $order->commission_cents
+                : (int) round($items->sum(function (CommerceOrderItem $item) {
+                    $product = $item->orderable;
+
+                    return (int) $item->total_cents * ((int) ($product?->commission_percent ?? 0) / 100);
+                })),
+            'payout_status' => $order->payout_status,
+            'buyer' => [
+                'name' => $order->user?->name ?: $order->guest_name,
+                'email' => $order->user?->email ?: $order->guest_email,
+            ],
+            'shipping_address' => $hasShippableItem ? $shippingAddress : null,
+            'items' => $items->map(fn (CommerceOrderItem $item) => [
+                'id' => $item->id,
+                'product_id' => $item->orderable_id,
+                'title' => $item->title,
+                'sku' => $item->sku,
+                'quantity' => $item->quantity,
+                'total_cents' => $item->total_cents,
+                'currency' => $item->currency,
+                'is_shippable' => (bool) $item->is_shippable,
+            ])->all(),
+            'product' => $ownsDirectProduct ? [
+                'id' => $order->orderable->id,
+                'title' => $order->orderable->title,
+                'sku' => $order->orderable->sku,
+                'is_shippable' => (bool) $order->orderable->is_shippable,
+            ] : null,
+            'issue' => [
+                'status' => $order->issue_status ?: 'none',
+                'note' => $order->issue_note,
+                'response' => $order->issue_response,
+            ],
+            'return_requests' => $order->returnRequests
+                ->filter(fn (CommerceReturnRequest $returnRequest) => $ownsDirectProduct
+                    || $returnRequest->commerce_order_item_id === null
+                    || $itemIds->contains($returnRequest->commerce_order_item_id))
+                ->map(fn (CommerceReturnRequest $returnRequest) => [
+                    'id' => $returnRequest->id,
+                    'commerce_order_item_id' => $returnRequest->commerce_order_item_id,
+                    'reason' => $returnRequest->reason,
+                    'quantity' => $returnRequest->quantity,
+                    'status' => $returnRequest->status,
+                    'created_at' => $returnRequest->created_at?->toJSON(),
+                ])
+                ->values()
+                ->all(),
+            'created_at' => $order->created_at?->toJSON(),
+            'completed_at' => $order->completed_at?->toJSON(),
+        ];
+    }
+
     private function eligiblePayoutOrdersFor(User $user)
     {
         $cutoff = now()->subDays(14);
@@ -3359,16 +3758,37 @@ class CommerceCheckoutController extends Controller
         if ($order->provider === 'bank_transfer') {
             $this->payments->prepareBankTransfer($order);
 
+            if (request()->expectsJson()) {
+                return $this->orderJsonResponse(
+                    $order->fresh(['club', 'items.orderable', 'returnRequests']),
+                    201,
+                );
+            }
+
             return redirect()->to($this->payments->orderRoute($order, 'bank-transfer'));
         }
 
         $url = $this->payments->createProviderCheckout($order);
+
+        if (request()->expectsJson()) {
+            return $this->orderJsonResponse(
+                $order->fresh(['club', 'items.orderable', 'returnRequests']),
+                201,
+            );
+        }
 
         if (request()->header('X-Inertia')) {
             return Inertia::location($url);
         }
 
         return redirect()->away($url);
+    }
+
+    private function orderJsonResponse(CommerceOrder $order, int $status = 200)
+    {
+        return (new CommerceOrderResource($order))
+            ->response()
+            ->setStatusCode($status);
     }
 
     private function sendConfirmationEmail(CommerceOrder $order): void
@@ -3768,5 +4188,4 @@ class CommerceCheckoutController extends Controller
             return $prefix.'-'.now()->format('Y').'-'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
         });
     }
-
 }

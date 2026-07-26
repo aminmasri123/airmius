@@ -2,34 +2,54 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'team_detail_screen.dart';
 
 class TeamInvitationResponseScreen extends StatefulWidget {
-  const TeamInvitationResponseScreen({super.key, this.invitationId, this.notification});
+  const TeamInvitationResponseScreen({
+    super.key,
+    this.invitationId,
+    this.token,
+    this.notification,
+  });
 
   final int? invitationId;
+  final String? token;
   final AirmiusNotification? notification;
 
   @override
-  State<TeamInvitationResponseScreen> createState() => _TeamInvitationResponseScreenState();
+  State<TeamInvitationResponseScreen> createState() =>
+      _TeamInvitationResponseScreenState();
 }
 
-class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScreen> {
+class _TeamInvitationResponseScreenState
+    extends State<TeamInvitationResponseScreen> {
   late Future<AirmiusTeamInvitation?> _invitationFuture;
   bool _busy = false;
+  bool _didStartLoading = false;
 
   @override
   void initState() {
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didStartLoading) return;
+    _didStartLoading = true;
     _invitationFuture = _loadInvitation();
   }
 
   Future<AirmiusTeamInvitation?> _loadInvitation() async {
     final repository = AirmiusServicesScope.of(context).repositories.clubs;
     try {
+      if (widget.token != null && widget.token!.trim().isNotEmpty) {
+        return await repository.teamInvitationByToken(widget.token!.trim());
+      }
       if (widget.invitationId != null && widget.invitationId! > 0) {
         return await repository.teamInvitation(widget.invitationId!);
       }
@@ -46,17 +66,27 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
   AirmiusTeamInvitation? _fallbackInvitation() {
     final notification = widget.notification;
     final invitationId = widget.invitationId;
-    if (notification == null || invitationId == null || invitationId <= 0) return null;
+    if (notification == null || invitationId == null || invitationId <= 0) {
+      return null;
+    }
 
     final data = notification.data;
     final title = notification.title.trim();
     final body = notification.body.trim();
-    final teamName = _stringFrom(data['team_name']) ?? _teamNameFromTitle(title) ?? 'Team';
+    final t = AirmiusScope.of(context).t;
+    final teamName =
+        _stringFrom(data['team_name']) ??
+        _teamNameFromTitle(title) ??
+        t('teamInvitation.fallbackTeam');
 
     return AirmiusTeamInvitation(
       id: invitationId,
-      role: _stringFrom(data['role']) ?? _roleFromBody(body) ?? 'Player',
-      status: _stringFrom(data['invitation_status'] ?? data['status']) ?? 'pending',
+      role:
+          _stringFrom(data['role']) ??
+          _roleFromBody(body) ??
+          t('teamInvitation.fallbackPlayer'),
+      status:
+          _stringFrom(data['invitation_status'] ?? data['status']) ?? 'pending',
       teamId: _intFrom(data['team_id']) ?? 0,
       clubId: _intFrom(data['club_id']),
       teamName: teamName,
@@ -72,9 +102,18 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final team = await AirmiusServicesScope.of(context).repositories.clubs.acceptTeamInvitation(invitation.id);
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      final team = widget.token != null && widget.token!.trim().isNotEmpty
+          ? await repository.acceptTeamInvitationByToken(widget.token!.trim())
+          : await repository.acceptTeamInvitation(invitation.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team-Einladung wurde angenommen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AirmiusScope.of(context).t('teamInvitation.acceptedToast'),
+          ),
+        ),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -89,7 +128,10 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      _showError(error, 'Team-Einladung konnte nicht angenommen werden');
+      _showError(
+        error,
+        AirmiusScope.of(context).t('teamInvitation.acceptFailed'),
+      );
     }
   }
 
@@ -97,20 +139,38 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.declineTeamInvitation(invitation.id);
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      if (widget.token != null && widget.token!.trim().isNotEmpty) {
+        await repository.declineTeamInvitationByToken(widget.token!.trim());
+      } else {
+        await repository.declineTeamInvitation(invitation.id);
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team-Einladung wurde abgelehnt.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AirmiusScope.of(context).t('teamInvitation.declinedToast'),
+          ),
+        ),
+      );
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
-      _showError(error, 'Team-Einladung konnte nicht abgelehnt werden');
+      _showError(
+        error,
+        AirmiusScope.of(context).t('teamInvitation.declineFailed'),
+      );
     }
   }
 
   void _showError(Object error, String fallback) {
-    final message = error is AirmiusApiException ? error.userMessage : '$error';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$fallback: $message')));
+    final message = error is AirmiusApiException
+        ? error.userMessage
+        : AirmiusScope.of(context).t('common.errorDetails');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$fallback: $message')));
   }
 
   @override
@@ -118,47 +178,79 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
-        foregroundColor: AirmiusColors.text,
+        backgroundColor:
+            (Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context)),
+        foregroundColor: airmiusTextColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Team-Einladung', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          AirmiusScope.of(context).t('teamInvitation.title'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
-        title: 'Clubs & Teams',
-        subtitle: 'Offene Team-Einladungen annehmen oder ablehnen',
+        title: AirmiusScope.of(context).t('teamInvitation.clubs'),
+        subtitle: AirmiusScope.of(context).t('teamInvitation.subtitle'),
         showHeader: true,
         child: FutureBuilder<AirmiusTeamInvitation?>(
           future: _invitationFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AirmiusPanel(
+              return AirmiusPanel(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: CircularProgressIndicator(color: AirmiusColors.blue)),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: airmiusAccentColor(context),
+                    ),
+                  ),
                 ),
               );
             }
 
             if (snapshot.hasError) {
-              final fallback = _fallbackInvitation() ?? _genericInvitation(widget.invitationId, widget.notification);
+              final fallback =
+                  _fallbackInvitation() ??
+                  _genericInvitation(
+                    widget.invitationId,
+                    widget.notification,
+                    teamFallback: AirmiusScope.of(
+                      context,
+                    ).t('teamInvitation.fallbackTeam'),
+                    roleFallback: AirmiusScope.of(
+                      context,
+                    ).t('teamInvitation.fallbackPlayer'),
+                  );
               return _InvitationStatusPanel(
                 invitation: fallback,
                 busy: _busy,
-                onAccept: fallback.status == 'pending' ? () => _accept(fallback) : null,
-                onDecline: fallback.status == 'pending' ? () => _decline(fallback) : null,
-                contextNote: 'Der Server konnte die Einladung gerade nicht synchron laden. Der angezeigte Stand stammt aus der Benachrichtigung.',
+                onAccept: fallback.status == 'pending'
+                    ? () => _accept(fallback)
+                    : null,
+                onDecline: fallback.status == 'pending'
+                    ? () => _decline(fallback)
+                    : null,
+                contextNote: AirmiusScope.of(
+                  context,
+                ).t('teamInvitation.notificationFallback'),
               );
             }
 
             final invitation = snapshot.data;
             if (invitation == null) {
-              return const EmptyPanel('Keine offene Team-Einladung gefunden.');
+              return EmptyPanel(
+                AirmiusScope.of(context).t('teamInvitation.none'),
+              );
             }
             return _InvitationStatusPanel(
               invitation: invitation,
               busy: _busy,
-              onAccept: invitation.status == 'pending' ? () => _accept(invitation) : null,
-              onDecline: invitation.status == 'pending' ? () => _decline(invitation) : null,
+              onAccept: invitation.status == 'pending'
+                  ? () => _accept(invitation)
+                  : null,
+              onDecline: invitation.status == 'pending'
+                  ? () => _decline(invitation)
+                  : null,
             );
           },
         ),
@@ -167,21 +259,36 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
   }
 }
 
-AirmiusTeamInvitation _genericInvitation(int? invitationId, AirmiusNotification? notification) {
-    final status = _stringFrom(notification?.data['invitation_status'] ?? notification?.data['status']) ?? _statusFromText('${notification?.title ?? ''} ${notification?.body ?? ''}') ?? 'unknown';
-    return AirmiusTeamInvitation(
-      id: invitationId ?? 0,
-      role: _stringFrom(notification?.data['role']) ?? 'Player',
-      status: status,
-      teamId: _intFrom(notification?.data['team_id']) ?? 0,
-      clubId: _intFrom(notification?.data['club_id']),
-      teamName: _stringFrom(notification?.data['team_name']) ?? _teamNameFromTitle(notification?.title ?? '') ?? 'Team',
-      clubName: _stringFrom(notification?.data['club_name']),
-      sportType: _stringFrom(notification?.data['sport_type']),
-      inviterName: _stringFrom(notification?.data['inviter_name']),
-      inviterEmail: _stringFrom(notification?.data['inviter_email']),
-      createdAt: notification?.timeLabel,
-    );
+AirmiusTeamInvitation _genericInvitation(
+  int? invitationId,
+  AirmiusNotification? notification, {
+  required String teamFallback,
+  required String roleFallback,
+}) {
+  final status =
+      _stringFrom(
+        notification?.data['invitation_status'] ?? notification?.data['status'],
+      ) ??
+      _statusFromText(
+        '${notification?.title ?? ''} ${notification?.body ?? ''}',
+      ) ??
+      'unknown';
+  return AirmiusTeamInvitation(
+    id: invitationId ?? 0,
+    role: _stringFrom(notification?.data['role']) ?? roleFallback,
+    status: status,
+    teamId: _intFrom(notification?.data['team_id']) ?? 0,
+    clubId: _intFrom(notification?.data['club_id']),
+    teamName:
+        _stringFrom(notification?.data['team_name']) ??
+        _teamNameFromTitle(notification?.title ?? '') ??
+        teamFallback,
+    clubName: _stringFrom(notification?.data['club_name']),
+    sportType: _stringFrom(notification?.data['sport_type']),
+    inviterName: _stringFrom(notification?.data['inviter_name']),
+    inviterEmail: _stringFrom(notification?.data['inviter_email']),
+    createdAt: notification?.timeLabel,
+  );
 }
 
 class _InvitationStatusPanel extends StatelessWidget {
@@ -201,7 +308,9 @@ class _InvitationStatusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final answered = invitation.status == 'accepted' || invitation.status == 'declined';
+    final t = AirmiusScope.of(context).t;
+    final answered =
+        invitation.status == 'accepted' || invitation.status == 'declined';
     final accepted = invitation.status == 'accepted';
     final unavailable = invitation.status == 'unknown';
 
@@ -209,45 +318,78 @@ class _InvitationStatusPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow(answered ? 'Team-Einladung beantwortet' : unavailable ? 'Team-Einladung' : 'Offene Team-Einladung'),
+          Eyebrow(
+            answered
+                ? t('teamInvitation.answered')
+                : unavailable
+                ? t('teamInvitation.title')
+                : t('teamInvitation.open'),
+          ),
           const SizedBox(height: 8),
           Text(
             answered
-                ? (accepted ? 'Du hast die Einladung angenommen' : 'Du hast die Einladung abgelehnt')
+                ? (accepted
+                      ? t('teamInvitation.acceptedHeadline')
+                      : t('teamInvitation.declinedHeadline'))
                 : unavailable
-                    ? 'Einladungsstatus konnte nicht synchron geladen werden'
-                    : 'Du wurdest zu einem Team eingeladen',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 21, fontWeight: FontWeight.w900),
+                ? t('teamInvitation.unavailableHeadline')
+                : t('teamInvitation.openHeadline'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             answered
-                ? (accepted ? 'Du bist dem Team und dem zugehoerigen Verein beigetreten.' : 'Diese Team-Einladung ist nicht mehr offen.')
+                ? (accepted
+                      ? t('teamInvitation.acceptedBody')
+                      : t('teamInvitation.declinedBody'))
                 : unavailable
-                    ? 'Oeffne die Benachrichtigung erneut, sobald der Server die aktuellen Daten bereitstellt.'
-                    : 'Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.',
-            style: const TextStyle(color: AirmiusColors.muted, height: 1.35),
+                ? t('teamInvitation.unavailableBody')
+                : t('teamInvitation.openBody'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
           ),
           if (contextNote != null) ...[
             const SizedBox(height: 8),
-            Text(contextNote!, style: const TextStyle(color: AirmiusColors.amber, height: 1.35, fontWeight: FontWeight.w800)),
+            Text(
+              contextNote!,
+              style: TextStyle(
+                color: AirmiusColors.amber,
+                height: 1.35,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ],
           const SizedBox(height: 14),
           _InvitationCard(invitation: invitation),
           const SizedBox(height: 14),
           if (answered)
-            StatusPill(accepted ? 'Angenommen' : 'Abgelehnt', color: accepted ? AirmiusColors.green : AirmiusColors.red)
+            StatusPill(
+              accepted
+                  ? t('teamInvitation.statusAccepted')
+                  : t('teamInvitation.statusDeclined'),
+              color: accepted ? AirmiusColors.green : AirmiusColors.red,
+            )
           else if (unavailable)
-            const StatusPill('Nicht synchronisiert', color: AirmiusColors.amber)
+            StatusPill(
+              t('teamInvitation.statusUnavailable'),
+              color: AirmiusColors.amber,
+            )
           else ...[
             AirmiusButton(
-              label: busy ? 'Wird angenommen...' : 'Annehmen',
+              label: busy
+                  ? t('teamInvitation.accepting')
+                  : t('teamInvitation.accept'),
               icon: Icons.check_circle_outline,
               onPressed: busy ? null : onAccept,
             ),
             const SizedBox(height: 10),
             AirmiusButton(
-              label: busy ? 'Bitte warten...' : 'Ablehnen',
+              label: busy
+                  ? t('teamInvitation.waiting')
+                  : t('teamInvitation.decline'),
               icon: Icons.cancel_outlined,
               secondary: true,
               onPressed: busy ? null : onDecline,
@@ -266,45 +408,85 @@ class _InvitationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final initials = invitation.teamName.trim().isEmpty
         ? 'T'
-        : invitation.teamName.trim().split(RegExp(r'\s+')).take(2).map((part) => part.substring(0, 1).toUpperCase()).join();
+        : invitation.teamName
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((part) => part.substring(0, 1).toUpperCase())
+              .join();
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            backgroundColor: AirmiusColors.blue.withValues(alpha: 0.14),
-            foregroundColor: AirmiusColors.text,
-            child: Text(initials, style: const TextStyle(fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusAccentColor(
+              context,
+            ).withValues(alpha: 0.14),
+            foregroundColor: airmiusTextColor(context),
+            child: Text(
+              initials,
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(invitation.teamName, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                Text(
+                  invitation.teamName,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   [
-                    invitation.clubName ?? 'Verein',
-                    if ((invitation.sportType ?? '').isNotEmpty) invitation.sportType!,
-                    'Rolle: ${_roleLabel(invitation.role)}',
+                    invitation.clubName ?? t('teamInvitation.club'),
+                    if ((invitation.sportType ?? '').isNotEmpty)
+                      invitation.sportType!,
+                    t(
+                      'teamInvitation.role',
+                    ).replaceFirst('{role}', _roleLabel(invitation.role, t)),
                   ].join(' - '),
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.35),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
                 ),
                 if ((invitation.inviterName ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text('Eingeladen von ${invitation.inviterName}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
+                  Text(
+                    t(
+                      'teamInvitation.invitedBy',
+                    ).replaceFirst('{name}', invitation.inviterName!),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
                 ] else ...[
                   const SizedBox(height: 4),
-                  const Text('Einladende Person wird nach dem Laden angezeigt.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
+                  Text(
+                    t('teamInvitation.inviterPending'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -314,11 +496,11 @@ class _InvitationCard extends StatelessWidget {
     );
   }
 
-  static String _roleLabel(String role) {
+  static String _roleLabel(String role, String Function(String) t) {
     return switch (role.toLowerCase()) {
-      'coach' => 'Trainer',
-      'captain' => 'Kapitän',
-      'player' => 'Spieler',
+      'coach' => t('teamInvitation.roleCoach'),
+      'captain' => t('teamInvitation.roleCaptain'),
+      'player' => t('teamInvitation.rolePlayer'),
       _ => role,
     };
   }
@@ -337,7 +519,10 @@ int? _intFrom(Object? value) {
 }
 
 String? _teamNameFromTitle(String title) {
-  final match = RegExp(r'Einladung zu (.+)$', caseSensitive: false).firstMatch(title);
+  final match = RegExp(
+    r'Einladung zu (.+)$',
+    caseSensitive: false,
+  ).firstMatch(title);
   return match?.group(1)?.trim();
 }
 
@@ -352,7 +537,13 @@ String? _roleFromBody(String body) {
 
 String? _statusFromText(String text) {
   final lower = text.toLowerCase();
-  if (lower.contains('angenommen') || lower.contains('accepted')) return 'accepted';
-  if (lower.contains('abgelehnt') || lower.contains('declined') || lower.contains('refused')) return 'declined';
+  if (lower.contains('angenommen') || lower.contains('accepted')) {
+    return 'accepted';
+  }
+  if (lower.contains('abgelehnt') ||
+      lower.contains('declined') ||
+      lower.contains('refused')) {
+    return 'declined';
+  }
   return null;
 }

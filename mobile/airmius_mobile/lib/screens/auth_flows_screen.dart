@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
 import 'account_operations_screen.dart';
+import 'email_verification_screen.dart';
+import 'password_recovery_screen.dart';
+import 'profile_completion_gate_screen.dart';
+import 'support_helpdesk_screen.dart';
+import 'two_factor_challenge_screen.dart';
 
 class AuthFlowsScreen extends StatefulWidget {
   const AuthFlowsScreen({super.key, this.onSocialLogin});
@@ -94,19 +99,17 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
   Future<void> _submitRegister() async {
     final services = AirmiusServicesScope.of(context);
+    final scope = AirmiusScope.of(context);
     final language = Localizations.localeOf(context).languageCode;
     setState(() => _registerError = null);
 
     if (_passwordController.text != _passwordConfirmationController.text) {
-      setState(
-        () =>
-            _registerError = 'Passwort und Bestätigung stimmen nicht überein.',
-      );
+      setState(() => _registerError = scope.t('authFlow.passwordMismatch'));
       return;
     }
 
     if (_gender.isEmpty) {
-      setState(() => _registerError = 'Bitte wähle dein Geschlecht aus.');
+      setState(() => _registerError = scope.t('authFlow.genderRequired'));
       return;
     }
 
@@ -149,6 +152,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   @override
   Widget build(BuildContext context) {
     final accent = _authAccent(context);
+    final scope = AirmiusScope.of(context);
     final surfaceSoft = _authSurfaceSoft(context);
     final text = _authText(context);
     final muted = _authMuted(context);
@@ -159,9 +163,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         backgroundColor: accent,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.manage_accounts_outlined),
-        label: const Text(
-          'Konto Ops',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        label: Text(
+          scope.t('authFlow.accountOps'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
@@ -173,14 +177,14 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         backgroundColor: _authHeader(context),
         foregroundColor: text,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Konto & Sicherheit',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        title: Text(
+          scope.t('authFlow.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
-        title: 'Konto & Sicherheit',
-        subtitle: 'Registrierung, Passwort, 2FA, E-Mail und Profilabschluss',
+        title: scope.t('authFlow.title'),
+        subtitle: scope.t('authFlow.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -191,10 +195,10 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                 children: [
                   const Center(child: AirmiusLogo(size: 72)),
                   const SizedBox(height: 12),
-                  const Eyebrow('Auth'),
+                  Eyebrow(scope.t('authFlow.eyebrow')),
                   const SizedBox(height: 8),
                   Text(
-                    'Alle wichtigen Auth-Seiten der Web-App als native UI vorbereitet.',
+                    scope.t('authFlow.intro'),
                     style: TextStyle(color: muted, height: 1.35),
                   ),
                   const SizedBox(height: 14),
@@ -203,29 +207,29 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                     runSpacing: 8,
                     children: [
                       for (final flow in const [
-                        'Registrieren',
-                        'Social',
-                        'Passwort',
-                        '2FA',
-                        'E-Mail',
-                        'Profil',
-                        'Gesperrt',
-                        'Löschen',
+                        ('register', 'authFlow.register'),
+                        ('social', 'authFlow.social'),
+                        ('password', 'authFlow.password'),
+                        ('twoFactor', 'authFlow.twoFactor'),
+                        ('email', 'authFlow.email'),
+                        ('profile', 'authFlow.profile'),
+                        ('suspended', 'authFlow.suspended'),
+                        ('delete', 'authFlow.delete'),
                       ])
                         ChoiceChip(
-                          selected: _flow == flow,
-                          label: Text(flow),
-                          onSelected: (_) => setState(() => _flow = flow),
+                          selected: _flow == flow.$1,
+                          label: Text(scope.t(flow.$2)),
+                          onSelected: (_) => setState(() => _flow = flow.$1),
                           selectedColor: accent.withValues(
                             alpha: _authDarkUi(context) ? 0.22 : 0.14,
                           ),
                           backgroundColor: surfaceSoft,
                           checkmarkColor: accent,
                           side: BorderSide(
-                            color: _flow == flow ? accent : border,
+                            color: _flow == flow.$1 ? accent : border,
                           ),
                           labelStyle: TextStyle(
-                            color: _flow == flow ? accent : muted,
+                            color: _flow == flow.$1 ? accent : muted,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -244,108 +248,139 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
   Widget _content() {
     return switch (_flow) {
-      'Registrieren' => _register(),
-      'Social' => _socialLogin(),
-      'Passwort' => _password(),
-      '2FA' => _twoFactor(),
-      'E-Mail' => _emailVerify(),
-      'Profil' => _profileCompletion(),
-      'Gesperrt' => _suspended(),
-      'Löschen' => _deleteAccount(),
+      'register' => _register(),
+      'social' => _socialLogin(),
+      'password' => _password(),
+      'twoFactor' => _twoFactor(),
+      'email' => _emailVerify(),
+      'profile' => _profileCompletion(),
+      'suspended' => _suspended(),
+      'delete' => _deleteAccount(),
       _ => _register(),
     };
   }
 
   Widget _register() {
     final services = AirmiusServicesScope.of(context);
+    final scope = AirmiusScope.of(context);
     final isLoading = services.authState.phase.name == 'loading';
     final error = _registerError ?? services.authState.error;
     final text = _authText(context);
     final muted = _authMuted(context);
+    final narrow = MediaQuery.sizeOf(context).width < 500;
 
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Registrieren'),
+          Eyebrow(scope.t('authFlow.register')),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Vorname',
-            hint: 'Max',
+            label: scope.t('application.firstName'),
+            hint: 'Alex',
             icon: Icons.person_outline,
             controller: _firstNameController,
           ),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Nachname',
-            hint: 'Mustermann',
+            label: scope.t('application.lastName'),
+            hint: 'Smith',
             icon: Icons.person_outline,
             controller: _lastNameController,
           ),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'E-Mail',
-            hint: 'konto@example.com',
+            label: scope.t('application.email'),
+            hint: 'account@example.com',
             icon: Icons.mail_outline,
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Land',
+            label: scope.t('profileGate.country'),
             hint: 'DE',
             icon: Icons.public_outlined,
             controller: _countryController,
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AirmiusTextField(
-                  label: 'Straße',
-                  hint: 'Optional',
-                  icon: Icons.home_outlined,
-                  controller: _streetController,
+          if (narrow) ...[
+            AirmiusTextField(
+              label: scope.t('authFlow.street'),
+              hint: scope.t('application.optional'),
+              icon: Icons.home_outlined,
+              controller: _streetController,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: scope.t('authFlow.number'),
+              hint: '12a',
+              controller: _houseNumberController,
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: AirmiusTextField(
+                    label: scope.t('authFlow.street'),
+                    hint: scope.t('application.optional'),
+                    icon: Icons.home_outlined,
+                    controller: _streetController,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 110,
-                child: AirmiusTextField(
-                  label: 'Nr.',
-                  hint: '12a',
-                  controller: _houseNumberController,
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 110,
+                  child: AirmiusTextField(
+                    label: scope.t('authFlow.number'),
+                    hint: '12a',
+                    controller: _houseNumberController,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              SizedBox(
-                width: 130,
-                child: AirmiusTextField(
-                  label: 'PLZ',
-                  hint: '10115',
-                  controller: _postalCodeController,
-                  keyboardType: TextInputType.number,
+          if (narrow) ...[
+            AirmiusTextField(
+              label: scope.t('authFlow.postal'),
+              hint: '10115',
+              controller: _postalCodeController,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: scope.t('authFlow.city'),
+              hint: 'Berlin',
+              icon: Icons.location_city_outlined,
+              controller: _cityController,
+            ),
+          ] else
+            Row(
+              children: [
+                SizedBox(
+                  width: 130,
+                  child: AirmiusTextField(
+                    label: scope.t('authFlow.postal'),
+                    hint: '10115',
+                    controller: _postalCodeController,
+                    keyboardType: TextInputType.number,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: AirmiusTextField(
-                  label: 'Stadt',
-                  hint: 'Berlin',
-                  icon: Icons.location_city_outlined,
-                  controller: _cityController,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AirmiusTextField(
+                    label: scope.t('authFlow.city'),
+                    hint: 'Berlin',
+                    icon: Icons.location_city_outlined,
+                    controller: _cityController,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Bundesland / Region',
-            hint: 'Optional',
+            label: scope.t('application.stateRegion'),
+            hint: scope.t('application.optional'),
             icon: Icons.map_outlined,
             controller: _stateController,
           ),
@@ -354,8 +389,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             children: [
               Expanded(
                 child: AirmiusTextField(
-                  label: 'Geburtsdatum',
-                  hint: 'JJJJ-MM-TT',
+                  label: scope.t('application.birthDate'),
+                  hint: 'YYYY-MM-DD',
                   icon: Icons.cake_outlined,
                   controller: _birthDateController,
                   keyboardType: TextInputType.datetime,
@@ -363,7 +398,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               ),
               const SizedBox(width: 10),
               IconButton.filledTonal(
-                tooltip: 'Datum wählen',
+                tooltip: scope.t('authFlow.dateChoose'),
                 onPressed: _pickBirthDate,
                 icon: const Icon(Icons.calendar_month_outlined),
               ),
@@ -372,27 +407,37 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _gender.isEmpty ? null : _gender,
+            isExpanded: true,
             dropdownColor: _authSurface(context),
             decoration: InputDecoration(
-              labelText: 'Geschlecht',
+              labelText: scope.t('application.gender'),
               prefixIcon: Icon(Icons.wc_outlined, color: muted),
             ),
             style: TextStyle(color: text, fontWeight: FontWeight.w800),
-            items: const [
-              DropdownMenuItem(value: 'female', child: Text('Weiblich')),
-              DropdownMenuItem(value: 'male', child: Text('Männlich')),
-              DropdownMenuItem(value: 'diverse', child: Text('Divers')),
+            items: [
+              DropdownMenuItem(
+                value: 'female',
+                child: Text(scope.t('application.gender.female')),
+              ),
+              DropdownMenuItem(
+                value: 'male',
+                child: Text(scope.t('application.gender.male')),
+              ),
+              DropdownMenuItem(
+                value: 'diverse',
+                child: Text(scope.t('application.gender.diverse')),
+              ),
               DropdownMenuItem(
                 value: 'not_specified',
-                child: Text('Keine Angabe'),
+                child: Text(scope.t('application.gender.unspecified')),
               ),
             ],
             onChanged: (value) => setState(() => _gender = value ?? ''),
           ),
           if (_requiresGuardianConsent) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Bei Nutzern unter 16 Jahren ist die E-Mail eines Erziehungsberechtigten erforderlich.',
+            Text(
+              scope.t('authFlow.guardianMinor'),
               style: TextStyle(
                 color: AirmiusColors.amber,
                 fontWeight: FontWeight.w800,
@@ -401,8 +446,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             ),
             const SizedBox(height: 12),
             AirmiusTextField(
-              label: 'E-Mail Erziehungsberechtigte/r',
-              hint: 'eltern@example.com',
+              label: scope.t('application.guardianEmail'),
+              hint: 'guardian@example.com',
               icon: Icons.supervisor_account_outlined,
               controller: _guardianEmailController,
               keyboardType: TextInputType.emailAddress,
@@ -410,16 +455,16 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           ],
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Passwort',
-            hint: 'Sicheres Passwort',
+            label: scope.t('account.newPassword'),
+            hint: scope.t('account.newPasswordHint'),
             icon: Icons.lock_outline,
             controller: _passwordController,
             obscureText: true,
           ),
           const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Passwort bestätigen',
-            hint: 'Passwort wiederholen',
+            label: scope.t('account.confirmPassword'),
+            hint: scope.t('account.confirmPasswordHint'),
             icon: Icons.lock_reset_outlined,
             controller: _passwordConfirmationController,
             obscureText: true,
@@ -433,7 +478,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               activeColor: _authAccent(context),
               contentPadding: EdgeInsets.zero,
               title: Text(
-                'AGB und Datenschutz akzeptieren',
+                scope.t('authFlow.terms'),
                 style: TextStyle(color: text, fontWeight: FontWeight.w800),
               ),
             ),
@@ -443,14 +488,14 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             runSpacing: 10,
             children: [
               _AuthAction(
-                label: 'Mit Google registrieren',
+                label: scope.t('authFlow.googleRegister'),
                 icon: Icons.g_mobiledata,
                 onPressed: widget.onSocialLogin == null
                     ? null
                     : () => widget.onSocialLogin!('google'),
               ),
               _AuthAction(
-                label: 'Mit Outlook registrieren',
+                label: scope.t('authFlow.outlookRegister'),
                 icon: Icons.mail_outline,
                 onPressed: widget.onSocialLogin == null
                     ? null
@@ -470,7 +515,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             const SizedBox(height: 10),
           ],
           AirmiusButton(
-            label: isLoading ? 'Konto wird erstellt...' : 'Konto erstellen',
+            label: isLoading
+                ? scope.t('authFlow.loading')
+                : scope.t('authFlow.create'),
             icon: Icons.person_add_alt,
             onPressed: _terms && !isLoading ? _submitRegister : null,
           ),
@@ -480,45 +527,52 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _socialLogin() {
+    final scope = AirmiusScope.of(context);
     final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Social Login'),
+          Eyebrow(scope.t('authFlow.social')),
           const SizedBox(height: 8),
           Text(
-            'Die Web-App besitzt OAuth-Redirects. In der Mobile-App wird daraus ein nativer Provider-Flow mit Account-Linking, Datenschutz und Fehlerstatus.',
+            scope.t('authFlow.socialBody'),
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 12),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.account_circle_outlined,
             title: 'Google',
-            body: 'OAuth, E-Mail-Abgleich und Profilanlage.',
-            status: 'Provider',
+            body: scope.t('authFlow.oauthStatus'),
+            status: scope.t('authFlow.provider'),
           ),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.phone_iphone_outlined,
             title: 'Apple',
-            body: 'Sign in with Apple, Private Relay und Account-Linking.',
-            status: 'iOS',
+            body: scope.t('authFlow.appleStatus'),
+            status: scope.t('authFlow.ios'),
           ),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.link_outlined,
-            title: 'Konto verknuepfen',
-            body: 'Bestehende Airmius-Konten mit Provider verbinden.',
-            status: 'Linking',
+            title: scope.t('authFlow.accountLinking'),
+            body: scope.t('authFlow.accountLinking'),
+            status: scope.t('authFlow.linking'),
           ),
           const SizedBox(height: 12),
-          const _AuthAction(
-            label: 'Google Login starten',
+          _AuthAction(
+            label: scope.t('authFlow.startGoogle'),
             icon: Icons.account_circle_outlined,
+            onPressed: widget.onSocialLogin == null
+                ? null
+                : () => widget.onSocialLogin!('google'),
           ),
           const SizedBox(height: 10),
-          const _AuthAction(
-            label: 'Apple Login starten',
+          _AuthAction(
+            label: scope.t('authFlow.startApple'),
             icon: Icons.phone_iphone_outlined,
+            onPressed: widget.onSocialLogin == null
+                ? null
+                : () => widget.onSocialLogin!('apple'),
           ),
         ],
       ),
@@ -526,30 +580,37 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _password() {
-    return const AirmiusPanel(
+    final scope = AirmiusScope.of(context);
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Passwort vergessen'),
-          SizedBox(height: 12),
+          Eyebrow(scope.t('passwordRecovery.forgot')),
+          const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'E-Mail',
-            hint: 'konto@example.com',
+            label: scope.t('passwordRecovery.email'),
+            hint: scope.t('login.emailHint'),
             icon: Icons.mail_outline,
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _AuthAction(
-            label: 'Reset-Link senden',
+            label: scope.t('passwordRecovery.send'),
             icon: Icons.mark_email_read_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PasswordRecoveryScreen()),
+            ),
           ),
-          SizedBox(height: 16),
-          Eyebrow('Passwort zurücksetzen'),
-          SizedBox(height: 12),
-          AirmiusTextField(label: 'Code / Token', hint: 'Aus der E-Mail'),
-          SizedBox(height: 12),
+          const SizedBox(height: 16),
+          Eyebrow(scope.t('passwordRecovery.reset')),
+          const SizedBox(height: 12),
           AirmiusTextField(
-            label: 'Neues Passwort',
-            hint: 'Neues Passwort',
+            label: scope.t('account.confirmationCode'),
+            hint: scope.t('passwordRecovery.sent'),
+          ),
+          const SizedBox(height: 12),
+          AirmiusTextField(
+            label: scope.t('passwordRecovery.newPassword'),
+            hint: scope.t('account.newPasswordHint'),
             icon: Icons.lock_outline,
           ),
         ],
@@ -558,29 +619,42 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _twoFactor() {
+    final scope = AirmiusScope.of(context);
     final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Zwei-Faktor-Authentifizierung'),
+          Eyebrow(scope.t('auth2fa.heading')),
           const SizedBox(height: 8),
           Text(
-            'Code aus Authenticator-App oder Recovery-Code eingeben.',
+            scope.t('auth2fa.description'),
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 12),
-          const AirmiusTextField(
-            label: '2FA Code',
+          AirmiusTextField(
+            label: scope.t('auth2fa.code'),
             hint: '123456',
             icon: Icons.password_outlined,
           ),
           const SizedBox(height: 12),
-          const AirmiusTextField(label: 'Recovery Code', hint: 'Optional'),
+          AirmiusTextField(
+            label: scope.t('auth2fa.recoveryCode'),
+            hint: scope.t('application.optional'),
+          ),
           const SizedBox(height: 12),
-          const _AuthAction(
-            label: 'Verifizieren',
+          _AuthAction(
+            label: scope.t('auth2fa.verify'),
             icon: Icons.verified_user_outlined,
+            onPressed: () {
+              final authState = AirmiusServicesScope.of(context).authState;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      TwoFactorChallengeScreen(authState: authState),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -588,28 +662,34 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _emailVerify() {
+    final scope = AirmiusScope.of(context);
     final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('E-Mail verifizieren'),
+          Eyebrow(scope.t('emailVerification.title')),
           const SizedBox(height: 8),
           Text(
-            'Bitte bestätige deine E-Mail-Adresse. Bei Bedarf kann eine neue Mail versendet werden.',
+            scope.t('emailVerification.description'),
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 12),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.mail_outline,
-            title: 'zbb.bop.it@gmail.com',
-            body: 'Wartet auf Bestätigung',
-            status: 'Offen',
+            title: scope.t('emailVerification.heading'),
+            body: scope.t('emailVerification.sent'),
+            status: scope.t('emailVerification.refresh'),
           ),
           const SizedBox(height: 12),
-          const _AuthAction(
-            label: 'Verifizierungslink erneut senden',
+          _AuthAction(
+            label: scope.t('emailVerification.resend'),
             icon: Icons.send_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const EmailVerificationScreen(),
+              ),
+            ),
           ),
         ],
       ),
@@ -617,34 +697,42 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _profileCompletion() {
-    return const AirmiusPanel(
+    final scope = AirmiusScope.of(context);
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Profil vervollstaendigen'),
-          SizedBox(height: 12),
+          Eyebrow(scope.t('profileGate.title')),
+          const SizedBox(height: 12),
           _AuthStatusLine(
             icon: Icons.person_outline,
-            title: 'Personendaten',
-            body: 'Name, Geburtsdatum und Profilbild',
+            title: scope.t('authFlow.profilePersonal'),
+            body: scope.t('authFlow.profilePersonalBody'),
             status: '80%',
           ),
           _AuthStatusLine(
             icon: Icons.directions_run,
-            title: 'Sportprofil',
-            body: 'Sportarten, Level, Ziele und Skills',
-            status: 'Offen',
+            title: scope.t('authFlow.profileSport'),
+            body: scope.t('authFlow.profileSportBody'),
+            status: scope.t('authFlow.open'),
           ),
           _AuthStatusLine(
             icon: Icons.privacy_tip_outlined,
-            title: 'Sichtbarkeit',
-            body: 'Profil, Vereine und Kontakte',
-            status: 'Prüfen',
+            title: scope.t('authFlow.profileVisibility'),
+            body: scope.t('authFlow.profileVisibilityBody'),
+            status: scope.t('authFlow.profileCheck'),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           _AuthAction(
-            label: 'Profil abschließen',
+            label: scope.t('authFlow.profileComplete'),
             icon: Icons.task_alt_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProfileCompletionGateScreen(
+                  authState: AirmiusServicesScope.of(context).authState,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -652,29 +740,33 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _suspended() {
+    final scope = AirmiusScope.of(context);
     final muted = _authMuted(context);
     return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Konto eingeschraenkt'),
+          Eyebrow(scope.t('authFlow.suspended')),
           const SizedBox(height: 8),
           Text(
-            'Der Zugriff kann durch Moderation, fehlende Verifizierung oder Sicherheitsregeln eingeschraenkt sein.',
+            scope.t('authFlow.suspendedBody'),
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 12),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.report_outlined,
-            title: 'Status',
-            body: 'Support kann Details prüfen.',
-            status: 'Gesperrt',
+            title: scope.t('authFlow.status'),
+            body: scope.t('authFlow.supportDetails'),
+            status: scope.t('authFlow.suspended'),
           ),
           const SizedBox(height: 12),
-          const _AuthAction(
-            label: 'Support kontaktieren',
+          _AuthAction(
+            label: scope.t('authFlow.contactSupport'),
             icon: Icons.support_agent_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SupportHelpdeskScreen()),
+            ),
           ),
         ],
       ),
@@ -682,47 +774,59 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _deleteAccount() {
+    final scope = AirmiusScope.of(context);
     final muted = _authMuted(context);
     return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Konto löschen'),
+          Eyebrow(scope.t('account.deleteAccount')),
           const SizedBox(height: 8),
           Text(
-            'Die Web-App sendet zuerst einen Löschcode. Die native App zeigt Warnung, Code-Eingabe, Export-Hinweis und finale Bestätigung.',
+            scope.t('authFlow.deleteBody'),
             style: TextStyle(color: muted, height: 1.35),
           ),
           const SizedBox(height: 12),
-          const AirmiusTextField(
-            label: 'Löschcode',
-            hint: 'Code aus der E-Mail',
+          AirmiusTextField(
+            label: scope.t('authFlow.deleteCode'),
+            hint: scope.t('authFlow.deleteCodeHint'),
             icon: Icons.password_outlined,
           ),
           const SizedBox(height: 12),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.download_outlined,
-            title: 'Datenexport',
-            body:
-                'Profil, Mitgliedschaften, Zahlungen und Medien vor Löschung exportieren.',
-            status: 'Empfohlen',
+            title: scope.t('authFlow.export'),
+            body: scope.t('authFlow.exportBody'),
+            status: scope.t('authFlow.recommended'),
           ),
-          const _AuthStatusLine(
+          _AuthStatusLine(
             icon: Icons.warning_amber_outlined,
-            title: 'Endgültige Löschung',
-            body: 'Konto wird erst nach API-Bestätigung final gelöscht.',
-            status: 'Kritisch',
+            title: scope.t('authFlow.finalDelete'),
+            body: scope.t('authFlow.finalDeleteBody'),
+            status: scope.t('authFlow.critical'),
           ),
           const SizedBox(height: 12),
-          const _AuthAction(
-            label: 'Löschcode senden',
+          _AuthAction(
+            label: scope.t('authFlow.sendDelete'),
             icon: Icons.mark_email_read_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    const AccountOperationsScreen(initialTab: 'Delete'),
+              ),
+            ),
           ),
           const SizedBox(height: 10),
-          const _AuthAction(
-            label: 'Konto endgültig löschen',
+          _AuthAction(
+            label: scope.t('authFlow.deleteFinal'),
             icon: Icons.delete_forever_outlined,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    const AccountOperationsScreen(initialTab: 'Delete'),
+              ),
+            ),
           ),
         ],
       ),
@@ -808,20 +912,9 @@ class _AuthAction extends StatelessWidget {
     return AirmiusButton(
       label: label,
       icon: icon,
-      onPressed:
-          onPressed ??
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => UiActionResultScreen(
-                title: label,
-                body:
-                    'Auth-Aktion für $label vorbereiten und später mit Laravel Auth/API verbinden.',
-                status: 'Auth',
-                icon: icon,
-              ),
-            ),
-          ),
+      // Unavailable provider actions stay disabled instead of opening a
+      // misleading placeholder screen. Real actions are wired by the parent.
+      onPressed: onPressed,
     );
   }
 }

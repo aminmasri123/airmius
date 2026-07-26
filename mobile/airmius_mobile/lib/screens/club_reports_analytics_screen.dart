@@ -10,10 +10,12 @@ class ClubReportsAnalyticsScreen extends StatefulWidget {
   const ClubReportsAnalyticsScreen({super.key});
 
   @override
-  State<ClubReportsAnalyticsScreen> createState() => _ClubReportsAnalyticsScreenState();
+  State<ClubReportsAnalyticsScreen> createState() =>
+      _ClubReportsAnalyticsScreenState();
 }
 
-class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen> {
+class _ClubReportsAnalyticsScreenState
+    extends State<ClubReportsAnalyticsScreen> {
   String _period = 'Monat';
   bool _includeFinance = true;
   bool _includeAttendance = true;
@@ -23,7 +25,8 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
   final List<_ReportCardData> _reports = const [
     _ReportCardData(
       title: 'Mitgliederentwicklung',
-      subtitle: 'Eintritte, Austritte, offene Anfragen, Altersgruppen und Teams.',
+      subtitle:
+          'Eintritte, Austritte, offene Anfragen, Altersgruppen und Teams.',
       value: '+12%',
       trend: 'Wachstum',
       icon: Icons.trending_up_outlined,
@@ -32,7 +35,8 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
     ),
     _ReportCardData(
       title: 'Beiträge & Zahlungen',
-      subtitle: 'Zahlstatus, Intervall, offene Beiträge, Barzahlung, Überweisung und SEPA.',
+      subtitle:
+          'Zahlstatus, Intervall, offene Beiträge, Barzahlung, Überweisung und SEPA.',
       value: '93%',
       trend: 'Bezahlt',
       icon: Icons.account_balance_wallet_outlined,
@@ -50,7 +54,8 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
     ),
     _ReportCardData(
       title: 'Vereinsaktivitaet',
-      subtitle: 'Beiträge, Kommentare, Chat-Aktivitaet, Dateien und sichtbare Inhalte.',
+      subtitle:
+          'Beiträge, Kommentare, Chat-Aktivitaet, Dateien und sichtbare Inhalte.',
       value: '42',
       trend: 'Aktionen',
       icon: Icons.insights_outlined,
@@ -62,7 +67,7 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -77,21 +82,55 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
                       children: [
                         const PageTitle(
                           title: 'Vereinsberichte & Auswertungen',
-                          subtitle: 'Mitglieder, Zahlungen, Anwesenheit, Aktivitaet, Exporte und Vorstandsauswertung.',
+                          subtitle:
+                              'Mitglieder, Zahlungen, Anwesenheit, Aktivitaet, Exporte und Vorstandsauswertung.',
                         ),
                         const SizedBox(height: 16),
-                        _ReportsHero(onExport: () => _toast('Export vorbereitet')),
+                        _ReportsHero(
+                          onExport: () => _toast('Export vorbereitet'),
+                        ),
                         const SizedBox(height: 16),
-                        _PeriodPicker(value: _period, onChanged: (value) => setState(() => _period = value)),
+                        _PeriodPicker(
+                          value: _period,
+                          onChanged: (value) => setState(() => _period = value),
+                        ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Berichtsinhalt',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Finanzen einbeziehen', subtitle: 'Beiträge, Zahlstatus, Zahlungsart und offene Posten.', value: _includeFinance, onChanged: (value) => setState(() => _includeFinance = value)),
-                              _SwitchRow(title: 'Anwesenheit einbeziehen', subtitle: 'Training, Events, Warteliste, Check-ins und No-Shows.', value: _includeAttendance, onChanged: (value) => setState(() => _includeAttendance = value)),
-                              _SwitchRow(title: 'Mitgliedsanfragen einbeziehen', subtitle: 'Offene, angenommene, abgelehnte und zurückgezogene Anfragen.', value: _includeRequests, onChanged: (value) => setState(() => _includeRequests = value)),
-                              _SwitchRow(title: 'Export vorbereiten', subtitle: 'CSV, PDF und Vorstandszusammenfassung für die API vormerken.', value: _includeExports, onChanged: (value) => setState(() => _includeExports = value)),
+                              _SwitchRow(
+                                title: 'Finanzen einbeziehen',
+                                subtitle:
+                                    'Beiträge, Zahlstatus, Zahlungsart und offene Posten.',
+                                value: _includeFinance,
+                                onChanged: (value) =>
+                                    setState(() => _includeFinance = value),
+                              ),
+                              _SwitchRow(
+                                title: 'Anwesenheit einbeziehen',
+                                subtitle:
+                                    'Training, Events, Warteliste, Check-ins und No-Shows.',
+                                value: _includeAttendance,
+                                onChanged: (value) =>
+                                    setState(() => _includeAttendance = value),
+                              ),
+                              _SwitchRow(
+                                title: 'Mitgliedsanfragen einbeziehen',
+                                subtitle:
+                                    'Offene, angenommene, abgelehnte und zurückgezogene Anfragen.',
+                                value: _includeRequests,
+                                onChanged: (value) =>
+                                    setState(() => _includeRequests = value),
+                              ),
+                              _SwitchRow(
+                                title: 'Export vorbereiten',
+                                subtitle:
+                                    'CSV, PDF und Vorstandszusammenfassung für die API vormerken.',
+                                value: _includeExports,
+                                onChanged: (value) =>
+                                    setState(() => _includeExports = value),
+                              ),
                             ],
                           ),
                         ),
@@ -106,10 +145,46 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Mitglieder', icon: Icons.badge_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMemberDirectoryScreen()))),
-                              AirmiusButton(label: 'Finanzen', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubFinanceCockpitScreen()))),
-                              AirmiusButton(label: 'Events', icon: Icons.event_available_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubEventAttendanceScreen()))),
-                              AirmiusButton(label: 'Export', icon: Icons.download_outlined, secondary: true, onPressed: () => _toast('CSV/PDF Export vorbereitet')),
+                              AirmiusButton(
+                                label: 'Mitglieder',
+                                icon: Icons.badge_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClubMemberDirectoryScreen(),
+                                  ),
+                                ),
+                              ),
+                              AirmiusButton(
+                                label: 'Finanzen',
+                                icon: Icons.account_balance_wallet_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClubFinanceCockpitScreen(),
+                                  ),
+                                ),
+                              ),
+                              AirmiusButton(
+                                label: 'Events',
+                                icon: Icons.event_available_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClubEventAttendanceScreen(),
+                                  ),
+                                ),
+                              ),
+                              AirmiusButton(
+                                label: 'Export',
+                                icon: Icons.download_outlined,
+                                secondary: true,
+                                onPressed: () =>
+                                    _toast('CSV/PDF Export vorbereitet'),
+                              ),
                             ],
                           ),
                         ),
@@ -126,7 +201,9 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -140,9 +217,13 @@ class _ReportsHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF102033), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF102033), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,29 +232,53 @@ class _ReportsHero extends StatelessWidget {
             children: [
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Eyebrow('VEREINSREPORTING'),
                     SizedBox(height: 4),
-                    Text('Auswertungen für Vorstand und Admins', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                    Text(
+                      'Auswertungen für Vorstand und Admins',
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              AirmiusButton(label: 'Export', icon: Icons.download_outlined, onPressed: onExport),
+              AirmiusButton(
+                label: 'Export',
+                icon: Icons.download_outlined,
+                onPressed: onExport,
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die mobile App bereitet Reports für Mitglieder, Finanzen, Anwesenheit und Aktivitaet vor, damit Vereine nicht im Blindflug arbeiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          Text(
+            'Die mobile App bereitet Reports für Mitglieder, Finanzen, Anwesenheit und Aktivitaet vor, damit Vereine nicht im Blindflug arbeiten.',
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             children: [
-              Expanded(child: MetricCard(value: '4', label: 'Reports')),
+              Expanded(
+                child: MetricCard(value: '4', label: 'Reports'),
+              ),
               SizedBox(width: 10),
-              Expanded(child: MetricCard(value: '6', label: 'Quellen')),
+              Expanded(
+                child: MetricCard(value: '6', label: 'Quellen'),
+              ),
               SizedBox(width: 10),
-              Expanded(child: MetricCard(value: '3', label: 'Exports')),
+              Expanded(
+                child: MetricCard(value: '3', label: 'Exports'),
+              ),
             ],
           ),
         ],
@@ -202,9 +307,18 @@ class _PeriodPicker extends StatelessWidget {
               selected: value == period,
               onSelected: (_) => onChanged(period),
               selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-              backgroundColor: AirmiusColors.card,
-              labelStyle: TextStyle(color: value == period ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              side: BorderSide(color: value == period ? AirmiusColors.blue : AirmiusColors.border),
+              backgroundColor: airmiusSurfaceColor(context),
+              labelStyle: TextStyle(
+                color: value == period
+                    ? airmiusTextColor(context)
+                    : airmiusMutedColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+              side: BorderSide(
+                color: value == period
+                    ? AirmiusColors.blue
+                    : airmiusBorderColor(context),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -215,7 +329,12 @@ class _PeriodPicker extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String title;
   final String subtitle;
@@ -227,20 +346,42 @@ class _SwitchRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
-          Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AirmiusColors.blue,
+          ),
         ],
       ),
     );
@@ -265,7 +406,11 @@ class _ReportCard extends StatelessWidget {
               Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(color: data.color.withValues(alpha: .18), borderRadius: BorderRadius.circular(18), border: Border.all(color: data.color.withValues(alpha: .5))),
+                decoration: BoxDecoration(
+                  color: data.color.withValues(alpha: .18),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: data.color.withValues(alpha: .5)),
+                ),
                 child: Icon(data.icon, color: data.color),
               ),
               const SizedBox(width: 12),
@@ -273,8 +418,21 @@ class _ReportCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(data.value, style: const TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
-                    Text('$period - ${data.trend}', style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)),
+                    Text(
+                      data.value,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      '$period - ${data.trend}',
+                      style: TextStyle(
+                        color: AirmiusColors.blue,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -282,9 +440,23 @@ class _ReportCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(data.subtitle, style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          Text(
+            data.subtitle,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [for (final point in data.points) StatusPill(point, color: AirmiusColors.blue)]),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final point in data.points)
+                StatusPill(point, color: AirmiusColors.blue),
+            ],
+          ),
         ],
       ),
     );
@@ -292,7 +464,15 @@ class _ReportCard extends StatelessWidget {
 }
 
 class _ReportCardData {
-  const _ReportCardData({required this.title, required this.subtitle, required this.value, required this.trend, required this.icon, required this.color, required this.points});
+  const _ReportCardData({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.trend,
+    required this.icon,
+    required this.color,
+    required this.points,
+  });
 
   final String title;
   final String subtitle;

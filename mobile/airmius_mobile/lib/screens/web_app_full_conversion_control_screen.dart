@@ -12,49 +12,56 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
       const _ConversionSection(
         title: 'Gastbereich',
         status: 'UI bereit',
-        body: 'Landing, Preise, Jobs, Ads, Blog, Sponsoren, Marketplace, Lernen und öffentliche Systemseiten.',
+        body:
+            'Landing, Preise, Jobs, Ads, Blog, Sponsoren, Marketplace, Lernen und öffentliche Systemseiten.',
         icon: Icons.public_outlined,
         color: AirmiusColors.blue,
       ),
       const _ConversionSection(
         title: 'Auth & Konto',
         status: 'UI bereit',
-        body: 'Login, Registrierung, Recovery, 2FA, Sessions, API Tokens, Profil, Sicherheit und Kontoeinstellungen.',
+        body:
+            'Login, Registrierung, Recovery, 2FA, Sessions, API Tokens, Profil, Sicherheit und Kontoeinstellungen.',
         icon: Icons.verified_user_outlined,
         color: AirmiusColors.amber,
       ),
       const _ConversionSection(
         title: 'Vereine & Mitgliedschaft',
         status: 'UI bereit',
-        body: 'Vereinsprofil, Beitrittsformular, Status, Rückzug, Rollen, Teams, Dateien, Regeln und Admin-Freigaben.',
+        body:
+            'Vereinsprofil, Beitrittsformular, Status, Rückzug, Rollen, Teams, Dateien, Regeln und Admin-Freigaben.',
         icon: Icons.groups_2_outlined,
         color: AirmiusColors.green,
       ),
       const _ConversionSection(
         title: 'Community & Kommunikation',
         status: 'UI bereit',
-        body: 'Feed, Freunde, Gruppen, Nachrichten, Benachrichtigungen, Dateiablage, Support und Moderation.',
+        body:
+            'Feed, Freunde, Gruppen, Nachrichten, Benachrichtigungen, Dateiablage, Support und Moderation.',
         icon: Icons.forum_outlined,
         color: AirmiusColors.pink,
       ),
       const _ConversionSection(
         title: 'Sport, Training & Lernen',
         status: 'UI bereit',
-        body: 'Trainingsplaene, Events, Anwesenheit, Wohlbefinden, Kurse, Zertifikate, Badges und Gamification.',
+        body:
+            'Trainingsplaene, Events, Anwesenheit, Wohlbefinden, Kurse, Zertifikate, Badges und Gamification.',
         icon: Icons.fitness_center_outlined,
         color: AirmiusColors.blue,
       ),
       const _ConversionSection(
         title: 'Admin & Betrieb',
         status: 'UI bereit',
-        body: 'Userverwaltung, Verifizierung, Finanzen, Abos, Provider, Mail, Plattformsettings und Release Readiness.',
+        body:
+            'Userverwaltung, Verifizierung, Finanzen, Abos, Provider, Mail, Plattformsettings und Release Readiness.',
         icon: Icons.admin_panel_settings_outlined,
         color: AirmiusColors.amber,
       ),
       const _ConversionSection(
         title: 'Mobile Qualitaet',
         status: 'Vorbereitet',
-        body: 'Navigation, Tabellenaktionen, Modals, Uploads, Offline Cache, Push, Maps, RTL, Accessibility und Store-QA.',
+        body:
+            'Navigation, Tabellenaktionen, Modals, Uploads, Offline Cache, Push, Maps, RTL, Accessibility und Store-QA.',
         icon: Icons.phone_iphone_outlined,
         color: AirmiusColors.green,
       ),
@@ -75,7 +82,11 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 Text(
                   'Die Flutter-App soll sich wie die mobile Web-App anfuehlen: gleiche Bereiche, gleiche Sprache, gleiche dunkle Airmius-Optik, aber mit nativen mobilen Interaktionen.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: AirmiusColors.text,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -102,7 +113,11 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'Nach der UI-Paritaet wird die App an Laravel angebunden: Auth, User, Clubs, Mitgliedsanträge, Dateien, Zahlungen und Benachrichtigungen laufen dann über echte API-Endpunkte.',
-                  style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -111,7 +126,8 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: 'API-Anbindung',
-                    body: 'Als naechstes werden Laravel-Endpunkte, Auth-Tokens, DTOs, Fehlerzustaende und Ladezustaende systematisch mit der Flutter-App verbunden.',
+                    body:
+                        'Als naechstes werden Laravel-Endpunkte, Auth-Tokens, DTOs, Fehlerzustaende und Ladezustaende systematisch mit der Flutter-App verbunden.',
                     status: 'Plan bereit',
                     icon: Icons.api_outlined,
                   ),
@@ -160,12 +176,28 @@ class _SectionCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(section.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        section.title,
+                        style: const TextStyle(
+                          color: AirmiusColors.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     StatusPill(section.status, color: section.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(section.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                Text(
+                  section.body,
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.42,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

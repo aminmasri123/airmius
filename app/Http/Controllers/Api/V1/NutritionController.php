@@ -11,6 +11,7 @@ use App\Models\NutritionMeal;
 use App\Services\Ai\AirmiusAiService;
 use App\Services\NutritionFoodLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class NutritionController extends Controller
@@ -97,7 +98,16 @@ class NutritionController extends Controller
                 'diet_style' => $data['diet_style'] ?? null,
             ]);
         } catch (RuntimeException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422);
+            Log::warning('Nutrition image analysis failed.', [
+                'user_id' => $request->user()->id,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Die KI-Auswertung ist derzeit nicht verfügbar. Bitte versuche es später erneut.',
+                'code' => 'nutrition_ai_unavailable',
+            ], 422);
         }
 
         return response()->json([

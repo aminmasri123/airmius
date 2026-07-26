@@ -59,6 +59,10 @@ class SettingsController extends Controller
                     'ads_personalization_consent',
                     'ads_measurement_consent',
                 ]),
+                'notification_preferences' => [
+                    'channels' => $this->notificationChannels($user),
+                    'quiet_time' => $user->notification_quiet_time ?: 'late',
+                ],
                 'event_defaults' => [
                     'radius_km' => $user->event_radius_km,
                     'sport_ids' => $user->event_default_sport_ids ?? [],
@@ -220,7 +224,7 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             'theme' => ['nullable', Rule::in(['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail', 'bazaar'])],
-            'country' => ['required', 'string', 'size:2'],
+            'country' => ['nullable', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],
             'house_number' => ['nullable', 'string', 'max:40'],
             'postal_code' => ['nullable', 'string', 'max:30'],
@@ -232,12 +236,30 @@ class SettingsController extends Controller
             'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
             'direct_message_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],
             'friend_request_privacy' => ['nullable', Rule::in(['everyone', 'friends'])],
+            'notification_channels' => ['nullable', 'array'],
+            'notification_channels.*' => ['boolean'],
+            'notification_quiet_time' => ['nullable', Rule::in(['none', 'late', 'early', 'weekend'])],
             'ads_personalization_consent' => ['boolean'],
             'ads_measurement_consent' => ['boolean'],
         ]);
 
         if (empty($data['theme'])) {
             unset($data['theme']);
+        }
+
+        if (array_key_exists('notification_channels', $data)) {
+            $allowedChannels = array_keys($this->notificationChannels($request->user()));
+            $channels = $data['notification_channels'] ?? [];
+            $unknownChannels = array_diff(array_keys($channels), $allowedChannels);
+            if ($unknownChannels !== []) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'notification_channels' => 'Unbekannter Benachrichtigungskanal.',
+                ]);
+            }
+            $data['notification_channels'] = array_replace(
+                $this->notificationChannels($request->user()),
+                collect($channels)->mapWithKeys(fn ($value, $key) => [(string) $key => (bool) $value])->all(),
+            );
         }
 
         if (MinorSafety::isUnderConsentAge($request->user())) {
@@ -257,7 +279,7 @@ class SettingsController extends Controller
 
         $request->user()->update([
             ...$data,
-            'country' => strtoupper($data['country']),
+            'country' => strtoupper((string) ($data['country'] ?? $request->user()->country ?? 'DE')),
             'event_radius_km' => $data['event_radius_km'] ?? null,
             'event_default_sport_ids' => $eventSportIds,
             'event_default_filters' => $eventDefaults,
@@ -269,5 +291,19 @@ class SettingsController extends Controller
         ]);
 
         return new UserResource($request->user()->refresh());
+    }
+
+    private function notificationChannels($user): array
+    {
+        $defaults = [
+            'push' => false,
+            'email' => true,
+            'chat' => true,
+            'club' => true,
+            'billing' => true,
+            'marketing' => false,
+        ];
+
+        return array_replace($defaults, is_array($user->notification_channels) ? $user->notification_channels : []);
     }
 }

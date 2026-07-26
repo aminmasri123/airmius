@@ -7,10 +7,12 @@ class ApiStateEmptyErrorSuiteScreen extends StatefulWidget {
   const ApiStateEmptyErrorSuiteScreen({super.key});
 
   @override
-  State<ApiStateEmptyErrorSuiteScreen> createState() => _ApiStateEmptyErrorSuiteScreenState();
+  State<ApiStateEmptyErrorSuiteScreen> createState() =>
+      _ApiStateEmptyErrorSuiteScreenState();
 }
 
-class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteScreen> {
+class _ApiStateEmptyErrorSuiteScreenState
+    extends State<ApiStateEmptyErrorSuiteScreen> {
   String state = 'Loading';
   bool showRetry = true;
   bool showOfflineBanner = true;
@@ -23,28 +25,32 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
       const _ApiStateRow(
         title: 'Loading',
         status: 'Skeleton',
-        body: 'Listen, Karten, Clubprofile und Formulare zeigen während API-Ladevorgaengen ruhige Skeleton-Zustaende.',
+        body:
+            'Listen, Karten, Clubprofile und Formulare zeigen während API-Ladevorgaengen ruhige Skeleton-Zustaende.',
         icon: Icons.hourglass_empty_outlined,
         color: AirmiusColors.blue,
       ),
       const _ApiStateRow(
         title: 'Empty',
         status: 'Leer',
-        body: 'Keine Vereine, keine Teams, keine Tickets oder keine Rechnungen bekommen klare Hilfetexte und naechste Aktionen.',
+        body:
+            'Keine Vereine, keine Teams, keine Tickets oder keine Rechnungen bekommen klare Hilfetexte und naechste Aktionen.',
         icon: Icons.inbox_outlined,
         color: AirmiusColors.green,
       ),
       const _ApiStateRow(
         title: 'Error',
         status: 'Retry',
-        body: 'API-Fehler zeigen freundliche Meldungen, Retry, Support-Hinweis und keine rohen technischen Details.',
+        body:
+            'API-Fehler zeigen freundliche Meldungen, Retry, Support-Hinweis und keine rohen technischen Details.',
         icon: Icons.error_outline,
         color: AirmiusColors.amber,
       ),
       const _ApiStateRow(
         title: 'Offline',
         status: 'Cache',
-        body: 'Offline-Zustaende zeigen lokale Daten, Synchronisationsstatus und sichere Aktionen ohne Datenverlust.',
+        body:
+            'Offline-Zustaende zeigen lokale Daten, Synchronisationsstatus und sichere Aktionen ohne Datenverlust.',
         icon: Icons.cloud_off_outlined,
         color: AirmiusColors.pink,
       ),
@@ -55,6 +61,8 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
       subtitle: 'Loading, Empty, Error und Retry',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -63,9 +71,13 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
               children: [
                 const SectionLabel('API UX'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Wenn Laravel später angebunden wird, braucht jede mobile Seite klare Zustaende: Laden, leer, Fehler, Retry, Offline, Cache und Synchronisation.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +106,8 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                     ButtonSegment(value: 'Offline', label: Text('Offline')),
                   ],
                   selected: {state},
-                  onSelectionChanged: (value) => setState(() => state = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => state = value.first),
                 ),
               ],
             ),
@@ -106,10 +119,31 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _ApiStateSwitch(title: 'Retry anzeigen', value: showRetry, color: AirmiusColors.blue, onChanged: (value) => setState(() => showRetry = value)),
-                _ApiStateSwitch(title: 'Offline-Banner anzeigen', value: showOfflineBanner, color: AirmiusColors.green, onChanged: (value) => setState(() => showOfflineBanner = value)),
-                _ApiStateSwitch(title: 'Skeletons nutzen', value: showSkeletons, color: AirmiusColors.amber, onChanged: (value) => setState(() => showSkeletons = value)),
-                _ApiStateSwitch(title: 'API-Fehler protokollieren', value: logApiErrors, color: AirmiusColors.pink, onChanged: (value) => setState(() => logApiErrors = value)),
+                _ApiStateSwitch(
+                  title: 'Retry anzeigen',
+                  value: showRetry,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) => setState(() => showRetry = value),
+                ),
+                _ApiStateSwitch(
+                  title: 'Offline-Banner anzeigen',
+                  value: showOfflineBanner,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) =>
+                      setState(() => showOfflineBanner = value),
+                ),
+                _ApiStateSwitch(
+                  title: 'Skeletons nutzen',
+                  value: showSkeletons,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) => setState(() => showSkeletons = value),
+                ),
+                _ApiStateSwitch(
+                  title: 'API-Fehler protokollieren',
+                  value: logApiErrors,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) => setState(() => logApiErrors = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +160,11 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                 const SizedBox(height: 8),
                 Text(
                   'Aktueller Zustand: $state. Später verbindet die API jeden Screen mit Success, Loading, Empty, Error, Retry, Offline und Cache-Status.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +173,8 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                   onPressed: () => openUiAction(
                     context,
                     title: 'API-State testen',
-                    body: 'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustaende für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustaende für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.sync_problem_outlined,
                   ),
@@ -182,7 +221,13 @@ class _ApiStateSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -201,20 +246,44 @@ class _ApiStateCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(icon: item.icon, color: item.color),
+          IconBadge(
+            icon: item.icon,
+            color: airmiusSemanticColor(context, item.color),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(child: Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                    StatusPill(item.status, color: item.color),
+                    Text(
+                      item.title,
+                      softWrap: true,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    StatusPill(
+                      item.status,
+                      color: airmiusSemanticColor(context, item.color),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                Text(
+                  item.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.42,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

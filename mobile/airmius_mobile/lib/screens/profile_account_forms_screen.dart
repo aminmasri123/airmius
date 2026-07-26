@@ -9,7 +9,8 @@ class ProfileAccountFormsScreen extends StatefulWidget {
   const ProfileAccountFormsScreen({super.key});
 
   @override
-  State<ProfileAccountFormsScreen> createState() => _ProfileAccountFormsScreenState();
+  State<ProfileAccountFormsScreen> createState() =>
+      _ProfileAccountFormsScreenState();
 }
 
 class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
@@ -23,7 +24,8 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Profilinformationen',
       area: 'Profil',
       status: 'Bearbeiten',
-      body: 'Name, Benutzername, E-Mail, Rolle, Standort und sichtbare Profilfelder wie in der Web-App.',
+      body:
+          'Name, Benutzername, E-Mail, Rolle, Standort und sichtbare Profilfelder wie in der Web-App.',
       icon: Icons.badge_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -31,7 +33,8 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Passwort aktualisieren',
       area: 'Security',
       status: 'Sicher',
-      body: 'Aktuelles Passwort, neues Passwort, Bestätigung und Sicherheitsfeedback als mobile Form.',
+      body:
+          'Aktuelles Passwort, neues Passwort, Bestätigung und Sicherheitsfeedback als mobile Form.',
       icon: Icons.password_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -39,7 +42,8 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Zwei-Faktor Authentifizierung',
       area: 'Security',
       status: '2FA',
-      body: '2FA aktivieren, QR-Code-Hinweis, Recovery-Codes und Statusanzeige für den Accountschutz.',
+      body:
+          '2FA aktivieren, QR-Code-Hinweis, Recovery-Codes und Statusanzeige für den Accountschutz.',
       icon: Icons.phonelink_lock_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -47,7 +51,8 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Andere Browser-Sessions',
       area: 'Security',
       status: 'Sessions',
-      body: 'Geräte und Sessions ansehen, abmelden und verdächtige Logins erkennen.',
+      body:
+          'Geräte und Sessions ansehen, abmelden und verdächtige Logins erkennen.',
       icon: Icons.devices_other_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -55,7 +60,8 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Konto löschen',
       area: 'Danger',
       status: 'Kritisch',
-      body: 'Warnhinweise, Passwortbestätigung, Datenfolgen und Supportpfad vor endgültiger Löschung.',
+      body:
+          'Warnhinweise, Passwortbestätigung, Datenfolgen und Supportpfad vor endgültiger Löschung.',
       icon: Icons.delete_forever_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -85,11 +91,17 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '5', label: 'Formulare')),
+                        Expanded(
+                          child: _Metric(value: '5', label: 'Formulare'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Security')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Security'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '1', label: 'Kritisch')),
+                        Expanded(
+                          child: _Metric(value: '1', label: 'Kritisch'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
@@ -103,8 +115,10 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
                       showProfile: _showProfile,
                       showSecurity: _showSecurity,
                       showDanger: _showDanger,
-                      onProfile: (value) => setState(() => _showProfile = value),
-                      onSecurity: (value) => setState(() => _showSecurity = value),
+                      onProfile: (value) =>
+                          setState(() => _showProfile = value),
+                      onSecurity: (value) =>
+                          setState(() => _showSecurity = value),
                       onDanger: (value) => setState(() => _showDanger = value),
                     ),
                     const SizedBox(height: 14),
@@ -116,10 +130,13 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
                       onSave: () => openUiAction(
                         context,
                         title: 'Profil speichern',
-                        message: 'Die mobile Formularstruktur ist bereit; Laravel speichert später Profil- und Security-Daten.',
+                        message:
+                            'Die mobile Formularstruktur ist bereit; Laravel speichert später Profil- und Security-Daten.',
                       ),
                       onDataRights: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => DataRightsRequestScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => DataRightsRequestScreen(),
+                        ),
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -140,7 +157,9 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -173,8 +192,23 @@ class _Header extends StatelessWidget {
       children: [
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        const Expanded(
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -190,18 +224,40 @@ class _Hero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF26364D)),
-        gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('PROFILE SETTINGS', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'PROFILE SETTINGS',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Account-Formulare', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Account-Formulare',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für Profilinformationen, Passwort, Zwei-Faktor, Sessions und Konto-Löschung.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -219,13 +275,30 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -233,7 +306,11 @@ class _Metric extends StatelessWidget {
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -254,10 +331,16 @@ class _Tabs extends StatelessWidget {
             label: Text(item),
             selected: active,
             onSelected: (_) => onChanged(item),
-            labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -288,9 +371,21 @@ class _VisibilityPanel extends StatelessWidget {
       title: 'Formularbereiche',
       child: Column(
         children: [
-          _SwitchRow(label: 'Profil anzeigen', value: showProfile, onChanged: onProfile),
-          _SwitchRow(label: 'Security anzeigen', value: showSecurity, onChanged: onSecurity),
-          _SwitchRow(label: 'Kritische Aktionen anzeigen', value: showDanger, onChanged: onDanger),
+          _SwitchRow(
+            label: 'Profil anzeigen',
+            value: showProfile,
+            onChanged: onProfile,
+          ),
+          _SwitchRow(
+            label: 'Security anzeigen',
+            value: showSecurity,
+            onChanged: onSecurity,
+          ),
+          _SwitchRow(
+            label: 'Kritische Aktionen anzeigen',
+            value: showDanger,
+            onChanged: onDanger,
+          ),
         ],
       ),
     );
@@ -306,14 +401,22 @@ class _ProfileFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
             height: 54,
-            decoration: BoxDecoration(color: form.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: form.color.withValues(alpha: .45))),
+            decoration: BoxDecoration(
+              color: form.color.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: form.color.withValues(alpha: .45)),
+            ),
             child: Icon(form.icon, color: form.color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -323,12 +426,28 @@ class _ProfileFormCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(form.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        form.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: form.status, color: form.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(form.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  form.body,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -339,7 +458,11 @@ class _ProfileFormCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onSave, required this.onDataRights, required this.onSupport});
+  const _ActionPanel({
+    required this.onSave,
+    required this.onDataRights,
+    required this.onSupport,
+  });
 
   final VoidCallback onSave;
   final VoidCallback onDataRights;
@@ -351,11 +474,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.save_outlined, label: 'Profil speichern', onTap: onSave),
+          _ActionButton(
+            icon: Icons.save_outlined,
+            label: 'Profil speichern',
+            onTap: onSave,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.privacy_tip_outlined, label: 'Datenrechte öffnen', onTap: onDataRights),
+          _ActionButton(
+            icon: Icons.privacy_tip_outlined,
+            label: 'Datenrechte öffnen',
+            onTap: onDataRights,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -372,11 +507,21 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D131D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -386,7 +531,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -400,13 +549,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -419,12 +578,24 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111A27),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF26364D)),
+        ),
         child: Row(
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -443,8 +614,19 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: .55)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

@@ -2,8 +2,28 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, te, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const tx = (key, fallback, params) => te(key) ? t(key, params) : fallback
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+const formatDate = (value) => {
+    if (!value) return '-'
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+
+    return new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}
+const categoryLabel = (category) => tx(`mail_center.categories.${category}`, category)
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 const props = defineProps({
     deliveries: {
@@ -149,67 +169,67 @@ const testSender = (sender) => {
 }
 
 const statusLabel = (status) => ({
-    sent: 'Gesendet',
-    failed: 'Fehlgeschlagen',
-    skipped: 'Gedrosselt',
-    resolved: 'Erledigt',
+    sent: t('mail_center.status.sent'),
+    failed: t('mail_center.status.failed'),
+    skipped: t('mail_center.status.skipped'),
+    resolved: t('mail_center.status.resolved'),
 }[status] || status || '-')
 
 const statusClass = (status) => ({
-    sent: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-    failed: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
-    skipped: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-    resolved: 'border-sky-500/30 bg-sky-500/10 text-sky-300',
+    sent: 'border-success/30 bg-success/10 text-success',
+    failed: 'border-error/30 bg-error/10 text-error',
+    skipped: 'border-warning/30 bg-warning/10 text-warning',
+    resolved: 'border-info/30 bg-info/10 text-info',
 }[status] || 'border-border bg-muted text-secondary')
 
 const readyLabel = (sender) => {
     if (sender.resolved?.mailer === 'log') {
-        return 'Lokal: Log'
+        return t('mail_center.sender.local_log')
     }
 
-    return sender.ready ? 'Bereit' : 'Unvollständig'
+    return sender.ready ? t('mail_center.sender.ready') : t('mail_center.sender.incomplete')
 }
 </script>
 
 <template>
-    <Head title="Mail-Zentrale" />
+    <Head :title="t('mail_center.page_title')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">System</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Mail-Zentrale</h1>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ t('mail_center.eyebrow') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ t('mail_center.title') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Überwache Versand, Warteschlange, Fehler und Absender-Regeln für transaktionale E-Mails.
+                        {{ t('mail_center.intro') }}
                     </p>
                 </div>
                 <div class="rounded-lg border border-border bg-bg px-4 py-3 text-sm text-secondary">
-                    Lokale Tests werden als Log-Mail behandelt, solange echte Mails lokal deaktiviert sind.
+                    {{ t('mail_center.local_test_notice') }}
                 </div>
             </div>
         </section>
 
         <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Protokoll</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ summary.total || 0 }}</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.summary.total') }}</p>
+                <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(summary.total) }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Gesendet</p>
-                <p class="mt-2 text-2xl font-bold text-emerald-300">{{ summary.sent || 0 }}</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.summary.sent') }}</p>
+                <p class="mt-2 text-2xl font-bold text-success">{{ formatNumber(summary.sent) }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Fehlgeschlagen</p>
-                <p class="mt-2 text-2xl font-bold text-rose-300">{{ summary.failed || 0 }}</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.summary.failed') }}</p>
+                <p class="mt-2 text-2xl font-bold text-error">{{ formatNumber(summary.failed) }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Gedrosselt</p>
-                <p class="mt-2 text-2xl font-bold text-amber-300">{{ summary.skipped || 0 }}</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.summary.skipped') }}</p>
+                <p class="mt-2 text-2xl font-bold text-warning">{{ formatNumber(summary.skipped) }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Erledigt</p>
-                <p class="mt-2 text-2xl font-bold text-sky-300">{{ summary.resolved || 0 }}</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.summary.resolved') }}</p>
+                <p class="mt-2 text-2xl font-bold text-info">{{ formatNumber(summary.resolved) }}</p>
             </div>
         </section>
 
@@ -217,31 +237,31 @@ const readyLabel = (sender) => {
             <div class="surface-card p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Absender-Regeln</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ t('mail_center.sender_rules.title') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Für Rechnungen kannst du Haupt- und Ersatz-Absender ohne Code-Änderung wechseln.
+                            {{ t('mail_center.sender_rules.hint') }}
                         </p>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="savePreferences">
                         <label class="text-sm font-semibold text-primary">
-                            Haupt
+                            {{ t('mail_center.sender_rules.primary') }}
                             <select v-model="preferenceForm.invoice_primary_category" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+                                <option v-for="category in categories" :key="category" :value="category">{{ categoryLabel(category) }}</option>
                             </select>
                         </label>
                         <label class="text-sm font-semibold text-primary">
                             Ersatz
                             <select v-model="preferenceForm.invoice_fallback_category" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                <option value="">Kein Ersatz</option>
-                                <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+                                <option value="">{{ t('mail_center.sender_rules.no_fallback') }}</option>
+                                <option v-for="category in categories" :key="category" :value="category">{{ categoryLabel(category) }}</option>
                             </select>
                         </label>
                         <button
                             type="submit"
-                            class="self-end rounded-lg border border-buttonPrimary bg-buttonPrimary px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
+                            class="self-end rounded-lg border border-buttonPrimary bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
                             :disabled="preferenceForm.processing"
                         >
-                            Speichern
+                            {{ t('mail_center.actions.save') }}
                         </button>
                     </form>
                 </div>
@@ -250,28 +270,28 @@ const readyLabel = (sender) => {
                     <div v-for="sender in senders" :key="sender.category" class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-sm font-semibold text-primary">{{ sender.category }}</p>
+                                <p class="text-sm font-semibold text-primary">{{ categoryLabel(sender.category) }}</p>
                                 <p class="mt-1 text-xs text-secondary">{{ sender.address }}</p>
                             </div>
-                            <span class="rounded-full border px-2 py-1 text-xs font-semibold" :class="sender.ready || sender.resolved?.mailer === 'log' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/30 bg-amber-500/10 text-amber-300'">
-                                {{ sender.disabled ? 'Deaktiviert' : readyLabel(sender) }}
+                            <span class="rounded-full border px-2 py-1 text-xs font-semibold" :class="sender.ready || sender.resolved?.mailer === 'log' ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'">
+                                {{ sender.disabled ? t('mail_center.sender.disabled') : readyLabel(sender) }}
                             </span>
                         </div>
                         <p class="mt-3 text-xs text-secondary">
-                            Mailer: {{ sender.resolved?.mailer || sender.mailer || '-' }}
+                            {{ t('mail_center.sender.mailer') }} {{ sender.resolved?.mailer || sender.mailer || '-' }}
                         </p>
                         <div v-if="canManageSecrets" class="mt-4 space-y-3 border-t border-border pt-4">
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <label class="text-xs font-semibold text-secondary">
-                                    Absenderadresse
+                                    {{ t('mail_center.fields.from_address') }}
                                     <input v-model="senderForms[sender.category].from_address" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 </label>
                                 <label class="text-xs font-semibold text-secondary">
-                                    Anzeigename
+                                    {{ t('mail_center.fields.from_name') }}
                                     <input v-model="senderForms[sender.category].from_name" type="text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 </label>
                                 <label class="text-xs font-semibold text-secondary">
-                                    SMTP Host
+                                    {{ t('mail_center.fields.smtp_host') }}
                                     <input v-model="senderForms[sender.category].host" type="text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 </label>
                                 <label class="text-xs font-semibold text-secondary">
@@ -279,13 +299,13 @@ const readyLabel = (sender) => {
                                     <input v-model="senderForms[sender.category].port" type="number" min="1" max="65535" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 </label>
                                 <label class="text-xs font-semibold text-secondary">
-                                    SMTP Benutzer
+                                    {{ t('mail_center.fields.smtp_user') }}
                                     <input v-model="senderForms[sender.category].username" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 </label>
                                 <label class="text-xs font-semibold text-secondary">
-                                    Verschluesselung
+                                    {{ t('mail_center.fields.encryption') }}
                                     <select v-model="senderForms[sender.category].scheme" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                                        <option value="">Standard</option>
+                                        <option value="">{{ t('mail_center.fields.default') }}</option>
                                         <option value="smtp">smtp</option>
                                         <option value="smtps">smtps</option>
                                     </select>
@@ -293,12 +313,12 @@ const readyLabel = (sender) => {
                             </div>
 
                             <label class="block text-xs font-semibold text-secondary">
-                                Neues Passwort setzen
+                                {{ t('mail_center.fields.new_password') }}
                                 <input
                                     v-model="senderForms[sender.category].new_password"
                                     type="password"
                                     autocomplete="new-password"
-                                    placeholder="Leer lassen, um Passwort nicht zu ändern"
+                                    :placeholder="t('mail_center.fields.password_placeholder')"
                                     class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
                                 >
                             </label>
@@ -306,25 +326,25 @@ const readyLabel = (sender) => {
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <label class="inline-flex items-center gap-2 text-xs font-semibold text-secondary">
                                     <input v-model="senderForms[sender.category].active" type="checkbox" class="h-4 w-4 rounded border-border bg-inputBg text-buttonPrimary accent-buttonPrimary">
-                                    Mailbox aktiv
+                                    {{ t('mail_center.sender.active') }}
                                 </label>
                                 <div class="flex gap-2">
                                     <button type="button" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-xs font-semibold text-primary transition hover:bg-muted" @click="testSender(sender)">
-                                        Testmail
+                                        {{ t('mail_center.actions.test_mail') }}
                                     </button>
                                     <button
                                         type="button"
-                                        class="rounded-lg border border-buttonPrimary bg-buttonPrimary px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
+                                        class="rounded-lg border border-buttonPrimary bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
                                         :disabled="senderForms[sender.category].processing"
                                         @click="saveSender(sender)"
                                     >
-                                        Speichern
+                                        {{ t('mail_center.actions.save') }}
                                     </button>
                                 </div>
                             </div>
 
                             <p class="text-xs text-secondary">
-                                Passwort ist {{ sender.has_password ? 'gesetzt' : 'nicht gesetzt' }}<span v-if="sender.password_updated_at"> · zuletzt aktualisiert {{ sender.password_updated_at }}</span>. Es wird nie angezeigt.
+                                {{ t('mail_center.sender.password_status', { status: sender.has_password ? t('mail_center.sender.password_set') : t('mail_center.sender.password_unset') }) }}<span v-if="sender.password_updated_at"> · {{ t('mail_center.sender.last_updated', { date: formatDate(sender.password_updated_at) }) }}</span>. {{ t('mail_center.sender.never_shown') }}
                             </p>
                         </div>
                     </div>
@@ -332,27 +352,27 @@ const readyLabel = (sender) => {
             </div>
 
             <div class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Queue & Fehlerjobs</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ t('mail_center.queue.title') }}</h2>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <div class="rounded-lg border border-border bg-bg p-4">
-                        <p class="text-xs font-semibold uppercase text-secondary">Offene Jobs</p>
-                        <p class="mt-2 text-2xl font-bold text-primary">{{ queue.pending_jobs || 0 }}</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.queue.pending') }}</p>
+                        <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(queue.pending_jobs) }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-4">
-                        <p class="text-xs font-semibold uppercase text-secondary">Fehlerjobs</p>
-                        <p class="mt-2 text-2xl font-bold text-rose-300">{{ queue.failed_jobs || 0 }}</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ t('mail_center.queue.failed') }}</p>
+                        <p class="mt-2 text-2xl font-bold text-error">{{ formatNumber(queue.failed_jobs) }}</p>
                     </div>
                 </div>
                 <div class="mt-4 space-y-3">
                     <div v-if="!recentFailedJobs.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                        Keine aktuellen Fehlerjobs gefunden.
+                        {{ t('mail_center.queue.empty') }}
                     </div>
-                    <div v-for="job in recentFailedJobs" :key="job.id" class="rounded-lg border border-rose-500/20 bg-rose-500/5 p-4">
+                    <div v-for="job in recentFailedJobs" :key="job.id" class="rounded-lg border border-error/20 bg-error/5 p-4">
                         <div class="flex items-center justify-between gap-3 text-xs text-secondary">
-                            <span>Job #{{ job.id }} · {{ job.queue }}</span>
-                            <span>{{ job.failed_at }}</span>
+                            <span>{{ t('mail_center.queue.job') }} #{{ job.id }} · {{ job.queue }}</span>
+                            <span>{{ formatDate(job.failed_at) }}</span>
                         </div>
-                        <p class="mt-2 text-sm text-rose-200">{{ job.error }}</p>
+                        <p class="mt-2 text-sm text-error">{{ job.error }}</p>
                     </div>
                 </div>
             </div>
@@ -360,35 +380,35 @@ const readyLabel = (sender) => {
 
         <section v-if="canManageSecrets" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
-                <h2 class="text-lg font-semibold text-primary">Mailbox-Audit</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ t('mail_center.audit.title') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Protokolliert werden Änderungen und Testversand ohne Klartext-Passwörter.
+                    {{ t('mail_center.audit.hint') }}
                 </p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border text-sm">
                     <thead class="bg-bg">
                         <tr class="text-left text-xs uppercase tracking-wide text-secondary">
-                            <th class="px-5 py-3">Zeit</th>
-                            <th class="px-5 py-3">Kategorie</th>
-                            <th class="px-5 py-3">Aktion</th>
-                            <th class="px-5 py-3">Admin</th>
-                            <th class="px-5 py-3">Details</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.time') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.category') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.action') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.admin') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.details') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
                         <tr v-if="!audits.length">
-                            <td colspan="5" class="px-5 py-8 text-center text-secondary">Noch keine Audit-Einträge.</td>
+                            <td colspan="5" class="px-5 py-8 text-center text-secondary">{{ t('mail_center.audit.empty') }}</td>
                         </tr>
                         <tr v-for="audit in audits" :key="audit.id">
-                            <td class="px-5 py-4 text-secondary">{{ audit.created_at }}</td>
-                            <td class="px-5 py-4 text-primary">{{ audit.category }}</td>
+                            <td class="px-5 py-4 text-secondary">{{ formatDate(audit.created_at) }}</td>
+                            <td class="px-5 py-4 text-primary">{{ categoryLabel(audit.category) }}</td>
                             <td class="px-5 py-4 text-primary">{{ audit.action }}</td>
                             <td class="px-5 py-4 text-secondary">#{{ audit.actor_id || '-' }}</td>
                             <td class="px-5 py-4 text-xs text-secondary">
-                                <span v-if="audit.after?.password_changed">Passwort wurde neu gesetzt. </span>
-                                <span v-if="audit.after?.from_address">Absender: {{ audit.after.from_address }}</span>
-                                <span v-else-if="audit.after?.error">Fehler: {{ audit.after.error }}</span>
+                                <span v-if="audit.after?.password_changed">{{ t('mail_center.audit.password_changed') }} </span>
+                                <span v-if="audit.after?.from_address">{{ t('mail_center.audit.sender') }} {{ audit.after.from_address }}</span>
+                                <span v-else-if="audit.after?.error">{{ t('mail_center.audit.error') }} {{ audit.after.error }}</span>
                                 <span v-else>-</span>
                             </td>
                         </tr>
@@ -401,25 +421,25 @@ const readyLabel = (sender) => {
             <div class="border-b border-border p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Versandprotokoll</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ t('mail_center.log.title') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Neue Einträge erscheinen für Mails, die über die zentrale Mail-Schicht laufen.
+                            {{ t('mail_center.log.hint') }}
                         </p>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[12rem_16rem_auto]" @submit.prevent="applyFilters">
                         <select v-model="filterForm.status" class="rounded-lg border-border bg-inputBg text-primary">
-                            <option value="">Alle Status</option>
-                            <option value="sent">Gesendet</option>
-                            <option value="failed">Fehlgeschlagen</option>
-                            <option value="skipped">Gedrosselt</option>
-                            <option value="resolved">Erledigt</option>
+                            <option value="">{{ t('mail_center.filters.all_statuses') }}</option>
+                            <option value="sent">{{ t('mail_center.status.sent') }}</option>
+                            <option value="failed">{{ t('mail_center.status.failed') }}</option>
+                            <option value="skipped">{{ t('mail_center.status.skipped') }}</option>
+                            <option value="resolved">{{ t('mail_center.status.resolved') }}</option>
                         </select>
                         <select v-model="filterForm.type" class="rounded-lg border-border bg-inputBg text-primary">
-                            <option value="">Alle Typen</option>
+                            <option value="">{{ t('mail_center.filters.all_types') }}</option>
                             <option v-for="type in types" :key="type" :value="type">{{ type }}</option>
                         </select>
                         <button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                            Filtern
+                            {{ t('mail_center.actions.filter') }}
                         </button>
                     </form>
                 </div>
@@ -429,19 +449,19 @@ const readyLabel = (sender) => {
                 <table class="min-w-full divide-y divide-border text-sm">
                     <thead class="bg-bg">
                         <tr class="text-left text-xs uppercase tracking-wide text-secondary">
-                            <th class="px-5 py-3">Status</th>
-                            <th class="px-5 py-3">Typ</th>
-                            <th class="px-5 py-3">Empfänger</th>
-                            <th class="px-5 py-3">Absender</th>
-                            <th class="px-5 py-3">Zeit</th>
-                            <th class="px-5 py-3">Fehler</th>
-                            <th class="px-5 py-3">Aktionen</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.status') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.type') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.recipient') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.sender') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.time') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.error') }}</th>
+                            <th class="px-5 py-3">{{ t('mail_center.table.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
                         <tr v-if="!deliveryRows.length">
                             <td colspan="7" class="px-5 py-10 text-center text-secondary">
-                                Noch keine Mail-Einträge vorhanden.
+                                {{ t('mail_center.log.empty') }}
                             </td>
                         </tr>
                         <tr v-for="delivery in deliveryRows" :key="delivery.id" class="align-top">
@@ -459,7 +479,7 @@ const readyLabel = (sender) => {
                                 <p class="text-primary">{{ delivery.from_address || '-' }}</p>
                                 <p class="text-xs text-secondary">{{ delivery.used_category || delivery.primary_category || '-' }} · {{ delivery.mailer || '-' }}</p>
                             </td>
-                            <td class="px-5 py-4 text-secondary">{{ delivery.sent_at || delivery.created_at }}</td>
+                            <td class="px-5 py-4 text-secondary">{{ formatDate(delivery.sent_at || delivery.created_at) }}</td>
                             <td class="max-w-md px-5 py-4 text-xs text-secondary">
                                 {{ delivery.error_message || '-' }}
                             </td>
@@ -468,15 +488,15 @@ const readyLabel = (sender) => {
                                     <div v-if="delivery.resendable" class="flex gap-2">
                                         <select v-model="resendCategories[delivery.id]" class="min-w-32 rounded-lg border-border bg-inputBg text-xs text-primary">
                                             <option v-for="category in categories" :key="category" :value="category">
-                                                {{ category }}
+                                                {{ categoryLabel(category) }}
                                             </option>
                                         </select>
-                                        <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-white" @click="resendDelivery(delivery)">
-                                            Erneut senden
+                                        <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="resendDelivery(delivery)">
+                                            {{ t('mail_center.actions.resend') }}
                                         </button>
                                     </div>
                                     <button type="button" class="w-fit rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="resolveDelivery(delivery)">
-                                        Als erledigt markieren
+                                        {{ t('mail_center.actions.resolve') }}
                                     </button>
                                 </div>
                                 <span v-else class="text-xs text-secondary">-</span>
@@ -492,11 +512,11 @@ const readyLabel = (sender) => {
                     :key="link.label"
                     :href="link.url || ''"
                     class="rounded-lg border px-3 py-2 text-sm"
-                    :class="link.active ? 'border-buttonPrimary bg-buttonPrimary text-white' : 'border-border text-primary hover:bg-muted'"
-                    v-html="link.label"
-                />
+                    :class="link.active ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-primary hover:bg-muted'"
+                >
+                    {{ paginationLabel(link.label) }}
+                </Link>
             </div>
         </section>
     </div>
 </template>
-

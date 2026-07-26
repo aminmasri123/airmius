@@ -2,13 +2,20 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\CommerceOrderSupport;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 
 class CommerceOrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $payload = is_array($this->payload) ? $this->payload : [];
+        $bankTransfer = data_get($payload, 'bank_transfer', []);
+        $shippingAddress = data_get($payload, 'shipping_address', []);
+        $support = app(CommerceOrderSupport::class)->summary($this->resource);
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -34,10 +41,61 @@ class CommerceOrderResource extends JsonResource
             'credit_note_number' => $this->credit_note_number,
             'issue_status' => $this->issue_status,
             'issue_note' => $this->issue_note,
+            'issue_response' => $this->issue_response,
             'payment_reference' => $this->payment_reference,
             'tracking_number' => $this->tracking_number,
             'tracking_url' => $this->tracking_url,
             'checkout_url' => $this->checkout_url,
+            'payment_action' => [
+                'type' => $this->provider === 'bank_transfer' ? 'bank_transfer' : 'redirect',
+                'url' => $this->provider === 'bank_transfer' ? null : $this->checkout_url,
+            ],
+            'bank_transfer' => $this->provider === 'bank_transfer' ? [
+                'account_holder' => data_get($bankTransfer, 'bank_account_holder'),
+                'bank_name' => data_get($bankTransfer, 'bank_name'),
+                'iban' => data_get($bankTransfer, 'iban'),
+                'bic' => data_get($bankTransfer, 'bic'),
+                'reference' => $this->payment_reference,
+                'due_at' => $this->due_at?->toJSON(),
+            ] : null,
+            'shipping_address' => is_array($shippingAddress) ? [
+                'country' => data_get($shippingAddress, 'country'),
+                'state' => data_get($shippingAddress, 'state'),
+                'postal_code' => data_get($shippingAddress, 'postal_code'),
+                'city' => data_get($shippingAddress, 'city'),
+                'street' => data_get($shippingAddress, 'street'),
+                'house_number' => data_get($shippingAddress, 'house_number'),
+            ] : null,
+            'support' => [
+                ...$support,
+                'can_cancel' => in_array($this->type, ['marketplace_product', 'marketplace_cart'], true)
+                    && in_array($this->status, ['pending', 'awaiting_transfer', 'completed'], true)
+                    && ! in_array($this->shipping_status, ['shipped', 'delivered'], true),
+            ],
+            'documents' => [
+                'invoice' => [
+                    'available' => filled($this->invoice_number),
+                    'number' => $this->invoice_number,
+                    'url' => filled($this->invoice_number)
+                        ? URL::temporarySignedRoute(
+                            'commerce.documents.signed',
+                            now()->addMinutes(5),
+                            ['order' => $this->id, 'type' => 'invoice'],
+                        )
+                        : null,
+                ],
+                'credit_note' => [
+                    'available' => filled($this->credit_note_number),
+                    'number' => $this->credit_note_number,
+                    'url' => filled($this->credit_note_number)
+                        ? URL::temporarySignedRoute(
+                            'commerce.documents.signed',
+                            now()->addMinutes(5),
+                            ['order' => $this->id, 'type' => 'credit-note'],
+                        )
+                        : null,
+                ],
+            ],
             'due_at' => $this->due_at?->toJSON(),
             'completed_at' => $this->completed_at?->toJSON(),
             'shipped_at' => $this->shipped_at?->toJSON(),
@@ -58,6 +116,22 @@ class CommerceOrderResource extends JsonResource
                 'currency' => $item->currency,
                 'tax_rate_percent' => $item->tax_rate_percent,
                 'is_shippable' => $item->is_shippable,
+            ])->values()),
+            'return_requests' => $this->whenLoaded('returnRequests', fn () => $this->returnRequests->map(fn ($returnRequest) => [
+                'id' => $returnRequest->id,
+                'commerce_order_item_id' => $returnRequest->commerce_order_item_id,
+                'status' => $returnRequest->status,
+                'reason' => $returnRequest->reason,
+                'resolution_note' => $returnRequest->resolution_note,
+                'quantity' => $returnRequest->quantity,
+                'requested_amount_cents' => $returnRequest->requested_amount_cents,
+                'approved_amount_cents' => $returnRequest->approved_amount_cents,
+                'currency' => $returnRequest->currency,
+                'requested_at' => $returnRequest->requested_at?->toJSON(),
+                'approved_at' => $returnRequest->approved_at?->toJSON(),
+                'rejected_at' => $returnRequest->rejected_at?->toJSON(),
+                'received_at' => $returnRequest->received_at?->toJSON(),
+                'refunded_at' => $returnRequest->refunded_at?->toJSON(),
             ])->values()),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),

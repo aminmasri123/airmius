@@ -8,7 +8,8 @@ class PublicSystemPagesScreen extends StatefulWidget {
   const PublicSystemPagesScreen({super.key});
 
   @override
-  State<PublicSystemPagesScreen> createState() => _PublicSystemPagesScreenState();
+  State<PublicSystemPagesScreen> createState() =>
+      _PublicSystemPagesScreenState();
 }
 
 class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
@@ -22,7 +23,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Welcome',
       area: 'Public',
       status: 'Landing',
-      body: 'Mobile Startseite mit Airmius-Marke, Login, Registrierung, Vereine entdecken und Hauptargumenten.',
+      body:
+          'Mobile Startseite mit Airmius-Marke, Login, Registrierung, Vereine entdecken und Hauptargumenten.',
       icon: Icons.auto_awesome_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +32,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Wartungsmodus',
       area: 'Status',
       status: 'Maintenance',
-      body: 'Freundliche Systemseite für geplante Wartung, Rückkehrzeit, Kontakt und Status-Hinweise.',
+      body:
+          'Freundliche Systemseite für geplante Wartung, Rückkehrzeit, Kontakt und Status-Hinweise.',
       icon: Icons.construction_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -38,7 +41,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Kein Zugriff',
       area: 'Status',
       status: 'Forbidden',
-      body: 'Klare Fehlerseite für fehlende Rechte, gesperrte Bereiche und sichere Rücknavigation.',
+      body:
+          'Klare Fehlerseite für fehlende Rechte, gesperrte Bereiche und sichere Rücknavigation.',
       icon: Icons.lock_person_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -46,7 +50,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Datenschutz',
       area: 'Legal',
       status: 'DSGVO',
-      body: 'Mobile Datenschutzseite mit Datenarten, Rechten, Kontakt, Einwilligungen und Export-Hinweisen.',
+      body:
+          'Mobile Datenschutzseite mit Datenarten, Rechten, Kontakt, Einwilligungen und Export-Hinweisen.',
       icon: Icons.privacy_tip_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -54,7 +59,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Nutzungsbedingungen',
       area: 'Legal',
       status: 'AGB',
-      body: 'Mobile AGB-Ansicht für Accounts, Vereine, Zahlungen, Marketplace, Inhalte und Plattformregeln.',
+      body:
+          'Mobile AGB-Ansicht für Accounts, Vereine, Zahlungen, Marketplace, Inhalte und Plattformregeln.',
       icon: Icons.description_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -84,11 +90,17 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _MetricCard(value: '5', label: 'Seiten')),
+                        Expanded(
+                          child: _MetricCard(value: '5', label: 'Seiten'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '2', label: 'Legal')),
+                        Expanded(
+                          child: _MetricCard(value: '2', label: 'Legal'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricCard(value: '2', label: 'Status')),
+                        Expanded(
+                          child: _MetricCard(value: '2', label: 'Status'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
@@ -104,7 +116,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
                       showGuestCta: _showGuestCta,
                       onLegal: (value) => setState(() => _showLegal = value),
                       onStatus: (value) => setState(() => _showStatus = value),
-                      onGuestCta: (value) => setState(() => _showGuestCta = value),
+                      onGuestCta: (value) =>
+                          setState(() => _showGuestCta = value),
                     ),
                     const SizedBox(height: 14),
                     for (final page in _visiblePages.where(_isVisible)) ...[
@@ -115,7 +128,8 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
                       onPreview: () => openUiAction(
                         context,
                         title: 'Public Preview',
-                        message: 'Diese Systemseiten sind als native UI vorbereitet und werden später mit CMS/API-Inhalten gefuellt.',
+                        message:
+                            'Diese Systemseiten sind als native UI vorbereitet und werden später mit CMS/API-Inhalten gefuellt.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -136,7 +150,9 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -170,9 +186,22 @@ class _Header extends StatelessWidget {
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
         const Expanded(
-          child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -197,13 +226,31 @@ class _HeroPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('PUBLIC SYSTEM PAGES', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'PUBLIC SYSTEM PAGES',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Welcome, Recht & Status', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Welcome, Recht & Status',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für öffentliche Einstiegsseiten, Wartung, Forbidden, Datenschutz und Nutzungsbedingungen.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -229,9 +276,22 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -239,7 +299,11 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.active, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.active,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String active;
   final List<String> values;
@@ -260,10 +324,16 @@ class _Tabs extends StatelessWidget {
             label: Text(value),
             selected: selected,
             onSelected: (_) => onChanged(value),
-            labelStyle: TextStyle(color: selected ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: selected ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -294,9 +364,21 @@ class _VisibilityPanel extends StatelessWidget {
       title: 'Mobile Sichtbarkeit',
       child: Column(
         children: [
-          _SwitchRow(label: 'Rechtliche Seiten anzeigen', value: showLegal, onChanged: onLegal),
-          _SwitchRow(label: 'Statusseiten anzeigen', value: showStatus, onChanged: onStatus),
-          _SwitchRow(label: 'Guest CTA anzeigen', value: showGuestCta, onChanged: onGuestCta),
+          _SwitchRow(
+            label: 'Rechtliche Seiten anzeigen',
+            value: showLegal,
+            onChanged: onLegal,
+          ),
+          _SwitchRow(
+            label: 'Statusseiten anzeigen',
+            value: showStatus,
+            onChanged: onStatus,
+          ),
+          _SwitchRow(
+            label: 'Guest CTA anzeigen',
+            value: showGuestCta,
+            onChanged: onGuestCta,
+          ),
         ],
       ),
     );
@@ -337,12 +419,28 @@ class _SystemPageCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(page.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        page.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: page.status, color: page.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(page.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  page.body,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -364,9 +462,17 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.visibility_outlined, label: 'Systemseiten Vorschau', onTap: onPreview),
+          _ActionButton(
+            icon: Icons.visibility_outlined,
+            label: 'Systemseiten Vorschau',
+            onTap: onPreview,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -391,7 +497,13 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -401,7 +513,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -415,13 +531,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -443,7 +569,15 @@ class _ActionButton extends StatelessWidget {
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -467,7 +601,14 @@ class _Pill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: .55)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

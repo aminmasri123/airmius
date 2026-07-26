@@ -5,6 +5,10 @@ import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     files: { type: [Array, Object], default: () => [] },
@@ -95,17 +99,17 @@ const shareTargetSelectRef = ref(null)
 const shareEmailInputRef = ref(null)
 
 const scopeOptions = [
-    { value: 'user', label: 'Meine Dateien' },
-    { value: 'team', label: 'Team' },
-    { value: 'club', label: 'Verein' },
-    { value: 'event', label: 'Event' },
+    { value: 'user', label: tx('files.scope.user') },
+    { value: 'team', label: tx('files.scope.team') },
+    { value: 'club', label: tx('files.scope.club') },
+    { value: 'event', label: tx('files.scope.event') },
 ]
 
 const itemSortOptions = [
-    { value: 'name-asc', label: 'Name (A-Z)' },
-    { value: 'name-desc', label: 'Name (Z-A)' },
-    { value: 'newest', label: 'Neueste zuerst' },
-    { value: 'oldest', label: 'Älteste zuerst' },
+    { value: 'name-asc', label: tx('files.sort.name_asc') },
+    { value: 'name-desc', label: tx('files.sort.name_desc') },
+    { value: 'newest', label: tx('files.sort.newest') },
+    { value: 'oldest', label: tx('files.sort.oldest') },
 ]
 
 const activeFolders = computed(() => {
@@ -116,13 +120,13 @@ const activeFiles = computed(() => {
 })
 const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
 const isStorageFull = computed(() => storageUsage.value?.is_full === true)
-const uploadFileName = computed(() => uploadForm.file?.name || 'Datei wählen')
+const uploadFileName = computed(() => uploadForm.file?.name || tx('files.choose_file'))
 const deleteTargetName = computed(() => {
     if (!deleteTarget.value) return ''
 
     return deleteType.value === 'folder' ? deleteTarget.value.name : fileName(deleteTarget.value)
 })
-const canConfirmDelete = computed(() => deleteConfirmation.value.trim().toLowerCase() === 'löschen')
+const canConfirmDelete = computed(() => deleteConfirmation.value.trim().toLowerCase() === tx('files.delete_word').toLowerCase())
 const shareTargets = computed(() => {
     const query = friendSearch.value.trim().toLowerCase()
 
@@ -177,21 +181,21 @@ const folderRangeEnd = computed(() => {
 const hasActiveSearch = computed(() => fileSearch.value.trim() !== '')
 const emptyStateText = computed(() => {
     if (!hasActiveSearch.value) {
-        return 'Dieser Ordner ist leer.'
+        return tx('files.empty_folder')
     }
 
-    return `Keine Treffer zu "${fileSearch.value.trim()}"`
+    return tx('files.no_results', { query: fileSearch.value.trim() })
 })
 const filterStatusText = computed(() => {
     if (isFiltering.value) {
-        return 'Liste wird aktualisiert...'
+        return tx('files.refreshing')
     }
 
     if (lastFilesPage.value > 1 || lastFoldersPage.value > 1) {
-        return `Ordnerseite ${currentFoldersPage.value} / ${lastFoldersPage.value}, Dateiseite ${currentFilesPage.value} / ${lastFilesPage.value}`
+        return tx('files.page_status', { foldersPage: currentFoldersPage.value, foldersLast: lastFoldersPage.value, filesPage: currentFilesPage.value, filesLast: lastFilesPage.value })
     }
 
-    return hasActiveSearch.value ? `Ergebnis: ${totalFolders.value} Ordner, ${totalFiles.value} Dateien` : ''
+    return hasActiveSearch.value ? tx('files.result_status', { folders: totalFolders.value, files: totalFiles.value }) : ''
 })
 
 const syncForms = () => {
@@ -527,15 +531,15 @@ watch(showShareModal, async (show) => {
 </script>
 
 <template>
-    <AppLayout title="Dateien">
-        <Head title="Dateien" />
+    <AppLayout :title="tx('files.page_title')">
+        <Head :title="tx('files.page_title')" />
         <input ref="fileInput" class="hidden" type="file" @change="setUploadFile">
 
         <div class="space-y-3">
             <div class="rounded-lg border border-border bg-card p-2 sm:p-3">
                 <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <label class="text-sm">
-                        <span class="mb-1 block text-secondary">Bereich</span>
+                        <span class="mb-1 block text-secondary">{{ tx('files.scope_label') }}</span>
                         <select v-model="scopeForm.scope" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
                             <option v-for="option in scopeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
@@ -544,7 +548,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'club'" class="text-sm">
                         <span class="mb-1 block text-secondary">Verein</span>
                         <select v-model="scopeForm.club_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswählen</option>
+                            <option :value="null">{{ tx('files.select') }}</option>
                             <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                         </select>
                     </label>
@@ -552,7 +556,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'team'" class="text-sm">
                         <span class="mb-1 block text-secondary">Team</span>
                         <select v-model="scopeForm.team_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswählen</option>
+                            <option :value="null">{{ tx('files.select') }}</option>
                             <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                         </select>
                     </label>
@@ -560,7 +564,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'event'" class="text-sm">
                         <span class="mb-1 block text-secondary">Event</span>
                         <select v-model="scopeForm.event_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswählen</option>
+                            <option :value="null">{{ tx('files.select') }}</option>
                             <option v-for="event in events" :key="event.id" :value="event.id">{{ event.title }}</option>
                         </select>
                     </label>
@@ -572,10 +576,10 @@ watch(showShareModal, async (show) => {
                     <div class="flex flex-col gap-3 border-b border-border p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                                <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
+                                <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || tx('files.manager') }}</h1>
                                 <div class="mt-1 flex flex-wrap gap-2 text-xs text-secondary">
-                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} Ordner</span>
-                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} Dateien</span>
+                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} {{ tx('files.folders') }}</span>
+                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} {{ tx('files.files') }}</span>
                                     <span v-if="currentFolder" class="max-w-full truncate rounded-full border border-border px-2 py-1">{{ currentFolder.name }}</span>
                                 </div>
                             </div>
@@ -586,7 +590,7 @@ watch(showShareModal, async (show) => {
                                     class="grid h-10 w-10 place-items-center rounded-lg border border-border text-lg text-primary hover:bg-inputBg md:hidden"
                                     :class="{ 'bg-inputBg': showMobileFilters }"
                                     :aria-expanded="showMobileFilters"
-                                    aria-label="Suchen und sortieren"
+                                    :aria-label="tx('files.search_sort')"
                                     @click="showMobileFilters = !showMobileFilters; showMobileActions = false"
                                 >
                                     <i class="las la-sliders-h"></i>
@@ -595,7 +599,7 @@ watch(showShareModal, async (show) => {
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg bg-buttonPrimary text-lg text-buttonTextPrimary shadow-sm disabled:opacity-50 md:hidden"
                                     :aria-expanded="showMobileActions"
-                                    aria-label="Datei oder Ordner hinzufügen"
+                                    :aria-label="tx('files.add_file_folder')"
                                     @click="showMobileActions = !showMobileActions; showMobileFilters = false"
                                 >
                                     <i :class="showMobileActions ? 'las la-times' : 'las la-plus'"></i>
@@ -606,25 +610,25 @@ watch(showShareModal, async (show) => {
                         <div v-if="showMobileActions" class="grid gap-2 rounded-lg border border-border bg-inputBg/40 p-2 md:hidden">
                             <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="submitUpload">
                                 <div class="flex items-center justify-between gap-2">
-                                    <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">Datei hochladen</h2>
-                                    <span class="truncate text-xs text-secondary">{{ currentFolder?.name || 'Hauptebene' }}</span>
+                                    <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('files.upload') }}</h2>
+                                    <span class="truncate text-xs text-secondary">{{ currentFolder?.name || tx('files.root') }}</span>
                                 </div>
                                 <button
                                     type="button"
                                     class="mt-3 flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
                                     @click="selectUploadFile"
-                                    aria-label="Datei auswählen"
+                                    :aria-label="tx('files.choose_file')"
                                 >
                                     <span class="truncate">{{ uploadFileName }}</span>
                                     <i class="las la-paperclip text-lg text-secondary"></i>
                                 </button>
                                 <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
-                                    Dein Speicher ist voll. Bitte lösche Dateien oder upgrade.
+                                    {{ tx('files.storage_full') }}
                                 </p>
                                 <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                                     {{ uploadForm.errors.file || uploadForm.errors.general }}
                                 </p>
-                                <AppLoadingState v-if="uploadForm.processing" class="mt-2" label="Upload laeuft..." inline />
+                                <AppLoadingState v-if="uploadForm.processing" class="mt-2" :label="tx('files.upload_running')" inline />
                                 <AppButton
                                     type="submit"
                                     class="mt-2"
@@ -632,14 +636,14 @@ watch(showShareModal, async (show) => {
                                     :loading="uploadForm.processing"
                                     :disabled="uploadForm.processing || !uploadForm.file || isStorageFull"
                                 >
-                                    {{ uploadForm.processing ? 'Laedt hoch...' : 'Hochladen' }}
+                                    {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
                                 </AppButton>
                             </form>
 
                             <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
-                                <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">Ordner erstellen</h2>
-                                <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" placeholder="Ordnername">
-                                <AppLoadingState v-if="folderForm.processing" class="mt-2" label="Ordner wird erstellt..." inline />
+                                <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('files.create_folder') }}</h2>
+                                <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" :placeholder="tx('files.folder_name')">
+                                <AppLoadingState v-if="folderForm.processing" class="mt-2" :label="tx('files.folder_creating')" inline />
                                 <AppButton
                                     type="submit"
                                     class="mt-2"
@@ -647,7 +651,7 @@ watch(showShareModal, async (show) => {
                                     :loading="folderForm.processing"
                                     :disabled="folderForm.processing || !folderForm.name.trim()"
                                 >
-                                    {{ folderForm.processing ? 'Erstellt...' : 'Erstellen' }}
+                                    {{ folderForm.processing ? tx('files.created') : tx('files.create') }}
                                 </AppButton>
                             </form>
                         </div>
@@ -662,33 +666,33 @@ watch(showShareModal, async (show) => {
                                 <input
                                     v-model="fileSearch"
                                     class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                                    placeholder="Suchen..."
+                                    :placeholder="tx('files.search_placeholder')"
                                     :disabled="isFiltering"
-                                    aria-label="Dateien und Ordner durchsuchen"
+                                    :aria-label="tx('files.search_aria')"
                                     @keyup.enter="scheduleFilterRefresh(true)"
                                 />
-                                <button v-if="fileSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" aria-label="Suche löschen">x</button>
+                                <button v-if="fileSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" :aria-label="tx('files.search_clear')">x</button>
                             </div>
                             <select
                                 v-model="itemsPerPage"
                                 class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
-                                aria-label="Einträge pro Seite"
+                                :aria-label="tx('files.per_page')"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="pageSize in pageSizeOptions" :key="`page-size-${pageSize}`" :value="pageSize">
-                                    Pro Seite: {{ pageSize }}
+                                    {{ tx('files.per_page_option', { count: pageSize }) }}
                                 </option>
                             </select>
                             <select
                                 v-model="itemSort"
                                 class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                                aria-label="Ordner und Dateien sortieren"
+                                :aria-label="tx('files.sort_aria')"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="option in itemSortOptions" :key="`sort-${option.value}`" :value="option.value">
-                                    Sortierung: {{ option.label }}
+                                    {{ tx('files.sort_option', { value: option.label }) }}
                                 </option>
                             </select>
                         </div>
@@ -699,10 +703,10 @@ watch(showShareModal, async (show) => {
                                 type="button"
                                 :disabled="isFiltering"
                                 @click="openFolder(currentFolder.parent)"
-                                aria-label="In das übergeordnete Verzeichnis gehen"
+                                :aria-label="tx('files.parent_folder')"
                             >
                                 <i class="las la-arrow-left"></i>
-                                Zurück
+                                {{ tx('files.back') }}
                             </button>
                             <p v-if="filterStatusText" class="text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
                         </div>
@@ -718,12 +722,12 @@ watch(showShareModal, async (show) => {
                                 type="button"
                                 class="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left"
                                 @click="openFolder(folder)"
-                                aria-label="Ordner öffnen"
+                                :aria-label="tx('files.open_folder')"
                             >
                                 <i class="las la-folder text-3xl text-yellow-500"></i>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
-                                    <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
+                                    <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} {{ tx('files.files') }}</p>
                                 </div>
                             </button>
                             <button
@@ -731,8 +735,8 @@ watch(showShareModal, async (show) => {
                                 class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="openShare(folder, 'folder')"
-                                title="Freigeben"
-                                aria-label="Ordner freigeben"
+                                :title="tx('files.share')"
+                                :aria-label="tx('files.share_folder')"
                             >
                                 <i class="las la-share-alt"></i>
                             </button>
@@ -741,8 +745,8 @@ watch(showShareModal, async (show) => {
                                 class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="openRename(folder, 'folder')"
-                                title="Umbenennen"
-                                aria-label="Ordner umbenennen"
+                                :title="tx('files.rename')"
+                                :aria-label="tx('files.rename_folder')"
                             >
                                 <i class="las la-pen"></i>
                             </button>
@@ -751,8 +755,8 @@ watch(showShareModal, async (show) => {
                                 class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="confirmDeleteFolder(folder)"
-                                title="Löschen"
-                                aria-label="Ordner löschen"
+                                :title="tx('files.delete')"
+                                :aria-label="tx('files.delete_folder')"
                             >
                                 <i class="las la-trash"></i>
                             </button>
@@ -772,8 +776,8 @@ watch(showShareModal, async (show) => {
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
                                     @click="openShare(file)"
-                                    title="Freigeben"
-                                    aria-label="Datei freigeben"
+                                    :title="tx('files.share')"
+                                    :aria-label="tx('files.share_file')"
                                 >
                                     <i class="las la-share-alt"></i>
                                 </button>
@@ -783,11 +787,11 @@ watch(showShareModal, async (show) => {
                                     :disabled="isFiltering"
                                     @click="openRename(file)"
                                     title="Umbenennen"
-                                    aria-label="Datei umbenennen"
+                                    :aria-label="tx('files.rename_file')"
                                 >
                                     <i class="las la-pen"></i>
                                 </button>
-                                <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" title="Herunterladen" aria-label="Datei herunterladen">
+                                <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" :title="tx('files.download')" :aria-label="tx('files.download_file')">
                                     <i class="las la-download"></i>
                                 </a>
                                 <button
@@ -795,8 +799,8 @@ watch(showShareModal, async (show) => {
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
                                     @click="deleteFile(file)"
-                                    title="Löschen"
-                                    aria-label="Datei löschen"
+                                    :title="tx('files.delete')"
+                                    :aria-label="tx('files.delete_file')"
                                 >
                                     <i class="las la-trash"></i>
                                 </button>
@@ -807,14 +811,14 @@ watch(showShareModal, async (show) => {
                             {{ emptyStateText }}
                         </div>
                         <p v-if="activeFiles.length" class="col-span-full text-xs text-secondary">
-                            Dateien {{ fileRangeStart }} - {{ fileRangeEnd }} von {{ totalFiles }}
+                            {{ tx('files.range_files', { start: fileRangeStart, end: fileRangeEnd, total: totalFiles }) }}
                         </p>
                         <p v-if="activeFolders.length" class="col-span-full text-xs text-secondary">
-                            Ordner {{ folderRangeStart }} - {{ folderRangeEnd }} von {{ totalFolders }}
+                            {{ tx('files.range_folders', { start: folderRangeStart, end: folderRangeEnd, total: totalFolders }) }}
                         </p>
 
                         <div v-if="lastFoldersPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-xs text-secondary">Ordnerseite {{ currentFoldersPage }} / {{ lastFoldersPage }}</span>
+                            <span class="text-xs text-secondary">{{ tx('files.folder_page', { current: currentFoldersPage, last: lastFoldersPage }) }}</span>
                             <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -822,7 +826,7 @@ watch(showShareModal, async (show) => {
                                     @click="goToFoldersPage(currentFoldersPage - 1)"
                                     type="button"
                                 >
-                                    Zurück
+                                    {{ tx('files.back') }}
                                 </button>
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -830,13 +834,13 @@ watch(showShareModal, async (show) => {
                                     @click="goToFoldersPage(currentFoldersPage + 1)"
                                     type="button"
                                 >
-                                    Weiter
+                                    {{ tx('files.next') }}
                                 </button>
                             </div>
                         </div>
 
                         <div v-if="lastFilesPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-xs text-secondary">Dateiseite {{ currentFilesPage }} / {{ lastFilesPage }}</span>
+                            <span class="text-xs text-secondary">{{ tx('files.file_page', { current: currentFilesPage, last: lastFilesPage }) }}</span>
                             <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -844,7 +848,7 @@ watch(showShareModal, async (show) => {
                                     @click="goToFilesPage(currentFilesPage - 1)"
                                     type="button"
                                 >
-                                    Zurück
+                                    {{ tx('files.back') }}
                                 </button>
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -852,7 +856,7 @@ watch(showShareModal, async (show) => {
                                     @click="goToFilesPage(currentFilesPage + 1)"
                                     type="button"
                                 >
-                                    Weiter
+                                    {{ tx('files.next') }}
                                 </button>
                             </div>
                         </div>
@@ -863,8 +867,8 @@ watch(showShareModal, async (show) => {
                     <section v-if="storageUsage" class="hidden rounded-lg border border-border bg-card p-3 md:block">
                         <div class="flex items-start justify-between gap-3 md:items-center">
                             <div class="min-w-0">
-                                <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Speicher</h2>
-                                <p class="mt-0.5 text-base font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} frei</p>
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.storage') }}</h2>
+                        <p class="mt-0.5 text-base font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} {{ tx('files.free') }}</p>
                             </div>
                             <span class="shrink-0 rounded-full border border-border px-2 py-1 text-xs font-semibold text-primary">
                                 {{ storageUsage.plan_name }}
@@ -877,33 +881,33 @@ watch(showShareModal, async (show) => {
                             ></div>
                         </div>
                         <div class="mt-2 text-xs text-secondary md:flex md:items-center md:justify-between">
-                            <span class="md:hidden">{{ formatStorage(storageUsage.used_bytes) }} genutzt von {{ storageUsage.limit_gb }} GB gesamt</span>
-                            <span class="hidden md:inline">{{ formatStorage(storageUsage.used_bytes) }} genutzt</span>
-                            <span class="hidden md:inline">{{ storageUsage.limit_gb }} GB gesamt</span>
+                            <span class="md:hidden">{{ tx('files.used_of_total', { used: formatStorage(storageUsage.used_bytes), limit: storageUsage.limit_gb }) }}</span>
+                            <span class="hidden md:inline">{{ formatStorage(storageUsage.used_bytes) }} {{ tx('files.used') }}</span>
+                            <span class="hidden md:inline">{{ storageUsage.limit_gb }} GB {{ tx('files.total') }}</span>
                         </div>
                     </section>
 
                     <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="submitUpload">
                         <div class="flex items-center justify-between gap-2">
-                            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Upload</h2>
-                            <span class="truncate text-xs text-secondary">{{ currentFolder?.name || 'Hauptebene' }}</span>
+                            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.upload') }}</h2>
+                            <span class="truncate text-xs text-secondary">{{ currentFolder?.name || tx('files.root') }}</span>
                         </div>
                         <button
                             type="button"
                             class="mt-3 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
                             @click="selectUploadFile"
-                            aria-label="Datei auswählen"
+                            :aria-label="tx('files.choose_file')"
                         >
                             <span class="truncate">{{ uploadFileName }}</span>
                             <i class="las la-paperclip text-lg text-secondary"></i>
                         </button>
                         <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
-                            Dein Speicher ist voll. Bitte lösche Dateien oder upgrade.
+                            {{ tx('files.storage_full') }}
                         </p>
                         <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                             {{ uploadForm.errors.file || uploadForm.errors.general }}
                         </p>
-                        <AppLoadingState v-if="uploadForm.processing" class="mt-2" label="Upload laeuft..." inline />
+                        <AppLoadingState v-if="uploadForm.processing" class="mt-2" :label="tx('files.upload_running')" inline />
                         <AppButton
                             type="submit"
                             class="mt-2"
@@ -911,14 +915,14 @@ watch(showShareModal, async (show) => {
                             :loading="uploadForm.processing"
                             :disabled="uploadForm.processing || !uploadForm.file || isStorageFull"
                         >
-                            {{ uploadForm.processing ? 'Laedt hoch...' : 'Hochladen' }}
+                            {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
                         </AppButton>
                     </form>
 
                     <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="createFolder">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neuer Ordner</h2>
-                        <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary md:h-10" placeholder="Ordnername">
-                        <AppLoadingState v-if="folderForm.processing" class="mt-2" label="Ordner wird erstellt..." inline />
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.new_folder') }}</h2>
+                        <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary md:h-10" :placeholder="tx('files.folder_name')">
+                        <AppLoadingState v-if="folderForm.processing" class="mt-2" :label="tx('files.folder_creating')" inline />
                         <AppButton
                             type="submit"
                             class="mt-2"
@@ -926,7 +930,7 @@ watch(showShareModal, async (show) => {
                             :loading="folderForm.processing"
                             :disabled="folderForm.processing || !folderForm.name.trim()"
                         >
-                            {{ folderForm.processing ? 'Erstellt...' : 'Erstellen' }}
+                            {{ folderForm.processing ? tx('files.created') : tx('files.create') }}
                         </AppButton>
                     </form>
                 </aside>
@@ -939,10 +943,10 @@ watch(showShareModal, async (show) => {
         >
             <div class="flex items-center justify-between gap-3 text-xs">
                 <span class="min-w-0 truncate font-semibold text-primary">
-                    Speicher: {{ formatStorage(storageUsage.used_bytes) }} von {{ storageUsage.limit_gb }} GB
+                    {{ tx('files.storage_mobile', { used: formatStorage(storageUsage.used_bytes), limit: storageUsage.limit_gb }) }}
                 </span>
                 <span class="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-secondary">
-                    {{ formatStorage(storageUsage.remaining_bytes) }} frei
+                    {{ formatStorage(storageUsage.remaining_bytes) }} {{ tx('files.free') }}
                 </span>
             </div>
             <div class="mt-2 h-1.5 rounded-full bg-inputBg">
@@ -957,14 +961,12 @@ watch(showShareModal, async (show) => {
     <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
         <div class="space-y-5 text-primary">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-error">Endgültig löschen</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-error">{{ tx('files.delete_final') }}</p>
                 <h2 class="mt-1 text-lg font-bold">
-                    {{ deleteType === 'folder' ? 'Ordner löschen' : 'Datei löschen' }}
+                    {{ deleteType === 'folder' ? tx('files.delete_folder') : tx('files.delete_file') }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    {{ deleteType === 'folder'
-                        ? 'Der Ordner und seine Dateien werden entfernt.'
-                        : 'Diese Datei wird entfernt.' }}
+                    {{ deleteType === 'folder' ? tx('files.delete_folder_message') : tx('files.delete_file_message') }}
                 </p>
             </div>
 
@@ -973,26 +975,26 @@ watch(showShareModal, async (show) => {
             </div>
 
             <label class="block text-sm">
-                <span class="mb-1 block text-secondary">Schreibe <span class="font-semibold text-primary">löschen</span>, um fortzufahren.</span>
+                <span class="mb-1 block text-secondary">{{ tx('files.delete_confirmation_hint') }}</span>
             <input
                 ref="deleteConfirmationInputRef"
                 v-model="deleteConfirmation"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                 autocomplete="off"
-                placeholder="löschen"
+                :placeholder="tx('files.delete_word')"
                 @keyup.enter="deleteConfirmed"
                 >
             </label>
 
             <div class="flex gap-3">
-                <button type="button" class="flex-1 rounded-lg border border-border px-4 py-2 text-primary hover:bg-inputBg" @click="closeDeleteModal">Abbrechen</button>
+                <button type="button" class="flex-1 rounded-lg border border-border px-4 py-2 text-primary hover:bg-inputBg" @click="closeDeleteModal">{{ tx('files.cancel') }}</button>
                 <button
                     type="button"
                     class="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!canConfirmDelete || deleteProcessing"
                     @click="deleteConfirmed"
                 >
-                    {{ deleteProcessing ? 'Lösche...' : 'Endgültig löschen' }}
+                    {{ deleteProcessing ? tx('files.deleting') : tx('files.delete_final') }}
                 </button>
             </div>
         </div>
@@ -1000,29 +1002,29 @@ watch(showShareModal, async (show) => {
 
     <Modal :show="showRenameModal" max-width="md" @close="showRenameModal = false">
         <form class="space-y-4 text-primary" @submit.prevent="submitRename">
-            <h2 class="text-lg font-bold">{{ renameType === 'folder' ? 'Ordner' : 'Datei' }} umbenennen</h2>
+            <h2 class="text-lg font-bold">{{ renameType === 'folder' ? tx('files.folder') : tx('files.file') }} {{ tx('files.rename') }}</h2>
             <input
                 v-if="renameType === 'folder'"
                 v-model="renameForm.name"
                 ref="renameFolderInputRef"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="Ordnername"
+                :placeholder="tx('files.folder_name')"
             >
             <input
                 v-else
                 v-model="renameForm.display_name"
                 ref="renameFileInputRef"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="Dateiname"
+                :placeholder="tx('files.file_name')"
             >
             <div class="flex gap-3">
-                <button type="button" class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="showRenameModal = false">Abbrechen</button>
+                <button type="button" class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="showRenameModal = false">{{ tx('files.cancel') }}</button>
                 <button
                     type="submit"
                     :disabled="renameForm.processing || (renameType === 'folder' ? !renameForm.name.trim() : !renameForm.display_name.trim())"
                     class="flex-1 rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 >
-                    Speichern
+                    {{ tx('files.save') }}
                 </button>
             </div>
         </form>
@@ -1030,19 +1032,19 @@ watch(showShareModal, async (show) => {
 
     <Modal :show="showShareModal" max-width="md" @close="showShareModal = false">
         <div class="space-y-4 text-primary">
-            <h2 class="text-lg font-bold">{{ shareType === 'folder' ? 'Ordner' : 'Datei' }} freigeben</h2>
+            <h2 class="text-lg font-bold">{{ shareType === 'folder' ? tx('files.folder') : tx('files.file') }} {{ tx('files.share') }}</h2>
             <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="shareForm.target_id = shareTargets[0]?.id || ''; shareForm.email = ''">
-                <option value="user">Freund</option>
-                <option v-if="shareType === 'file'" value="email">Externe E-Mail</option>
+                <option value="user">{{ tx('files.friend') }}</option>
+                <option v-if="shareType === 'file'" value="email">{{ tx('files.external_email') }}</option>
             </select>
-            <input v-if="shareForm.target_type === 'user'" v-model="friendSearch" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Freund suchen">
+            <input v-if="shareForm.target_type === 'user'" v-model="friendSearch" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('files.friend_search')">
             <select
                 v-if="shareForm.target_type === 'user'"
                 v-model="shareForm.target_id"
                 ref="shareTargetSelectRef"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
             >
-                <option value="">Auswählen</option>
+                <option value="">{{ tx('files.select') }}</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
                     {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
                 </option>
@@ -1061,7 +1063,7 @@ watch(showShareModal, async (show) => {
                 class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 @click="shareItem"
             >
-                Freigeben
+                {{ tx('files.share') }}
             </button>
         </div>
     </Modal>

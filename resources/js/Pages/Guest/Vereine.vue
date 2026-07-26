@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -22,7 +22,7 @@ const form = ref({
     location: props.filters.location || '',
 })
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const initials = (name) => (name || '?').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 const page = usePage()
 const selectedClub = ref(null)
@@ -60,7 +60,8 @@ const intervalLabel = (interval) => ({
     none: 'kein Beitrag',
 }[interval] || interval)
 
-const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(value || 0))
@@ -212,5 +213,4 @@ const submitMembershipRequest = () => {
         <Footer />
     </div>
 </template>
-
 

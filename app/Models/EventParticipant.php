@@ -16,10 +16,13 @@ class EventParticipant extends Model
         'response_reason',
         'response_mode',
         'responded_at',
+        'checked_in_at',
+        'check_in_method',
     ];
 
     protected $casts = [
         'responded_at' => 'datetime',
+        'checked_in_at' => 'datetime',
     ];
 
     public function event()

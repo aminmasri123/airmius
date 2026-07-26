@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\Event;
+use App\Models\File;
+use App\Models\LearningCourse;
+use App\Models\MarketplaceProduct;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -62,5 +66,67 @@ class GlobalSearchTest extends TestCase
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'club' && $result['id'] === $club->id));
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'team' && $result['id'] === $team->id));
         $this->assertSame(route('auth.teams.join-requests.store', $team->id), $results->firstWhere('type', 'team')['join_url']);
+    }
+
+    public function test_mobile_search_returns_visible_events_courses_products_and_files(): void
+    {
+        $user = User::factory()->create(['name' => 'Search Owner']);
+
+        $event = Event::create([
+            'user_id' => $user->id,
+            'title' => 'Launch Training',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+        $course = LearningCourse::create([
+            'user_id' => $user->id,
+            'title' => 'Launch Course',
+            'slug' => 'launch-course',
+            'subtitle' => 'Course for the search contract',
+            'status' => 'published',
+            'is_public' => true,
+            'published_at' => now(),
+        ]);
+        $product = MarketplaceProduct::create([
+            'user_id' => $user->id,
+            'title' => 'Launch Product',
+            'description' => 'Searchable product',
+            'status' => 'published',
+            'moderation_status' => 'approved',
+        ]);
+        $file = File::create([
+            'user_id' => $user->id,
+            'display_name' => 'Launch Document.pdf',
+            'path' => 'files/launch-document.pdf',
+            'type' => 'application/pdf',
+            'size' => 1200,
+        ]);
+        $foreignFile = File::create([
+            'user_id' => User::factory()->create()->id,
+            'display_name' => 'Launch Document private.pdf',
+            'path' => 'files/launch-document-private.pdf',
+            'type' => 'application/pdf',
+            'size' => 1200,
+        ]);
+
+        $results = collect($this->actingAs($user)
+            ->getJson('/api/v1/search?q=Launch')
+            ->assertOk()
+            ->json('results'));
+
+        foreach ([
+            ['type' => 'event', 'id' => $event->id],
+            ['type' => 'course', 'id' => $course->id],
+            ['type' => 'product', 'id' => $product->id],
+            ['type' => 'file', 'id' => $file->id],
+        ] as $expected) {
+            $this->assertTrue(
+                $results->contains(fn (array $result) => $result['type'] === $expected['type'] && $result['id'] === $expected['id']),
+                "Missing {$expected['type']} search result."
+            );
+        }
+        $this->assertFalse($results->contains(fn (array $result) => $result['id'] === $foreignFile->id));
     }
 }

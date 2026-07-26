@@ -20,7 +20,7 @@ class FriendController extends Controller
     {
         $user = $request->user();
 
-        return Inertia::render('Auth/Dashboard/Friends/Index', [
+        $payload = [
             'friends' => $user->friendships()
                 ->with('friend:id,name,email,profile_photo_path')
                 ->latest()
@@ -60,7 +60,13 @@ class FriendController extends Controller
                     ],
                     'created_at' => $invitation->created_at,
                 ]),
-        ]);
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => $payload]);
+        }
+
+        return Inertia::render('Auth/Dashboard/Friends/Index', $payload);
     }
 
     public function store(Request $request)
@@ -97,6 +103,13 @@ class FriendController extends Controller
             );
 
             Notification::route('mail', $email)->notify(new ExternalFriendInvitation($invitation->load('sender')));
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'data' => ['invitation_id' => $invitation->id, 'external' => true],
+                    'message' => 'Einladung per E-Mail gesendet.',
+                ], 201);
+            }
 
             return back()->with('success', 'Einladung per E-Mail gesendet.');
         }
@@ -173,6 +186,17 @@ class FriendController extends Controller
             'invitation_id' => $invitation->id,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'recipient_id' => $recipient->id,
+                    'external' => false,
+                ],
+                'message' => 'Einladung gesendet.',
+            ], 201);
+        }
+
         return back()->with('success', 'Einladung gesendet.');
     }
 
@@ -207,17 +231,34 @@ class FriendController extends Controller
             'invitation_id' => $invitation->id,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'status' => 'accepted',
+                    'friend_id' => $invitation->sender_id,
+                ],
+                'message' => 'Einladung angenommen.',
+            ]);
+        }
+
         return back()->with('success', 'Einladung angenommen.');
+    }
+
+    public function invitationByToken(Request $request, string $token)
+    {
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertTokenRecipient($request, $invitation);
+
+        return response()->json([
+            'data' => $this->tokenInvitationPayload($invitation),
+        ]);
     }
 
     public function acceptByToken(Request $request, string $token)
     {
-        $invitation = FriendInvitation::query()
-            ->where('token', $token)
-            ->where('status', 'pending')
-            ->firstOrFail();
-
-        abort_unless(strtolower((string) $invitation->email) === strtolower($request->user()->email), 403);
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertTokenRecipient($request, $invitation);
         abort_if($invitation->sender_id === $request->user()->id, 422, 'Du kannst dich nicht selbst einladen.');
 
         $alreadyFriends = Friendship::query()
@@ -254,7 +295,42 @@ class FriendController extends Controller
             'invitation_id' => $invitation->id,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'status' => 'accepted',
+                    'friend_id' => $invitation->sender_id,
+                ],
+                'message' => 'Einladung angenommen.',
+            ]);
+        }
+
         return redirect()->route('auth.friends.index')->with('success', 'Einladung angenommen.');
+    }
+
+    public function declineByToken(Request $request, string $token)
+    {
+        $invitation = $this->pendingInvitationByToken($token);
+        $this->assertTokenRecipient($request, $invitation);
+
+        $invitation->update([
+            'recipient_id' => $request->user()->id,
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'status' => 'declined',
+                ],
+                'message' => 'Einladung abgelehnt.',
+            ]);
+        }
+
+        return redirect()->route('auth.friends.index')->with('success', 'Einladung abgelehnt.');
     }
 
     public function decline(Request $request, FriendInvitation $invitation)
@@ -266,6 +342,16 @@ class FriendController extends Controller
             'status' => 'declined',
             'responded_at' => now(),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'status' => 'declined',
+                ],
+                'message' => 'Einladung abgelehnt.',
+            ]);
+        }
 
         return back()->with('success', 'Einladung abgelehnt.');
     }
@@ -305,6 +391,49 @@ class FriendController extends Controller
                 'responded_at' => now(),
             ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'friend_id' => $user->id,
+                    'deleted' => true,
+                ],
+                'message' => 'Freundschaft wurde beendet.',
+            ]);
+        }
+
         return back()->with('success', 'Freundschaft wurde beendet.');
+    }
+
+    private function pendingInvitationByToken(string $token): FriendInvitation
+    {
+        return FriendInvitation::query()
+            ->where('token', $token)
+            ->where('status', 'pending')
+            ->with('sender:id,name,email,profile_photo_path')
+            ->firstOrFail();
+    }
+
+    private function assertTokenRecipient(Request $request, FriendInvitation $invitation): void
+    {
+        $email = $invitation->email ?: $invitation->recipient?->email;
+
+        abort_unless(
+            filled($email) && strtolower((string) $email) === strtolower((string) $request->user()->email),
+            403
+        );
+    }
+
+    private function tokenInvitationPayload(FriendInvitation $invitation): array
+    {
+        return [
+            'id' => $invitation->id,
+            'status' => $invitation->status,
+            'created_at' => $invitation->created_at,
+            'sender' => [
+                'id' => $invitation->sender?->id,
+                'name' => $invitation->sender?->name,
+                'profile_photo_url' => $invitation->sender?->profile_photo_url,
+            ],
+        ];
     }
 }

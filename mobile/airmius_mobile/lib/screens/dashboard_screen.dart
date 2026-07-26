@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_models.dart';
+import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_services_scope.dart';
@@ -7,13 +9,14 @@ import '../core/airmius_theme.dart';
 import '../models/app_tab.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
+import 'daily_flow_screen.dart';
 
 Color _dashText(BuildContext context) {
-  return Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+  return airmiusTextColor(context);
 }
 
 Color _dashMuted(BuildContext context) {
-  return Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+  return airmiusMutedColor(context);
 }
 
 Color _dashSurface(BuildContext context) {
@@ -54,10 +57,44 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _showCustomize = false;
+  String? _loadError;
+  _DashboardLiveData? _liveData;
   final Set<String> _visibleWidgets = {
     for (final widget in _dashboardWidgets)
       if (AirmiusMvpSurface.isDashboardWidgetVisible(widget.key)) widget.key,
   };
+
+  @override
+  void initState() {
+    super.initState();
+    // Live data is loaded after the first frame so the initial layout remains
+    // deterministic on low-end devices and in accessibility previews.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadDashboard();
+    });
+  }
+
+  Future<void> _loadDashboard() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .dashboardDailyFlow();
+      final raw = response['data'];
+      if (!mounted) return;
+      setState(() {
+        _liveData = raw is JsonMap ? _DashboardLiveData.fromJson(raw) : null;
+        _loadError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error is AirmiusApiException
+            ? error.userMessage
+            : AirmiusScope.of(context).t('common.errorDetails');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,12 +103,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final firstName = authState.user?.firstName?.trim();
     final userName = firstName != null && firstName.isNotEmpty
         ? firstName
-        : authState.user?.name ?? 'Sportler';
+        : authState.user?.name ?? scope.t('dashboard.athlete');
 
     return PageFrame(
       title: scope.t('dashboard'),
-      subtitle:
-          'Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.',
+      subtitle: scope.t('dashboard.subtitle'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -92,14 +128,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _QuickActions(
             onOpenTab: widget.onOpenTab,
             onOpenModule: widget.onOpenModule,
+            onOpenDailyFlow: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DailyFlowScreen()),
+            ),
           ),
           const SizedBox(height: 14),
-          _StatsGrid(stats: _stats),
+          if (_loadError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _DashboardLoadState(
+                error: _loadError!,
+                onRetry: _loadDashboard,
+              ),
+            ),
+          _StatsGrid(stats: _dashboardStats(context, scope, _liveData)),
           const SizedBox(height: 14),
           _DashboardWidgets(
             visibleWidgets: _visibleWidgets,
             onOpenTab: widget.onOpenTab,
             onOpenModule: widget.onOpenModule,
+            liveData: _liveData,
           ),
         ],
       ),
@@ -114,6 +163,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       _visibleWidgets.add(key);
     });
+  }
+}
+
+class _DashboardLoadState extends StatelessWidget {
+  const _DashboardLoadState({required this.error, required this.onRetry});
+
+  final String error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      borderColor: Theme.of(context).colorScheme.error.withValues(alpha: 0.45),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 390;
+          final message = Row(
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  t('dashboard.liveDataUnavailable'),
+                  style: TextStyle(
+                    color: _dashText(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          );
+          final retry = TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_outlined),
+            label: Text(t('common.retry')),
+          );
+          return compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    message,
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: retry,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: message),
+                    retry,
+                  ],
+                );
+        },
+      ),
+    );
   }
 }
 
@@ -136,6 +245,7 @@ class _DashboardHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final scheme = Theme.of(context).colorScheme;
     final text = _dashText(context);
     final muted = _dashMuted(context);
@@ -165,7 +275,7 @@ class _DashboardHero extends StatelessWidget {
                             ? 0.16
                             : 0.12,
                       ),
-                      AirmiusColors.pink.withValues(
+                      scheme.tertiary.withValues(
                         alpha: Theme.of(context).brightness == Brightness.dark
                             ? 0.16
                             : 0.08,
@@ -188,10 +298,10 @@ class _DashboardHero extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Eyebrow('Dashboard'),
+                            Eyebrow(t('dashboard')),
                             const SizedBox(height: 7),
                             Text(
-                              'Hallo $userName',
+                              '${t('dashboard.hello')} $userName',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -202,7 +312,7 @@ class _DashboardHero extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.',
+                              t('dashboard.subtitle'),
                               style: TextStyle(
                                 color: muted,
                                 height: 1.45,
@@ -216,9 +326,9 @@ class _DashboardHero extends StatelessWidget {
                       OutlinedButton.icon(
                         onPressed: onToggleCustomize,
                         icon: const Icon(Icons.tune_outlined, size: 18),
-                        label: const Text(
-                          'Anpassen',
-                          style: TextStyle(fontWeight: FontWeight.w900),
+                        label: Text(
+                          t('dashboard.customize'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: text,
@@ -254,7 +364,7 @@ class _DashboardHero extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Widgets',
+                                      t('dashboard.widgets'),
                                       style: TextStyle(
                                         color: text,
                                         fontWeight: FontWeight.w900,
@@ -262,7 +372,7 @@ class _DashboardHero extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Wähle aus, was sichtbar ist.',
+                                      t('dashboard.widgetsBody'),
                                       style: TextStyle(
                                         color: muted,
                                         fontSize: 12,
@@ -274,7 +384,7 @@ class _DashboardHero extends StatelessWidget {
                               ),
                               TextButton(
                                 onPressed: onShowAll,
-                                child: const Text('Alles zeigen'),
+                                child: Text(t('dashboard.showAll')),
                               ),
                             ],
                           ),
@@ -318,6 +428,7 @@ class _WidgetToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final muted = _dashMuted(context);
     final surface = _dashSurface(context);
     final border = _dashBorder(context);
@@ -340,7 +451,7 @@ class _WidgetToggle extends StatelessWidget {
             Icon(item.icon, size: 16, color: active ? accent : muted),
             const SizedBox(width: 7),
             Text(
-              item.label,
+              t(item.label),
               style: TextStyle(
                 color: active ? accent : muted,
                 fontWeight: FontWeight.w900,
@@ -355,43 +466,56 @@ class _WidgetToggle extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.onOpenTab, required this.onOpenModule});
+  const _QuickActions({
+    required this.onOpenTab,
+    required this.onOpenModule,
+    required this.onOpenDailyFlow,
+  });
 
   final ValueChanged<AppTab> onOpenTab;
   final ValueChanged<ModuleDefinition> onOpenModule;
+  final VoidCallback onOpenDailyFlow;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final text = _dashText(context);
     final muted = _dashMuted(context);
     final actions = [
       _QuickAction(
-        title: 'Training',
-        subtitle: 'Dokumentieren',
+        title: t('dashboard.training'),
+        subtitle: t('dashboard.document'),
         icon: Icons.assignment_turned_in_outlined,
-        color: AirmiusColors.blue,
+        color: airmiusAccentColor(context),
         onTap: () => onOpenModule(_module('Events & Training')),
       ),
       _QuickAction(
-        title: 'Dateien',
-        subtitle: 'Verwalten',
+        title: t('dashboard.files'),
+        subtitle: t('dashboard.manage'),
         icon: Icons.folder_outlined,
-        color: AirmiusColors.green,
+        color: Theme.of(context).colorScheme.secondary,
         onTap: () => onOpenModule(_module('Dateien')),
       ),
       _QuickAction(
-        title: 'Updates',
-        subtitle: 'Prüfen',
+        title: t('dashboard.updates'),
+        subtitle: t('dashboard.review'),
         icon: Icons.notifications_outlined,
-        color: AirmiusColors.amber,
+        color: Theme.of(context).colorScheme.tertiary,
         onTap: () => onOpenTab(AppTab.updates),
       ),
       _QuickAction(
-        title: 'Feed',
-        subtitle: 'Posten',
+        title: t('dashboard.feed'),
+        subtitle: t('dashboard.post'),
         icon: Icons.dynamic_feed_outlined,
-        color: AirmiusColors.pink,
+        color: Theme.of(context).colorScheme.primary,
         onTap: () => onOpenTab(AppTab.feed),
+      ),
+      _QuickAction(
+        title: t('dailyFlow.title'),
+        subtitle: t('dailyFlow.open'),
+        icon: Icons.today_outlined,
+        color: airmiusAccentColor(context),
+        onTap: onOpenDailyFlow,
       ),
     ];
 
@@ -458,7 +582,12 @@ class _StatsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth > 640 ? 4 : 2;
-        final childAspectRatio = columns == 4 ? 1.25 : 1.35;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final childAspectRatio = columns == 4
+            ? (textScale > 1.2 ? 1.0 : 1.25)
+            : constraints.maxWidth <= 480
+            ? (textScale > 1.2 ? 0.78 : 1.05)
+            : 1.2;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -483,6 +612,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final text = _dashText(context);
     final muted = _dashMuted(context);
     return AirmiusPanel(
@@ -495,7 +625,7 @@ class _StatCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  stat.label.toUpperCase(),
+                  t(stat.label).toUpperCase(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -518,7 +648,7 @@ class _StatCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  stat.meta,
+                  t(stat.meta),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -552,38 +682,53 @@ class _DashboardWidgets extends StatelessWidget {
     required this.visibleWidgets,
     required this.onOpenTab,
     required this.onOpenModule,
+    required this.liveData,
   });
 
   final Set<String> visibleWidgets;
   final ValueChanged<AppTab> onOpenTab;
   final ValueChanged<ModuleDefinition> onOpenModule;
+  final _DashboardLiveData? liveData;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final dashboardData = liveData;
     return Column(
       children: [
         if (visibleWidgets.contains('training')) ...[
           _TrainingWidget(
             onOpen: () => onOpenModule(_module('Events & Training')),
+            liveData: liveData,
           ),
           const SizedBox(height: 14),
         ],
         if (visibleWidgets.contains('focus')) ...[
-          _FocusWidget(onOpenTab: onOpenTab, onOpenModule: onOpenModule),
+          _FocusWidget(
+            onOpenTab: onOpenTab,
+            onOpenModule: onOpenModule,
+            liveData: liveData,
+          ),
           const SizedBox(height: 14),
         ],
         if (AirmiusMvpSurface.showDeveloperSuites &&
             visibleWidgets.contains('nutrition')) ...[
           _CompactWidget(
-            title: 'Ernährung',
-            eyebrow: 'Heute',
-            action: 'Öffnen',
+            title: t('dashboard.nutrition'),
+            eyebrow: t('dashboard.liveData'),
+            action: t('dashboard.open'),
             icon: Icons.restaurant_menu_outlined,
-            color: AirmiusColors.amber,
-            metrics: const [
-              ('1840', 'kcal'),
-              ('120 g', 'Protein'),
-              ('3', 'Mahlzeiten'),
+            color: Theme.of(context).colorScheme.tertiary,
+            metrics: [
+              (
+                liveData?.step('nutrition')?.progress.toString() ?? '—',
+                t('dashboard.dailyScore'),
+              ),
+              (
+                liveData?.step('hydration')?.progress.toString() ?? '—',
+                t('dashboard.hydration'),
+              ),
+              (liveData?.step('nutrition')?.meta ?? '—', t('dashboard.plans')),
             ],
             onOpen: () => onOpenModule(_module('Ernährung')),
           ),
@@ -591,44 +736,59 @@ class _DashboardWidgets extends StatelessWidget {
         ],
         if (visibleWidgets.contains('events')) ...[
           _ListWidget(
-            title: 'Termine',
-            eyebrow: '5 geplant',
-            action: 'Kalender',
+            title: t('dashboard.events'),
+            eyebrow: liveData?.eventCountLabel(t) ?? t('dashboard.liveData'),
+            action: t('dashboard.calendar'),
             icon: Icons.event_outlined,
-            color: AirmiusColors.green,
-            lines: const [
-              'Training heute 18:30 - Sporthalle',
-              'Teammeeting morgen 19:00',
-              'Spieltag Samstag 14:00',
-            ],
-            onOpen: () => onOpenModule(_module('Events')),
+            color: Theme.of(context).colorScheme.secondary,
+            lines: liveData?.eventLines ?? const [],
+            emptyLabel: t('dashboard.noLiveData'),
+            onOpen: () => onOpenModule(_module('Events & Training')),
           ),
           const SizedBox(height: 14),
         ],
         if (AirmiusMvpSurface.showDeveloperSuites &&
             visibleWidgets.contains('sport_map')) ...[
           _CompactWidget(
-            title: 'Sportkarte',
-            eyebrow: 'Routen & Orte',
-            action: 'Karte',
+            title: t('dashboard.sportMap'),
+            eyebrow: t('dashboard.liveData'),
+            action: t('dashboard.open'),
             icon: Icons.map_outlined,
-            color: AirmiusColors.blue,
-            metrics: const [('8', 'Routen'), ('4', 'Tracks'), ('6', 'Plaetze')],
+            color: airmiusAccentColor(context),
+            metrics: [
+              (
+                liveData?.step('route')?.progress.toString() ?? '—',
+                t('dashboard.dailyScore'),
+              ),
+              (liveData?.step('route')?.meta ?? '—', t('dashboard.distance')),
+              (liveData?.step('route')?.body ?? '—', t('dashboard.openStatus')),
+            ],
             onOpen: () => onOpenModule(_module('Sportkarte')),
           ),
           const SizedBox(height: 14),
         ],
         if (visibleWidgets.contains('files')) ...[
           _CompactWidget(
-            title: 'Dateien',
-            eyebrow: 'Speicher',
-            action: 'Dateien',
+            title: t('dashboard.files'),
+            eyebrow: t('dashboard.storage'),
+            action: t('dashboard.files'),
             icon: Icons.folder_outlined,
-            color: AirmiusColors.pink,
-            metrics: const [
-              ('1.8 GB', 'frei'),
-              ('24', 'Dateien'),
-              ('4', 'Freigaben'),
+            color: Theme.of(context).colorScheme.tertiary,
+            metrics: [
+              (
+                dashboardData == null
+                    ? '—'
+                    : _formatDashboardBytes(dashboardData.filesBytes),
+                t('dashboard.storage'),
+              ),
+              (
+                dashboardData == null ? '—' : '${dashboardData.filesCount}',
+                t('dashboard.files'),
+              ),
+              (
+                dashboardData == null ? '—' : t('dashboard.liveData'),
+                t('dashboard.openStatus'),
+              ),
             ],
             onOpen: () => onOpenModule(_module('Dateien')),
           ),
@@ -636,16 +796,14 @@ class _DashboardWidgets extends StatelessWidget {
         ],
         if (visibleWidgets.contains('notifications')) ...[
           _ListWidget(
-            title: 'Inbox',
-            eyebrow: '3 ungelesen',
-            action: 'Öffnen',
+            title: t('dashboard.inbox'),
+            eyebrow:
+                liveData?.notificationCountLabel(t) ?? t('dashboard.liveData'),
+            action: t('dashboard.open'),
             icon: Icons.notifications_outlined,
-            color: AirmiusColors.amber,
-            lines: const [
-              'Neue Reaktion auf deinen Beitrag',
-              'Vereinsanfrage wartet',
-              'Trainingserinnerung für heute',
-            ],
+            color: Theme.of(context).colorScheme.tertiary,
+            lines: liveData?.notificationLines ?? const [],
+            emptyLabel: t('dashboard.noLiveData'),
             onOpen: () => onOpenTab(AppTab.updates),
           ),
         ],
@@ -655,88 +813,68 @@ class _DashboardWidgets extends StatelessWidget {
 }
 
 class _TrainingWidget extends StatelessWidget {
-  const _TrainingWidget({required this.onOpen});
+  const _TrainingWidget({required this.onOpen, required this.liveData});
 
   final VoidCallback onOpen;
+  final _DashboardLiveData? liveData;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final muted = _dashMuted(context);
-    final bars = [35, 72, 48, 88, 42, 64, 28];
-    final labels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    final training = liveData?.step('training');
+    final progress = training?.progress;
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _WidgetHeader(
-            eyebrow: 'Wochenübersicht',
-            title: 'Training',
-            action: 'Öffnen',
+            eyebrow: t('dashboard.liveData'),
+            title: t('dashboard.training'),
+            action: t('dashboard.open'),
             icon: Icons.running_with_errors_outlined,
-            color: AirmiusColors.blue,
+            color: airmiusAccentColor(context),
             onOpen: onOpen,
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 150,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (var index = 0; index < bars.length; index++) ...[
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: bars[index] / 100,
-                              widthFactor: 0.72,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      AirmiusColors.blueDeep,
-                                      AirmiusColors.blue,
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          labels[index],
-                          style: TextStyle(
-                            color: muted,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (index != bars.length - 1) const SizedBox(width: 6),
-                ],
-              ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: progress == null ? 0 : progress / 100,
+              minHeight: 12,
+              backgroundColor: _dashSurfaceSoft(context),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                airmiusAccentColor(context),
+              ),
             ),
           ),
+          const SizedBox(height: 10),
+          Text(
+            training?.body ?? t('dashboard.noLiveData'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: muted, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             children: [
               Expanded(
-                child: _MiniMetric(value: '12.4 km', label: 'Distanz'),
+                child: _MiniMetric(
+                  value: training?.meta ?? '—',
+                  label: t('dashboard.distance'),
+                ),
               ),
               Expanded(
-                child: _MiniMetric(value: '1840', label: 'Kalorien'),
+                child: _MiniMetric(
+                  value: progress == null ? '—' : '$progress%',
+                  label: t('dashboard.calories'),
+                ),
               ),
               Expanded(
-                child: _MiniMetric(value: '2', label: 'Plaene'),
+                child: _MiniMetric(
+                  value: training == null ? '—' : t('dashboard.openStatus'),
+                  label: t('dashboard.plans'),
+                ),
               ),
             ],
           ),
@@ -747,49 +885,67 @@ class _TrainingWidget extends StatelessWidget {
 }
 
 class _FocusWidget extends StatelessWidget {
-  const _FocusWidget({required this.onOpenTab, required this.onOpenModule});
+  const _FocusWidget({
+    required this.onOpenTab,
+    required this.onOpenModule,
+    required this.liveData,
+  });
 
   final ValueChanged<AppTab> onOpenTab;
   final ValueChanged<ModuleDefinition> onOpenModule;
+  final _DashboardLiveData? liveData;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      _FocusItem(
-        title: 'Training dokumentieren',
-        body: 'Heute offen',
-        meta: 'Jetzt',
-        icon: Icons.assignment_turned_in_outlined,
-        onTap: () => onOpenModule(_module('Events & Training')),
-      ),
-      _FocusItem(
-        title: 'Feed prüfen',
-        body: 'Kommentare & Reaktionen',
-        meta: '3 neu',
-        icon: Icons.dynamic_feed_outlined,
-        onTap: () => onOpenTab(AppTab.feed),
-      ),
-      _FocusItem(
-        title: 'Verein ansehen',
-        body: 'Anfrage und Profil',
-        meta: 'Offen',
-        icon: Icons.groups_outlined,
-        onTap: () => onOpenTab(AppTab.clubs),
-      ),
-    ];
+    final t = AirmiusScope.of(context).t;
+    final liveSteps = liveData?.steps ?? const <_DashboardStep>[];
+    final items = liveSteps.isEmpty
+        ? [
+            _FocusItem(
+              title: t('dashboard.importantToday'),
+              body: t('dashboard.noLiveData'),
+              meta: '—',
+              icon: Icons.check_circle_outline,
+              onTap: () => onOpenModule(_module('Events & Training')),
+            ),
+          ]
+        : liveSteps.take(3).map((step) {
+            final action = switch (step.key) {
+              'training' => () => onOpenModule(_module('Events & Training')),
+              'route' => () => onOpenModule(_module('Sportkarte')),
+              'nutrition' ||
+              'hydration' => () => onOpenModule(_module('Ernährung')),
+              'reminders' => () => onOpenTab(AppTab.updates),
+              _ => () => onOpenModule(_module('Events & Training')),
+            };
+            final icon = switch (step.key) {
+              'training' => Icons.assignment_turned_in_outlined,
+              'route' => Icons.map_outlined,
+              'nutrition' => Icons.restaurant_menu_outlined,
+              'hydration' => Icons.water_drop_outlined,
+              _ => Icons.notifications_outlined,
+            };
+            return _FocusItem(
+              title: _dashboardStepTitle(t, step.key),
+              body: step.body,
+              meta: step.meta,
+              icon: icon,
+              onTap: action,
+            );
+          }).toList();
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: _WidgetTitle(
-                  eyebrow: 'Heute wichtig',
-                  title: 'Naechste Schritte',
+                  eyebrow: t('dashboard.importantToday'),
+                  title: t('dashboard.nextSteps'),
                 ),
               ),
-              StatusPill('${items.length}', color: AirmiusColors.blue),
+              StatusPill('${items.length}', color: airmiusAccentColor(context)),
             ],
           ),
           const SizedBox(height: 12),
@@ -868,6 +1024,7 @@ class _ListWidget extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.lines,
+    required this.emptyLabel,
     required this.onOpen,
   });
 
@@ -877,6 +1034,7 @@ class _ListWidget extends StatelessWidget {
   final IconData icon;
   final Color color;
   final List<String> lines;
+  final String emptyLabel;
   final VoidCallback onOpen;
 
   @override
@@ -896,6 +1054,17 @@ class _ListWidget extends StatelessWidget {
             onOpen: onOpen,
           ),
           const SizedBox(height: 12),
+          if (lines.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                emptyLabel,
+                style: TextStyle(
+                  color: _dashMuted(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           for (final line in lines)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1155,40 +1324,179 @@ class _FocusItem {
   final VoidCallback onTap;
 }
 
+class _DashboardStep {
+  const _DashboardStep({
+    required this.key,
+    required this.title,
+    required this.body,
+    required this.meta,
+    required this.progress,
+    required this.cta,
+  });
+
+  final String key;
+  final String title;
+  final String body;
+  final String meta;
+  final int progress;
+  final String cta;
+
+  factory _DashboardStep.fromJson(JsonMap json) {
+    return _DashboardStep(
+      key: '${json['key'] ?? ''}',
+      title: '${json['title'] ?? ''}',
+      body: '${json['body'] ?? ''}',
+      meta: '${json['meta'] ?? ''}',
+      progress: _safeDashboardInt(json['progress']).clamp(0, 100),
+      cta: '${json['cta'] ?? ''}',
+    );
+  }
+}
+
+class _DashboardLiveData {
+  const _DashboardLiveData({
+    required this.score,
+    required this.steps,
+    required this.filesCount,
+    required this.filesBytes,
+  });
+
+  final int score;
+  final List<_DashboardStep> steps;
+  final int filesCount;
+  final int filesBytes;
+
+  factory _DashboardLiveData.fromJson(JsonMap json) {
+    final rawSteps = json['steps'];
+    final parsedSteps = rawSteps is List
+        ? rawSteps
+              .whereType<Map>()
+              .map(
+                (item) => _DashboardStep.fromJson(item.cast<String, dynamic>()),
+              )
+              .toList(growable: false)
+        : const <_DashboardStep>[];
+    return _DashboardLiveData(
+      score: _safeDashboardInt(json['score']).clamp(0, 100),
+      steps: parsedSteps,
+      filesCount: _safeDashboardInt(
+        json['files'] is JsonMap
+            ? (json['files'] as JsonMap)['count']
+            : json['file_count'],
+      ),
+      filesBytes: _safeDashboardInt(
+        json['files'] is JsonMap
+            ? (json['files'] as JsonMap)['bytes']
+            : json['file_bytes'],
+      ),
+    );
+  }
+
+  _DashboardStep? step(String key) {
+    for (final item in steps) {
+      if (item.key == key) return item;
+    }
+    return null;
+  }
+
+  List<String> get eventLines => steps
+      .where((step) => step.key == 'training' || step.key == 'reminders')
+      .map(
+        (step) => [
+          step.body,
+          step.meta,
+        ].where((part) => part.trim().isNotEmpty).join(' · '),
+      )
+      .where((line) => line.trim().isNotEmpty)
+      .take(3)
+      .toList(growable: false);
+
+  List<String> get notificationLines => steps
+      .where((step) => step.key == 'reminders')
+      .map(
+        (step) => [
+          step.body,
+          step.meta,
+        ].where((part) => part.trim().isNotEmpty).join(' · '),
+      )
+      .where((line) => line.trim().isNotEmpty)
+      .take(3)
+      .toList(growable: false);
+
+  String eventCountLabel(String Function(String) t) {
+    final count = eventLines.length;
+    return count == 0 ? t('dashboard.liveData') : '$count';
+  }
+
+  String notificationCountLabel(String Function(String) t) {
+    final count = notificationLines.length;
+    return count == 0 ? t('dashboard.liveData') : '$count';
+  }
+}
+
+String _formatDashboardBytes(int bytes) {
+  if (bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  var value = bytes.toDouble();
+  var unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return '${value.toStringAsFixed(unit == 0 ? 0 : 2)} ${units[unit]}';
+}
+
+int _safeDashboardInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.round();
+  return int.tryParse('$value') ?? 0;
+}
+
+String _dashboardStepTitle(String Function(String) t, String key) {
+  return switch (key) {
+    'training' => t('dashboard.training'),
+    'route' => t('dashboard.sportMap'),
+    'nutrition' => t('dashboard.nutrition'),
+    'hydration' => t('dashboard.hydration'),
+    'reminders' => t('dashboard.inbox'),
+    _ => t('dashboard.importantToday'),
+  };
+}
+
 const _dashboardWidgets = [
   _DashboardWidgetDef(
     key: 'training',
-    label: 'Training',
+    label: 'dashboard.training',
     icon: Icons.directions_run_outlined,
   ),
   _DashboardWidgetDef(
     key: 'focus',
-    label: 'Heute wichtig',
+    label: 'dashboard.importantToday',
     icon: Icons.bolt_outlined,
   ),
   _DashboardWidgetDef(
     key: 'nutrition',
-    label: 'Ernährung',
+    label: 'dashboard.nutrition',
     icon: Icons.restaurant_menu_outlined,
   ),
   _DashboardWidgetDef(
     key: 'events',
-    label: 'Termine',
+    label: 'dashboard.events',
     icon: Icons.calendar_month_outlined,
   ),
   _DashboardWidgetDef(
     key: 'sport_map',
-    label: 'Sportkarte',
+    label: 'dashboard.sportMap',
     icon: Icons.map_outlined,
   ),
   _DashboardWidgetDef(
     key: 'files',
-    label: 'Dateien',
+    label: 'dashboard.files',
     icon: Icons.folder_outlined,
   ),
   _DashboardWidgetDef(
     key: 'notifications',
-    label: 'Inbox',
+    label: 'dashboard.inbox',
     icon: Icons.notifications_outlined,
   ),
 ];
@@ -1196,36 +1504,50 @@ const _dashboardWidgets = [
 Iterable<_DashboardWidgetDef> get _visibleDashboardWidgets => _dashboardWidgets
     .where((widget) => AirmiusMvpSurface.isDashboardWidgetVisible(widget.key));
 
-const _stats = [
-  _DashboardStat(
-    label: 'Trainings diese Woche',
-    value: '4',
-    meta: '+12% zur Vorwoche',
-    icon: Icons.directions_run_outlined,
-    color: AirmiusColors.blue,
-  ),
-  _DashboardStat(
-    label: 'Trainingszeit',
-    value: '320 min',
-    meta: '5 aktive Tage',
-    icon: Icons.timer_outlined,
-    color: AirmiusColors.green,
-  ),
-  _DashboardStat(
-    label: 'Aktivitaetswert',
-    value: '82%',
-    meta: '7 Tage Serie',
-    icon: Icons.trending_up_outlined,
-    color: AirmiusColors.pink,
-  ),
-  _DashboardStat(
-    label: 'Speicher frei',
-    value: '1.8 GB',
-    meta: '24 Dateien',
-    icon: Icons.storage_outlined,
-    color: AirmiusColors.amber,
-  ),
-];
+List<_DashboardStat> _dashboardStats(
+  BuildContext context,
+  AirmiusScope scope,
+  _DashboardLiveData? liveData,
+) {
+  final training = liveData?.step('training');
+  final nutrition = liveData?.step('nutrition');
+  final hydration = liveData?.step('hydration');
+  String percent(_DashboardStep? step) =>
+      step == null ? '—' : '${step.progress}%';
+  String meta(_DashboardStep? step) => step?.meta.trim().isNotEmpty == true
+      ? step!.meta
+      : scope.t('dashboard.noLiveData');
+  return [
+    _DashboardStat(
+      label: 'dashboard.trainingProgress',
+      value: percent(training),
+      meta: meta(training),
+      icon: Icons.directions_run_outlined,
+      color: airmiusAccentColor(context),
+    ),
+    _DashboardStat(
+      label: 'dashboard.dailyScore',
+      value: liveData == null ? '—' : '${liveData.score}%',
+      meta: scope.t('dashboard.liveData'),
+      icon: Icons.trending_up_outlined,
+      color: Theme.of(context).colorScheme.tertiary,
+    ),
+    _DashboardStat(
+      label: 'dashboard.nutritionProgress',
+      value: percent(nutrition),
+      meta: meta(nutrition),
+      icon: Icons.restaurant_menu_outlined,
+      color: Theme.of(context).colorScheme.secondary,
+    ),
+    _DashboardStat(
+      label: 'dashboard.hydrationProgress',
+      value: percent(hydration),
+      meta: meta(hydration),
+      icon: Icons.water_drop_outlined,
+      color: Theme.of(context).colorScheme.tertiary,
+    ),
+  ];
+}
 
 ModuleDefinition _module(String title) {
   return appModules.firstWhere(

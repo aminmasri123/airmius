@@ -21,6 +21,9 @@ class MobileDeepLinkContractTest extends TestCase
             ['airmius://events/31', 'event_show', 'EventShow', 'event', '31'],
             ['airmius://feed/44', 'feed_post', 'FeedPost', 'post', '44'],
             ['airmius://chat/9', 'chat_conversation', 'ChatConversation', 'conversation', '9'],
+            ['airmius://messages/17', 'chat_message', 'ChatMessage', 'message', '17'],
+            ['airmius://profile/23', 'profile_show', 'ProfileShow', 'user', '23'],
+            ['airmius://friends/invitations/token/abc123/accept', 'friend_invitation', 'FriendInvitationAccept', 'token', 'abc123'],
             ['airmius://team-invitations/token/abc123/accept', 'invitation', 'InvitationAccept', 'token', 'abc123'],
         ];
 

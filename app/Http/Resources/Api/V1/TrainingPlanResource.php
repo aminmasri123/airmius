@@ -25,13 +25,28 @@ class TrainingPlanResource extends JsonResource
             'status' => $this->status,
             'share_permission' => $this->share_permission,
             'settings' => $this->settings,
+            'is_template' => (bool) data_get($this->settings, 'is_template', false),
+            'template_source_id' => data_get($this->settings, 'template_source_id'),
             'can_write' => $viewer ? $this->canWrite($viewer) : false,
             'can_delete' => $viewer ? (int) $this->created_by === (int) $viewer->id : false,
             'creator' => new UserResource($this->whenLoaded('creator')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'assignments_count' => $this->whenCounted('assignments'),
+            'assignments' => $this->whenLoaded('assignments', fn () => $this->assignments->map(fn ($assignment) => [
+                'id' => $assignment->id,
+                'permission' => $assignment->permission,
+                'user' => $assignment->user ? [
+                    'id' => $assignment->user->id,
+                    'name' => $assignment->user->name,
+                ] : null,
+                'team' => $assignment->team ? [
+                    'id' => $assignment->team->id,
+                    'name' => $assignment->team->name,
+                ] : null,
+            ])->values()),
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'id' => $item->id,
+                'source_exercise_id' => $item->source_exercise_id,
                 'title' => $item->title,
                 'sport_type' => $item->sport_type,
                 'description' => $item->description,

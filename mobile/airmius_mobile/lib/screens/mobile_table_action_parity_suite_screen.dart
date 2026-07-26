@@ -7,10 +7,12 @@ class MobileTableActionParitySuiteScreen extends StatefulWidget {
   const MobileTableActionParitySuiteScreen({super.key});
 
   @override
-  State<MobileTableActionParitySuiteScreen> createState() => _MobileTableActionParitySuiteScreenState();
+  State<MobileTableActionParitySuiteScreen> createState() =>
+      _MobileTableActionParitySuiteScreenState();
 }
 
-class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionParitySuiteScreen> {
+class _MobileTableActionParitySuiteScreenState
+    extends State<MobileTableActionParitySuiteScreen> {
   String _area = 'Verein';
   String _sort = 'Neueste';
   bool _bulkMode = false;
@@ -26,7 +28,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Mitgliedschaftsanfrage ZBB Konto',
       meta: 'ClubMemberships/Index',
       status: 'Offen',
-      body: 'Antrag, Formularfelder, Dokumente, Zahlweise, Rückzug und Adminentscheidung als mobile Listenkarte.',
+      body:
+          'Antrag, Formularfelder, Dokumente, Zahlweise, Rückzug und Adminentscheidung als mobile Listenkarte.',
       icon: Icons.assignment_ind_outlined,
       primary: 'Antrag prüfen',
       secondary: 'Dokumente',
@@ -37,7 +40,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Mitglied Max Mustermann',
       meta: 'Users/Profile + Club Member Directory',
       status: 'Aktiv',
-      body: 'Rolle, Team, Zahlstatus, Dateien, Notizen, Audit und schnelle Statusänderung ohne breite Tabelle.',
+      body:
+          'Rolle, Team, Zahlstatus, Dateien, Notizen, Audit und schnelle Statusänderung ohne breite Tabelle.',
       icon: Icons.people_outline,
       primary: 'Profil',
       secondary: 'Status',
@@ -48,7 +52,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Vereinsverifizierung Airmius Running Club',
       meta: 'Admin/ClubVerifications',
       status: 'Review',
-      body: 'Dokumente, Impressum, Kontakt, Entscheidung, Ablehnung, Kommentar und Benachrichtigung als Admin-Karte.',
+      body:
+          'Dokumente, Impressum, Kontakt, Entscheidung, Ablehnung, Kommentar und Benachrichtigung als Admin-Karte.',
       icon: Icons.verified_user_outlined,
       primary: 'Freigeben',
       secondary: 'Ablehnen',
@@ -59,7 +64,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Moderationsmeldung Beitrag #482',
       meta: 'Admin/Moderation',
       status: 'Eskalation',
-      body: 'Reportgrund, Autor, Inhalt, Maturity, Aktion, Sperre, Audit und Rückmeldung im mobilen Action-Sheet.',
+      body:
+          'Reportgrund, Autor, Inhalt, Maturity, Aktion, Sperre, Audit und Rückmeldung im mobilen Action-Sheet.',
       icon: Icons.flag_outlined,
       primary: 'Entscheiden',
       secondary: 'Audit',
@@ -70,7 +76,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Bestellung Marketplace #A-1042',
       meta: 'MarketplaceOrderStatus',
       status: 'Banktransfer',
-      body: 'Zahlstatus, Bankdaten, Rechnung, Lieferung, Support und Rückkehr zum Produkt als mobile Statuskarte.',
+      body:
+          'Zahlstatus, Bankdaten, Rechnung, Lieferung, Support und Rückkehr zum Produkt als mobile Statuskarte.',
       icon: Icons.receipt_long_outlined,
       primary: 'Status',
       secondary: 'Beleg',
@@ -81,7 +88,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Produkt Vereins-Shirt',
       meta: 'Commerce/ProductShow',
       status: 'Aktiv',
-      body: 'Preis, Varianten, Bestand, Anbieter, Wishlist, Warenkorb und Adminaktionen ohne Desktop-Tabelle.',
+      body:
+          'Preis, Varianten, Bestand, Anbieter, Wishlist, Warenkorb und Adminaktionen ohne Desktop-Tabelle.',
       icon: Icons.inventory_2_outlined,
       primary: 'Produkt',
       secondary: 'Bestand',
@@ -92,7 +100,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Blogbeitrag Trainingsplanung',
       meta: 'Blogs/Index + Categories',
       status: 'Entwurf',
-      body: 'Kategorie, Autor, Public Preview, Medien, Freigabe, SEO und Publishing als Karten-Workflow.',
+      body:
+          'Kategorie, Autor, Public Preview, Medien, Freigabe, SEO und Publishing als Karten-Workflow.',
       icon: Icons.article_outlined,
       primary: 'Bearbeiten',
       secondary: 'Preview',
@@ -103,7 +112,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Datei Datenschutzordnung.pdf',
       meta: 'Files/Index + ClubPolicyDocuments',
       status: 'Verknuepft',
-      body: 'Upload, Zweck, Sichtbarkeit, Link, Pflichtdokument, Version und Dateimanager-Zuordnung als mobile Zeile.',
+      body:
+          'Upload, Zweck, Sichtbarkeit, Link, Pflichtdokument, Version und Dateimanager-Zuordnung als mobile Zeile.',
       icon: Icons.folder_outlined,
       primary: 'Öffnen',
       secondary: 'Verknuepfen',
@@ -114,7 +124,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Training Event Samstag',
       meta: 'Events/Index + Show',
       status: '24 Zusagen',
-      body: 'Teilnahme, Warteliste, Team, Ort, Guardian-Gate, Kalender und Traineraktion in einer mobilen Karte.',
+      body:
+          'Teilnahme, Warteliste, Team, Ort, Guardian-Gate, Kalender und Traineraktion in einer mobilen Karte.',
       icon: Icons.event_available_outlined,
       primary: 'Teilnahme',
       secondary: 'Details',
@@ -125,7 +136,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Trainingslog Intervall',
       meta: 'Training/LogShow',
       status: 'Feedback',
-      body: 'Leistungswerte, Coach-Kommentar, Sichtbarkeit, Medien und Planbezug als kompakte Detailkarte.',
+      body:
+          'Leistungswerte, Coach-Kommentar, Sichtbarkeit, Medien und Planbezug als kompakte Detailkarte.',
       icon: Icons.fitness_center_outlined,
       primary: 'Log',
       secondary: 'Feedback',
@@ -133,23 +145,27 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
     ),
   ];
 
-  List<_MobileRow> get _visibleRows => _rows.where((row) => row.area == _area).toList();
+  List<_MobileRow> get _visibleRows =>
+      _rows.where((row) => row.area == _area).toList();
 
   @override
   Widget build(BuildContext context) {
     final selectedCount = _bulkMode ? _visibleRows.length : 0;
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
       body: SafeArea(
         child: PageFrame(
           title: 'Mobile Table Action Parity',
-          subtitle: 'Web-Tabellen werden mobile Karten, Filter und Action-Sheets.',
+          subtitle:
+              'Web-Tabellen werden mobile Karten, Filter und Action-Sheets.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -185,7 +201,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
                   onAction: () => openUiAction(
                     context,
                     title: 'Bulk-Aktion',
-                    body: 'Mehrfachauswahl für $_area: Statuswechsel, Export, Benachrichtigung oder Rollenaktion vorbereiten.',
+                    body:
+                        'Mehrfachauswahl für $_area: Statuswechsel, Export, Benachrichtigung oder Rollenaktion vorbereiten.',
                     status: 'Bulk',
                     icon: Icons.select_all_outlined,
                   ),
@@ -204,7 +221,8 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
                 onOpen: () => openUiAction(
                   context,
                   title: 'Table Action Parity',
-                  body: 'Desktop-Tabellenmuster wurden für mobile Karten, Filter, Sortierung, Pagination, Bulk-Auswahl, Export und Action-Sheets vorbereitet.',
+                  body:
+                      'Desktop-Tabellenmuster wurden für mobile Karten, Filter, Sortierung, Pagination, Bulk-Auswahl, Export und Action-Sheets vorbereitet.',
                   status: 'Mobile Tables',
                   icon: Icons.table_rows_outlined,
                 ),
@@ -239,14 +257,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('MOBILE LISTEN'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Tabellen werden zu Karten, nicht zu Mini-Excel.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Viele Webmodule nutzen Tabellen. In der App werden daraus mobile Listen mit Filterchips, Status-Pills, Detail-CTA, Bulk-Bar und sicheren Action-Sheets.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -286,14 +312,23 @@ class _FilterPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Filter und Sortierung',
-      subtitle: 'Desktop-Tabellenfilter werden zu horizontalen Chips und klaren mobilen Suchzustaenden.',
+      subtitle:
+          'Desktop-Tabellenfilter werden zu horizontalen Chips und klaren mobilen Suchzustaenden.',
       children: [
         const Eyebrow('Bereich'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: areas.map((area) => _Chip(label: area, selected: activeArea == area, onTap: () => onArea(area))).toList(),
+          children: areas
+              .map(
+                (area) => _Chip(
+                  label: area,
+                  selected: activeArea == area,
+                  onTap: () => onArea(area),
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: 14),
         const Eyebrow('Sortieren nach'),
@@ -301,7 +336,16 @@ class _FilterPanel extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: sorts.map((sort) => _Chip(label: sort, selected: activeSort == sort, onTap: () => onSort(sort), green: true)).toList(),
+          children: sorts
+              .map(
+                (sort) => _Chip(
+                  label: sort,
+                  selected: activeSort == sort,
+                  onTap: () => onSort(sort),
+                  green: true,
+                ),
+              )
+              .toList(),
         ),
       ],
     );
@@ -329,11 +373,24 @@ class _ModePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Aktionen',
-      subtitle: 'Listenaktionen werden auf Mobile sichtbar, aber nicht überladen.',
+      subtitle:
+          'Listenaktionen werden auf Mobile sichtbar, aber nicht überladen.',
       children: [
-        _SwitchLine(title: 'Bulk-Auswahl aktivieren', value: bulkMode, onChanged: onBulk),
-        _SwitchLine(title: 'Export-/Download-CTAs zeigen', value: showExports, onChanged: onExports),
-        _SwitchLine(title: 'Gefaehrliche Aktionen sichtbar', value: showDangerActions, onChanged: onDanger),
+        _SwitchLine(
+          title: 'Bulk-Auswahl aktivieren',
+          value: bulkMode,
+          onChanged: onBulk,
+        ),
+        _SwitchLine(
+          title: 'Export-/Download-CTAs zeigen',
+          value: showExports,
+          onChanged: onExports,
+        ),
+        _SwitchLine(
+          title: 'Gefaehrliche Aktionen sichtbar',
+          value: showDangerActions,
+          onChanged: onDanger,
+        ),
       ],
     );
   }
@@ -353,16 +410,34 @@ class _BulkBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      borderColor: AirmiusColors.green,
+      borderColor: Theme.of(context).colorScheme.secondary,
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          StatusPill('$count ausgewählt', color: AirmiusColors.green),
-          AirmiusButton(label: 'Status wechseln', icon: Icons.swap_horiz_outlined, onPressed: onAction),
-          AirmiusButton(label: 'Benachrichtigen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: onAction),
-          if (showExports) AirmiusButton(label: 'Export', icon: Icons.download_outlined, secondary: true, onPressed: onAction),
+          StatusPill(
+            '$count ausgewählt',
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+          AirmiusButton(
+            label: 'Status wechseln',
+            icon: Icons.swap_horiz_outlined,
+            onPressed: onAction,
+          ),
+          AirmiusButton(
+            label: 'Benachrichtigen',
+            icon: Icons.mark_email_read_outlined,
+            secondary: true,
+            onPressed: onAction,
+          ),
+          if (showExports)
+            AirmiusButton(
+              label: 'Export',
+              icon: Icons.download_outlined,
+              secondary: true,
+              onPressed: onAction,
+            ),
         ],
       ),
     );
@@ -382,8 +457,9 @@ class _MobileRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, row.color);
     return AirmiusPanel(
-      borderColor: row.color.withValues(alpha: .5),
+      borderColor: color.withValues(alpha: .5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -391,35 +467,59 @@ class _MobileRowCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (bulkMode) ...[
-                Checkbox(value: true, activeColor: AirmiusColors.green, onChanged: (_) {}),
+                Checkbox(
+                  value: true,
+                  activeColor: Theme.of(context).colorScheme.secondary,
+                  onChanged: (_) {},
+                ),
                 const SizedBox(width: 8),
               ],
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: row.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: row.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(row.icon, color: row.color),
+                child: Icon(row.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      row.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(row.meta, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      row.meta,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(row.status, color: row.color),
+              StatusPill(row.status, color: color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(row.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            row.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -431,7 +531,8 @@ class _MobileRowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: row.primary,
-                  body: '${row.title}: ${row.body}\n\nMobile Tabellenzeile für ${row.meta}.',
+                  body:
+                      '${row.title}: ${row.body}\n\nMobile Tabellenzeile für ${row.meta}.',
                   status: row.status,
                   icon: row.icon,
                 ),
@@ -443,7 +544,8 @@ class _MobileRowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: row.secondary,
-                  body: 'Action-Sheet mit Details, Rollen, Dokumenten, Export, Benachrichtigung und Audit für ${row.title}.',
+                  body:
+                      'Action-Sheet mit Details, Rollen, Dokumenten, Export, Benachrichtigung und Audit für ${row.title}.',
                   status: 'Action Sheet',
                   icon: Icons.more_horiz_outlined,
                 ),
@@ -456,7 +558,8 @@ class _MobileRowCard extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: 'Gefaehrliche Aktion',
-                    body: 'Danger-Aktion für ${row.title}: Bestätigung, Grund, Audit und Rückmeldung erforderlich.',
+                    body:
+                        'Danger-Aktion für ${row.title}: Bestätigung, Grund, Audit und Rückmeldung erforderlich.',
                     status: 'Danger',
                     icon: Icons.block_outlined,
                   ),
@@ -480,12 +583,24 @@ class _Checklist extends StatelessWidget {
       title: 'Tabellen-Paritaet',
       subtitle: 'Was aus Desktop-Listen mobil übersetzt wird.',
       children: [
-        const _CheckLine('Jede Tabellenzeile wird eine lesbare Karte mit Status, Kontext und CTA.'),
-        const _CheckLine('Filter, Suche und Sortierung werden als Chips und kompakte Panels gefuehrt.'),
-        const _CheckLine('Bulk-Auswahl, Export und Benachrichtigungen bleiben mobil bedienbar.'),
-        const _CheckLine('Gefaehrliche Aktionen bleiben hinter expliziten Action-Sheets und Audit-Hinweisen.'),
+        const _CheckLine(
+          'Jede Tabellenzeile wird eine lesbare Karte mit Status, Kontext und CTA.',
+        ),
+        const _CheckLine(
+          'Filter, Suche und Sortierung werden als Chips und kompakte Panels gefuehrt.',
+        ),
+        const _CheckLine(
+          'Bulk-Auswahl, Export und Benachrichtigungen bleiben mobil bedienbar.',
+        ),
+        const _CheckLine(
+          'Gefaehrliche Aktionen bleiben hinter expliziten Action-Sheets und Audit-Hinweisen.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Tabellen-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Tabellen-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -508,14 +623,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -537,15 +664,22 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = green ? AirmiusColors.green : AirmiusColors.blue;
+    final color = green
+        ? Theme.of(context).colorScheme.secondary
+        : airmiusAccentColor(context);
     return ChoiceChip(
       selected: selected,
       label: Text(label),
       onSelected: (_) => onTap(),
       selectedColor: color.withValues(alpha: .25),
-      backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: selected ? color : AirmiusColors.border),
-      labelStyle: TextStyle(color: selected ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+      backgroundColor: airmiusSurfaceSoftColor(context),
+      side: BorderSide(color: selected ? color : airmiusBorderColor(context)),
+      labelStyle: TextStyle(
+        color: selected
+            ? airmiusTextColor(context)
+            : airmiusMutedColor(context),
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
@@ -562,9 +696,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -572,10 +719,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -585,16 +729,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

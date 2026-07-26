@@ -7,10 +7,12 @@ class FacilityBookingResourceSchedulerSuiteScreen extends StatefulWidget {
   const FacilityBookingResourceSchedulerSuiteScreen({super.key});
 
   @override
-  State<FacilityBookingResourceSchedulerSuiteScreen> createState() => _FacilityBookingResourceSchedulerSuiteScreenState();
+  State<FacilityBookingResourceSchedulerSuiteScreen> createState() =>
+      _FacilityBookingResourceSchedulerSuiteScreenState();
 }
 
-class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBookingResourceSchedulerSuiteScreen> {
+class _FacilityBookingResourceSchedulerSuiteScreenState
+    extends State<FacilityBookingResourceSchedulerSuiteScreen> {
   String _resourceType = 'Plaetze';
   bool _conflictCheck = true;
   bool _roleRules = true;
@@ -19,19 +21,33 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
 
   @override
   Widget build(BuildContext context) {
-    final resources = _resources.where((resource) => _resourceType == 'Alle' || resource.type == _resourceType).toList();
+    final resources = _resources
+        .where(
+          (resource) =>
+              _resourceType == 'Alle' || resource.type == _resourceType,
+        )
+        .toList();
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Ressourcen buchen', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Ressourcen buchen',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Facility Booking Resource Scheduler',
-        subtitle: 'Mobile UI für Plaetze, Hallen, Raeume, Geräte, Buchungen, Konflikte, Wartung und Rollenrechte.',
-        trailing: const StatusPill('Scheduler', color: AirmiusColors.green),
+        subtitle:
+            'Mobile UI für Plaetze, Hallen, Raeume, Geräte, Buchungen, Konflikte, Wartung und Rollenrechte.',
+        trailing: StatusPill(
+          'Scheduler',
+          color: Theme.of(context).colorScheme.secondary,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -42,30 +58,59 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
                 children: [
                   const Eyebrow('RESOURCE BOOKING'),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Vereinsressourcen werden mobil planbar.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Die App bereitet Buchungen für Plaetze, Hallen, Raeume, Geräte und Trainingsfenster mit Konfliktprüfung und Rollenrechten vor.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.42),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['Alle', 'Plaetze', 'Hallen', 'Raeume', 'Geräte', 'Training', 'Wartung'].map((item) {
-                      return ChoiceChip(
-                        selected: _resourceType == item,
-                        label: Text(item),
-                        onSelected: (_) => setState(() => _resourceType = item),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                        backgroundColor: AirmiusColors.panelSoft,
-                        side: BorderSide(color: _resourceType == item ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _resourceType == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          'Alle',
+                          'Plaetze',
+                          'Hallen',
+                          'Raeume',
+                          'Geräte',
+                          'Training',
+                          'Wartung',
+                        ].map((item) {
+                          return ChoiceChip(
+                            selected: _resourceType == item,
+                            label: Text(item),
+                            onSelected: (_) =>
+                                setState(() => _resourceType = item),
+                            selectedColor: airmiusAccentColor(
+                              context,
+                            ).withValues(alpha: .22),
+                            backgroundColor: airmiusSurfaceSoftColor(context),
+                            side: BorderSide(
+                              color: _resourceType == item
+                                  ? airmiusAccentColor(context)
+                                  : airmiusBorderColor(context),
+                            ),
+                            labelStyle: TextStyle(
+                              color: _resourceType == item
+                                  ? airmiusTextColor(context)
+                                  : airmiusMutedColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -73,11 +118,17 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '6', label: 'Ressourcen')),
+                Expanded(
+                  child: MetricCard(value: '6', label: 'Ressourcen'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '18', label: 'Slots')),
+                Expanded(
+                  child: MetricCard(value: '18', label: 'Slots'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '2', label: 'Konflikte')),
+                Expanded(
+                  child: MetricCard(value: '2', label: 'Konflikte'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -85,35 +136,50 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(children: [const Expanded(child: Eyebrow('BUCHUNGSREGELN')), StatusPill(_resourceType, color: AirmiusColors.blue)]),
+                  Row(
+                    children: [
+                      const Expanded(child: Eyebrow('BUCHUNGSREGELN')),
+                      StatusPill(
+                        _resourceType,
+                        color: airmiusAccentColor(context),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   _BookingToggle(
                     icon: Icons.event_busy_outlined,
                     title: 'Konfliktprüfung',
-                    body: 'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfuegbarkeit werden vor dem Speichern geprüft.',
+                    body:
+                        'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfuegbarkeit werden vor dem Speichern geprüft.',
                     enabled: _conflictCheck,
-                    onChanged: (value) => setState(() => _conflictCheck = value),
+                    onChanged: (value) =>
+                        setState(() => _conflictCheck = value),
                   ),
                   _BookingToggle(
                     icon: Icons.admin_panel_settings_outlined,
                     title: 'Rollenrechte',
-                    body: 'Mitglieder, Trainer, Vereinsadmins und Kassenwarte bekommen unterschiedliche Buchungs- und Freigaberechte.',
+                    body:
+                        'Mitglieder, Trainer, Vereinsadmins und Kassenwarte bekommen unterschiedliche Buchungs- und Freigaberechte.',
                     enabled: _roleRules,
                     onChanged: (value) => setState(() => _roleRules = value),
                   ),
                   _BookingToggle(
                     icon: Icons.build_outlined,
                     title: 'Wartungszeiten',
-                    body: 'Plaetze, Raeume oder Geräte können für Pflege, Reparatur oder externe Nutzung blockiert werden.',
+                    body:
+                        'Plaetze, Raeume oder Geräte können für Pflege, Reparatur oder externe Nutzung blockiert werden.',
                     enabled: _maintenanceBlocks,
-                    onChanged: (value) => setState(() => _maintenanceBlocks = value),
+                    onChanged: (value) =>
+                        setState(() => _maintenanceBlocks = value),
                   ),
                   _BookingToggle(
                     icon: Icons.payments_outlined,
                     title: 'Zahlungspflichtige Slots',
-                    body: 'Optionale Gebuehren für externe Gäste, Court-Buchungen oder Sondernutzung können später angebunden werden.',
+                    body:
+                        'Optionale Gebuehren für externe Gäste, Court-Buchungen oder Sondernutzung können später angebunden werden.',
                     enabled: _paymentRequired,
-                    onChanged: (value) => setState(() => _paymentRequired = value),
+                    onChanged: (value) =>
+                        setState(() => _paymentRequired = value),
                     last: true,
                   ),
                 ],
@@ -125,25 +191,47 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
               const SizedBox(height: 12),
             ],
             AirmiusPanel(
-              borderColor: AirmiusColors.amber.withValues(alpha: .45),
+              borderColor: Theme.of(
+                context,
+              ).colorScheme.tertiary.withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('KONFLIKT-VORSCHAU'),
                   const SizedBox(height: 8),
-                  const Text('Court 1 ist um 18:00 bereits durch U16 Training belegt. Alternative: Court 2 um 18:30 oder Halle B um 19:00.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
+                  Text(
+                    'Court 1 ist um 18:00 bereits durch U16 Training belegt. Alternative: Court 2 um 18:30 oder Halle B um 19:00.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                      height: 1.38,
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const [
-                      StatusPill('Alternative gefunden', color: AirmiusColors.green),
-                      StatusPill('Trainer-Konflikt', color: AirmiusColors.amber),
-                      StatusPill('Teamtermin', color: AirmiusColors.blue),
+                    children: [
+                      StatusPill(
+                        'Alternative gefunden',
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
+                      StatusPill(
+                        'Trainer-Konflikt',
+                        color: Theme.of(context).colorScheme.tertiary,
+                      ),
+                      StatusPill(
+                        'Teamtermin',
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'Alternative buchen', icon: Icons.event_available_outlined, onPressed: () {}),
+                  AirmiusButton(
+                    label: 'Alternative buchen',
+                    icon: Icons.event_available_outlined,
+                    onPressed: () {},
+                  ),
                 ],
               ),
             ),
@@ -154,10 +242,25 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
                 children: [
                   const Eyebrow('API BOOKING PAYLOAD'),
                   const SizedBox(height: 10),
-                  const _PayloadLine(label: 'resource_type', value: 'court, hall, room, equipment, training_slot'),
-                  const _PayloadLine(label: 'rules', value: 'role_scope, conflict_check, maintenance_block, payment_required'),
-                  const _PayloadLine(label: 'actions', value: 'reserve, approve, cancel, reschedule, block, export'),
-                  const _PayloadLine(label: 'audit', value: 'created_by, team_id, trainer_id, changed_at, conflict_reason'),
+                  const _PayloadLine(
+                    label: 'resource_type',
+                    value: 'court, hall, room, equipment, training_slot',
+                  ),
+                  const _PayloadLine(
+                    label: 'rules',
+                    value:
+                        'role_scope, conflict_check, maintenance_block, payment_required',
+                  ),
+                  const _PayloadLine(
+                    label: 'actions',
+                    value:
+                        'reserve, approve, cancel, reschedule, block, export',
+                  ),
+                  const _PayloadLine(
+                    label: 'audit',
+                    value:
+                        'created_by, team_id, trainer_id, changed_at, conflict_reason',
+                  ),
                 ],
               ),
             ),
@@ -169,7 +272,14 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
 }
 
 class _Resource {
-  const _Resource({required this.type, required this.title, required this.body, required this.status, required this.icon, required this.color});
+  const _Resource({
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.status,
+    required this.icon,
+    required this.color,
+  });
 
   final String type;
   final String title;
@@ -180,13 +290,63 @@ class _Resource {
 }
 
 const _resources = [
-  _Resource(type: 'Plaetze', title: 'Court 1', body: 'Tennisplatz mit Flutlicht, heute 18:00 durch U16 Training belegt.', status: 'Belegt', icon: Icons.sports_tennis, color: AirmiusColors.amber),
-  _Resource(type: 'Plaetze', title: 'Court 2', body: 'Freier Slot um 18:30, buchbar für Mitglieder und Trainer.', status: 'Frei', icon: Icons.sports_tennis, color: AirmiusColors.green),
-  _Resource(type: 'Hallen', title: 'Halle B', body: 'Mehrzweckhalle für Training, Events und Vereinsversammlungen.', status: '19:00 frei', icon: Icons.location_on_outlined, color: AirmiusColors.blue),
-  _Resource(type: 'Raeume', title: 'Besprechungsraum', body: 'Vorstand, Trainermeeting, Elternabend oder Sponsorentermin.', status: 'Review', icon: Icons.meeting_room_outlined, color: AirmiusColors.blue),
-  _Resource(type: 'Geräte', title: 'Timing-System', body: 'Gerät für Wettkampf und Training, Rückgabe mit Checkliste.', status: 'Ausgabe', icon: Icons.inventory_2_outlined, color: AirmiusColors.green),
-  _Resource(type: 'Training', title: 'U16 Trainingsslot', body: 'Serientermin mit Coach, Team, Check-in und Anwesenheitsliste.', status: 'Serie', icon: Icons.event_available_outlined, color: AirmiusColors.green),
-  _Resource(type: 'Wartung', title: 'Court Pflege', body: 'Blockierter Zeitraum für Reinigung, Reparatur oder Saisonvorbereitung.', status: 'Block', icon: Icons.build_outlined, color: AirmiusColors.amber),
+  _Resource(
+    type: 'Plaetze',
+    title: 'Court 1',
+    body: 'Tennisplatz mit Flutlicht, heute 18:00 durch U16 Training belegt.',
+    status: 'Belegt',
+    icon: Icons.sports_tennis,
+    color: AirmiusColors.amber,
+  ),
+  _Resource(
+    type: 'Plaetze',
+    title: 'Court 2',
+    body: 'Freier Slot um 18:30, buchbar für Mitglieder und Trainer.',
+    status: 'Frei',
+    icon: Icons.sports_tennis,
+    color: AirmiusColors.green,
+  ),
+  _Resource(
+    type: 'Hallen',
+    title: 'Halle B',
+    body: 'Mehrzweckhalle für Training, Events und Vereinsversammlungen.',
+    status: '19:00 frei',
+    icon: Icons.location_on_outlined,
+    color: AirmiusColors.blue,
+  ),
+  _Resource(
+    type: 'Raeume',
+    title: 'Besprechungsraum',
+    body: 'Vorstand, Trainermeeting, Elternabend oder Sponsorentermin.',
+    status: 'Review',
+    icon: Icons.meeting_room_outlined,
+    color: AirmiusColors.blue,
+  ),
+  _Resource(
+    type: 'Geräte',
+    title: 'Timing-System',
+    body: 'Gerät für Wettkampf und Training, Rückgabe mit Checkliste.',
+    status: 'Ausgabe',
+    icon: Icons.inventory_2_outlined,
+    color: AirmiusColors.green,
+  ),
+  _Resource(
+    type: 'Training',
+    title: 'U16 Trainingsslot',
+    body: 'Serientermin mit Coach, Team, Check-in und Anwesenheitsliste.',
+    status: 'Serie',
+    icon: Icons.event_available_outlined,
+    color: AirmiusColors.green,
+  ),
+  _Resource(
+    type: 'Wartung',
+    title: 'Court Pflege',
+    body:
+        'Blockierter Zeitraum für Reinigung, Reparatur oder Saisonvorbereitung.',
+    status: 'Block',
+    icon: Icons.build_outlined,
+    color: AirmiusColors.amber,
+  ),
 ];
 
 class _ResourceCard extends StatelessWidget {
@@ -196,16 +356,21 @@ class _ResourceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resourceColor = airmiusSemanticColor(context, resource.color);
     return AirmiusPanel(
-      borderColor: resource.color.withValues(alpha: .42),
+      borderColor: resourceColor.withValues(alpha: .42),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(color: resource.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: resource.color.withValues(alpha: .42))),
-            child: Icon(resource.icon, color: resource.color),
+            decoration: BoxDecoration(
+              color: resourceColor.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: resourceColor.withValues(alpha: .42)),
+            ),
+            child: Icon(resource.icon, color: resourceColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -214,14 +379,35 @@ class _ResourceCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(resource.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-                    StatusPill(resource.status, color: resource.color),
+                    Expanded(
+                      child: Text(
+                        resource.title,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    StatusPill(resource.status, color: resourceColor),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(resource.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  resource.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
                 const SizedBox(height: 9),
-                Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(resource.type, color: resource.color), const StatusPill('Bookable')]),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    StatusPill(resource.type, color: resourceColor),
+                    const StatusPill('Bookable'),
+                  ],
+                ),
               ],
             ),
           ),
@@ -232,7 +418,14 @@ class _ResourceCard extends StatelessWidget {
 }
 
 class _BookingToggle extends StatelessWidget {
-  const _BookingToggle({required this.icon, required this.title, required this.body, required this.enabled, required this.onChanged, this.last = false});
+  const _BookingToggle({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.enabled,
+    required this.onChanged,
+    this.last = false,
+  });
 
   final IconData icon;
   final String title;
@@ -248,19 +441,40 @@ class _BookingToggle extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: enabled ? AirmiusColors.green : AirmiusColors.muted),
+          Icon(
+            icon,
+            color: enabled
+                ? Theme.of(context).colorScheme.secondary
+                : airmiusMutedColor(context),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
-          Switch(value: enabled, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Switch(
+            value: enabled,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -279,12 +493,33 @@ class _PayloadLine extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 112, child: Text(label, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.text, height: 1.35))),
+            SizedBox(
+              width: 112,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: airmiusAccentColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  height: 1.35,
+                ),
+              ),
+            ),
           ],
         ),
       ),

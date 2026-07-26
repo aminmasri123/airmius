@@ -78,7 +78,7 @@ class TrainerCockpitController extends Controller
         $plans = $this->plans($teamIds, $user);
         $coachWeekly = $this->coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems);
 
-        return Inertia::render('Auth/Dashboard/TrainerCockpit/Index', [
+        $payload = [
             'teams' => $teams,
             'summary' => [
                 'teams' => $teamCount,
@@ -98,7 +98,13 @@ class TrainerCockpitController extends Controller
             'recentLogs' => $recentLogs,
             'plans' => $plans,
             'coachWeekly' => $coachWeekly,
-        ]);
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => $payload]);
+        }
+
+        return Inertia::render('Auth/Dashboard/TrainerCockpit/Index', $payload);
     }
 
     public static function userCanView(User $user): bool

@@ -3,6 +3,9 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Support\UploadStorage;
+use App\Support\ClubPermissions;
+use App\Support\Roles;
+use App\Services\PlanFeatureService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,6 +13,13 @@ class ClubResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $membershipPivot = $this->pivot;
+        if (! $membershipPivot && $request->user()) {
+            $membershipPivot = $this->users()
+                ->whereKey($request->user()->id)
+                ->first()?->pivot;
+        }
+
         return [
             'id' => $this->id,
             'owner_id' => $this->owner_id,
@@ -46,11 +56,20 @@ class ClubResource extends JsonResource
             'members_can_post_to_teams' => (bool) $this->members_can_post_to_teams,
             'visibility' => $this->visibility,
             'can_manage' => (bool) ($request->user()?->can('update', $this->resource) ?? false),
+            'can_manage_training_exercises' => (bool) ($request->user()
+                && app(PlanFeatureService::class)->allows($this->resource, 'exercise_library_custom')
+                && ($this->owner_id === $request->user()->id
+                    || $request->user()->hasAnyRole(Roles::FULL_ACCESS)
+                    || ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::EVENTS_MANAGE))),
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
-            'membership' => $this->pivot ? [
-                'role' => $this->pivot->role ?? null,
-                'status' => $this->pivot->membership_status ?? null,
-                'joined_on' => isset($this->pivot->joined_on) ? (string) $this->pivot->joined_on : null,
+            'membership' => $membershipPivot ? [
+                'role' => $membershipPivot->role ?? null,
+                'status' => $membershipPivot->membership_status ?? null,
+                'joined_on' => isset($membershipPivot->joined_on) ? (string) $membershipPivot->joined_on : null,
+                'membership_ends_on' => isset($membershipPivot->membership_ends_on) ? (string) $membershipPivot->membership_ends_on : null,
+                'pause_requested' => (bool) ($membershipPivot->pause_requested_at ?? false),
+                'paused_from' => isset($membershipPivot->paused_from) ? (string) $membershipPivot->paused_from : null,
+                'paused_until' => isset($membershipPivot->paused_until) ? (string) $membershipPivot->paused_until : null,
             ] : null,
             'users_count' => $this->whenCounted('users'),
             'teams_count' => $this->whenCounted('teams'),

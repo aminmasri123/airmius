@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -10,6 +11,13 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, locale, messages } = useI18n()
+const tx = (key, fallback = key, values = {}) => {
+    const auto = messages.value?.[locale.value]?.auto?.[key]
+    if (auto) return t(key, values) === key ? auto : t(key, values)
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const storage = computed(() => page.props.auth?.user?.storage_usage || null)
 const showCustomize = ref(false)
 const defaultWidgetKeys = ['training', 'focus', 'nutrition', 'events', 'sport_map', 'files', 'notifications']
@@ -19,17 +27,17 @@ const legacyStorageKey = 'airmius.dashboard.widgets.v2'
 const storageKey = computed(() => `airmius.dashboard.widgets.v3.${page.props.auth?.user?.id || 'guest'}`)
 let preferencesSaveTimer = null
 
-const widgets = [
-    { key: 'training', label: 'Training', icon: 'las la-running' },
-    { key: 'focus', label: 'Heute wichtig', icon: 'las la-bolt' },
-    { key: 'nutrition', label: 'Ernährung', icon: 'las la-utensils' },
-    { key: 'events', label: 'Termine', icon: 'las la-calendar-check' },
-    { key: 'sport_map', label: 'Sportkarte', icon: 'las la-map-marked-alt' },
-    { key: 'files', label: 'Dateien', icon: 'las la-folder-open' },
-    { key: 'notifications', label: 'Inbox', icon: 'las la-bell' },
-]
+const widgets = computed(() => [
+    { key: 'training', label: tx('Training'), icon: 'las la-running' },
+    { key: 'focus', label: tx('Heute wichtig'), icon: 'las la-bolt' },
+    { key: 'nutrition', label: tx('Ernährung'), icon: 'las la-utensils' },
+    { key: 'events', label: tx('Termine'), icon: 'las la-calendar-check' },
+    { key: 'sport_map', label: tx('Sportkarte'), icon: 'las la-map-marked-alt' },
+    { key: 'files', label: tx('Dateien'), icon: 'las la-folder-open' },
+    { key: 'notifications', label: tx('Inbox'), icon: 'las la-bell' },
+])
 
-const userName = computed(() => props.dashboard?.profile?.name || page.props.auth?.user?.first_name || page.props.auth?.user?.name || 'Sportler')
+const userName = computed(() => props.dashboard?.profile?.name || page.props.auth?.user?.first_name || page.props.auth?.user?.name || tx('Sportler'))
 const training = computed(() => props.dashboard?.training || {})
 const events = computed(() => props.dashboard?.events || {})
 const nutrition = computed(() => props.dashboard?.nutrition || {})
@@ -47,7 +55,7 @@ const hasNutritionChart = computed(() => nutritionChart.value.some((item) => Num
 const stats = computed(() => [
     {
         key: 'trainings',
-        label: 'Trainings diese Woche',
+        label: tx('Trainings diese Woche'),
         value: formatNumber(training.value.week_count || 0),
         meta: trendLabel(training.value.trend_percent),
         icon: 'las la-running',
@@ -55,25 +63,25 @@ const stats = computed(() => [
     },
     {
         key: 'minutes',
-        label: 'Trainingszeit',
+        label: tx('Trainingszeit'),
         value: `${formatNumber(training.value.week_minutes || 0)} min`,
-        meta: `${formatNumber(training.value.active_days || 0)} aktive Tage`,
+        meta: `${formatNumber(training.value.active_days || 0)} ${tx('aktive Tage')}`,
         icon: 'las la-stopwatch',
         tone: 'from-emerald-500 to-lime-400',
     },
     {
         key: 'fitness',
-        label: 'Aktivitätswert',
+        label: tx('Aktivitätswert'),
         value: `${formatNumber(training.value.activity_score || 0)}%`,
-        meta: `${formatNumber(training.value.streak_days || 0)} Tage Serie`,
+        meta: `${formatNumber(training.value.streak_days || 0)} ${tx('Tage Serie')}`,
         icon: 'las la-chart-line',
         tone: 'from-violet-500 to-fuchsia-400',
     },
     {
         key: 'storage',
-        label: 'Speicher frei',
+        label: tx('Speicher frei'),
         value: storage.value ? formatBytes(storage.value.remaining_bytes) : formatBytes(files.value.bytes || 0),
-        meta: storage.value ? `${storage.value.used_percent}% genutzt` : `${formatNumber(files.value.count || 0)} Dateien`,
+        meta: storage.value ? `${storage.value.used_percent}% ${tx('genutzt')}` : `${formatNumber(files.value.count || 0)} ${tx('Dateien')}`,
         icon: 'las la-database',
         tone: 'from-amber-400 to-orange-500',
     },
@@ -81,29 +89,29 @@ const stats = computed(() => [
 
 const quickActions = computed(() => [
     {
-        title: 'Training',
-        subtitle: 'Dokumentieren',
+        title: tx('Training'),
+        subtitle: tx('Dokumentieren'),
         href: route('auth.training.logs.create'),
         icon: 'las la-clipboard-check',
         tone: 'bg-sky-500/15 text-sky-200 border-sky-400/30',
     },
     {
-        title: 'Route',
-        subtitle: 'Planen',
+        title: tx('Route'),
+        subtitle: tx('Planen'),
         href: route('auth.sport-map.index'),
         icon: 'las la-route',
         tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
     },
     {
-        title: 'Ernährung',
-        subtitle: 'Eintragen',
+        title: tx('Ernährung'),
+        subtitle: tx('Eintragen'),
         href: route('auth.nutrition.index'),
         icon: 'las la-utensils',
         tone: 'bg-orange-500/15 text-orange-100 border-orange-400/30',
     },
     {
-        title: 'Plan',
-        subtitle: 'Öffnen',
+        title: tx('Plan'),
+        subtitle: tx('Öffnen'),
         href: route('auth.training.index'),
         icon: 'las la-calendar-plus',
         tone: 'bg-violet-500/15 text-violet-100 border-violet-400/30',
@@ -120,7 +128,7 @@ const toggleWidget = (key) => {
     visibleWidgetKeys.value = [...visibleWidgetKeys.value, key]
 }
 
-const validWidgetKeys = computed(() => widgets.map((widget) => widget.key))
+const validWidgetKeys = computed(() => widgets.value.map((widget) => widget.key))
 
 const normalizeWidgetKeys = (keys) => {
     if (!Array.isArray(keys)) return null
@@ -173,7 +181,8 @@ const syncWidgetPreferences = (keys) => {
 
 const barHeight = (value, max) => `${Math.max(10, Math.round((Number(value || 0) / max) * 100))}%`
 
-const formatNumber = (value) => new Intl.NumberFormat('de-DE').format(Number(value || 0))
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
 
 const formatBytes = (bytes) => {
     const value = Number(bytes || 0)
@@ -190,13 +199,13 @@ const formatDistance = (meters) => {
 
     if (value <= 0) return '0 km'
 
-    return `${(value / 1000).toLocaleString('de-DE', { maximumFractionDigits: value >= 10000 ? 0 : 1 })} km`
+    return `${(value / 1000).toLocaleString(localeCode.value, { maximumFractionDigits: value >= 10000 ? 0 : 1 })} km`
 }
 
 const formatDateTime = (value) => {
-    if (!value) return 'Kein Termin'
+    if (!value) return tx('Kein Termin')
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
@@ -207,16 +216,16 @@ const formatDateTime = (value) => {
 const trendLabel = (value) => {
     const trend = Number(value || 0)
 
-    if (trend > 0) return `+${trend}% zur Vorwoche`
-    if (trend < 0) return `${trend}% zur Vorwoche`
+    if (trend > 0) return `+${trend}% ${tx('zur Vorwoche')}`
+    if (trend < 0) return `${trend}% ${tx('zur Vorwoche')}`
 
-    return 'stabil zur Vorwoche'
+    return tx('stabil zur Vorwoche')
 }
 
 const notificationTime = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
@@ -252,7 +261,7 @@ watch(visibleWidgetKeys, (keys) => {
 </script>
 
 <template>
-    <Head :title="$t('Dashboard')" />
+    <Head :title="tx('Dashboard')" />
 
     <div class="space-y-4 pb-20 md:space-y-6">
         <section class="surface-card overflow-hidden">
@@ -260,10 +269,10 @@ watch(visibleWidgetKeys, (keys) => {
                 <div class="absolute inset-x-0 top-0 -z-10 h-28 bg-gradient-to-r from-air-blue/25 via-emerald-400/15 to-fuchsia-500/20"></div>
                 <div class="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="min-w-0 max-w-2xl">
-                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Dashboard</p>
-                        <h1 class="mt-1 truncate text-2xl font-black text-primary sm:text-3xl">Hallo {{ userName }}</h1>
+                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('Dashboard') }}</p>
+                        <h1 class="mt-1 truncate text-2xl font-black text-primary sm:text-3xl">{{ tx('Hallo') }} {{ userName }}</h1>
                         <p class="mt-2 max-w-xl text-sm leading-6 text-secondary">
-                            Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.
+                            {{ tx('Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.') }}
                         </p>
                     </div>
 
@@ -273,7 +282,7 @@ watch(visibleWidgetKeys, (keys) => {
                         @click="showCustomize = !showCustomize"
                     >
                         <i class="las la-sliders-h text-lg"></i>
-                        Dashboard anpassen
+                        {{ tx('Dashboard anpassen') }}
                     </button>
                 </div>
 
@@ -283,11 +292,11 @@ watch(visibleWidgetKeys, (keys) => {
                 >
                     <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div class="min-w-0">
-                            <p class="text-sm font-bold text-primary">Widgets</p>
-                            <p class="text-xs text-secondary">Wähle aus, was auf deinem Dashboard sichtbar ist.</p>
+                            <p class="text-sm font-bold text-primary">{{ tx('Widgets') }}</p>
+                            <p class="text-xs text-secondary">{{ tx('Wähle aus, was auf deinem Dashboard sichtbar ist.') }}</p>
                         </div>
                         <button type="button" class="w-full rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted sm:w-auto" @click="visibleWidgetKeys = widgets.map((widget) => widget.key)">
-                            Alles zeigen
+                            {{ tx('Alles zeigen') }}
                         </button>
                     </div>
                     <div class="mt-4 flex min-w-0 flex-wrap gap-2">
@@ -340,11 +349,11 @@ watch(visibleWidgetKeys, (keys) => {
             <div v-if="isWidgetVisible('training')" class="surface-card p-4 sm:p-5 xl:col-span-7">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Wochenübersicht</p>
-                        <h2 class="mt-1 text-xl font-black text-primary">Training</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('Wochenübersicht') }}</p>
+                        <h2 class="mt-1 text-xl font-black text-primary">{{ tx('Training') }}</h2>
                     </div>
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Öffnen
+                        {{ tx('Öffnen') }}
                     </Link>
                 </div>
 
@@ -362,22 +371,22 @@ watch(visibleWidgetKeys, (keys) => {
                         </div>
                     </div>
                     <div v-else class="flex h-full items-center justify-center rounded-2xl border border-dashed border-border text-center text-sm text-secondary">
-                        Noch keine Trainingsdaten für diese Woche.
+                        {{ tx('Noch keine Trainingsdaten für diese Woche.') }}
                     </div>
                 </div>
 
                 <div class="mt-5 grid grid-cols-3 gap-2 text-center">
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatDistance(training.week_distance_meters) }}</p>
-                        <p class="text-xs text-secondary">Distanz</p>
+                        <p class="text-xs text-secondary">{{ tx('Distanz') }}</p>
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(training.week_calories) }}</p>
-                        <p class="text-xs text-secondary">Kalorien</p>
+                        <p class="text-xs text-secondary">{{ tx('Kalorien') }}</p>
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(training.plan_count) }}</p>
-                        <p class="text-xs text-secondary">Pläne</p>
+                        <p class="text-xs text-secondary">{{ tx('Pläne') }}</p>
                     </div>
                 </div>
             </div>
@@ -385,8 +394,8 @@ watch(visibleWidgetKeys, (keys) => {
             <div v-if="isWidgetVisible('focus')" class="surface-card p-4 sm:p-5 xl:col-span-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Heute wichtig</p>
-                        <h2 class="mt-1 text-xl font-black text-primary">Nächste Schritte</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-air-blue">{{ tx('Heute wichtig') }}</p>
+                        <h2 class="mt-1 text-xl font-black text-primary">{{ tx('Nächste Schritte') }}</h2>
                     </div>
                     <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-bold text-air-blue">{{ focusItems.length }}</span>
                 </div>
@@ -409,7 +418,7 @@ watch(visibleWidgetKeys, (keys) => {
                     </Link>
                 </div>
                 <div v-else class="mt-5 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-secondary">
-                    Alles ruhig. Du hast gerade keine offenen Punkte.
+                    {{ tx('Alles ruhig. Du hast gerade keine offenen Punkte.') }}
                 </div>
             </div>
         </section>
@@ -418,11 +427,11 @@ watch(visibleWidgetKeys, (keys) => {
             <div v-if="isWidgetVisible('nutrition')" class="surface-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-orange-300">Ernährung</p>
-                        <h2 class="mt-1 text-lg font-black text-primary">Heute</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-orange-300">{{ tx('Ernährung') }}</p>
+                        <h2 class="mt-1 text-lg font-black text-primary">{{ tx('Heute') }}</h2>
                     </div>
                     <Link :href="route('auth.nutrition.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Öffnen
+                        {{ tx('Öffnen') }}
                     </Link>
                 </div>
 
@@ -433,11 +442,11 @@ watch(visibleWidgetKeys, (keys) => {
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(Math.round(nutrition.today_protein_g || 0)) }} g</p>
-                        <p class="text-xs text-secondary">Protein</p>
+                        <p class="text-xs text-secondary">{{ tx('Protein') }}</p>
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(nutrition.meals_today) }}</p>
-                        <p class="text-xs text-secondary">Mahlzeiten</p>
+                        <p class="text-xs text-secondary">{{ tx('Mahlzeiten') }}</p>
                     </div>
                 </div>
 
@@ -454,7 +463,7 @@ watch(visibleWidgetKeys, (keys) => {
                         </div>
                     </div>
                     <div v-else class="flex h-full items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-secondary">
-                        Noch keine Mahlzeiten eingetragen.
+                        {{ tx('Noch keine Mahlzeiten eingetragen.') }}
                     </div>
                 </div>
             </div>
@@ -462,56 +471,56 @@ watch(visibleWidgetKeys, (keys) => {
             <div v-if="isWidgetVisible('events')" class="surface-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-emerald-300">Termine</p>
-                        <h2 class="mt-1 text-lg font-black text-primary">{{ formatNumber(events.upcoming_count) }} geplant</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-emerald-300">{{ tx('Termine') }}</p>
+                        <h2 class="mt-1 text-lg font-black text-primary">{{ formatNumber(events.upcoming_count) }} {{ tx('geplant') }}</h2>
                     </div>
                     <Link :href="route('auth.events.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Kalender
+                        {{ tx('Kalender') }}
                     </Link>
                 </div>
 
                 <div v-if="events.next?.length" class="mt-4 divide-y divide-border">
                     <Link v-for="event in events.next.slice(0, 3)" :key="event.id" :href="route('auth.events.index')" class="block py-3">
                         <p class="truncate text-sm font-black text-primary">{{ event.title }}</p>
-                        <p class="mt-1 text-xs text-secondary">{{ formatDateTime(event.start_time) }} · {{ event.location || 'ohne Ort' }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ formatDateTime(event.start_time) }} · {{ event.location || tx('ohne Ort') }}</p>
                     </Link>
                 </div>
                 <div v-else class="mt-5 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-secondary">
-                    Keine kommenden Termine.
+                    {{ tx('Keine kommenden Termine.') }}
                 </div>
             </div>
 
             <div v-if="isWidgetVisible('sport_map')" class="surface-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-sky-300">Sportkarte</p>
-                        <h2 class="mt-1 text-lg font-black text-primary">Routen & Orte</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-sky-300">{{ tx('Sportkarte') }}</p>
+                        <h2 class="mt-1 text-lg font-black text-primary">{{ tx('Routen & Orte') }}</h2>
                     </div>
                     <Link :href="route('auth.sport-map.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Karte
+                        {{ tx('Karte') }}
                     </Link>
                 </div>
 
                 <div class="mt-4 grid grid-cols-3 gap-2 text-center">
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(sportMap.routes_count) }}</p>
-                        <p class="text-xs text-secondary">Routen</p>
+                        <p class="text-xs text-secondary">{{ tx('Routen') }}</p>
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(sportMap.tracks_count) }}</p>
-                        <p class="text-xs text-secondary">Tracks</p>
+                        <p class="text-xs text-secondary">{{ tx('Tracks') }}</p>
                     </div>
                     <div>
                         <p class="text-lg font-black text-primary">{{ formatNumber(sportMap.places_count) }}</p>
-                        <p class="text-xs text-secondary">Plätze</p>
+                        <p class="text-xs text-secondary">{{ tx('Plätze') }}</p>
                     </div>
                 </div>
 
                 <div class="mt-5 rounded-2xl border border-border p-4">
-                    <p class="text-xs font-bold uppercase tracking-wide text-secondary">Diese Woche getrackt</p>
+                    <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('Diese Woche getrackt') }}</p>
                     <p class="mt-1 text-2xl font-black text-primary">{{ formatDistance(sportMap.week_track_distance_meters) }}</p>
                     <p class="mt-2 truncate text-xs text-secondary">
-                        Letzte Route: {{ sportMap.last_route?.title || 'Noch keine Route' }}
+                        {{ tx('Letzte Route') }}: {{ sportMap.last_route?.title || tx('Noch keine Route') }}
                     </p>
                 </div>
             </div>
@@ -519,11 +528,11 @@ watch(visibleWidgetKeys, (keys) => {
             <div v-if="isWidgetVisible('files')" class="surface-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-violet-300">Dateien</p>
-                        <h2 class="mt-1 text-lg font-black text-primary">Speicher</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-violet-300">{{ tx('Dateien') }}</p>
+                        <h2 class="mt-1 text-lg font-black text-primary">{{ tx('Speicher') }}</h2>
                     </div>
                     <Link :href="route('auth.files.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Dateien
+                        {{ tx('Dateien') }}
                     </Link>
                 </div>
 
@@ -532,26 +541,26 @@ watch(visibleWidgetKeys, (keys) => {
                         <p class="text-2xl font-black text-primary">{{ formatBytes(storage.remaining_bytes) }}</p>
                         <span class="rounded-full border border-border px-3 py-1 text-xs font-bold text-primary">{{ storage.plan_name }}</span>
                     </div>
-                    <p class="mt-1 text-sm text-secondary">frei von {{ storage.limit_gb }} GB</p>
+                    <p class="mt-1 text-sm text-secondary">{{ tx('frei von') }} {{ storage.limit_gb }} GB</p>
                     <div class="mt-4 h-3 overflow-hidden rounded-full bg-inputBg">
                         <div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400" :style="{ width: `${storage.used_percent}%` }"></div>
                     </div>
-                    <p class="mt-2 text-xs text-secondary">{{ formatBytes(storage.used_bytes) }} genutzt · {{ storage.used_percent }}%</p>
+                    <p class="mt-2 text-xs text-secondary">{{ formatBytes(storage.used_bytes) }} {{ tx('genutzt') }} · {{ storage.used_percent }}%</p>
                 </div>
                 <div v-else class="mt-5 rounded-2xl border border-border p-4">
                     <p class="text-2xl font-black text-primary">{{ formatBytes(files.bytes) }}</p>
-                    <p class="mt-1 text-sm text-secondary">{{ formatNumber(files.count) }} Dateien gespeichert</p>
+                    <p class="mt-1 text-sm text-secondary">{{ formatNumber(files.count) }} {{ tx('Dateien gespeichert') }}</p>
                 </div>
             </div>
 
             <div v-if="isWidgetVisible('notifications')" class="surface-card p-4 sm:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-amber-300">Inbox</p>
-                        <h2 class="mt-1 text-lg font-black text-primary">{{ formatNumber(notifications.unread_count) }} ungelesen</h2>
+                        <p class="text-xs font-bold uppercase tracking-wide text-amber-300">{{ tx('Inbox') }}</p>
+                        <h2 class="mt-1 text-lg font-black text-primary">{{ formatNumber(notifications.unread_count) }} {{ tx('ungelesen') }}</h2>
                     </div>
                     <Link :href="route('auth.notifications.index')" class="rounded-xl border border-border px-3 py-2 text-xs font-bold text-primary hover:border-air-blue hover:text-air-blue">
-                        Öffnen
+                    {{ tx('Öffnen') }}
                     </Link>
                 </div>
 
@@ -567,7 +576,7 @@ watch(visibleWidgetKeys, (keys) => {
                     </Link>
                 </div>
                 <div v-else class="mt-5 rounded-2xl border border-dashed border-border p-6 text-center text-sm text-secondary">
-                    Keine neuen Nachrichten.
+                    {{ tx('Keine neuen Nachrichten.') }}
                 </div>
             </div>
         </section>

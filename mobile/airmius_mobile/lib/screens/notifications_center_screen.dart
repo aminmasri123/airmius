@@ -16,7 +16,8 @@ class NotificationsCenterScreen extends StatefulWidget {
   final bool embedded;
 
   @override
-  State<NotificationsCenterScreen> createState() => _NotificationsCenterScreenState();
+  State<NotificationsCenterScreen> createState() =>
+      _NotificationsCenterScreenState();
 }
 
 class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
@@ -25,6 +26,7 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   AirmiusPage<AirmiusNotification>? _lastNotificationsPage;
   final Set<int> _locallyRead = <int>{};
   final Set<int> _locallyUnread = <int>{};
+  bool _markingAllRead = false;
   late Future<AirmiusPage<AirmiusNotification>> _notificationsFuture;
 
   @override
@@ -36,13 +38,17 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   }
 
   Future<AirmiusPage<AirmiusNotification>> _loadNotifications() async {
-    final page = await AirmiusServicesScope.of(context).repositories.notifications.notifications();
+    final page = await AirmiusServicesScope.of(
+      context,
+    ).repositories.notifications.notifications();
     final adjustedPage = _applyLocalReadState(page);
     _lastNotificationsPage = adjustedPage;
     return adjustedPage;
   }
 
-  AirmiusPage<AirmiusNotification> _applyLocalReadState(AirmiusPage<AirmiusNotification> page) {
+  AirmiusPage<AirmiusNotification> _applyLocalReadState(
+    AirmiusPage<AirmiusNotification> page,
+  ) {
     final items = page.items.map((item) {
       if (_locallyUnread.contains(item.id)) return item.copyWith(unread: true);
       if (_locallyRead.contains(item.id)) return item.copyWith(unread: false);
@@ -63,7 +69,9 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
     });
   }
 
-  Future<void> _toggleNotificationReadState(AirmiusNotification notification) async {
+  Future<void> _toggleNotificationReadState(
+    AirmiusNotification notification,
+  ) async {
     final markUnread = !notification.unread;
 
     setState(() {
@@ -83,11 +91,43 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
     });
 
     try {
-      final repository = AirmiusServicesScope.of(context).repositories.notifications;
-      markUnread ? await repository.markAsUnread(notification.id) : await repository.markAsRead(notification.id);
+      final repository = AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications;
+      markUnread
+          ? await repository.markAsUnread(notification.id)
+          : await repository.markAsRead(notification.id);
     } catch (_) {
       // Keep the local state. A stale backend route cache or temporary transport
       // issue must not turn a successful UI action into a list loading error.
+    }
+  }
+
+  Future<void> _markAllNotificationsRead() async {
+    if (_markingAllRead) return;
+    final page = _lastNotificationsPage;
+    if (page == null || page.items.every((item) => !item.unread)) return;
+
+    setState(() {
+      _markingAllRead = true;
+      _locallyRead.addAll(page.items.map((item) => item.id));
+      _locallyUnread.clear();
+      _lastNotificationsPage = _applyLocalReadState(page);
+    });
+
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.markAllAsRead();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('notifications.error')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _markingAllRead = false);
     }
   }
 
@@ -103,7 +143,10 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
         backgroundColor: _notificationHeader(context),
         foregroundColor: _notificationText(context),
         surfaceTintColor: Colors.transparent,
-        title: Text(scope.t('notifications.title'), style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          scope.t('notifications.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: scope.t('notifications.title'),
@@ -132,31 +175,65 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
         future: _notificationsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _ScrollableNotifications(child: _LoadingNotifications());
+            return const _ScrollableNotifications(
+              child: _LoadingNotifications(),
+            );
           }
           if (snapshot.hasError) {
-            return _ScrollableNotifications(child: _ErrorNotifications(onRetry: _reload));
+            return _ScrollableNotifications(
+              child: _ErrorNotifications(onRetry: _reload),
+            );
           }
 
           final page = _lastNotificationsPage ?? snapshot.data;
           final allItems = page?.items ?? const <AirmiusNotification>[];
-          final items = allItems.where((item) => _filter == 'all' || _typeKey(item.type) == _filter).toList();
+          final items = allItems
+              .where(
+                (item) => _filter == 'all' || _typeKey(item.type) == _filter,
+              )
+              .toList();
           final unread = allItems.where((item) => item.unread).length;
-          final requests = allItems.where((item) => _typeKey(item.type) == 'club').length;
-          final system = allItems.where((item) => _typeKey(item.type) == 'system').length;
+          final requests = allItems
+              .where((item) => _typeKey(item.type) == 'club')
+              .length;
+          final system = allItems
+              .where((item) => _typeKey(item.type) == 'system')
+              .length;
 
           return _ScrollableNotifications(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(child: MetricCard(value: '$unread', label: scope.t('messages.unread'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: MetricCard(value: '$requests', label: scope.t('notifications.requests'))),
-                    const SizedBox(width: 10),
-                    Expanded(child: MetricCard(value: '$system', label: scope.t('notifications.system'))),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cards = [
+                      MetricCard(
+                        value: '$unread',
+                        label: scope.t('messages.unread'),
+                      ),
+                      MetricCard(
+                        value: '$requests',
+                        label: scope.t('notifications.requests'),
+                      ),
+                      MetricCard(
+                        value: '$system',
+                        label: scope.t('notifications.system'),
+                      ),
+                    ];
+                    final columns = constraints.maxWidth < 520 ? 2 : 3;
+                    final gap = 10.0;
+                    final width = columns == 2
+                        ? (constraints.maxWidth - gap) / 2
+                        : (constraints.maxWidth - gap * 2) / 3;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final card in cards)
+                          SizedBox(width: width, child: card),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -168,15 +245,33 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                         selected: _filter == entry.key,
                         label: Text(entry.value),
                         onSelected: (_) => setState(() => _filter = entry.key),
-                        selectedColor: accent.withValues(alpha: _notificationDarkUi(context) ? 0.22 : 0.14),
+                        selectedColor: accent.withValues(
+                          alpha: _notificationDarkUi(context) ? 0.22 : 0.14,
+                        ),
                         backgroundColor: surfaceSoft,
                         checkmarkColor: accent,
-                        side: BorderSide(color: _filter == entry.key ? accent : border),
-                        labelStyle: TextStyle(color: _filter == entry.key ? accent : muted, fontWeight: FontWeight.w900),
+                        side: BorderSide(
+                          color: _filter == entry.key ? accent : border,
+                        ),
+                        labelStyle: TextStyle(
+                          color: _filter == entry.key ? accent : muted,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 14),
+                if (unread > 0) ...[
+                  AirmiusButton(
+                    label: scope.t('notifications.markAllRead'),
+                    icon: Icons.done_all_outlined,
+                    secondary: true,
+                    onPressed: _markingAllRead
+                        ? null
+                        : _markAllNotificationsRead,
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 if (items.isEmpty)
                   EmptyPanel(scope.t('notifications.empty'))
                 else
@@ -187,7 +282,11 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                         SectionLabel(scope.t('notifications.title')),
                         const SizedBox(height: 10),
                         for (final item in items) ...[
-                          _NotificationLine(item: item, onChanged: _reload, onToggleReadState: _toggleNotificationReadState),
+                          _NotificationLine(
+                            item: item,
+                            onChanged: _reload,
+                            onToggleReadState: _toggleNotificationReadState,
+                          ),
                           const SizedBox(height: 10),
                         ],
                       ],
@@ -195,10 +294,15 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                   ),
                 const SizedBox(height: 14),
                 AirmiusButton(
-                  label: 'Push',
+                  label: scope.t('notificationSettings.channel.push'),
                   icon: Icons.tune_outlined,
                   secondary: true,
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationPreferencesScreen(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -213,7 +317,9 @@ AirmiusThemePalette _notificationPalette(BuildContext context) {
   try {
     return AirmiusThemeModeScope.of(context).palette;
   } on StateError {
-    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+    return Theme.of(context).brightness == Brightness.dark
+        ? AirmiusThemePalette.dark
+        : AirmiusThemePalette.air;
   }
 }
 
@@ -236,17 +342,23 @@ Color _notificationAccent(BuildContext context) {
 
 Color _notificationHeader(BuildContext context) {
   final palette = _notificationPalette(context);
-  return _notificationDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+  return _notificationDarkUi(context)
+      ? palette.darkHeader
+      : palette.lightSurface;
 }
 
 Color _notificationSurface(BuildContext context) {
   final palette = _notificationPalette(context);
-  return _notificationDarkUi(context) ? palette.darkSurface : palette.lightSurface;
+  return _notificationDarkUi(context)
+      ? palette.darkSurface
+      : palette.lightSurface;
 }
 
 Color _notificationSurfaceSoft(BuildContext context) {
   final palette = _notificationPalette(context);
-  return _notificationDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+  return _notificationDarkUi(context)
+      ? palette.darkSurfaceSoft
+      : palette.lightSurfaceSoft;
 }
 
 Color _notificationText(BuildContext context) {
@@ -256,16 +368,25 @@ Color _notificationText(BuildContext context) {
 
 Color _notificationMuted(BuildContext context) {
   final palette = _notificationPalette(context);
-  return _notificationDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+  return _notificationDarkUi(context)
+      ? AirmiusColors.muted
+      : palette.lightMutedText;
 }
 
 Color _notificationMutedSoft(BuildContext context) {
-  return Color.lerp(_notificationMuted(context), _notificationSurface(context), _notificationDarkUi(context) ? 0.22 : 0.28) ?? _notificationMuted(context);
+  return Color.lerp(
+        _notificationMuted(context),
+        _notificationSurface(context),
+        _notificationDarkUi(context) ? 0.22 : 0.28,
+      ) ??
+      _notificationMuted(context);
 }
 
 Color _notificationBorder(BuildContext context) {
   final palette = _notificationPalette(context);
-  return _notificationDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
+  return _notificationDarkUi(context)
+      ? AirmiusColors.border
+      : palette.lightBorder;
 }
 
 class _ScrollableNotifications extends StatelessWidget {
@@ -283,11 +404,16 @@ class _ScrollableNotifications extends StatelessWidget {
 }
 
 class _NotificationLine extends StatefulWidget {
-  const _NotificationLine({required this.item, required this.onChanged, required this.onToggleReadState});
+  const _NotificationLine({
+    required this.item,
+    required this.onChanged,
+    required this.onToggleReadState,
+  });
 
   final AirmiusNotification item;
   final VoidCallback onChanged;
-  final Future<void> Function(AirmiusNotification notification) onToggleReadState;
+  final Future<void> Function(AirmiusNotification notification)
+  onToggleReadState;
 
   @override
   State<_NotificationLine> createState() => _NotificationLineState();
@@ -304,7 +430,11 @@ class _NotificationLineState extends State<_NotificationLine> {
       await widget.onToggleReadState(widget.item);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('notifications.error')),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -320,7 +450,12 @@ class _NotificationLineState extends State<_NotificationLine> {
       if (teamInvitationId != null) {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: teamInvitationId, notification: notification)),
+          MaterialPageRoute(
+            builder: (_) => TeamInvitationResponseScreen(
+              invitationId: teamInvitationId,
+              notification: notification,
+            ),
+          ),
         );
         widget.onChanged();
         return;
@@ -331,7 +466,10 @@ class _NotificationLineState extends State<_NotificationLine> {
         MaterialPageRoute(
           builder: (_) => NotificationDetailScreen(
             notification: notification,
-            typeLabel: _labelForType(AirmiusScope.of(context), notification.type),
+            typeLabel: _labelForType(
+              AirmiusScope.of(context),
+              notification.type,
+            ),
             icon: _iconForType(notification.type),
             onChanged: widget.onChanged,
           ),
@@ -339,11 +477,17 @@ class _NotificationLineState extends State<_NotificationLine> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('notifications.error')),
+        ),
+      );
     } finally {
       if (widget.item.unread && mounted) {
         try {
-          await AirmiusServicesScope.of(context).repositories.notifications.markAsRead(widget.item.id);
+          await AirmiusServicesScope.of(
+            context,
+          ).repositories.notifications.markAsRead(widget.item.id);
           widget.onChanged();
         } catch (_) {
           // Opening the notification must not depend on the read-state request.
@@ -363,7 +507,13 @@ class _NotificationLineState extends State<_NotificationLine> {
     final muted = _notificationMuted(context);
     final mutedSoft = _notificationMutedSoft(context);
     final border = _notificationBorder(context);
-    final unreadBackground = Color.lerp(surface, accent, _notificationDarkUi(context) ? 0.12 : 0.09) ?? surface;
+    final unreadBackground =
+        Color.lerp(
+          surface,
+          accent,
+          _notificationDarkUi(context) ? 0.12 : 0.09,
+        ) ??
+        surface;
     return InkWell(
       onTap: _openNotification,
       borderRadius: BorderRadius.circular(14),
@@ -372,7 +522,9 @@ class _NotificationLineState extends State<_NotificationLine> {
         decoration: BoxDecoration(
           color: item.unread ? unreadBackground : surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: item.unread ? accent.withValues(alpha: 0.45) : border),
+          border: Border.all(
+            color: item.unread ? accent.withValues(alpha: 0.45) : border,
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,22 +537,43 @@ class _NotificationLineState extends State<_NotificationLine> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text(item.title, style: TextStyle(color: text, fontWeight: FontWeight.w900))),
-                      Text(_shortTime(item.timeLabel), style: TextStyle(color: mutedSoft, fontSize: 12)),
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _shortTime(item.timeLabel),
+                        style: TextStyle(color: mutedSoft, fontSize: 12),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(item.body, style: TextStyle(color: muted, height: 1.3)),
                   const SizedBox(height: 8),
-                  StatusPill(_labelForType(scope, item.type), color: item.unread ? accent : mutedSoft),
+                  StatusPill(
+                    _labelForType(scope, item.type),
+                    color: item.unread ? accent : mutedSoft,
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             IconButton(
-              tooltip: item.unread ? scope.t('notifications.markRead') : scope.t('notifications.markUnread'),
+              tooltip: item.unread
+                  ? scope.t('notifications.markRead')
+                  : scope.t('notifications.markUnread'),
               onPressed: _busy ? null : _toggleReadState,
-              icon: Icon(item.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined, color: item.unread ? accent : muted),
+              icon: Icon(
+                item.unread
+                    ? Icons.mark_email_read_outlined
+                    : Icons.mark_email_unread_outlined,
+                color: item.unread ? accent : muted,
+              ),
             ),
             Icon(Icons.chevron_right, color: muted, size: 20),
           ],
@@ -424,9 +597,16 @@ class _LoadingNotifications extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent)),
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+            ),
             const SizedBox(width: 12),
-            Text(scope.t('status.loading'), style: TextStyle(color: muted, fontWeight: FontWeight.w800)),
+            Text(
+              scope.t('status.loading'),
+              style: TextStyle(color: muted, fontWeight: FontWeight.w800),
+            ),
           ],
         ),
       ),
@@ -449,9 +629,18 @@ class _ErrorNotifications extends StatelessWidget {
         children: [
           const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
           const SizedBox(height: 10),
-          Text(scope.t('notifications.error'), textAlign: TextAlign.center, style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+          Text(
+            scope.t('notifications.error'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 12),
-          AirmiusButton(label: scope.t('notifications.retry'), icon: Icons.refresh_outlined, onPressed: onRetry, secondary: true),
+          AirmiusButton(
+            label: scope.t('notifications.retry'),
+            icon: Icons.refresh_outlined,
+            onPressed: onRetry,
+            secondary: true,
+          ),
         ],
       ),
     );
@@ -459,18 +648,28 @@ class _ErrorNotifications extends StatelessWidget {
 }
 
 Map<String, String> _filters(AirmiusScope scope) => {
-      'all': scope.t('notifications.all'),
-      'club': scope.t('messages.club'),
-      'chat': scope.t('messages.chat'),
-      'payment': scope.t('notifications.payment'),
-      'system': scope.t('notifications.system'),
-    };
+  'all': scope.t('notifications.all'),
+  'club': scope.t('messages.club'),
+  'chat': scope.t('messages.chat'),
+  'payment': scope.t('notifications.payment'),
+  'system': scope.t('notifications.system'),
+};
 
 String _typeKey(String rawType) {
   final type = rawType.toLowerCase();
-  if (type.contains('club') || type.contains('verein') || type.contains('membership') || type.contains('request')) return 'club';
+  if (type.contains('club') ||
+      type.contains('verein') ||
+      type.contains('membership') ||
+      type.contains('request')) {
+    return 'club';
+  }
   if (type.contains('chat') || type.contains('message')) return 'chat';
-  if (type.contains('payment') || type.contains('billing') || type.contains('zahlung') || type.contains('invoice')) return 'payment';
+  if (type.contains('payment') ||
+      type.contains('billing') ||
+      type.contains('zahlung') ||
+      type.contains('invoice')) {
+    return 'payment';
+  }
   return 'system';
 }
 
@@ -480,15 +679,25 @@ String _labelForType(AirmiusScope scope, String rawType) {
 
 int? _teamInvitationId(AirmiusNotification notification) {
   final type = notification.type.toLowerCase();
-  final explicitId = _intFromDynamic(notification.data['invitation_id'] ?? notification.data['team_invitation_id']);
-  if (explicitId != null && (type.contains('team.invite') || type.contains('team.invitation') || type.contains('trainer') || type.contains('invite') || type.contains('invitation'))) {
+  final explicitId = _intFromDynamic(
+    notification.data['invitation_id'] ??
+        notification.data['team_invitation_id'],
+  );
+  if (explicitId != null &&
+      (type.contains('team.invite') ||
+          type.contains('team.invitation') ||
+          type.contains('trainer') ||
+          type.contains('invite') ||
+          type.contains('invitation'))) {
     return explicitId;
   }
 
   final actionUrl = notification.actionUrl;
   if (actionUrl == null || actionUrl.isEmpty) return null;
 
-  final match = RegExp(r'(?:team_invitation|invitation_id)=([0-9]+)').firstMatch(actionUrl);
+  final match = RegExp(
+    r'(?:team_invitation|invitation_id)=([0-9]+)',
+  ).firstMatch(actionUrl);
   return match == null ? null : int.tryParse(match.group(1) ?? '');
 }
 

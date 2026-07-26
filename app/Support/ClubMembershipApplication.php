@@ -119,6 +119,23 @@ class ClubMembershipApplication
             ->all();
     }
 
+    /**
+     * Stable version token for a document as it was presented to the applicant.
+     * The token changes when the title, link or attached file changes, while
+     * keeping the original document payload readable in the audit trail.
+     */
+    public static function documentVersion(array $document): string
+    {
+        return 'sha256:'.hash('sha256', json_encode([
+            'id' => (string) ($document['id'] ?? ''),
+            'type' => (string) ($document['type'] ?? 'other'),
+            'title' => (string) ($document['title'] ?? ''),
+            'url' => (string) ($document['url'] ?? ''),
+            'file_id' => $document['file_id'] ?? null,
+            'file_name' => (string) ($document['file_name'] ?? ''),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
     public static function normalizeFieldModes(?array $settings): array
     {
         $settings = $settings ?: self::DEFAULT_FIELD_MODES;

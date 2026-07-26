@@ -4,6 +4,7 @@ import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -33,6 +34,8 @@ const penaltyCatalogState = ref(props.penaltyCatalog || { rules: [], fees: [], c
 const commentForm = useForm({ content: '' })
 const cancelForm = useForm({ reason: '' })
 const page = usePage()
+const { locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 
 const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
@@ -147,7 +150,7 @@ watch(() => props.currentParticipantStatus, (next) => {
 const formatDateTime = (date) => {
     if (!date) return '-'
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         weekday: 'short',
         day: '2-digit',
         month: '2-digit',
@@ -161,7 +164,7 @@ const formatDateTime = (date) => {
 const formatDate = (date) => {
     if (!date) return '-'
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -334,7 +337,7 @@ const saveBulkAttendance = () => {
     })
 }
 
-const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format(Number(amount || 0))

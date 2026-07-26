@@ -102,6 +102,12 @@ class MobileSyncContract
                 'fallback_url' => '/chat?conversation={conversation}',
             ],
             [
+                'key' => 'social_updates',
+                'importance' => 'high',
+                'deep_link' => 'airmius://friends',
+                'fallback_url' => '/friends',
+            ],
+            [
                 'key' => 'training_updates',
                 'importance' => 'default',
                 'deep_link' => 'airmius://training/plans/{trainingPlan}',

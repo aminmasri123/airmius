@@ -3,6 +3,11 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
 
 const props = defineProps({
     sports: { type: Array, default: () => [] },
@@ -24,7 +29,7 @@ const selectedSport = computed(() => {
 const deleteModalMessage = computed(() => {
     const name = sportBeingDeleted.value?.name || ''
 
-    return `Möchtest du die Sportart "${name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
+    return t('sports_admin.delete_message', { name })
 })
 
 const filteredSports = computed(() => {
@@ -124,10 +129,10 @@ const confirmDeleteSport = () => {
 
 const usageLabel = (sport) => {
     const parts = [
-        `${sport.teams_count} Teams`,
-        `${sport.clubs_count} Vereine`,
-        `${sport.profiles_count} Profile`,
-        `${sport.posts_count} Beiträge`,
+        t('sports_admin.usage.teams', { count: formatNumber(sport.teams_count) }),
+        t('sports_admin.usage.clubs', { count: formatNumber(sport.clubs_count) }),
+        t('sports_admin.usage.profiles', { count: formatNumber(sport.profiles_count) }),
+        t('sports_admin.usage.posts', { count: formatNumber(sport.posts_count) }),
     ]
 
     return parts.join(' · ')
@@ -137,30 +142,29 @@ const usageLabel = (sport) => {
 <template>
     <AppLayout>
 
-        <Head title="Sportarten verwalten" />
+        <Head :title="t('sports_admin.page_title')" />
 
         <div class="space-y-6 ">
             <!-- HEADER -->
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">
-                        System Admin
+                        {{ t('sports_admin.eyebrow') }}
                     </p>
 
                     <h1 class="mt-1 text-2xl font-bold text-primary">
-                        Sportarten verwalten
+                        {{ t('sports_admin.title') }}
                     </h1>
 
                     <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
-                        Pflege zentrale Sportarten, Aktivstatus und Sortierung. Die Nutzungszahlen zeigen dir,
-                        wie viele Teams, Vereine, Profile und Beiträge je Sportart existieren.
+                        {{ t('sports_admin.intro') }}
                     </p>
                 </div>
 
                 <!-- Mobile Plus -->
                 <button type="button"
                     class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary shadow sm:hidden"
-                    @click="openCreateModal" aria-label="Sportart erstellen">
+                    @click="openCreateModal" :aria-label="t('sports_admin.actions.create_sport')">
                     <i class="las la-plus text-2xl"></i>
                 </button>
 
@@ -168,7 +172,7 @@ const usageLabel = (sport) => {
                 <button type="button"
                     class="hidden rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover sm:inline-flex"
                     @click="openCreateModal">
-                    + Sportart erstellen
+                    + {{ t('sports_admin.actions.create_sport') }}
                 </button>
             </div>
 
@@ -176,7 +180,7 @@ const usageLabel = (sport) => {
             <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <div class="rounded-lg border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase text-secondary">
-                        Sportarten
+                        {{ t('sports_admin.metrics.sports') }}
                     </p>
                     <p class="mt-2 text-2xl font-bold text-primary">
                         {{ summary.sports_count || 0 }}
@@ -185,7 +189,7 @@ const usageLabel = (sport) => {
 
                 <div class="rounded-lg border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase text-secondary">
-                        Aktiv
+                        {{ t('sports_admin.metrics.active') }}
                     </p>
                     <p class="mt-2 text-2xl font-bold text-primary">
                         {{ summary.active_count || 0 }}
@@ -194,7 +198,7 @@ const usageLabel = (sport) => {
 
                 <div class="rounded-lg border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase text-secondary">
-                        Teams
+                        {{ t('sports_admin.metrics.teams') }}
                     </p>
                     <p class="mt-2 text-2xl font-bold text-primary">
                         {{ summary.teams_count || 0 }}
@@ -203,7 +207,7 @@ const usageLabel = (sport) => {
 
                 <div class="rounded-lg border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase text-secondary">
-                        Vereine
+                        {{ t('sports_admin.metrics.clubs') }}
                     </p>
                     <p class="mt-2 text-2xl font-bold text-primary">
                         {{ summary.clubs_count || 0 }}
@@ -218,18 +222,18 @@ const usageLabel = (sport) => {
                     <div class="shrink-0 space-y-3 border-b border-border p-4">
                         <div class="flex items-center justify-between gap-3">
                             <h2 class="text-sm font-semibold text-primary">
-                                Alle Sportarten
+                                {{ t('sports_admin.list.all') }}
                             </h2>
 
                             <span class="rounded bg-inputBg px-2 py-1 text-xs text-secondary">
-                                {{ filteredSports.length }}
+                                {{ formatNumber(filteredSports.length) }}
                             </span>
                         </div>
 
                         <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
                             <i class="las la-search text-lg text-secondary"></i>
 
-                            <input v-model="search" type="search" placeholder="Name, Slug oder Kategorie"
+                            <input v-model="search" type="search" :placeholder="t('sports_admin.search_placeholder')"
                                 class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0">
                         </label>
 
@@ -239,7 +243,7 @@ const usageLabel = (sport) => {
                                     ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
                                     : 'border-border text-secondary hover:bg-inputBg hover:text-primary'"
                                 @click="statusFilter = filter">
-                                {{ filter === 'all' ? 'Alle' : filter === 'active' ? 'Aktiv' : 'Inaktiv' }}
+                                {{ t(`sports_admin.filters.${filter}`) }}
                             </button>
                         </div>
                     </div>
@@ -257,12 +261,12 @@ const usageLabel = (sport) => {
 
                                     <span class="shrink-0 rounded px-2 py-0.5 text-xs"
                                         :class="sport.is_active ? 'bg-success/10 text-success' : 'bg-error/10 text-error'">
-                                        {{ sport.is_active ? 'aktiv' : 'inaktiv' }}
+                                        {{ sport.is_active ? t('sports_admin.filters.active') : t('sports_admin.filters.inactive') }}
                                     </span>
                                 </span>
 
                                 <span class="mt-1 block truncate text-xs text-secondary">
-                                    {{ sport.slug }} · {{ sport.category || 'ohne Kategorie' }}
+                                    {{ sport.slug }} · {{ sport.category || t('sports_admin.no_category') }}
                                 </span>
 
                                 <span class="mt-1 block truncate text-xs text-secondary">
@@ -276,7 +280,7 @@ const usageLabel = (sport) => {
                         </button>
 
                         <div v-if="filteredSports.length === 0" class="p-8 text-center text-sm text-secondary">
-                            Keine Sportarten gefunden.
+                            {{ t('sports_admin.list.empty') }}
                         </div>
                     </div>
                 </section>
@@ -299,15 +303,15 @@ const usageLabel = (sport) => {
                                 <button type="button"
                                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                                     :disabled="form.processing" @click="save">
-                                    Speichern
+                                    {{ t('sports_admin.actions.save') }}
                                 </button>
 
                                 <button type="button"
                                     class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                                     :disabled="selectedSport.usage_count > 0"
-                                    :title="selectedSport.usage_count > 0 ? 'Genutzte Sportarten bitte deaktivieren statt löschen.' : 'Sportart löschen'"
+                                    :title="selectedSport.usage_count > 0 ? t('sports_admin.delete_used_hint') : t('sports_admin.actions.delete')"
                                     @click="deleteSport">
-                                    Löschen
+                                    {{ t('sports_admin.actions.delete') }}
                                 </button>
                             </div>
                         </div>
@@ -315,7 +319,7 @@ const usageLabel = (sport) => {
                         <div class="grid gap-4 p-4 md:grid-cols-2">
                             <label class="space-y-1">
                                 <span class="text-xs font-semibold uppercase text-secondary">
-                                    Name
+                                    {{ t('sports_admin.fields.name') }}
                                 </span>
 
                                 <input v-model="form.name" type="text"
@@ -328,10 +332,10 @@ const usageLabel = (sport) => {
 
                             <label class="space-y-1">
                                 <span class="text-xs font-semibold uppercase text-secondary">
-                                    Slug
+                                    {{ t('sports_admin.fields.slug') }}
                                 </span>
 
-                                <input v-model="form.slug" type="text" placeholder="wird aus Name erzeugt"
+                                <input v-model="form.slug" type="text" :placeholder="t('sports_admin.fields.slug_placeholder')"
                                     class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
 
                                 <span v-if="form.errors.slug" class="text-sm text-error">
@@ -341,7 +345,7 @@ const usageLabel = (sport) => {
 
                             <label class="space-y-1">
                                 <span class="text-xs font-semibold uppercase text-secondary">
-                                    Kategorie
+                                    {{ t('sports_admin.fields.category') }}
                                 </span>
 
                                 <input v-model="form.category" list="sport-categories" type="text"
@@ -354,7 +358,7 @@ const usageLabel = (sport) => {
 
                             <label class="space-y-1">
                                 <span class="text-xs font-semibold uppercase text-secondary">
-                                    Sortierung
+                                    {{ t('sports_admin.fields.sort_order') }}
                                 </span>
 
                                 <input v-model.number="form.sort_order" type="number" min="0"
@@ -370,7 +374,7 @@ const usageLabel = (sport) => {
                                 <input v-model="form.is_active" type="checkbox"
                                     class="rounded border-border text-buttonPrimary focus:ring-buttonPrimary">
 
-                                Aktiv in Auswahlfeldern anzeigen
+                                {{ t('sports_admin.fields.active_in_selects') }}
                             </label>
 
                             <div class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
@@ -378,14 +382,14 @@ const usageLabel = (sport) => {
                                     <strong class="text-primary">
                                         {{ selectedSport.skills_count }}
                                     </strong>
-                                    Skills hinterlegt
+                                    {{ t('sports_admin.usage.skills') }}
                                 </p>
 
                                 <p class="mt-1">
                                     <strong class="text-primary">
                                         {{ selectedSport.usage_count }}
                                     </strong>
-                                    gesamte Nutzungen
+                                    {{ t('sports_admin.usage.total') }}
                                 </p>
                             </div>
                         </div>
@@ -409,11 +413,11 @@ const usageLabel = (sport) => {
                         <div class="flex items-start justify-between gap-4">
                             <div class="min-w-0">
                                 <h2 class="truncate text-lg font-semibold text-primary">
-                                    Neue Sportart
+                                    {{ t('sports_admin.create.title') }}
                                 </h2>
 
                                 <p class="mt-1 text-sm text-secondary">
-                                    Slug kann leer bleiben und wird automatisch erzeugt.
+                                    {{ t('sports_admin.create.hint') }}
                                 </p>
                             </div>
 
@@ -429,7 +433,7 @@ const usageLabel = (sport) => {
                     <form class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4" @submit.prevent="createSport">
                         <label class="block space-y-1">
                             <span class="text-xs font-semibold uppercase text-secondary">
-                                Name
+                                {{ t('sports_admin.fields.name') }}
                             </span>
 
                             <input v-model="createForm.name" type="text"
@@ -443,10 +447,10 @@ const usageLabel = (sport) => {
 
                         <label class="block space-y-1">
                             <span class="text-xs font-semibold uppercase text-secondary">
-                                Slug
+                                {{ t('sports_admin.fields.slug') }}
                             </span>
 
-                            <input v-model="createForm.slug" type="text" placeholder="optional"
+                            <input v-model="createForm.slug" type="text" :placeholder="t('sports_admin.fields.optional')"
                                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary">
 
                             <span v-if="createForm.errors.slug" class="text-sm text-error">
@@ -456,7 +460,7 @@ const usageLabel = (sport) => {
 
                         <label class="block space-y-1">
                             <span class="text-xs font-semibold uppercase text-secondary">
-                                Kategorie
+                                {{ t('sports_admin.fields.category') }}
                             </span>
 
                             <input v-model="createForm.category" list="sport-categories" type="text"
@@ -466,7 +470,7 @@ const usageLabel = (sport) => {
 
                         <label class="block space-y-1">
                             <span class="text-xs font-semibold uppercase text-secondary">
-                                Sortierung
+                                {{ t('sports_admin.fields.sort_order') }}
                             </span>
 
                             <input v-model.number="createForm.sort_order" type="number" min="0"
@@ -478,7 +482,7 @@ const usageLabel = (sport) => {
                             <input v-model="createForm.is_active" type="checkbox"
                                 class="rounded border-border text-buttonPrimary focus:ring-buttonPrimary">
 
-                            Aktiv in Auswahlfeldern anzeigen
+                            {{ t('sports_admin.fields.active_in_selects') }}
                         </label>
                     </form>
 
@@ -488,13 +492,13 @@ const usageLabel = (sport) => {
                             <button type="button"
                                 class="flex-1 rounded-lg border border-border px-4 py-3 font-semibold text-secondary hover:border-borderHover hover:text-primary"
                                 @click="closeCreateModal">
-                                Abbrechen
+                                {{ t('sports_admin.actions.cancel') }}
                             </button>
 
                             <button type="button"
                                 class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-50"
                                 :disabled="createForm.processing" @click="createSport">
-                                {{ createForm.processing ? 'Speichern...' : 'Erstellen' }}
+                                {{ createForm.processing ? t('sports_admin.actions.saving') : t('sports_admin.actions.create') }}
                             </button>
                         </div>
                     </div>
@@ -504,10 +508,10 @@ const usageLabel = (sport) => {
 
         <DeleteConfirmModal
             :show="showDeleteModal"
-            title="Sportart löschen"
+            :title="t('sports_admin.delete_title')"
             :message="deleteModalMessage"
             confirm-text="delete"
-            cancel-text="Abbrechen"
+            :cancel-text="t('sports_admin.actions.cancel')"
             @cancel="closeDeleteModal"
             @confirm="confirmDeleteSport"
         />

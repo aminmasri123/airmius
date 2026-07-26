@@ -18,7 +18,11 @@ class MainActivity : FlutterActivity() {
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).also { channel ->
             channel.setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "getInitialLink" -> result.success(initialLink)
+                    "getInitialLink" -> {
+                        val link = initialLink
+                        initialLink = null
+                        result.success(link)
+                    }
                     else -> result.notImplemented()
                 }
             }

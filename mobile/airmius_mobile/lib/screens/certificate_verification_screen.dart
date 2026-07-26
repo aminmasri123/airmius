@@ -1,79 +1,310 @@
 import 'package:flutter/material.dart';
-import 'learning_operations_screen.dart';
 
-import '../core/airmius_theme.dart';
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import 'public_interest_screen.dart';
 
+/// Public certificate verification backed by the read-only, rate-limited API.
+///
+/// The screen intentionally exposes only the public certificate fields. It
+/// does not offer the authenticated PDF download route or any operations
+/// controls, so a guest can verify a certificate without gaining account
+/// access.
 class CertificateVerificationScreen extends StatefulWidget {
-  const CertificateVerificationScreen({super.key, this.code = 'AIR-2026-001'});
+  const CertificateVerificationScreen({super.key, this.code = ''});
 
   final String code;
 
   @override
-  State<CertificateVerificationScreen> createState() => _CertificateVerificationScreenState();
+  State<CertificateVerificationScreen> createState() =>
+      _CertificateVerificationScreenState();
 }
 
-class _CertificateVerificationScreenState extends State<CertificateVerificationScreen> {
-  bool _valid = true;
-  bool _public = true;
+class _CertificateVerificationScreenState
+    extends State<CertificateVerificationScreen> {
+  late final TextEditingController _code;
+  JsonMap? _certificate;
+  String? _error;
+  bool _loading = false;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _code = TextEditingController(text: widget.code);
+  }
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verify() async {
+    final code = _code.text.trim();
+    if (code.isEmpty || _loading) {
+      setState(() => _error = t('certificate.required'));
+      return;
+    }
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _loading = true;
+      _error = null;
+      _certificate = null;
+    });
+
+    try {
+      final response = await _client.publicCertificate(code);
+      final data = response['data'];
+      if (data is! Map) {
+        throw const AirmiusApiException(
+          statusCode: 404,
+          body: '{"message":"Certificate not found."}',
+          path: '/api/v1/public/learning/certificates',
+        );
+      }
+      final certificate = Map<String, dynamic>.from(data);
+      if (certificate['code'] == null || certificate['course_title'] == null) {
+        throw const AirmiusApiException(
+          statusCode: 404,
+          body: '{"message":"Certificate not found."}',
+          path: '/api/v1/public/learning/certificates',
+        );
+      }
+      if (mounted) setState(() => _certificate = certificate);
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.statusCode == 404
+            ? t('certificate.notFound')
+            : t('certificate.error');
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = t('certificate.error'));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _value(Object? value, [String fallback = '—']) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _date(Object? value) {
+    final raw = value?.toString() ?? '';
+    final parsed = DateTime.tryParse(raw)?.toLocal();
+    if (parsed == null) return _value(value);
+    return '${parsed.day.toString().padLeft(2, '0')}.${parsed.month.toString().padLeft(2, '0')}.${parsed.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final certificate = _certificate;
+    final theme = Theme.of(context);
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF16855E), foregroundColor: Colors.white, icon: const Icon(Icons.school_outlined), label: const Text('Cert Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LearningOperationsScreen(initialTab: 'Zertifikate')))),
-        
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Zertifikat prüfen', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(
+        title: Text(
+          t('certificate.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: PageFrame(
-        title: 'Zertifikat prüfen',
-        subtitle: 'Public Certificate Verify, Code, Status und Download',
-        trailing: StatusPill(_valid ? 'Gültig' : 'Ungültig', color: _valid ? AirmiusColors.green : AirmiusColors.red),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Verification'),
-            const SizedBox(height: 8),
-            const Text('Zertifikate können öffentlich per Code geprüft und später gegen Laravel validiert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-            const SizedBox(height: 12),
-            AirmiusTextField(label: 'Zertifikatscode', hint: widget.code, icon: Icons.verified_outlined),
-          ])),
-          const SizedBox(height: 14),
-          Row(children: const [Expanded(child: MetricCard(value: '100%', label: 'Quiz')), SizedBox(width: 10), Expanded(child: MetricCard(value: '6', label: 'Lektionen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2026', label: 'Jahr'))]),
-          const SizedBox(height: 14),
-          AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Status'),
-            SwitchListTile(value: _valid, onChanged: (value) => setState(() => _valid = value), activeThumbColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zertifikat gültig', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren API-Erfolgs- oder Fehlerzustand.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _public, onChanged: (value) => setState(() => _public = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich verifizierbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann von Vereinen, Arbeitgebern oder Kursanbietern geprüft werden.', style: TextStyle(color: AirmiusColors.muted))),
-          ])),
-          const SizedBox(height: 14),
-          const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Eyebrow('Zertifikatsdaten'),
-            SizedBox(height: 10),
-            _CertificateLine(icon: Icons.person_outline, title: 'ZBB Konto', body: 'Teilnehmername und Profilbezug.', status: 'User'),
-            _CertificateLine(icon: Icons.school_outlined, title: 'Datenschutz im Sportverein', body: 'Kurs, Abschlussdatum, Prüfstatus und Aussteller.', status: 'Kurs'),
-            _CertificateLine(icon: Icons.workspace_premium_outlined, title: 'Airmius Learning', body: 'Aussteller, Signatur und Audit-Hinweis.', status: 'Issuer'),
-          ])),
-          const SizedBox(height: 14),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Code prüfen', icon: Icons.fact_check_outlined, onPressed: () => openUiAction(context, title: 'Zertifikatscode prüfen', body: 'Code gegen Public-Learning-API validieren und Ergebnis anzeigen.', status: 'Verify', icon: Icons.fact_check_outlined)),
-            AirmiusButton(label: 'PDF anzeigen', icon: Icons.picture_as_pdf_outlined, secondary: true, onPressed: _valid ? () => openUiAction(context, title: 'Zertifikat anzeigen', body: 'Zertifikat als PDF anzeigen, teilen oder herunterladen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined) : null),
-            AirmiusButton(label: 'Melden', icon: Icons.report_outlined, danger: true, onPressed: () => openUiAction(context, title: 'Zertifikat melden', body: 'Unstimmigkeit melden, Review starten und Supportfall vorbereiten.', status: 'Review', icon: Icons.report_outlined)),
-          ]),
-        ]),
+        title: t('certificate.title'),
+        subtitle: t('certificate.subtitle'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('certificate.eyebrow')),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('certificate.intro'),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusTextField(
+                    controller: _code,
+                    label: t('certificate.code'),
+                    hint: t('certificate.codeHint'),
+                    icon: Icons.verified_outlined,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _verify(),
+                    autocorrect: false,
+                    enabled: !_loading,
+                  ),
+                  const SizedBox(height: 12),
+                  AirmiusButton(
+                    label: _loading
+                        ? t('certificate.checking')
+                        : t('certificate.check'),
+                    icon: _loading
+                        ? Icons.hourglass_top_outlined
+                        : Icons.fact_check_outlined,
+                    onPressed: _loading ? null : _verify,
+                  ),
+                ],
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                borderColor: theme.colorScheme.error,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.error_outline, color: theme.colorScheme.error),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_error!)),
+                  ],
+                ),
+              ),
+            ],
+            if (certificate != null) ...[
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                borderColor: theme.colorScheme.secondary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.verified_outlined,
+                          color: theme.colorScheme.secondary,
+                          size: 30,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            t('certificate.valid'),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        StatusPill(
+                          '${_value(certificate['progress_percent'], '100')}%',
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _CertificateLine(
+                      title: t('certificate.code'),
+                      body: _value(certificate['code']),
+                      icon: Icons.tag_outlined,
+                    ),
+                    _CertificateLine(
+                      title: t('certificate.student'),
+                      body: _value(certificate['student_name']),
+                      icon: Icons.person_outline,
+                    ),
+                    _CertificateLine(
+                      title: t('certificate.course'),
+                      body: _value(certificate['course_title']),
+                      icon: Icons.school_outlined,
+                    ),
+                    if (_value(certificate['course_subtitle']) != '—')
+                      _CertificateLine(
+                        title: t('certificate.courseSubtitle'),
+                        body: _value(certificate['course_subtitle']),
+                        icon: Icons.subject_outlined,
+                      ),
+                    _CertificateLine(
+                      title: t('certificate.issued'),
+                      body: _date(certificate['issued_at']),
+                      icon: Icons.event_available_outlined,
+                    ),
+                    _CertificateLine(
+                      title: t('certificate.tutor'),
+                      body: _value(
+                        (certificate['tutor'] is Map
+                            ? certificate['tutor']['name']
+                            : certificate['tutor']),
+                      ),
+                      icon: Icons.person_pin_outlined,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                child: AirmiusButton(
+                  label: t('certificate.report'),
+                  icon: Icons.report_outlined,
+                  secondary: true,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => PublicInterestScreen(
+                        topic:
+                            '${t('certificate.reportTopic')} ${_value(certificate['code'])}',
+                        kind: 'certificate_report',
+                        icon: Icons.report_outlined,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _CertificateLine extends StatelessWidget {
-  const _CertificateLine({required this.icon, required this.title, required this.body, required this.status});
+  const _CertificateLine({
+    required this.title,
+    required this.body,
+    required this.icon,
+  });
 
-  final IconData icon;
   final String title;
   final String body;
-  final String status;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(padding: const EdgeInsets.only(top: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: AirmiusColors.blue), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))])), StatusPill(status)]));
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
-

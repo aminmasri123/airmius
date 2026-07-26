@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -7,8 +8,12 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'clubs_screen.dart';
+import 'file_preview_screen.dart';
+import 'lesson_detail_screen.dart';
+import 'marketplace_screen.dart';
 import 'search_operations_screen.dart';
 import 'team_detail_screen.dart';
+import 'training_event_detail_screen.dart';
 import 'user_profile_detail_screen.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
@@ -20,7 +25,7 @@ class GlobalSearchScreen extends StatefulWidget {
 
 class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   String _query = '';
-  String _filter = 'Alle';
+  String _filter = 'all';
   Future<List<AirmiusSearchResult>>? _resultsFuture;
 
   @override
@@ -51,110 +56,345 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final onAccent = theme.colorScheme.onPrimary;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF1D5FA8),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.manage_search_outlined),
-        label: const Text('Search Ops', style: TextStyle(fontWeight: FontWeight.w900)),
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SearchOperationsScreen())),
+        backgroundColor: accent,
+        foregroundColor: onAccent,
+        icon: Icon(Icons.manage_search_outlined),
+        label: Text(
+          scope.t('search.ops'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SearchOperationsScreen()),
+        ),
       ),
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: Text(scope.t('search.title'), style: const TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          scope.t('search.title'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: PageFrame(
         title: scope.t('search.title'),
         subtitle: scope.t('search.subtitle'),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SearchBox(hint: scope.t('search'), onChanged: _setQuery),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final filter in const ['Alle', 'Person', 'Team', 'Verein'])
-              ChoiceChip(
-                selected: _filter == filter,
-                label: Text(filter),
-                onSelected: (_) => setState(() => _filter = filter),
-                selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-                backgroundColor: AirmiusColors.cardSoft,
-                side: BorderSide(color: _filter == filter ? AirmiusColors.blue : AirmiusColors.border),
-                labelStyle: TextStyle(color: _filter == filter ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              ),
-          ]),
-          const SizedBox(height: 14),
-          FutureBuilder<List<AirmiusSearchResult>>(
-            future: _resultsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return AirmiusPanel(child: Padding(padding: const EdgeInsets.all(18), child: Center(child: Text(scope.t('search.loading'), style: const TextStyle(color: AirmiusColors.muted)))));
-              }
-              if (snapshot.hasError) {
-                return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const Eyebrow('API Fehler'),
-                  const SizedBox(height: 8),
-                  Text('${snapshot.error}', style: const TextStyle(color: AirmiusColors.muted)),
-                  const SizedBox(height: 12),
-                  AirmiusButton(label: scope.t('search.retry'), icon: Icons.refresh_outlined, onPressed: _reload),
-                ]));
-              }
-
-              final results = snapshot.data ?? const <AirmiusSearchResult>[];
-              final items = results.where((item) => _filter == 'Alle' || _typeLabel(item.type) == _filter).toList();
-              final clubCount = results.where((item) => _typeLabel(item.type) == 'Verein').length;
-              final personCount = results.where((item) => _typeLabel(item.type) == 'Person').length;
-              final teamCount = results.where((item) => _typeLabel(item.type) == 'Team').length;
-
-              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(children: [
-                  Expanded(child: MetricCard(value: '$clubCount', label: scope.t('search.clubs'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: MetricCard(value: '$personCount', label: scope.t('search.people'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: MetricCard(value: '$teamCount', label: scope.t('search.teams'))),
-                ]),
-                const SizedBox(height: 14),
-                if (items.isEmpty)
-                  AirmiusPanel(child: Padding(padding: const EdgeInsets.all(18), child: Center(child: Text(scope.t('search.empty'), style: const TextStyle(color: AirmiusColors.muted)))))
-                else
-                  for (final item in items) ...[
-                    AirmiusPanel(
-                      onTap: () => _openResult(item),
-                      child: Row(children: [
-                        AirmiusAvatar(item.title, imageUrl: _resultImageUrl(item)),
-                        const SizedBox(width: 14),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 4),
-                          Text(item.subtitle, style: const TextStyle(color: AirmiusColors.muted)),
-                          const SizedBox(height: 8),
-                          StatusPill(_typeLabel(item.type)),
-                        ])),
-                        const Icon(Icons.chevron_right, color: AirmiusColors.muted),
-                      ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SearchBox(hint: scope.t('search'), onChanged: _setQuery),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final filter in const [
+                  'all',
+                  'person',
+                  'team',
+                  'club',
+                  'event',
+                  'course',
+                  'product',
+                  'file',
+                ])
+                  ChoiceChip(
+                    selected: _filter == filter,
+                    label: Text(scope.t('search.filter.$filter')),
+                    onSelected: (_) => setState(() => _filter = filter),
+                    selectedColor: accent.withValues(alpha: 0.22),
+                    backgroundColor: airmiusSurfaceSoftColor(context),
+                    side: BorderSide(
+                      color: _filter == filter
+                          ? accent
+                          : airmiusBorderColor(context),
                     ),
-                    const SizedBox(height: 12),
+                    labelStyle: TextStyle(
+                      color: _filter == filter
+                          ? accent
+                          : airmiusMutedColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            FutureBuilder<List<AirmiusSearchResult>>(
+              future: _resultsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return AirmiusPanel(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Center(
+                        child: Text(
+                          scope.t('search.loading'),
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(scope.t('search.apiError')),
+                        const SizedBox(height: 8),
+                        Text(
+                          snapshot.error is AirmiusApiException
+                              ? (snapshot.error! as AirmiusApiException)
+                                    .userMessage
+                              : scope.t('common.errorDetails'),
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
+                        const SizedBox(height: 12),
+                        AirmiusButton(
+                          label: scope.t('search.retry'),
+                          icon: Icons.refresh_outlined,
+                          onPressed: _reload,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final results = snapshot.data ?? const <AirmiusSearchResult>[];
+                final items = results
+                    .where(
+                      (item) =>
+                          _filter == 'all' || _typeKey(item.type) == _filter,
+                    )
+                    .toList();
+                final clubCount = results
+                    .where((item) => _typeKey(item.type) == 'club')
+                    .length;
+                final personCount = results
+                    .where((item) => _typeKey(item.type) == 'person')
+                    .length;
+                final teamCount = results
+                    .where((item) => _typeKey(item.type) == 'team')
+                    .length;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MetricCard(
+                            value: '$clubCount',
+                            label: scope.t('search.clubs'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MetricCard(
+                            value: '$personCount',
+                            label: scope.t('search.people'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MetricCard(
+                            value: '$teamCount',
+                            label: scope.t('search.teams'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (items.isEmpty)
+                      AirmiusPanel(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Center(
+                            child: Text(
+                              scope.t('search.empty'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      for (final item in items) ...[
+                        AirmiusPanel(
+                          onTap: () => _openResult(item),
+                          child: Row(
+                            children: [
+                              AirmiusAvatar(
+                                item.title,
+                                imageUrl: _resultImageUrl(item),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      style: TextStyle(
+                                        color: airmiusTextColor(context),
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.subtitle,
+                                      style: TextStyle(
+                                        color: airmiusMutedColor(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    StatusPill(
+                                      scope.t(
+                                        'search.filter.${_typeKey(item.type)}',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: airmiusMutedColor(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                   ],
-              ]);
-            },
-          ),
-        ]),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _openResult(AirmiusSearchResult item) {
+  Future<void> _openResult(AirmiusSearchResult item) async {
     final club = item.club;
     if (club != null) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ClubProfileScreen(club: ClubSummary.fromAirmiusClub(club), requested: false, onRequest: (_) {}, onWithdraw: (_) {})));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ClubProfileScreen(
+            club: ClubSummary.fromAirmiusClub(club),
+            requested: false,
+            onRequest: (_) {},
+            onWithdraw: (_) {},
+          ),
+        ),
+      );
       return;
     }
 
-    if (_typeLabel(item.type) == 'Team') {
+    final type = _typeKey(item.type);
+    if (type == 'event') {
+      try {
+        final event = await AirmiusServicesScope.of(
+          context,
+        ).repositories.events.event(item.id);
+        if (!mounted) return;
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TrainingEventDetailScreen(
+              event: event,
+              fallbackBody: item.subtitle,
+            ),
+          ),
+        );
+      } on AirmiusApiException catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+      return;
+    }
+
+    if (type == 'course') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              LessonDetailScreen(courseId: item.id, initialTitle: item.title),
+        ),
+      );
+      return;
+    }
+
+    if (type == 'product') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MarketplaceScreen(initialQuery: item.title),
+        ),
+      );
+      return;
+    }
+
+    if (type == 'file') {
+      final fileUrl = item.payload['file_url']?.toString();
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FilePreviewScreen(
+            title: item.title,
+            body: item.subtitle,
+            status: item.payload['mime_type']?.toString() ?? 'Datei',
+            icon: Icons.insert_drive_file_outlined,
+            fileId: item.id,
+            fileUrl: fileUrl,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (type == 'team') {
       final team = item.team;
       final teamId = team?.id == 0 ? item.id : team?.id;
-      Navigator.push(context, MaterialPageRoute(builder: (_) => TeamDetailScreen(title: team?.name ?? item.title, mode: 'Profil', teamId: teamId, team: team)));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TeamDetailScreen(
+            title: team?.name ?? item.title,
+            mode: 'Profil',
+            teamId: teamId,
+            team: team,
+          ),
+        ),
+      );
       return;
     }
 
-    Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileDetailScreen(name: item.title, body: item.subtitle, status: _typeLabel(item.type), context: 'Globale Suche')));
+    final scope = AirmiusScope.of(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProfileDetailScreen(
+          userId: item.id,
+          name: item.title,
+          body: item.subtitle,
+          status: scope.t('search.filter.${_typeKey(item.type)}'),
+          context: scope.t('search.context'),
+        ),
+      ),
+    );
   }
 
   String? _resultImageUrl(AirmiusSearchResult item) {
@@ -165,9 +405,13 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 }
 
-String _typeLabel(String rawType) {
+String _typeKey(String rawType) {
   final type = rawType.toLowerCase();
-  if (type.contains('club') || type.contains('verein')) return 'Verein';
-  if (type.contains('team')) return 'Team';
-  return 'Person';
+  if (type.contains('club') || type.contains('verein')) return 'club';
+  if (type.contains('team')) return 'team';
+  if (type.contains('event') || type.contains('termin')) return 'event';
+  if (type.contains('course') || type.contains('kurs')) return 'course';
+  if (type.contains('product') || type.contains('produkt')) return 'product';
+  if (type.contains('file') || type.contains('datei')) return 'file';
+  return 'person';
 }

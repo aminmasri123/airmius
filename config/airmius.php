@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'mobile_app_url' => env('AIRMIUS_MOBILE_APP_URL', 'https://app.airmius.com'),
+
     'billing' => [
         'company_name' => env('AIRMIUS_BILLING_COMPANY_NAME', 'Airmius'),
         'legal_name' => env('AIRMIUS_BILLING_LEGAL_NAME', ''),

@@ -102,6 +102,39 @@ class OperatingContractFeatureTest extends TestCase
         ]);
     }
 
+    public function test_summary_keeps_contract_currencies_separate(): void
+    {
+        $viewer = User::factory()->create();
+        $this->grantPermissions($viewer, ['finance.view']);
+
+        OperatingContract::query()->create([
+            'name' => 'Euro Hosting',
+            'category' => 'hosting',
+            'status' => 'active',
+            'amount' => 100,
+            'currency' => 'EUR',
+            'billing_interval' => 'monthly',
+        ]);
+        OperatingContract::query()->create([
+            'name' => 'Dollar Software',
+            'category' => 'software',
+            'status' => 'active',
+            'amount' => 200,
+            'currency' => 'USD',
+            'billing_interval' => 'monthly',
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('admin.operating-contracts.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('summary.monthly_totals', 2)
+                ->where('summary.monthly_totals.0.currency', 'EUR')
+                ->where('summary.monthly_totals.0.amount', 100)
+                ->where('summary.monthly_totals.1.currency', 'USD')
+                ->where('summary.monthly_totals.1.amount', 200)
+            );
+    }
+
     private function validPayload(array $overrides = []): array
     {
         return array_merge([

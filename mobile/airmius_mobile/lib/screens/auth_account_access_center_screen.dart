@@ -8,10 +8,12 @@ class AuthAccountAccessCenterScreen extends StatefulWidget {
   const AuthAccountAccessCenterScreen({super.key});
 
   @override
-  State<AuthAccountAccessCenterScreen> createState() => _AuthAccountAccessCenterScreenState();
+  State<AuthAccountAccessCenterScreen> createState() =>
+      _AuthAccountAccessCenterScreenState();
 }
 
-class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterScreen> {
+class _AuthAccountAccessCenterScreenState
+    extends State<AuthAccountAccessCenterScreen> {
   String _flow = 'Login';
   bool _emailVerified = true;
   bool _profileComplete = false;
@@ -20,19 +22,64 @@ class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterS
   bool _suspendedNotice = false;
 
   final List<_AuthFlowItem> _items = const [
-    _AuthFlowItem(title: 'Login', body: 'E-Mail, Passwort, Remember me, Weiterleitung und Fehlermeldungen.', status: 'Basis', icon: Icons.login_outlined, color: AirmiusColors.blue),
-    _AuthFlowItem(title: 'Registrierung', body: 'Neues Konto, Rolle, Sprache, Datenschutz und Profilstart.', status: 'Public', icon: Icons.person_add_outlined, color: AirmiusColors.green),
-    _AuthFlowItem(title: 'Profil vervollstaendigen', body: 'CompleteProfile mit Name, Rolle, Kontaktdaten und Onboarding-Hinweis.', status: 'Pflicht', icon: Icons.assignment_ind_outlined, color: AirmiusColors.amber),
-    _AuthFlowItem(title: 'E-Mail verifizieren', body: 'VerifyEmail mit Status, erneut senden und naechstem Schritt.', status: 'Sicherheit', icon: Icons.mark_email_read_outlined, color: AirmiusColors.blueDeep),
-    _AuthFlowItem(title: 'Passwort zurücksetzen', body: 'ForgotPassword, ResetPassword und ConfirmPassword als mobile Form-Flows.', status: 'Recovery', icon: Icons.lock_reset_outlined, color: AirmiusColors.red),
-    _AuthFlowItem(title: 'Two-Factor Challenge', body: '2FA-Code, Recovery-Code, Sicherheitshinweis und Support-Option.', status: '2FA', icon: Icons.phonelink_lock_outlined, color: AirmiusColors.blue),
-    _AuthFlowItem(title: 'Konto gesperrt', body: 'Suspended-Seite mit Grund, Supportkontakt, Status und naechster Aktion.', status: 'Sperre', icon: Icons.block_outlined, color: AirmiusColors.red),
+    _AuthFlowItem(
+      title: 'Login',
+      body: 'E-Mail, Passwort, Remember me, Weiterleitung und Fehlermeldungen.',
+      status: 'Basis',
+      icon: Icons.login_outlined,
+      color: AirmiusColors.blue,
+    ),
+    _AuthFlowItem(
+      title: 'Registrierung',
+      body: 'Neues Konto, Rolle, Sprache, Datenschutz und Profilstart.',
+      status: 'Public',
+      icon: Icons.person_add_outlined,
+      color: AirmiusColors.green,
+    ),
+    _AuthFlowItem(
+      title: 'Profil vervollstaendigen',
+      body:
+          'CompleteProfile mit Name, Rolle, Kontaktdaten und Onboarding-Hinweis.',
+      status: 'Pflicht',
+      icon: Icons.assignment_ind_outlined,
+      color: AirmiusColors.amber,
+    ),
+    _AuthFlowItem(
+      title: 'E-Mail verifizieren',
+      body: 'VerifyEmail mit Status, erneut senden und naechstem Schritt.',
+      status: 'Sicherheit',
+      icon: Icons.mark_email_read_outlined,
+      color: AirmiusColors.blueDeep,
+    ),
+    _AuthFlowItem(
+      title: 'Passwort zurücksetzen',
+      body:
+          'ForgotPassword, ResetPassword und ConfirmPassword als mobile Form-Flows.',
+      status: 'Recovery',
+      icon: Icons.lock_reset_outlined,
+      color: AirmiusColors.red,
+    ),
+    _AuthFlowItem(
+      title: 'Two-Factor Challenge',
+      body: '2FA-Code, Recovery-Code, Sicherheitshinweis und Support-Option.',
+      status: '2FA',
+      icon: Icons.phonelink_lock_outlined,
+      color: AirmiusColors.blue,
+    ),
+    _AuthFlowItem(
+      title: 'Konto gesperrt',
+      body:
+          'Suspended-Seite mit Grund, Supportkontakt, Status und naechster Aktion.',
+      status: 'Sperre',
+      icon: Icons.block_outlined,
+      color: AirmiusColors.red,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -45,27 +92,86 @@ class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterS
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Auth & Account-Zugang', subtitle: 'Login, Registrierung, Profilabschluss, E-Mail-Verifizierung, Passwort, 2FA und Sperrstatus.'),
+                        const PageTitle(
+                          title: 'Auth & Account-Zugang',
+                          subtitle:
+                              'Login, Registrierung, Profilabschluss, E-Mail-Verifizierung, Passwort, 2FA und Sperrstatus.',
+                        ),
                         const SizedBox(height: 16),
-                        _AuthHero(onContinue: () => _toast('Auth-Flow fortsetzen vorbereitet')),
+                        _AuthHero(
+                          onContinue: () =>
+                              _toast('Auth-Flow fortsetzen vorbereitet'),
+                        ),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Aktiver Flow', value: _flow, values: const ['Login', 'Register', 'Verify', 'Password', '2FA', 'Suspended'], onChanged: (value) => setState(() => _flow = value)),
+                        _ChoicePanel(
+                          title: 'Aktiver Flow',
+                          value: _flow,
+                          values: const [
+                            'Login',
+                            'Register',
+                            'Verify',
+                            'Password',
+                            '2FA',
+                            'Suspended',
+                          ],
+                          onChanged: (value) => setState(() => _flow = value),
+                        ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Zugangsstatus',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'E-Mail verifiziert', subtitle: 'VerifyEmail ist erledigt oder erneut anfordern.', value: _emailVerified, onChanged: (value) => setState(() => _emailVerified = value)),
-                              _SwitchRow(title: 'Profil vollstaendig', subtitle: 'CompleteProfile mit Pflichtdaten und Onboarding abgeschlossen.', value: _profileComplete, onChanged: (value) => setState(() => _profileComplete = value)),
-                              _SwitchRow(title: '2FA aktiv', subtitle: 'TwoFactorChallenge und Recovery-Code als mobile UI vorbereitet.', value: _twoFactorEnabled, onChanged: (value) => setState(() => _twoFactorEnabled = value)),
-                              _SwitchRow(title: 'Passwort-Reset erlaubt', subtitle: 'ForgotPassword, ResetPassword und ConfirmPassword aktiv.', value: _passwordResetAllowed, onChanged: (value) => setState(() => _passwordResetAllowed = value)),
-                              _SwitchRow(title: 'Sperrhinweis anzeigen', subtitle: 'Suspended-Seite mit Grund und Supportkontakt sichtbar.', value: _suspendedNotice, onChanged: (value) => setState(() => _suspendedNotice = value)),
+                              _SwitchRow(
+                                title: 'E-Mail verifiziert',
+                                subtitle:
+                                    'VerifyEmail ist erledigt oder erneut anfordern.',
+                                value: _emailVerified,
+                                onChanged: (value) =>
+                                    setState(() => _emailVerified = value),
+                              ),
+                              _SwitchRow(
+                                title: 'Profil vollstaendig',
+                                subtitle:
+                                    'CompleteProfile mit Pflichtdaten und Onboarding abgeschlossen.',
+                                value: _profileComplete,
+                                onChanged: (value) =>
+                                    setState(() => _profileComplete = value),
+                              ),
+                              _SwitchRow(
+                                title: '2FA aktiv',
+                                subtitle:
+                                    'TwoFactorChallenge und Recovery-Code als mobile UI vorbereitet.',
+                                value: _twoFactorEnabled,
+                                onChanged: (value) =>
+                                    setState(() => _twoFactorEnabled = value),
+                              ),
+                              _SwitchRow(
+                                title: 'Passwort-Reset erlaubt',
+                                subtitle:
+                                    'ForgotPassword, ResetPassword und ConfirmPassword aktiv.',
+                                value: _passwordResetAllowed,
+                                onChanged: (value) => setState(
+                                  () => _passwordResetAllowed = value,
+                                ),
+                              ),
+                              _SwitchRow(
+                                title: 'Sperrhinweis anzeigen',
+                                subtitle:
+                                    'Suspended-Seite mit Grund und Supportkontakt sichtbar.',
+                                value: _suspendedNotice,
+                                onChanged: (value) =>
+                                    setState(() => _suspendedNotice = value),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
                         for (final item in _items) ...[
-                          _AuthFlowCard(item: item, onOpen: () => _toast('${item.title}: UI-Flow vorbereitet')),
+                          _AuthFlowCard(
+                            item: item,
+                            onOpen: () =>
+                                _toast('${item.title}: UI-Flow vorbereitet'),
+                          ),
                           const SizedBox(height: 12),
                         ],
                         AirmiusPanel(
@@ -74,8 +180,23 @@ class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterS
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Flow testen', icon: Icons.play_arrow_outlined, onPressed: () => _toast('Auth-Flow testen vorbereitet')),
-                              AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
+                              AirmiusButton(
+                                label: 'Flow testen',
+                                icon: Icons.play_arrow_outlined,
+                                onPressed: () =>
+                                    _toast('Auth-Flow testen vorbereitet'),
+                              ),
+                              AirmiusButton(
+                                label: 'Support',
+                                icon: Icons.support_agent_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SupportHelpdeskScreen(),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -92,7 +213,9 @@ class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterS
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -106,9 +229,13 @@ class _AuthHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF10243B), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10243B), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,14 +244,55 @@ class _AuthHero extends StatelessWidget {
             children: [
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('AUTH'), SizedBox(height: 4), Text('Zugang sicher und mobil', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
-              AirmiusButton(label: 'Weiter', icon: Icons.arrow_forward_outlined, onPressed: onContinue),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow('AUTH'),
+                    SizedBox(height: 4),
+                    Text(
+                      'Zugang sicher und mobil',
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AirmiusButton(
+                label: 'Weiter',
+                icon: Icons.arrow_forward_outlined,
+                onPressed: onContinue,
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die Auth-Webseiten werden als mobile UI abgebildet: Login, Register, CompleteProfile, VerifyEmail, Passwort-Reset, 2FA und Suspended.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          Text(
+            'Die Auth-Webseiten werden als mobile UI abgebildet: Login, Register, CompleteProfile, VerifyEmail, Passwort-Reset, 2FA und Suspended.',
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '7', label: 'Flows')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Security')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Support'))]),
+          Row(
+            children: [
+              Expanded(
+                child: MetricCard(value: '7', label: 'Flows'),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: MetricCard(value: '2', label: 'Security'),
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: MetricCard(value: '1', label: 'Support'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -132,7 +300,12 @@ class _AuthHero extends StatelessWidget {
 }
 
 class _ChoicePanel extends StatelessWidget {
-  const _ChoicePanel({required this.title, required this.value, required this.values, required this.onChanged});
+  const _ChoicePanel({
+    required this.title,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String title;
   final String value;
@@ -153,9 +326,18 @@ class _ChoicePanel extends StatelessWidget {
               selected: value == item,
               onSelected: (_) => onChanged(item),
               selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-              backgroundColor: AirmiusColors.card,
-              labelStyle: TextStyle(color: value == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              side: BorderSide(color: value == item ? AirmiusColors.blue : AirmiusColors.border),
+              backgroundColor: airmiusSurfaceColor(context),
+              labelStyle: TextStyle(
+                color: value == item
+                    ? airmiusTextColor(context)
+                    : airmiusMutedColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+              side: BorderSide(
+                color: value == item
+                    ? AirmiusColors.blue
+                    : airmiusBorderColor(context),
+              ),
             ),
         ],
       ),
@@ -164,7 +346,12 @@ class _ChoicePanel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String title;
   final String subtitle;
@@ -176,11 +363,44 @@ class _SwitchRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-        Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
-      ]),
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: AirmiusColors.blue,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -198,10 +418,38 @@ class _AuthFlowCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: item.color.withValues(alpha: .18), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .5))), child: Icon(item.icon, color: item.color)),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: .18),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: item.color.withValues(alpha: .5)),
+            ),
+            child: Icon(item.icon, color: item.color),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [StatusPill(item.status, color: item.color), const SizedBox(height: 8), Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700))])),
-          IconButton(onPressed: onOpen, icon: const Icon(Icons.chevron_right, color: AirmiusColors.muted)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StatusPill(item.status, color: item.color),
+                const SizedBox(height: 8),
+                Text(
+                  item.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onOpen,
+            icon: Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+          ),
         ],
       ),
     );
@@ -209,7 +457,13 @@ class _AuthFlowCard extends StatelessWidget {
 }
 
 class _AuthFlowItem {
-  const _AuthFlowItem({required this.title, required this.body, required this.status, required this.icon, required this.color});
+  const _AuthFlowItem({
+    required this.title,
+    required this.body,
+    required this.status,
+    required this.icon,
+    required this.color,
+  });
 
   final String title;
   final String body;

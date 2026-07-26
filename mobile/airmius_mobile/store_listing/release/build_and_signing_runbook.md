@@ -13,7 +13,7 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 - iOS bundle ID:
   - `com.airmius.app`
 - App version:
-  - `1.0.0+1` until product/version owner changes it.
+  - `1.0.10+11` for the current release candidate; update only with the product/version owner.
 
 ## Android prerequisites
 
@@ -21,6 +21,7 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 - Android licenses accepted.
 - Release keystore created and stored outside source control.
 - `android/key.properties` created from `android/key.properties.example`.
+- Release Gradle configuration refuses to fall back to the debug key when `key.properties` is missing.
 - Play App Signing SHA-256 fingerprint copied for App Links.
 - Final `assetlinks.json` deployed to `https://app.airmius.com/.well-known/assetlinks.json`.
 

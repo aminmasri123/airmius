@@ -11,7 +11,6 @@ use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductReview;
 use App\Models\MarketplaceProductWishlist;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CommerceController extends Controller
 {
@@ -137,7 +136,7 @@ class CommerceController extends Controller
     public function orders(Request $request)
     {
         $orders = CommerceOrder::query()
-            ->with(['club', 'items'])
+            ->with(['club', 'items.orderable', 'returnRequests'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate($this->perPage($request));
@@ -149,7 +148,7 @@ class CommerceController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        return new CommerceOrderResource($order->loadMissing(['club', 'items']));
+        return new CommerceOrderResource($order->loadMissing(['club', 'items.orderable', 'returnRequests']));
     }
 
     private function verifiedPurchaseOrder(Request $request, MarketplaceProduct $product): ?CommerceOrder

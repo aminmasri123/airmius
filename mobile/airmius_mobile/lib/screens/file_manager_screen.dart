@@ -1,26 +1,37 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_upload_retry_policy.dart';
 import 'file_operations_screen.dart';
 import 'file_preview_screen.dart';
-import 'shared_file_access_screen.dart';
 
 class FileManagerScreen extends StatefulWidget {
-  const FileManagerScreen({super.key});
+  const FileManagerScreen({
+    super.key,
+    this.initialScope = 'mine',
+    this.initialTeamId,
+    this.initialSearch = '',
+  });
+
+  final String initialScope;
+  final int? initialTeamId;
+  final String initialSearch;
 
   @override
   State<FileManagerScreen> createState() => _FileManagerScreenState();
 }
 
 class _FileManagerScreenState extends State<FileManagerScreen> {
-  String _scope = 'Meine Dateien';
+  String _scope = 'mine';
+  int? _fixedTeamId;
   String _folder = 'Hauptebene';
   int? _folderId;
   bool _showFilters = false;
@@ -28,66 +39,63 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   bool _loading = true;
   bool _runningAction = false;
   bool _loadedOnce = false;
-  String _fileName = 'Datei wählen';
+  String _fileName = '';
   String? _error;
   String? _success;
   PlatformFile? _pickedFile;
   AirmiusFileWorkspace? _workspace;
   final _folderNameController = TextEditingController();
 
-  static const _scopes = ['Meine Dateien', 'Team', 'Verein', 'Event'];
-  static const _folders = [
-    _FileFolder('Vereinsdokumente', 3),
-    _FileFolder('Mitglieder', 2),
-    _FileFolder('Rechnungen', 4),
-    _FileFolder('Training', 1),
-  ];
-  static const _files = [
-    _ManagedFile(
-      Icons.picture_as_pdf_outlined,
-      'Datenschutz.pdf',
-      'Privat - PDF - 420 KB',
-      'Mit Mitgliedsantrag verknuepft',
-      'Pflicht',
-    ),
-    _ManagedFile(
-      Icons.description_outlined,
-      'Beitragsordnung.docx',
-      'Verein - DOCX - 86 KB',
-      'Mit Beitragsregel verknuepft',
-      'Pflicht',
-    ),
-    _ManagedFile(
-      Icons.picture_as_pdf_outlined,
-      'Vereinsregeln.pdf',
-      'Club - PDF - 1.2 MB',
-      'Sichtbar auf Clubprofil',
-      'Optional',
-    ),
-  ];
+  AirmiusUser? get _user => AirmiusServicesScope.of(context).authState.user;
+
+  List<String> get _scopes {
+    final user = _user;
+    return [
+      'mine',
+      if (_fixedTeamId != null || user?.teams.isNotEmpty == true) 'team',
+      if (user?.clubs.isNotEmpty == true) 'club',
+    ];
+  }
+
+  int? get _selectedTeamId {
+    if (_scope != 'team') return null;
+    if (_fixedTeamId != null) return _fixedTeamId;
+    final teams = _user?.teams ?? const <AirmiusNamedItem>[];
+    return teams.isEmpty ? null : teams.first.id;
+  }
+
+  int? get _selectedClubId {
+    if (_scope != 'club') return null;
+    final clubs = _user?.clubs ?? const <AirmiusNamedItem>[];
+    return clubs.isEmpty ? null : clubs.first.id;
+  }
+
+  int? get _selectedEventId => null;
 
   List<_FileFolder> get _activeFolders =>
-      _workspace?.folders.map(_FileFolder.fromApi).toList() ?? _folders;
+      _workspace?.folders.map(_FileFolder.fromApi).toList() ?? const [];
 
   List<_ManagedFile> get _activeFiles =>
-      _workspace?.files.map(_ManagedFile.fromApi).toList() ?? _files;
+      _workspace?.files
+          .map((file) => _ManagedFile.fromApi(file, AirmiusScope.of(context).t))
+          .toList() ??
+      const [];
 
-  AirmiusStorageUsage get _storage =>
-      _workspace?.storage ??
-      const AirmiusStorageUsage(
-        limitGb: 1,
-        usedBytes: 0,
-        remainingBytes: 1024 * 1024 * 1024,
-        usedPercent: 0,
-        isFull: false,
-      );
+  AirmiusStorageUsage? get _storage => _workspace?.storage;
+
+  @override
+  void initState() {
+    super.initState();
+    _scope = widget.initialScope;
+    _fixedTeamId = widget.initialTeamId;
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_loadedOnce) {
       _loadedOnce = true;
-      _loadWorkspace();
+      _loadWorkspace(search: widget.initialSearch);
     }
   }
 
@@ -99,32 +107,34 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Dateien',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
+        title: Text(t('files'), style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(
-            tooltip: 'Share-Link öffnen',
+            tooltip: t('files.shareLink'),
             icon: const Icon(Icons.link_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SharedFileAccessScreen()),
-            ),
+            onPressed: _openSharePicker,
           ),
           IconButton(
-            tooltip: 'Datei Ops',
+            tooltip: t('files.operations'),
             icon: const Icon(Icons.folder_shared_outlined),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    const FileOperationsScreen(initialTab: 'Uploads'),
+                builder: (_) => FileOperationsScreen(
+                  initialTab: 'Uploads',
+                  onOpenUploader: () {
+                    Navigator.pop(context);
+                    _openUploadIntent();
+                  },
+                ),
               ),
             ),
           ),
@@ -187,18 +197,17 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                     MaterialPageRoute(
                       builder: (_) => FilePreviewScreen(
                         title: file.title,
+                        fileId: file.id,
+                        fileMeta: file.meta,
                         body: file.previewBody,
                         status: file.status,
                         icon: file.icon,
+                        fileUrl: file.url,
                       ),
                     ),
                   ),
-                  onShare: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SharedFileAccessScreen(),
-                    ),
-                  ),
+                  onShareFile: _shareFile,
+                  onShareFolder: _shareFolder,
                   onRenameFolder: _renameFolder,
                   onDeleteFolder: _deleteFolder,
                   onRenameFile: _renameFile,
@@ -207,18 +216,20 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
               ],
             ),
           ),
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: _StorageFooter(storage: _storage),
-          ),
+          if (_storage != null)
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: _StorageFooter(storage: _storage!),
+            ),
         ],
       ),
     );
   }
 
   Future<void> _loadWorkspace({String? search}) async {
+    final homeLabel = AirmiusScope.of(context).t('files.home');
     setState(() {
       _loading = true;
       _error = null;
@@ -228,11 +239,18 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       final workspace = await AirmiusServicesScope.of(context)
           .repositories
           .files
-          .workspace(scope: _apiScope, folderId: _folderId, search: search);
+          .workspace(
+            scope: _apiScope,
+            folderId: _folderId,
+            clubId: _selectedClubId,
+            teamId: _selectedTeamId,
+            eventId: _selectedEventId,
+            search: search,
+          );
       if (!mounted) return;
       setState(() {
         _workspace = workspace;
-        _folder = workspace.currentFolder?.name ?? 'Hauptebene';
+        _folder = workspace.currentFolder?.name ?? homeLabel;
         _loading = false;
       });
     } catch (error) {
@@ -244,7 +262,12 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
   }
 
-  String get _apiScope => 'user';
+  String get _apiScope => switch (_scope) {
+    'team' => 'team',
+    'club' => 'club',
+    'event' => 'event',
+    _ => 'user',
+  };
 
   void _changeScope(String value) {
     setState(() {
@@ -292,23 +315,25 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   }
 
   void _submitUpload() {
+    final t = AirmiusScope.of(context).t;
     final file = _pickedFile;
     if (file == null) {
-      setState(() => _error = 'Bitte zuerst eine Datei wählen.');
+      setState(() => _error = t('files.chooseFirst'));
       return;
     }
 
     _runAction(() async {
       await _uploadFile(file);
       _pickedFile = null;
-      _fileName = 'Datei wählen';
+      _fileName = '';
       _showActions = false;
-      _success = 'Datei hochgeladen.';
+      _success = t('files.uploaded');
       await _loadWorkspace();
     });
   }
 
   Future<void> _uploadFile(PlatformFile file) async {
+    final readFailed = AirmiusScope.of(context).t('files.readFailed');
     final services = AirmiusServicesScope.of(context);
     final base = Uri.parse(services.environment.apiBaseUrl);
     final path =
@@ -325,6 +350,15 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           'Authorization': 'Bearer ${services.authState.session!.token}',
       });
       request.fields['scope'] = _apiScope;
+      if (_selectedClubId != null) {
+        request.fields['club_id'] = '$_selectedClubId';
+      }
+      if (_selectedTeamId != null) {
+        request.fields['team_id'] = '$_selectedTeamId';
+      }
+      if (_selectedEventId != null) {
+        request.fields['event_id'] = '$_selectedEventId';
+      }
       if (_folderId != null) request.fields['folder_id'] = '$_folderId';
 
       if (file.bytes != null && file.bytes!.isNotEmpty) {
@@ -346,9 +380,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           ),
         );
       } else {
-        throw const AirmiusApiException(
+        throw AirmiusApiException(
           statusCode: 0,
-          body: 'Die ausgewählte Datei konnte nicht gelesen werden.',
+          body: readFailed,
           path: '/api/v1/uploads',
         );
       }
@@ -386,9 +420,10 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   }
 
   void _createFolder() {
+    final t = AirmiusScope.of(context).t;
     final name = _folderNameController.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Bitte Ordnername eingeben.');
+      setState(() => _error = t('files.folderNameRequired'));
       return;
     }
     _runAction(() async {
@@ -396,18 +431,22 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         scope: _apiScope,
         name: name,
         parentId: _folderId,
+        clubId: _selectedClubId,
+        teamId: _selectedTeamId,
+        eventId: _selectedEventId,
       );
       _folderNameController.clear();
       _showActions = false;
-      _success = 'Ordner erstellt.';
+      _success = t('files.folderCreated');
       await _loadWorkspace();
     });
   }
 
   Future<void> _renameFolder(_FileFolder folder) async {
     if (folder.id == null) return;
+    final t = AirmiusScope.of(context).t;
     final name = await _askName(
-      title: 'Ordner umbenennen',
+      title: t('files.renameFolder'),
       initial: folder.name,
     );
     if (name == null) return;
@@ -415,44 +454,218 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       await AirmiusServicesScope.of(
         context,
       ).repositories.files.renameFolder(folder.id!, name);
-      _success = 'Ordner umbenannt.';
+      _success = t('files.folderRenamed');
       await _loadWorkspace();
     });
   }
 
   Future<void> _deleteFolder(_FileFolder folder) async {
     if (folder.id == null) return;
+    final t = AirmiusScope.of(context).t;
     _runAction(() async {
       await AirmiusServicesScope.of(
         context,
       ).repositories.files.deleteFolder(folder.id!);
-      _success = 'Ordner gelöscht.';
+      _success = t('files.folderDeleted');
       await _loadWorkspace();
     });
   }
 
   Future<void> _renameFile(_ManagedFile file) async {
     if (file.id == null) return;
-    final name = await _askName(title: 'Datei umbenennen', initial: file.title);
+    final t = AirmiusScope.of(context).t;
+    final name = await _askName(
+      title: t('files.renameFile'),
+      initial: file.title,
+    );
     if (name == null) return;
     _runAction(() async {
       await AirmiusServicesScope.of(
         context,
       ).repositories.files.renameFile(file.id!, name);
-      _success = 'Datei umbenannt.';
+      _success = t('files.fileRenamed');
       await _loadWorkspace();
     });
   }
 
   Future<void> _deleteFile(_ManagedFile file) async {
     if (file.id == null) return;
+    final t = AirmiusScope.of(context).t;
     _runAction(() async {
       await AirmiusServicesScope.of(
         context,
       ).repositories.files.deleteFile(file.id!);
-      _success = 'Datei gelöscht.';
+      _success = t('files.fileDeleted');
       await _loadWorkspace();
     });
+  }
+
+  Future<void> _shareFile(_ManagedFile file) async {
+    final t = AirmiusScope.of(context).t;
+    if (file.id == null) {
+      _showMessage(t('files.shareUnavailable'));
+      return;
+    }
+
+    await _runAction(() async {
+      final data = await AirmiusServicesScope.of(
+        context,
+      ).repositories.files.createFileShare(file.id!);
+      final link = '${data['url'] ?? ''}'.trim();
+      if (link.isEmpty) {
+        _showMessage(t('files.shareUnavailable'));
+        return;
+      }
+      await Clipboard.setData(ClipboardData(text: link));
+      _success = t('files.shareCreated');
+    });
+  }
+
+  Future<void> _openSharePicker() async {
+    final files = _activeFiles;
+    final t = AirmiusScope.of(context).t;
+    if (files.isEmpty) {
+      _showMessage(t('files.selectFileToShare'));
+      return;
+    }
+
+    final selected = await showModalBottomSheet<_ManagedFile>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
+            itemCount: files.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 6),
+            itemBuilder: (_, index) {
+              final file = files[index];
+              return ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: airmiusBorderColor(context)),
+                ),
+                leading: Icon(file.icon, color: airmiusAccentColor(context)),
+                title: Text(file.title),
+                subtitle: Text(file.meta),
+                trailing: const Icon(Icons.link_outlined),
+                onTap: () => Navigator.pop(sheetContext, file),
+              );
+            },
+          ),
+        );
+      },
+    );
+    if (selected != null && mounted) await _shareFile(selected);
+  }
+
+  Future<void> _shareFolder(_FileFolder folder) async {
+    final t = AirmiusScope.of(context).t;
+    if (folder.id == null) {
+      _showMessage(t('files.shareUnavailable'));
+      return;
+    }
+
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .friends();
+      final payload = response['data'];
+      final rawFriends = payload is Map ? payload['friends'] : null;
+      final friends = rawFriends is List
+          ? rawFriends
+                .whereType<Map>()
+                .map((friend) {
+                  final id = int.tryParse('${friend['id'] ?? ''}');
+                  final name = '${friend['name'] ?? ''}'.trim();
+                  return id == null || name.isEmpty
+                      ? null
+                      : _ShareFriend(id: id, name: name);
+                })
+                .whereType<_ShareFriend>()
+                .toList()
+          : const <_ShareFriend>[];
+
+      if (!mounted) return;
+      if (friends.isEmpty) {
+        _showMessage(t('files.noFriendsToShare'));
+        return;
+      }
+
+      final selected = await _chooseShareFriend(friends);
+      if (selected == null || !mounted) return;
+
+      await _runAction(() async {
+        await AirmiusServicesScope.of(
+          context,
+        ).repositories.files.shareFolder(folder.id!, selected.id);
+        _success = t('files.folderShareCreated');
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = _messageFor(error));
+    }
+  }
+
+  Future<_ShareFriend?> _chooseShareFriend(List<_ShareFriend> friends) {
+    final t = AirmiusScope.of(context).t;
+    return showDialog<_ShareFriend>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(dialogContext),
+        title: Text(
+          t('files.shareFolderTitle'),
+          style: TextStyle(
+            color: airmiusTextColor(dialogContext),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: friends.length,
+            separatorBuilder: (_, _) =>
+                Divider(color: airmiusBorderColor(dialogContext), height: 1),
+            itemBuilder: (_, index) {
+              final friend = friends[index];
+              return ListTile(
+                minVerticalPadding: 10,
+                leading: CircleAvatar(
+                  backgroundColor: airmiusAccentColor(dialogContext),
+                  foregroundColor: Theme.of(
+                    dialogContext,
+                  ).colorScheme.onPrimary,
+                  child: Text(friend.name.characters.first.toUpperCase()),
+                ),
+                title: Text(
+                  friend.name,
+                  style: TextStyle(
+                    color: airmiusTextColor(dialogContext),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                onTap: () => Navigator.pop(dialogContext, friend),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('files.cancel')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _runAction(Future<void> Function() action) async {
@@ -475,27 +688,28 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     required String title,
     required String initial,
   }) async {
+    final t = AirmiusScope.of(context).t;
     final controller = TextEditingController(text: initial);
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AirmiusColors.card,
+        backgroundColor: airmiusSurfaceColor(context),
         title: Text(
           title,
-          style: const TextStyle(
-            color: AirmiusColors.text,
+          style: TextStyle(
+            color: airmiusTextColor(context),
             fontWeight: FontWeight.w900,
           ),
         ),
-        content: _TextField(controller: controller, hintText: 'Name'),
+        content: _TextField(controller: controller, hintText: t('files.name')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
+            child: Text(t('files.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Speichern'),
+            child: Text(t('files.save')),
           ),
         ],
       ),
@@ -506,7 +720,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
 
   String _messageFor(Object error) {
     if (error is AirmiusApiException) return error.userMessage;
-    return 'Aktion konnte nicht abgeschlossen werden.';
+    return AirmiusScope.of(context).t('files.actionFailed');
   }
 }
 
@@ -523,15 +737,16 @@ class _ScopePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _Panel(
       padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Bereich',
+          Text(
+            t('files.scope'),
             style: TextStyle(
-              color: AirmiusColors.muted,
+              color: airmiusMutedColor(context),
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -541,24 +756,26 @@ class _ScopePanel extends StatelessWidget {
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: AirmiusColors.input,
+              color: airmiusInputColor(context),
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: AirmiusColors.border),
+              border: Border.all(color: airmiusBorderColor(context)),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: value,
                 isExpanded: true,
-                dropdownColor: AirmiusColors.card,
-                iconEnabledColor: AirmiusColors.muted,
-                style: const TextStyle(
-                  color: AirmiusColors.text,
+                dropdownColor: airmiusSurfaceColor(context),
+                iconEnabledColor: airmiusMutedColor(context),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
                   fontWeight: FontWeight.w800,
                 ),
                 items: values
                     .map(
-                      (item) =>
-                          DropdownMenuItem(value: item, child: Text(item)),
+                      (item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(t('files.scope.$item')),
+                      ),
                     )
                     .toList(),
                 onChanged: (next) {
@@ -593,7 +810,8 @@ class _FileBrowserCard extends StatelessWidget {
     required this.files,
     required this.onOpenFolder,
     required this.onOpenFile,
-    required this.onShare,
+    required this.onShareFile,
+    required this.onShareFolder,
     required this.onRenameFolder,
     required this.onDeleteFolder,
     required this.onRenameFile,
@@ -618,7 +836,8 @@ class _FileBrowserCard extends StatelessWidget {
   final List<_ManagedFile> files;
   final ValueChanged<_FileFolder> onOpenFolder;
   final ValueChanged<_ManagedFile> onOpenFile;
-  final VoidCallback onShare;
+  final ValueChanged<_ManagedFile> onShareFile;
+  final ValueChanged<_FileFolder> onShareFolder;
   final ValueChanged<_FileFolder> onRenameFolder;
   final ValueChanged<_FileFolder> onDeleteFolder;
   final ValueChanged<_ManagedFile> onRenameFile;
@@ -626,6 +845,7 @@ class _FileBrowserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _Panel(
       padding: EdgeInsets.zero,
       child: Column(
@@ -644,9 +864,9 @@ class _FileBrowserCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            folder == 'Hauptebene' ? 'Dateimanager' : folder,
-                            style: const TextStyle(
-                              color: AirmiusColors.text,
+                            onBack == null ? t('files.manager') : folder,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
                             ),
@@ -656,9 +876,17 @@ class _FileBrowserCard extends StatelessWidget {
                             spacing: 6,
                             runSpacing: 6,
                             children: [
-                              _CountChip('$totalFolders Ordner'),
-                              _CountChip('$totalFiles Dateien'),
-                              if (folder != 'Hauptebene') _CountChip(folder),
+                              _CountChip(
+                                t(
+                                  'files.countFolders',
+                                ).replaceAll('{count}', '$totalFolders'),
+                              ),
+                              _CountChip(
+                                t(
+                                  'files.countFiles',
+                                ).replaceAll('{count}', '$totalFiles'),
+                              ),
+                              if (onBack != null) _CountChip(folder),
                             ],
                           ),
                         ],
@@ -669,14 +897,14 @@ class _FileBrowserCard extends StatelessWidget {
                       icon: Icons.tune_outlined,
                       active: showFilters,
                       onTap: onToggleFilters,
-                      semanticLabel: 'Suchen und sortieren',
+                      semanticLabel: t('files.searchSort'),
                     ),
                     const SizedBox(width: 8),
                     _HeaderIconButton(
                       icon: showActions ? Icons.close : Icons.add,
                       primary: true,
                       onTap: onToggleActions,
-                      semanticLabel: 'Datei oder Ordner hinzufuegen',
+                      semanticLabel: t('files.add'),
                     ),
                   ],
                 ),
@@ -701,10 +929,10 @@ class _FileBrowserCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onBack,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text('Zurück'),
+                      label: Text(t('files.back')),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AirmiusColors.text,
-                        side: const BorderSide(color: AirmiusColors.border),
+                        foregroundColor: airmiusTextColor(context),
+                        side: BorderSide(color: airmiusBorderColor(context)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(9),
                         ),
@@ -713,10 +941,10 @@ class _FileBrowserCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                const Text(
-                  'Aktuelle Ansicht',
+                Text(
+                  t('files.currentView'),
                   style: TextStyle(
-                    color: AirmiusColors.muted,
+                    color: airmiusMutedColor(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -724,7 +952,7 @@ class _FileBrowserCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: AirmiusColors.border, height: 1),
+          Divider(color: airmiusBorderColor(context), height: 1),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -733,7 +961,7 @@ class _FileBrowserCard extends StatelessWidget {
                   _FolderRow(
                     folder: item,
                     onOpen: () => onOpenFolder(item),
-                    onShare: onShare,
+                    onShare: () => onShareFolder(item),
                     onRename: () => onRenameFolder(item),
                     onDelete: () => onDeleteFolder(item),
                   ),
@@ -743,7 +971,7 @@ class _FileBrowserCard extends StatelessWidget {
                   _FileRow(
                     file: file,
                     onOpen: () => onOpenFile(file),
-                    onShare: onShare,
+                    onShare: () => onShareFile(file),
                     onRename: () => onRenameFile(file),
                     onDelete: () => onDeleteFile(file),
                   ),
@@ -753,9 +981,9 @@ class _FileBrowserCard extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Dateien 1 - $totalFiles von $totalFiles',
-                    style: const TextStyle(
-                      color: AirmiusColors.muted,
+                    t('files.fileRange').replaceAll('{count}', '$totalFiles'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
                       fontSize: 12,
                     ),
                   ),
@@ -764,9 +992,11 @@ class _FileBrowserCard extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Ordner 1 - $totalFolders von $totalFolders',
-                    style: const TextStyle(
-                      color: AirmiusColors.muted,
+                    t(
+                      'files.folderRange',
+                    ).replaceAll('{count}', '$totalFolders'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
                       fontSize: 12,
                     ),
                   ),
@@ -797,12 +1027,13 @@ class _ActionsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: AirmiusColors.input.withValues(alpha: 0.55),
+        color: airmiusInputColor(context).withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         children: [
@@ -811,12 +1042,12 @@ class _ActionsPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Row(
+                Row(
                   children: [
                     Text(
-                      'Datei hochladen',
+                      t('files.uploadTitle'),
                       style: TextStyle(
-                        color: AirmiusColors.muted,
+                        color: airmiusMutedColor(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                         letterSpacing: .2,
@@ -824,9 +1055,9 @@ class _ActionsPanel extends StatelessWidget {
                     ),
                     Spacer(),
                     Text(
-                      'Hauptebene',
+                      t('files.home'),
                       style: TextStyle(
-                        color: AirmiusColors.muted,
+                        color: airmiusMutedColor(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -841,8 +1072,8 @@ class _ActionsPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _PrimaryBlockButton(
-                  label: 'Hochladen',
-                  enabled: fileName != 'Datei wählen',
+                  label: t('membership.upload'),
+                  enabled: fileName.isNotEmpty,
                   onTap: onUpload,
                 ),
               ],
@@ -854,10 +1085,10 @@ class _ActionsPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Ordner erstellen',
+                Text(
+                  t('files.createFolder'),
                   style: TextStyle(
-                    color: AirmiusColors.muted,
+                    color: airmiusMutedColor(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: .2,
@@ -866,11 +1097,11 @@ class _ActionsPanel extends StatelessWidget {
                 const SizedBox(height: 10),
                 _TextField(
                   controller: folderNameController,
-                  hintText: 'Ordnername',
+                  hintText: t('files.name'),
                 ),
                 const SizedBox(height: 8),
                 _PrimaryBlockButton(
-                  label: 'Erstellen',
+                  label: t('files.create'),
                   enabled: true,
                   onTap: onCreateFolder,
                 ),
@@ -890,19 +1121,20 @@ class _FilterPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Column(
       children: [
         _TextField(
-          hintText: 'Suchen...',
+          hintText: t('files.searchHint'),
           prefixIcon: Icons.search,
           onChanged: onSearchChanged,
         ),
         const SizedBox(height: 8),
         Row(
-          children: const [
-            Expanded(child: _SelectLike(label: 'Pro Seite: 24')),
+          children: [
+            Expanded(child: _SelectLike(label: t('files.pageSize'))),
             SizedBox(width: 8),
-            Expanded(child: _SelectLike(label: 'Name (A-Z)')),
+            Expanded(child: _SelectLike(label: t('files.sortName'))),
           ],
         ),
       ],
@@ -925,9 +1157,12 @@ class _StateBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final isError = error != null;
-    final text = loading ? 'Backend wird geladen...' : (error ?? success ?? '');
-    final color = isError ? AirmiusColors.red : AirmiusColors.green;
+    final text = loading ? t('files.loading') : (error ?? success ?? '');
+    final color = isError
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.secondary;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -954,16 +1189,17 @@ class _StateBanner extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: AirmiusColors.text,
+              style: TextStyle(
+                color: airmiusTextColor(context),
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
           if (isError)
             IconButton(
+              tooltip: t('common.retry'),
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh, color: AirmiusColors.text),
+              icon: Icon(Icons.refresh, color: airmiusTextColor(context)),
             ),
         ],
       ),
@@ -988,6 +1224,7 @@ class _FolderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _RowShell(
       child: Row(
         children: [
@@ -997,9 +1234,9 @@ class _FolderRow extends StatelessWidget {
               onTap: onOpen,
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.folder,
-                    color: AirmiusColors.amber,
+                    color: Theme.of(context).colorScheme.tertiary,
                     size: 34,
                   ),
                   const SizedBox(width: 10),
@@ -1011,16 +1248,18 @@ class _FolderRow extends StatelessWidget {
                           folder.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AirmiusColors.text,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${folder.filesCount} Dateien',
-                          style: const TextStyle(
-                            color: AirmiusColors.muted,
+                          t(
+                            'files.countFiles',
+                          ).replaceAll('{count}', '${folder.filesCount}'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -1035,17 +1274,17 @@ class _FolderRow extends StatelessWidget {
           _SmallIcon(
             icon: Icons.share_outlined,
             onTap: onShare,
-            semanticLabel: 'Ordner freigeben',
+            semanticLabel: t('files.folderShare'),
           ),
           _SmallIcon(
             icon: Icons.edit_outlined,
             onTap: onRename,
-            semanticLabel: 'Ordner umbenennen',
+            semanticLabel: t('files.folderRename'),
           ),
           _SmallIcon(
             icon: Icons.delete_outline,
             onTap: onDelete,
-            semanticLabel: 'Ordner löschen',
+            semanticLabel: t('files.folderDelete'),
           ),
         ],
       ),
@@ -1070,6 +1309,7 @@ class _FileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _RowShell(
       child: Column(
         children: [
@@ -1078,7 +1318,7 @@ class _FileRow extends StatelessWidget {
             onTap: onOpen,
             child: Row(
               children: [
-                Icon(file.icon, color: AirmiusColors.muted, size: 32),
+                Icon(file.icon, color: airmiusMutedColor(context), size: 32),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -1088,8 +1328,8 @@ class _FileRow extends StatelessWidget {
                         file.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AirmiusColors.text,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -1098,8 +1338,8 @@ class _FileRow extends StatelessWidget {
                         file.meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AirmiusColors.muted,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1117,22 +1357,22 @@ class _FileRow extends StatelessWidget {
               _SmallIcon(
                 icon: Icons.share_outlined,
                 onTap: onShare,
-                semanticLabel: 'Datei freigeben',
+                semanticLabel: t('files.fileShare'),
               ),
               _SmallIcon(
                 icon: Icons.edit_outlined,
                 onTap: onRename,
-                semanticLabel: 'Datei umbenennen',
+                semanticLabel: t('files.fileRename'),
               ),
               _SmallIcon(
                 icon: Icons.download_outlined,
                 onTap: onOpen,
-                semanticLabel: 'Datei herunterladen',
+                semanticLabel: t('files.fileDownload'),
               ),
               _SmallIcon(
                 icon: Icons.delete_outline,
                 onTap: onDelete,
-                semanticLabel: 'Datei löschen',
+                semanticLabel: t('files.fileDelete'),
               ),
             ],
           ),
@@ -1149,6 +1389,7 @@ class _StorageFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final used = _formatBytes(storage.usedBytes);
     final remaining = _formatBytes(storage.remainingBytes);
     final progress = storage.limitGb <= 0
@@ -1158,12 +1399,12 @@ class _StorageFooter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: AirmiusColors.card.withValues(alpha: 0.96),
+        color: airmiusSurfaceColor(context).withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.25),
             blurRadius: 22,
             offset: const Offset(0, -8),
           ),
@@ -1176,18 +1417,22 @@ class _StorageFooter extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Speicher: $used von ${storage.limitGb} GB',
+                  t('files.storage')
+                      .replaceAll('{used}', used)
+                      .replaceAll('{limit}', '${storage.limitGb}'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AirmiusColors.text,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              _FooterBadge('$remaining frei'),
+              _FooterBadge(
+                t('files.free').replaceAll('{remaining}', remaining),
+              ),
             ],
           ),
           const SizedBox(height: 7),
@@ -1196,9 +1441,9 @@ class _StorageFooter extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 5,
               value: progress,
-              backgroundColor: AirmiusColors.input,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AirmiusColors.blue,
+              backgroundColor: airmiusInputColor(context),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                airmiusAccentColor(context),
               ),
             ),
           ),
@@ -1232,9 +1477,9 @@ class _Panel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: AirmiusColors.card,
+        color: airmiusSurfaceColor(context),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: child,
     );
@@ -1251,9 +1496,9 @@ class _RowShell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: AirmiusColors.input.withValues(alpha: 0.35),
+        color: airmiusInputColor(context).withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: child,
     );
@@ -1288,14 +1533,18 @@ class _HeaderIconButton extends StatelessWidget {
           width: 40,
           decoration: BoxDecoration(
             color: primary
-                ? AirmiusColors.text
-                : (active ? AirmiusColors.input : Colors.transparent),
+                ? airmiusTextColor(context)
+                : (active ? airmiusInputColor(context) : Colors.transparent),
             borderRadius: BorderRadius.circular(9),
-            border: primary ? null : Border.all(color: AirmiusColors.border),
+            border: primary
+                ? null
+                : Border.all(color: airmiusBorderColor(context)),
           ),
           child: Icon(
             icon,
-            color: primary ? AirmiusColors.bg : AirmiusColors.text,
+            color: primary
+                ? Theme.of(context).scaffoldBackgroundColor
+                : airmiusTextColor(context),
             size: 22,
           ),
         ),
@@ -1319,10 +1568,10 @@ class _SmallIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: semanticLabel,
-      constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+      constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
-      icon: Icon(icon, color: AirmiusColors.muted, size: 21),
+      icon: Icon(icon, color: airmiusMutedColor(context), size: 21),
       onPressed: onTap,
     );
   }
@@ -1339,12 +1588,12 @@ class _CountChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AirmiusColors.muted,
+        style: TextStyle(
+          color: airmiusMutedColor(context),
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),
@@ -1364,12 +1613,12 @@ class _FooterBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AirmiusColors.muted,
+        style: TextStyle(
+          color: airmiusMutedColor(context),
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
@@ -1398,9 +1647,9 @@ class _InputLikeButton extends StatelessWidget {
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AirmiusColors.input,
+          color: airmiusInputColor(context),
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: AirmiusColors.border),
+          border: Border.all(color: airmiusBorderColor(context)),
         ),
         child: Row(
           children: [
@@ -1409,14 +1658,14 @@ class _InputLikeButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AirmiusColors.text,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            Icon(icon, color: AirmiusColors.muted, size: 20),
+            Icon(icon, color: airmiusMutedColor(context), size: 20),
           ],
         ),
       ),
@@ -1443,10 +1692,10 @@ class _PrimaryBlockButton extends StatelessWidget {
         onPressed: enabled ? onTap : null,
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: AirmiusColors.blueDeep,
-          disabledBackgroundColor: Colors.white.withValues(alpha: 0.55),
-          foregroundColor: Colors.white,
-          disabledForegroundColor: AirmiusColors.bg.withValues(alpha: 0.80),
+          backgroundColor: airmiusAccentColor(context),
+          disabledBackgroundColor: airmiusSurfaceSoftColor(context),
+          foregroundColor: airmiusOnColor(airmiusAccentColor(context)),
+          disabledForegroundColor: airmiusMutedColor(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
         ),
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -1475,26 +1724,26 @@ class _TextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(
-          color: AirmiusColors.text,
+        style: TextStyle(
+          color: airmiusTextColor(context),
           fontWeight: FontWeight.w800,
         ),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: AirmiusColors.mutedSoft),
+          hintStyle: TextStyle(color: airmiusMutedColor(context)),
           prefixIcon: prefixIcon == null
               ? null
-              : Icon(prefixIcon, color: AirmiusColors.muted, size: 20),
+              : Icon(prefixIcon, color: airmiusMutedColor(context), size: 20),
           filled: true,
-          fillColor: AirmiusColors.input,
+          fillColor: airmiusInputColor(context),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: AirmiusColors.border),
+            borderSide: BorderSide(color: airmiusBorderColor(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: AirmiusColors.blue),
+            borderSide: BorderSide(color: airmiusAccentColor(context)),
           ),
         ),
       ),
@@ -1513,9 +1762,9 @@ class _SelectLike extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
@@ -1524,14 +1773,14 @@ class _SelectLike extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AirmiusColors.text,
+              style: TextStyle(
+                color: airmiusTextColor(context),
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          const Icon(Icons.keyboard_arrow_down, color: AirmiusColors.muted),
+          Icon(Icons.keyboard_arrow_down, color: airmiusMutedColor(context)),
         ],
       ),
     );
@@ -1549,6 +1798,13 @@ class _FileFolder {
   final int? id;
 }
 
+class _ShareFriend {
+  const _ShareFriend({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
 class _ManagedFile {
   const _ManagedFile(
     this.icon,
@@ -1560,14 +1816,17 @@ class _ManagedFile {
     this.url,
   });
 
-  factory _ManagedFile.fromApi(AirmiusManagedFile file) {
-    final type = file.type.isEmpty ? 'Datei' : file.type;
+  factory _ManagedFile.fromApi(
+    AirmiusManagedFile file,
+    String Function(String) t,
+  ) {
+    final type = file.type.isEmpty ? t('files') : file.type;
     return _ManagedFile(
       _iconFor(type),
       file.name,
       '$type - ${_formatSize(file.size)}',
-      file.url.isEmpty ? 'Backend-Datei ohne direkte Vorschau-URL.' : file.url,
-      'Backend',
+      file.url.isEmpty ? t('files.backendPreview') : file.url,
+      t('files.backend'),
       id: file.id,
       url: file.url,
     );

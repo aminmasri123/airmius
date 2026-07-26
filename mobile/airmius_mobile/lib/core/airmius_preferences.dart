@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'airmius_l10n.dart';
+import 'airmius_accessibility_scope.dart';
 import 'airmius_preferences_store.dart';
 import 'airmius_theme.dart';
 
 class AirmiusPreferences {
-  AirmiusPreferences({
-    AirmiusPreferencesStore? store,
-  }) : _store = store ?? createAirmiusPreferencesStore();
+  AirmiusPreferences({AirmiusPreferencesStore? store})
+    : _store = store ?? createAirmiusPreferencesStore();
 
   final AirmiusPreferencesStore _store;
 
@@ -56,7 +56,29 @@ class AirmiusPreferences {
     return _store.writeString(_themePaletteKey, palette.key);
   }
 
+  Future<AirmiusTextSize> readTextSize() async {
+    return airmiusTextSizeFromKey(await _store.readString(_textSizeKey));
+  }
+
+  Future<void> writeTextSize(AirmiusTextSize textSize) {
+    return _store.writeString(_textSizeKey, textSize.key);
+  }
+
+  Future<bool> readPermissionOnboardingComplete() async {
+    return await _store.readString(_permissionOnboardingCompleteKey) == 'true';
+  }
+
+  Future<void> writePermissionOnboardingComplete(bool complete) {
+    return _store.writeString(
+      _permissionOnboardingCompleteKey,
+      complete ? 'true' : 'false',
+    );
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
   static const _themePaletteKey = 'airmius.themePalette';
+  static const _textSizeKey = 'airmius.textSize';
+  static const _permissionOnboardingCompleteKey =
+      'airmius.permissionOnboardingComplete';
 }

@@ -3,16 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
-use App\Models\AdCreative;
 use App\Models\AdEvent;
+use App\Models\CommerceAuditLog;
 use App\Models\CommerceOrder;
 use App\Models\CommerceOrderItem;
 use App\Models\CommerceReturnRequest;
-use App\Models\CommerceAuditLog;
-use App\Models\CommerceWarehouse;
-use App\Models\CommerceStockMovement;
 use App\Models\CommerceShippingRate;
+use App\Models\CommerceStockMovement;
 use App\Models\CommerceTaxRate;
+use App\Models\CommerceWarehouse;
 use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
@@ -24,23 +23,24 @@ use App\Models\PayoutProfile;
 use App\Models\Setting;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionCoupon;
-use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Models\WebsiteRequest;
+use App\Notifications\CommerceReturnStatusUpdated;
 use App\Services\AdminCommerceDashboardPayloadService;
-use App\Services\MediaOptimizer;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
+use App\Services\MediaOptimizer;
+use App\Support\AppNotification;
 use App\Support\CarrierTracking;
 use App\Support\MarketplaceProductInput;
 use App\Support\MarketplaceProductQualityGate;
 use App\Support\MarketplaceSellerReadiness;
 use App\Support\UploadStorage;
-use App\Support\AppNotification;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -457,10 +457,10 @@ class AdminCommerceController extends Controller
 
         $returnRequest->refresh()->load('user');
         if ($returnRequest->user) {
-            $returnRequest->user->notify(new \App\Notifications\CommerceReturnStatusUpdated($returnRequest));
+            $returnRequest->user->notify(new CommerceReturnStatusUpdated($returnRequest));
         } elseif ($returnRequest->guest_email) {
             Notification::route('mail', $returnRequest->guest_email)
-                ->notify(new \App\Notifications\CommerceReturnStatusUpdated($returnRequest));
+                ->notify(new CommerceReturnStatusUpdated($returnRequest));
         }
 
         return back()->with('success', 'Rücksendung wurde aktualisiert.');
@@ -1194,7 +1194,7 @@ class AdminCommerceController extends Controller
             ->values()
             ->all();
         $data['gallery_images'] = $galleryImages;
-        $data['image_url'] = $data['image_url'] ?: ($galleryImages[0] ?? null);
+        $data['image_url'] = ($data['image_url'] ?? null) ?: ($galleryImages[0] ?? null);
 
         $data['features'] = collect(preg_split('/\r\n|\r|\n/', $featuresText))
             ->map(fn (string $feature) => trim($feature))
@@ -1506,6 +1506,7 @@ class AdminCommerceController extends Controller
                     ->filter(fn ($item) => $item->orderable instanceof MarketplaceProduct)
                     ->map(fn ($item) => $item->orderable->user_id)
                     ->filter()
+                    ->toBase()
                     ->unique()
                     ->values();
 
@@ -1688,7 +1689,7 @@ class AdminCommerceController extends Controller
 
                 if ($tokenResponse->ok()) {
                     $response = Http::withToken($tokenResponse->json('access_token'))
-                        ->withHeaders(['PayPal-Request-Id' => (string) \Illuminate\Support\Str::uuid()])
+                        ->withHeaders(['PayPal-Request-Id' => (string) Str::uuid()])
                         ->post($this->paypalBaseUrl().'/v2/payments/captures/'.$captureId.'/refund', [
                             'amount' => [
                                 'currency_code' => $order->currency,
@@ -1876,4 +1877,3 @@ class AdminCommerceController extends Controller
             ->all();
     }
 }
-

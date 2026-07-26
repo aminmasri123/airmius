@@ -1,5 +1,7 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -27,7 +29,9 @@ const steps = [
     'guest.learning.steps.improve',
 ]
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const { locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
@@ -170,4 +174,3 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
         <Footer />
     </div>
 </template>
-

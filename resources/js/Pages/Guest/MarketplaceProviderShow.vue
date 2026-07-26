@@ -21,7 +21,7 @@ const props = defineProps({
 
 const page = usePage()
 const { isDark } = useTheme()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
@@ -42,7 +42,8 @@ const categoryLabels = {
     outfit_subscription: t('Outfit-Abo'),
 }
 
-const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format((cents || 0) / 100)

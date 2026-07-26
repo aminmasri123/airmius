@@ -5,6 +5,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -20,10 +21,13 @@ const props = defineProps({
     },
 })
 
+const { t, locale } = useI18n()
+const tx = (value, params = {}) => t(value, params)
+
 const formatDate = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -35,13 +39,13 @@ const articleSchema = computed(() => {
         {
             '@type': 'ListItem',
             position: 1,
-            name: 'Startseite',
+            name: tx('Startseite'),
             item: route('welcome'),
         },
         {
             '@type': 'ListItem',
             position: 2,
-            name: 'Blog',
+            name: tx('Blog'),
             item: route('guest.blog.index'),
         },
     ]
@@ -95,8 +99,8 @@ const categoryHref = computed(() => props.post.blog_category?.slug
 
 <template>
     <SeoHead
-        :title="isPreview ? `[Vorschau] ${post.meta_title || post.title}` : (post.meta_title || post.title)"
-        :description="post.meta_description || post.excerpt || 'Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.'"
+        :title="isPreview ? `[${tx('Vorschau')}] ${post.meta_title || post.title}` : (post.meta_title || post.title)"
+        :description="post.meta_description || post.excerpt || tx('Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.')"
         :image="post.cover_image || '/img/logo/Airmius-Logo-Light.png'"
         type="article"
         :schema="articleSchema"
@@ -109,14 +113,14 @@ const categoryHref = computed(() => props.post.blog_category?.slug
 
         <main class="px-4 pt-36 md:pt-44">
             <div v-if="isPreview" class="mx-auto mb-6 max-w-4xl rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm font-semibold text-air-orange">
-                Vorschau: Dieser Beitrag ist nicht öffentlich indexierbar.
+                {{ tx('Vorschau: Dieser Beitrag ist nicht öffentlich indexierbar.') }}
             </div>
 
             <article class="mx-auto max-w-4xl">
-                <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-secondary" aria-label="Breadcrumb">
-                    <Link :href="route('welcome')" class="hover:text-primary">Startseite</Link>
+                <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-secondary" :aria-label="tx('Breadcrumb')">
+                    <Link :href="route('welcome')" class="hover:text-primary">{{ tx('Startseite') }}</Link>
                     <span>/</span>
-                    <Link :href="route('guest.blog.index')" class="hover:text-primary">Blog</Link>
+                    <Link :href="route('guest.blog.index')" class="hover:text-primary">{{ tx('Blog') }}</Link>
                     <template v-if="post.blog_category?.name || post.category">
                         <span>/</span>
                         <Link :href="categoryHref" class="hover:text-primary">{{ post.blog_category?.name || post.category }}</Link>
@@ -129,7 +133,7 @@ const categoryHref = computed(() => props.post.blog_category?.slug
                     <span v-if="post.category" class="rounded-full border border-border px-3 py-1">{{ post.category }}</span>
                     <span>{{ post.author?.name }}</span>
                     <span v-if="post.published_at">{{ formatDate(post.published_at) }}</span>
-                    <span>{{ post.reading_time_minutes || 1 }} Min. Lesezeit</span>
+                    <span>{{ post.reading_time_minutes || 1 }} {{ tx('Min. Lesezeit') }}</span>
                 </div>
 
                 <h1 class="mt-4 font-heading text-4xl font-900 leading-tight sm:text-5xl">{{ post.title }}</h1>
@@ -143,14 +147,14 @@ const categoryHref = computed(() => props.post.blog_category?.slug
             </article>
 
             <section v-if="relatedPosts.length" class="mx-auto mt-16 max-w-4xl border-t border-border pt-8">
-                <h2 class="font-heading text-2xl font-900 text-primary">Mehr aus dieser Kategorie</h2>
+                <h2 class="font-heading text-2xl font-900 text-primary">{{ tx('Mehr aus dieser Kategorie') }}</h2>
                 <div class="mt-5 grid gap-4 md:grid-cols-3">
                     <article v-for="related in relatedPosts" :key="related.id" class="rounded-lg border border-border bg-card p-4">
                         <p class="text-xs text-secondary">{{ related.blog_category?.name || related.category }}</p>
                         <h3 class="mt-2 text-base font-bold text-primary">{{ related.title }}</h3>
                         <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-secondary">{{ related.excerpt }}</p>
                         <Link :href="route('guest.blog.show', related.slug)" class="mt-4 inline-flex text-sm font-semibold text-air-blue hover:underline">
-                            Lesen
+                            {{ tx('Lesen') }}
                         </Link>
                     </article>
                 </div>
@@ -286,4 +290,3 @@ const categoryHref = computed(() => props.post.blog_category?.slug
     padding: 0.05rem 0.25rem;
 }
 </style>
-

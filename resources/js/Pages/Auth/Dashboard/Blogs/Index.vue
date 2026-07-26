@@ -3,8 +3,18 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, nextTick, ref } from 'vue'
 import { confirmDialog, promptDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 const props = defineProps({
     posts: Object,
@@ -44,13 +54,13 @@ const form = useForm({
 
 const statusOptions = computed(() => {
     const options = [
-        ['draft', 'Entwurf'],
-        ['review', 'Review'],
-        ['archived', 'Archiviert'],
+        ['draft', t('Entwurf')],
+        ['review', t('Review')],
+        ['archived', t('Archiviert')],
     ]
 
     if (props.can.publish) {
-        options.splice(2, 0, ['published', 'Veröffentlicht'])
+        options.splice(2, 0, ['published', t('Veröffentlicht')])
     }
 
     return options
@@ -65,47 +75,47 @@ const statusClasses = {
     archived: 'bg-error/15 text-error',
 }
 
-const toolbarGroups = [
+const toolbarGroups = computed(() => [
     [
-        { label: 'B', title: 'Fett', command: 'bold', class: 'font-black' },
-        { label: 'I', title: 'Kursiv', command: 'italic', class: 'italic' },
-        { label: 'U', title: 'Unterstrichen', command: 'underline', class: 'underline' },
-        { label: 'S', title: 'Durchgestrichen', command: 'strikeThrough', class: 'line-through' },
+        { label: 'B', title: t('blogs_editor.toolbar.bold'), command: 'bold', class: 'font-black' },
+        { label: 'I', title: t('blogs_editor.toolbar.italic'), command: 'italic', class: 'italic' },
+        { label: 'U', title: t('blogs_editor.toolbar.underline'), command: 'underline', class: 'underline' },
+        { label: 'S', title: t('blogs_editor.toolbar.strike'), command: 'strikeThrough', class: 'line-through' },
     ],
     [
-        { icon: 'las la-list-ul', title: 'Liste', command: 'insertUnorderedList' },
-        { icon: 'las la-list-ol', title: 'Nummerierte Liste', command: 'insertOrderedList' },
-        { icon: 'las la-quote-right', title: 'Zitat', block: 'blockquote' },
+        { icon: 'las la-list-ul', title: t('blogs_editor.toolbar.list'), command: 'insertUnorderedList' },
+        { icon: 'las la-list-ol', title: t('blogs_editor.toolbar.numbered_list'), command: 'insertOrderedList' },
+        { icon: 'las la-quote-right', title: t('blogs_editor.toolbar.quote'), block: 'blockquote' },
     ],
     [
-        { icon: 'las la-align-left', title: 'Links', command: 'justifyLeft' },
-        { icon: 'las la-align-center', title: 'Zentriert', command: 'justifyCenter' },
-        { icon: 'las la-align-right', title: 'Rechts', command: 'justifyRight' },
+        { icon: 'las la-align-left', title: t('blogs_editor.toolbar.left'), command: 'justifyLeft' },
+        { icon: 'las la-align-center', title: t('blogs_editor.toolbar.center'), command: 'justifyCenter' },
+        { icon: 'las la-align-right', title: t('blogs_editor.toolbar.right'), command: 'justifyRight' },
     ],
-]
+])
 
-const contentStyles = [
-    ['', 'Textart wählen'],
-    ['p', 'Absatz'],
-    ['h2', 'Titel im Artikel'],
-    ['lead', 'Untertitel / Lead'],
-    ['h3', 'Abschnitt'],
-    ['h4', 'Zwischenüberschrift'],
-    ['blockquote', 'Zitat'],
-    ['callout', 'Hinweisbox'],
-    ['pre', 'Code / Notiz'],
-]
+const contentStyles = computed(() => [
+    ['', t('blogs_editor.styles.choose')],
+    ['p', t('blogs_editor.styles.paragraph')],
+    ['h2', t('blogs_editor.styles.article_title')],
+    ['lead', t('blogs_editor.styles.lead')],
+    ['h3', t('blogs_editor.styles.section')],
+    ['h4', t('blogs_editor.styles.subheading')],
+    ['blockquote', t('blogs_editor.styles.quote')],
+    ['callout', t('blogs_editor.styles.callout')],
+    ['pre', t('blogs_editor.styles.code')],
+])
 
-const semanticInlineStyles = [
-    ['', 'Farbe / Markierung'],
-    ['blog-text-primary', 'Standardtext'],
-    ['blog-text-secondary', 'Nebeninfo'],
-    ['blog-text-accent', 'Akzent'],
-    ['blog-text-success', 'Positiv'],
-    ['blog-text-warning', 'Wichtig'],
-    ['blog-text-danger', 'Warnung'],
-    ['blog-mark', 'Markierung'],
-]
+const semanticInlineStyles = computed(() => [
+    ['', t('blogs_editor.inline.choose')],
+    ['blog-text-primary', t('blogs_editor.inline.primary')],
+    ['blog-text-secondary', t('blogs_editor.inline.secondary')],
+    ['blog-text-accent', t('blogs_editor.inline.accent')],
+    ['blog-text-success', t('blogs_editor.inline.success')],
+    ['blog-text-warning', t('blogs_editor.inline.warning')],
+    ['blog-text-danger', t('blogs_editor.inline.danger')],
+    ['blog-mark', t('blogs_editor.inline.mark')],
+])
 
 const resetForm = () => {
     editingPost.value = null
@@ -182,14 +192,14 @@ const applyContentStyle = (style) => {
     }
 
     editorRef.value?.focus()
-    const html = selectedHtml() || 'Text eingeben...'
+    const html = selectedHtml() || t('blogs_editor.editor.text_placeholder')
 
     if (style === 'lead') {
         document.execCommand('insertHTML', false, `<p class="blog-lead">${html}</p>`)
     }
 
     if (style === 'callout') {
-        document.execCommand('insertHTML', false, `<div class="blog-callout"><strong>Hinweis</strong><p>${html}</p></div>`)
+        document.execCommand('insertHTML', false, `<div class="blog-callout"><strong>${t('blogs_editor.editor.callout_label')}</strong><p>${html}</p></div>`)
     }
 
     syncEditor()
@@ -199,7 +209,7 @@ const applySemanticInlineStyle = (styleClass) => {
     if (!styleClass) return
 
     editorRef.value?.focus()
-    const html = selectedHtml() || 'Text'
+    const html = selectedHtml() || t('blogs_editor.editor.text_placeholder')
     document.execCommand('insertHTML', false, `<span class="${styleClass}">${html}</span>`)
     syncEditor()
 }
@@ -212,11 +222,11 @@ const setEditorDirection = (direction) => {
 
 const createLink = async () => {
     const url = await promptDialog({
-        title: 'Link einfügen',
-        message: 'Füge die vollständige URL ein, die im Artikel verlinkt werden soll.',
-        inputLabel: 'URL',
+        title: t('blogs_editor.prompts.link_title'),
+        message: t('blogs_editor.prompts.link_message'),
+        inputLabel: t('blogs_editor.prompts.url'),
         placeholder: 'https://airmius.com',
-        confirmLabel: 'Einfügen',
+        confirmLabel: t('blogs_editor.prompts.insert'),
         required: true,
     })
 
@@ -243,11 +253,11 @@ const uploadContentImage = async (event) => {
     if (!file) return
 
     const alt = await promptDialog({
-        title: 'Bildbeschreibung',
-        message: 'Der Alt-Text hilft bei Barrierefreiheit und SEO.',
-        inputLabel: 'Alt-Text',
+        title: t('blogs_editor.prompts.image_title'),
+        message: t('blogs_editor.prompts.image_message'),
+        inputLabel: t('blogs_editor.prompts.alt_text'),
         defaultValue: file.name.replace(/\.[^.]+$/, ''),
-        confirmLabel: 'Bild hochladen',
+        confirmLabel: t('blogs_editor.prompts.upload_image'),
     })
 
     if (alt === null) {
@@ -290,34 +300,34 @@ const hasCoverImage = computed(() => Boolean(form.cover_image || form.cover_imag
 
 const seoChecks = computed(() => [
     {
-        label: 'Titel ist suchfreundlich',
+        label: t('blogs_editor.seo.title_label'),
         passed: effectiveMetaTitle.value.length >= 35 && effectiveMetaTitle.value.length <= 65,
-        hint: '35-65 Zeichen',
+        hint: t('blogs_editor.seo.title_hint'),
     },
     {
-        label: 'Meta Description ist klickstark',
+        label: t('blogs_editor.seo.meta_label'),
         passed: effectiveMetaDescription.value.length >= 110 && effectiveMetaDescription.value.length <= 160,
-        hint: '110-160 Zeichen',
+        hint: t('blogs_editor.seo.meta_hint'),
     },
     {
-        label: 'Kurztext vorhanden',
+        label: t('blogs_editor.seo.excerpt_label'),
         passed: form.excerpt.trim().length >= 80,
-        hint: 'Mindestens 80 Zeichen',
+        hint: t('blogs_editor.seo.excerpt_hint'),
     },
     {
-        label: 'Artikel hat genug Tiefe',
+        label: t('blogs_editor.seo.depth_label'),
         passed: contentWordCount.value >= 450,
-        hint: `${contentWordCount.value} Woerter`,
+        hint: t('blogs_editor.seo.words_hint', { count: formatNumber(contentWordCount.value) }),
     },
     {
-        label: 'Kategorie gesetzt',
+        label: t('blogs_editor.seo.category_label'),
         passed: Boolean(form.blog_category_id || form.category),
-        hint: 'Für Archiv, Breadcrumbs und Related Posts',
+        hint: t('blogs_editor.seo.category_hint'),
     },
     {
-        label: 'Cover Bild gesetzt',
+        label: t('blogs_editor.seo.cover_label'),
         passed: hasCoverImage.value,
-        hint: '1600 x 900 px empfohlen',
+        hint: t('blogs_editor.seo.cover_hint'),
     },
 ])
 
@@ -339,7 +349,7 @@ const publishBlocked = computed(() => form.status === 'published' && seoScore.va
 const formatDateTime = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -377,9 +387,9 @@ const submit = () => {
 
 const destroyPost = async (post) => {
     const confirmed = await confirmDialog({
-        title: 'Blogbeitrag löschen',
-        message: `Soll der Blogbeitrag "${post.title}" wirklich gelöscht werden?`,
-        confirmLabel: 'Löschen',
+        title: t('blogs_editor.delete_title'),
+        message: t('blogs_editor.delete_message', { title: post.title }),
+        confirmLabel: t('Löschen'),
         danger: true,
     })
 
@@ -402,16 +412,16 @@ const applyFilters = () => {
 </script>
 
 <template>
-    <Head title="Blogs" />
+    <Head :title="t('blogs_editor.page_title')" />
 
     <div class="space-y-6">
         <div class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Website CMS</p>
-                    <h1 class="mt-1 text-3xl font-bold text-primary">Blog Studio</h1>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ t('blogs_editor.eyebrow') }}</p>
+                    <h1 class="mt-1 text-3xl font-bold text-primary">{{ t('blogs_editor.title') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
-                        Schreibe Beiträge mit Überschriften, Listen, Markierungen, Links, Zitaten und sauberer öffentlicher Darstellung.
+                        {{ t('blogs_editor.intro') }}
                     </p>
                 </div>
 
@@ -421,23 +431,23 @@ const applyFilters = () => {
                         :href="route('blog-categories.index')"
                         class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                     >
-                        Kategorien
+                        {{ t('blogs_editor.categories') }}
                     </Link>
                     <input
                         v-model="search"
                         class="rounded-lg border-border bg-inputBg text-sm text-primary"
-                        placeholder="Suchen..."
+                        :placeholder="t('blogs_editor.search')"
                         @keydown.enter.prevent="applyFilters"
                     />
                     <select v-model="filterStatus" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="applyFilters">
-                        <option value="all">Alle Status</option>
-                        <option value="draft">Entwurf</option>
-                        <option value="review">Review</option>
-                        <option value="published">Veröffentlicht</option>
-                        <option value="archived">Archiviert</option>
+                        <option value="all">{{ t('blogs_editor.filters.all') }}</option>
+                        <option value="draft">{{ t('Entwurf') }}</option>
+                        <option value="review">{{ t('Review') }}</option>
+                        <option value="published">{{ t('Veröffentlicht') }}</option>
+                        <option value="archived">{{ t('Archiviert') }}</option>
                     </select>
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="applyFilters">
-                        Filtern
+                        {{ t('blogs_editor.filter') }}
                     </button>
                 </div>
             </div>
@@ -459,7 +469,7 @@ const applyFilters = () => {
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span :class="[statusClasses[post.status], 'rounded-full px-3 py-1 text-xs font-semibold']">
-                                    {{ post.status }}
+                                    {{ statusOptions.find(([value]) => value === post.status)?.[1] || post.status }}
                                 </span>
                                 <Link
                                     v-if="post.category && can.manageCategories"
@@ -472,13 +482,13 @@ const applyFilters = () => {
                                     {{ post.category }}
                                 </span>
                                 <span class="text-xs text-secondary">
-                                    {{ post.author?.name || 'Unbekannt' }}
+                                    {{ post.author?.name || t('Unbekannt') }}
                                 </span>
                                 <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
                                     SEO {{ post.seo_score || 0 }}%
                                 </span>
                                 <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
-                                    {{ post.revisions_count || 0 }} Revisionen
+                                    {{ formatNumber(post.revisions_count) }} {{ t('blogs_editor.revisions') }}
                                 </span>
                             </div>
 
@@ -487,7 +497,7 @@ const applyFilters = () => {
                                 {{ post.excerpt || stripHtml(post.content) }}
                             </p>
                             <p v-if="post.latest_revision" class="mt-2 text-xs text-secondary">
-                                Letzte Sicherung: {{ formatDateTime(post.latest_revision.created_at) }} mit {{ post.latest_revision.seo_score }}% SEO
+                                {{ t('blogs_editor.latest_revision', { date: formatDateTime(post.latest_revision.created_at), score: post.latest_revision.seo_score }) }}
                             </p>
 
                             <div class="mt-4 flex flex-wrap gap-2">
@@ -496,28 +506,28 @@ const applyFilters = () => {
                                     class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="edit(post)"
                                 >
-                                    Bearbeiten
+                                    {{ t('Bearbeiten') }}
                                 </button>
                                 <Link
                                     v-if="post.status === 'published'"
                                     :href="route('guest.blog.show', post.slug)"
                                     class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                 >
-                                    Anzeigen
+                                    {{ t('Anzeigen') }}
                                 </Link>
                                 <Link
                                     v-if="can.update"
                                     :href="route('blogs.preview', post.id)"
                                     class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                 >
-                                    Vorschau
+                                    {{ t('Vorschau') }}
                                 </Link>
                                 <button
                                     v-if="can.delete"
                                     class="rounded-lg bg-error px-3 py-2 text-sm font-semibold text-white"
                                     @click="destroyPost(post)"
                                 >
-                                    Löschen
+                                    {{ t('Löschen') }}
                                 </button>
                             </div>
                         </div>
@@ -525,7 +535,7 @@ const applyFilters = () => {
                 </article>
 
                 <div v-if="!posts.data.length" class="surface-card p-8 text-center text-secondary">
-                    Noch keine Blogbeiträge vorhanden.
+                    {{ t('blogs_editor.empty') }}
                 </div>
 
                 <div v-if="posts.links?.length > 3" class="flex flex-wrap gap-2">
@@ -535,8 +545,9 @@ const applyFilters = () => {
                         :href="link.url || '#'"
                         class="rounded-lg border border-border px-3 py-2 text-sm"
                         :class="link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted'"
-                        v-html="link.label"
-                    />
+                    >
+                        {{ paginationLabel(link.label) }}
+                    </Link>
                 </div>
             </section>
 
@@ -545,28 +556,28 @@ const applyFilters = () => {
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-secondary">
-                                {{ editingPost ? 'Beitrag bearbeiten' : 'Neuer Beitrag' }}
+                                {{ editingPost ? t('blogs_editor.form.edit_eyebrow') : t('blogs_editor.form.new_eyebrow') }}
                             </p>
                             <h2 class="mt-1 text-lg font-bold text-primary">
-                                {{ editingPost ? editingPost.title : 'Schreiben' }}
+                                {{ editingPost ? editingPost.title : t('blogs_editor.form.write_title') }}
                             </h2>
                         </div>
                         <button v-if="editingPost" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="resetForm">
-                            Neu
+                            {{ t('blogs_editor.form.new_button') }}
                         </button>
                     </div>
                 </div>
 
                 <form class="space-y-4 p-5" @submit.prevent="submit">
                     <div>
-                        <label class="text-sm font-semibold text-primary">Titel</label>
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.title') }}</label>
                         <input v-model="form.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
                         <p v-if="form.errors.title" class="mt-1 text-sm text-error">{{ form.errors.title }}</p>
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Slug</label>
-                        <input v-model="form.slug" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="automatisch bei leerem Feld" />
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.slug') }}</label>
+                        <input v-model="form.slug" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('blogs_editor.fields.slug_placeholder')" />
                         <p v-if="form.errors.slug" class="mt-1 text-sm text-error">{{ form.errors.slug }}</p>
                     </div>
 
@@ -578,12 +589,12 @@ const applyFilters = () => {
                                     :href="route('blog-categories.index')"
                                     class="text-sm font-semibold text-primary hover:text-air-blue hover:underline"
                                 >
-                                    Kategorie
+                                    {{ t('blogs_editor.fields.category') }}
                                 </Link>
-                                <label v-else class="text-sm font-semibold text-primary">Kategorie</label>
+                                <label v-else class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.category') }}</label>
                             </div>
                             <select v-model="form.blog_category_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                <option value="">Kategorie wählen</option>
+                                <option value="">{{ t('blogs_editor.fields.category_placeholder') }}</option>
                                 <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
                                     {{ category.name }}
                                 </option>
@@ -591,7 +602,7 @@ const applyFilters = () => {
                             <p v-if="form.errors.category" class="mt-1 text-sm text-error">{{ form.errors.category }}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-semibold text-primary">Status</label>
+                            <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.status') }}</label>
                             <select v-model="form.status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                 <option v-for="[value, label] in statusOptions" :key="value" :value="value">{{ label }}</option>
                             </select>
@@ -599,17 +610,17 @@ const applyFilters = () => {
                     </div>
 
                     <div v-if="can.publish">
-                        <label class="text-sm font-semibold text-primary">Veröffentlichen am</label>
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.publish_at') }}</label>
                         <input v-model="form.published_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Kurztext</label>
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.excerpt') }}</label>
                         <textarea v-model="form.excerpt" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></textarea>
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Inhalt</label>
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.content') }}</label>
                         <div class="mt-1 overflow-hidden rounded-lg border border-border bg-inputBg">
                             <div class="flex flex-wrap items-center gap-1 border-b border-border bg-card/70 p-2">
                                 <select class="h-9 rounded-md border-border bg-inputBg text-xs font-semibold text-primary" @change="applyContentStyle($event.target.value)">
@@ -634,7 +645,7 @@ const applyFilters = () => {
                                 <span class="ml-1 flex gap-1 border-l border-border pl-1">
                                     <button
                                         type="button"
-                                        title="Links nach rechts"
+                                        :title="t('blogs_editor.toolbar.ltr')"
                                         class="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold hover:bg-muted"
                                         :class="editorDirection === 'ltr' ? 'bg-air-blue/15 text-air-blue' : 'text-primary'"
                                         @click="setEditorDirection('ltr')"
@@ -643,7 +654,7 @@ const applyFilters = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        title="Rechts nach links"
+                                        :title="t('blogs_editor.toolbar.rtl')"
                                         class="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold hover:bg-muted"
                                         :class="editorDirection === 'rtl' ? 'bg-air-blue/15 text-air-blue' : 'text-primary'"
                                         @click="setEditorDirection('rtl')"
@@ -656,12 +667,12 @@ const applyFilters = () => {
                                     <option v-for="[value, label] in semanticInlineStyles" :key="value" :value="value">{{ label }}</option>
                                 </select>
 
-                                <button type="button" title="Link" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="createLink">
+                                <button type="button" :title="t('blogs_editor.toolbar.link')" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="createLink">
                                     <i class="las la-link"></i>
                                 </button>
                                 <button
                                     type="button"
-                                    title="Bild in Inhalt einfügen"
+                                    :title="t('blogs_editor.toolbar.insert_image')"
                                     class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted disabled:opacity-60"
                                     :disabled="contentImageUploading"
                                     @click="selectContentImage"
@@ -675,7 +686,7 @@ const applyFilters = () => {
                                     class="hidden"
                                     @change="uploadContentImage"
                                 />
-                                <button type="button" title="Formatierung entfernen" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="runCommand('removeFormat')">
+                                <button type="button" :title="t('blogs_editor.toolbar.remove_format')" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="runCommand('removeFormat')">
                                     <i class="las la-eraser"></i>
                                 </button>
                             </div>
@@ -694,8 +705,8 @@ const applyFilters = () => {
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Cover Bild</label>
-                        <input v-model="form.cover_image" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." />
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.cover') }}</label>
+                        <input v-model="form.cover_image" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('blogs_editor.fields.cover_placeholder')" />
                         <input
                             ref="coverUploadInput"
                             type="file"
@@ -704,29 +715,29 @@ const applyFilters = () => {
                             @change="selectCoverUpload"
                         />
                         <p class="mt-1 text-xs text-secondary">
-                            Empfohlenes Format: 1600 x 900 px im Querformat. Link einfügen oder Bild hochladen. Wenn beides gesetzt ist, wird der Upload verwendet.
+                            {{ t('blogs_editor.fields.cover_help') }}
                         </p>
                         <p v-if="form.errors.cover_image" class="mt-1 text-sm text-error">{{ form.errors.cover_image }}</p>
                         <p v-if="form.errors.cover_image_upload" class="mt-1 text-sm text-error">{{ form.errors.cover_image_upload }}</p>
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Tags</label>
-                        <input v-model="form.tags" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Training, Verein, Digital" />
+                        <label class="text-sm font-semibold text-primary">{{ t('blogs_editor.fields.tags') }}</label>
+                        <input v-model="form.tags" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('blogs_editor.fields.tags_placeholder')" />
                     </div>
 
                     <div class="rounded-lg border border-border bg-inputBg p-3">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-sm font-semibold text-primary">SEO</p>
+                            <p class="text-sm font-semibold text-primary">{{ t('blogs_editor.seo.title') }}</p>
                             <span class="text-sm font-bold" :class="seoScoreClass">{{ seoScore }}%</span>
                         </div>
                         <div class="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                             <div class="h-full rounded-full bg-air-green transition-all" :style="{ width: `${seoScore}%` }"></div>
                         </div>
-                        <input v-model="form.meta_title" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Title" />
-                        <textarea v-model="form.meta_description" rows="2" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Description"></textarea>
+                        <input v-model="form.meta_title" class="mt-3 w-full rounded-lg border-border bg-card text-primary" :placeholder="t('blogs_editor.seo.meta_title_placeholder')" />
+                        <textarea v-model="form.meta_description" rows="2" class="mt-3 w-full rounded-lg border-border bg-card text-primary" :placeholder="t('blogs_editor.seo.meta_description_placeholder')"></textarea>
                         <p v-if="publishBlocked" class="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
-                            Veröffentlichen ist ab 85% SEO-Qualität möglich.
+                            {{ t('blogs_editor.seo.publish_blocked') }}
                         </p>
                         <div class="mt-3 grid gap-2 text-xs">
                             <div v-for="check in seoChecks" :key="check.label" class="flex items-start gap-2">
@@ -743,7 +754,7 @@ const applyFilters = () => {
                         class="w-full rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary disabled:opacity-60"
                         :disabled="form.processing || (!editingPost && !can.create) || publishBlocked"
                     >
-                        {{ editingPost ? 'Aktualisieren' : 'Erstellen' }}
+                        {{ editingPost ? t('Aktualisieren') : t('Erstellen') }}
                     </button>
                 </form>
             </aside>

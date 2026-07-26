@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Controllers\AdminCommerceController as WebAdminCommerceController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\CommerceOrderResource;
@@ -10,6 +11,7 @@ use App\Http\Resources\Api\V1\MarketplaceProductResource;
 use App\Http\Resources\Api\V1\PayoutProfileResource;
 use App\Models\AdCampaign;
 use App\Models\CommerceOrder;
+use App\Models\CommerceReturnRequest;
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
 use App\Models\MarketplacePayout;
@@ -20,18 +22,25 @@ use App\Models\Setting;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionCoupon;
 use App\Models\SubscriptionInvoice;
+use App\Models\User;
 use App\Models\WebsiteRequest;
+use App\Services\AdminCommerceDashboardPayloadService;
 use App\Services\CommerceDocumentService;
 use App\Support\AppNotification;
 use App\Support\CarrierTracking;
 use App\Support\Roles;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class AdminCommerceController extends Controller
 {
-    public function __construct(private CommerceDocumentService $documents) {}
+    public function __construct(
+        private CommerceDocumentService $documents,
+        private AdminCommerceDashboardPayloadService $dashboardPayload,
+    ) {}
 
     public function dashboard(Request $request)
     {
@@ -80,6 +89,12 @@ class AdminCommerceController extends Controller
                 'orders' => CommerceOrderResource::collection($orders)->response()->getData(true),
                 'payouts' => MarketplacePayoutResource::collection($payouts)->resolve($request),
                 'payout_profiles' => PayoutProfileResource::collection($payoutProfiles)->resolve($request),
+                'payout_candidates' => $this->payoutCandidates(),
+                'return_requests' => CommerceReturnRequest::query()
+                    ->with(['order.user:id,name,email', 'item'])
+                    ->latest('id')
+                    ->limit(50)
+                    ->get(),
                 'shipping_carriers' => CarrierTracking::carriers(),
             ],
         ]);
@@ -97,9 +112,65 @@ class AdminCommerceController extends Controller
                 'shipping_rates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->limit(100)->get(),
                 'seller_applications' => MarketplaceSellerApplication::query()->with('user:id,name,email')->latest('id')->limit(100)->get(),
                 'website_requests' => WebsiteRequest::query()->with(['user:id,name,email', 'club:id,name'])->latest('id')->limit(100)->get(),
-                'campaigns' => AdCampaign::query()->latest('id')->limit(100)->get(),
+                'campaigns' => AdCampaign::query()->with('creatives')->latest('id')->limit(100)->get(),
+                'commerce_settings' => $this->dashboardPayload->commerceSettings(),
+                'marketplace_visuals' => $this->marketplaceVisuals(),
+                'marketplace_commissions' => $this->marketplaceCommissions(),
             ],
         ]);
+    }
+
+    public function storeProduct(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+        $latestId = (int) MarketplaceProduct::query()->max('id');
+
+        app(WebAdminCommerceController::class)->storeProduct($request);
+
+        $product = MarketplaceProduct::query()
+            ->where('id', '>', $latestId)
+            ->latest('id')
+            ->firstOrFail();
+
+        return (new MarketplaceProductResource($product->load(['user', 'club'])))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function updateProduct(Request $request, MarketplaceProduct $product)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateProduct($request, $product);
+
+        return new MarketplaceProductResource($product->fresh(['user', 'club']));
+    }
+
+    public function destroyProduct(Request $request, MarketplaceProduct $product)
+    {
+        $this->authorizeCommerceAdmin($request);
+        $productId = $product->id;
+
+        app(WebAdminCommerceController::class)->destroyProduct($request, $product);
+
+        $remaining = MarketplaceProduct::query()->find($productId);
+
+        return response()->json([
+            'data' => [
+                'id' => $productId,
+                'deleted' => $remaining === null,
+                'archived' => $remaining?->status === 'archived',
+            ],
+        ]);
+    }
+
+    public function adjustProductStock(Request $request, MarketplaceProduct $product)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->adjustProductStock($request, $product);
+
+        return new MarketplaceProductResource($product->fresh(['user', 'club']));
     }
 
     public function storeCoupon(Request $request)
@@ -319,6 +390,106 @@ class AdminCommerceController extends Controller
         return response()->json(['data' => $campaign->fresh()]);
     }
 
+    public function storeCampaign(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+        $latestId = (int) AdCampaign::query()->max('id');
+
+        app(WebAdminCommerceController::class)->storeCampaign($request);
+
+        $campaign = AdCampaign::query()
+            ->where('id', '>', $latestId)
+            ->with('creatives')
+            ->latest('id')
+            ->firstOrFail();
+
+        return response()->json(['data' => $campaign], 201);
+    }
+
+    public function updateCampaign(Request $request, AdCampaign $campaign)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateCampaign($request, $campaign);
+
+        return response()->json(['data' => $campaign->fresh('creatives')]);
+    }
+
+    public function updateOrderIssue(Request $request, CommerceOrder $order)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateOrderIssue($request, $order);
+
+        return new CommerceOrderResource($order->fresh(['club', 'items']));
+    }
+
+    public function replyOrderIssue(Request $request, CommerceOrder $order)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->replyOrderIssue($request, $order);
+
+        return new CommerceOrderResource($order->fresh(['club', 'items']));
+    }
+
+    public function updateReturnRequest(Request $request, CommerceReturnRequest $returnRequest)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateReturnRequest($request, $returnRequest);
+
+        return response()->json([
+            'data' => $returnRequest->fresh(['order.user:id,name,email', 'item']),
+        ]);
+    }
+
+    public function createPayout(Request $request, User $user)
+    {
+        $this->authorizeCommerceAdmin($request);
+        $latestId = (int) MarketplacePayout::query()->max('id');
+
+        app(WebAdminCommerceController::class)->createPayout($request, $user);
+
+        $payout = MarketplacePayout::query()
+            ->where('id', '>', $latestId)
+            ->where('user_id', $user->id)
+            ->with('user')
+            ->latest('id')
+            ->firstOrFail();
+
+        return (new MarketplacePayoutResource($payout))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function updateMarketplaceVisuals(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateMarketplaceVisuals($request);
+
+        return response()->json(['data' => $this->marketplaceVisuals()]);
+    }
+
+    public function updateMarketplaceCommissions(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateMarketplaceCommissions($request);
+
+        return response()->json(['data' => $this->marketplaceCommissions()]);
+    }
+
+    public function updateCommerceSettings(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        app(WebAdminCommerceController::class)->updateCommerceSettings($request);
+
+        return response()->json(['data' => $this->dashboardPayload->commerceSettings()]);
+    }
+
     public function refundOrder(Request $request, CommerceOrder $order)
     {
         $this->authorizeCommerceAdmin($request);
@@ -354,12 +525,22 @@ class AdminCommerceController extends Controller
                 'invoice' => [
                     'available' => filled($order->invoice_number),
                     'number' => $order->invoice_number,
-                    'url' => $order->invoice_number ? route('api.v1.admin.commerce.orders.invoice', $order) : null,
+                    'url' => $order->invoice_number
+                        ? URL::temporarySignedRoute('commerce.documents.signed', now()->addMinutes(10), [
+                            'order' => $order,
+                            'type' => 'invoice',
+                        ])
+                        : null,
                 ],
                 'credit_note' => [
                     'available' => filled($order->credit_note_number),
                     'number' => $order->credit_note_number,
-                    'url' => $order->credit_note_number ? route('api.v1.admin.commerce.orders.credit-note', $order) : null,
+                    'url' => $order->credit_note_number
+                        ? URL::temporarySignedRoute('commerce.documents.signed', now()->addMinutes(10), [
+                            'order' => $order,
+                            'type' => 'credit-note',
+                        ])
+                        : null,
                 ],
             ],
         ]);
@@ -545,5 +726,159 @@ class AdminCommerceController extends Controller
         Setting::setValue($settingKey, (string) ($next + 1));
 
         return $prefix.'-'.now()->format('Y').'-'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function payoutCandidates(): array
+    {
+        $cutoff = now()->subDays(14);
+        $orders = CommerceOrder::query()
+            ->with(['orderable.user:id,name,email', 'items.orderable.user:id,name,email'])
+            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
+            ->where('status', 'completed')
+            ->where('payout_status', 'pending')
+            ->where(fn ($query) => $query->whereNull('issue_status')->orWhere('issue_status', 'none'))
+            ->whereDoesntHave('returnRequests')
+            ->where(function ($query) use ($cutoff) {
+                $query->where(function ($noShipping) use ($cutoff) {
+                    $noShipping
+                        ->whereDoesntHave('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('completed_at', '<=', $cutoff);
+                })->orWhere(function ($shipping) use ($cutoff) {
+                    $shipping
+                        ->whereHas('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('shipping_status', 'delivered')
+                        ->where('delivered_at', '<=', $cutoff);
+                });
+            })
+            ->where(function ($query) {
+                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id'))
+                    ->orWhereHas('items', fn ($items) => $items
+                        ->where('orderable_type', MarketplaceProduct::class)
+                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id')));
+            })
+            ->get()
+            ->filter(function (CommerceOrder $order) {
+                $sellerIds = $order->items
+                    ->filter(fn ($item) => $item->orderable instanceof MarketplaceProduct)
+                    ->map(fn ($item) => $item->orderable->user_id)
+                    ->filter()
+                    ->toBase()
+                    ->unique()
+                    ->values();
+
+                if ($order->orderable instanceof MarketplaceProduct && $order->orderable->user_id) {
+                    $sellerIds->push($order->orderable->user_id);
+                }
+
+                return $sellerIds->unique()->count() === 1;
+            });
+
+        return $orders
+            ->groupBy(fn (CommerceOrder $order) => $order->orderable?->user_id
+                ?: $order->items->first(fn ($item) => $item->orderable instanceof MarketplaceProduct)?->orderable?->user_id)
+            ->filter(fn ($group, $userId) => filled($userId))
+            ->map(function ($group, $userId) {
+                $seller = $group->first()->orderable?->user
+                    ?: $group->first()->items->first(fn ($item) => $item->orderable instanceof MarketplaceProduct)?->orderable?->user;
+
+                return [
+                    'user_id' => (int) $userId,
+                    'name' => $seller?->name,
+                    'email' => $seller?->email,
+                    'orders_count' => $group->count(),
+                    'gross_cents' => $group->sum('amount_cents'),
+                    'commission_cents' => $group->sum('commission_cents'),
+                    'amount_cents' => $group->sum('amount_cents') - $group->sum('commission_cents'),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function marketplaceVisuals(): array
+    {
+        $definitions = [
+            'side_banner' => [
+                'label' => 'Seitlicher Marketplace-Banner',
+                'description' => 'Schmaler Hintergrund links und rechts.',
+                'recommended_size' => '192 x 1080 px',
+                'default_width' => 192,
+                'default_height' => 1080,
+                'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
+            ],
+            'hero_banner' => [
+                'label' => 'Oberer Aktions-/Hero-Banner',
+                'description' => 'Hauptbild im ersten Marketplace-Bereich.',
+                'recommended_size' => '1600 x 900 px',
+                'default_width' => 1600,
+                'default_height' => 900,
+                'default' => '',
+            ],
+            'sale_banner' => [
+                'label' => 'Sale-Kachel / Aktionsbild',
+                'description' => 'Bild für die Sale-Kachel.',
+                'recommended_size' => '800 x 1000 px',
+                'default_width' => 800,
+                'default_height' => 1000,
+                'default' => '',
+            ],
+        ];
+
+        return collect($definitions)->map(function (array $definition, string $key) {
+            $settingKey = 'marketplace_visual_'.$key;
+            $source = (string) Setting::valueFor($settingKey, $definition['default']);
+
+            return [
+                'key' => $key,
+                'label' => $definition['label'],
+                'description' => $definition['description'],
+                'recommended_size' => $definition['recommended_size'],
+                'width' => (int) Setting::valueFor($settingKey.'_width', $definition['default_width']),
+                'height' => (int) Setting::valueFor($settingKey.'_height', $definition['default_height']),
+                'source' => $source,
+                'url' => UploadStorage::url($source),
+            ];
+        })->values()->all();
+    }
+
+    private function marketplaceCommissions(): array
+    {
+        $defaults = [
+            'equipment' => 'Sportgeräte & Equipment',
+            'apparel' => 'Bekleidung & Schuhe',
+            'nutrition' => 'Ernährung & Supplements',
+            'accessories' => 'Zubehör',
+            'digital_products' => 'Digitale Produkte',
+            'product' => 'Sonstige Produkte',
+            'course' => 'Kurse / E-Learning',
+            'camp' => 'Camps',
+            'service' => 'Services / Airmius intern',
+            'outfit_subscription' => 'Outfit-Abo',
+        ];
+        $configured = $this->settingMap('marketplace_category_commissions');
+        $labels = collect($defaults)
+            ->merge($this->settingMap('marketplace_category_labels'))
+            ->merge(MarketplaceProduct::query()
+                ->whereNotNull('category')
+                ->distinct()
+                ->pluck('category')
+                ->mapWithKeys(fn (string $category) => [
+                    $category => $defaults[$category] ?? str($category)->replace(['_', '-'], ' ')->title()->toString(),
+                ]));
+        $fallback = (int) Setting::valueFor('marketplace_default_commission_percent', 10);
+
+        return $labels->map(fn (string $label, string $category) => [
+            'category' => $category,
+            'label' => $label,
+            'commission_percent' => (int) ($configured[$category] ?? $fallback),
+        ])->values()->all();
+    }
+
+    private function settingMap(string $key): array
+    {
+        $raw = Setting::valueFor($key, '{}');
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 }

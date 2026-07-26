@@ -42,8 +42,21 @@ class ClubMembershipApplicationFlowTest extends TestCase
         $this->assertSame(['gender' => 'female'], $membershipRequest->application_data);
         $this->assertSame('cash', $membershipRequest->preferred_payment_method);
         $this->assertSame('monthly', $membershipRequest->requested_billing_interval);
+        $this->assertSame('12.50', $membershipRequest->preview_amount);
+        $this->assertSame('12.50', $membershipRequest->preview_base_amount);
+        $this->assertSame('0.00', $membershipRequest->preview_discount_amount);
+        $this->assertSame('standard', $membershipRequest->preview_rule_type);
         $this->assertSame('monthly', $membershipRequest->preview_interval);
         $this->assertSame('privacy-doc', $membershipRequest->accepted_documents[0]['id']);
+        $this->assertSame('membership-v1', $membershipRequest->consent_version);
+        $this->assertSame('sha256:'.hash('sha256', json_encode([
+            'id' => 'privacy-doc',
+            'type' => 'privacy',
+            'title' => 'Datenschutz',
+            'url' => 'https://example.test/privacy',
+            'file_id' => null,
+            'file_name' => '',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)), $membershipRequest->accepted_documents[0]['version']);
 
         $this->actingAs($applicant)
             ->delete(route('auth.club-membership-requests.destroy', $club))
@@ -143,6 +156,7 @@ class ClubMembershipApplicationFlowTest extends TestCase
             'type' => 'membership',
             'application_data' => ['gender' => 'diverse'],
             'accepted_documents' => ['privacy-doc' => true],
+            'consent_signature' => 'Ada Applicant',
             'preferred_payment_method' => 'cash',
             'requested_billing_interval' => 'yearly',
         ])
@@ -150,6 +164,10 @@ class ClubMembershipApplicationFlowTest extends TestCase
             ->assertJsonPath('data.type', 'membership')
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.accepted_documents.0.id', 'privacy-doc')
+            ->assertJsonPath('data.accepted_documents.0.version', fn ($value) => is_string($value) && str_starts_with($value, 'sha256:'))
+            ->assertJsonPath('data.consent.version', 'membership-v1')
+            ->assertJsonPath('data.consent.signature', 'Ada Applicant')
+            ->assertJsonPath('data.consent.method', 'typed_signature')
             ->assertJsonPath('data.preferred_payment_method', 'cash')
             ->assertJsonPath('data.requested_billing_interval', 'yearly');
 
@@ -162,6 +180,30 @@ class ClubMembershipApplicationFlowTest extends TestCase
         ])
             ->assertStatus(422)
             ->assertJsonPath('message', 'Du bist bereits Mitglied in diesem Verein.');
+    }
+
+    public function test_api_club_profile_exposes_only_public_application_configuration_to_applicants(): void
+    {
+        $owner = User::factory()->create();
+        $applicant = User::factory()->create();
+        $club = $this->clubWithApplicationForm($owner);
+        $club->update([
+            'sepa_iban' => 'DE02120300000000202051',
+            'sepa_bic' => 'BYLADEM1001',
+            'verification_status' => 'verified',
+            'is_listed' => true,
+        ]);
+
+        Sanctum::actingAs($applicant);
+
+        $this->getJson("/api/v1/clubs/{$club->id}")
+            ->assertOk()
+            ->assertJsonPath('data.management.settings.membership_requests_enabled', true)
+            ->assertJsonPath('data.management.settings.membership_application_documents.0.id', 'privacy-doc')
+            ->assertJsonPath('data.management.settings.membership_payment_methods.0', 'cash')
+            ->assertJsonMissingPath('data.management.settings.sepa_iban')
+            ->assertJsonMissingPath('data.management.members')
+            ->assertJsonMissingPath('data.management.invoices');
     }
 
     private function clubWithApplicationForm(User $owner): Club

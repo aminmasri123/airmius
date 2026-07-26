@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../core/airmius_accessibility_scope.dart';
 
+import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import 'airmius_web_image_stub.dart'
@@ -60,7 +63,9 @@ Color _themeSurface(BuildContext context) {
 
 Color _themeSurfaceSoft(BuildContext context) {
   final palette = _themePalette(context);
-  return _isDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+  return _isDarkUi(context)
+      ? palette.darkSurfaceSoft
+      : palette.lightSurfaceSoft;
 }
 
 Color _themeInput(BuildContext context) {
@@ -85,15 +90,23 @@ Color _themeBorder(BuildContext context) {
 
 Color _themeShadow(BuildContext context) {
   final palette = _themePalette(context);
-  return _isDarkUi(context) ? Colors.black.withValues(alpha: 0.20) : palette.primary.withValues(alpha: 0.12);
+  return _isDarkUi(context)
+      ? Colors.black.withValues(alpha: 0.20)
+      : palette.primary.withValues(alpha: 0.12);
 }
 
-enum AirmiusLogoVariant {
-  mark,
-  wordmark,
-  full,
-  vertical,
+String _uiLabel(BuildContext context, String key, String fallback) {
+  try {
+    final value = AirmiusScope.of(context).t(key).trim();
+    return value.isEmpty || value == key ? fallback : value;
+  } catch (_) {
+    // Shared widgets are also useful in isolated previews and widget tests
+    // where the app-level localization scope may not be mounted yet.
+    return fallback;
+  }
 }
+
+enum AirmiusLogoVariant { mark, wordmark, full, vertical }
 
 class AirmiusLogo extends StatelessWidget {
   const AirmiusLogo({
@@ -118,14 +131,25 @@ class AirmiusLogo extends StatelessWidget {
     final useDarkUiLogo = forceDark ?? _shouldUseDarkUiLogo(context);
     final assetPath = switch (selectedVariant) {
       AirmiusLogoVariant.mark => 'assets/images/airmius-mark.png',
-      AirmiusLogoVariant.wordmark => useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png',
-      AirmiusLogoVariant.full => useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png',
-      AirmiusLogoVariant.vertical => useDarkUiLogo ? 'assets/images/airmius-logo-vertical-dark.png' : 'assets/images/airmius-logo-vertical-light.png',
+      AirmiusLogoVariant.wordmark =>
+        useDarkUiLogo
+            ? 'assets/images/airmius-logo-dark.png'
+            : 'assets/images/airmius-logo-light.png',
+      AirmiusLogoVariant.full =>
+        useDarkUiLogo
+            ? 'assets/images/airmius-logo-dark.png'
+            : 'assets/images/airmius-logo-light.png',
+      AirmiusLogoVariant.vertical =>
+        useDarkUiLogo
+            ? 'assets/images/airmius-logo-vertical-dark.png'
+            : 'assets/images/airmius-logo-vertical-light.png',
     };
-    final fallbackAssetPath = useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png';
+    final fallbackAssetPath = useDarkUiLogo
+        ? 'assets/images/airmius-logo-dark.png'
+        : 'assets/images/airmius-logo-light.png';
 
     return Semantics(
-      label: 'Airmius Logo',
+      label: 'Airmius',
       image: true,
       child: Image.asset(
         assetPath,
@@ -135,9 +159,12 @@ class AirmiusLogo extends StatelessWidget {
         errorBuilder: (_, _, _) => Image.asset(
           fallbackAssetPath,
           height: resolvedSize,
-          width: selectedVariant == AirmiusLogoVariant.mark ? resolvedSize : null,
+          width: selectedVariant == AirmiusLogoVariant.mark
+              ? resolvedSize
+              : null,
           fit: BoxFit.contain,
-          errorBuilder: (context, _, _) => Icon(Icons.auto_awesome, color: _themeAccent(context)),
+          errorBuilder: (context, _, _) =>
+              Icon(Icons.auto_awesome, color: _themeAccent(context)),
         ),
       ),
     );
@@ -183,7 +210,8 @@ class AirmiusPanel extends StatelessWidget {
     final text = _themeText(context);
     final muted = _themeMuted(context);
     final border = _themeBorder(context);
-    final content = child ??
+    final content =
+        child ??
         (children == null
             ? null
             : Column(
@@ -196,18 +224,29 @@ class AirmiusPanel extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (title != null) Text(title!, style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900)),
+              if (title != null)
+                Text(
+                  title!,
+                  style: TextStyle(
+                    color: text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(subtitle!, style: TextStyle(color: muted, fontWeight: FontWeight.w700)),
+                Text(
+                  subtitle!,
+                  style: TextStyle(color: muted, fontWeight: FontWeight.w700),
+                ),
               ] else if (body != null) ...[
                 const SizedBox(height: 4),
-                Text(body!, style: TextStyle(color: muted, fontWeight: FontWeight.w700)),
+                Text(
+                  body!,
+                  style: TextStyle(color: muted, fontWeight: FontWeight.w700),
+                ),
               ],
-              if (content != null) ...[
-                const SizedBox(height: 10),
-                content,
-              ],
+              if (content != null) ...[const SizedBox(height: 10), content],
             ],
           )
         : content;
@@ -228,15 +267,13 @@ class AirmiusPanel extends StatelessWidget {
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  surfaceSoft,
-                  surface,
-                  accent2.withValues(alpha: 0.16),
-                ],
+                colors: [surfaceSoft, surface, accent2.withValues(alpha: 0.16)],
               )
             : null,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor ?? Color.lerp(border, accent, 0.18) ?? border),
+        border: Border.all(
+          color: borderColor ?? Color.lerp(border, accent, 0.18) ?? border,
+        ),
         boxShadow: [
           BoxShadow(
             color: _themeShadow(context),
@@ -245,13 +282,29 @@ class AirmiusPanel extends StatelessWidget {
           ),
         ],
       ),
-      child: constrainedPanelBody,
+      // Keep interactive Material descendants (ListTile, SwitchListTile,
+      // radio rows) above the panel decoration. Without this local Material,
+      // Flutter reports that the decorated container can hide their ink and
+      // selected backgrounds, especially in compact accessibility layouts.
+      child: Material(
+        type: MaterialType.transparency,
+        child: constrainedPanelBody,
+      ),
     );
 
     if (onTap == null) return box;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: box),
+    return Semantics(
+      button: true,
+      enabled: true,
+      label: title ?? subtitle ?? body,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: box,
+        ),
+      ),
     );
   }
 }
@@ -267,9 +320,15 @@ class PageFrame extends StatelessWidget {
     this.actions,
     this.showHeader = false,
     this.onRefresh,
-  })  : child = child ?? body ?? const SizedBox.shrink(),
-        assert(child == null || body == null, 'Provide exactly one of child or body to PageFrame.'),
-        assert(child != null || body != null, 'Provide either child or body to PageFrame.');
+  }) : child = child ?? body ?? const SizedBox.shrink(),
+       assert(
+         child == null || body == null,
+         'Provide exactly one of child or body to PageFrame.',
+       ),
+       assert(
+         child != null || body != null,
+         'Provide either child or body to PageFrame.',
+       );
 
   final String title;
   final String subtitle;
@@ -287,15 +346,14 @@ class PageFrame extends StatelessWidget {
       ?trailing,
       if (actions != null)
         ...actions!.map(
-          (action) => Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: action,
-          ),
+          (action) =>
+              Padding(padding: const EdgeInsets.only(left: 8), child: action),
         ),
     ];
 
     final scrollView = CustomScrollView(
       physics: onRefresh == null ? null : const AlwaysScrollableScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -306,40 +364,70 @@ class PageFrame extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (showHeader) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    if (showHeader)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final titleBlock = Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                softWrap: true,
+                                style: TextStyle(
+                                  color: text,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.05,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                softWrap: true,
+                                style: TextStyle(
+                                  color: muted,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          );
+                          final trailing = trailingWidgets.isEmpty
+                              ? null
+                              : Wrap(
+                                  alignment: WrapAlignment.end,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: trailingWidgets,
+                                );
+                          // On phones (and with large text enabled), stack
+                          // actions below the heading to avoid clipped
+                          // controls and preserve a generous hit target.
+                          if (trailing == null || constraints.maxWidth < 560) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  title,
-                                  style: TextStyle(
-                                    color: text,
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.05,
+                                titleBlock,
+                                if (trailing != null) ...[
+                                  const SizedBox(height: 10),
+                                  Align(
+                                    alignment: AlignmentDirectional.centerEnd,
+                                    child: trailing,
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  subtitle,
-                                  style: TextStyle(
-                                    color: muted,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                ],
                               ],
-                            ),
-                          ),
-                          if (trailingWidgets.isNotEmpty)
-                            Row(mainAxisSize: MainAxisSize.min, children: trailingWidgets),
-                        ],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: titleBlock),
+                              const SizedBox(width: 12),
+                              trailing,
+                            ],
+                          );
+                        },
                       ),
-                      const SizedBox(height: 16),
-                    ],
+                    if (showHeader) const SizedBox(height: 16),
                     child,
                   ],
                 ),
@@ -380,11 +468,7 @@ class AirmiusLogoMark extends StatelessWidget {
 }
 
 class IconBadge extends StatelessWidget {
-  const IconBadge({
-    super.key,
-    required this.icon,
-    required this.color,
-  });
+  const IconBadge({super.key, required this.icon, required this.color});
 
   final IconData icon;
   final Color color;
@@ -450,9 +534,23 @@ class Metric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: TextStyle(color: text, fontSize: 22, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: text,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -460,11 +558,7 @@ class Metric extends StatelessWidget {
 }
 
 class PageTitle extends StatelessWidget {
-  const PageTitle({
-    super.key,
-    required this.title,
-    required this.subtitle,
-  });
+  const PageTitle({super.key, required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -476,9 +570,20 @@ class PageTitle extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: TextStyle(color: text, fontSize: 26, fontWeight: FontWeight.w900, height: 1.05)),
+        Text(
+          title,
+          style: TextStyle(
+            color: text,
+            fontSize: 26,
+            fontWeight: FontWeight.w900,
+            height: 1.05,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(color: muted, fontWeight: FontWeight.w600)),
+        Text(
+          subtitle,
+          style: TextStyle(color: muted, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }
@@ -514,8 +619,8 @@ void openUiAction(
 }) {
   final resolvedBody = (body == null || body.trim().isEmpty)
       ? (message == null || message.trim().isEmpty
-          ? 'UI-Aktion vorbereiten und in der App sichtbar halten.'
-          : message)
+            ? AirmiusScope.of(context).t('uiAction.fallback')
+            : message)
       : body;
 
   Navigator.of(context).push(
@@ -544,7 +649,8 @@ class _OpenUiActionResultScreen extends StatefulWidget {
   final IconData icon;
 
   @override
-  State<_OpenUiActionResultScreen> createState() => _OpenUiActionResultScreenState();
+  State<_OpenUiActionResultScreen> createState() =>
+      _OpenUiActionResultScreenState();
 }
 
 class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
@@ -556,11 +662,15 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
     final accent = _themeAccent(context);
     final text = _themeText(context);
     final muted = _themeMuted(context);
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: _themeHeader(context),
         surfaceTintColor: Colors.transparent,
-        title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          widget.title,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: widget.title,
@@ -579,17 +689,20 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Eyebrow('UI-Aktion'),
+                        Eyebrow(t('uiAction.eyebrow')),
                         const SizedBox(height: 8),
-                        Text(widget.body, style: TextStyle(color: muted, height: 1.35)),
+                        Text(
+                          widget.body,
+                          style: TextStyle(color: muted, height: 1.35),
+                        ),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             StatusPill(widget.status),
-                            const StatusPill('UI bereit'),
-                            const StatusPill('API später'),
+                            StatusPill(t('uiAction.ready')),
+                            StatusPill(t('uiAction.apiLater')),
                           ],
                         ),
                       ],
@@ -603,20 +716,32 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
                 onChanged: (value) => setState(() => _saveAsDraft = value),
                 activeThumbColor: accent,
                 contentPadding: EdgeInsets.zero,
-                title: Text('Als Entwurf vormerken', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
-                subtitle: Text('UI bleibt lokal sichtbar, Server-Sync ist später geplant.', style: TextStyle(color: muted)),
+                title: Text(
+                  t('uiAction.draft'),
+                  style: TextStyle(color: text, fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(
+                  t('uiAction.draftBody'),
+                  style: TextStyle(color: muted),
+                ),
               ),
               SwitchListTile.adaptive(
                 value: _notify,
                 onChanged: (value) => setState(() => _notify = value),
                 activeThumbColor: AirmiusColors.amber,
                 contentPadding: EdgeInsets.zero,
-                title: Text('Benachrichtigung ausloesen', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
-                subtitle: Text('Push/Inbox-Signal optional vormerken.', style: TextStyle(color: muted)),
+                title: Text(
+                  t('uiAction.notify'),
+                  style: TextStyle(color: text, fontWeight: FontWeight.w900),
+                ),
+                subtitle: Text(
+                  t('uiAction.notifyBody'),
+                  style: TextStyle(color: muted),
+                ),
               ),
               const SizedBox(height: 12),
               AirmiusButton(
-                label: 'Aktion vormerken',
+                label: t('uiAction.save'),
                 icon: Icons.check_circle_outline,
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -661,9 +786,19 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallbackLabel = (userLabel == null || userLabel!.trim().isEmpty) ? 'GK' : userLabel!.trim();
+    final fallbackLabel = (userLabel == null || userLabel!.trim().isEmpty)
+        ? 'GK'
+        : userLabel!.trim();
     final text = _themeText(context);
     final muted = _themeMuted(context);
+    final searchLabel = _uiLabel(context, 'nav.search', 'Suche');
+    final messagesLabel = _uiLabel(context, 'nav.messages', 'Nachrichten');
+    final notificationsLabel = _uiLabel(
+      context,
+      'nav.notifications',
+      'Benachrichtigungen',
+    );
+    final menuLabel = _uiLabel(context, 'nav.menu', 'Menü');
 
     return AppBar(
       backgroundColor: _themeHeader(context),
@@ -672,31 +807,40 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
       automaticallyImplyLeading: false,
       centerTitle: false,
       titleSpacing: 12,
-      title: InkWell(
-        onTap: onLogoTap,
-        borderRadius: BorderRadius.circular(8),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: AirmiusLogo(compact: true),
+      title: Semantics(
+        button: onLogoTap != null,
+        label: 'Airmius',
+        child: InkWell(
+          onTap: onLogoTap,
+          borderRadius: BorderRadius.circular(8),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: AirmiusLogo(compact: true),
+          ),
         ),
       ),
       actions: [
         IconButton(
-          tooltip: 'Suche',
+          tooltip: searchLabel,
           onPressed: onSearch,
           icon: Icon(Icons.search, color: muted),
         ),
         IconButton(
-          tooltip: 'Nachrichten',
+          tooltip: messagesLabel,
           onPressed: onMessages,
           icon: Icon(Icons.chat_bubble_outline, color: muted),
         ),
         IconButton(
-          tooltip: 'Benachrichtigungen',
+          tooltip: notificationsLabel,
           onPressed: onNotifications,
-          icon: _NotificationBell(count: notificationCount),
+          icon: _NotificationBell(
+            count: notificationCount,
+            semanticLabel: notificationsLabel,
+          ),
         ),
-        if (onOpenProfile != null || onOpenSettings != null || onSignOut != null)
+        if (onOpenProfile != null ||
+            onOpenSettings != null ||
+            onSignOut != null)
           _ProfileMenuBubble(
             userLabel: fallbackLabel,
             userImageUrl: userImageUrl,
@@ -708,7 +852,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
           UserBubble(label: fallbackLabel, imageUrl: userImageUrl),
         Builder(
           builder: (context) => IconButton(
-            tooltip: 'Menue',
+            tooltip: menuLabel,
             onPressed: () => Scaffold.of(context).openDrawer(),
             icon: Icon(Icons.menu, color: text),
           ),
@@ -720,37 +864,47 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 class _NotificationBell extends StatelessWidget {
-  const _NotificationBell({required this.count});
+  const _NotificationBell({required this.count, required this.semanticLabel});
 
   final int count;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
     final muted = _themeMuted(context);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(Icons.notifications_none, color: muted),
-        if (count > 0)
-          Positioned(
-            right: -6,
-            top: -7,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: AirmiusColors.red,
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: _themeHeader(context), width: 2),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                count > 99 ? '99+' : '$count',
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, height: 1),
+    return Semantics(
+      label: count > 0 ? '$semanticLabel, $count' : semanticLabel,
+      image: true,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(Icons.notifications_none, color: muted),
+          if (count > 0)
+            Positioned(
+              right: -6,
+              top: -7,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: AirmiusColors.red,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: _themeHeader(context), width: 2),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  count > 99 ? '99+' : '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -801,14 +955,23 @@ class UserBubble extends StatelessWidget {
               errorBuilder: (_, _, _) => Center(child: initials),
             ),
     );
-    if (onTap == null) return bubble;
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: bubble,
+    final semanticName = label.trim().isEmpty
+        ? _uiLabel(context, 'nav.user', 'Benutzer')
+        : label.trim();
+    if (onTap == null) {
+      return Semantics(image: true, label: semanticName, child: bubble);
+    }
+    return Semantics(
+      button: true,
+      label: '${_uiLabel(context, 'nav.user', 'Benutzer')}: $semanticName',
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: bubble,
+        ),
       ),
     );
   }
@@ -824,8 +987,12 @@ class UserBubble extends StatelessWidget {
 
 String initialsFromName(String? name, {String fallback = '?'}) {
   final parts =
-      name?.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList() ??
-          const <String>[];
+      name
+          ?.trim()
+          .split(RegExp(r'\s+'))
+          .where((part) => part.isNotEmpty)
+          .toList() ??
+      const <String>[];
   if (parts.isEmpty) return fallback;
   if (parts.length == 1) {
     final part = parts.first;
@@ -838,29 +1005,51 @@ String? resolveAirmiusImageUrl(String? imageUrl) {
   final value = imageUrl?.trim();
   if (value == null || value.isEmpty) return null;
   if (value.startsWith('data:image/')) return value;
-  final uri = Uri.tryParse(value);
-  if (uri != null && uri.hasScheme && uri.hasAuthority) return value;
+  final absolute = safeExternalHttpUrl(value, httpsOnly: false);
+  if (absolute != null) return absolute.toString();
+  final parsed = Uri.tryParse(value);
+  if (parsed != null && parsed.hasScheme) return null;
 
-  const origin = String.fromEnvironment('AIRMIUS_API_BASE_URL', defaultValue: 'https://airmius.com');
+  const origin = String.fromEnvironment(
+    'AIRMIUS_API_BASE_URL',
+    defaultValue: 'https://app.airmius.com',
+  );
   final base = Uri.tryParse(origin);
   if (base == null || !base.hasScheme || base.host.isEmpty) return null;
-  if (value.startsWith('/')) return base.replace(path: _withAirmiusBasePath(base, value), query: null, fragment: null).toString();
+  if (value.startsWith('/')) {
+    return base
+        .replace(
+          path: _withAirmiusBasePath(base, value),
+          query: null,
+          fragment: null,
+        )
+        .toString();
+  }
   final cleanPath = value.replaceFirst(RegExp(r'^/+'), '');
-  final path = cleanPath.startsWith('storage/') || cleanPath.startsWith('build/') || cleanPath.startsWith('images/') ? '/$cleanPath' : '/storage/$cleanPath';
-  return base.replace(path: _withAirmiusBasePath(base, path), query: null, fragment: null).toString();
+  final path =
+      cleanPath.startsWith('storage/') ||
+          cleanPath.startsWith('build/') ||
+          cleanPath.startsWith('images/')
+      ? '/$cleanPath'
+      : '/storage/$cleanPath';
+  return base
+      .replace(
+        path: _withAirmiusBasePath(base, path),
+        query: null,
+        fragment: null,
+      )
+      .toString();
 }
 
 String _withAirmiusBasePath(Uri base, String path) {
-  final cleanBase = base.path == '/' ? '' : base.path.replaceFirst(RegExp(r'/$'), '');
+  final cleanBase = base.path == '/'
+      ? ''
+      : base.path.replaceFirst(RegExp(r'/$'), '');
   if (cleanBase.isEmpty || path.startsWith('$cleanBase/')) return path;
   return '$cleanBase$path';
 }
 
-enum _ProfileAction {
-  openProfile,
-  openSettings,
-  signOut,
-}
+enum _ProfileAction { openProfile, openSettings, signOut }
 
 class _ProfileMenuBubble extends StatelessWidget {
   const _ProfileMenuBubble({
@@ -881,35 +1070,41 @@ class _ProfileMenuBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <PopupMenuEntry<_ProfileAction>>[];
     if (onOpenProfile != null) {
-      items.add(_buildItem(
-        context,
-        action: _ProfileAction.openProfile,
-        icon: Icons.person_outline,
-        text: 'Profil',
-      ));
+      items.add(
+        _buildItem(
+          context,
+          action: _ProfileAction.openProfile,
+          icon: Icons.person_outline,
+          text: _uiLabel(context, 'nav.profile', 'Profil'),
+        ),
+      );
     }
     if (onOpenSettings != null) {
-      items.add(_buildItem(
-        context,
-        action: _ProfileAction.openSettings,
-        icon: Icons.settings_outlined,
-        text: 'Einstellungen',
-      ));
+      items.add(
+        _buildItem(
+          context,
+          action: _ProfileAction.openSettings,
+          icon: Icons.settings_outlined,
+          text: _uiLabel(context, 'nav.settings', 'Einstellungen'),
+        ),
+      );
     }
     if (onSignOut != null) {
       if (items.isNotEmpty) {
         items.add(const PopupMenuDivider());
       }
-      items.add(_buildItem(
-        context,
-        action: _ProfileAction.signOut,
-        icon: Icons.logout_outlined,
-        text: 'Abmelden',
-      ));
+      items.add(
+        _buildItem(
+          context,
+          action: _ProfileAction.signOut,
+          icon: Icons.logout_outlined,
+          text: _uiLabel(context, 'nav.signOut', 'Abmelden'),
+        ),
+      );
     }
 
     return PopupMenuButton<_ProfileAction>(
-      tooltip: 'Benutzer',
+      tooltip: _uiLabel(context, 'nav.user', 'Benutzer'),
       offset: const Offset(0, 48),
       icon: UserBubble(label: userLabel, imageUrl: userImageUrl),
       color: _themeSurface(context),
@@ -944,7 +1139,10 @@ class _ProfileMenuBubble extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: foreground),
           const SizedBox(width: 12),
-          Text(text, style: TextStyle(color: foreground, fontWeight: FontWeight.w800)),
+          Text(
+            text,
+            style: TextStyle(color: foreground, fontWeight: FontWeight.w800),
+          ),
         ],
       ),
     );
@@ -961,7 +1159,12 @@ class Eyebrow extends StatelessWidget {
     final accent = _themeAccent(context);
     return Text(
       text.toUpperCase(),
-      style: TextStyle(color: accent, fontSize: 12, letterSpacing: 0.7, fontWeight: FontWeight.w900),
+      style: TextStyle(
+        color: accent,
+        fontSize: 12,
+        letterSpacing: 0.7,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
@@ -986,8 +1189,9 @@ class AirmiusButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = danger ? AirmiusColors.red : _themeAccent(context);
     final muted = _themeMuted(context);
+    late final Widget button;
     if (secondary || danger) {
-      return OutlinedButton.icon(
+      button = OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -996,23 +1200,35 @@ class AirmiusButton extends StatelessWidget {
           side: BorderSide(color: color.withValues(alpha: 0.65)),
           backgroundColor: color.withValues(alpha: 0.08),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      );
+    } else {
+      button = FilledButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: airmiusOnColor(color),
+          disabledBackgroundColor: _themeSurfaceSoft(context),
+          disabledForegroundColor: muted,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
       );
     }
 
-    return FilledButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
-      style: FilledButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: _themeSurfaceSoft(context),
-        disabledForegroundColor: muted,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      ),
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: onPressed != null,
+      label: label,
+      child: button,
     );
   }
 }
@@ -1030,6 +1246,12 @@ class AirmiusTextField extends StatelessWidget {
     this.keyboardType,
     this.obscureText = false,
     this.suffixIcon,
+    this.textInputAction,
+    this.onSubmitted,
+    this.autofillHints,
+    this.enabled = true,
+    this.readOnly = false,
+    this.autocorrect = true,
   });
 
   final String label;
@@ -1042,6 +1264,12 @@ class AirmiusTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final Widget? suffixIcon;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final Iterable<String>? autofillHints;
+  final bool enabled;
+  final bool readOnly;
+  final bool autocorrect;
 
   @override
   Widget build(BuildContext context) {
@@ -1051,7 +1279,13 @@ class AirmiusTextField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
       keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      autofillHints: autofillHints,
+      enabled: enabled,
+      readOnly: readOnly,
+      autocorrect: autocorrect,
       obscureText: obscureText,
       maxLines: maxLines,
       style: TextStyle(color: text, fontWeight: FontWeight.w700),
@@ -1066,10 +1300,16 @@ class AirmiusTextField extends StatelessWidget {
 }
 
 class SearchBox extends StatelessWidget {
-  const SearchBox({super.key, required this.hint, required this.onChanged});
+  const SearchBox({
+    super.key,
+    required this.hint,
+    required this.onChanged,
+    this.onSubmitted,
+  });
 
   final String hint;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -1077,16 +1317,28 @@ class SearchBox extends StatelessWidget {
     final text = _themeText(context);
     final muted = _themeMuted(context);
     final border = _themeBorder(context);
-    return TextField(
-      onChanged: onChanged,
-      style: TextStyle(color: text, fontWeight: FontWeight.w800),
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(Icons.search, color: muted),
-        filled: true,
-        fillColor: _themeInput(context),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: accent)),
+    return Semantics(
+      textField: true,
+      label: _uiLabel(context, 'nav.search', 'Suche'),
+      child: TextField(
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textInputAction: TextInputAction.search,
+        style: TextStyle(color: text, fontWeight: FontWeight.w800),
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(Icons.search, color: muted),
+          filled: true,
+          fillColor: _themeInput(context),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide(color: border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide(color: accent),
+          ),
+        ),
       ),
     );
   }
@@ -1107,9 +1359,23 @@ class MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: TextStyle(color: accent, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: accent,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -1117,7 +1383,12 @@ class MetricCard extends StatelessWidget {
 }
 
 class AirmiusAvatar extends StatelessWidget {
-  const AirmiusAvatar(this.name, {super.key, this.large = false, this.imageUrl});
+  const AirmiusAvatar(
+    this.name, {
+    super.key,
+    this.large = false,
+    this.imageUrl,
+  });
 
   final String name;
   final bool large;
@@ -1182,6 +1453,7 @@ class AirmiusMediaImage extends StatelessWidget {
     this.height,
     this.aspectRatio,
     this.borderRadius = 16,
+    this.semanticLabel,
     this.fallback,
     this.fallbackUrls = const [],
   });
@@ -1191,35 +1463,65 @@ class AirmiusMediaImage extends StatelessWidget {
   final double? height;
   final double? aspectRatio;
   final double borderRadius;
+  final String? semanticLabel;
   final Widget? fallback;
 
   @override
   Widget build(BuildContext context) {
+    final token = _tryMediaAuthToken(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
         color: _themeSurfaceSoft(context),
         child: height != null
-            ? SizedBox(width: double.infinity, height: height, child: _AirmiusNetworkImageWithFallbacks(url: url, fallbackUrls: fallbackUrls, fallback: fallback))
-            : AspectRatio(aspectRatio: aspectRatio ?? 16 / 9, child: _AirmiusNetworkImageWithFallbacks(url: url, fallbackUrls: fallbackUrls, fallback: fallback)),
+            ? SizedBox(
+                width: double.infinity,
+                height: height,
+                child: _AirmiusNetworkImageWithFallbacks(
+                  url: url,
+                  fallbackUrls: fallbackUrls,
+                  authToken: token,
+                  semanticLabel: semanticLabel,
+                  fallback: fallback,
+                ),
+              )
+            : AspectRatio(
+                aspectRatio: aspectRatio ?? 16 / 9,
+                child: _AirmiusNetworkImageWithFallbacks(
+                  url: url,
+                  fallbackUrls: fallbackUrls,
+                  authToken: token,
+                  semanticLabel: semanticLabel,
+                  fallback: fallback,
+                ),
+              ),
       ),
     );
   }
-
 }
 
 class _AirmiusNetworkImageWithFallbacks extends StatefulWidget {
-  const _AirmiusNetworkImageWithFallbacks({required this.url, this.fallbackUrls = const [], this.fallback});
+  const _AirmiusNetworkImageWithFallbacks({
+    required this.url,
+    this.fallbackUrls = const [],
+    this.authToken,
+    this.semanticLabel,
+    this.fallback,
+  });
 
   final String url;
   final List<String> fallbackUrls;
+  final String? authToken;
+  final String? semanticLabel;
   final Widget? fallback;
 
   @override
-  State<_AirmiusNetworkImageWithFallbacks> createState() => _AirmiusNetworkImageWithFallbacksState();
+  State<_AirmiusNetworkImageWithFallbacks> createState() =>
+      _AirmiusNetworkImageWithFallbacksState();
 }
 
-class _AirmiusNetworkImageWithFallbacksState extends State<_AirmiusNetworkImageWithFallbacks> {
+class _AirmiusNetworkImageWithFallbacksState
+    extends State<_AirmiusNetworkImageWithFallbacks> {
   late List<String> _candidates;
   int _index = 0;
 
@@ -1232,7 +1534,9 @@ class _AirmiusNetworkImageWithFallbacksState extends State<_AirmiusNetworkImageW
   @override
   void didUpdateWidget(_AirmiusNetworkImageWithFallbacks oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url || oldWidget.fallbackUrls != widget.fallbackUrls) {
+    if (oldWidget.url != widget.url ||
+        oldWidget.fallbackUrls != widget.fallbackUrls ||
+        oldWidget.authToken != widget.authToken) {
       _candidates = _imageUrlCandidates(widget.url, widget.fallbackUrls);
       _index = 0;
     }
@@ -1241,15 +1545,26 @@ class _AirmiusNetworkImageWithFallbacksState extends State<_AirmiusNetworkImageW
   @override
   Widget build(BuildContext context) {
     if (_candidates.isEmpty) return widget.fallback ?? const _MediaFallback();
-    final htmlImage = airmiusHtmlImage(_candidates, fit: BoxFit.cover);
-    if (htmlImage != null) return htmlImage;
+    final authHeaders = _authHeaders;
+    if (authHeaders == null) {
+      final htmlImage = airmiusHtmlImage(
+        _candidates,
+        fit: BoxFit.cover,
+        semanticLabel: widget.semanticLabel,
+      );
+      if (htmlImage != null) return htmlImage;
+    }
 
     return Image.network(
       _candidates[_index],
+      headers: authHeaders,
       width: double.infinity,
       height: double.infinity,
       fit: BoxFit.cover,
-      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+      semanticLabel: widget.semanticLabel,
+      webHtmlElementStrategy: authHeaders == null
+          ? WebHtmlElementStrategy.prefer
+          : WebHtmlElementStrategy.never,
       errorBuilder: (_, _, _) {
         if (_index + 1 < _candidates.length) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1261,14 +1576,55 @@ class _AirmiusNetworkImageWithFallbacksState extends State<_AirmiusNetworkImageW
       },
     );
   }
+
+  Map<String, String>? get _authHeaders {
+    final token = widget.authToken;
+    if (token == null || !_isProtectedFeedImageUrl(_candidates[_index])) {
+      return null;
+    }
+    return <String, String>{'Authorization': 'Bearer $token'};
+  }
 }
 
-List<String> _imageUrlCandidates(String imageUrl, [List<String> fallbackUrls = const []]) {
+String? _tryMediaAuthToken(BuildContext context) {
+  try {
+    final token = AirmiusServicesScope.of(context).authState.session?.token;
+    final value = token?.trim();
+    return value == null || value.isEmpty ? null : value;
+  } on Object {
+    return null;
+  }
+}
+
+bool _isProtectedFeedImageUrl(String value) {
+  final normalized = resolveAirmiusImageUrl(value) ?? value;
+  final uri = Uri.tryParse(normalized);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) return false;
+
+  const origin = String.fromEnvironment(
+    'AIRMIUS_API_BASE_URL',
+    defaultValue: 'https://app.airmius.com',
+  );
+  final base = Uri.tryParse(origin);
+  if (base == null || base.host.isEmpty || uri.host != base.host) return false;
+
+  return RegExp(r'^/api/v1/posts/[^/]+/image/?$').hasMatch(uri.path);
+}
+
+List<String> _imageUrlCandidates(
+  String imageUrl, [
+  List<String> fallbackUrls = const [],
+]) {
   final urls = <String>[];
   void add(String? value) {
     final url = value?.trim();
     if (url == null || url.isEmpty || urls.contains(url)) return;
-    urls.add(url);
+    if (url.startsWith('data:image/')) {
+      urls.add(url);
+      return;
+    }
+    final safe = safeExternalHttpUrl(url, httpsOnly: false);
+    if (safe != null) urls.add(safe.toString());
   }
 
   final normalized = resolveAirmiusImageUrl(imageUrl);
@@ -1283,7 +1639,15 @@ List<String> _imageUrlCandidates(String imageUrl, [List<String> fallbackUrls = c
   if (uri != null && uri.path.contains('/storage/')) {
     final currentOrigin = Uri.base;
     if (currentOrigin.hasScheme && currentOrigin.host.isNotEmpty) {
-      add(currentOrigin.replace(path: _withAirmiusBasePath(currentOrigin, uri.path), query: uri.query.isEmpty ? null : uri.query, fragment: null).toString());
+      add(
+        currentOrigin
+            .replace(
+              path: _withAirmiusBasePath(currentOrigin, uri.path),
+              query: uri.query.isEmpty ? null : uri.query,
+              fragment: null,
+            )
+            .toString(),
+      );
     }
   }
 
@@ -1298,7 +1662,10 @@ class _MediaFallback extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Icon(Icons.image_not_supported_outlined, color: _themeMuted(context)),
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          color: _themeMuted(context),
+        ),
       ),
     );
   }
@@ -1320,7 +1687,14 @@ class StatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
         border: Border.all(color: resolvedColor.withValues(alpha: 0.45)),
       ),
-      child: Text(label, style: TextStyle(color: resolvedColor, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: resolvedColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -1339,7 +1713,10 @@ class LanguageChooser extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(scope.t('language'), style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+          Text(
+            scope.t('language'),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1352,8 +1729,13 @@ class LanguageChooser extends StatelessWidget {
                   onSelected: (_) => scope.setLanguage(language),
                   selectedColor: accent.withValues(alpha: 0.22),
                   backgroundColor: _themeSurfaceSoft(context),
-                  side: BorderSide(color: scope.language == language ? accent : border),
-                  labelStyle: TextStyle(color: scope.language == language ? accent : muted, fontWeight: FontWeight.w900),
+                  side: BorderSide(
+                    color: scope.language == language ? accent : border,
+                  ),
+                  labelStyle: TextStyle(
+                    color: scope.language == language ? accent : muted,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
             ],
           ),
@@ -1369,16 +1751,21 @@ class AirmiusThemeChooser extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
+    final accessibility = AirmiusAccessibilityScope.of(context);
+    final translations = AirmiusScope.of(context);
     final text = _themeText(context);
     final muted = _themeMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Design', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+          Text(
+            translations.t('accessibility.design'),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 6),
           Text(
-            'Logo und Theme folgen dem Airmius-Prinzip für Dunkel, Normal und System.',
+            translations.t('accessibility.designDescription'),
             style: TextStyle(color: muted, fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 10),
@@ -1386,13 +1773,28 @@ class AirmiusThemeChooser extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ThemeChoice(mode: ThemeMode.dark, active: scope.mode, label: 'Dunkel'),
-              _ThemeChoice(mode: ThemeMode.light, active: scope.mode, label: 'Normal'),
-              _ThemeChoice(mode: ThemeMode.system, active: scope.mode, label: 'System'),
+              _ThemeChoice(
+                mode: ThemeMode.dark,
+                active: scope.mode,
+                label: translations.t('accessibility.dark'),
+              ),
+              _ThemeChoice(
+                mode: ThemeMode.light,
+                active: scope.mode,
+                label: translations.t('accessibility.light'),
+              ),
+              _ThemeChoice(
+                mode: ThemeMode.system,
+                active: scope.mode,
+                label: translations.t('accessibility.system'),
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          Text('Farbpalette', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+          Text(
+            translations.t('accessibility.palette'),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -1400,6 +1802,49 @@ class AirmiusThemeChooser extends StatelessWidget {
             children: [
               for (final palette in AirmiusThemePalette.values)
                 _PaletteChoice(palette: palette, active: scope.palette),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            translations.t('accessibility.textSize'),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            translations.t('accessibility.textSizeDescription'),
+            style: TextStyle(color: muted, fontSize: 12, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final size in AirmiusTextSize.values)
+                ChoiceChip(
+                  selected: accessibility.textSize == size,
+                  label: Text(switch (size) {
+                    AirmiusTextSize.normal => translations.t(
+                      'accessibility.textNormal',
+                    ),
+                    AirmiusTextSize.large => translations.t(
+                      'accessibility.textLarge',
+                    ),
+                    AirmiusTextSize.extraLarge => translations.t(
+                      'accessibility.textExtraLarge',
+                    ),
+                    AirmiusTextSize.veryLarge => translations.t(
+                      'accessibility.textVeryLarge',
+                    ),
+                  }),
+                  onSelected: (_) => accessibility.setTextSize(size),
+                  selectedColor: _themeAccent(context).withValues(alpha: 0.22),
+                  backgroundColor: _themeSurfaceSoft(context),
+                  side: BorderSide(
+                    color: accessibility.textSize == size
+                        ? _themeAccent(context)
+                        : _themeBorder(context),
+                  ),
+                ),
             ],
           ),
         ],
@@ -1432,16 +1877,16 @@ class _ThemeChoice extends StatelessWidget {
       selectedColor: accent.withValues(alpha: 0.22),
       backgroundColor: _themeSurfaceSoft(context),
       side: BorderSide(color: active == mode ? accent : border),
-      labelStyle: TextStyle(color: active == mode ? accent : muted, fontWeight: FontWeight.w900),
+      labelStyle: TextStyle(
+        color: active == mode ? accent : muted,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
 
 class _PaletteChoice extends StatelessWidget {
-  const _PaletteChoice({
-    required this.palette,
-    required this.active,
-  });
+  const _PaletteChoice({required this.palette, required this.active});
 
   final AirmiusThemePalette palette;
   final AirmiusThemePalette active;
@@ -1449,18 +1894,22 @@ class _PaletteChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
+    final translations = AirmiusScope.of(context);
     final selected = active == palette;
     final muted = _themeMuted(context);
     final border = _themeBorder(context);
     return ChoiceChip(
       selected: selected,
       avatar: _PaletteSwatch(palette: palette),
-      label: Text(palette.label),
+      label: Text(translations.t('accessibility.palette.${palette.key}')),
       onSelected: (_) => scope.setPalette(palette),
       selectedColor: palette.primary.withValues(alpha: 0.22),
       backgroundColor: _themeSurfaceSoft(context),
       side: BorderSide(color: selected ? palette.primary : border),
-      labelStyle: TextStyle(color: selected ? palette.primary : muted, fontWeight: FontWeight.w900),
+      labelStyle: TextStyle(
+        color: selected ? palette.primary : muted,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }
@@ -1478,7 +1927,9 @@ class _PaletteSwatch extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(colors: [palette.primary, palette.secondary]),
+          gradient: LinearGradient(
+            colors: [palette.primary, palette.secondary],
+          ),
           border: Border.all(color: _themeBorder(context)),
         ),
       ),
@@ -1490,25 +1941,44 @@ Future<bool> confirmDanger(
   BuildContext context, [
   String? legacyTitle,
   String? legacyMessage,
-  String confirmLabel = 'Zurückziehen',
+  String? confirmLabel,
   VoidCallback? onConfirm,
 ]) async {
   final resolvedTitle = (legacyTitle ?? '').trim();
   final resolvedMessage = (legacyMessage ?? '').trim();
+  final cancelLabel = _uiLabel(context, 'common.cancel', 'Abbrechen');
+  final resolvedConfirmLabel = confirmLabel?.trim().isNotEmpty == true
+      ? confirmLabel!.trim()
+      : _uiLabel(context, 'common.confirm', 'Bestätigen');
 
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       backgroundColor: _themeSurface(context),
       surfaceTintColor: Colors.transparent,
-      title: Text(resolvedTitle, style: TextStyle(color: _themeText(context), fontWeight: FontWeight.w900)),
-      content: Text(resolvedMessage, style: TextStyle(color: _themeMuted(context), height: 1.4)),
+      title: Text(
+        resolvedTitle,
+        style: TextStyle(
+          color: _themeText(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      content: Text(
+        resolvedMessage,
+        style: TextStyle(color: _themeMuted(context), height: 1.4),
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: Text(cancelLabel),
+        ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          style: FilledButton.styleFrom(backgroundColor: AirmiusColors.red, foregroundColor: Colors.white),
-          child: Text(confirmLabel),
+          style: FilledButton.styleFrom(
+            backgroundColor: AirmiusColors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: Text(resolvedConfirmLabel),
         ),
       ],
     ),

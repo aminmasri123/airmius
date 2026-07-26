@@ -27,6 +27,7 @@ class SportProfileScoutService
         if (! $visible) {
             return [
                 'user_id' => $profileUser->id,
+                'profile' => $this->safeProfilePayload($profileUser, false),
                 'visibility' => 'private',
                 'headline' => 'Privates Sportprofil',
                 'headline_key' => 'profile.sport_cv.private_headline',
@@ -61,6 +62,7 @@ class SportProfileScoutService
 
         return [
             'user_id' => $profileUser->id,
+            'profile' => $this->safeProfilePayload($profileUser, true),
             'visibility' => 'public',
             'headline' => $this->headline($sportProfiles),
             'summary' => [
@@ -118,6 +120,22 @@ class SportProfileScoutService
             ],
         ];
     }
+
+    /**
+     * Return only fields that are safe to use in a public profile deep link.
+     * Contact and account data intentionally never leave the profile API.
+     */
+    private function safeProfilePayload(User $profileUser, bool $visible): array
+    {
+        return [
+            'id' => $profileUser->id,
+            'name' => $visible ? $profileUser->name : 'Privates Profil',
+            'bio' => $visible ? $profileUser->bio : null,
+            'profile_photo_url' => $visible ? $profileUser->profile_photo_url : null,
+            'profile_visibility' => $profileUser->profile_visibility ?? 'public',
+        ];
+    }
+
     public function scoutSearch(User $viewer, array $filters): array
     {
         $limit = max(1, min(30, (int) ($filters['limit'] ?? 15)));

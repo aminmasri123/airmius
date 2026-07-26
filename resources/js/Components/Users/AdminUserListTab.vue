@@ -1,5 +1,9 @@
 ﻿<script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 
 const props = defineProps({
     searchQuery: { type: String, default: '' },
@@ -36,7 +40,7 @@ const status = computed({
     set: (value) => emit('update:statusFilter', value),
 })
 
-const formatDate = (value) => value ? new Date(value).toLocaleString('de-DE') : '-'
+const formatDate = (value) => value ? new Date(value).toLocaleString(localeCode.value) : '-'
 
 const statusLabel = (user) => {
     if (user.account_status === 'suspended') {
@@ -172,4 +176,3 @@ const statusLabel = (user) => {
         </div>
     </section>
 </template>
-

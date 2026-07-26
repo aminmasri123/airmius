@@ -2,8 +2,13 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
 
 const props = defineProps({
     guidelines: { type: Array, default: () => [] },
@@ -88,32 +93,31 @@ const updateVisuals = () => {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
-            visualFeedback.value = { type: 'success', message: 'Bilder wurden gespeichert.' }
+            visualFeedback.value = { type: 'success', message: t('media_guidelines.feedback.saved') }
             visualForm.uploads = {}
             visualForm.login_slider_uploads = []
         },
         onError: () => {
-            visualFeedback.value = { type: 'error', message: 'Bilder konnten nicht gespeichert werden. Bitte prüfe die Dateien oder Pfade.' }
+            visualFeedback.value = { type: 'error', message: t('media_guidelines.feedback.failed') }
         },
     })
 }
 
 const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.has(key))
-    ? 'Hier bearbeitbar'
-    : (item.edit_hint || 'Jeweils am Inhalt bearbeiten')
+    ? t('media_guidelines.action.editable')
+    : (item.edit_hint || t('media_guidelines.action.content'))
 </script>
 
 <template>
-    <Head title="Bildmasse" />
+    <Head :title="t('media_guidelines.page_title')" />
 
     <div class="space-y-6">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Media & Content</p>
-                <h1 class="mt-1 text-3xl font-bold text-primary">Empfohlene Bildmasse</h1>
+                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ t('media_guidelines.eyebrow') }}</p>
+                <h1 class="mt-1 text-3xl font-bold text-primary">{{ t('media_guidelines.title') }}</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                    Zentrale Übersicht für Redakteure, Admins und Vereine: welche Bildgrößen für Profile, Blog,
-                    Posts, Videos und weitere Medien am besten funktionieren.
+                    {{ t('media_guidelines.intro') }}
                 </p>
             </div>
 
@@ -121,10 +125,10 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                 <input
                     v-model="search"
                     class="rounded-lg border-border bg-inputBg text-sm text-primary"
-                    placeholder="Suchen..."
+                    :placeholder="t('media_guidelines.search_placeholder')"
                 >
                 <select v-model="selectedCategory" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                    <option value="all">Alle Bereiche</option>
+                    <option value="all">{{ t('media_guidelines.all_areas') }}</option>
                     <option v-for="category in categories.filter((category) => category !== 'all')" :key="category" :value="category">
                         {{ category }}
                     </option>
@@ -134,19 +138,19 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
 
         <section class="grid gap-4 md:grid-cols-3">
             <article class="rounded-lg border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Standard Upload</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">{{ t('media_guidelines.cards.standard_upload') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">JPG, PNG, WebP</p>
-                <p class="mt-1 text-sm text-secondary">Diese Formate funktionieren für fast alle Bildbereiche.</p>
+                <p class="mt-1 text-sm text-secondary">{{ t('media_guidelines.cards.standard_upload_hint') }}</p>
             </article>
             <article class="rounded-lg border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Login-Slider</p>
-                <p class="mt-2 text-2xl font-bold text-primary">1 bis mehrere</p>
-                <p class="mt-1 text-sm text-secondary">Dynamischer Hochformat-Slider für die rechte Login-Seite.</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">{{ t('media_guidelines.cards.login_slider') }}</p>
+                <p class="mt-2 text-2xl font-bold text-primary">{{ t('media_guidelines.cards.one_or_more') }}</p>
+                <p class="mt-1 text-sm text-secondary">{{ t('media_guidelines.cards.login_slider_hint') }}</p>
             </article>
             <article class="rounded-lg border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Globale Banner</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ props.visuals.length }}</p>
-                <p class="mt-1 text-sm text-secondary">Marketplace und Outfit-Abo Bildflaechen zentral pflegen.</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">{{ t('media_guidelines.cards.global_banners') }}</p>
+                <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(props.visuals.length) }}</p>
+                <p class="mt-1 text-sm text-secondary">{{ t('media_guidelines.cards.global_banners_hint') }}</p>
             </article>
         </section>
 
@@ -154,10 +158,10 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
             <div class="border-b border-border bg-inputBg/70 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-air-blue">Zentrale Bildsteuerung</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Globale Bilder direkt bearbeiten</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-air-blue">{{ t('media_guidelines.editor.eyebrow') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ t('media_guidelines.editor.title') }}</h2>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                            Login-Slider, Marketplace-Banner und Outfit-Abo Hero können hier zentral gepflegt werden. Inhaltsspezifische Bilder bleiben beim jeweiligen Profil, Verein, Blog oder Produkt.
+                            {{ t('media_guidelines.editor.intro') }}
                         </p>
                     </div>
                     <button
@@ -167,7 +171,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                         @click="updateVisuals"
                     >
                         <i class="las la-save text-lg"></i>
-                        Bilder speichern
+                        {{ t('media_guidelines.editor.save') }}
                     </button>
                 </div>
             </div>
@@ -187,19 +191,19 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                     <div class="rounded-lg border border-border bg-inputBg p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wider text-air-blue">Dynamischer Slider</p>
-                                <h3 class="mt-1 text-lg font-bold text-primary">Login-Slider rechts</h3>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-air-blue">{{ t('media_guidelines.slider.eyebrow') }}</p>
+                                <h3 class="mt-1 text-lg font-bold text-primary">{{ t('media_guidelines.slider.title') }}</h3>
                                 <p class="mt-2 text-sm leading-6 text-secondary">
-                                    Lade ein Bild oder mehrere Bilder hoch. Die Reihenfolge entspricht der Liste. Empfohlen: 1080 x 1920 px.
+                                    {{ t('media_guidelines.slider.intro') }}
                                 </p>
                             </div>
                             <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">
-                                {{ visualForm.login_slider_sources.filter(Boolean).length + visualForm.login_slider_uploads.length }} Bilder
+                                {{ formatNumber(visualForm.login_slider_sources.filter(Boolean).length + visualForm.login_slider_uploads.length) }} {{ t('media_guidelines.images') }}
                             </span>
                         </div>
 
                         <div class="mt-4 rounded-lg border border-dashed border-border bg-card p-4">
-                            <label class="block text-xs font-semibold uppercase text-secondary">Mehrere Bilder hochladen</label>
+                            <label class="block text-xs font-semibold uppercase text-secondary">{{ t('media_guidelines.slider.upload_multiple') }}</label>
                             <input
                                 type="file"
                                 multiple
@@ -208,7 +212,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                                 @change="setLoginSliderUploads"
                             >
                             <p class="mt-2 text-xs leading-5 text-secondary">
-                                Neue Uploads werden beim Speichern an die vorhandenen Sliderbilder angehaengt.
+                                {{ t('media_guidelines.slider.upload_hint') }}
                             </p>
                             <p v-if="visualForm.errors.login_slider_uploads" class="mt-1 text-xs text-error">{{ visualForm.errors.login_slider_uploads }}</p>
                         </div>
@@ -219,7 +223,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                             @click="addLoginSlide"
                         >
                             <i class="las la-plus"></i>
-                            Leeren Slot hinzufügen
+                            {{ t('media_guidelines.slider.add_slot') }}
                         </button>
                     </div>
 
@@ -233,7 +237,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                                 <img
                                     v-if="sourcePreview(source)"
                                     :src="sourcePreview(source)"
-                                    :alt="`Login-Slider Bild ${index + 1}`"
+                                    :alt="t('media_guidelines.slider.image_alt', { count: index + 1 })"
                                     class="aspect-[9/16] w-full object-cover"
                                 >
                                 <div v-else class="flex aspect-[9/16] items-center justify-center text-secondary">
@@ -244,7 +248,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                                 </span>
                             </div>
 
-                            <label class="mt-3 block text-xs font-semibold uppercase text-secondary">URL oder gespeicherter Pfad</label>
+                            <label class="mt-3 block text-xs font-semibold uppercase text-secondary">{{ t('media_guidelines.fields.source') }}</label>
                             <input
                                 v-model="visualForm.login_slider_sources[index]"
                                 class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary"
@@ -254,11 +258,11 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
 
                             <button
                                 type="button"
-                                class="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
+                                class="mt-3 inline-flex items-center gap-2 rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                 @click="removeLoginSlide(index)"
                             >
                                 <i class="las la-trash"></i>
-                                Entfernen
+                                {{ t('media_guidelines.remove') }}
                             </button>
                         </article>
                     </div>
@@ -290,7 +294,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                         <p class="mt-2 text-xs font-semibold text-primary">{{ visual.recommended_size }} - {{ visual.ratio }}</p>
                     </div>
 
-                    <label class="mt-4 block text-xs font-semibold uppercase text-secondary">URL oder gespeicherter Pfad</label>
+                    <label class="mt-4 block text-xs font-semibold uppercase text-secondary">{{ t('media_guidelines.fields.source') }}</label>
                     <input
                         v-model="visualForm.sources[visual.key]"
                         class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary"
@@ -298,7 +302,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                     >
                     <p v-if="visualForm.errors[`sources.${visual.key}`]" class="mt-1 text-xs text-error">{{ visualForm.errors[`sources.${visual.key}`] }}</p>
 
-                    <label class="mt-3 block text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
+                    <label class="mt-3 block text-xs font-semibold uppercase text-secondary">{{ t('media_guidelines.fields.upload') }}</label>
                     <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -315,14 +319,14 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                 <table class="min-w-full divide-y divide-border text-sm">
                     <thead class="bg-inputBg text-left text-xs font-semibold uppercase tracking-wider text-secondary">
                         <tr>
-                            <th class="px-4 py-3">Bereich</th>
-                            <th class="px-4 py-3">Bildtyp</th>
-                            <th class="px-4 py-3">Empfohlen</th>
-                            <th class="px-4 py-3">Verhaeltnis</th>
-                            <th class="px-4 py-3">Format</th>
-                            <th class="px-4 py-3">Max.</th>
-                            <th class="px-4 py-3">Hinweis</th>
-                            <th class="px-4 py-3">Bearbeitung</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.area') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.type') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.recommended') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.ratio') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.format') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.max') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.note') }}</th>
+                            <th class="px-4 py-3">{{ t('media_guidelines.table.editing') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -347,9 +351,8 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
             </div>
 
             <div v-if="!filteredGuidelines.length" class="p-8 text-center text-sm text-secondary">
-                Keine passenden Bildmasse gefunden.
+                {{ t('media_guidelines.empty') }}
             </div>
         </section>
     </div>
 </template>
-

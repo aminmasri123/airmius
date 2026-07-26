@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\SportTrackResource;
 use App\Models\ConnectedSportAccount;
+use App\Services\SportIntegrationSyncService;
 use App\Services\SportIntegrationActivityImportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,19 +27,62 @@ class SportIntegrationController extends Controller
 
                         return [
                             ...$provider,
-                            'account' => $account ? [
-                                'id' => $account->id,
-                                'status' => $account->status,
-                                'display_name' => $account->display_name,
-                                'last_synced_at' => $account->last_synced_at?->toIso8601String(),
-                                'sync_summary' => $account->sync_summary ?? [],
-                            ] : null,
+                            'account' => $account ? $this->accountPayload($account) : null,
                         ];
                     })
                     ->values(),
                 'normalized_import' => $this->normalizedImportContract(),
                 'gpx' => $this->gpxContract(),
+                'activities' => $request->user()
+                    ->connectedSportActivities()
+                    ->latest('started_at')
+                    ->limit(20)
+                    ->get(['id', 'provider', 'activity_type', 'title', 'started_at', 'duration_seconds', 'distance_meters', 'calories', 'metrics'])
+                    ->map(fn ($activity) => [
+                        'id' => $activity->id,
+                        'provider' => $activity->provider,
+                        'activity_type' => $activity->activity_type,
+                        'title' => $activity->title,
+                        'started_at' => $activity->started_at?->toIso8601String(),
+                        'duration_seconds' => $activity->duration_seconds,
+                        'distance_meters' => $activity->distance_meters,
+                        'calories' => $activity->calories,
+                        'metrics' => $activity->metrics ?? [],
+                    ])
+                    ->values(),
             ],
+        ]);
+    }
+
+    public function sync(
+        Request $request,
+        ConnectedSportAccount $account,
+        SportIntegrationSyncService $syncService,
+    ) {
+        abort_unless($account->user_id === $request->user()->id, 403);
+
+        $result = $syncService->sync($account);
+        $account = $account->fresh();
+
+        return response()->json([
+            'data' => [
+                'ok' => (bool) ($result['ok'] ?? false),
+                'message' => $result['message'] ?? null,
+                'imported' => (int) ($result['imported'] ?? 0),
+                'account' => $this->accountPayload($account),
+            ],
+        ], ($result['ok'] ?? false) ? 200 : 422);
+    }
+
+    public function disconnect(Request $request, ConnectedSportAccount $account)
+    {
+        abort_unless($account->user_id === $request->user()->id, 403);
+
+        $account->delete();
+
+        return response()->json([
+            'message' => 'sport_integration_disconnected',
+            'data' => ['account_id' => $account->id],
         ]);
     }
 
@@ -116,12 +160,7 @@ class SportIntegrationController extends Controller
                     'metrics' => $result['activity']->metrics ?? [],
                 ],
                 'track' => $result['track'] ? new SportTrackResource($result['track']) : null,
-                'account' => [
-                    'id' => $result['account']->id,
-                    'provider' => $result['account']->provider,
-                    'status' => $result['account']->status,
-                    'last_synced_at' => $result['account']->last_synced_at?->toIso8601String(),
-                ],
+                'account' => $this->accountPayload($result['account']),
             ],
         ], 201);
     }
@@ -140,6 +179,7 @@ class SportIntegrationController extends Controller
                 'scopes' => ['workouts', 'workout_routes', 'heart_rate', 'active_energy'],
                 'next_action' => 'request_ios_healthkit_permissions',
                 'request_message' => __('Apple Health wird nativ über HealthKit importiert.'),
+                'request_message_key' => 'fitness.providerAppleHealth',
             ],
             [
                 'key' => 'google_fit',
@@ -152,6 +192,7 @@ class SportIntegrationController extends Controller
                 'scopes' => ['fitness.activity.read', 'fitness.location.read'],
                 'next_action' => 'oauth_or_android_health_permissions',
                 'request_message' => __('Google Fit kann per OAuth oder normalisiertem App-Import angebunden werden.'),
+                'request_message_key' => 'fitness.providerGoogleFit',
             ],
             [
                 'key' => 'garmin',
@@ -164,6 +205,7 @@ class SportIntegrationController extends Controller
                 'scopes' => ['activities', 'wellness'],
                 'next_action' => 'collect_partner_interest',
                 'request_message' => __('Garmin Health API braucht Partnerfreigabe; normalisierte Importe bleiben vorbereitet.'),
+                'request_message_key' => 'fitness.providerGarmin',
             ],
             [
                 'key' => 'strava',
@@ -175,7 +217,8 @@ class SportIntegrationController extends Controller
                 'supports_background_sync' => true,
                 'scopes' => ['read', 'activity:read_all'],
                 'next_action' => 'oauth_connect_or_upload_gpx',
-                'request_message' => __('Strava Import ist per OAuth vorbereitet; Export läuft über GPX.'),
+                'request_message' => __('Strava Import ist per OAuth verfügbar; Export läuft über GPX.'),
+                'request_message_key' => 'fitness.providerStrava',
             ],
         ];
     }
@@ -214,5 +257,31 @@ class SportIntegrationController extends Controller
             'garmin' => 'Garmin',
             'strava' => 'Strava',
         ][$provider] ?? $provider;
+    }
+
+    private function accountPayload(ConnectedSportAccount $account): array
+    {
+        return [
+            'id' => $account->id,
+            'provider' => $account->provider,
+            'status' => $account->status,
+            'display_name' => $account->display_name,
+            'last_synced_at' => $account->last_synced_at?->toIso8601String(),
+            'sync_summary' => [
+                ...($account->sync_summary ?? []),
+                'message_key' => $this->accountMessageKey($account),
+            ],
+        ];
+    }
+
+    private function accountMessageKey(ConnectedSportAccount $account): string
+    {
+        return match ($account->status) {
+            'connected' => 'fitness.accountConnected',
+            'requested' => 'fitness.accountRequested',
+            'native_ready' => 'fitness.statusNative',
+            'error' => 'fitness.accountError',
+            default => 'fitness.statusPlanned',
+        };
     }
 }

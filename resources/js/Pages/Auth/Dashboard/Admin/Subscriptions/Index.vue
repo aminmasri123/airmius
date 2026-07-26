@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { centsToMajor, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -15,6 +16,11 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, locale } = useI18n()
+const tx = (key, fallback = key, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const selectedActor = ref('all')
 const clubSearch = ref('')
 const userSearch = ref('')
@@ -108,14 +114,17 @@ const summary = computed(() => ({
     userSubscriptions: props.plans.reduce((total, plan) => total + Number(plan.user_subscriptions_count || 0), 0),
 }))
 
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const formatPrice = (cents, currency = 'EUR') => {
     const value = Number(cents || 0) / 100
-    return value
-        ? new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(value)
-        : `0 ${currency}`
+        return value
+            ? new Intl.NumberFormat(localeCode.value, { style: 'currency', currency }).format(value)
+            : `0 ${currency}`
 }
 
-const limitLabel = (value, suffix = '') => value ? `${value}${suffix}` : 'Unbegrenzt'
+const actorLabel = (actor) => tx(`subscriptions.actor.${actor}`, actorLabels[actor] || actor)
+const statusLabel = (status) => tx(`subscriptions.status.${status}`, statusLabels[status] || status || '-')
+const limitLabel = (value, suffix = '') => value ? `${value}${suffix}` : tx('subscriptions.unlimited', 'Unbegrenzt')
 const displayUserName = (user) => user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || '-'
 
 const formForPlan = (plan) => {
@@ -322,7 +331,7 @@ const markTransferPaid = (checkout) => {
                     @click="selectedActor = actor"
                 >
                     <i :class="actorIcons[actor]"></i>
-                    {{ actorLabels[actor] }}
+                    {{ actorLabel(actor) }}
                 </button>
             </div>
         </section>
@@ -336,10 +345,10 @@ const markTransferPaid = (checkout) => {
                                 <h2 class="text-lg font-bold text-primary">{{ plan.name }}</h2>
                                 <span v-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ plan.badge }}</span>
                             </div>
-                            <p class="mt-1 text-xs text-secondary">{{ actorLabels[plan.target_actor] || plan.target_actor }} - {{ plan.slug }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ actorLabel(plan.target_actor) }} - {{ plan.slug }}</p>
                         </div>
                         <button type="button" class="min-h-10 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:border-borderHover" @click="editingPlanId = editingPlanId === plan.id ? null : plan.id">
-                            {{ editingPlanId === plan.id ? 'Schließen' : 'Bearbeiten' }}
+                            {{ editingPlanId === plan.id ? tx('Schließen') : tx('Bearbeiten') }}
                         </button>
                     </div>
                 </div>
@@ -376,7 +385,7 @@ const markTransferPaid = (checkout) => {
 
                     <div class="flex flex-wrap gap-2 text-xs">
                         <span class="rounded-full px-2 py-1 font-semibold" :class="plan.is_active ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
-                            {{ plan.is_active ? 'Aktiv' : 'Inaktiv' }}
+                            {{ plan.is_active ? tx('Aktiv') : tx('Inaktiv') }}
                         </span>
                         <span class="rounded-full px-2 py-1 font-semibold" :class="plan.is_public ? 'bg-air-blue/15 text-air-blue' : 'bg-muted text-secondary'">
                             {{ plan.is_public ? 'Öffentlich' : 'Privat' }}
@@ -458,7 +467,7 @@ const markTransferPaid = (checkout) => {
                         </label>
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="formForPlan(plan).is_active" type="checkbox" class="rounded border-border bg-inputBg">
-                            Aktiv
+                            {{ tx('Aktiv') }}
                         </label>
                     </div>
 
@@ -486,7 +495,7 @@ const markTransferPaid = (checkout) => {
                                 <div class="flex items-center gap-2">
                                     <label class="flex items-center gap-1 text-xs text-primary">
                                         <input v-model="price.is_active" type="checkbox" class="rounded border-border bg-inputBg">
-                                        Aktiv
+                                        {{ tx('Aktiv') }}
                                     </label>
                                     <button type="button" class="rounded-lg border border-border px-2 py-1 text-xs text-primary hover:bg-muted" @click="removeCountryPrice(plan, index)">
                                         Entfernen
@@ -494,7 +503,7 @@ const markTransferPaid = (checkout) => {
                                 </div>
                             </div>
                             <p v-if="!formForPlan(plan).country_prices.length" class="text-xs text-secondary">
-                            Ohne Länderpreis wird der Standardpreis des Plans verwendet.
+                            {{ tx('Ohne Länderpreis wird der Standardpreis des Plans verwendet.') }}
                             </p>
                         </div>
                     </div>
@@ -510,9 +519,9 @@ const markTransferPaid = (checkout) => {
             <div class="border-b border-border p-5">
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Offene Überweisungen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('Offene Überweisungen') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Airmius-Abos, die per Banküberweisung gebucht wurden und noch manuell bestätigt werden müssen.
+                            {{ tx('Airmius-Abos, die per Banküberweisung gebucht wurden und noch manuell bestätigt werden müssen.') }}
                         </p>
                     </div>
                     <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
@@ -565,7 +574,7 @@ const markTransferPaid = (checkout) => {
             <div class="border-b border-border p-5">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Vereins-Abos</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('Vereins-Abos') }}</h2>
                         <p class="mt-1 text-sm text-secondary">Ordne Vereinen einen Vereinsplan zu und behalte Nutzung und Limits im Blick.</p>
                     </div>
                     <div class="relative w-full lg:w-80">
@@ -617,7 +626,7 @@ const markTransferPaid = (checkout) => {
                                     <option value="cancels_at_period_end">Gekündigt zum Ende</option>
                                     <option value="cancelled">Gekündigt</option>
                                 </select>
-                                <p class="mt-1 text-xs text-secondary">{{ statusLabels[formForClub(club).status] }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ statusLabel(formForClub(club).status) }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <div class="grid min-w-44 gap-2">
@@ -653,9 +662,9 @@ const markTransferPaid = (checkout) => {
             <div class="border-b border-border p-5">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">{{ actorLabels[selectedActor] }}-Abos zuordnen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ actorLabel(selectedActor) }}-{{ tx('Abos zuordnen') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Liste alle Nutzer und ordne ihnen manuell einen passenden {{ actorLabels[selectedActor] }}-Plan zu.
+                            {{ tx('Liste alle Nutzer und ordne ihnen manuell einen passenden Plan zu.') }}
                         </p>
                     </div>
                     <div class="relative w-full lg:w-80">
@@ -732,7 +741,7 @@ const markTransferPaid = (checkout) => {
                     Keine Nutzer gefunden.
                 </p>
                 <p v-else-if="!selectedUserPlans.length" class="px-5 pb-5 text-sm text-warning">
-                    Für {{ actorLabels[selectedActor] }} sind noch keine Abo-Pläne vorhanden.
+                    {{ tx('Für diesen Bereich sind noch keine Abo-Pläne vorhanden.') }}
                 </p>
             </div>
         </section>
@@ -805,7 +814,7 @@ const markTransferPaid = (checkout) => {
                 </table>
 
                 <p v-if="!userSubscriptions.length" class="px-5 py-8 text-sm text-secondary">
-                    Noch keine Nutzer-Abos vorhanden.
+                    {{ tx('Noch keine Nutzer-Abos vorhanden.') }}
                 </p>
             </div>
         </section>

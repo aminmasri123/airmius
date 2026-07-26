@@ -11,6 +11,7 @@ class TrainingPlanItem extends Model
 
     protected $fillable = [
         'training_plan_id',
+        'source_exercise_id',
         'title',
         'sport_type',
         'description',
@@ -38,6 +39,11 @@ class TrainingPlanItem extends Model
     public function plan()
     {
         return $this->belongsTo(TrainingPlan::class, 'training_plan_id');
+    }
+
+    public function sourceExercise()
+    {
+        return $this->belongsTo(TrainingExercise::class, 'source_exercise_id');
     }
 
     public function logs()

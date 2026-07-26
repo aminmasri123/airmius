@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { computed, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -13,6 +14,17 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, te, locale, messages } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const tAuto = (value, params = {}) => {
+    const source = String(value ?? '').trim()
+    if (!source || locale.value === 'de') return source
+
+    const dictionary = messages.value?.[locale.value]?.auto || {}
+    if (dictionary[source]) return dictionary[source]
+
+    return te(source) ? t(source, params) : source
+}
 const notice = ref(null)
 
 const forms = reactive(Object.fromEntries(props.clubs.map((club) => [
@@ -28,10 +40,10 @@ const forms = reactive(Object.fromEntries(props.clubs.map((club) => [
 const pendingCount = computed(() => props.clubs.filter((club) => club.verification_status === 'pending_verification').length)
 
 const statusLabel = (status) => ({
-    pending_verification: 'Wartet auf Prüfung',
-    verified: 'Freigegeben',
-    rejected: 'Abgelehnt',
-}[status] || status)
+    pending_verification: tAuto('Wartet auf Prüfung'),
+    verified: tAuto('Freigegeben'),
+    rejected: tAuto('Abgelehnt'),
+}[status] || tAuto(status))
 
 const statusClass = (status) => ({
     pending_verification: 'border-warning/30 bg-warning/10 text-warning',
@@ -41,7 +53,7 @@ const statusClass = (status) => ({
 
 const dateLabel = (value) => {
     if (!value) return '-'
-    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+    return new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 }
 
 const submit = (club, action) => {
@@ -60,10 +72,10 @@ const submit = (club, action) => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            notice.value = { type: 'success', message: page.props.flash?.success || 'Änderung gespeichert.' }
+            notice.value = { type: 'success', message: page.props.flash?.success || tAuto('Änderung gespeichert.') }
         },
         onError: () => {
-            notice.value = { type: 'error', message: 'Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.' }
+            notice.value = { type: 'error', message: tAuto('Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.') }
         },
         onFinish: () => {
             form.processing = false
@@ -73,19 +85,19 @@ const submit = (club, action) => {
 </script>
 
 <template>
-    <Head title="Vereinsprüfung" />
+    <Head :title="tAuto('Vereinsprüfung')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <h1 class="text-xl font-semibold text-primary">Vereinsprüfung</h1>
+                    <h1 class="text-xl font-semibold text-primary">{{ tAuto('Vereinsprüfung') }}</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        Neue Vereinsantraege freigeben, ablehnen und Vereinsnummern prüfen.
+                        {{ tAuto('Neue Vereinsantraege freigeben, ablehnen und Vereinsnummern prüfen.') }}
                     </p>
                 </div>
                 <span class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary">
-                    {{ pendingCount }} offen
+                    {{ pendingCount }} {{ tAuto('offen') }}
                 </span>
             </div>
         </section>
@@ -115,28 +127,28 @@ const submit = (club, action) => {
 
                         <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                             <div>
-                                <dt class="text-secondary">Antragsteller</dt>
+                                <dt class="text-secondary">{{ tAuto('Antragsteller') }}</dt>
                                 <dd class="text-primary">{{ club.owner?.name || '-' }}</dd>
                                 <dd class="text-xs text-secondary">{{ club.owner?.email || '-' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-secondary">Sportart</dt>
+                                <dt class="text-secondary">{{ tAuto('Sportart') }}</dt>
                                 <dd class="text-primary">{{ club.sport_type || '-' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-secondary">Ort</dt>
+                                <dt class="text-secondary">{{ tAuto('Ort') }}</dt>
                                 <dd class="text-primary">{{ [club.city, club.country].filter(Boolean).join(', ') || '-' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-secondary">Beantragt am</dt>
+                                <dt class="text-secondary">{{ tAuto('Beantragt am') }}</dt>
                                 <dd class="text-primary">{{ dateLabel(club.verification_requested_at) }}</dd>
                             </div>
                             <div>
-                                <dt class="text-secondary">Beantragte Vereinsnummer</dt>
+                                <dt class="text-secondary">{{ tAuto('Beantragte Vereinsnummer') }}</dt>
                                 <dd class="text-primary">{{ club.requested_official_club_number || '-' }}</dd>
                             </div>
                             <div>
-                                <dt class="text-secondary">Aktuelle Vereinsnummer</dt>
+                                <dt class="text-secondary">{{ tAuto('Aktuelle Vereinsnummer') }}</dt>
                                 <dd class="text-primary">{{ club.official_club_number || '-' }}</dd>
                             </div>
                         </dl>
@@ -144,18 +156,18 @@ const submit = (club, action) => {
 
                     <div class="space-y-3 rounded-lg border border-border bg-bg p-4">
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Geprüfte Vereinsnummer</span>
-                            <input v-model="forms[club.id].official_club_number" class="input" placeholder="Optional" />
+                            <span class="text-sm font-semibold text-primary">{{ tAuto('Geprüfte Vereinsnummer') }}</span>
+                            <input v-model="forms[club.id].official_club_number" class="input" :placeholder="tAuto('Optional')" />
                         </label>
 
                         <label class="flex items-start gap-3 text-sm text-primary">
                             <input v-model="forms[club.id].mark_official" type="checkbox" class="mt-1 rounded border-border bg-inputBg" />
-                            <span>Als offiziellen Verein mit Badge markieren</span>
+                            <span>{{ tAuto('Als offiziellen Verein mit Badge markieren') }}</span>
                         </label>
 
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Notiz</span>
-                            <textarea v-model="forms[club.id].verification_notes" class="input min-h-24" placeholder="Grund bei Ablehnung oder interner Hinweis"></textarea>
+                            <span class="text-sm font-semibold text-primary">{{ tAuto('Notiz') }}</span>
+                            <textarea v-model="forms[club.id].verification_notes" class="input min-h-24" :placeholder="tAuto('Grund bei Ablehnung oder interner Hinweis')"></textarea>
                         </label>
 
                         <div class="flex flex-wrap gap-2">
@@ -165,7 +177,7 @@ const submit = (club, action) => {
                                 :disabled="forms[club.id].processing"
                                 @click="submit(club, 'approve')"
                             >
-                                Freigeben
+                                {{ tAuto('Freigeben') }}
                             </button>
                             <button
                                 type="button"
@@ -173,10 +185,10 @@ const submit = (club, action) => {
                                 :disabled="forms[club.id].processing"
                                 @click="submit(club, 'reject')"
                             >
-                                Ablehnen
+                                {{ tAuto('Ablehnen') }}
                             </button>
                             <Link :href="route('auth.clubs.show', club.id)" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                Öffnen
+                                {{ tAuto('Öffnen') }}
                             </Link>
                         </div>
                     </div>
@@ -185,8 +197,7 @@ const submit = (club, action) => {
         </section>
 
         <section v-else class="surface-card p-8 text-center text-sm text-secondary">
-            Keine Vereinsantraege vorhanden.
+            {{ tAuto('Keine Vereinsantraege vorhanden.') }}
         </section>
     </div>
 </template>
-

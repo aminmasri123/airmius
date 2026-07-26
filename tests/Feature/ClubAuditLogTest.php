@@ -107,4 +107,36 @@ class ClubAuditLogTest extends TestCase
             ->assertJsonPath('data.audit_logs.0.actor.name', 'Audit Owner')
             ->assertJsonPath('data.audit_logs.1.type', 'club.invoice.created');
     }
+
+    public function test_member_role_changes_are_written_to_the_club_audit_log(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$member->id}/role", [
+            'role' => 'trainer',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'type' => 'club.member.role_updated',
+            'subject_type' => User::class,
+            'subject_id' => $member->id,
+        ]);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/billing")
+            ->assertOk()
+            ->assertJsonPath('data.audit_logs.0.type', 'club.member.role_updated')
+            ->assertJsonPath('data.audit_logs.0.data.from_role', 'member')
+            ->assertJsonPath('data.audit_logs.0.data.to_role', 'trainer');
+    }
 }

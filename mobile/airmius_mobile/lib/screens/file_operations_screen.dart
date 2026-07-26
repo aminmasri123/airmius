@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class FileOperationsScreen extends StatefulWidget {
-  const FileOperationsScreen({super.key, this.initialTab = 'Uploads'});
+  const FileOperationsScreen({
+    super.key,
+    this.initialTab = 'Uploads',
+    this.onOpenUploader,
+  });
 
   final String initialTab;
+  final VoidCallback? onOpenUploader;
 
   @override
   State<FileOperationsScreen> createState() => _FileOperationsScreenState();
 }
 
 class _FileOperationsScreenState extends State<FileOperationsScreen> {
-  String _tab = 'Uploads';
+  String _tab = 'uploads';
   String _query = '';
 
   @override
@@ -25,30 +31,51 @@ class _FileOperationsScreenState extends State<FileOperationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final operations = _filtered(_tab == 'Alle' ? _operations : _operations.where((item) => item.tab == _tab).toList());
+    final t = AirmiusScope.of(context).t;
+    final operations = _filtered(
+      _tab == 'all'
+          ? _operations
+          : _operations.where((item) => item.tab == _tab).toList(),
+      t,
+    );
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Datei-Operationen', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          t('filesOps.title'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
-        title: 'Datei-Operationen',
-        subtitle: 'Uploads, Vereinsdokumente, Regeln, Share-Links und API-Zuordnung',
+        title: t('filesOps.title'),
+        subtitle: t('filesOps.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AirmiusPanel(
-              borderColor: AirmiusColors.blue.withValues(alpha: .45),
+              borderColor: airmiusAccentColor(context).withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Eyebrow('Dokumente & Dateimanager'),
+                  Eyebrow(t('filesOps.eyebrow')),
                   const SizedBox(height: 8),
-                  const Text('Vereine können Dateien hochladen, als Pflichtdokument markieren, mit Mitgliedsanträgen oder Beitragsregeln verknuepfen und sicher teilen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  Text(
+                    t('filesOps.body'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.4,
+                    ),
+                  ),
                   const SizedBox(height: 14),
-                  SearchBox(hint: 'Dateiaktion suchen', onChanged: (value) => setState(() => _query = value.trim().toLowerCase())),
+                  SearchBox(
+                    hint: t('filesOps.search'),
+                    onChanged: (value) =>
+                        setState(() => _query = value.trim().toLowerCase()),
+                  ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -56,13 +83,24 @@ class _FileOperationsScreenState extends State<FileOperationsScreen> {
                     children: [
                       for (final tab in _tabs)
                         ChoiceChip(
-                          label: Text(tab),
+                          label: Text(_tabLabel(tab, t)),
                           selected: _tab == tab,
                           onSelected: (_) => setState(() => _tab = tab),
-                          selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-                          backgroundColor: AirmiusColors.panelSoft,
-                          side: BorderSide(color: _tab == tab ? AirmiusColors.blue : AirmiusColors.border),
-                          labelStyle: TextStyle(color: _tab == tab ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                          selectedColor: airmiusAccentColor(
+                            context,
+                          ).withValues(alpha: .24),
+                          backgroundColor: airmiusSurfaceSoftColor(context),
+                          side: BorderSide(
+                            color: _tab == tab
+                                ? airmiusAccentColor(context)
+                                : airmiusBorderColor(context),
+                          ),
+                          labelStyle: TextStyle(
+                            color: _tab == tab
+                                ? airmiusTextColor(context)
+                                : airmiusMutedColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                     ],
                   ),
@@ -71,104 +109,337 @@ class _FileOperationsScreenState extends State<FileOperationsScreen> {
             ),
             const SizedBox(height: 16),
             for (final operation in operations) ...[
-              _FileOperationCard(operation: operation),
+              _FileOperationCard(
+                operation: operation,
+                t: t,
+                onOpenUploader: widget.onOpenUploader,
+              ),
               const SizedBox(height: 12),
             ],
-            if (operations.isEmpty) const EmptyPanel('Keine Dateiaktion gefunden.'),
+            if (operations.isEmpty) EmptyPanel(t('filesOps.empty')),
           ],
         ),
       ),
     );
   }
 
-  List<_FileOperation> _filtered(List<_FileOperation> source) {
+  List<_FileOperation> _filtered(
+    List<_FileOperation> source,
+    String Function(String) t,
+  ) {
     if (_query.isEmpty) return source;
-    return source.where((item) => '${item.title} ${item.body} ${item.endpoint} ${item.method}'.toLowerCase().contains(_query)).toList();
+    return source
+        .where(
+          (item) =>
+              '${t(item.titleKey)} ${t(item.bodyKey)} ${item.endpoint} ${item.method}'
+                  .toLowerCase()
+                  .contains(_query),
+        )
+        .toList();
   }
 }
 
+String _tabLabel(String tab, String Function(String) t) =>
+    t('filesOps.tab.$tab');
+
 class _FileOperationCard extends StatelessWidget {
-  const _FileOperationCard({required this.operation});
+  const _FileOperationCard({
+    required this.operation,
+    required this.t,
+    this.onOpenUploader,
+  });
 
   final _FileOperation operation;
+  final String Function(String) t;
+  final VoidCallback? onOpenUploader;
 
   @override
-  Widget build(BuildContext context) => AirmiusPanel(
-        borderColor: operation.danger ? AirmiusColors.red.withValues(alpha: .45) : AirmiusColors.border,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(color: operation.color.withValues(alpha: .13), borderRadius: BorderRadius.circular(16), border: Border.all(color: operation.color.withValues(alpha: .5))),
-                  child: Icon(operation.icon, color: operation.color),
+  Widget build(BuildContext context) {
+    final operationColor = operation.color == AirmiusColors.blue
+        ? airmiusAccentColor(context)
+        : operation.color;
+    return AirmiusPanel(
+      borderColor: operation.danger
+          ? AirmiusColors.red.withValues(alpha: .45)
+          : airmiusBorderColor(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: operationColor.withValues(alpha: .13),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: operationColor.withValues(alpha: .5),
+                  ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(operation.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 17)),
-                      const SizedBox(height: 5),
-                      Text(operation.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                child: Icon(operation.icon, color: operationColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t(operation.titleKey),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      t(operation.bodyKey),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(_tabLabel(operation.tab, t), color: operationColor),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: airmiusBorderColor(context)),
+            ),
+            child: Text(
+              '${operation.method} ${operation.endpoint}',
+              style: TextStyle(
+                color: AirmiusColors.green,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (operation.actionKey == 'filesOps.uploadAction' &&
+                  onOpenUploader != null)
+                AirmiusButton(
+                  label: t(operation.actionKey),
+                  icon: operation.icon,
+                  danger: operation.danger,
+                  onPressed: onOpenUploader,
+                ),
+              AirmiusButton(
+                label: t('filesOps.apiContext'),
+                icon: Icons.api_outlined,
+                secondary: true,
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    backgroundColor: airmiusSurfaceColor(dialogContext),
+                    title: Text(
+                      '${t(operation.titleKey)} API',
+                      style: TextStyle(
+                        color: airmiusTextColor(dialogContext),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    content: Text(
+                      '${t('filesOps.apiBody')}\n\n${operation.method} ${operation.endpoint}',
+                      style: TextStyle(color: airmiusMutedColor(dialogContext)),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text(t('files.cancel')),
+                      ),
                     ],
                   ),
                 ),
-                StatusPill(operation.tab, color: operation.color),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AirmiusColors.bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-              child: Text('${operation.method} ${operation.endpoint}', style: const TextStyle(color: AirmiusColors.green, fontSize: 12, fontWeight: FontWeight.w900)),
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                AirmiusButton(label: operation.action, icon: operation.icon, danger: operation.danger, onPressed: () => openUiAction(context, title: operation.title, body: '${operation.body}\n\nEndpoint: ${operation.method} ${operation.endpoint}', status: operation.tab, icon: operation.icon)),
-                AirmiusButton(label: 'API Kontext', icon: Icons.api_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${operation.title} API', body: 'Payload, Rollenrechte, Auditlog, Dateimanager-Ziel und spätere Laravel-Response für ${operation.title} anzeigen.', status: 'API', icon: Icons.api_outlined)),
-              ],
-            ),
-          ],
-        ),
-      );
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FileOperation {
-  const _FileOperation({required this.tab, required this.title, required this.body, required this.method, required this.endpoint, required this.icon, required this.action, required this.color, this.danger = false});
+  const _FileOperation({
+    required this.tab,
+    required this.titleKey,
+    required this.bodyKey,
+    required this.method,
+    required this.endpoint,
+    required this.icon,
+    required this.actionKey,
+    required this.color,
+    this.danger = false,
+  });
   final String tab;
-  final String title;
-  final String body;
+  final String titleKey;
+  final String bodyKey;
   final String method;
   final String endpoint;
   final IconData icon;
-  final String action;
+  final String actionKey;
   final Color color;
   final bool danger;
 }
 
-const _tabs = ['Uploads', 'Verein', 'Antrag', 'Team', 'Share', 'Regeln', 'Alle'];
+const _tabs = [
+  'uploads',
+  'club',
+  'application',
+  'team',
+  'share',
+  'rules',
+  'all',
+];
 
 final _operations = <_FileOperation>[
-  _FileOperation(tab: 'Uploads', title: 'Datei hochladen', body: 'Datei aus Galerie, Kamera oder Dateisystem in den zentralen Dateimanager laden.', method: 'POST', endpoint: ApiContract.uploads, icon: Icons.upload_file_outlined, action: 'Upload starten', color: AirmiusColors.blue),
-  _FileOperation(tab: 'Uploads', title: 'Datei aktualisieren', body: 'Name, Beschreibung, Ordner, Sichtbarkeit und Metadaten einer Datei bearbeiten.', method: 'PATCH', endpoint: ApiContract.upload(1), icon: Icons.edit_outlined, action: 'Aktualisieren', color: AirmiusColors.blue),
-  _FileOperation(tab: 'Uploads', title: 'Datei löschen', body: 'Datei entfernen und bestehende Verknuepfungen vorher anzeigen.', method: 'DELETE', endpoint: ApiContract.upload(1), icon: Icons.delete_outline, action: 'Löschen', color: AirmiusColors.red, danger: true),
-  _FileOperation(tab: 'Verein', title: 'Vereinsdokument verknuepfen', body: 'Datenschutz, Beitragsordnung oder Vereinsregeln an das Vereinsprofil haengen.', method: 'POST', endpoint: ApiContract.clubDocuments(1), icon: Icons.folder_shared_outlined, action: 'Verknuepfen', color: AirmiusColors.amber),
-  _FileOperation(tab: 'Verein', title: 'Vereinsdokument entfernen', body: 'Verknuepfung loesen, ohne die Datei aus dem Dateimanager zu löschen.', method: 'DELETE', endpoint: ApiContract.clubDocument(1, 1), icon: Icons.link_off_outlined, action: 'Entfernen', color: AirmiusColors.red, danger: true),
-  _FileOperation(tab: 'Antrag', title: 'Pflichtdokument an Antrag haengen', body: 'Dokumente für Mitgliedsantrag sichtbar machen und als Pflicht/Optional markieren.', method: 'POST', endpoint: ApiContract.clubMembershipDocuments(1), icon: Icons.assignment_outlined, action: 'Antrag verknuepfen', color: AirmiusColors.green),
-  _FileOperation(tab: 'Antrag', title: 'Antragsdokument entfernen', body: 'Pflichtdokument aus Mitgliedsantrag oder Beitragsregel entfernen.', method: 'DELETE', endpoint: ApiContract.clubMembershipDocument(1, 1), icon: Icons.assignment_return_outlined, action: 'Antrag loesen', color: AirmiusColors.red, danger: true),
-  _FileOperation(tab: 'Team', title: 'Teamdatei verknuepfen', body: 'Trainingsordnung, Spielplan oder interne Datei an ein Team haengen.', method: 'POST', endpoint: ApiContract.teamFiles(1), icon: Icons.groups_2_outlined, action: 'Team verknuepfen', color: AirmiusColors.blue),
-  _FileOperation(tab: 'Team', title: 'Teamdatei entfernen', body: 'Dateizugriff für Team entfernen und Rechte aktualisieren.', method: 'DELETE', endpoint: ApiContract.teamFile(1, 1), icon: Icons.group_remove_outlined, action: 'Team loesen', color: AirmiusColors.red, danger: true),
-  _FileOperation(tab: 'Share', title: 'Share-Link erstellen', body: 'Zeitlich begrenzten Link mit Token, Ablaufdatum und Datenschutzhinweis erzeugen.', method: 'POST', endpoint: ApiContract.uploadShare(1), icon: Icons.link_outlined, action: 'Link erstellen', color: AirmiusColors.green),
-  _FileOperation(tab: 'Share', title: 'Geteilte Datei öffnen', body: 'Öffentliche Token-Route für Download oder Vorschau abbilden.', method: 'GET', endpoint: ApiContract.sharedFilePublic('{token}'), icon: Icons.visibility_outlined, action: 'Token öffnen', color: AirmiusColors.green),
-  _FileOperation(tab: 'Regeln', title: 'Dokument als Datenschutz setzen', body: 'Datei als aktuelle Datenschutzversion markieren und mit Antraegen verbinden.', method: 'PUT', endpoint: ApiContract.clubDocumentPurpose(1, 1, 'privacy'), icon: Icons.privacy_tip_outlined, action: 'Zweck setzen', color: AirmiusColors.amber),
-  _FileOperation(tab: 'Regeln', title: 'Dokument als Beitragsordnung setzen', body: 'Datei als Beitragsregel markieren, damit Mitglieder sie vor Antrag sehen.', method: 'PUT', endpoint: ApiContract.clubDocumentPurpose(1, 1, 'fees'), icon: Icons.payments_outlined, action: 'Regel setzen', color: AirmiusColors.amber),
+  _FileOperation(
+    tab: 'uploads',
+    titleKey: 'files.uploadTitle',
+    bodyKey: 'filesOps.uploadBody',
+    method: 'POST',
+    endpoint: ApiContract.uploads,
+    icon: Icons.upload_file_outlined,
+    actionKey: 'filesOps.uploadAction',
+    color: AirmiusColors.blue,
+  ),
+  _FileOperation(
+    tab: 'uploads',
+    titleKey: 'filesOps.updateTitle',
+    bodyKey: 'filesOps.updateBody',
+    method: 'PATCH',
+    endpoint: ApiContract.upload(1),
+    icon: Icons.edit_outlined,
+    actionKey: 'filesOps.updateAction',
+    color: AirmiusColors.blue,
+  ),
+  _FileOperation(
+    tab: 'uploads',
+    titleKey: 'filesOps.deleteTitle',
+    bodyKey: 'filesOps.deleteBody',
+    method: 'DELETE',
+    endpoint: ApiContract.upload(1),
+    icon: Icons.delete_outline,
+    actionKey: 'files.fileDelete',
+    color: AirmiusColors.red,
+    danger: true,
+  ),
+  _FileOperation(
+    tab: 'club',
+    titleKey: 'filesOps.linkClubTitle',
+    bodyKey: 'filesOps.linkClubBody',
+    method: 'POST',
+    endpoint: ApiContract.clubDocuments(1),
+    icon: Icons.folder_shared_outlined,
+    actionKey: 'filesOps.linkAction',
+    color: AirmiusColors.amber,
+  ),
+  _FileOperation(
+    tab: 'club',
+    titleKey: 'filesOps.unlinkClubTitle',
+    bodyKey: 'filesOps.unlinkClubBody',
+    method: 'DELETE',
+    endpoint: ApiContract.clubDocument(1, 1),
+    icon: Icons.link_off_outlined,
+    actionKey: 'filesOps.unlinkAction',
+    color: AirmiusColors.red,
+    danger: true,
+  ),
+  _FileOperation(
+    tab: 'application',
+    titleKey: 'filesOps.linkApplicationTitle',
+    bodyKey: 'filesOps.linkApplicationBody',
+    method: 'POST',
+    endpoint: ApiContract.clubMembershipDocuments(1),
+    icon: Icons.assignment_outlined,
+    actionKey: 'filesOps.linkApplicationAction',
+    color: AirmiusColors.green,
+  ),
+  _FileOperation(
+    tab: 'application',
+    titleKey: 'filesOps.unlinkApplicationTitle',
+    bodyKey: 'filesOps.unlinkApplicationBody',
+    method: 'DELETE',
+    endpoint: ApiContract.clubMembershipDocument(1, 1),
+    icon: Icons.assignment_return_outlined,
+    actionKey: 'filesOps.unlinkApplicationAction',
+    color: AirmiusColors.red,
+    danger: true,
+  ),
+  _FileOperation(
+    tab: 'team',
+    titleKey: 'filesOps.linkTeamTitle',
+    bodyKey: 'filesOps.linkTeamBody',
+    method: 'POST',
+    endpoint: ApiContract.teamFiles(1),
+    icon: Icons.groups_2_outlined,
+    actionKey: 'filesOps.linkTeamAction',
+    color: AirmiusColors.blue,
+  ),
+  _FileOperation(
+    tab: 'team',
+    titleKey: 'filesOps.unlinkTeamTitle',
+    bodyKey: 'filesOps.unlinkTeamBody',
+    method: 'DELETE',
+    endpoint: ApiContract.teamFile(1, 1),
+    icon: Icons.group_remove_outlined,
+    actionKey: 'filesOps.unlinkTeamAction',
+    color: AirmiusColors.red,
+    danger: true,
+  ),
+  _FileOperation(
+    tab: 'share',
+    titleKey: 'filesOps.createShareTitle',
+    bodyKey: 'filesOps.createShareBody',
+    method: 'POST',
+    endpoint: ApiContract.uploadShare(1),
+    icon: Icons.link_outlined,
+    actionKey: 'filesOps.createShareAction',
+    color: AirmiusColors.green,
+  ),
+  _FileOperation(
+    tab: 'share',
+    titleKey: 'filesOps.openSharedTitle',
+    bodyKey: 'filesOps.openSharedBody',
+    method: 'GET',
+    endpoint: ApiContract.sharedFilePublic('{token}'),
+    icon: Icons.visibility_outlined,
+    actionKey: 'filesOps.openSharedAction',
+    color: AirmiusColors.green,
+  ),
+  _FileOperation(
+    tab: 'rules',
+    titleKey: 'filesOps.privacyTitle',
+    bodyKey: 'filesOps.privacyBody',
+    method: 'PUT',
+    endpoint: ApiContract.clubDocumentPurpose(1, 1, 'privacy'),
+    icon: Icons.privacy_tip_outlined,
+    actionKey: 'filesOps.setPurposeAction',
+    color: AirmiusColors.amber,
+  ),
+  _FileOperation(
+    tab: 'rules',
+    titleKey: 'filesOps.feesTitle',
+    bodyKey: 'filesOps.feesBody',
+    method: 'PUT',
+    endpoint: ApiContract.clubDocumentPurpose(1, 1, 'fees'),
+    icon: Icons.payments_outlined,
+    actionKey: 'filesOps.setRuleAction',
+    color: AirmiusColors.amber,
+  ),
 ];

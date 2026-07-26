@@ -7,7 +7,11 @@ import 'package:flutter/widgets.dart';
 
 int _airmiusHtmlImageCounter = 0;
 
-Widget? airmiusHtmlImage(List<String> urls, {BoxFit fit = BoxFit.cover}) {
+Widget? airmiusHtmlImage(
+  List<String> urls, {
+  BoxFit fit = BoxFit.cover,
+  String? semanticLabel,
+}) {
   if (urls.isEmpty) return null;
 
   final viewType = 'airmius-html-image-${_airmiusHtmlImageCounter++}';
@@ -16,7 +20,9 @@ Widget? airmiusHtmlImage(List<String> urls, {BoxFit fit = BoxFit.cover}) {
     var index = 0;
     final image = html.ImageElement()
       ..src = urls[index]
-      ..alt = 'Airmius Bild';
+      ..alt = semanticLabel?.trim().isNotEmpty == true
+          ? semanticLabel!.trim()
+          : 'Airmius Bild';
 
     image
       ..setAttribute('decoding', 'async')

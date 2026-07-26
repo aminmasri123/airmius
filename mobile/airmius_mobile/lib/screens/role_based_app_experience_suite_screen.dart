@@ -8,10 +8,12 @@ class RoleBasedAppExperienceSuiteScreen extends StatefulWidget {
   const RoleBasedAppExperienceSuiteScreen({super.key});
 
   @override
-  State<RoleBasedAppExperienceSuiteScreen> createState() => _RoleBasedAppExperienceSuiteScreenState();
+  State<RoleBasedAppExperienceSuiteScreen> createState() =>
+      _RoleBasedAppExperienceSuiteScreenState();
 }
 
-class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperienceSuiteScreen> {
+class _RoleBasedAppExperienceSuiteScreenState
+    extends State<RoleBasedAppExperienceSuiteScreen> {
   String _filter = 'Alle';
   bool _showPublic = true;
   bool _showMember = true;
@@ -22,7 +24,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Gast',
       area: 'Public',
       status: 'Public',
-      body: 'Welcome, Vereine entdecken, Guest Marketplace, Blog, E-Learning, Pricing, Jobs, Sponsoren und Interesse anmelden.',
+      body:
+          'Welcome, Vereine entdecken, Guest Marketplace, Blog, E-Learning, Pricing, Jobs, Sponsoren und Interesse anmelden.',
       icon: Icons.public_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +33,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Spieler / Mitglied',
       area: 'Member',
       status: 'User',
-      body: 'Dashboard, Feed, Vereine, Teams, Training, Badges, Chat, Dateien, Rechnungen, Profil und Mitgliedschaftsanfragen.',
+      body:
+          'Dashboard, Feed, Vereine, Teams, Training, Badges, Chat, Dateien, Rechnungen, Profil und Mitgliedschaftsanfragen.',
       icon: Icons.directions_run_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +42,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Trainer',
       area: 'Member',
       status: 'Coach',
-      body: 'Trainer Cockpit, Teams, Trainingsplaene, Events, Anwesenheit, Logs, Feedback, Dateien und Teamkommunikation.',
+      body:
+          'Trainer Cockpit, Teams, Trainingsplaene, Events, Anwesenheit, Logs, Feedback, Dateien und Teamkommunikation.',
       icon: Icons.sports_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -46,7 +51,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Guardian / Eltern',
       area: 'Member',
       status: 'Guardian',
-      body: 'Elternkonto, Kinderverwaltung, Einwilligungen, Medienfreigaben, Mitgliedschaftsstatus und sichere Kommunikation.',
+      body:
+          'Elternkonto, Kinderverwaltung, Einwilligungen, Medienfreigaben, Mitgliedschaftsstatus und sichere Kommunikation.',
       icon: Icons.family_restroom_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -54,7 +60,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Vereinsadmin',
       area: 'Admin',
       status: 'Club',
-      body: 'Club Cockpit, Mitgliedsanfragen, Form Builder, Beitragsregeln, Teams, Rollen, Dokumente, Finanzen und Kommunikation.',
+      body:
+          'Club Cockpit, Mitgliedsanfragen, Form Builder, Beitragsregeln, Teams, Rollen, Dokumente, Finanzen und Kommunikation.',
       icon: Icons.apartment_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -62,7 +69,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Sponsor / Provider',
       area: 'Admin',
       status: 'Partner',
-      body: 'Sponsorprofil, Kampagnen, Marketplace-Produkte, Verträge, Provider-Kosten, Reporting und Kontaktanfragen.',
+      body:
+          'Sponsorprofil, Kampagnen, Marketplace-Produkte, Verträge, Provider-Kosten, Reporting und Kontaktanfragen.',
       icon: Icons.handshake_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -70,7 +78,8 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Plattformadmin',
       area: 'Admin',
       status: 'Platform',
-      body: 'User Management, Moderation, Club Verification, Mail Center, Finance, Contracts, Settings, Audit und Release Readiness.',
+      body:
+          'User Management, Moderation, Club Verification, Mail Center, Finance, Contracts, Settings, Audit und Release Readiness.',
       icon: Icons.admin_panel_settings_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -78,13 +87,16 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'API / Integration',
       area: 'Admin',
       status: 'API',
-      body: 'API Tokens, API Connection, Laravel Binding Readiness, Fehler-Mapping, Upload Contracts und Rollen-Kontext.',
+      body:
+          'API Tokens, API Connection, Laravel Binding Readiness, Fehler-Mapping, Upload Contracts und Rollen-Kontext.',
       icon: Icons.integration_instructions_outlined,
       color: Color(0xFFF8B84E),
     ),
   ];
 
-  List<_RoleItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
+  List<_RoleItem> get _visible => _filter == 'Alle'
+      ? _items
+      : _items.where((item) => item.area == _filter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -104,27 +116,50 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
                     const _Hero(
                       eyebrow: 'ROLE EXPERIENCE',
                       title: 'Rollenbasierte App-Erlebnisse',
-                      subtitle: 'Native Kontroll-UI für Gast, Mitglied, Trainer, Guardian, Vereinsadmin, Sponsor/Provider, Plattformadmin und API-Rollen.',
+                      subtitle:
+                          'Native Kontroll-UI für Gast, Mitglied, Trainer, Guardian, Vereinsadmin, Sponsor/Provider, Plattformadmin und API-Rollen.',
                     ),
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '8', label: 'Rollen')),
+                        Expanded(
+                          child: _Metric(value: '8', label: 'Rollen'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Member')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Member'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '4', label: 'Admin')),
+                        Expanded(
+                          child: _Metric(value: '4', label: 'Admin'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    _Tabs(value: _filter, values: const ['Alle', 'Public', 'Member', 'Admin'], onChanged: (value) => setState(() => _filter = value)),
+                    _Tabs(
+                      value: _filter,
+                      values: const ['Alle', 'Public', 'Member', 'Admin'],
+                      onChanged: (value) => setState(() => _filter = value),
+                    ),
                     const SizedBox(height: 14),
                     _SwitchPanel(
                       title: 'Rollenbereiche',
                       rows: [
-                        _SwitchRowData('Public anzeigen', _showPublic, (value) => setState(() => _showPublic = value)),
-                        _SwitchRowData('Member anzeigen', _showMember, (value) => setState(() => _showMember = value)),
-                        _SwitchRowData('Admin anzeigen', _showAdmin, (value) => setState(() => _showAdmin = value)),
+                        _SwitchRowData(
+                          'Public anzeigen',
+                          _showPublic,
+                          (value) => setState(() => _showPublic = value),
+                        ),
+                        _SwitchRowData(
+                          'Member anzeigen',
+                          _showMember,
+                          (value) => setState(() => _showMember = value),
+                        ),
+                        _SwitchRowData(
+                          'Admin anzeigen',
+                          _showAdmin,
+                          (value) => setState(() => _showAdmin = value),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -137,8 +172,22 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
                       firstLabel: 'Rolle simulieren',
                       secondIcon: Icons.admin_panel_settings_outlined,
                       secondLabel: 'Rechte prüfen',
-                      onFirst: () => openUiAction(context, title: 'Rolle simulieren', body: 'Die rollenbasierte UI-Zuordnung ist vorbereitet; echte Rollen kommen später aus Laravel.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Rechte prüfen', body: 'Rollen- und Berechtigungs-Gates sind als App-UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(
+                        context,
+                        title: 'Rolle simulieren',
+                        body:
+                            'Die rollenbasierte UI-Zuordnung ist vorbereitet; echte Rollen kommen später aus Laravel.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
+                      onSecond: () => openUiAction(
+                        context,
+                        title: 'Rechte prüfen',
+                        body:
+                            'Rollen- und Berechtigungs-Gates sind als App-UI vorbereitet.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
                       onSupport: () => _openSupport(context),
                     ),
                   ],
@@ -158,7 +207,9 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -192,36 +243,83 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onSupport;
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        const AirmiusLogo(markOnly: true, size: 34),
-        const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
-      ]);
+  Widget build(BuildContext context) => Row(
+    children: [
+      const AirmiusLogo(markOnly: true, size: 34),
+      const SizedBox(width: 10),
+      const Expanded(
+        child: Text(
+          'Airmius',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      IconButton(
+        onPressed: onSupport,
+        icon: const Icon(
+          Icons.support_agent_outlined,
+          color: Color(0xFFAFC0D8),
+        ),
+      ),
+    ],
+  );
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.eyebrow, required this.title, required this.subtitle});
+  const _Hero({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
   final String eyebrow;
   final String title;
   final String subtitle;
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF26364D)),
-          gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)]),
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: const TextStyle(
+            color: Color(0xFF5BA7FF),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(eyebrow, style: const TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600)),
-        ]),
-      );
+        const SizedBox(height: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            height: 1.45,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Metric extends StatelessWidget {
@@ -231,44 +329,74 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
-        ]),
-      );
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
   final String value;
   final List<String> values;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 42,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: values.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final item = values[index];
-            final active = item == value;
-            return ChoiceChip(
-              label: Text(item),
-              selected: active,
-              onSelected: (_) => onChanged(item),
-              labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
-              selectedColor: const Color(0xFF173D68),
-              backgroundColor: const Color(0xFF101722),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
-            );
-          },
-        ),
-      );
+    height: 42,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: values.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final item = values[index];
+        final active = item == value;
+        return ChoiceChip(
+          label: Text(item),
+          selected: active,
+          onSelected: (_) => onChanged(item),
+          labelStyle: TextStyle(
+            color: active ? Colors.white : const Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w900,
+          ),
+          selectedColor: const Color(0xFF173D68),
+          backgroundColor: const Color(0xFF101722),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: const BorderSide(color: Color(0xFF26364D)),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _SwitchPanel extends StatelessWidget {
@@ -278,20 +406,28 @@ class _SwitchPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Panel(
-        title: title,
-        child: Column(
-          children: rows
-              .map((row) => SwitchListTile.adaptive(
-                    value: row.value,
-                    onChanged: row.onChanged,
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    activeThumbColor: const Color(0xFF5BA7FF),
-                    title: Text(row.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  ))
-              .toList(),
-        ),
-      );
+    title: title,
+    child: Column(
+      children: rows
+          .map(
+            (row) => SwitchListTile.adaptive(
+              value: row.value,
+              onChanged: row.onChanged,
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              activeThumbColor: const Color(0xFF5BA7FF),
+              title: Text(
+                row.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    ),
+  );
 }
 
 class _RoleCard extends StatelessWidget {
@@ -300,22 +436,72 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 54, height: 54, decoration: BoxDecoration(color: item.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .45))), child: Icon(item.icon, color: item.color, size: 28)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [Expanded(child: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))), _Pill(label: item.status, color: item.color)]),
-            const SizedBox(height: 8),
-            Text(item.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
-          ])),
-        ]),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: item.color.withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: item.color.withValues(alpha: .45)),
+          ),
+          child: Icon(item.icon, color: item.color, size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  _Pill(label: item.status, color: item.color),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.body,
+                style: const TextStyle(
+                  color: Color(0xFFDDE7F5),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.firstIcon, required this.firstLabel, required this.secondIcon, required this.secondLabel, required this.onFirst, required this.onSecond, required this.onSupport});
+  const _ActionPanel({
+    required this.firstIcon,
+    required this.firstLabel,
+    required this.secondIcon,
+    required this.secondLabel,
+    required this.onFirst,
+    required this.onSecond,
+    required this.onSupport,
+  });
   final IconData firstIcon;
   final String firstLabel;
   final IconData secondIcon;
@@ -325,13 +511,22 @@ class _ActionPanel extends StatelessWidget {
   final VoidCallback onSupport;
 
   @override
-  Widget build(BuildContext context) => _Panel(title: 'Schnellaktionen', child: Column(children: [
+  Widget build(BuildContext context) => _Panel(
+    title: 'Schnellaktionen',
+    child: Column(
+      children: [
         _ActionButton(icon: firstIcon, label: firstLabel, onTap: onFirst),
         const SizedBox(height: 10),
         _ActionButton(icon: secondIcon, label: secondLabel, onTap: onSecond),
         const SizedBox(height: 10),
-        _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
-      ]));
+        _ActionButton(
+          icon: Icons.support_agent_outlined,
+          label: 'Support kontaktieren',
+          onTap: onSupport,
+        ),
+      ],
+    ),
+  );
 }
 
 class _Panel extends StatelessWidget {
@@ -341,28 +536,68 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)), const SizedBox(height: 12), child]),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF0D131D),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111A27),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
-          child: Row(children: [Icon(icon, color: AirmiusColors.blue), const SizedBox(width: 12), Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))), const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8))]),
-        ),
-      );
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AirmiusColors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Pill extends StatelessWidget {
@@ -372,8 +607,15 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-        child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: .55)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
+    ),
+  );
 }

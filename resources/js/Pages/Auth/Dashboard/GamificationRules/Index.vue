@@ -1,7 +1,13 @@
 ﻿<script setup>
 import { computed, ref, watch } from 'vue'
 import { Head, useForm } from '@inertiajs/vue3'
+import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+
+const { t, locale } = useI18n({ useScope: 'global' })
+
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
 
 const props = defineProps({
     rules: { type: Object, default: () => ({}) },
@@ -53,20 +59,32 @@ const healthTone = computed(() => {
 })
 
 const ruleRisk = (rule) => {
-    if (!rule.is_active) return ['Pausiert', 'bg-muted text-secondary']
-    if (rule.is_penalty) return ['Safety', 'bg-error/10 text-error']
-    if (rule.xp_amount > 50) return ['Sehr hoher Reward', 'bg-yellow-500/10 text-yellow-700']
-    if (!rule.daily_limit && rule.xp_amount > 0) return ['Ohne Tageslimit', 'bg-air-blue/10 text-air-blue']
+    if (!rule.is_active) return [t('gamification_rules.risk.paused'), 'bg-muted text-secondary']
+    if (rule.is_penalty) return [t('gamification_rules.risk.safety'), 'bg-error/10 text-error']
+    if (rule.xp_amount > 50) return [t('gamification_rules.risk.high_reward'), 'bg-warning/10 text-warning']
+    if (!rule.daily_limit && rule.xp_amount > 0) return [t('gamification_rules.risk.no_daily_limit'), 'bg-air-blue/10 text-air-blue']
 
-    return ['Balanciert', 'bg-air-green/10 text-air-green']
+    return [t('gamification_rules.risk.balanced'), 'bg-air-green/10 text-air-green']
 }
 
 const actorLabel = (actor) => ({
-    sportler: 'Sportler',
-    trainer: 'Trainer',
-    verein: 'Vereine',
-    team: 'Teams',
+    sportler: t('gamification_rules.actors.sportler'),
+    trainer: t('gamification_rules.actors.trainer'),
+    verein: t('gamification_rules.actors.verein'),
+    team: t('gamification_rules.actors.team'),
 }[actor] || actor)
+
+const riskNoteLabel = (note) => {
+    const keys = {
+        'Viele positive Regeln ohne Daily Limit': 'many_without_limit',
+        'Mindestens ein Reward ist sehr hoch': 'high_reward_exists',
+        'XP-Vorzeichen passt nicht zur Regelart': 'xp_sign_mismatch',
+        'Keine Penalty-Regel für Missbrauch': 'no_penalty_rule',
+        'Alle Regeln sind pausiert': 'all_paused',
+    }
+
+    return keys[note] ? t(`gamification_rules.risk_notes.${keys[note]}`) : note
+}
 
 const save = () => {
     form.rules = form.rules.map((rule) => ({
@@ -82,15 +100,15 @@ const save = () => {
 
 <template>
     <AppLayout>
-        <Head title="Gamification verwalten" />
+        <Head :title="t('gamification_rules.page_title')" />
 
         <div class="space-y-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Admin</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Gamification-Regeln</h1>
+                    <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">{{ t('gamification_rules.eyebrow') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ t('gamification_rules.title') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
-                        Verwalte XP, Daily Limits, Trust-Auswirkungen und aktive Regeln zentral. Änderungen wirken auf neue Aktionen und halten das System fair, steuerbar und jugendschutzfreundlich.
+                        {{ t('gamification_rules.intro') }}
                     </p>
                 </div>
 
@@ -99,7 +117,7 @@ const save = () => {
                     :disabled="form.processing"
                     @click="save"
                 >
-                    Speichern
+                    {{ t('gamification_rules.save') }}
                 </button>
             </div>
 
@@ -118,53 +136,53 @@ const save = () => {
 
             <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualität</p>
-                    <p :class="['mt-2 text-2xl font-bold', healthTone]">{{ selectedHealth.quality_score }}/10</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.quality') }}</p>
+                    <p :class="['mt-2 text-2xl font-bold', healthTone]">{{ formatNumber(selectedHealth.quality_score) }}/10</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Regeln</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.active_rules }}/{{ selectedHealth.rules }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.active_rules') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.active_rules) }}/{{ formatNumber(selectedHealth.rules) }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Daily Limits</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.daily_limited_rules }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.daily_limits') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.daily_limited_rules) }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Strafen</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.penalties }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.penalties') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.penalties) }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Max XP</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.max_positive_xp }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.max_xp') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.max_positive_xp) }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Durchschnitt XP</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.avg_positive_xp }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.average_xp') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.avg_positive_xp) }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Heute</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.events_today }}</p>
-                    <p class="text-xs text-secondary">{{ selectedHealth.xp_today }} XP</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.today') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.events_today) }}</p>
+                    <p class="text-xs text-secondary">{{ formatNumber(selectedHealth.xp_today) }} XP</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Gecappt</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ selectedHealth.capped_today }}</p>
-                    <p class="text-xs text-secondary">Daily-Limit Treffer</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('gamification_rules.metrics.capped') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(selectedHealth.capped_today) }}</p>
+                    <p class="text-xs text-secondary">{{ t('gamification_rules.metrics.daily_limit_hits') }}</p>
                 </div>
             </section>
 
             <section
                 v-if="selectedHealth.risk_notes?.length"
-                class="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4"
+                class="rounded-xl border border-warning/30 bg-warning/10 p-4"
             >
-                <p class="text-xs font-semibold uppercase tracking-wide text-yellow-700">Balance-Hinweise</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-warning">{{ t('gamification_rules.balance_heading') }}</p>
                 <div class="mt-2 flex flex-wrap gap-2">
                     <span
                         v-for="note in selectedHealth.risk_notes"
                         :key="note"
                         class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary"
                     >
-                        {{ note }}
+                        {{ riskNoteLabel(note) }}
                     </span>
                 </div>
             </section>
@@ -186,7 +204,7 @@ const save = () => {
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <div>
                             <h2 class="font-semibold text-primary">{{ category }}</h2>
-                            <p class="text-xs text-secondary">{{ items.length }} Regeln</p>
+                            <p class="text-xs text-secondary">{{ t('gamification_rules.rules_count', { count: formatNumber(items.length) }) }}</p>
                         </div>
                     </div>
 
@@ -203,7 +221,7 @@ const save = () => {
                                         class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary"
                                     >
                                     <span class="rounded-full bg-inputBg px-2 py-1 font-mono text-xs text-secondary">{{ rule.key }}</span>
-                                    <span v-if="rule.is_penalty" class="rounded-full bg-error/10 px-2 py-1 text-xs font-semibold text-error">Strafe</span>
+                                    <span v-if="rule.is_penalty" class="rounded-full bg-error/10 px-2 py-1 text-xs font-semibold text-error">{{ t('gamification_rules.penalty') }}</span>
                                     <span :class="['rounded-full px-2 py-1 text-xs font-semibold', ruleRisk(rule)[1]]">{{ ruleRisk(rule)[0] }}</span>
                                 </div>
                                 <textarea
@@ -219,25 +237,25 @@ const save = () => {
                             </label>
 
                             <label class="space-y-1" :class="{ 'opacity-50': rule.is_penalty }">
-                                <span class="text-xs font-semibold uppercase text-secondary">Daily Limit</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">{{ t('gamification_rules.fields.daily_limit') }}</span>
                                 <input
                                     v-model.number="rule.daily_limit"
                                     type="number"
                                     min="1"
-                                    placeholder="kein Limit"
+                                    :placeholder="t('gamification_rules.fields.no_limit')"
                                     :disabled="rule.is_penalty"
                                     class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                             </label>
 
                             <label class="space-y-1">
-                                <span class="text-xs font-semibold uppercase text-secondary">Trust</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">{{ t('gamification_rules.fields.trust') }}</span>
                                 <input v-model.number="rule.trust_delta" type="number" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             </label>
 
                             <label class="flex items-center gap-2 self-center rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <input v-model="rule.is_active" type="checkbox" class="rounded border-border bg-card">
-                                Aktiv
+                                {{ t('gamification_rules.active') }}
                             </label>
                         </article>
                     </div>
@@ -246,5 +264,3 @@ const save = () => {
         </div>
     </AppLayout>
 </template>
-
-

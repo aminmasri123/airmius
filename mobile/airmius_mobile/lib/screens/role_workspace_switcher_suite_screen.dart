@@ -7,10 +7,12 @@ class RoleWorkspaceSwitcherSuiteScreen extends StatefulWidget {
   const RoleWorkspaceSwitcherSuiteScreen({super.key});
 
   @override
-  State<RoleWorkspaceSwitcherSuiteScreen> createState() => _RoleWorkspaceSwitcherSuiteScreenState();
+  State<RoleWorkspaceSwitcherSuiteScreen> createState() =>
+      _RoleWorkspaceSwitcherSuiteScreenState();
 }
 
-class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcherSuiteScreen> {
+class _RoleWorkspaceSwitcherSuiteScreenState
+    extends State<RoleWorkspaceSwitcherSuiteScreen> {
   String workspace = 'Mitglied';
   bool rememberLastWorkspace = true;
   bool showRoleBadges = true;
@@ -23,35 +25,40 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
       const _WorkspaceRole(
         title: 'Mitglied',
         status: 'Aktiv',
-        body: 'Startet mit Mitgliedschaften, Karte, Beiträgen, Events, Nachrichten, Badges und Support.',
+        body:
+            'Startet mit Mitgliedschaften, Karte, Beiträgen, Events, Nachrichten, Badges und Support.',
         icon: Icons.badge_outlined,
         color: AirmiusColors.green,
       ),
       const _WorkspaceRole(
         title: 'Vereinsadmin',
         status: 'ZBB',
-        body: 'Wechselt zu Anfragen, Mitgliedern, Teams, Dokumenten, Beitragsregeln, Import/Export und Analytics.',
+        body:
+            'Wechselt zu Anfragen, Mitgliedern, Teams, Dokumenten, Beitragsregeln, Import/Export und Analytics.',
         icon: Icons.groups_2_outlined,
         color: AirmiusColors.blue,
       ),
       const _WorkspaceRole(
         title: 'Trainer',
         status: 'Team',
-        body: 'Fokussiert Training, Kader, Anwesenheit, Vorfaelle, Teamchat, Kurse und Rollenrechte.',
+        body:
+            'Fokussiert Training, Kader, Anwesenheit, Vorfaelle, Teamchat, Kurse und Rollenrechte.',
         icon: Icons.sports_outlined,
         color: AirmiusColors.amber,
       ),
       const _WorkspaceRole(
         title: 'Guardian',
         status: 'Safety',
-        body: 'Zeigt Minderjaehrige, Freigaben, Notfallkontakte, Dokumente, Events und Benachrichtigungen.',
+        body:
+            'Zeigt Minderjaehrige, Freigaben, Notfallkontakte, Dokumente, Events und Benachrichtigungen.',
         icon: Icons.family_restroom_outlined,
         color: AirmiusColors.pink,
       ),
       const _WorkspaceRole(
         title: 'Plattformadmin',
         status: 'Admin',
-        body: 'Öffnet Moderation, Audit, Verifizierung, Support, Analytics, Content, Ads und Systembetrieb.',
+        body:
+            'Öffnet Moderation, Audit, Verifizierung, Support, Analytics, Content, Ads und Systembetrieb.',
         icon: Icons.admin_panel_settings_outlined,
         color: AirmiusColors.blue,
       ),
@@ -62,6 +69,8 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
       subtitle: 'Kontextwechsel für die mobile App',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -70,9 +79,13 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
               children: [
                 const SectionLabel('ROLE ROUTING'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Die mobile App muss den richtigen Arbeitsbereich laden: Mitglied, Vereinsadmin, Trainer, Guardian oder Plattformadmin. Jede Rolle sieht andere Navigation, Aktionen und Daten.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -101,7 +114,8 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
                     ButtonSegment(value: 'Admin', label: Text('Admin')),
                   ],
                   selected: {workspace},
-                  onSelectionChanged: (value) => setState(() => workspace = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => workspace = value.first),
                 ),
               ],
             ),
@@ -113,10 +127,33 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _WorkspaceSwitch(title: 'Letzten Workspace merken', value: rememberLastWorkspace, color: AirmiusColors.green, onChanged: (value) => setState(() => rememberLastWorkspace = value)),
-                _WorkspaceSwitch(title: 'Rollenbadges anzeigen', value: showRoleBadges, color: AirmiusColors.blue, onChanged: (value) => setState(() => showRoleBadges = value)),
-                _WorkspaceSwitch(title: 'Adminbereiche schuetzen', value: restrictAdminAreas, color: AirmiusColors.amber, onChanged: (value) => setState(() => restrictAdminAreas = value)),
-                _WorkspaceSwitch(title: 'Schnellwechsel aktivieren', value: quickSwitchEnabled, color: AirmiusColors.pink, onChanged: (value) => setState(() => quickSwitchEnabled = value)),
+                _WorkspaceSwitch(
+                  title: 'Letzten Workspace merken',
+                  value: rememberLastWorkspace,
+                  color: Theme.of(context).colorScheme.secondary,
+                  onChanged: (value) =>
+                      setState(() => rememberLastWorkspace = value),
+                ),
+                _WorkspaceSwitch(
+                  title: 'Rollenbadges anzeigen',
+                  value: showRoleBadges,
+                  color: airmiusAccentColor(context),
+                  onChanged: (value) => setState(() => showRoleBadges = value),
+                ),
+                _WorkspaceSwitch(
+                  title: 'Adminbereiche schuetzen',
+                  value: restrictAdminAreas,
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onChanged: (value) =>
+                      setState(() => restrictAdminAreas = value),
+                ),
+                _WorkspaceSwitch(
+                  title: 'Schnellwechsel aktivieren',
+                  value: quickSwitchEnabled,
+                  color: airmiusAccentColor(context),
+                  onChanged: (value) =>
+                      setState(() => quickSwitchEnabled = value),
+                ),
               ],
             ),
           ),
@@ -133,7 +170,11 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
                 const SizedBox(height: 8),
                 Text(
                   'Aktiver Workspace: $workspace. Später verbindet die API Rollen, Berechtigungen, Vereine, Teams, Guardian-Beziehungen und Adminrechte mit der mobilen Navigation.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -142,7 +183,8 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
                   onPressed: () => openUiAction(
                     context,
                     title: 'Workspace wechseln',
-                    body: 'Diese UI bereitet Rollenwechsel, Workspace-Startseite, Berechtigungen und kontextbezogene Navigation für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Rollenwechsel, Workspace-Startseite, Berechtigungen und kontextbezogene Navigation für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.swap_horiz_outlined,
                   ),
@@ -189,9 +231,15 @@ class _WorkspaceSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
-      activeThumbColor: color,
+      activeThumbColor: airmiusSemanticColor(context, color),
       onChanged: onChanged,
     );
   }
@@ -208,7 +256,10 @@ class _WorkspaceRoleCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(icon: role.icon, color: role.color),
+          IconBadge(
+            icon: role.icon,
+            color: airmiusSemanticColor(context, role.color),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -216,12 +267,31 @@ class _WorkspaceRoleCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(role.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                    StatusPill(role.status, color: role.color),
+                    Expanded(
+                      child: Text(
+                        role.title,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    StatusPill(
+                      role.status,
+                      color: airmiusSemanticColor(context, role.color),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(role.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                Text(
+                  role.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.42,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

@@ -25,7 +25,8 @@ class NotificationDetailScreen extends StatefulWidget {
   final VoidCallback onChanged;
 
   @override
-  State<NotificationDetailScreen> createState() => _NotificationDetailScreenState();
+  State<NotificationDetailScreen> createState() =>
+      _NotificationDetailScreenState();
 }
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
@@ -45,7 +46,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.notifications.markAsRead(widget.notification.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.markAsRead(widget.notification.id);
       widget.onChanged();
       if (!mounted) return;
       setState(() => _busy = false);
@@ -53,7 +56,11 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       if (!mounted) return;
       setState(() => _busy = false);
       if (silent) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('notifications.error')),
+        ),
+      );
     }
   }
 
@@ -61,14 +68,20 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.notifications.delete(widget.notification.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.notifications.delete(widget.notification.id);
       widget.onChanged();
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('notifications.error')),
+        ),
+      );
     }
   }
 
@@ -77,7 +90,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     if (invitationId != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: invitationId, notification: widget.notification)),
+        MaterialPageRoute(
+          builder: (_) => TeamInvitationResponseScreen(
+            invitationId: invitationId,
+            notification: widget.notification,
+          ),
+        ),
       );
       return;
     }
@@ -100,7 +118,10 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
         backgroundColor: _notificationDetailHeader(context),
         foregroundColor: text,
         surfaceTintColor: Colors.transparent,
-        title: Text(scope.t('notifications.title'), style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          scope.t('notifications.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: widget.notification.title,
@@ -119,7 +140,12 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     children: [
                       Icon(widget.icon, color: accent, size: 34),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(widget.notification.body, style: TextStyle(color: muted, height: 1.35))),
+                      Expanded(
+                        child: Text(
+                          widget.notification.body,
+                          style: TextStyle(color: muted, height: 1.35),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -128,7 +154,14 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     runSpacing: 8,
                     children: [
                       StatusPill(widget.typeLabel),
-                      StatusPill(widget.notification.unread ? scope.t('messages.unread') : scope.t('status.ready'), color: widget.notification.unread ? AirmiusColors.green : accent),
+                      StatusPill(
+                        widget.notification.unread
+                            ? scope.t('messages.unread')
+                            : scope.t('status.ready'),
+                        color: widget.notification.unread
+                            ? Theme.of(context).colorScheme.secondary
+                            : accent,
+                      ),
                     ],
                   ),
                 ],
@@ -146,16 +179,25 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     onPressed: _openContext,
                   ),
                 AirmiusButton(
-                  label: _busy ? scope.t('status.loading') : scope.t('notifications.markRead'),
+                  label: _busy
+                      ? scope.t('status.loading')
+                      : scope.t('notifications.markRead'),
                   icon: Icons.mark_email_read_outlined,
                   secondary: true,
-                  onPressed: _busy || !widget.notification.unread ? null : _markRead,
+                  onPressed: _busy || !widget.notification.unread
+                      ? null
+                      : _markRead,
                 ),
                 AirmiusButton(
                   label: 'Push',
                   icon: Icons.tune_outlined,
                   secondary: true,
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationPreferencesScreen(),
+                    ),
+                  ),
                 ),
                 AirmiusButton(
                   label: scope.t('notifications.delete'),
@@ -176,7 +218,9 @@ AirmiusThemePalette _notificationDetailPalette(BuildContext context) {
   try {
     return AirmiusThemeModeScope.of(context).palette;
   } on StateError {
-    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+    return Theme.of(context).brightness == Brightness.dark
+        ? AirmiusThemePalette.dark
+        : AirmiusThemePalette.air;
   }
 }
 
@@ -199,30 +243,46 @@ Color _notificationDetailAccent(BuildContext context) {
 
 Color _notificationDetailHeader(BuildContext context) {
   final palette = _notificationDetailPalette(context);
-  return _notificationDetailDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+  return _notificationDetailDarkUi(context)
+      ? palette.darkHeader
+      : palette.lightSurface;
 }
 
 Color _notificationDetailText(BuildContext context) {
   final palette = _notificationDetailPalette(context);
-  return _notificationDetailDarkUi(context) ? AirmiusColors.text : palette.lightText;
+  return _notificationDetailDarkUi(context)
+      ? airmiusTextColor(context)
+      : palette.lightText;
 }
 
 Color _notificationDetailMuted(BuildContext context) {
   final palette = _notificationDetailPalette(context);
-  return _notificationDetailDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+  return _notificationDetailDarkUi(context)
+      ? airmiusMutedColor(context)
+      : palette.lightMutedText;
 }
 
 int? _teamInvitationId(AirmiusNotification notification) {
   final type = notification.type.toLowerCase();
-  final explicitId = _intFromDynamic(notification.data['invitation_id'] ?? notification.data['team_invitation_id']);
-  if (explicitId != null && (type.contains('team.invite') || type.contains('team.invitation') || type.contains('trainer') || type.contains('invite') || type.contains('invitation'))) {
+  final explicitId = _intFromDynamic(
+    notification.data['invitation_id'] ??
+        notification.data['team_invitation_id'],
+  );
+  if (explicitId != null &&
+      (type.contains('team.invite') ||
+          type.contains('team.invitation') ||
+          type.contains('trainer') ||
+          type.contains('invite') ||
+          type.contains('invitation'))) {
     return explicitId;
   }
 
   final actionUrl = notification.actionUrl;
   if (actionUrl == null || actionUrl.isEmpty) return null;
 
-  final match = RegExp(r'(?:team_invitation|invitation_id)=([0-9]+)').firstMatch(actionUrl);
+  final match = RegExp(
+    r'(?:team_invitation|invitation_id)=([0-9]+)',
+  ).firstMatch(actionUrl);
   return match == null ? null : int.tryParse(match.group(1) ?? '');
 }
 

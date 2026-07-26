@@ -5,11 +5,15 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
 })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 const expertScores = [
     ['Motivation', '10/10', 'Belohnt echte Entwicklung statt blinden Login-Druck.'],
@@ -129,8 +133,8 @@ const badges = [
 
 <template>
     <SeoHead
-        title="Gamification System für Sportler, Trainer, Teams und Vereine"
-        description="Airmius Gamification macht sportliche Entwicklung, Engagement, Vertrauen und Vereinsarbeit sichtbar, fair und jugendschutzfreundlich."
+        :title="tx('Gamification System für Sportler, Trainer, Teams und Vereine')"
+        :description="tx('Airmius Gamification macht sportliche Entwicklung, Engagement, Vertrauen und Vereinsarbeit sichtbar, fair und jugendschutzfreundlich.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -140,29 +144,29 @@ const badges = [
         <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
                 <div>
-                    <span class="text-sm font-semibold uppercase tracking-wider text-air-blue">Airmius Level-System</span>
+                    <span class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Airmius Level-System') }}</span>
                     <h1 class="mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                        Gamification, die sportliche Entwicklung gesund sichtbar macht.
+                        {{ tx('Gamification, die sportliche Entwicklung gesund sichtbar macht.') }}
                     </h1>
                     <p class="mt-5 max-w-3xl text-lg leading-relaxed text-secondary">
-                        Airmius belohnt Training, Zuverlässigkeit, Kompetenz, Wissen, Teamkultur und Vereinsarbeit. Das System ist fair, rollenbasiert, auditierbar und bewusst so gebaut, dass bei jungen Sportlern kein ungesunder Leistungsdruck entsteht.
+                        {{ tx('Airmius belohnt Training, Zuverlässigkeit, Kompetenz, Wissen, Teamkultur und Vereinsarbeit. Das System ist fair, rollenbasiert, auditierbar und bewusst so gebaut, dass bei jungen Sportlern kein ungesunder Leistungsdruck entsteht.') }}
                     </p>
                     <div class="mt-7 flex flex-col gap-3 sm:flex-row">
                         <Link
                             :href="route('register')"
                             class="inline-flex items-center justify-center rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                         >
-                            Kostenlos starten
+                            {{ tx('Kostenlos starten') }}
                         </Link>
                         <Link
                             :href="route('guest.pricing')"
                             class="inline-flex items-center justify-center rounded-lg border border-border px-5 py-3 text-sm font-bold text-primary hover:bg-muted"
                         >
-                            Pakete ansehen
+                            {{ tx('Pakete ansehen') }}
                         </Link>
                     </div>
                     <p class="mt-3 text-xs text-secondary">
-                        Kein Pay-to-win. Keine XP durch blosses Einloggen. Fortschritt entsteht durch nachvollziehbare Aktionen.
+                        {{ tx('Kein Pay-to-win. Keine XP durch blosses Einloggen. Fortschritt entsteht durch nachvollziehbare Aktionen.') }}
                     </p>
                 </div>
 
@@ -177,16 +181,16 @@ const badges = [
                     </div>
                     <div class="p-5">
                         <div class="rounded-lg bg-inputBg p-5">
-                            <p class="text-xs font-semibold uppercase text-air-green">Live-Profil</p>
+                            <p class="text-xs font-semibold uppercase text-air-green">{{ tx('Live-Profil') }}</p>
                             <div class="mt-4 grid gap-4 sm:grid-cols-[0.8fr_1.2fr]">
                                 <div class="rounded-lg bg-card p-4">
-                                    <p class="text-sm text-secondary">Aktueller Rang</p>
-                                    <p class="mt-2 text-3xl font-900 text-primary">Athlete</p>
-                                    <p class="mt-1 text-sm text-air-blue">Level 5</p>
+                                    <p class="text-sm text-secondary">{{ tx('Aktueller Rang') }}</p>
+                                    <p class="mt-2 text-3xl font-900 text-primary">{{ tx('Athlete') }}</p>
+                                    <p class="mt-1 text-sm text-air-blue">{{ tx('Level 5') }}</p>
                                 </div>
                                 <div class="rounded-lg bg-card p-4">
                                     <div class="flex items-center justify-between gap-4 text-sm">
-                                        <span class="text-secondary">Fortschritt</span>
+                                        <span class="text-secondary">{{ tx('Fortschritt') }}</span>
                                         <span class="font-mono text-air-green">64%</span>
                                     </div>
                                     <div class="mt-3 h-3 overflow-hidden rounded-full bg-bg">
@@ -195,31 +199,31 @@ const badges = [
                                     <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                                         <div class="rounded-md bg-bg p-2">
                                             <p class="font-bold text-primary">1.30x</p>
-                                            <p class="text-secondary">Trust</p>
+                                    <p class="text-secondary">{{ tx('Trust') }}</p>
                                         </div>
                                         <div class="rounded-md bg-bg p-2">
                                             <p class="font-bold text-primary">14</p>
-                                            <p class="text-secondary">Streak</p>
+                                    <p class="text-secondary">{{ tx('Streak') }}</p>
                                         </div>
                                         <div class="rounded-md bg-bg p-2">
                                             <p class="font-bold text-primary">8</p>
-                                            <p class="text-secondary">Badges</p>
+                                    <p class="text-secondary">{{ tx('Badges') }}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                                 <div class="rounded-md bg-card p-3">
-                                    <p class="text-secondary">Training</p>
-                                    <p class="mt-1 font-bold text-primary">Check-in bestätigt</p>
+                                    <p class="text-secondary">{{ tx('Training') }}</p>
+                                    <p class="mt-1 font-bold text-primary">{{ tx('Check-in bestätigt') }}</p>
                                 </div>
                                 <div class="rounded-md bg-card p-3">
-                                    <p class="text-secondary">Skill</p>
-                                    <p class="mt-1 font-bold text-primary">Level verbessert</p>
+                                    <p class="text-secondary">{{ tx('Skill') }}</p>
+                                    <p class="mt-1 font-bold text-primary">{{ tx('Level verbessert') }}</p>
                                 </div>
                                 <div class="rounded-md bg-card p-3">
-                                    <p class="text-secondary">Fairness</p>
-                                    <p class="mt-1 font-bold text-primary">Daily Cap aktiv</p>
+                                    <p class="text-secondary">{{ tx('Fairness') }}</p>
+                                    <p class="mt-1 font-bold text-primary">{{ tx('Daily Cap aktiv') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -229,34 +233,34 @@ const badges = [
 
             <section class="mx-auto mt-12 max-w-7xl">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-primary">Expertenanalyse aus allen Perspektiven</h2>
+                    <h2 class="text-2xl font-bold text-primary">{{ tx('Expertenanalyse aus allen Perspektiven') }}</h2>
                     <p class="mt-2 max-w-3xl text-secondary">
-                        Das System wird nicht nur als Punkte-Mechanik bewertet, sondern als Produktmotor für Motivation, Vertrauen, Vereinsorganisation, Sicherheit und langfristige Bindung.
+                        {{ tx('Das System wird nicht nur als Punkte-Mechanik bewertet, sondern als Produktmotor für Motivation, Vertrauen, Vereinsorganisation, Sicherheit und langfristige Bindung.') }}
                     </p>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <article v-for="[title, score, text] in expertScores" :key="title" class="surface-card p-5">
                         <div class="flex items-start justify-between gap-3">
-                            <h3 class="font-bold text-primary">{{ title }}</h3>
+                            <h3 class="font-bold text-primary">{{ tx(title) }}</h3>
                             <span class="rounded-full bg-air-green/15 px-2 py-1 text-xs font-bold text-air-green">{{ score }}</span>
                         </div>
-                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ text }}</p>
+                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ tx(text) }}</p>
                     </article>
                 </div>
             </section>
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 lg:grid-cols-4">
                 <article v-for="[title, text] in principles" :key="title" class="surface-card p-5">
-                    <h2 class="text-lg font-bold">{{ title }}</h2>
-                    <p class="mt-3 text-sm leading-relaxed text-secondary">{{ text }}</p>
+                    <h2 class="text-lg font-bold">{{ tx(title) }}</h2>
+                    <p class="mt-3 text-sm leading-relaxed text-secondary">{{ tx(text) }}</p>
                 </article>
             </section>
 
             <section class="mx-auto mt-12 max-w-7xl">
                 <div class="mb-6">
-                    <h2 class="text-2xl font-bold text-primary">Rollenlogik</h2>
+                    <h2 class="text-2xl font-bold text-primary">{{ tx('Rollenlogik') }}</h2>
                     <p class="mt-2 max-w-3xl text-secondary">
-                        Eine gute Sportplattform darf nicht alle gleich messen. Airmius bewertet jede Rolle nach ihrem echten Beitrag.
+                        {{ tx('Eine gute Sportplattform darf nicht alle gleich messen. Airmius bewertet jede Rolle nach ihrem echten Beitrag.') }}
                     </p>
                 </div>
                 <div class="grid gap-5 lg:grid-cols-3">
@@ -266,14 +270,14 @@ const badges = [
                                 <i :class="[role.icon, 'text-2xl text-air-blue']"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-primary">{{ role.title }}</h3>
-                                <p class="text-xs text-air-green">{{ role.score }}</p>
+                                <h3 class="font-bold text-primary">{{ tx(role.title) }}</h3>
+                                <p class="text-xs text-air-green">{{ tx(role.score) }}</p>
                             </div>
                         </div>
-                        <p class="mt-4 text-sm leading-relaxed text-secondary">{{ role.text }}</p>
+                        <p class="mt-4 text-sm leading-relaxed text-secondary">{{ tx(role.text) }}</p>
                         <div class="mt-4 flex flex-wrap gap-2">
                             <span v-for="metric in role.metrics" :key="metric" class="rounded-full bg-bg px-3 py-1 text-xs font-semibold text-secondary">
-                                {{ metric }}
+                                {{ tx(metric) }}
                             </span>
                         </div>
                     </article>
@@ -282,9 +286,9 @@ const badges = [
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 xl:grid-cols-[1.15fr_0.85fr]">
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">XP-Aktionen für Sportler</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('XP-Aktionen für Sportler') }}</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Die wichtigsten positiven Aktionen sind konkret, begrenzt und mit Trust gekoppelt.
+                        {{ tx('Die wichtigsten positiven Aktionen sind konkret, begrenzt und mit Trust gekoppelt.') }}
                     </p>
                     <div class="mt-5 overflow-hidden rounded-lg border border-border">
                         <div
@@ -292,26 +296,26 @@ const badges = [
                             :key="action"
                             class="grid gap-3 border-b border-border bg-bg p-4 last:border-b-0 md:grid-cols-[190px_90px_1fr]"
                         >
-                            <div class="font-semibold">{{ action }}</div>
+                            <div class="font-semibold">{{ tx(action) }}</div>
                             <div class="font-mono text-air-green">{{ xp }}</div>
-                            <div class="text-sm text-secondary">{{ text }}</div>
+                            <div class="text-sm text-secondary">{{ tx(text) }}</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Level-System</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Level-System') }}</h2>
                     <p class="mt-3 text-sm leading-relaxed text-secondary">
-                        Die XP-Schwelle steigt progressiv. Frühe Level motivieren schnell, höhere Level verlangen langfristige Qualität.
+                        {{ tx('Die XP-Schwelle steigt progressiv. Frühe Level motivieren schnell, höhere Level verlangen langfristige Qualität.') }}
                     </p>
                     <div class="mt-4 rounded-lg bg-inputBg p-4 font-mono text-sm text-air-green">
-                        XP_needed = Summe aus 250 * level^1.7
+                        {{ tx('XP_needed = Summe aus 250 * level^1.7') }}
                     </div>
                     <div class="mt-5 grid gap-3">
                         <div v-for="[level, xp, rank] in levelMilestones" :key="level" class="flex items-center justify-between gap-4 rounded-lg bg-bg p-3 text-sm">
-                            <span class="font-semibold">{{ level }}</span>
+                            <span class="font-semibold">{{ tx(level) }}</span>
                             <span class="text-secondary">{{ xp }}</span>
-                            <span class="font-bold text-air-blue">{{ rank }}</span>
+                            <span class="font-bold text-air-blue">{{ tx(rank) }}</span>
                         </div>
                     </div>
                 </div>
@@ -321,16 +325,16 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Interaktive XP-Demo</p>
-                            <h2 class="mt-2 text-2xl font-bold">Teste, wie Fortschritt entsteht.</h2>
+                            <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Interaktive XP-Demo') }}</p>
+                            <h2 class="mt-2 text-2xl font-bold">{{ tx('Teste, wie Fortschritt entsteht.') }}</h2>
                             <p class="mt-2 text-sm leading-relaxed text-secondary">
-                                Die Demo nutzt echte XP-Werte und Daily Caps aus dem System. So wird sofort klar: wenige sinnvolle Aktionen bringen mehr als viele leere Klicks.
+                                {{ tx('Die Demo nutzt echte XP-Werte und Daily Caps aus dem System. So wird sofort klar: wenige sinnvolle Aktionen bringen mehr als viele leere Klicks.') }}
                             </p>
                         </div>
                         <div class="rounded-lg bg-inputBg p-4 text-right">
-                            <p class="text-xs font-semibold uppercase text-secondary">Ergebnis</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Ergebnis') }}</p>
                             <p class="mt-1 text-3xl font-900 text-air-green">+{{ demoTotalXp }} XP</p>
-                            <p class="mt-1 text-xs text-secondary">inkl. Trust & Tagesbonus</p>
+                            <p class="mt-1 text-xs text-secondary">{{ tx('inkl. Trust & Tagesbonus') }}</p>
                         </div>
                     </div>
 
@@ -338,8 +342,8 @@ const badges = [
                         <label v-for="action in demoActions" :key="action.key" class="rounded-lg bg-bg p-4">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <span class="font-semibold text-primary">{{ action.label }}</span>
-                                    <p class="mt-1 text-xs text-secondary">+{{ action.xp }} XP je Aktion - Cap {{ action.limit }}x</p>
+                                    <span class="font-semibold text-primary">{{ tx(action.label) }}</span>
+                                    <p class="mt-1 text-xs text-secondary">+{{ action.xp }} XP {{ tx('guest.gamification.per_action') }} - {{ tx('guest.gamification.cap') }} {{ action.limit }}x</p>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <input
@@ -357,13 +361,13 @@ const badges = [
                 </div>
 
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Auswertung</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Auswertung') }}</h2>
                     <p class="mt-2 text-sm leading-relaxed text-secondary">
-                        Trust verändert nicht das Ziel, sondern die Gewichtung: verlässliches Verhalten wird stärker, auffälliges Verhalten schwächer bewertet.
+                        {{ tx('Trust verändert nicht das Ziel, sondern die Gewichtung: verlässliches Verhalten wird stärker, auffälliges Verhalten schwächer bewertet.') }}
                     </p>
                     <div class="mt-5 rounded-lg bg-inputBg p-4">
                         <div class="flex items-center justify-between gap-4 text-sm">
-                            <span class="font-semibold text-primary">Trust-Multiplikator</span>
+                            <span class="font-semibold text-primary">{{ tx('Trust-Multiplikator') }}</span>
                             <span class="font-mono text-air-green">{{ trustMultiplier.toFixed(2) }}x</span>
                         </div>
                         <input
@@ -375,22 +379,22 @@ const badges = [
                             class="mt-4 w-full accent-air-green"
                         >
                         <div class="mt-2 flex justify-between text-xs text-secondary">
-                            <span>auffällig</span>
-                            <span>neutral</span>
-                            <span>vertrauenswuerdig</span>
+                            <span>{{ tx('auffällig') }}</span>
+                            <span>{{ tx('neutral') }}</span>
+                            <span>{{ tx('vertrauenswuerdig') }}</span>
                         </div>
                     </div>
                     <div class="mt-5 grid gap-3 sm:grid-cols-3">
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs text-secondary">Basis-XP</p>
+                            <p class="text-xs text-secondary">{{ tx('Basis-XP') }}</p>
                             <p class="mt-1 text-2xl font-bold text-primary">{{ demoBaseXp }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs text-secondary">Tagesbonus</p>
+                            <p class="text-xs text-secondary">{{ tx('Tagesbonus') }}</p>
                             <p class="mt-1 text-2xl font-bold text-primary">+{{ demoDailyBonus }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs text-secondary">Badge-Fortschritt</p>
+                            <p class="text-xs text-secondary">{{ tx('Badge-Fortschritt') }}</p>
                             <p class="mt-1 text-2xl font-bold text-primary">{{ demoProgress }}%</p>
                         </div>
                     </div>
@@ -398,37 +402,37 @@ const badges = [
                         <div class="h-full rounded-full bg-buttonPrimary transition-all" :style="{ width: `${demoProgress}%` }"></div>
                     </div>
                     <p class="mt-3 text-xs text-secondary">
-                        Beispielziel: Badge "Erste Schritte" bei 50 XP.
+                        {{ tx('Beispielziel: Badge "Erste Schritte" bei 50 XP.') }}
                     </p>
                 </div>
             </section>
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 lg:grid-cols-2">
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Vereine & Teams</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Vereine & Teams') }}</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Organisation bekommt eigene Anerkennung, weil gute Vereinsarbeit oft unsichtbar bleibt.
+                        {{ tx('Organisation bekommt eigene Anerkennung, weil gute Vereinsarbeit oft unsichtbar bleibt.') }}
                     </p>
                     <div class="mt-5 space-y-3">
                         <div v-for="[action, xp, text] in organizationActions" :key="action" class="rounded-lg bg-bg p-3">
                             <div class="flex items-center justify-between gap-4 text-sm">
-                                <span class="font-semibold">{{ action }}</span>
+                                <span class="font-semibold">{{ tx(action) }}</span>
                                 <span class="font-mono text-air-green">{{ xp }}</span>
                             </div>
-                            <p class="mt-1 text-sm text-secondary">{{ text }}</p>
+                            <p class="mt-1 text-sm text-secondary">{{ tx(text) }}</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Lifecycle-Wirkung</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Lifecycle-Wirkung') }}</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Gamification wirkt über die ganze Nutzerreise, nicht nur als Badge-Schicht am Ende.
+                        {{ tx('Gamification wirkt über die ganze Nutzerreise, nicht nur als Badge-Schicht am Ende.') }}
                     </p>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
                         <article v-for="[title, text] in lifecycle" :key="title" class="rounded-lg bg-bg p-4">
-                            <h3 class="font-semibold text-primary">{{ title }}</h3>
-                            <p class="mt-2 text-sm leading-relaxed text-secondary">{{ text }}</p>
+                            <h3 class="font-semibold text-primary">{{ tx(title) }}</h3>
+                            <p class="mt-2 text-sm leading-relaxed text-secondary">{{ tx(text) }}</p>
                         </article>
                     </div>
                 </div>
@@ -436,30 +440,30 @@ const badges = [
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 lg:grid-cols-[0.95fr_1.05fr]">
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Strafen mit Mass</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Strafen mit Mass') }}</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Abzüge sind kein Druckmittel, sondern Schutz für Fairness, Verlässlichkeit und Qualität.
+                        {{ tx('Abzüge sind kein Druckmittel, sondern Schutz für Fairness, Verlässlichkeit und Qualität.') }}
                     </p>
                     <div class="mt-5 space-y-3">
                         <div v-for="[title, xp, text] in penalties" :key="title" class="rounded-lg bg-bg p-3">
                             <div class="flex justify-between gap-3">
-                                <strong>{{ title }}</strong>
+                                <strong>{{ tx(title) }}</strong>
                                 <span class="font-mono text-error">{{ xp }}</span>
                             </div>
-                            <p class="mt-1 text-sm text-secondary">{{ text }}</p>
+                            <p class="mt-1 text-sm text-secondary">{{ tx(text) }}</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">Anti-Cheat & Governance</h2>
+                    <h2 class="text-2xl font-bold">{{ tx('Anti-Cheat & Governance') }}</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Das System ist technisch und organisatorisch darauf ausgelegt, Missbrauch zu begrenzen und Entscheidungen nachvollziehbar zu machen.
+                        {{ tx('Das System ist technisch und organisatorisch darauf ausgelegt, Missbrauch zu begrenzen und Entscheidungen nachvollziehbar zu machen.') }}
                     </p>
                     <div class="mt-5 grid gap-3 md:grid-cols-2">
                         <article v-for="[title, text] in safetyLayers" :key="title" class="rounded-lg bg-bg p-4">
-                            <h3 class="font-semibold text-primary">{{ title }}</h3>
-                            <p class="mt-2 text-sm leading-relaxed text-secondary">{{ text }}</p>
+                            <h3 class="font-semibold text-primary">{{ tx(title) }}</h3>
+                            <p class="mt-2 text-sm leading-relaxed text-secondary">{{ tx(text) }}</p>
                         </article>
                     </div>
                 </div>
@@ -467,10 +471,10 @@ const badges = [
 
             <section class="mx-auto mt-12 max-w-7xl">
                 <div class="mb-6">
-                    <p class="text-sm font-semibold uppercase tracking-wider text-air-green">Badge-Vorschau</p>
-                    <h2 class="mt-2 text-2xl font-bold text-primary">Auszeichnungen mit echter Bedeutung.</h2>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-air-green">{{ tx('Badge-Vorschau') }}</p>
+                    <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx('Auszeichnungen mit echter Bedeutung.') }}</h2>
                     <p class="mt-2 max-w-3xl text-secondary">
-                        Badges sollen nicht nur hübsch aussehen. Sie markieren nachweisbare Entwicklung, Verlässlichkeit, Wissen, Vereinsaufbau und Fair Play.
+                        {{ tx('Badges sollen nicht nur hübsch aussehen. Sie markieren nachweisbare Entwicklung, Verlässlichkeit, Wissen, Vereinsaufbau und Fair Play.') }}
                     </p>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -480,11 +484,11 @@ const badges = [
                                 <i :class="[icon, 'text-2xl text-air-blue']"></i>
                             </div>
                             <div>
-                                <h3 class="font-bold text-primary">{{ name }}</h3>
-                                <p class="mt-1 text-xs font-semibold uppercase text-air-green">{{ trigger }}</p>
+                                <h3 class="font-bold text-primary">{{ tx(name) }}</h3>
+                                <p class="mt-1 text-xs font-semibold uppercase text-air-green">{{ tx(trigger) }}</p>
                             </div>
                         </div>
-                        <p class="mt-4 text-sm leading-relaxed text-secondary">{{ text }}</p>
+                        <p class="mt-4 text-sm leading-relaxed text-secondary">{{ tx(text) }}</p>
                     </article>
                 </div>
             </section>
@@ -492,24 +496,24 @@ const badges = [
             <section class="mx-auto mt-12 max-w-7xl rounded-lg border border-border bg-card p-6">
                 <div class="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-wider text-air-green">Datenschutz & Jugendschutz</p>
-                        <h2 class="mt-2 text-2xl font-bold text-primary">Gesunde Motivation statt sozialer Druck.</h2>
+                        <p class="text-sm font-semibold uppercase tracking-wider text-air-green">{{ tx('Datenschutz & Jugendschutz') }}</p>
+                        <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx('Gesunde Motivation statt sozialer Druck.') }}</h2>
                         <p class="mt-3 text-sm leading-relaxed text-secondary">
-                            Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschraenkt. Bei Minderjährigen stehen Sicherheit, Regeneration, altersgerechte Ziele und paedagogisch sinnvolle Anerkennung im Vordergrund.
+                            {{ tx('Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschraenkt. Bei Minderjährigen stehen Sicherheit, Regeneration, altersgerechte Ziele und paedagogisch sinnvolle Anerkennung im Vordergrund.') }}
                         </p>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs font-bold uppercase text-air-blue">Privacy</p>
-                            <p class="mt-2 text-sm text-secondary">Zugriffe rollenbasiert und zweckgebunden.</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tx('Privacy') }}</p>
+                            <p class="mt-2 text-sm text-secondary">{{ tx('Zugriffe rollenbasiert und zweckgebunden.') }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs font-bold uppercase text-air-blue">Youth Safety</p>
-                            <p class="mt-2 text-sm text-secondary">Keine Belohnung für exzessive Nutzung.</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tx('Youth Safety') }}</p>
+                            <p class="mt-2 text-sm text-secondary">{{ tx('Keine Belohnung für exzessive Nutzung.') }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-4">
-                            <p class="text-xs font-bold uppercase text-air-blue">Transparency</p>
-                            <p class="mt-2 text-sm text-secondary">Regeln, Limits und Abzüge erklaerbar.</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tx('Transparency') }}</p>
+                            <p class="mt-2 text-sm text-secondary">{{ tx('Regeln, Limits und Abzüge erklaerbar.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -519,17 +523,17 @@ const badges = [
                 <div class="rounded-lg border border-air-blue/40 bg-air-blue/10 p-6">
                     <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
                         <div>
-                            <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Fazit</p>
-                            <h2 class="mt-2 text-2xl font-bold text-primary">Aus Produkt-, UX-, Fairness-, Vereins- und Sicherheits-Perspektive: 10/10.</h2>
+                            <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Fazit') }}</p>
+                            <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx('Aus Produkt-, UX-, Fairness-, Vereins- und Sicherheits-Perspektive: 10/10.') }}</h2>
                             <p class="mt-3 max-w-3xl text-sm leading-relaxed text-secondary">
-                                Die verbesserte Darstellung zeigt klar, warum Airmius Gamification nicht nur Punkte vergibt, sondern gesunde Entwicklung, verlässliches Verhalten und starke Vereinsorganisation messbar macht.
+                                {{ tx('Die verbesserte Darstellung zeigt klar, warum Airmius Gamification nicht nur Punkte vergibt, sondern gesunde Entwicklung, verlässliches Verhalten und starke Vereinsorganisation messbar macht.') }}
                             </p>
                         </div>
                         <Link
                             :href="route('register')"
                             class="inline-flex items-center justify-center rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                         >
-                            Jetzt Profil aufbauen
+                            {{ tx('Jetzt Profil aufbauen') }}
                         </Link>
                     </div>
                 </div>
@@ -539,5 +543,3 @@ const badges = [
         <Footer />
     </div>
 </template>
-
-

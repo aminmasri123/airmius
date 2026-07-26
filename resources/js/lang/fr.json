@@ -639,7 +639,7 @@
       "connected": "Connecté",
       "connect": "Connecter",
       "sport_apps_title": "Synchroniser les applications sportives",
-      "sport_apps_description": "Connecte des applications sportives pour que les données d'entraînement puissent ensuite alimenter ton profil Airmius.",
+      "sport_apps_description": "Connecte des applications sportives pour synchroniser tes données d'entraînement en toute sécurité dans ton profil Airmius.",
       "last_synced": "Dernière synchronisation : {date}",
       "google_status": "Statut Google :",
       "google_error": "Erreur Google :",
@@ -664,7 +664,7 @@
       "provider_descriptions": {
         "strava": "Strava connecte les données de course, vélo, natation et entraînement via l'API OAuth officielle.",
         "garmin": "L'API Garmin Health nécessite une validation fournisseur. Les utilisateurs peuvent marquer leur intérêt jusqu'à l'activation du partenariat.",
-        "google_fit": "Connexion via Google OAuth. L'import d'activités sera construit ensuite sur les jetons enregistrés.",
+        "google_fit": "Connexion via Google OAuth. Les activités peuvent maintenant être synchronisées avec les jetons enregistrés.",
         "mi_fitness": "Mi Fitness n'a pas d'intégration OAuth standard simple dans le projet. La connexion est marquée comme souhaitée.",
         "polar": "Polar AccessLink fournit des données d'entraînement et d'activité via OAuth/API. L'intégration est marquée comme souhaitée.",
         "fitbit": "L'API Web Fitbit peut fournir activités, pas, distance, calories et données de santé via OAuth. L'intégration est marquée comme souhaitée."
@@ -756,7 +756,11 @@
   "notifications": {
     "new": "Nouvelle notification",
     "empty": "Aucune notification",
-    "unread_count": "{count} non lues"
+    "unread_count": "{count} non lues",
+    "read": "Lue",
+    "unread": "Non lue",
+    "label": "Notification",
+    "removal_objection_message": "Je conteste cette suppression et demande un examen."
   },
   "sport_map": {
     "eyebrow": "Itineraires, suivi et lieux sportifs",
@@ -899,7 +903,9 @@
     },
     "none": {
       "club": "Aucun club",
-      "team": "Aucune équipe"
+      "team": "Aucune équipe",
+      "not_required": "Non requis",
+      "team_assigned": "Défini par l’équipe"
     },
     "types": {
       "training": "Entraînement",
@@ -944,6 +950,25 @@
       "friday": "Ven",
       "saturday": "Sam",
       "sunday": "Dim"
+    },
+    "free_limit": "Compte gratuit : {remaining} événement(s) sur {limit} restants ce mois-ci. Les événements récurrents ne sont pas disponibles.",
+    "steps": {
+      "base": "Base",
+      "time": "Horaire",
+      "details": "Détails",
+      "review": "Vérifier"
+    },
+    "validation": {
+      "title": "Veuillez saisir un titre.",
+      "private_team": "Les événements privés nécessitent une équipe.",
+      "organization_club": "Les événements d’organisation nécessitent un club.",
+      "start": "Veuillez définir une heure de début.",
+      "end_before_start": "La fin ne peut pas précéder le début.",
+      "reminder_after_start": "Le rappel doit précéder le début.",
+      "recurrence_end": "Veuillez définir une date de fin de récurrence.",
+      "recurrence_before_start": "La fin de récurrence doit suivre le début.",
+      "recurrence_days": "Veuillez choisir au moins un jour.",
+      "participants": "La limite de participants doit être au moins 1."
     }
   },
   "roles": {
@@ -964,6 +989,72 @@
     "cta": {
       "start": "Commencer gratuitement",
       "explore": "Découvrir Airmius"
+    },
+    "events": {
+      "meta_title": "Découvrir les événements sportifs",
+      "meta_description": "Trouvez sur Airmius les entraînements, matchs, rencontres et événements sportifs publics des clubs et équipes.",
+      "eyebrow": "Événements",
+      "title": "Trouvez des événements sportifs, entraînements et rencontres publics.",
+      "plan": "Planifier mon événement",
+      "search_placeholder": "Événement, club ou équipe",
+      "search_label": "Rechercher un événement, club ou équipe",
+      "type_label": "Type d’événement",
+      "all_types": "Tous les types",
+      "location_placeholder": "Ville ou pays",
+      "location_label": "Rechercher une ville ou un pays",
+      "search": "Rechercher",
+      "find_club": "Trouver un club",
+      "join": "Participer",
+      "empty": "Aucun événement public ne correspond à ces critères."
+    },
+    "sports": {
+      "meta_title": "Disciplines sportives sur Airmius",
+      "meta_description": "Découvrez les disciplines actives sur Airmius et trouvez les clubs, équipes, événements et offres sportives numériques adaptés.",
+      "eyebrow": "Disciplines sportives",
+      "title": "Trouvez la bonne discipline, des clubs et des équipes.",
+      "find_clubs": "Rechercher des clubs",
+      "search_placeholder": "Rechercher une discipline",
+      "search_label": "Rechercher une discipline",
+      "category_label": "Catégorie sportive",
+      "all_categories": "Toutes les catégories",
+      "filter": "Filtrer",
+      "sport": "Sport",
+      "clubs": "Clubs",
+      "teams": "Équipes",
+      "show_clubs": "Afficher les clubs",
+      "events": "Événements",
+      "empty": "Aucune discipline ne correspond à ces critères."
+    },
+    "sponsors": {
+      "meta_title": "Sponsors Airmius",
+      "meta_description": "Découvrez les sponsors et partenaires qui soutiennent Airmius, les clubs et les offres sportives.",
+      "eyebrow": "Partenaires Airmius",
+      "title": "Des sponsors qui rendent le sport plus visible et abordable.",
+      "intro": "Les visiteurs trouvent ici tous les sponsors Airmius et partenaires de clubs actifs. Des offres de plateforme aux soutiens locaux, chaque carte montre qui contribue aux réductions, offres et projets des clubs.",
+      "visible_title": "Visible pour les visiteurs",
+      "visible_text": "Les sponsors de l’administration apparaissent automatiquement tant que leur période est active.",
+      "search_placeholder": "Rechercher un sponsor, club ou site",
+      "all": "Tous",
+      "airmius": "Airmius",
+      "outfit": "Tenues",
+      "clubs": "Clubs",
+      "website": "Visiter le site",
+      "empty_title": "Aucun sponsor trouvé.",
+      "empty_text": "Adaptez la recherche ou le filtre.",
+      "scope_platform": "Plateforme Airmius",
+      "scope_outfit": "Abonnement tenues",
+      "scope_club": "Sponsor de club",
+      "scope_platform_text": "Soutient les offres et avantages de la plateforme Airmius.",
+      "scope_outfit_text": "Soutient les abonnements tenues et les offres partenaires pour les sportifs.",
+      "scope_club_text": "Soutient les offres des clubs et les projets sportifs locaux."
+    },
+    "gamification": {
+      "per_action": "par action",
+      "cap": "limite"
+    },
+    "admin_badges": {
+      "delete_title": "Supprimer le badge",
+      "delete_message": "Supprimer vraiment le badge \"{name}\" ?"
     },
     "top": {
       "hero": {
@@ -1116,7 +1207,19 @@
         "title": "Apprenez l'organisation sportive moderne.",
         "subtitle": "Modules courts pour entraîneurs, managers, joueurs et responsables de club."
       },
-      "start": "Commencer l'apprentissage",
+      "start": "Commencer l’apprentissage",
+      "cta": {
+        "room": "Ouvrir l’espace d’apprentissage",
+        "buy": "Acheter le cours",
+        "paid": "Cours payant",
+        "free": "S’inscrire gratuitement",
+        "price": "Prix :",
+        "certificate": "Certificat :",
+        "lesson_unlock": "Cette leçon sera disponible le {date}."
+      },
+      "status": {
+        "cancelled": "Retiré"
+      },
       "steps": {
         "learn": "Apprendre vite",
         "apply": "Appliquer directement",
@@ -1715,7 +1818,7 @@
     "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "Moins de défilement, plus de clarté : catégories, promotions et sélections au lieu de tous les produits à la fois.",
     "Jetzt entdecken": "Découvrir",
     "Hilfe & Bestellung": "Aide & commande",
-    "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "Commande invité, commande connectée et offres vendeurs sont prétes.",
+    "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "Commande invité, commande connectée et offres vendeurs sont disponibles.",
     "Anbieter werden": "Devenir vendeur",
     "Vereine, Trainer und Shops können Angebote einstellen.": "Les clubs, coachs et boutiques peuvent publier des offres.",
     "Produkte, Camps und Kurse aus deinem Sportnetzwerk.": "Produits, camps et cours de ton réseau sportif.",
@@ -3135,7 +3238,7 @@
     "Ausgangsplan: . Die KI erstellt eine neue bestätigbare Version, damit dein alter Plan nachvollziehbar bleibt.": "Plan initial : . L'IA crée une nouvelle version vérifiable pour que ton ancien plan reste traçable.",
     "Ausgestellt": "Émis",
     "Ausgestellt am": "Émis le",
-    "Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.": "Planification équilibrée activée : Chaque unité reçoit ultérieurement automatiquement son type, par exemple Long Run, Intervalle, Technique ou Réparation.",
+    "Ausgewogene Planung aktiv: Die KI ordnet jede Einheit automatisch einem passenden Typ zu, z. B. Long Run, Intervalle, Technik oder Regeneration.": "Planification équilibrée activée : l’IA attribue automatiquement à chaque séance un type adapté, par exemple sortie longue, intervalles, technique ou récupération.",
     "Ausgewählt": "Sélectionné",
     "Ausgewählte Produkte": "Produits sélectionnés",
     "Ausgewählter Tag": "Jour sélectionné",
@@ -5403,6 +5506,124 @@
   "teams": {
     "empty": "Aucune équipe/aucun club disponible."
   },
+  "teams_workspace": {
+    "sport_open": "Sport à définir",
+    "roles": { "owner": "Propriétaire", "admin": "Admin du club", "manager": "Responsable", "academy_manager": "Responsable de l’académie", "financial_controller": "Responsable financier", "trainer": "Coach", "member": "Membre" },
+    "team_roles": { "coach": "Coach", "captain": "Capitaine", "player": "Joueur" },
+    "steps": { "basic": "Base", "address": "Adresse", "review": "Vérifier" },
+    "tabs": { "basic": "Base", "visibility": "Visibilité", "address": "Adresse", "bank": "Compte bancaire", "sponsors": "Sponsors" },
+    "messages": {
+      "insights_error": "Impossible de charger l’activité de l’équipe.", "job_created": "Entrée créée.", "job_updated": "Entrée mise à jour.", "job_save_error": "Impossible d’enregistrer l’entrée. Vérifiez les champs signalés.", "job_delete_title": "Supprimer le poste « {title} »", "job_delete_message": "Cette entrée sera supprimée définitivement et ne figurera plus sur la page des postes.", "job_deleted": "Entrée supprimée.", "job_delete_error": "Impossible de supprimer l’entrée.", "job_delete_button": "Supprimer le poste", "club_registered": "Club enregistré.", "club_register_error": "Impossible d’enregistrer le club. Vérifiez les champs signalés.",
+      "team_created": "Équipe créée.", "team_create_error": "Impossible de créer l’équipe. Vérifiez les champs.", "invite_sent": "Invitation envoyée.", "invite_error": "Impossible d’envoyer l’invitation.",
+      "member_added": "Membre ajouté à l’équipe.", "member_add_error": "Impossible d’ajouter le membre.", "invitation_accepted": "Invitation d’équipe acceptée.", "invitation_accept_error": "Impossible d’accepter l’invitation d’équipe.", "invitation_declined": "Invitation d’équipe refusée.", "invitation_decline_error": "Impossible de refuser l’invitation d’équipe.",
+      "join_request_sent": "Demande d’adhésion à l’équipe envoyée.", "join_request_send_error": "Impossible d’envoyer la demande d’adhésion.", "join_request_approved": "Demande d’adhésion à l’équipe acceptée.", "join_request_approve_error": "Impossible d’accepter la demande d’adhésion.", "join_request_declined": "Demande d’adhésion à l’équipe refusée.", "join_request_decline_error": "Impossible de refuser la demande d’adhésion.",
+      "club_role_saved": "Rôle du club enregistré.", "club_role_error": "Impossible d’enregistrer le rôle du club.", "club_saved": "Détails du club enregistrés.", "club_save_error": "Impossible d’enregistrer les détails du club. Vérifiez les champs.",
+      "sponsor_updated": "Sponsor mis à jour.", "sponsor_created": "Sponsor créé.", "sponsor_save_error": "Impossible d’enregistrer le sponsor. Vérifiez les champs.", "sponsor_remove_title": "Supprimer le sponsor « {name} »", "sponsor_remove_message": "Ce sponsor sera retiré du club. Cette action est irréversible.", "sponsor_removed": "Sponsor supprimé.", "sponsor_remove_error": "Impossible de supprimer le sponsor.",
+      "team_role_saved": "Rôle de l’équipe enregistré.", "team_role_error": "Impossible d’enregistrer le rôle de l’équipe.", "leave_team_title": "Quitter l’équipe « {name} »", "remove_member_title": "Retirer {member} de « {team} »", "leave_team_message": "Vous ne pouvez quitter cette équipe qu’après règlement des factures du club encore ouvertes.", "remove_member_message": "Le membre sera retiré de cette équipe. L’adhésion au club reste active.", "leave_team_button": "Quitter l’équipe", "remove_member_button": "Retirer le membre", "team_left": "Vous avez quitté l’équipe.", "member_removed": "Membre retiré de l’équipe.", "leave_team_error": "Impossible de quitter l’équipe. Vérifiez les factures ouvertes.", "member_remove_error": "Impossible de retirer le membre.",
+      "delete_club_title": "Supprimer le club « {name} »", "delete_club_message": "Toutes les équipes de ce club seront également supprimées. Cette action est irréversible.", "club_deleted": "Club supprimé.", "club_delete_error": "Impossible de supprimer le club.", "delete_team_title": "Supprimer l’équipe « {name} »", "delete_team_message": "L’équipe et ses affectations seront supprimées. Cette action est irréversible.", "team_deleted": "Équipe supprimée.", "team_delete_error": "Impossible de supprimer l’équipe."
+    }
+  },
+  "teams_profile": {
+    "messages": {
+      "deactivate_rule": "Désactiver la règle « {title} » ? Les écritures existantes restent conservées.",
+      "cancel_fee": "Annuler cette écriture ?"
+    }
+  },
+  "clubs_profile": {
+    "messages": {
+      "withdraw_request": "Voulez-vous vraiment retirer votre demande d’adhésion à « {name} » ?",
+      "leave_club": "Voulez-vous vraiment quitter « {name} » ? Vous serez également retiré de toutes les équipes de ce club. Cette action est possible uniquement si aucune facture ne reste ouverte."
+    }
+  },
+  "operating_contracts": {
+    "deadline": {
+      "since": "il y a {days} jours",
+      "today": "aujourd’hui",
+      "tomorrow": "demain",
+      "in_days": "dans {days} jours"
+    },
+    "messages": {
+      "delete": "Voulez-vous vraiment supprimer « {name} » ?"
+    }
+  },
+  "Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge.": "Profil d’équipe, appartenance, membres et publications visibles.",
+  "Individuelle Regeln für": "Règles personnalisées pour",
+  "und offene Strafbuchungen.": "et les écritures d’amende ouvertes.",
+  "Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden.": "Les équipes de ce club apparaîtront ici dès leur création.",
+  "Angenommene Mitglieder werden in dieser Liste sichtbar.": "Les membres acceptés apparaissent dans cette liste.",
+  "Vereinsdaten speichern": "Enregistrer les informations du club",
+  "Speichert...": "Enregistrement…",
+  "Vereinsdaten werden gespeichert...": "Les informations du club sont en cours d’enregistrement…",
+  "ab": "à partir de",
+  "Min.": "min.",
+  "max.": "max.",
+  "wird gespeichert…": "enregistrement…",
+  "Unbekannt": "Inconnu",
+  "Diese Buchung stornieren?": "Annuler cette écriture ?",
+  "fällig": "échéance",
+  "bezahlt": "payé",
+  "Strafkatalog konnte nicht geladen werden.": "Le catalogue des amendes n’a pas pu être chargé.",
+  "Regel konnte nicht gespeichert werden.": "La règle n’a pas pu être enregistrée.",
+  "Regel konnte nicht deaktiviert werden.": "La règle n’a pas pu être désactivée.",
+  "Strafe konnte nicht gebucht werden.": "L’amende n’a pas pu être enregistrée.",
+  "Buchung konnte nicht bezahlt markiert werden.": "L’écriture n’a pas pu être marquée comme payée.",
+  "Buchung konnte nicht storniert werden.": "L’écriture n’a pas pu être annulée.",
+  "Änderung gespeichert.": "Modifications enregistrées.",
+  "Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.": "La modification n’a pas pu être enregistrée. Vérifiez vos saisies.",
+  "Karten": "Cartes",
+  "Routenplanung": "Planification d’itinéraire",
+  "Künstliche Intelligenz": "Intelligence artificielle",
+  "Kartenaufrufe": "Chargements de carte",
+  "Credits/Anfragen": "Crédits/requêtes",
+  "Text-Anfragen": "Requêtes texte",
+  "Trips": "Trajets",
+  "Trips + aktive Nutzer": "Trajets + utilisateurs actifs",
+  "Info": "Info",
+  "Eigene Routing-Infrastruktur:": "Infrastructure de routage interne :",
+  "Zielkosten ca.": "Coût cible env.",
+  "frei enthalten.": "inclus gratuitement.",
+  "Plan im aktuellen Volumen nutzbar.": "Plan utilisable au volume actuel.",
+  "Behalte Karte, Routing, Navigation und KI im Blick. Die Zahlen helfen zu erkennen, wann Mapbox, GraphHopper, openrouteservice, eigene Infrastruktur oder KI-Anbieter gewechselt werden sollten.": "Surveillez les cartes, le routage, la navigation et l’IA pour savoir quand changer de fournisseur.",
+  "Kosten steigen, wenn sehr viele Nutzer die Sportkarte laden.": "Les coûts augmentent lorsque beaucoup d’utilisateurs chargent la carte sportive.",
+  "GraphHopper Free ist nur für Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.": "GraphHopper Free est réservé au développement. Les itinéraires enregistrés économisent des crédits et des coûts.",
+  "Echte Live-Navigation kostet pro Nutzer und pro Trip.": "La navigation en direct coûte par utilisateur et par trajet.",
+  "Für Ernährung, Training und Blogtexte werden Tokens gezählt.": "Les tokens sont comptés pour la nutrition, l’entraînement et les textes de blog.",
+  "Webkarte": "Carte web",
+  "Live-Navigation": "Navigation en direct",
+  "KI-Text": "Texte IA",
+  "KI-Bildanalyse": "Analyse d’image IA",
+  "GraphHopper Free/Dev wird eng": "GraphHopper Free/Dev atteint sa limite",
+  "Kartenaufrufe steigen": "Les chargements de carte augmentent",
+  "Navigation SDK getrennt betrachten": "Évaluer séparément le SDK de navigation",
+  "KI-Daten minimieren": "Minimiser les données IA",
+  "Noch entspannt": "Utilisation encore confortable",
+  "Fristen": "Échéances",
+  "Kein Anbieter": "Aucun fournisseur",
+  "Vertrag bearbeiten": "Modifier le contrat",
+  "WLAN Büro, Handyvertrag, Fahrzeugleasing ...": "Wi-Fi de bureau, forfait mobile, leasing de véhicule…",
+  "Neuer Vertrag": "Nouveau contrat",
+  "Automatisch aus Ende minus Frist": "Calculé à partir de la fin moins le préavis",
+  "Anlegen": "Créer",
+  "Büro & Standort": "Bureau et site",
+  "Vertrag löschen": "Supprimer le contrat",
+  "-": "-",
+  "Beendet": "Terminé",
+  "WLAN & Internet": "Wi-Fi et internet",
+  "Handy & Mobilfunk": "Mobile et téléphonie",
+  "Leasing": "Leasing",
+  "Software": "Logiciels",
+  "Hosting & Domains": "Hébergement et domaines",
+  "Versicherung": "Assurance",
+  "Marketing": "Marketing",
+  "Finanzen & Steuer": "Finance et fiscalité",
+  "Dienstleister": "Prestataire",
+  "Quartalsweise": "Trimestriel",
+  "Lastschrift": "Prélèvement automatique",
+  "« Previous": "« Précédent",
+  "Next »": "Suivant »",
+  "Neue Regel": "Nouvelle règle",
+  "Regel bearbeiten": "Modifier la règle",
+  "Regel anlegen": "Créer la règle",
   "Schließen": "Fermer",
   "AIRMIUS": "AIRMIUS",
   "AIRMIUS Marketplace": "Marketplace AIRMIUS",
@@ -5425,7 +5646,7 @@
   "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "Moins de défilement, plus de clarté : catégories, promotions et sélections au lieu de tous les produits à la fois.",
   "Jetzt entdecken": "Découvrir maintenant",
   "Hilfe & Bestellung": "Aide et commande",
-  "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "Commande invité, commande connectée et offres vendeurs sont prétes.",
+  "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "Commande invité, commande connectée et offres vendeurs sont disponibles.",
   "Anbieter werden": "Devenir vendeur",
   "Vereine, Trainer und Shops können Angebote einstellen.": "Les clubs, coachs et boutiques peuvent publier des offres.",
   "Alle anzeigen": "Tout afficher",
@@ -6443,5 +6664,137 @@
   "Noch kein Termin": "Aucun rendez-vous",
   "Rückgabe:": "Retour :",
   "Eine Vereinswebsite, die Mitglieder gewinnt, Sponsoren überzeugt und Arbeit spart.": "Un site de club qui attire des membres, convainc les sponsors et réduit la charge de travail.",
-  "Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.": "Un modèle tarifaire pour tous ceux qui organisent, pratiquent ou soutiennent le sport."
+  "Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.": "Un modèle tarifaire pour tous ceux qui organisent, pratiquent ou soutiennent le sport.",
+  "Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.": "Les sportifs et les parents commencent gratuitement. Les clubs paient selon leur taille. Les coachs, sponsors et prestataires disposent de parcours dédiés à mesure que leurs besoins grandissent.",
+  "Kostenlos starten, sportlich sichtbar werden.": "Commencer gratuitement et gagner en visibilité sportive.",
+  "Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen später für Portfolio, Statistiken und mehr Sichtbarkeit.": "Les sportifs restent gratuits dans l’essentiel. Les fonctions Pro ajoutent portfolio, statistiques et visibilité.",
+  "Training organisieren, Teams begleiten, Wissen verkaufen.": "Organiser l’entraînement, accompagner les équipes et vendre son expertise.",
+  "Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen später eigene Gruppen, Camps und Kursverkauf.": "Les coachs travaillent gratuitement dans le forfait club. Les coachs indépendants peuvent ensuite gérer groupes, camps et ventes de cours.",
+  "Vereinsverwaltung, Community und Kommunikation in einem System.": "Gestion du club, communauté et communication dans un seul système.",
+  "Die Vereinspläne sind der Hauptumsatz: Mitglieder, Teams, Beiträge, Rechnungen, Dateien und Sponsoren.": "Les forfaits club couvrent l’essentiel : membres, équipes, cotisations, factures, fichiers et sponsors.",
+  "Sicherheit für Minderjährige bleibt kostenlos.": "La sécurité des mineurs reste gratuite.",
+  "Elternzustimmung, Widerruf und Kinderüberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.": "Le consentement parental, la révocation et le suivi des enfants sont des fonctions de confiance, sans facturation séparée.",
+  "Regionale Sichtbarkeit im Sportumfeld.": "Gagner en visibilité régionale dans le sport.",
+  "Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsäule, sobald genug Aktivität vorhanden ist.": "Les profils sponsors, campagnes et annonces locales forment un axe B2B lorsque l’activité est suffisante.",
+  "Marketplace für Produkte, Kurse und Services.": "Marketplace de produits, cours et services.",
+  "Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.": "Les prestataires pourront proposer produits, camps, cours et services sportifs à mesure que le marketplace grandit.",
+  "Websites, Kampagnen und digitale Sichtbarkeit für Vereine.": "Sites web, campagnes et visibilité numérique pour les clubs.",
+  "Airmius bietet Vereinen Website-Erstellung, Landingpages und digitale Kampagnen als Angebotsservice nach Anfrage.": "Airmius propose aux clubs des sites, landing pages et campagnes numériques sur devis et demande.",
+  "Individuelle Lösungen für Verbände und große Organisationen.": "Solutions sur mesure pour fédérations et grandes organisations.",
+  "Enterprise ist für Mandantenfähigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.": "L’offre Enterprise vise le multi-tenant, la migration, les intégrations, la formation et les SLA.",
+  "Funktionslogik": "Logique des fonctionnalités",
+  "Ausbauplan": "Feuille de route",
+  "Reihenfolge für die fehlenden Vereins- und Trainerfunktionen": "Ordre des fonctions club et coach restantes",
+  "training_log": {
+    "title": "Séance d'entraînement",
+    "status": { "draft": "Brouillon", "planned": "Planifiée", "in_progress": "En cours", "completed": "Terminée" },
+    "exact": "exact",
+    "equal": "identique",
+    "roles": { "athlete": "Sportif", "trainer": "Coach", "team_staff": "Équipe", "admin": "Admin" },
+    "metrics": { "time": "Moment", "duration": "Durée", "distance": "Distance", "calories": "Calories", "intensity": "Intensité" },
+    "labels": { "athlete": "Sportif :", "team": "Équipe :", "sport": "Sport :", "reps": "Rép. :", "weight": "Poids :", "time": "Temps :", "distance": "Distance :", "intensity": "Intensité :" },
+    "actions": { "new": "Nouvelle séance", "overview": "Retour à la vue d'ensemble" },
+    "comparison": { "eyebrow": "Plan vs réel", "title": "Comparer la séance prévue et réalisée", "value": "Valeur", "planned": "Prévu", "actual": "Réalisé", "delta": "Écart", "scheduled": "Date prévue", "documented": "Documenté", "details": "Détails" },
+    "entries": "entrées",
+    "documentation": "Documentation",
+    "exercises": "Exercices et valeurs",
+    "set": "Série",
+    "media": "Voir les médias",
+    "no_details": "Aucune valeur détaillée enregistrée.",
+    "notes": "Notes",
+    "trainer_note": "Note du coach",
+    "wellness": { "title": "Charge et état", "rpe": "RPE", "energy": "Énergie", "pain": "Douleur", "sleep": "Sommeil" },
+    "plan_reference": "Référence du plan",
+    "feedback": "Feedback",
+    "feedback_title": "Échange entre sportif et coach",
+    "unknown": "Inconnu",
+    "no_feedback": "Aucun feedback pour le moment. Écrivez la première réponse directement sur cette séance.",
+    "reply": "Écrire une réponse",
+    "placeholder": "Feedback, question, conseil technique ou prochain objectif",
+    "send": "Envoyer le feedback"
+  },
+  "users_edit": { "suspension": { "no_change": "Ne pas modifier", "lift": "Lever la suspension", "one_day": "Suspendre 1 jour", "three_days": "Suspendre 3 jours", "seven_days": "Suspendre 7 jours", "ten_days": "Suspendre 10 jours", "fourteen_days": "Suspendre 14 jours", "thirty_days": "Suspendre 30 jours", "sixty_days": "Suspendre 60 jours", "ninety_days": "Suspendre 90 jours" } },
+  "training_workspace": {
+    "sports": { "all": "Tous", "laufen": "Course", "schwimmen": "Natation", "gym": "Gym", "fussball": "Football", "tanzen": "Danse", "golf": "Golf", "cycling": "Cyclisme", "yoga": "Yoga" },
+    "metrics": { "Distanz km": "Distance km", "Pace Ziel": "Allure cible", "Höhenmeter": "Dénivelé", "RPE": "RPE", "Bahnen": "Longueurs", "Stil": "Style", "Intervall": "Intervalle", "Pausenzeit": "Temps de repos", "Sätze": "Séries", "Wiederholungen": "Répétitions", "Gewicht kg": "Poids kg", "Pause": "Repos", "Schwerpunkt": "Focus", "Spielfeld": "Terrain", "Spielerzahl": "Joueurs", "Drill": "Exercice", "Choreo": "Chorégraphie", "Takte": "Mesures", "Tempo": "Tempo", "Löcher": "Trous", "Schläger": "Clubs", "Zielscore": "Score cible", "Watt Ziel": "Watts cibles", "Kadenz": "Cadence", "Flow": "Flow", "Atemfokus": "Focus respiration", "Level": "Niveau", "Haltezeit": "Temps de maintien" },
+    "plan_types": { "gym": "Gym", "run_interval": "Intervalles", "long_run": "Course longue", "swim": "Natation", "football": "Football", "cycling": "Vélo", "generic": "Libre" },
+    "sections": { "overview": { "label": "Vue d'ensemble", "hint": "Départ" }, "plans": { "label": "Plans", "hint": "Construction" }, "week": { "label": "Semaine", "hint": "Calendrier" }, "logs": { "label": "Journaux", "hint": "Documentation" }, "analysis": { "label": "Analyse", "hint": "Signaux" } },
+    "plan_steps": { "0": { "label": "Bases", "hint": "Nom et rythme" }, "1": { "label": "Objectif", "hint": "Période et niveau" }, "2": { "label": "Partage", "hint": "Équipe et sportifs" }, "3": { "label": "Séance", "hint": "Premier entraînement" } },
+    "ai_steps": { "0": { "label": "Objectif", "hint": "Que faut-il améliorer ?" }, "1": { "label": "Cadre", "hint": "Temps, niveau, règles" }, "2": { "label": "Aperçu", "hint": "Vérifier et enregistrer" } },
+    "duration_presets": { "0": { "label": "1 mois", "hint": "Démarrage rapide" }, "1": { "label": "2 mois", "hint": "Construction" }, "2": { "label": "3 mois", "hint": "Bloc stable" }, "3": { "label": "6 mois", "hint": "Long terme" } },
+    "cadence": { "single": "Une fois", "daily": "Quotidien", "weekly": "Hebdomadaire", "monthly": "Mensuel" },
+    "phase": { "base": "Base", "build": "Construction", "peak": "Pic", "recovery": "Récupération", "rehab": "Rééducation" },
+    "level": { "beginner": "Débutant", "intermediate": "Intermédiaire", "advanced": "Avancé", "elite": "Performance" },
+    "load": { "low": "Léger", "medium": "Modéré", "high": "Élevé", "test": "Test" },
+    "permission": { "read": "Lecture seule", "write": "Modification" },
+    "status": { "missed": "Non réalisé" },
+    "item_status": { "completed": "Terminé", "missed": "Non réalisé", "due": "À faire", "planned": "Planifié" },
+    "units": { "hours": "h", "minutes": "min" },
+    "fallback_training": "Entraînement",
+    "page_title": "Entraînement",
+    "eyebrow": "Espace entraînement",
+    "tagline": "Planifier · Réaliser · Partager",
+    "title": "Plans d'entraînement",
+    "next_training": "Prochain entraînement",
+    "empty_next": "Rien de planifié",
+    "empty_next_mobile": "Commencez directement ci-dessous.",
+    "empty_next_desktop": "Créez un plan ou documentez une séance spontanée.",
+    "no_appointment": "Aucune séance planifiée.",
+    "actions": { "start": "Démarrer", "create_plan": "Créer un plan", "ai_plan": "Plan IA", "document": "Documenter" },
+    "stats": { "plans": "Plans", "logs": "Journaux", "completed": "Terminés", "teams": "Équipes" },
+    "ai": { "free": "Gratuit", "limit_without_monthly": "Niveau {tier} : jusqu'à {weeks} semaines", "limit_with_monthly": "Niveau {tier} : {remaining}/{limit} plans IA ce mois-ci, jusqu'à {weeks} semaines", "analysis": "Analyse", "adjustment": "Ajustement", "adjusted_title": "{title} adapté", "training_plan": "Plan d'entraînement", "unavailable": "Les plans d'entraînement IA ne sont pas disponibles avec votre quota actuel.", "goal_required": "Saisissez d'abord un objectif d'entraînement clair.", "revision_required": "Indiquez brièvement ce que l'IA doit modifier dans le plan.", "too_many_weeks": "Votre niveau autorise des plans IA jusqu'à {weeks} semaines. Choisissez une durée plus courte ou passez au niveau supérieur.", "too_many_items": "Ce plan contiendrait {requested} séances. Réduisez le nombre de semaines ou de séances à {max} maximum.", "preview_created": "Proposition IA créée.", "profile_missing": "Des données du profil sportif sont nécessaires pour un plan fiable.", "generation_failed": "Le plan d'entraînement IA n'a pas pu être créé.", "save_failed": "Le plan IA n'a pas pu être enregistré." },
+    "log_create": {
+      "page_title": "Documenter un entraînement", "eyebrow": "Entraînement", "title": "Documenter une séance", "intro": "Saisissez rapidement l'essentiel, validez les séries et ajoutez les détails plus tard si besoin.", "back": "Retour", "template": "Modèle", "status": "Statut", "quality": "Qualité", "step": "Étape", "training_type": "Type d'entraînement", "swipe_hint": "Faites défiler les modèles sur mobile.", "selected": "Sélectionné", "change": "Modifier", "athlete": "Sportif", "planned_session": "Séance planifiée", "spontaneous": "Entraînement spontané", "sport": "Sport", "sport_search": "Rechercher un sport", "self": "Moi-même", "quick_choice": "Choix rapide",
+      "autosave": { "saving": "Enregistrement du brouillon...", "dirty": "Les modifications seront bientôt enregistrées", "saved": "Brouillon enregistré", "at": "à", "none": "Aucun brouillon" },
+      "summary": { "gym": "{exercises} exercices · {completed}/{sets} séries terminées", "long_run": "Les données globales suffisent · segments facultatifs", "entries": "{count} lignes détaillées" },
+      "checklist": { "basics": "Données de base", "time": "Moment", "load": "Charge", "details": "Détails", "wellness": "État", "notes_media": "Notes ou médias", "visibility": "Visibilité" },
+      "steps": { "1": { "label": "Choisir l'entraînement", "short": "Départ" }, "2": { "label": "Documenter", "short": "Détails" }, "3": { "label": "Terminer", "short": "Fin" } },
+      "types": { "gym": { "label": "Gym / force", "short": "Gym", "detail": "Exercices et séries" }, "run_interval": { "label": "Intervalles de course", "short": "Intervalles", "detail": "Intervalles" }, "long_run": { "label": "Course longue", "short": "Course longue", "detail": "Segments du parcours" }, "swim": { "label": "Natation", "short": "Natation", "detail": "Séries et technique" }, "football": { "label": "Football", "short": "Football", "detail": "Exercices et jeux" }, "cycling": { "label": "Cyclisme", "short": "Vélo", "detail": "Segments du parcours" }, "generic": { "label": "Entraînement libre", "short": "Libre", "detail": "Exercices / valeurs" } },
+      "more_fields": "Autres informations", "optional": "facultatif", "notes_placeholder": "Ressenti, technique, douleurs ou particularités", "live_mode": "Mode live", "live_hint": "Démarrage rapide sur le terrain, en salle ou en déplacement.", "live_start": "Démarrer en direct", "live_end": "Terminer le direct", "live_take_time": "Utiliser le temps écoulé", "duration_set": "Définir la durée", "finish": "Terminer", "save": "Enregistrer l'entraînement", "next": "Suivant", "next_document": "Continuer la documentation", "finish_title": "Terminer l'entraînement", "finish_intro": "Ces valeurs sont volontairement à la fin. Saisissez seulement ce que vous connaissez vraiment.", "work_mode": "Mode de travail", "active_template": "Modèle actif", "gym_hint": "Saisissez d'abord l'exercice, puis chaque série avec ses répétitions et son poids.", "general_hint": "Les champs s'adaptent au type d'entraînement. Pour une course longue, les segments sont facultatifs.", "moment": "Moment", "quality_check": "Contrôle qualité", "volume": "Volume",
+      "fields": { "title": "Titre", "status": "Statut", "time": "Moment", "duration": "Durée en minutes", "distance": "Distance en km", "notes": "Notes", "trainer_note": "Note du coach", "visibility": "Visibilité", "intensity": "Intensité", "calories": "Calories brûlées" },
+      "visibility": { "trainer": "Coach et encadrants autorisés", "private": "Moi uniquement", "team": "Équipe" },
+      "notify": { "athlete": "Prévenir le sportif à l'enregistrement", "trainer": "Prévenir le coach à l'enregistrement", "hint": "Actif par défaut. Si désactivé, aucune notification n'est envoyée ; les personnes autorisées voient toujours la séance." },
+      "intensity": { "none": "Non indiqué", "easy": "Léger", "medium": "Modéré", "hard": "Soutenu / intense", "recovery": "Récupération" },
+      "wellness": { "title": "État (facultatif)", "hint": "Remplissez uniquement si vous souhaitez documenter votre état. 1 est faible, 10 est élevé.", "rpe": "Effort 1–10", "energy": "Énergie 1–10", "pain": "Douleur 0–10", "sleep": "Sommeil en heures" },
+      "back_to_details": "Retour aux détails"
+    }
+  },
+  "files": {
+    "page_title": "Fichiers", "scope_label": "Espace", "select": "Sélectionner", "manager": "Gestionnaire de fichiers", "folders": "dossiers", "files": "fichiers", "search_sort": "Rechercher et trier", "add_file_folder": "Ajouter un fichier ou dossier", "upload": "Téléverser un fichier", "root": "Racine", "choose_file": "Choisir un fichier", "storage_full": "Votre espace est plein. Supprimez des fichiers ou passez à une offre supérieure.", "upload_running": "Téléversement en cours...", "uploading": "Téléversement...", "create_folder": "Créer un dossier", "new_folder": "Nouveau dossier", "folder_name": "Nom du dossier", "folder_creating": "Création du dossier...", "created": "Créé...", "create": "Créer", "search_placeholder": "Rechercher...", "search_aria": "Rechercher des fichiers et dossiers", "search_clear": "Effacer la recherche", "per_page": "Éléments par page", "per_page_option": "Par page : {count}", "sort_aria": "Trier les dossiers et fichiers", "sort_option": "Tri : {value}", "parent_folder": "Aller au dossier parent", "back": "Retour", "next": "Suivant", "open_folder": "Ouvrir le dossier", "share": "Partager", "share_folder": "Partager le dossier", "share_file": "Partager le fichier", "rename": "Renommer", "rename_folder": "Renommer le dossier", "rename_file": "Renommer le fichier", "delete": "Supprimer", "delete_folder": "Supprimer le dossier", "delete_file": "Supprimer le fichier", "delete_file_message": "Ce fichier sera supprimé.", "delete_folder_message": "Le dossier et ses fichiers seront supprimés.", "download": "Télécharger", "download_file": "Télécharger le fichier", "storage": "Espace de stockage", "free": "libres", "used": "utilisés", "total": "au total", "used_of_total": "{used} utilisés sur {limit} Go au total", "storage_mobile": "Stockage : {used} sur {limit} Go", "empty_folder": "Ce dossier est vide.", "no_results": "Aucun résultat pour \"{query}\"", "refreshing": "Actualisation de la liste...", "page_status": "Page dossiers {foldersPage} / {foldersLast}, page fichiers {filesPage} / {filesLast}", "result_status": "Résultat : {folders} dossiers, {files} fichiers", "range_files": "Fichiers {start}–{end} sur {total}", "range_folders": "Dossiers {start}–{end} sur {total}", "folder_page": "Page dossiers {current} / {last}", "file_page": "Page fichiers {current} / {last}", "delete_final": "Supprimer définitivement", "delete_confirmation_hint": "Saisissez supprimer pour continuer.", "delete_word": "supprimer", "cancel": "Annuler", "deleting": "Suppression...", "save": "Enregistrer", "folder": "Dossier", "file": "Fichier", "friend": "Ami", "external_email": "E-mail externe", "friend_search": "Rechercher un ami",
+    "scope": { "user": "Mes fichiers", "team": "Équipe", "club": "Club", "event": "Événement" },
+    "sort": { "name_asc": "Nom (A–Z)", "name_desc": "Nom (Z–A)", "newest": "Plus récents", "oldest": "Plus anciens" }
+  },
+  "chat": {
+    "title": "Chat", "choose_hint": "Choisissez une personne ou un groupe, puis ouvrez-le.", "new_conversation": "Nouvelle conversation", "search_placeholder": "Rechercher une personne, une équipe ou un entraînement", "group_invitations": "Invitations de groupe", "invited_by": "De", "member": "Membre", "accept": "Accepter", "decline": "Refuser", "empty_title": "Aucun chat", "empty_description": "Démarrez une conversation pour voir les messages ici.", "no_matches_title": "Aucun chat correspondant", "no_matches_description": "Modifiez le filtre ou cherchez un autre nom.", "back": "Retour", "chat_suffix": "", "members": "membres", "muted": "silencieux", "unmute": "Activer les notifications", "mute": "Mettre le chat en sourdine", "group_profile": "Profil du groupe", "add_people": "Ajouter des personnes", "leave_group": "Quitter le groupe", "message_search": "Rechercher dans ce chat", "clear_search": "Effacer la recherche", "loading_older": "Chargement des anciens messages...", "load_older": "Charger les anciens messages", "reactions_hint": "Cliquez sur un message pour réagir", "direct_chat": "Chat direct", "team_chat": "Chat d'équipe", "event_chat": "Chat d'événement", "group_chat": "Chat de groupe", "no_messages": "Aucun message", "system_notice": "Avis système", "you": "Vous", "image_sent": "Image envoyée", "video_sent": "Vidéo envoyée", "file_sent": "Fichier envoyé", "message": "Message", "file": "Fichier",
+    "filters": { "direct": "Personnes", "team": "Équipes", "group": "Groupes", "event": "Entraînement", "all": "Tous" },
+    "types": { "direct": "Direct", "group": "Groupe", "team": "Équipe", "event": "Entraînement" },
+    "status": { "sending": "Envoi", "failed": "Non envoyé", "sent": "Envoyé", "delivered": "Distribué", "read": "Lu" },
+    "errors": { "upload_cancelled": "Téléversement annulé.", "rate_limited": "Trop de messages en peu de temps.", "send_failed": "Échec de l'envoi." }
+  },
+  "commerce": {
+    "page_title": "Boutique et factures", "eyebrow": "Achats et abonnements", "title": "Boutique, factures et offres", "intro": "Gérez vos achats Marketplace, cours, publicités, abonnements tenue et compte, panier et factures au même endroit.",
+    "order": { "status": { "delivered": "Terminée", "paid": "Payée", "pending": "Ouverte", "awaiting_transfer": "Virement attendu", "cancelled": "Annulée", "refunded": "Remboursée" }, "hints": { "delivered": "Votre commande a été livrée.", "processing": "Paiement reçu ; votre commande est en préparation.", "pending": "Paiement encore en attente", "awaiting_transfer": "Nous attendons le paiement.", "cancelled": "Cette commande a été annulée.", "refunded": "Cette commande a été remboursée." }, "cancel": { "title": "Annuler la commande", "message": "Annuler cette commande ? C’est possible uniquement avant son expédition.", "confirm": "Annuler" } },
+    "shipping": { "status": { "open": "Ouverte", "prepared": "En préparation", "shipped": "Expédiée", "delivered": "Livrée" } },
+    "issue": { "status": { "reported": "Problème signalé", "reviewing": "En vérification", "resolved": "Résolu", "refunded": "Remboursé", "cancelled": "Annulé" } },
+    "payout": { "status": { "requested": "Demandé", "prepared": "En vérification", "paid": "Versé", "cancelled": "Annulé" } },
+    "shop": { "learning_title": "Cours et e-learning", "learning_description": "Achetez des cours en ligne, des plans d’entraînement et des offres numériques.", "categories": { "all": "Tout", "courses": "Cours / e-learning", "outfit": "Abonnement tenue", "account": "Abonnement compte et options" } },
+    "payment": { "bank_transfer": "Virement bancaire", "stripe": "Stripe", "paypal": "PayPal" },
+    "checkout": { "confirm": "Confirmer le paiement" },
+    "provider_location": { "remove": { "title": "Supprimer le lieu", "message": "Supprimer {name} de votre profil vendeur ?", "confirm": "Supprimer" } },
+    "tabs": { "shop": "Boutique", "cart": "Panier", "invoices": "Factures", "ads": "Publicités", "create": "Vendre", "provider": "Profil vendeur", "payouts": "Versement" }
+  },
+  "users_admin": { "page_title": "Gestion des utilisateurs", "title": "Tableau de bord admin – utilisateurs", "intro": "Vue d’ensemble des utilisateurs inscrits.", "search": "Rechercher par nom ou e-mail…", "empty": "Aucun utilisateur trouvé.", "tabs": { "users": "Utilisateurs", "warnings": "Alertes", "inactivity": "Inactivité et RGPD" }, "filters": { "all": "Tous les statuts" }, "status": { "active": "Actif", "suspended": "Suspendu", "suspended_until": "Suspendu jusqu’au {date}" }, "actions": { "edit": "Modifier", "delete": "Supprimer" }, "inactivity": { "12": "12 mois et plus", "18": "18 mois et plus", "24": "24 mois et plus", "36": "36 mois et plus", "mail_failed": "Erreurs e-mail" }, "stage": { "first": "Premier e-mail dû", "second": "Deuxième e-mail dû", "scheduled": "Masquer le profil", "anonymize": "Vérifier l’anonymisation", "waiting": "En attente", "active": "Actif", "check": "Vérifier" } },
+  "learning_studio": { "page_title": "École sportive Airmius", "eyebrow": "École sportive Airmius", "title": "Studio de cours pour coachs et tuteurs", "intro": "Planifiez de vrais cours en ligne avec chapitres, leçons, devoirs, pièces jointes, quiz, notes et échanges.", "new_course": "Planifier un cours", "create_course": "Créer le cours", "my_courses": "Mes cours", "upload_failed": "Échec du téléversement.", "units": { "minutes": "min", "hours": "h" }, "categories": { "training": "Entraînement", "nutrition": "Nutrition", "mindset": "Mental", "tactics": "Tactique", "rehab": "Rééducation et prévention", "coaching": "Coaching", "club_management": "Gestion de club" }, "levels": { "beginner": "Débutant", "intermediate": "Intermédiaire", "advanced": "Avancé", "pro": "Pro" }, "lesson_types": { "lesson": "Leçon", "video": "Vidéo", "exercise": "Exercice", "assignment": "Devoir", "live_session": "Session en direct" } },
+  "friends": { "page_title": "Amis", "title": "Amis", "intro": "Invitez des amis, acceptez les demandes et gardez le contact avec vos partenaires sportifs.", "invite_title": "Inviter un ami", "invite_hint": "Saisissez une adresse e-mail. Les utilisateurs existants reçoivent une demande ; les personnes externes reçoivent une invitation par e-mail.", "invite": "Inviter", "invite_success": "Invitation envoyée.", "invite_failed": "Impossible d’envoyer l’invitation.", "pending": "Demandes en attente", "accept": "Accepter", "accepting": "Acceptation…", "accepted": "Demande d’amitié acceptée.", "accept_failed": "Impossible d’accepter la demande.", "decline": "Refuser", "mine": "Mes amis", "empty": "Aucun ami pour l’instant. Invitez quelqu’un pour commencer.", "sent": "Envoyées", "sent_empty": "Aucune invitation envoyée en attente.", "actions_for": "Actions pour {name}", "end": "Terminer", "end_friendship": "Mettre fin à l’amitié", "remove_title": "Mettre fin à l’amitié", "remove_message": "Voulez-vous vraiment mettre fin à votre amitié avec {name} ?", "report": "Signaler", "report_friend": "Signaler l’ami", "report_title": "Signaler le profil", "report_message": "Signaler {name} ? Le signalement sera envoyé à la modération." },
+  "rides": { "blocks": { "driver": "Vous êtes le conducteur de ce trajet.", "already_joined": "Vous avez déjà rejoint ce trajet.", "pending_request": "Demande en attente.", "full": "Ce covoiturage est complet.", "past": "L’heure de départ est passée.", "not_allowed": "Vous n’avez pas accès à ce trajet.", "unavailable": "Ce trajet n’est pas disponible actuellement." }, "states": { "driver": "Votre trajet", "pending": "Demande ouverte", "full": "Complet", "past": "Passé", "past_short": "Passé", "not_visible": "Non visible", "unavailable": "Indisponible" }, "legend": { "not_allowed": "Accès refusé (visibilité/statut).", "full": "Trajet complet.", "past": "Trajet passé.", "pending": "Demande en attente." }, "role": { "driver": "Conducteur", "joined": "Participant" }, "hints": { "can_join": "Vous pouvez envoyer une demande. Le point de rendez-vous privé et les coordonnées seront visibles après acceptation.", "pending": "Votre demande attend une réponse. Vous pouvez la retirer à tout moment.", "joined": "Vous participez et voyez les coordonnées et le point de rendez-vous partagés.", "driver_pending": "Vérifiez les demandes et actualisez les places disponibles.", "driver": "Vous gérez ce trajet." }, "not_set": "Non renseigné", "seats": "places", "seat_hint": "Occupation des places" },
+  "outfit_workspace": { "page_title": "Abonnement tenue", "eyebrow": "Centre des abonnements", "overview": "Tout en un coup d’œil", "active_subscriptions": "Abonnements actifs", "next_delivery": "Prochaine livraison", "style_profile": "Profil de style", "subscriptions_title": "Vos abonnements et livraisons", "subscriptions_hint": "Statut, mois de livraison et suivi au même endroit.", "choose_plan": "Choisir une formule", "not_planned": "Pas encore planifié", "status": { "active": "Actif", "paused": "En pause", "payment_paused": "En pause pour paiement", "cancels_at_period_end": "Résilié en fin de période", "pending_payment": "Paiement en attente", "pending_confirmation": "Validation en attente", "cancelled": "Résilié", "planned": "Planifié", "preparing": "En préparation", "shipped": "Expédié", "delivered": "Livré", "skipped": "Suspendu" }, "issue_types": { "exchange": "Échange", "return": "Retour", "damaged": "Endommagé", "missing_item": "Article manquant", "wrong_item": "Mauvais article", "other": "Autre" }, "issue_status": { "open": "Ouvert", "reviewing": "En vérification", "approved": "Validé", "return_waiting": "Retour en attente", "replacement_preparing": "Remplacement en préparation", "resolved": "Résolu", "rejected": "Clôturé" }, "payment": { "bank_transfer": "Virement bancaire", "paypal": "PayPal" }, "actions": { "cancel_pending": "Annuler", "cancel": "Résilier" }, "contract_terms": { "monthly": "L’abonnement tenue est mensuel avec paiement récurrent.", "payment": "La première livraison est préparée après confirmation du paiement.", "future": "La pause et la résiliation s’appliquent uniquement aux livraisons futures." }, "branding": { "sponsor": "Branding sponsor", "club": "Branding du club", "custom": "Branding personnalisé", "default": "Branding" }, "feedback": { "profile_saved": "Profil de style enregistré.", "profile_failed": "Impossible d’enregistrer le profil. Vérifiez vos informations." } },
+  "moderation": { "page_title": "Modération", "eyebrow": "Admin", "title": "Modération", "intro": "Examinez les contenus signalés ou marqués automatiquement dans le fil, les commentaires et le chat.", "users": "utilisateurs", "reported_by": "Signalé par", "unknown_user": "Inconnu", "unknown_date": "Inconnu", "note": "Note :", "source": "Source :", "user": "Utilisateur :", "system": "Système", "metrics": { "reports": "Signalements ouverts", "flags": "Alertes automatiques", "warnings": "Alertes (90 jours)", "suspended": "Comptes suspendus" }, "tabs": { "reports": "Signalements", "flags": "Marqués automatiquement", "warnings": "Alertes" }, "actions": { "dismiss": "Classer sans suite", "actioned": "Marquer comme traité", "remove": "Supprimer le contenu" }, "empty": { "reports": "Aucun signalement.", "flags": "Aucune alerte automatique.", "warnings": "Aucune alerte pour ce filtre." }, "deleted_content": "Contenu supprimé", "remove_title": "Supprimer le contenu", "remove_message": "Ce contenu sera supprimé définitivement. Continuer ?", "remove_confirm": "Supprimer définitivement" },
+"outfit_admin": {"plan_delete_title":"Supprimer ou désactiver la formule","plan_delete_message":"Supprimer ou désactiver la formule « {name} » ?","continue":"Continuer","mark_unpaid_title":"Marquer le paiement comme ouvert","mark_unpaid_message":"Marquer cet abonnement actif comme paiement ouvert ? Les relances démarreront automatiquement.","mark_unpaid_confirm":"Marquer comme ouvert"}, "global_feedback": {"permission_denied":"Vous n’avez pas l’autorisation pour cette action.","generic":"L’action n’a pas pu être terminée. Vérifiez vos saisies.","session_expired":"Votre session a expiré. Reconnectez-vous.","not_found":"Le contenu demandé est introuvable.","session_reload":"Votre session a expiré. Rechargez la page puis réessayez.","validation":"Vérifiez vos saisies.","server":"Erreur serveur. Réessayez dans un instant.","action_failed":"L’action n’a pas pu être terminée.","unexpected":"Une erreur inattendue est survenue. Réessayez."}, "feed": {"types":{"normal":"Normal","question":"Question","knowledge":"Connaissances","training_drill":"Exercice","tactic":"Tactique","analysis":"Analyse","experience":"Expérience","club_update":"Info du club"},"visibility":{"public":"Public","organization":"Club","team":"Équipe"}}, "subscriptions": {"unlimited":"Illimité","actor":{"all":"Tous","sportler":"Sportifs","trainer":"Coachs","verein":"Clubs","eltern":"Parents","sponsor":"Sponsors","anbieter":"Prestataires","enterprise":"Enterprise"},"status":{"trialing":"Essai","active":"Actif","past_due":"Paiement en attente","cancelled":"Résilié","cancels_at_period_end":"Résilié en fin de période"}}, "club_memberships": {"empty_audit":"Aucune entrée d’audit pour le moment.","finance":{"type":{"income":"Recette","expense":"Dépense"},"account":{"cash":"Espèces","bank":"Banque"}}}, "admin_finance": {"eyebrow":"Finances","payments_title":"Paiements","payments_intro":"Tous les paiements de clubs et de la plateforme au même endroit.","subscription_invoices":"Factures d’abonnement","count":"Paiements","paid":"Payés","open":"Ouverts","revenue_paid":"Chiffre d’affaires encaissé","manual_title":"Saisir un paiement manuel","manual_hint":"Enregistrez un paiement et associez-le éventuellement à une facture ouverte.","create_payment":"Créer le paiement","delete":"Supprimer","empty_payments":"Aucun paiement pour le moment.","payment_delete_title":"Supprimer le paiement","payment_delete_message":"Supprimer le paiement #{id} ?","status":{"paid":"Payé","pending":"Ouvert","open":"Ouvert","failed":"Échoué","cancelled":"Annulé","overdue":"La date d’échéance est dépassée.","awaiting_transfer":"Virement attendu"},"method":{"paypal":"PayPal","stripe":"Stripe","bank_transfer":"Virement","cash":"Espèces","card":"Carte"},"invoices_title":"Centre des factures","invoices_intro":"Créez et vérifiez les factures d’abonnements, tenues, achats marketplace, cours, publicités, sponsoring et services d’agence (site, logo ou branding).","create_invoice":"Créer la facture","all_invoices":"Toutes les factures","invoice_list":"Liste des factures","all_sources":"Toutes les sources au même endroit","new":"Nouveau","empty_invoices":"Aucune facture pour le moment.","new_invoice":"Nouvelle facture","invoice_create_hint":"Saisissez le motif, le destinataire et les détails de la prestation. La personne sera informée automatiquement.","cancel":"Annuler","save_status":"Enregistrer le statut","invoice_delete_title":"Supprimer la facture","invoice_delete_message":"Supprimer la facture {number} ?","invoice_hints":{"open":"La facture est créée et n’est pas encore payée.","pending":"Le paiement ou la vérification est en cours.","paid":"La facture sera marquée comme payée.","overdue":"La date d’échéance est dépassée.","cancelled":"La facture n’est plus active."},"subscription_invoice_title":"Factures d’abonnement Airmius","billing":"Facturation","subscription_invoice_intro":"Vérifiez les factures d’abonnement, mettez à jour leur statut et téléchargez les PDF au même endroit.","manage_subscriptions":"Gérer les abonnements","empty_subscription_invoices":"Aucune facture d’abonnement Airmius pour le moment."}
+  ,"gamification_rules": {"page_title":"Gérer la gamification","eyebrow":"Admin","title":"Règles de gamification","intro":"Gérez les XP, les limites quotidiennes, les effets sur la confiance et les règles actives au même endroit. Les changements s’appliquent aux nouvelles actions et maintiennent un système équitable, contrôlable et adapté aux jeunes.","save":"Enregistrer","actors":{"sportler":"Sportifs","trainer":"Coachs","verein":"Clubs","team":"Équipes"},"metrics":{"quality":"Qualité","active_rules":"Règles actives","daily_limits":"Limites quotidiennes","penalties":"Sanctions","max_xp":"XP max.","average_xp":"XP moyen","today":"Aujourd’hui","capped":"Plafonné","daily_limit_hits":"Atteintes de la limite quotidienne"},"balance_heading":"Indications d’équilibre","rules_count":"{count} règles","penalty":"Sanction","active":"Actif","fields":{"daily_limit":"Limite quotidienne","no_limit":"sans limite","trust":"Confiance"},"risk":{"paused":"En pause","safety":"Sécurité","high_reward":"Récompense très élevée","no_daily_limit":"Sans limite quotidienne","balanced":"Équilibré"},"risk_notes":{"many_without_limit":"Beaucoup de règles positives sans limite quotidienne","high_reward_exists":"Au moins une récompense est très élevée","xp_sign_mismatch":"Le signe des XP ne correspond pas au type de règle","no_penalty_rule":"Aucune règle de sanction contre les abus","all_paused":"Toutes les règles sont en pause"}}
+  ,"media_guidelines":{"page_title":"Tailles d’image","eyebrow":"Médias et contenu","title":"Tailles d’image recommandées","intro":"Un aperçu central pour les rédacteurs, administrateurs et clubs : les dimensions qui conviennent le mieux aux profils, blogs, publications, vidéos et autres médias.","search_placeholder":"Rechercher...","all_areas":"Tous les espaces","images":"Images","remove":"Supprimer","empty":"Aucune taille d’image correspondante trouvée.","cards":{"standard_upload":"Téléchargement standard","standard_upload_hint":"Ces formats fonctionnent pour presque toutes les zones d’image.","login_slider":"Slider de connexion","one_or_more":"1 ou plusieurs","login_slider_hint":"Slider vertical dynamique pour la page de connexion à droite.","global_banners":"Bannières globales","global_banners_hint":"Gérez centralement les images du marketplace et de l’abonnement tenue."},"editor":{"eyebrow":"Commande centrale des images","title":"Modifier directement les images globales","intro":"Le slider de connexion, les bannières marketplace et le visuel principal de l’abonnement tenue peuvent être gérés ici. Les images propres au contenu restent sur le profil, le club, le blog ou le produit concerné.","save":"Enregistrer les images"},"slider":{"eyebrow":"Slider dynamique","title":"Slider de connexion (droite)","intro":"Téléchargez une ou plusieurs images. Leur ordre suit la liste. Recommandé : 1080 × 1920 px.","upload_multiple":"Télécharger plusieurs images","upload_hint":"Les nouveaux fichiers sont ajoutés aux images existantes lors de l’enregistrement.","add_slot":"Ajouter un emplacement vide","image_alt":"Image du slider de connexion {count}"},"fields":{"source":"URL ou chemin enregistré","upload":"Télécharger une image"},"table":{"area":"Espace","type":"Type d’image","recommended":"Recommandé","ratio":"Proportion","format":"Format","max":"Max.","note":"Note","editing":"Modification"},"action":{"editable":"Modifiable ici","content":"Modifier dans le contenu concerné"},"feedback":{"saved":"Images enregistrées.","failed":"Les images n’ont pas pu être enregistrées. Vérifiez les fichiers ou les chemins."}}
+  ,"mail_center":{"page_title":"Centre de messagerie","eyebrow":"Système","title":"Centre de messagerie","intro":"Surveillez les envois, la file d’attente, les erreurs et les règles d’expéditeur des e-mails transactionnels.","local_test_notice":"Les tests locaux sont traités comme des e-mails de journal tant que les vrais e-mails sont désactivés localement.","summary":{"total":"Journal","sent":"Envoyés","failed":"Échoués","skipped":"Limité","resolved":"Traités"},"sender_rules":{"title":"Règles d’expéditeur","hint":"Pour les factures, changez l’expéditeur principal et de secours sans modifier le code.","primary":"Principal","no_fallback":"Aucun secours"},"actions":{"save":"Enregistrer","test_mail":"E-mail test","filter":"Filtrer","resend":"Renvoyer","resolve":"Marquer comme traité"},"sender":{"local_log":"Local : journal","ready":"Prêt","incomplete":"Incomplet","disabled":"Désactivé","mailer":"Mailer :","active":"Boîte active","password_status":"Mot de passe : {status}","password_set":"défini","password_unset":"non défini","last_updated":"mis à jour le {date}","never_shown":"Il n’est jamais affiché."},"fields":{"from_address":"Adresse d’expédition","from_name":"Nom affiché","smtp_host":"Hôte SMTP","smtp_user":"Utilisateur SMTP","encryption":"Chiffrement","default":"Par défaut","new_password":"Définir un nouveau mot de passe","password_placeholder":"Laisser vide pour conserver le mot de passe actuel"},"queue":{"title":"File et échecs","pending":"Jobs ouverts","failed":"Jobs échoués","empty":"Aucun échec récent trouvé.","job":"Job"},"audit":{"title":"Audit de boîte","hint":"Les modifications et tests sont journalisés sans mots de passe en clair.","empty":"Aucune entrée d’audit.","password_changed":"Mot de passe réinitialisé.","sender":"Expéditeur :","error":"Erreur :"},"log":{"title":"Journal des envois","hint":"Les nouvelles entrées correspondent aux e-mails passant par la couche centrale.","empty":"Aucune entrée d’e-mail."},"filters":{"all_statuses":"Tous les statuts","all_types":"Tous les types"},"table":{"status":"Statut","type":"Type","recipient":"Destinataire","sender":"Expéditeur","time":"Heure","error":"Erreur","actions":"Actions","category":"Catégorie","action":"Action","admin":"Admin","details":"Détails"},"status":{"sent":"Envoyé","failed":"Échoué","skipped":"Limité","resolved":"Traité"},"categories":{"system":"Système","billing":"Facturation","support":"Support","marketplace":"Marketplace","academy":"Académie","security":"Sécurité","partners":"Partenaires","legal":"Juridique"}}
+  ,"admin_settings":{"ai_tokens":{"expiry":"Date d’expiration","set":"défini","missing":"manquante","expired_short":"expiré","no_api_key":"Aucune clé API définie","no_model":"Aucun modèle défini","no_expiry":"Aucune date d’expiration détectée dans la clé","status":{"ok":"Prêt","inactive":"Inactif","missing_key":"Clé API manquante","missing_model":"Modèle manquant","expired":"Expiré","expiring_soon":"Expire bientôt","valid_until":"Valide"},"messages":{"ok":"La clé API est définie. Aucune date d’expiration n’a été détectée dans la clé.","inactive":"Ce fournisseur n’est pas configuré comme fournisseur principal ou de secours.","missing_key":"Ce fournisseur ne peut pas être utilisé sans clé API.","missing_model":"Définissez un modèle dans la configuration de l’environnement.","expired":"Le jeton a expiré. Saisissez une nouvelle clé API.","expiring_soon":"Le jeton expire bientôt. Renouvelez-le à temps.","valid_until":"Le jeton est actuellement valide."}}}
+  ,"sports_admin":{"page_title":"Gérer les sports","eyebrow":"Administration système","title":"Gérer les sports","intro":"Gérez les sports centraux, leur statut actif et leur ordre. Les chiffres d’utilisation indiquent le nombre d’équipes, clubs, profils et publications pour chaque sport.","search_placeholder":"Nom, slug ou catégorie","no_category":"sans catégorie","delete_title":"Supprimer le sport","delete_message":"Voulez-vous vraiment supprimer le sport « {name} » ? Cette action est irréversible.","delete_used_hint":"Désactivez les sports utilisés au lieu de les supprimer.","metrics":{"sports":"Sports","active":"Actifs","teams":"Équipes","clubs":"Clubs"},"list":{"all":"Tous les sports","empty":"Aucun sport trouvé."},"filters":{"all":"Tous","active":"Actif","inactive":"Inactif"},"actions":{"create_sport":"Créer un sport","save":"Enregistrer","delete":"Supprimer","cancel":"Annuler","saving":"Enregistrement...","create":"Créer"},"fields":{"name":"Nom","slug":"Slug","slug_placeholder":"généré depuis le nom","category":"Catégorie","sort_order":"Ordre","active_in_selects":"Afficher comme actif dans les sélections","optional":"facultatif"},"create":{"title":"Nouveau sport","hint":"Le slug peut rester vide et sera généré automatiquement."},"usage":{"teams":"{count} équipes","clubs":"{count} clubs","profiles":"{count} profils","posts":"{count} publications","skills":"Compétences renseignées","total":"utilisations au total"}}
+  ,"blog_categories":{"page_title":"Catégories du blog","eyebrow":"CMS du site","title":"Catégories du blog","intro":"Gérez les catégories disponibles lors de la création d’un article de blog.","back":"Retour aux blogs","empty":"Aucune catégorie pour le moment.","delete_title":"Supprimer la catégorie","delete_message":"Supprimer la catégorie « {name} » ?","fields":{"name":"Nom","slug":"Slug","sort_order":"Ordre","status":"Statut","posts":"Articles","actions":"Actions","description":"Description"},"status":{"active":"Active","inactive":"Inactive"},"actions":{"edit":"Modifier","delete":"Supprimer","new":"Nouveau","update":"Mettre à jour","create":"Créer"},"form":{"edit_eyebrow":"Modifier la catégorie","new_eyebrow":"Nouvelle catégorie","create_title":"Créer une catégorie","slug_placeholder":"généré si vide"}}
+  ,"blogs_editor":{"page_title":"Blogs","eyebrow":"CMS du site","title":"Studio de blog","intro":"Rédigez des articles avec titres, listes, mises en évidence, liens, citations et une présentation publique claire.","categories":"Catégories","search":"Rechercher...","filter":"Filtrer","revisions":"révisions","latest_revision":"Dernière sauvegarde : {date}, SEO {score}%","empty":"Aucun article pour le moment.","form":{"edit_eyebrow":"Modifier l’article","new_eyebrow":"Nouvel article","write_title":"Rédiger","new_button":"Nouveau"},"fields":{"title":"Titre","slug":"Slug","slug_placeholder":"généré si vide","category":"Catégorie","category_placeholder":"Choisir une catégorie","status":"Statut","publish_at":"Publier le","excerpt":"Résumé","content":"Contenu","cover":"Image de couverture","cover_placeholder":"https://…","cover_help":"Recommandé : 1600 × 900 px en paysage. Collez un lien ou téléversez une image ; le téléversement est prioritaire.","tags":"Tags","tags_placeholder":"Entraînement, club, numérique"},"toolbar":{"bold":"Gras","italic":"Italique","underline":"Souligné","strike":"Barré","list":"Liste","numbered_list":"Liste numérotée","quote":"Citation","left":"Aligner à gauche","center":"Centré","right":"Aligner à droite","ltr":"Gauche à droite","rtl":"Droite à gauche","link":"Lien","insert_image":"Insérer une image dans le contenu","remove_format":"Supprimer le formatage"},"styles":{"choose":"Choisir le style","paragraph":"Paragraphe","article_title":"Titre de l’article","lead":"Sous-titre / introduction","section":"Section","subheading":"Intertitre","quote":"Citation","callout":"Encadré","code":"Code / note"},"inline":{"choose":"Couleur / surlignage","primary":"Texte standard","secondary":"Information secondaire","accent":"Accent","success":"Positif","warning":"Important","danger":"Avertissement","mark":"Surlignage"},"editor":{"text_placeholder":"Saisir du texte...","callout_label":"Note"},"prompts":{"link_title":"Insérer un lien","link_message":"Saisissez l’URL complète à lier dans l’article.","url":"URL","insert":"Insérer","image_title":"Description de l’image","image_message":"Le texte alternatif améliore l’accessibilité et le SEO.","alt_text":"Texte alternatif","upload_image":"Télécharger l’image"},"seo":{"title":"SEO","title_label":"Titre optimisé pour la recherche","title_hint":"35–65 caractères","meta_label":"Méta-description convaincante","meta_hint":"110–160 caractères","excerpt_label":"Résumé présent","excerpt_hint":"Au moins 80 caractères","depth_label":"Article suffisamment détaillé","words_hint":"{count} mots","category_label":"Catégorie définie","category_hint":"Pour les archives, fils d’Ariane et articles associés","cover_label":"Couverture définie","cover_hint":"1600 × 900 px recommandé","meta_title_placeholder":"Méta-titre","meta_description_placeholder":"Méta-description","publish_blocked":"La publication exige au moins 85 % de qualité SEO."},"delete_title":"Supprimer l’article","delete_message":"Supprimer l’article « {title} » ?","filters":{"all":"Tous les statuts"}}
 }

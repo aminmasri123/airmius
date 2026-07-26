@@ -91,7 +91,7 @@ const marketplaceLiteralTranslations = {
         'Entdecken': 'اكتشف',
         'Jetzt entdecken': 'اكتشف الآن',
         'Hilfe & Bestellung': 'المساعدة والطلب',
-        'Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.': 'طلبات الضيوف والطلبات بعد تسجيل الدخول وعروض المزودين جاهزة.',
+        'Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.': 'طلبات الضيوف والطلبات بعد تسجيل الدخول وعروض المزودين متاحة.',
         'Anbieter werden': 'كن مزودا',
         'Vereine, Trainer und Shops können Angebote einstellen.': 'يمكن للأندية والمدربين والمتاجر إضافة عروض.',
         'Produkt': 'منتج',
@@ -334,7 +334,8 @@ const quickTiles = computed(() => [
     { label: mt('Outfit-Abo'), hint: mt('Sportkleidung'), icon: 'las la-tshirt', category: 'outfit_subscription', search: '' },
 ])
 
-const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format((cents || 0) / 100)
@@ -830,7 +831,7 @@ const selectSegment = (segment) => {
                     <div class="grid gap-4">
                         <div class="rounded border border-border bg-card p-4 shadow-sm">
                             <p class="text-sm font-black text-primary">{{ mt("Hilfe & Bestellung") }}</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">{{ mt("Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.") }}</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">{{ mt("Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.") }}</p>
                         </div>
                         <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded border border-border bg-card p-4 shadow-sm transition hover:bg-muted">
                             <p class="text-sm font-black text-primary">{{ mt("Anbieter werden") }}</p>

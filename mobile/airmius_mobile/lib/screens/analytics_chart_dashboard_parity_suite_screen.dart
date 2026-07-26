@@ -7,17 +7,25 @@ class AnalyticsChartDashboardParitySuiteScreen extends StatefulWidget {
   const AnalyticsChartDashboardParitySuiteScreen({super.key});
 
   @override
-  State<AnalyticsChartDashboardParitySuiteScreen> createState() => _AnalyticsChartDashboardParitySuiteScreenState();
+  State<AnalyticsChartDashboardParitySuiteScreen> createState() =>
+      _AnalyticsChartDashboardParitySuiteScreenState();
 }
 
-class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChartDashboardParitySuiteScreen> {
+class _AnalyticsChartDashboardParitySuiteScreenState
+    extends State<AnalyticsChartDashboardParitySuiteScreen> {
   String _area = 'Verein';
   String _period = '30 Tage';
   bool _showCharts = true;
   bool _showExports = true;
   bool _showEmptyStates = false;
 
-  static const _areas = ['Verein', 'Admin', 'Commerce', 'Training', 'Community'];
+  static const _areas = [
+    'Verein',
+    'Admin',
+    'Commerce',
+    'Training',
+    'Community',
+  ];
   static const _periods = ['7 Tage', '30 Tage', 'Quartal', 'Jahr'];
 
   static const _cards = <_AnalyticsCard>[
@@ -26,7 +34,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Mitgliedschaftsanfragen',
       value: '24',
       trend: '+18%',
-      body: 'Neue Antraege, Rückzuege, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
+      body:
+          'Neue Antraege, Rückzuege, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
       icon: Icons.assignment_ind_outlined,
       color: AirmiusColors.green,
     ),
@@ -35,7 +44,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Vereinsfinanzen',
       value: '8.420 EUR',
       trend: '+9%',
-      body: 'Beiträge, Rechnungen, offene Zahlungen, Banktransfer, Mahnungen und Monatsabschluss als mobile KPI-Karten.',
+      body:
+          'Beiträge, Rechnungen, offene Zahlungen, Banktransfer, Mahnungen und Monatsabschluss als mobile KPI-Karten.',
       icon: Icons.account_balance_wallet_outlined,
       color: AirmiusColors.amber,
     ),
@@ -44,7 +54,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Moderation Cases',
       value: '13',
       trend: '-4%',
-      body: 'Reports, Eskalationen, Sperren, Bearbeiter, SLA und Trust-Entscheidungen in einer Admin-Reportansicht.',
+      body:
+          'Reports, Eskalationen, Sperren, Bearbeiter, SLA und Trust-Entscheidungen in einer Admin-Reportansicht.',
       icon: Icons.flag_outlined,
       color: AirmiusColors.red,
     ),
@@ -53,7 +64,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Systembetrieb',
       value: '99.8%',
       trend: 'stabil',
-      body: 'Mail, Providerkosten, Webhooks, Wartung, API-Fehler, Queue und Release-Gates als Betriebsübersicht.',
+      body:
+          'Mail, Providerkosten, Webhooks, Wartung, API-Fehler, Queue und Release-Gates als Betriebsübersicht.',
       icon: Icons.monitor_heart_outlined,
       color: AirmiusColors.green,
     ),
@@ -62,7 +74,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Bestellungen',
       value: '156',
       trend: '+22%',
-      body: 'Marketplace, Checkouts, Banktransfer, Orders, Retouren, Anbieter und Umsatzentwicklung für Mobile Commerce.',
+      body:
+          'Marketplace, Checkouts, Banktransfer, Orders, Retouren, Anbieter und Umsatzentwicklung für Mobile Commerce.',
       icon: Icons.storefront_outlined,
       color: AirmiusColors.green,
     ),
@@ -71,7 +84,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Outfit-Abos',
       value: '42',
       trend: '+6%',
-      body: 'Abos, Lieferungen, Pausen, Zahlstatus, Supportfaelle und offene Pakete als mobile Kennzahlen.',
+      body:
+          'Abos, Lieferungen, Pausen, Zahlstatus, Supportfaelle und offene Pakete als mobile Kennzahlen.',
       icon: Icons.checkroom_outlined,
       color: AirmiusColors.blue,
     ),
@@ -80,7 +94,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Trainingsteilnahmen',
       value: '318',
       trend: '+14%',
-      body: 'Events, Zusagen, Wartelisten, No-Shows, Logs, Coach-Feedback und Teamverteilung.',
+      body:
+          'Events, Zusagen, Wartelisten, No-Shows, Logs, Coach-Feedback und Teamverteilung.',
       icon: Icons.event_available_outlined,
       color: AirmiusColors.green,
     ),
@@ -89,7 +104,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Leistungsfortschritt',
       value: '82%',
       trend: '+5%',
-      body: 'Sportprofil, Trainingsplaene, Logs, Zielerreichung, Wellbeing und Coach-Freigabe als mobile Auswertung.',
+      body:
+          'Sportprofil, Trainingsplaene, Logs, Zielerreichung, Wellbeing und Coach-Freigabe als mobile Auswertung.',
       icon: Icons.insights_outlined,
       color: AirmiusColors.blue,
     ),
@@ -98,7 +114,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Feed Aktivitaet',
       value: '1.2k',
       trend: '+31%',
-      body: 'Posts, Kommentare, Reaktionen, Meldungen, Sichtbarkeit, Vereine, Teams und Community-Wachstum.',
+      body:
+          'Posts, Kommentare, Reaktionen, Meldungen, Sichtbarkeit, Vereine, Teams und Community-Wachstum.',
       icon: Icons.dynamic_feed_outlined,
       color: AirmiusColors.blue,
     ),
@@ -107,20 +124,24 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Badges & Learning',
       value: '276',
       trend: '+11%',
-      body: 'Badges, XP, Kurse, Zertifikate, Quiz, Aufgaben und Lernfortschritt als mobile Gamification-Reports.',
+      body:
+          'Badges, XP, Kurse, Zertifikate, Quiz, Aufgaben und Lernfortschritt als mobile Gamification-Reports.',
       icon: Icons.workspace_premium_outlined,
       color: AirmiusColors.amber,
     ),
   ];
 
-  List<_AnalyticsCard> get _visibleCards => _cards.where((card) => card.area == _area).toList();
+  List<_AnalyticsCard> get _visibleCards =>
+      _cards.where((card) => card.area == _area).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
@@ -131,14 +152,19 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Hero(area: _area, period: _period, showCharts: _showCharts, showExports: _showExports),
+              _Hero(
+                area: _area,
+                period: _period,
+                showCharts: _showCharts,
+                showExports: _showExports,
+              ),
               const SizedBox(height: 16),
               _ChoicePanel(
                 title: 'Dashboard-Bereich',
                 items: _areas,
                 active: _area,
                 onChanged: (value) => setState(() => _area = value),
-                color: AirmiusColors.blue,
+                color: airmiusAccentColor(context),
               ),
               const SizedBox(height: 16),
               _ChoicePanel(
@@ -146,7 +172,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
                 items: _periods,
                 active: _period,
                 onChanged: (value) => setState(() => _period = value),
-                color: AirmiusColors.green,
+                color: Theme.of(context).colorScheme.secondary,
               ),
               const SizedBox(height: 16),
               _RulesPanel(
@@ -163,7 +189,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
                   onRetry: () => openUiAction(
                     context,
                     title: 'Reportdaten neu laden',
-                    body: 'Loading, Empty, Error, Retry und Cache-Hinweis für mobile Analytics vorbereiten.',
+                    body:
+                        'Loading, Empty, Error, Retry und Cache-Hinweis für mobile Analytics vorbereiten.',
                     status: 'Retry',
                     icon: Icons.refresh_outlined,
                   ),
@@ -174,7 +201,11 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
               if (_showCharts) _TrendPanel(area: _area, period: _period),
               if (_showCharts) const SizedBox(height: 16),
               for (final card in _visibleCards) ...[
-                _ReportCard(card: card, period: _period, showExports: _showExports),
+                _ReportCard(
+                  card: card,
+                  period: _period,
+                  showExports: _showExports,
+                ),
                 const SizedBox(height: 12),
               ],
               const SizedBox(height: 4),
@@ -182,7 +213,8 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
                 onOpen: () => openUiAction(
                   context,
                   title: 'Analytics Dashboard Parity',
-                  body: 'Web-Dashboards, KPI-Karten, Diagramme, Trends, Reports, Exporte und Loading/Empty/Error-Zustaende sind als mobile Flutter-UI vorbereitet.',
+                  body:
+                      'Web-Dashboards, KPI-Karten, Diagramme, Trends, Reports, Exporte und Loading/Empty/Error-Zustaende sind als mobile Flutter-UI vorbereitet.',
                   status: 'Analytics',
                   icon: Icons.insights_outlined,
                 ),
@@ -217,14 +249,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('ANALYTICS & REPORTS'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Dashboards werden mobil zu klaren Entscheidungs-Karten.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter übernimmt Web-Reports nicht als breite Diagramme, sondern als KPI-Karten, Trendleisten, Reportdetails, Export-CTAs und saubere Empty/Loading/Error-Zustaende.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -260,6 +300,10 @@ class _ChoicePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return AirmiusPanel(
       title: title,
       children: [
@@ -273,9 +317,12 @@ class _ChoicePanel extends StatelessWidget {
                   label: Text(item),
                   onSelected: (_) => onChanged(item),
                   selectedColor: color.withValues(alpha: .24),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: active == item ? color : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: surfaceColor,
+                  side: BorderSide(color: active == item ? color : borderColor),
+                  labelStyle: TextStyle(
+                    color: active == item ? textColor : mutedColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -306,11 +353,24 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Dashboard-Regeln',
-      subtitle: 'Diese Schalter simulieren später API-Daten, Exportrechte und Datenzustand.',
+      subtitle:
+          'Diese Schalter simulieren später API-Daten, Exportrechte und Datenzustand.',
       children: [
-        _SwitchLine(title: 'Mini-Charts anzeigen', value: showCharts, onChanged: onCharts),
-        _SwitchLine(title: 'Export- und PDF-CTAs anzeigen', value: showExports, onChanged: onExports),
-        _SwitchLine(title: 'Empty/Loading/Error-Zustand simulieren', value: showEmptyStates, onChanged: onEmpty),
+        _SwitchLine(
+          title: 'Mini-Charts anzeigen',
+          value: showCharts,
+          onChanged: onCharts,
+        ),
+        _SwitchLine(
+          title: 'Export- und PDF-CTAs anzeigen',
+          value: showExports,
+          onChanged: onExports,
+        ),
+        _SwitchLine(
+          title: 'Empty/Loading/Error-Zustand simulieren',
+          value: showEmptyStates,
+          onChanged: onEmpty,
+        ),
       ],
     );
   }
@@ -326,7 +386,9 @@ class _KpiGrid extends StatelessWidget {
     return Row(
       children: [
         for (var i = 0; i < cards.length && i < 2; i++) ...[
-          Expanded(child: MetricCard(value: cards[i].value, label: cards[i].title)),
+          Expanded(
+            child: MetricCard(value: cards[i].value, label: cards[i].title),
+          ),
           if (i == 0) const SizedBox(width: 10),
         ],
       ],
@@ -335,10 +397,7 @@ class _KpiGrid extends StatelessWidget {
 }
 
 class _TrendPanel extends StatelessWidget {
-  const _TrendPanel({
-    required this.area,
-    required this.period,
-  });
+  const _TrendPanel({required this.area, required this.period});
 
   final String area;
   final String period;
@@ -348,7 +407,8 @@ class _TrendPanel extends StatelessWidget {
     const values = [.35, .58, .44, .72, .63, .86, .76];
     return AirmiusPanel(
       title: 'Trend $area',
-      subtitle: 'Mini-Chart für $period, mobil lesbar ohne große Desktop-Achsen.',
+      subtitle:
+          'Mini-Chart für $period, mobil lesbar ohne große Desktop-Achsen.',
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -361,7 +421,14 @@ class _TrendPanel extends StatelessWidget {
                   child: Container(
                     height: 24 + (value * 68),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [AirmiusColors.blue, AirmiusColors.green], begin: Alignment.bottomCenter, end: Alignment.topCenter),
+                      gradient: LinearGradient(
+                        colors: [
+                          airmiusAccentColor(context),
+                          Theme.of(context).colorScheme.secondary,
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -372,7 +439,14 @@ class _TrendPanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        const Text('Trendbars ersetzen komplexe Web-Charts auf kleinen Screens und fuehren in Detailreports.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
+        Text(
+          'Trendbars ersetzen komplexe Web-Charts auf kleinen Screens und fuehren in Detailreports.',
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
     );
   }
@@ -386,16 +460,39 @@ class _StatePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      borderColor: AirmiusColors.amber,
+      borderColor: Theme.of(context).colorScheme.tertiary,
       child: Column(
         children: [
-          const Icon(Icons.query_stats_outlined, color: AirmiusColors.amber, size: 42),
+          Icon(
+            Icons.query_stats_outlined,
+            color: Theme.of(context).colorScheme.tertiary,
+            size: 42,
+          ),
           const SizedBox(height: 10),
-          const Text('Noch keine Reportdaten', style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            'Noch keine Reportdaten',
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 6),
-          const Text('Empty, Loading, Error und Retry sind eigene mobile Zustände, nicht nur fehlende Daten.', textAlign: TextAlign.center, style: TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700)),
+          Text(
+            'Empty, Loading, Error und Retry sind eigene mobile Zustände, nicht nur fehlende Daten.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Daten neu laden', icon: Icons.refresh_outlined, onPressed: onRetry),
+          AirmiusButton(
+            label: 'Daten neu laden',
+            icon: Icons.refresh_outlined,
+            onPressed: onRetry,
+          ),
         ],
       ),
     );
@@ -415,8 +512,9 @@ class _ReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, card.color);
     return AirmiusPanel(
-      borderColor: card.color.withValues(alpha: .55),
+      borderColor: color.withValues(alpha: .55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -427,28 +525,48 @@ class _ReportCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: card.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: card.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(card.icon, color: card.color),
+                child: Icon(card.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(card.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      card.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text('$period · ${card.area}', style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      '$period · ${card.area}',
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(card.trend, color: card.color),
+              StatusPill(card.trend, color: color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(card.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            card.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -460,7 +578,8 @@ class _ReportCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: card.title,
-                  body: '${card.title}: ${card.body}\n\nZeitraum: $period, Wert: ${card.value}, Trend: ${card.trend}.',
+                  body:
+                      '${card.title}: ${card.body}\n\nZeitraum: $period, Wert: ${card.value}, Trend: ${card.trend}.',
                   status: 'Report',
                   icon: card.icon,
                 ),
@@ -473,7 +592,8 @@ class _ReportCard extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: '${card.title} Export',
-                    body: 'CSV, PDF, Zeitraum, Filter, Berechtigung und Audit für ${card.title} vorbereiten.',
+                    body:
+                        'CSV, PDF, Zeitraum, Filter, Berechtigung und Audit für ${card.title} vorbereiten.',
                     status: 'Export',
                     icon: Icons.download_outlined,
                   ),
@@ -497,12 +617,24 @@ class _Checklist extends StatelessWidget {
       title: 'Dashboard-Paritaet',
       subtitle: 'Was aus Web-Reports mobil übernommen wird.',
       children: [
-        const _CheckLine('KPI-Karten ersetzen breite Tabellen und komplexe Desktop-Charts.'),
-        const _CheckLine('Mini-Charts, Trends und Reportdetails bleiben auf kleinen Screens lesbar.'),
-        const _CheckLine('Export, Zeitraumfilter, Rollenrechte und Audit bleiben als CTAs sichtbar.'),
-        const _CheckLine('Loading, Empty, Error und Retry bekommen eigene mobile Reportzustände.'),
+        const _CheckLine(
+          'KPI-Karten ersetzen breite Tabellen und komplexe Desktop-Charts.',
+        ),
+        const _CheckLine(
+          'Mini-Charts, Trends und Reportdetails bleiben auf kleinen Screens lesbar.',
+        ),
+        const _CheckLine(
+          'Export, Zeitraumfilter, Rollenrechte und Audit bleiben als CTAs sichtbar.',
+        ),
+        const _CheckLine(
+          'Loading, Empty, Error und Retry bekommen eigene mobile Reportzustände.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Analytics-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Analytics-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -525,14 +657,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -551,9 +695,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -561,10 +718,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -574,16 +728,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

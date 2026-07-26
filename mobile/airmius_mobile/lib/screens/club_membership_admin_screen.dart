@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -12,36 +14,132 @@ class ClubMembershipAdminScreen extends StatefulWidget {
   const ClubMembershipAdminScreen({super.key});
 
   @override
-  State<ClubMembershipAdminScreen> createState() => _ClubMembershipAdminScreenState();
+  State<ClubMembershipAdminScreen> createState() =>
+      _ClubMembershipAdminScreenState();
 }
 
 class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
-  static const int _defaultClubId = 26;
+  static const _fieldDefinitions =
+      <({String key, String labelKey, String sectionKey})>[
+        (
+          key: 'first_name',
+          labelKey: 'membership.field.firstName',
+          sectionKey: 'membership.fieldSection.personal',
+        ),
+        (
+          key: 'last_name',
+          labelKey: 'membership.field.lastName',
+          sectionKey: 'membership.fieldSection.personal',
+        ),
+        (
+          key: 'birth_date',
+          labelKey: 'membership.field.birthDate',
+          sectionKey: 'membership.fieldSection.personal',
+        ),
+        (
+          key: 'gender',
+          labelKey: 'membership.field.gender',
+          sectionKey: 'membership.fieldSection.personal',
+        ),
+        (
+          key: 'email',
+          labelKey: 'membership.field.email',
+          sectionKey: 'membership.fieldSection.contact',
+        ),
+        (
+          key: 'phone',
+          labelKey: 'membership.field.phone',
+          sectionKey: 'membership.fieldSection.contact',
+        ),
+        (
+          key: 'street',
+          labelKey: 'membership.field.street',
+          sectionKey: 'membership.fieldSection.address',
+        ),
+        (
+          key: 'house_number',
+          labelKey: 'membership.field.houseNumber',
+          sectionKey: 'membership.fieldSection.address',
+        ),
+        (
+          key: 'postal_code',
+          labelKey: 'membership.field.postalCode',
+          sectionKey: 'membership.fieldSection.address',
+        ),
+        (
+          key: 'city',
+          labelKey: 'membership.field.city',
+          sectionKey: 'membership.fieldSection.address',
+        ),
+        (
+          key: 'guardian_email',
+          labelKey: 'membership.field.guardianEmail',
+          sectionKey: 'membership.fieldSection.guardian',
+        ),
+        (
+          key: 'emergency_contact_phone',
+          labelKey: 'membership.field.emergencyPhone',
+          sectionKey: 'membership.fieldSection.emergency',
+        ),
+        (
+          key: 'athlete_license_number',
+          labelKey: 'membership.field.licenseNumber',
+          sectionKey: 'membership.fieldSection.sport',
+        ),
+        (
+          key: 'sepa_iban',
+          labelKey: 'membership.field.iban',
+          sectionKey: 'membership.fieldSection.payment',
+        ),
+        (
+          key: 'sepa_bic',
+          labelKey: 'membership.field.bic',
+          sectionKey: 'membership.fieldSection.payment',
+        ),
+      ];
 
-  final Map<String, bool> _fields = {
-    'Personendaten': true,
-    'Wohndaten': true,
-    'Kontaktdaten': true,
-    'Erziehungsberechtigte': true,
-    'Notfallkontakt': false,
-    'Zahlungsdaten': true,
-    'Lizenznummer': false,
-    'Dokument-Upload': true,
+  final Map<String, String> _fieldModes = {
+    for (final field in _fieldDefinitions) field.key: 'off',
   };
+  final List<JsonMap> _documents = <JsonMap>[];
+  Set<String> _paymentMethods = {'bank_transfer'};
+  bool _requestsEnabled = true;
 
-  String _cycle = 'Monatlich';
-  String _payment = 'Überweisung';
-  late Future<AirmiusPage<AirmiusClubMembershipRequest>> _requestsFuture;
+  Future<AirmiusClub>? _clubFuture;
+  Future<AirmiusPage<AirmiusClubMembershipRequest>>? _requestsFuture;
   bool _reviewing = false;
+  bool _saving = false;
+  int? _hydratedClubId;
+  String _clubName = 'Verein';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _requestsFuture = _loadRequests();
+    _clubFuture ??= _loadClub();
+    _requestsFuture ??= _loadRequests();
   }
 
-  Future<AirmiusPage<AirmiusClubMembershipRequest>> _loadRequests() {
-    return AirmiusServicesScope.of(context).repositories.memberships.clubRequests(_defaultClubId);
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  Future<AirmiusClub> _loadClub() async {
+    final repository = AirmiusServicesScope.of(context).repositories.clubs;
+    final clubs = await repository.searchClubs(mine: true);
+    final manageable = clubs.items.where((club) => club.canManage).toList();
+    if (manageable.isEmpty) {
+      throw StateError(t('membership.noManagedClub'));
+    }
+    final club = await repository.club(manageable.first.id);
+    _clubName = club.name;
+    _hydrate(club);
+    return club;
+  }
+
+  Future<AirmiusPage<AirmiusClubMembershipRequest>> _loadRequests() async {
+    final repository = AirmiusServicesScope.of(
+      context,
+    ).repositories.memberships;
+    final club = await _clubFuture!;
+    return repository.clubRequests(club.id);
   }
 
   void _reloadRequests() {
@@ -50,19 +148,110 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
     });
   }
 
+  void _hydrate(AirmiusClub club) {
+    if (_hydratedClubId == club.id) return;
+    _hydratedClubId = club.id;
+    final settings = club.management?.settings ?? const <String, dynamic>{};
+    final fields = settings['membership_application_fields'];
+    if (fields is List) {
+      for (final item in fields.whereType<JsonMap>()) {
+        final key = item['key']?.toString();
+        final mode = item['mode']?.toString();
+        if (key != null &&
+            mode != null &&
+            {'off', 'optional', 'required'}.contains(mode)) {
+          _fieldModes[key] = mode;
+        }
+      }
+    } else if (fields is JsonMap) {
+      for (final entry in fields.entries) {
+        final mode = entry.value?.toString();
+        if ({'off', 'optional', 'required'}.contains(mode)) {
+          _fieldModes[entry.key] = mode!;
+        }
+      }
+    }
+    _requestsEnabled = settings['membership_requests_enabled'] != false;
+    final methods = settings['membership_payment_methods'];
+    if (methods is List && methods.isNotEmpty) {
+      _paymentMethods = methods.map((value) => value.toString()).toSet();
+    }
+    final documents = settings['membership_application_documents'];
+    if (documents is List) {
+      _documents
+        ..clear()
+        ..addAll(documents.whereType<JsonMap>());
+    }
+  }
+
+  String _paymentLabel(String value) => switch (value) {
+    'cash' => t('membership.payment.cash'),
+    'sepa_debit' => t('membership.payment.sepaDebit'),
+    _ => t('membership.payment.bankTransfer'),
+  };
+
+  Future<void> _saveSettings() async {
+    if (_saving) return;
+    final repository = AirmiusServicesScope.of(context).repositories.clubs;
+    setState(() => _saving = true);
+    try {
+      final club = await _clubFuture!;
+      await repository.updateMembershipSettings(club.id, {
+        'membership_requests_enabled': _requestsEnabled,
+        'membership_application_fields': _fieldModes,
+        'membership_payment_methods': _paymentMethods.toList(),
+        'membership_application_documents': _documents,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t('membership.settingsSavedAfter'))),
+      );
+      setState(() => _saving = false);
+      _reloadRequests();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('membership.saveFailed')}: ${error is AirmiusApiException ? error.userMessage : t('common.errorDetails')}',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final requestsFuture = _requestsFuture;
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.folder_shared_outlined), label: const Text('Dokument Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => FileOperationsScreen(initialTab: 'Antrag')))),
-        
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        icon: Icon(Icons.folder_shared_outlined),
+        label: Text(
+          t('membership.documentOps'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const FileOperationsScreen(initialTab: 'Antrag'),
+          ),
+        ),
+      ),
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            (Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context)),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Mitgliedschaften', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          t('membership.title'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
-        title: 'Mitgliedschaften',
-        subtitle: 'Anfragen, Formularfelder, Regeln und Zahlungen',
+        title: t('membership.title'),
+        subtitle: t('membership.subtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -70,52 +259,107 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('Vereinsadmin'),
+                children: [
+                  Eyebrow(t('membership.admin')),
                   SizedBox(height: 8),
-                  Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
+                  Text(
+                    _clubName,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   SizedBox(height: 6),
-                  Text('Hier verwaltet der Verein, welche Daten Mitglieder im Antrag ausfuellen müssen und welche Dokumente gelten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    t('membership.adminHint'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             FutureBuilder<AirmiusPage<AirmiusClubMembershipRequest>>(
-              future: _requestsFuture,
+              future: requestsFuture,
               builder: (context, snapshot) {
-                final requests = snapshot.data?.items ?? const <AirmiusClubMembershipRequest>[];
-                final pending = requests.where((request) => request.status == 'pending').length;
-                final approved = requests.where((request) => request.status == 'approved').length;
-                return Row(
-                  children: [
-                    Expanded(child: MetricCard(value: '${snapshot.hasData ? pending : 1}', label: 'Offen')),
-                    const SizedBox(width: 10),
-                    Expanded(child: MetricCard(value: '$approved', label: 'Angenommen')),
-                    const SizedBox(width: 10),
-                    const Expanded(child: MetricCard(value: '3', label: 'Dokumente')),
-                  ],
+                final requests =
+                    snapshot.data?.items ??
+                    const <AirmiusClubMembershipRequest>[];
+                final pending = requests
+                    .where((request) => request.status == 'pending')
+                    .length;
+                final approved = requests
+                    .where((request) => request.status == 'approved')
+                    .length;
+                final cards = [
+                  MetricCard(
+                    value: '${snapshot.hasData ? pending : '…'}',
+                    label: t('membership.status.pending'),
+                  ),
+                  MetricCard(
+                    value: '$approved',
+                    label: t('membership.status.active'),
+                  ),
+                  MetricCard(
+                    value: '${_documents.length}',
+                    label: t('membership.documentsAfter'),
+                  ),
+                ];
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth < 520 ? 2 : 3;
+                    final gap = 10.0;
+                    final width = columns == 2
+                        ? (constraints.maxWidth - gap) / 2
+                        : (constraints.maxWidth - gap * 2) / 3;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final card in cards)
+                          SizedBox(width: width, child: card),
+                      ],
+                    );
+                  },
                 );
               },
             ),
             const SizedBox(height: 14),
             AirmiusPanel(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMembershipManagementScreen())),
-              borderColor: AirmiusColors.blue.withValues(alpha: 0.55),
-              child: const Row(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ClubMembershipManagementScreen(),
+                ),
+              ),
+              borderColor: airmiusAccentColor(context).withValues(alpha: 0.55),
+              child: Row(
                 children: [
-                  Icon(Icons.groups_3_outlined, color: AirmiusColors.blue),
-                  SizedBox(width: 12),
+                  Icon(
+                    Icons.groups_3_outlined,
+                    color: airmiusAccentColor(context),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Eyebrow('Komplette Verwaltung'),
-                        SizedBox(height: 5),
-                        Text('Mitglieder, externe Mitglieder, Rechnungen, Zahlungen, SEPA, DATEV und Import verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                        Eyebrow(t('membership.completeManagement')),
+                        const SizedBox(height: 5),
+                        Text(
+                          t('membership.completeManagementHint'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            height: 1.35,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, color: AirmiusColors.muted),
+                  Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
                 ],
               ),
             ),
@@ -123,28 +367,60 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
             AirmiusPanel(
               borderColor: AirmiusColors.green.withValues(alpha: 0.55),
               child: FutureBuilder<AirmiusPage<AirmiusClubMembershipRequest>>(
-                future: _requestsFuture,
+                future: requestsFuture,
                 builder: (context, snapshot) {
-                  final requests = snapshot.data?.items.where((request) => request.status == 'pending').toList() ?? const <AirmiusClubMembershipRequest>[];
+                  final requests =
+                      snapshot.data?.items
+                          .where((request) => request.status == 'pending')
+                          .toList() ??
+                      const <AirmiusClubMembershipRequest>[];
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(
                         children: [
-                          const Expanded(child: Eyebrow('Neue Anfrage')),
-                          if (snapshot.connectionState == ConnectionState.waiting)
-                            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AirmiusColors.blue))
+                          Expanded(child: Eyebrow(t('membership.newRequest'))),
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting)
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: airmiusAccentColor(context),
+                              ),
+                            )
                           else
-                            IconButton(onPressed: _reloadRequests, icon: const Icon(Icons.refresh_outlined, color: AirmiusColors.muted)),
+                            IconButton(
+                              onPressed: _reloadRequests,
+                              icon: Icon(
+                                Icons.refresh_outlined,
+                                color: airmiusMutedColor(context),
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       if (snapshot.hasError)
                         _RequestFallback(onRetry: _reloadRequests)
+                      else if (snapshot.connectionState ==
+                          ConnectionState.waiting)
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              color: airmiusAccentColor(context),
+                            ),
+                          ),
+                        )
                       else if (requests.isEmpty && snapshot.hasData)
-                        const Text('Keine offenen Mitgliedschaftsanfragen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))
-                      else if (requests.isEmpty)
-                        const _RequestCard.fallback()
+                        Text(
+                          t('membership.noOpenRequests'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )
                       else
                         for (final request in requests) ...[
                           _RequestCard(request: request),
@@ -153,9 +429,41 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: _reviewing ? 'Speichere...' : 'Annehmen', icon: Icons.check_circle_outline, onPressed: _reviewing ? null : () => _reviewRequest(request, approve: true)),
-                              AirmiusButton(label: 'Ablehnen', icon: Icons.cancel_outlined, danger: true, onPressed: _reviewing ? null : () => _reviewRequest(request, approve: false)),
-                              AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
+                              AirmiusButton(
+                                label: _reviewing
+                                    ? t('membership.saving')
+                                    : t('membership.approve'),
+                                icon: Icons.check_circle_outline,
+                                onPressed: _reviewing
+                                    ? null
+                                    : () => _reviewRequest(
+                                        request,
+                                        approve: true,
+                                      ),
+                              ),
+                              AirmiusButton(
+                                label: t('membership.decline'),
+                                icon: Icons.cancel_outlined,
+                                danger: true,
+                                onPressed: _reviewing
+                                    ? null
+                                    : () => _reviewRequest(
+                                        request,
+                                        approve: false,
+                                      ),
+                              ),
+                              AirmiusButton(
+                                label: t('membership.operations'),
+                                icon: Icons.tune_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const MembershipOperationsScreen(),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -169,18 +477,72 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Formularfelder'),
+                  Eyebrow(t('membership.applicationFields')),
                   const SizedBox(height: 8),
-                  const Text('Der Verein entscheidet pro Feld, ob es im Antrag sichtbar ist.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    t('membership.applicationFieldsBody'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  for (final entry in _fields.entries)
-                    SwitchListTile(
-                      value: entry.value,
-                      onChanged: (value) => setState(() => _fields[entry.key] = value),
-                      title: Text(entry.key, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                      subtitle: Text(entry.value ? 'Wird im Formular angezeigt' : 'Ist für Antragsteller ausgeblendet', style: const TextStyle(color: AirmiusColors.muted)),
-                      activeThumbColor: AirmiusColors.blue,
+                  Material(
+                    type: MaterialType.transparency,
+                    child: SwitchListTile(
+                      value: _requestsEnabled,
+                      onChanged: (value) =>
+                          setState(() => _requestsEnabled = value),
+                      title: Text(
+                        t('membership.allowRequests'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      subtitle: Text(
+                        t(
+                          _requestsEnabled
+                              ? 'membership.requestsEnabled'
+                              : 'membership.requestsDisabled',
+                        ),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                      activeThumbColor: airmiusAccentColor(context),
                       contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const Divider(height: 12),
+                  for (final field in _fieldDefinitions)
+                    Material(
+                      type: MaterialType.transparency,
+                      child: SwitchListTile(
+                        value: _fieldModes[field.key] != 'off',
+                        onChanged: (value) => setState(
+                          () => _fieldModes[field.key] = value
+                              ? (_fieldModes[field.key] == 'required'
+                                    ? 'required'
+                                    : 'optional')
+                              : 'off',
+                        ),
+                        title: Text(
+                          t(field.labelKey),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${t(field.sectionKey)} · ${_fieldModes[field.key] == 'required'
+                              ? t('membership.field.required')
+                              : _fieldModes[field.key] == 'off'
+                              ? t('membership.field.hidden')
+                              : t('membership.field.optional')}',
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
+                        activeThumbColor: airmiusAccentColor(context),
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                 ],
               ),
@@ -190,70 +552,136 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Beitrag & Zahlung'),
+                  Eyebrow(t('membership.payment')),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _cycle,
-                    dropdownColor: AirmiusColors.cardSoft,
-                    decoration: const InputDecoration(labelText: 'Zahlungsrhythmus'),
-                    items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-                    onChanged: (value) => setState(() => _cycle = value ?? _cycle),
+                  Text(
+                    t('membership.paymentMethods'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final method in const [
+                        'bank_transfer',
+                        'cash',
+                        'sepa_debit',
+                      ])
+                        FilterChip(
+                          selected: _paymentMethods.contains(method),
+                          label: Text(_paymentLabel(method)),
+                          onSelected: (selected) => setState(() {
+                            if (selected) {
+                              _paymentMethods = {..._paymentMethods, method};
+                            } else if (_paymentMethods.length > 1) {
+                              _paymentMethods = {..._paymentMethods}
+                                ..remove(method);
+                            }
+                          }),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: _payment,
-                    dropdownColor: AirmiusColors.cardSoft,
-                    decoration: const InputDecoration(labelText: 'Zahlmethode'),
-                    items: const ['Überweisung', 'Bar', 'SEPA-Lastschrift'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-                    onChanged: (value) => setState(() => _payment = value ?? _payment),
+                  Text(
+                    t('membership.contributionRulesHint'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  const AirmiusTextField(label: 'Beitrag', hint: 'z.B. 12,00 EUR'),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            const AirmiusPanel(
+            AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Eyebrow('Verknuepfte Dokumente'),
-                  SizedBox(height: 10),
-                  _DocumentLinkLine(title: 'Datenschutz.pdf', status: 'Pflicht'),
-                  _DocumentLinkLine(title: 'Beitragsordnung.docx', status: 'Pflicht'),
-                  _DocumentLinkLine(title: 'Vereinsregeln.pdf', status: 'Optional'),
+                  Eyebrow(t('membership.linkedDocuments')),
+                  const SizedBox(height: 10),
+                  if (_documents.isEmpty)
+                    Text(
+                      t('membership.noDocuments'),
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    )
+                  else
+                    for (final document in _documents)
+                      _DocumentLinkLine(
+                        title:
+                            document['title']?.toString() ??
+                            t('membership.document'),
+                        status: document['is_required'] == true
+                            ? t('membership.field.required')
+                            : t('membership.field.optional'),
+                      ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+            AirmiusButton(
+              label: _saving ? t('membership.saving') : t('membership.save'),
+              icon: Icons.save_outlined,
+              onPressed: _saving ? null : _saveSettings,
+            ),
             const SizedBox(height: 10),
-            AirmiusButton(label: 'Membership Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
+            AirmiusButton(
+              label: t('membership.operations'),
+              icon: Icons.tune_outlined,
+              secondary: true,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MembershipOperationsScreen(),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _reviewRequest(AirmiusClubMembershipRequest request, {required bool approve}) async {
+  Future<void> _reviewRequest(
+    AirmiusClubMembershipRequest request, {
+    required bool approve,
+  }) async {
     if (_reviewing) return;
-    final title = approve ? 'Anfrage annehmen' : 'Anfrage ablehnen';
+    final applicant = request.applicantName ?? t('membership.member');
+    final title = approve
+        ? t('membership.reviewApproveTitle')
+        : t('membership.reviewDeclineTitle');
     final message = approve
-        ? 'Moechtest du ${request.applicantName ?? 'diese Person'} als Mitglied aufnehmen?'
-        : 'Moechtest du die Anfrage von ${request.applicantName ?? 'dieser Person'} ablehnen?';
+        ? t('membership.reviewApproveMessage').replaceFirst('{name}', applicant)
+        : t(
+            'membership.reviewDeclineMessage',
+          ).replaceFirst('{name}', applicant);
     final ok = approve ? true : await confirmDanger(context, title, message);
     if (!ok || !mounted) return;
 
     setState(() => _reviewing = true);
     try {
-      final repository = AirmiusServicesScope.of(context).repositories.memberships;
+      final repository = AirmiusServicesScope.of(
+        context,
+      ).repositories.memberships;
       if (approve) {
         await repository.approveClubRequest(request.clubId, request.id);
       } else {
         await repository.declineClubRequest(request.clubId, request.id);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Anfrage wurde angenommen.' : 'Anfrage wurde abgelehnt.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approve
+                ? t('membership.reviewApproved')
+                : t('membership.reviewDeclined'),
+          ),
+        ),
+      );
       setState(() {
         _reviewing = false;
         _requestsFuture = _loadRequests();
@@ -261,33 +689,38 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _reviewing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Aktion konnte nicht gespeichert werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('membership.reviewActionFailed')}: ${error is AirmiusApiException ? error.userMessage : t('common.errorDetails')}',
+          ),
+        ),
+      );
     }
   }
 }
 
 class _RequestCard extends StatelessWidget {
-  const _RequestCard({required this.request}) : fallbackName = null, fallbackClub = null, fallbackStatus = null;
-  const _RequestCard.fallback()
-      : request = null,
-        fallbackName = 'ZBB Konto',
-        fallbackClub = 'ZBB',
-        fallbackStatus = 'Offen';
+  const _RequestCard({required this.request});
 
-  final AirmiusClubMembershipRequest? request;
-  final String? fallbackName;
-  final String? fallbackClub;
-  final String? fallbackStatus;
+  final AirmiusClubMembershipRequest request;
 
   @override
   Widget build(BuildContext context) {
-    final name = request?.applicantName ?? fallbackName ?? 'Mitglied';
-    final club = request?.clubName ?? fallbackClub ?? 'Verein';
-    final status = request == null ? fallbackStatus ?? 'Offen' : _statusLabel(request!.status);
-    final meta = request?.message == null || request!.message!.isEmpty ? '$club - Antrag mit Personendaten und Dokumenten' : request!.message!;
+    final t = AirmiusScope.of(context).t;
+    final name = request.applicantName ?? t('membership.member');
+    final club = request.clubName ?? t('membership.club');
+    final status = _statusLabel(request.status, t);
+    final meta = request.message == null || request.message!.isEmpty
+        ? t('membership.requestSummary').replaceFirst('{club}', club)
+        : request.message!;
     return Container(
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Row(
         children: [
           AirmiusAvatar(name),
@@ -296,9 +729,15 @@ class _RequestCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(meta, style: const TextStyle(color: AirmiusColors.muted)),
+                Text(meta, style: TextStyle(color: airmiusMutedColor(context))),
               ],
             ),
           ),
@@ -308,12 +747,13 @@ class _RequestCard extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status) {
+  String _statusLabel(String status, String Function(String) t) {
     return switch (status) {
-      'approved' => 'Angenommen',
-      'declined' => 'Abgelehnt',
-      'withdrawn' => 'Zurückgezogen',
-      _ => 'Offen',
+      'approved' => t('membership.inbox.status.approved'),
+      'declined' => t('membership.inbox.status.declined'),
+      'withdrawn' => t('membership.inbox.status.withdrawn'),
+      'review' => t('membership.inbox.status.review'),
+      _ => t('membership.inbox.status.pending'),
     };
   }
 }
@@ -325,12 +765,24 @@ class _RequestFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Anfragen konnten nicht geladen werden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+        Text(
+          t('membership.requestLoadFailed'),
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
         const SizedBox(height: 10),
-        AirmiusButton(label: 'Erneut laden', icon: Icons.refresh_outlined, secondary: true, onPressed: onRetry),
+        AirmiusButton(
+          label: t('common.retry'),
+          icon: Icons.refresh_outlined,
+          secondary: true,
+          onPressed: onRetry,
+        ),
       ],
     );
   }
@@ -348,14 +800,20 @@ class _DocumentLinkLine extends StatelessWidget {
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         children: [
-          const Icon(Icons.description_outlined, color: AirmiusColors.blue),
+          Icon(Icons.description_outlined, color: airmiusAccentColor(context)),
           const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
           StatusPill(status),
         ],
       ),
     );
   }
 }
-
-

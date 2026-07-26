@@ -3,8 +3,14 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
 import { useCommerceProducts } from '@/composables/useCommerceProducts'
+import { useI18n } from 'vue-i18n'
 
 export function useCommerceWorkspace(props) {
+    const { t, locale } = useI18n()
+    const tx = (key, fallback, values = {}) => {
+        const translated = t(key, values)
+        return translated === key ? fallback : translated
+    }
     const page = usePage()
     const selectedClubId = ref(props.clubs[0]?.id || '')
     const provider = ref('bank_transfer')
@@ -218,13 +224,15 @@ export function useCommerceWorkspace(props) {
         customer_vat_id: '',
     })
 
-    const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+
+    const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
         style: 'currency',
         currency,
     }).format(Number(cents || 0) / 100)
 
     const formatDateTime = (value) => value
-        ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
+        ? new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
         : '-'
 
     watch(() => campaignForm.placement, (placement) => {
@@ -243,54 +251,56 @@ export function useCommerceWorkspace(props) {
 
     const orderPaymentLabel = (order) => {
         if (order.status === 'completed') {
-            return order.shipping_status === 'delivered' ? 'Abgeschlossen' : 'Bezahlt'
+            return order.shipping_status === 'delivered'
+                ? tx('commerce.order.status.delivered', 'Abgeschlossen')
+                : tx('commerce.order.status.paid', 'Bezahlt')
         }
 
         return {
-            pending: 'Offen',
-            awaiting_transfer: 'Wartet auf Überweisung',
-            cancelled: 'Storniert',
-            refunded: 'Erstattet',
+            pending: tx('commerce.order.status.pending', 'Offen'),
+            awaiting_transfer: tx('commerce.order.status.awaiting_transfer', 'Wartet auf Überweisung'),
+            cancelled: tx('commerce.order.status.cancelled', 'Storniert'),
+            refunded: tx('commerce.order.status.refunded', 'Erstattet'),
         }[order.status] || order.status
     }
 
     const orderPaymentHint = (order) => {
         if (order.status === 'completed') {
             return order.shipping_status === 'delivered'
-                ? 'Deine Bestellung wurde zugestellt.'
-                : 'Zahlung eingegangen, deine Bestellung wird bearbeitet.'
+                ? tx('commerce.order.hints.delivered', 'Deine Bestellung wurde zugestellt.')
+                : tx('commerce.order.hints.processing', 'Zahlung eingegangen, deine Bestellung wird bearbeitet.')
         }
 
         return {
-            pending: 'Zahlung noch offen',
-            awaiting_transfer: 'Wir warten auf den Zahlungseingang.',
-            cancelled: 'Diese Bestellung wurde storniert.',
-            refunded: 'Diese Bestellung wurde erstattet.',
+            pending: tx('commerce.order.hints.pending', 'Zahlung noch offen'),
+            awaiting_transfer: tx('commerce.order.hints.awaiting_transfer', 'Wir warten auf den Zahlungseingang.'),
+            cancelled: tx('commerce.order.hints.cancelled', 'Diese Bestellung wurde storniert.'),
+            refunded: tx('commerce.order.hints.refunded', 'Diese Bestellung wurde erstattet.'),
         }[order.status] || ''
     }
 
     const orderShippingLabel = (status) => ({
-        open: 'Offen',
-        prepared: 'Wird vorbereitet',
-        shipped: 'Versendet',
-        delivered: 'Zugestellt',
+        open: tx('commerce.shipping.status.open', 'Offen'),
+        prepared: tx('commerce.shipping.status.prepared', 'Wird vorbereitet'),
+        shipped: tx('commerce.shipping.status.shipped', 'Versendet'),
+        delivered: tx('commerce.shipping.status.delivered', 'Zugestellt'),
     }[status || 'open'] || status)
 
     const orderIssueLabel = (status) => ({
-        reported: 'Problem gemeldet',
-        reviewing: 'In Prüfung',
-        resolved: 'Gelöst',
-        refunded: 'Erstattet',
-        cancelled: 'Storniert',
+        reported: tx('commerce.issue.status.reported', 'Problem gemeldet'),
+        reviewing: tx('commerce.issue.status.reviewing', 'In Prüfung'),
+        resolved: tx('commerce.issue.status.resolved', 'Gelöst'),
+        refunded: tx('commerce.issue.status.refunded', 'Erstattet'),
+        cancelled: tx('commerce.issue.status.cancelled', 'Storniert'),
     }[status] || status)
 
     const orderSupport = (order) => order.support_summary || {}
 
     const payoutStatusLabel = (status) => ({
-        requested: 'Angefordert',
-        prepared: 'In Prüfung',
-        paid: 'Ausgezahlt',
-        cancelled: 'Storniert',
+        requested: tx('commerce.payout.status.requested', 'Angefordert'),
+        prepared: tx('commerce.payout.status.prepared', 'In Prüfung'),
+        paid: tx('commerce.payout.status.paid', 'Ausgezahlt'),
+        cancelled: tx('commerce.payout.status.cancelled', 'Storniert'),
     }[status] || status || '-')
 
     const orderIsDelivered = (order) => order.status === 'completed' && order.shipping_status === 'delivered'
@@ -318,16 +328,16 @@ export function useCommerceWorkspace(props) {
 
         return []
     })
-    const visibleShopProductTitle = computed(() => 'Kurse und E-Learning')
-    const visibleShopProductDescription = computed(() => 'Online-Kurse, Trainingspläne und digitale Lernangebote kaufen.')
+    const visibleShopProductTitle = computed(() => tx('commerce.shop.learning_title', 'Kurse und E-Learning'))
+    const visibleShopProductDescription = computed(() => tx('commerce.shop.learning_description', 'Online-Kurse, Trainingspläne und digitale Lernangebote kaufen.'))
     const showAccountShop = computed(() => ['all', 'account'].includes(shopView.value))
     const showOutfitShop = computed(() => ['all', 'outfit'].includes(shopView.value))
     const showProductShop = computed(() => ['all', 'courses'].includes(shopView.value))
     const shopCategoryTabs = computed(() => [
-        { key: 'all', label: 'Alle', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
-        { key: 'courses', label: 'Kurse / E-Learning', count: courseProducts.value.length },
-        { key: 'outfit', label: 'Outfit-Abo', count: props.outfitPlans.length },
-        { key: 'account', label: 'Konto-Abo & Add-ons', count: props.accountPlans.length + visibleAddons.value.length },
+        { key: 'all', label: tx('commerce.shop.categories.all', 'Alle'), count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
+        { key: 'courses', label: tx('commerce.shop.categories.courses', 'Kurse / E-Learning'), count: courseProducts.value.length },
+        { key: 'outfit', label: tx('commerce.shop.categories.outfit', 'Outfit-Abo'), count: props.outfitPlans.length },
+        { key: 'account', label: tx('commerce.shop.categories.account', 'Konto-Abo & Add-ons'), count: props.accountPlans.length + visibleAddons.value.length },
     ])
 
     const adFormats = [
@@ -469,23 +479,23 @@ export function useCommerceWorkspace(props) {
     }
 
     const providerLabel = (value) => ({
-        bank_transfer: 'Überweisung',
-        stripe: 'Stripe',
-        paypal: 'PayPal',
+        bank_transfer: tx('commerce.payment.bank_transfer', 'Überweisung'),
+        stripe: tx('commerce.payment.stripe', 'Stripe'),
+        paypal: tx('commerce.payment.paypal', 'PayPal'),
     })[value] || value
 
     const checkoutConfirmationTitle = computed(() => {
         const item = checkoutConfirmation.value.item
 
         if (!item) {
-            return 'Checkout bestätigen'
+            return tx('commerce.checkout.confirm', 'Checkout bestätigen')
         }
 
         if (checkoutConfirmation.value.type === 'account_plan') {
             return item.name
         }
 
-        return item.name || item.title || 'Checkout bestätigen'
+        return item.name || item.title || tx('commerce.checkout.confirm', 'Checkout bestätigen')
     })
 
     const checkoutConfirmationPrice = computed(() => {
@@ -548,13 +558,13 @@ export function useCommerceWorkspace(props) {
 
     const activeOrders = computed(() => props.orders.filter((order) => ['pending', 'awaiting_transfer', 'completed', 'cancelled', 'refunded'].includes(order.status)))
     const commerceTabs = computed(() => [
-        { key: 'shop', label: 'Shop', icon: 'las la-th-large', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
-        { key: 'cart', label: 'Warenkorb', icon: 'las la-shopping-cart', count: cartItemCount.value },
-        { key: 'invoices', label: 'Rechnungen', icon: 'las la-file-invoice', count: props.purchaseHistory.length },
-        { key: 'ads', label: 'Ads', icon: 'las la-bullhorn', count: props.myCampaigns.length },
-        { key: 'create', label: 'Verkaufen', icon: 'las la-plus-circle', count: props.myProducts.length + props.websiteRequests.length },
-        { key: 'provider', label: 'Anbieterprofil', icon: 'las la-store', count: props.providerLocations.length },
-        { key: 'payouts', label: 'Auszahlung', icon: 'las la-wallet', count: props.payoutSummary.pending_orders || 0 },
+        { key: 'shop', label: tx('commerce.tabs.shop', 'Shop'), icon: 'las la-th-large', count: courseProducts.value.length + props.accountPlans.length + visibleAddons.value.length + props.outfitPlans.length },
+        { key: 'cart', label: tx('commerce.tabs.cart', 'Warenkorb'), icon: 'las la-shopping-cart', count: cartItemCount.value },
+        { key: 'invoices', label: tx('commerce.tabs.invoices', 'Rechnungen'), icon: 'las la-file-invoice', count: props.purchaseHistory.length },
+        { key: 'ads', label: tx('commerce.tabs.ads', 'Ads'), icon: 'las la-bullhorn', count: props.myCampaigns.length },
+        { key: 'create', label: tx('commerce.tabs.create', 'Verkaufen'), icon: 'las la-plus-circle', count: props.myProducts.length + props.websiteRequests.length },
+        { key: 'provider', label: tx('commerce.tabs.provider', 'Anbieterprofil'), icon: 'las la-store', count: props.providerLocations.length },
+        { key: 'payouts', label: tx('commerce.tabs.payouts', 'Auszahlung'), icon: 'las la-wallet', count: props.payoutSummary.pending_orders || 0 },
     ])
 
     const campaignCreateErrors = computed(() => Object.values(campaignForm.errors || {})
@@ -1008,9 +1018,9 @@ export function useCommerceWorkspace(props) {
 
     const destroyProviderLocation = async (location) => {
         const confirmed = await confirmDialog({
-            title: 'Standort entfernen',
-            message: `${location.name} wirklich aus deinem Anbieterprofil entfernen?`,
-            confirmLabel: 'Entfernen',
+            title: tx('commerce.provider_location.remove.title', 'Standort entfernen'),
+            message: tx('commerce.provider_location.remove.message', `${location.name} wirklich aus deinem Anbieterprofil entfernen?`, { name: location.name }),
+            confirmLabel: tx('commerce.provider_location.remove.confirm', 'Entfernen'),
             danger: true,
         })
 
@@ -1083,9 +1093,9 @@ export function useCommerceWorkspace(props) {
     const cancelOrder = async (order) => {
         if (!orderCanCancel(order)) return
         const confirmed = await confirmDialog({
-            title: 'Bestellung stornieren',
-            message: 'Bestellung wirklich stornieren? Das ist nur möglich, solange sie noch nicht versendet wurde.',
-            confirmLabel: 'Stornieren',
+            title: tx('commerce.order.cancel.title', 'Bestellung stornieren'),
+            message: tx('commerce.order.cancel.message', 'Bestellung wirklich stornieren? Das ist nur möglich, solange sie noch nicht versendet wurde.'),
+            confirmLabel: tx('commerce.order.cancel.confirm', 'Stornieren'),
             danger: true,
         })
 

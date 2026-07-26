@@ -7,17 +7,25 @@ class MapLocationRouteParitySuiteScreen extends StatefulWidget {
   const MapLocationRouteParitySuiteScreen({super.key});
 
   @override
-  State<MapLocationRouteParitySuiteScreen> createState() => _MapLocationRouteParitySuiteScreenState();
+  State<MapLocationRouteParitySuiteScreen> createState() =>
+      _MapLocationRouteParitySuiteScreenState();
 }
 
-class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRouteParitySuiteScreen> {
+class _MapLocationRouteParitySuiteScreenState
+    extends State<MapLocationRouteParitySuiteScreen> {
   String _area = 'Sportkarte';
   String _permission = 'Beim Nutzen';
   bool _showPrivacyHint = true;
   bool _offlineMap = false;
   bool _liveTracking = false;
 
-  static const _areas = ['Sportkarte', 'Events', 'Rides', 'Vereine', 'Public Orte'];
+  static const _areas = [
+    'Sportkarte',
+    'Events',
+    'Rides',
+    'Vereine',
+    'Public Orte',
+  ];
   static const _permissions = ['Aus', 'Beim Nutzen', 'Einmalig', 'Immer'];
 
   static const _flows = <_MapFlow>[
@@ -25,7 +33,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Sportkarte',
       title: 'Sportkarte entdecken',
       route: 'Auth/Dashboard/SportMap/Index',
-      body: 'Orte, Routen, Trainingsspots, Filter, Distanz, Kategorie, Datenschutz und Melden als mobile Kartenansicht.',
+      body:
+          'Orte, Routen, Trainingsspots, Filter, Distanz, Kategorie, Datenschutz und Melden als mobile Kartenansicht.',
       status: 'Map',
       icon: Icons.map_outlined,
       primary: 'Karte öffnen',
@@ -36,7 +45,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Sportkarte',
       title: 'Route starten',
       route: 'RouteDetail',
-      body: 'Route, Distanz, Dauer, Schwierigkeit, Offline-Hinweis, Start-CTA und Live-Track-Zustand.',
+      body:
+          'Route, Distanz, Dauer, Schwierigkeit, Offline-Hinweis, Start-CTA und Live-Track-Zustand.',
       status: 'Route',
       icon: Icons.alt_route_outlined,
       primary: 'Route starten',
@@ -47,7 +57,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Events',
       title: 'Event-Ort und Treffpunkt',
       route: 'Events/Show',
-      body: 'Trainingsevent mit Ort, Treffpunkt, Karte, Kalender, Teilnahme, Guardian-Gate und Navigation.',
+      body:
+          'Trainingsevent mit Ort, Treffpunkt, Karte, Kalender, Teilnahme, Guardian-Gate und Navigation.',
       status: 'Event',
       icon: Icons.event_outlined,
       primary: 'Navigation',
@@ -58,7 +69,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Rides',
       title: 'Fahrgemeinschaft Treffpunkt',
       route: 'Rides/Index',
-      body: 'Mitfahrt, Treffpunkt, Fahrer, freie Plaetze, Kontaktfreigabe, Guardian-Schutz und sichere Standortanzeige.',
+      body:
+          'Mitfahrt, Treffpunkt, Fahrer, freie Plaetze, Kontaktfreigabe, Guardian-Schutz und sichere Standortanzeige.',
       status: 'Ride',
       icon: Icons.directions_car_outlined,
       primary: 'Mitfahrt',
@@ -69,7 +81,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Vereine',
       title: 'Vereinsadresse sichtbar machen',
       route: 'Clubs/Profile + ClubVisibilitySettings',
-      body: 'Club-Adresse, Public-Sichtbarkeit, Kontakt, Anfahrt, Standortgenauigkeit und Datenschutzoptionen.',
+      body:
+          'Club-Adresse, Public-Sichtbarkeit, Kontakt, Anfahrt, Standortgenauigkeit und Datenschutzoptionen.',
       status: 'Club',
       icon: Icons.groups_outlined,
       primary: 'Adresse zeigen',
@@ -80,7 +93,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       area: 'Public Orte',
       title: 'Standort einreichen',
       route: 'PublicLocationSubmission',
-      body: 'Gast-Standortvorschlag mit Kategorie, Kontakt, Karte, Moderationsstatus, Datenschutz und Korrekturmeldung.',
+      body:
+          'Gast-Standortvorschlag mit Kategorie, Kontakt, Karte, Moderationsstatus, Datenschutz und Korrekturmeldung.',
       status: 'Submission',
       icon: Icons.add_location_alt_outlined,
       primary: 'Einreichen',
@@ -89,14 +103,17 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
     ),
   ];
 
-  List<_MapFlow> get _visibleFlows => _flows.where((flow) => flow.area == _area).toList();
+  List<_MapFlow> get _visibleFlows =>
+      _flows.where((flow) => flow.area == _area).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
@@ -107,7 +124,12 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Hero(area: _area, permission: _permission, offlineMap: _offlineMap, liveTracking: _liveTracking),
+              _Hero(
+                area: _area,
+                permission: _permission,
+                offlineMap: _offlineMap,
+                liveTracking: _liveTracking,
+              ),
               const SizedBox(height: 16),
               _MapPreview(
                 area: _area,
@@ -117,7 +139,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 onOpen: () => openUiAction(
                   context,
                   title: 'Kartenansicht',
-                  body: 'Mobile Kartenansicht für $_area mit Standortfreigabe $_permission, Offline-Karte $_offlineMap und Live-Tracking $_liveTracking.',
+                  body:
+                      'Mobile Kartenansicht für $_area mit Standortfreigabe $_permission, Offline-Karte $_offlineMap und Live-Tracking $_liveTracking.',
                   status: 'Map',
                   icon: Icons.map_outlined,
                 ),
@@ -128,7 +151,7 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 items: _areas,
                 active: _area,
                 onChanged: (value) => setState(() => _area = value),
-                color: AirmiusColors.blue,
+                color: airmiusAccentColor(context),
               ),
               const SizedBox(height: 16),
               _ChoicePanel(
@@ -136,7 +159,7 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 items: _permissions,
                 active: _permission,
                 onChanged: (value) => setState(() => _permission = value),
-                color: AirmiusColors.green,
+                color: Theme.of(context).colorScheme.secondary,
               ),
               const SizedBox(height: 16),
               _RulesPanel(
@@ -154,7 +177,8 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                   onOpen: () => openUiAction(
                     context,
                     title: 'Standort Datenschutz',
-                    body: 'Standortfreigabe, Zweckbindung, Genauigkeit, Guardian-Regel, Sichtbarkeit und Widerruf als mobile Datenschutzkarte.',
+                    body:
+                        'Standortfreigabe, Zweckbindung, Genauigkeit, Guardian-Regel, Sichtbarkeit und Widerruf als mobile Datenschutzkarte.',
                     status: 'Privacy',
                     icon: Icons.privacy_tip_outlined,
                   ),
@@ -164,13 +188,17 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 _MapFlowCard(flow: flow),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Kartenflows für diesen Bereich sichtbar.'),
+              if (_visibleFlows.isEmpty)
+                const EmptyPanel(
+                  'Keine Kartenflows für diesen Bereich sichtbar.',
+                ),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
                   context,
                   title: 'Map Location Parity',
-                  body: 'Sportkarte, Events, Fahrgemeinschaften, Vereinsadresse, Public-Orte, Routen, Permissions, Datenschutz und Offline-Karten sind als mobile UI vorbereitet.',
+                  body:
+                      'Sportkarte, Events, Fahrgemeinschaften, Vereinsadresse, Public-Orte, Routen, Permissions, Datenschutz und Offline-Karten sind als mobile UI vorbereitet.',
                   status: 'Location',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -205,14 +233,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('MAPS & LOCATION'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Standort muss nuetzlich sein, ohne sich unsicher anzufuehlen.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter bereitet Sportkarte, Routen, Treffpunkte, Vereinsadressen, Standortvorschläge, Berechtigungen, Datenschutz und Offline-Zustaende als native mobile UI vor.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -222,7 +258,10 @@ class _Hero extends StatelessWidget {
               _Metric(value: area, label: 'Bereich'),
               _Metric(value: permission, label: 'Permission'),
               _Metric(value: offlineMap ? 'An' : 'Aus', label: 'Offline'),
-              _Metric(value: liveTracking ? 'Live' : 'Still', label: 'Tracking'),
+              _Metric(
+                value: liveTracking ? 'Live' : 'Still',
+                label: 'Tracking',
+              ),
             ],
           ),
         ],
@@ -249,7 +288,7 @@ class _MapPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      borderColor: AirmiusColors.blue,
+      borderColor: airmiusAccentColor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -257,27 +296,56 @@ class _MapPreview extends StatelessWidget {
             height: 180,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AirmiusColors.borderStrong),
+              border: Border.all(color: airmiusBorderColor(context)),
               gradient: const LinearGradient(
-                colors: [Color(0xFF0F2233), Color(0xFF123F5C), Color(0xFF0D1A28)],
+                colors: [
+                  Color(0xFF0F2233),
+                  Color(0xFF123F5C),
+                  Color(0xFF0D1A28),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
             child: Stack(
               children: [
-                Positioned(left: 22, top: 22, child: _MapDot(color: AirmiusColors.blue, label: 'A')),
-                Positioned(right: 34, top: 42, child: _MapDot(color: AirmiusColors.green, label: 'B')),
-                Positioned(left: 88, bottom: 34, child: _MapDot(color: AirmiusColors.amber, label: 'C')),
+                Positioned(
+                  left: 22,
+                  top: 22,
+                  child: _MapDot(
+                    color: airmiusAccentColor(context),
+                    label: 'A',
+                  ),
+                ),
+                Positioned(
+                  right: 34,
+                  top: 42,
+                  child: _MapDot(
+                    color: Theme.of(context).colorScheme.secondary,
+                    label: 'B',
+                  ),
+                ),
+                Positioned(
+                  left: 88,
+                  bottom: 34,
+                  child: _MapDot(
+                    color: Theme.of(context).colorScheme.tertiary,
+                    label: 'C',
+                  ),
+                ),
                 Positioned(
                   left: 18,
                   right: 18,
                   bottom: 18,
-                  child: Row(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
-                      StatusPill(area, color: AirmiusColors.blue),
-                      const SizedBox(width: 8),
-                      StatusPill(permission, color: AirmiusColors.green),
+                      StatusPill(area, color: airmiusAccentColor(context)),
+                      StatusPill(
+                        permission,
+                        color: Theme.of(context).colorScheme.secondary,
+                      ),
                     ],
                   ),
                 ),
@@ -285,14 +353,28 @@ class _MapPreview extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Text(area, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            area,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             'Offline-Karte: ${offlineMap ? 'aktiv' : 'aus'} · Live Tracking: ${liveTracking ? 'aktiv' : 'aus'}',
-            style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Karte simulieren', icon: Icons.map_outlined, onPressed: onOpen),
+          AirmiusButton(
+            label: 'Karte simulieren',
+            icon: Icons.map_outlined,
+            onPressed: onOpen,
+          ),
         ],
       ),
     );
@@ -300,10 +382,7 @@ class _MapPreview extends StatelessWidget {
 }
 
 class _MapDot extends StatelessWidget {
-  const _MapDot({
-    required this.color,
-    required this.label,
-  });
+  const _MapDot({required this.color, required this.label});
 
   final Color color;
   final String label;
@@ -319,7 +398,10 @@ class _MapDot extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color, width: 2),
       ),
-      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w900),
+      ),
     );
   }
 }
@@ -341,6 +423,10 @@ class _ChoicePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return AirmiusPanel(
       title: title,
       children: [
@@ -354,9 +440,12 @@ class _ChoicePanel extends StatelessWidget {
                   label: Text(item),
                   onSelected: (_) => onChanged(item),
                   selectedColor: color.withValues(alpha: .24),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: active == item ? color : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: surfaceColor,
+                  side: BorderSide(color: active == item ? color : borderColor),
+                  labelStyle: TextStyle(
+                    color: active == item ? textColor : mutedColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -387,21 +476,31 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Location-Regeln',
-      subtitle: 'Diese Optionen werden später von Android/iOS Permissions und Laravel-API-Zwecken gesteuert.',
+      subtitle:
+          'Diese Optionen werden später von Android/iOS Permissions und Laravel-API-Zwecken gesteuert.',
       children: [
-        _SwitchLine(title: 'Datenschutzhinweis anzeigen', value: showPrivacyHint, onChanged: onPrivacy),
-        _SwitchLine(title: 'Offline-Kartenmodus', value: offlineMap, onChanged: onOffline),
-        _SwitchLine(title: 'Live-Tracking simulieren', value: liveTracking, onChanged: onLive),
+        _SwitchLine(
+          title: 'Datenschutzhinweis anzeigen',
+          value: showPrivacyHint,
+          onChanged: onPrivacy,
+        ),
+        _SwitchLine(
+          title: 'Offline-Kartenmodus',
+          value: offlineMap,
+          onChanged: onOffline,
+        ),
+        _SwitchLine(
+          title: 'Live-Tracking simulieren',
+          value: liveTracking,
+          onChanged: onLive,
+        ),
       ],
     );
   }
 }
 
 class _PrivacyPanel extends StatelessWidget {
-  const _PrivacyPanel({
-    required this.permission,
-    required this.onOpen,
-  });
+  const _PrivacyPanel({required this.permission, required this.onOpen});
 
   final String permission;
   final VoidCallback onOpen;
@@ -409,21 +508,43 @@ class _PrivacyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      borderColor: AirmiusColors.green,
+      borderColor: Theme.of(context).colorScheme.secondary,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.privacy_tip_outlined, color: AirmiusColors.green, size: 30),
+          Icon(
+            Icons.privacy_tip_outlined,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 30,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Standortfreigabe: $permission', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  'Standortfreigabe: $permission',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 5),
-                const Text('User sehen Zweck, Genauigkeit, Sichtbarkeit, Guardian-Hinweis und Widerruf direkt in der App.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
+                Text(
+                  'User sehen Zweck, Genauigkeit, Sichtbarkeit, Guardian-Hinweis und Widerruf direkt in der App.',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 12),
-                AirmiusButton(label: 'Datenschutz anzeigen', icon: Icons.privacy_tip_outlined, secondary: true, onPressed: onOpen),
+                AirmiusButton(
+                  label: 'Datenschutz anzeigen',
+                  icon: Icons.privacy_tip_outlined,
+                  secondary: true,
+                  onPressed: onOpen,
+                ),
               ],
             ),
           ),
@@ -440,8 +561,9 @@ class _MapFlowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, flow.color);
     return AirmiusPanel(
-      borderColor: flow.color.withValues(alpha: .55),
+      borderColor: color.withValues(alpha: .55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -452,28 +574,48 @@ class _MapFlowCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: flow.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: flow.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(flow.icon, color: flow.color),
+                child: Icon(flow.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(flow.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      flow.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(flow.route, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      flow.route,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(flow.status, color: flow.color),
+              StatusPill(flow.status, color: color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(flow.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            flow.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -497,7 +639,8 @@ class _MapFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Filter, Datenschutz, Berechtigung, Offline, Route und API-Zustand für ${flow.title}.',
+                  body:
+                      'Filter, Datenschutz, Berechtigung, Offline, Route und API-Zustand für ${flow.title}.',
                   status: 'Location Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -521,12 +664,24 @@ class _Checklist extends StatelessWidget {
       title: 'Karten-/Location-Paritaet',
       subtitle: 'Was aus Web-Orten mobil übernommen wird.',
       children: [
-        const _CheckLine('Sportkarte, Routen, Events, Fahrgemeinschaften und Public-Orte haben eigene mobile Kartenzustaende.'),
-        const _CheckLine('Standortfreigabe zeigt Zweck, Genauigkeit, Datenschutz, Guardian-Regeln und Widerruf.'),
-        const _CheckLine('Treffpunkte, Navigation, Offline-Karten und Live-Tracking werden als UI-Zustaende vorbereitet.'),
-        const _CheckLine('Vereinsadresse und Standortvorschläge bleiben mit Sichtbarkeit und Moderation verbunden.'),
+        const _CheckLine(
+          'Sportkarte, Routen, Events, Fahrgemeinschaften und Public-Orte haben eigene mobile Kartenzustaende.',
+        ),
+        const _CheckLine(
+          'Standortfreigabe zeigt Zweck, Genauigkeit, Datenschutz, Guardian-Regeln und Widerruf.',
+        ),
+        const _CheckLine(
+          'Treffpunkte, Navigation, Offline-Karten und Live-Tracking werden als UI-Zustaende vorbereitet.',
+        ),
+        const _CheckLine(
+          'Vereinsadresse und Standortvorschläge bleiben mit Sichtbarkeit und Moderation verbunden.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Location-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Location-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -549,14 +704,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -575,9 +742,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -585,10 +765,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -598,16 +775,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

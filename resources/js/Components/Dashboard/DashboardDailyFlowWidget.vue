@@ -9,7 +9,7 @@ const stepTone = (key) => ({
     training: 'bg-sky-500',
     route: 'bg-emerald-500',
     nutrition: 'bg-amber-500',
-    hydration: 'bg-cyan-500',
+    hydration: 'bg-air-blue',
     reminders: 'bg-violet-500',
 }[key] || 'bg-buttonPrimary')
 </script>
@@ -82,4 +82,3 @@ const stepTone = (key) => ({
         </div>
     </section>
 </template>
-

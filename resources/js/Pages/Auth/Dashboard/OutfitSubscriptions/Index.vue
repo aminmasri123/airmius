@@ -22,7 +22,11 @@ const props = defineProps({
     }) },
 })
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const { isDark } = useTheme()
 const page = usePage()
 const currentUser = computed(() => page.props.auth?.user || {})
@@ -109,15 +113,16 @@ const sponsorLogoUrl = (sponsor) => isDark.value
     ? (sponsor?.logo_dark_url || sponsor?.logo_light_url || sponsor?.logo_url)
     : (sponsor?.logo_light_url || sponsor?.logo_dark_url || sponsor?.logo_url)
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
 
 const formatDate = (value) => {
-    if (!value) return 'Noch nicht geplant'
+    if (!value) return tx('outfit_workspace.not_planned', 'Noch nicht geplant')
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -132,42 +137,42 @@ const scrollToPlans = () => {
 }
 
 const statusLabel = (status) => ({
-    active: 'Aktiv',
-    paused: 'Pausiert',
-    payment_paused: 'Wegen Zahlung pausiert',
-    cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
-    pending_payment: 'Zahlung offen',
-    pending_confirmation: 'Wartet auf Freigabe',
-    cancelled: 'Gekuendigt',
-    planned: 'Geplant',
-    preparing: 'In Vorbereitung',
-    shipped: 'Versendet',
-    delivered: 'Geliefert',
-    skipped: 'Ausgesetzt',
+    active: tx('outfit_workspace.status.active', 'Aktiv'),
+    paused: tx('outfit_workspace.status.paused', 'Pausiert'),
+    payment_paused: tx('outfit_workspace.status.payment_paused', 'Wegen Zahlung pausiert'),
+    cancels_at_period_end: tx('outfit_workspace.status.cancels_at_period_end', 'Gekündigt zum Laufzeitende'),
+    pending_payment: tx('outfit_workspace.status.pending_payment', 'Zahlung offen'),
+    pending_confirmation: tx('outfit_workspace.status.pending_confirmation', 'Wartet auf Freigabe'),
+    cancelled: tx('outfit_workspace.status.cancelled', 'Gekündigt'),
+    planned: tx('outfit_workspace.status.planned', 'Geplant'),
+    preparing: tx('outfit_workspace.status.preparing', 'In Vorbereitung'),
+    shipped: tx('outfit_workspace.status.shipped', 'Versendet'),
+    delivered: tx('outfit_workspace.status.delivered', 'Geliefert'),
+    skipped: tx('outfit_workspace.status.skipped', 'Ausgesetzt'),
 }[status] || status)
 
 const issueTypeLabel = (type) => ({
-    exchange: 'Umtausch',
-    return: 'Retoure',
-    damaged: 'Beschaedigt',
-    missing_item: 'Artikel fehlt',
-    wrong_item: 'Falscher Artikel',
-    other: 'Sonstiges',
+    exchange: tx('outfit_workspace.issue_types.exchange', 'Umtausch'),
+    return: tx('outfit_workspace.issue_types.return', 'Retoure'),
+    damaged: tx('outfit_workspace.issue_types.damaged', 'Beschädigt'),
+    missing_item: tx('outfit_workspace.issue_types.missing_item', 'Artikel fehlt'),
+    wrong_item: tx('outfit_workspace.issue_types.wrong_item', 'Falscher Artikel'),
+    other: tx('outfit_workspace.issue_types.other', 'Sonstiges'),
 }[type] || type || '-')
 
 const issueStatusLabel = (status) => ({
-    open: 'Offen',
-    reviewing: 'In Prüfung',
-    approved: 'Freigegeben',
-    return_waiting: 'Rücksendung offen',
-    replacement_preparing: 'Ersatz wird vorbereitet',
-    resolved: 'Geloest',
-    rejected: 'Abgeschlossen',
+    open: tx('outfit_workspace.issue_status.open', 'Offen'),
+    reviewing: tx('outfit_workspace.issue_status.reviewing', 'In Prüfung'),
+    approved: tx('outfit_workspace.issue_status.approved', 'Freigegeben'),
+    return_waiting: tx('outfit_workspace.issue_status.return_waiting', 'Rücksendung offen'),
+    replacement_preparing: tx('outfit_workspace.issue_status.replacement_preparing', 'Ersatz wird vorbereitet'),
+    resolved: tx('outfit_workspace.issue_status.resolved', 'Gelöst'),
+    rejected: tx('outfit_workspace.issue_status.rejected', 'Abgeschlossen'),
 }[status] || status || '-')
 
 const paymentProviderLabel = (provider) => ({
-    bank_transfer: 'Überweisung',
-    paypal: 'PayPal',
+    bank_transfer: tx('outfit_workspace.payment.bank_transfer', 'Überweisung'),
+    paypal: tx('outfit_workspace.payment.paypal', 'PayPal'),
 }[provider] || provider || '-')
 
 const shippingAddressLine = (address) => [
@@ -178,21 +183,23 @@ const shippingAddressLine = (address) => [
 
 const isPendingPayment = (subscription) => subscription?.status === 'pending_payment'
 
-const cancelActionLabel = (subscription) => isPendingPayment(subscription) ? 'Abbrechen' : 'Kündigen'
+const cancelActionLabel = (subscription) => isPendingPayment(subscription)
+    ? tx('outfit_workspace.actions.cancel_pending', 'Abbrechen')
+    : tx('outfit_workspace.actions.cancel', 'Kündigen')
 
 const planContractRules = (plan) => plan?.contract_rules || props.contractRules
 
 const planContractTerms = (plan) => (plan?.contract_terms?.length ? plan.contract_terms : [
-    'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.',
-    'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.',
-    'Pause und Kündigung gelten nur für zukünftige Lieferungen.',
+    tx('outfit_workspace.contract_terms.monthly', 'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.'),
+    tx('outfit_workspace.contract_terms.payment', 'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.'),
+    tx('outfit_workspace.contract_terms.future', 'Pause und Kündigung gelten nur für zukünftige Lieferungen.'),
 ])
 
 const brandingLabel = (type) => ({
-    sponsor_logo: 'Sponsor-Branding',
-    club_logo: 'Vereins-Branding',
-    custom: 'Individuelles Branding',
-}[type] || 'Branding')
+    sponsor_logo: tx('outfit_workspace.branding.sponsor', 'Sponsor-Branding'),
+    club_logo: tx('outfit_workspace.branding.club', 'Vereins-Branding'),
+    custom: tx('outfit_workspace.branding.custom', 'Individuelles Branding'),
+}[type] || tx('outfit_workspace.branding.default', 'Branding'))
 
 const updateProfile = () => {
     profileFeedback.value = null
@@ -210,13 +217,13 @@ const updateProfile = () => {
         onSuccess: () => {
             profileFeedback.value = {
                 type: 'success',
-                message: 'Style-Profil wurde gespeichert.',
+                message: tx('outfit_workspace.feedback.profile_saved', 'Style-Profil wurde gespeichert.'),
             }
         },
         onError: () => {
             profileFeedback.value = {
                 type: 'error',
-                message: 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.',
+                message: tx('outfit_workspace.feedback.profile_failed', 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.'),
             }
         },
     })
@@ -307,7 +314,7 @@ const submitIssue = () => {
 </script>
 
 <template>
-    <Head title="Outfit-Abo" />
+    <Head :title="tx('outfit_workspace.page_title', 'Outfit-Abo')" />
 
     <div class="space-y-6 p-4 sm:p-6">
         <div
@@ -353,8 +360,8 @@ const submitIssue = () => {
 
                 <div class="grid content-between gap-4 border-t border-border bg-card p-5 lg:border-l lg:border-t-0 lg:p-6">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Abo-Zentrale</p>
-                        <h2 class="mt-2 text-xl font-bold text-primary">Alles auf einen Blick</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('outfit_workspace.eyebrow', 'Abo-Zentrale') }}</p>
+                        <h2 class="mt-2 text-xl font-bold text-primary">{{ tx('outfit_workspace.overview', 'Alles auf einen Blick') }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             Aktive Abos, nächste Lieferung und Style-Daten bleiben hier schnell erreichbar.
                         </p>
@@ -362,15 +369,15 @@ const submitIssue = () => {
 
                     <div class="grid gap-3">
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs uppercase text-secondary">Aktive Abos</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('outfit_workspace.active_subscriptions', 'Aktive Abos') }}</p>
                             <p class="mt-2 text-3xl font-black text-primary">{{ activeSubscriptions.length }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs uppercase text-secondary">Nächste Lieferung</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('outfit_workspace.next_delivery', 'Nächste Lieferung') }}</p>
                             <p class="mt-2 text-lg font-bold text-primary">{{ formatDate(nextDelivery) }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs uppercase text-secondary">Style-Profil</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('outfit_workspace.style_profile', 'Style-Profil') }}</p>
                             <p class="mt-2 text-lg font-bold" :class="hasStyleProfile ? 'text-success' : 'text-warning'">
                                 {{ hasStyleProfile ? 'Bereit' : 'Noch offen' }}
                             </p>
@@ -391,7 +398,7 @@ const submitIssue = () => {
             <form id="style-profile" class="rounded-lg border border-border bg-card p-5 shadow-sm" @submit.prevent="updateProfile">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-bold text-primary">Style-Profil</h2>
+                        <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.style_profile', 'Style-Profil') }}</h2>
                         <p class="mt-1 text-sm text-secondary">Diese Angaben steuern die Zusammenstellung deiner Boxen.</p>
                     </div>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="profileForm.processing">
@@ -462,8 +469,8 @@ const submitIssue = () => {
             <div class="rounded-lg border border-border bg-card p-5 shadow-sm">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-bold text-primary">Deine Abos und Lieferungen</h2>
-                        <p class="mt-1 text-sm text-secondary">Status, Liefermonat und Tracking an einem Ort.</p>
+                        <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.subscriptions_title', 'Deine Abos und Lieferungen') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('outfit_workspace.subscriptions_hint', 'Status, Liefermonat und Tracking an einem Ort.') }}</p>
                     </div>
                     <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} Einträge</span>
                 </div>
@@ -584,7 +591,7 @@ const submitIssue = () => {
         <section id="outfit-plans">
             <div class="mb-4 flex items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-primary">Pläne wählen</h2>
+                        <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.choose_plan', 'Pläne wählen') }}</h2>
                     <p class="mt-1 text-sm text-secondary">Sponsor-Subventionen werden direkt vom Monatsbetrag abgezogen.</p>
                 </div>
             </div>

@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class EditFormScreen extends StatefulWidget {
-  const EditFormScreen({super.key, required this.title, required this.subtitle, this.mode = EditFormMode.basic});
+  const EditFormScreen({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.mode = EditFormMode.basic,
+  });
 
   final String title;
   final String subtitle;
@@ -47,8 +53,12 @@ class _EditFormScreenState extends State<EditFormScreen> {
     }
 
     final user = AirmiusServicesScope.of(context).authState.user;
-    _firstNameController.text = user?.firstName?.trim().isNotEmpty == true ? user!.firstName!.trim() : '';
-    _lastNameController.text = user?.lastName?.trim().isNotEmpty == true ? user!.lastName!.trim() : '';
+    _firstNameController.text = user?.firstName?.trim().isNotEmpty == true
+        ? user!.firstName!.trim()
+        : '';
+    _lastNameController.text = user?.lastName?.trim().isNotEmpty == true
+        ? user!.lastName!.trim()
+        : '';
     _bioController.text = user?.bio?.trim() ?? '';
 
     final gender = user?.gender?.trim() ?? '';
@@ -69,11 +79,17 @@ class _EditFormScreenState extends State<EditFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(
+          widget.title,
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: widget.title,
@@ -86,37 +102,63 @@ class _EditFormScreenState extends State<EditFormScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Bearbeiten'),
+                  Eyebrow(t('profile.edit.eyebrow')),
                   const SizedBox(height: 8),
-                  Text(widget.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
+                  Text(
+                    widget.title,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(widget.subtitle, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    widget.subtitle,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            ..._fieldsForMode(),
+            ..._fieldsForMode(t),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w800)),
+              Text(
+                _error!,
+                style: TextStyle(
+                  color: airmiusSemanticColor(context, AirmiusColors.red),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ],
             const SizedBox(height: 16),
             AirmiusButton(
-              label: _saving ? 'Speichere...' : 'Speichern',
+              label: _saving
+                  ? t('profile.edit.saving')
+                  : t('profile.edit.save'),
               icon: Icons.save_outlined,
               onPressed: _saving ? null : _save,
             ),
             const SizedBox(height: 10),
-            AirmiusButton(label: 'Abbrechen', icon: Icons.close_outlined, secondary: true, onPressed: _saving ? null : () => Navigator.pop(context)),
+            AirmiusButton(
+              label: t('profile.edit.cancel'),
+              icon: Icons.close_outlined,
+              secondary: true,
+              onPressed: _saving ? null : () => Navigator.pop(context),
+            ),
           ],
         ),
       ),
     );
   }
 
-  List<Widget> _fieldsForMode() {
+  List<Widget> _fieldsForMode(String Function(String) t) {
     return switch (widget.mode) {
-      EditFormMode.profile => _profileFields(),
+      EditFormMode.profile => _profileFields(t),
       EditFormMode.privacy => _privacyFields(),
       EditFormMode.payment => _paymentFields(),
       EditFormMode.admin => _adminFields(),
@@ -129,158 +171,283 @@ class _EditFormScreenState extends State<EditFormScreen> {
 
   List<Widget> _basicFields() {
     return const [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        AirmiusTextField(label: 'Titel', hint: 'Name oder Bezeichnung'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Beschreibung', hint: 'Kurzbeschreibung', maxLines: 4),
-      ])),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusTextField(label: 'Titel', hint: 'Name oder Bezeichnung'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Beschreibung',
+              hint: 'Kurzbeschreibung',
+              maxLines: 4,
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
-  List<Widget> _profileFields() {
+  List<Widget> _profileFields(String Function(String) t) {
     return [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Eyebrow('Persoenliche Daten'),
-        const SizedBox(height: 12),
-        AirmiusTextField(label: 'Vorname', hint: 'Vorname', controller: _firstNameController),
-        const SizedBox(height: 12),
-        AirmiusTextField(label: 'Nachname', hint: 'Nachname', controller: _lastNameController),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _gender.isEmpty ? null : _gender,
-          dropdownColor: AirmiusColors.cardSoft,
-          decoration: const InputDecoration(
-            labelText: 'Geschlecht',
-            prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
-          ),
-          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-          items: const [
-            DropdownMenuItem(value: 'female', child: Text('Weiblich')),
-            DropdownMenuItem(value: 'male', child: Text('Männlich')),
-            DropdownMenuItem(value: 'diverse', child: Text('Divers')),
-            DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow(t('profile.edit.personal')),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profileGate.firstName'),
+              hint: t('profileGate.firstName'),
+              controller: _firstNameController,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profileGate.lastName'),
+              hint: t('profileGate.lastName'),
+              controller: _lastNameController,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _gender.isEmpty ? null : _gender,
+              isExpanded: true,
+              dropdownColor: airmiusSurfaceSoftColor(context),
+              decoration: InputDecoration(
+                labelText: t('profileGate.gender'),
+                prefixIcon: Icon(
+                  Icons.wc_outlined,
+                  color: airmiusMutedColor(context),
+                ),
+              ),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+              items: [
+                DropdownMenuItem(
+                  value: 'female',
+                  child: Text(t('profileGate.gender.female')),
+                ),
+                DropdownMenuItem(
+                  value: 'male',
+                  child: Text(t('profileGate.gender.male')),
+                ),
+                DropdownMenuItem(
+                  value: 'diverse',
+                  child: Text(t('profileGate.gender.diverse')),
+                ),
+                DropdownMenuItem(
+                  value: 'not_specified',
+                  child: Text(t('profileGate.gender.notSpecified')),
+                ),
+              ],
+              onChanged: (value) => setState(() => _gender = value ?? ''),
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.bio'),
+              hint: t('profile.edit.bioHint'),
+              controller: _bioController,
+              maxLines: 3,
+            ),
           ],
-          onChanged: (value) => setState(() => _gender = value ?? ''),
         ),
-        const SizedBox(height: 12),
-        AirmiusTextField(label: 'Bio', hint: 'Sport, Verein, Ziele...', controller: _bioController, maxLines: 3),
-      ])),
-      const SizedBox(height: 12),
-      const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Sportprofil'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Hauptsportart', hint: 'Laufen, Tennis, Fitness...'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Level', hint: 'Einsteiger, Fortgeschritten, Trainer'),
-      ])),
+      ),
     ];
   }
 
   List<Widget> _privacyFields() {
     return [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Eyebrow('Sichtbarkeit'),
-        SwitchListTile(
-          value: _publicVisible,
-          onChanged: (value) => setState(() => _publicVisible = value),
-          title: const Text('Profil sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-          subtitle: const Text('Andere Nutzer können dein Profil finden.', style: TextStyle(color: AirmiusColors.muted)),
-          activeThumbColor: AirmiusColors.blue,
-          contentPadding: EdgeInsets.zero,
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Eyebrow('Sichtbarkeit'),
+            SwitchListTile(
+              value: _publicVisible,
+              onChanged: (value) => setState(() => _publicVisible = value),
+              title: const Text(
+                'Profil sichtbar',
+                style: TextStyle(
+                  color: AirmiusColors.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              subtitle: const Text(
+                'Andere Nutzer können dein Profil finden.',
+                style: TextStyle(color: AirmiusColors.muted),
+              ),
+              activeThumbColor: AirmiusColors.blue,
+              contentPadding: EdgeInsets.zero,
+            ),
+            SwitchListTile(
+              value: _enabled,
+              onChanged: (value) => setState(() => _enabled = value),
+              title: const Text(
+                'Benachrichtigungen erlauben',
+                style: TextStyle(
+                  color: AirmiusColors.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              subtitle: const Text(
+                'Push, E-Mail und Vereinsupdates.',
+                style: TextStyle(color: AirmiusColors.muted),
+              ),
+              activeThumbColor: AirmiusColors.blue,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ],
         ),
-        SwitchListTile(
-          value: _enabled,
-          onChanged: (value) => setState(() => _enabled = value),
-          title: const Text('Benachrichtigungen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-          subtitle: const Text('Push, E-Mail und Vereinsupdates.', style: TextStyle(color: AirmiusColors.muted)),
-          activeThumbColor: AirmiusColors.blue,
-          contentPadding: EdgeInsets.zero,
-        ),
-      ])),
+      ),
       const SizedBox(height: 12),
-      const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Datenrechte'),
-        SizedBox(height: 10),
-        AirmiusTextField(label: 'Export-Kommentar', hint: 'Optionaler Hinweis für Datenexport oder Löschanfrage', maxLines: 3),
-      ])),
+      const AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow('Datenrechte'),
+            SizedBox(height: 10),
+            AirmiusTextField(
+              label: 'Export-Kommentar',
+              hint: 'Optionaler Hinweis für Datenexport oder Löschanfrage',
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
   List<Widget> _paymentFields() {
     return const [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Zahlung'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Zahlmethode', hint: 'Überweisung, Bar, SEPA'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'IBAN', hint: 'DE...'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Rechnungsadresse', hint: 'Adresse für Rechnungen', maxLines: 3),
-      ])),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow('Zahlung'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Zahlmethode',
+              hint: 'Überweisung, Bar, SEPA',
+            ),
+            SizedBox(height: 12),
+            AirmiusTextField(label: 'IBAN', hint: 'DE...'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Rechnungsadresse',
+              hint: 'Adresse für Rechnungen',
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
   List<Widget> _adminFields() {
     return [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Eyebrow('Admin-Aktion'),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _status,
-          dropdownColor: AirmiusColors.cardSoft,
-          decoration: const InputDecoration(labelText: 'Status'),
-          items: const ['Aktiv', 'In Prüfung', 'Gesperrt', 'Abgelehnt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-          onChanged: (value) => setState(() => _status = value ?? _status),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Eyebrow('Admin-Aktion'),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _status,
+              dropdownColor: AirmiusColors.cardSoft,
+              decoration: const InputDecoration(labelText: 'Status'),
+              items: const ['Aktiv', 'In Prüfung', 'Gesperrt', 'Abgelehnt']
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _status = value ?? _status),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _role,
+              dropdownColor: AirmiusColors.cardSoft,
+              decoration: const InputDecoration(labelText: 'Rolle'),
+              items: const ['Mitglied', 'Trainer', 'Club Admin', 'System Admin']
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _role = value ?? _role),
+            ),
+            const SizedBox(height: 12),
+            const AirmiusTextField(
+              label: 'Interne Notiz',
+              hint: 'Warum wird der Status geändert?',
+              maxLines: 3,
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          initialValue: _role,
-          dropdownColor: AirmiusColors.cardSoft,
-          decoration: const InputDecoration(labelText: 'Rolle'),
-          items: const ['Mitglied', 'Trainer', 'Club Admin', 'System Admin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-          onChanged: (value) => setState(() => _role = value ?? _role),
-        ),
-        const SizedBox(height: 12),
-        const AirmiusTextField(label: 'Interne Notiz', hint: 'Warum wird der Status geändert?', maxLines: 3),
-      ])),
+      ),
     ];
   }
 
   List<Widget> _fileFields() {
     return const [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Datei'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Dateiname', hint: 'Datenschutz.pdf'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Kategorie', hint: 'Vereinsdokumente'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Verknuepfung', hint: 'Mitgliedsantrag, Beitragsregel, Team'),
-      ])),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow('Datei'),
+            SizedBox(height: 12),
+            AirmiusTextField(label: 'Dateiname', hint: 'Datenschutz.pdf'),
+            SizedBox(height: 12),
+            AirmiusTextField(label: 'Kategorie', hint: 'Vereinsdokumente'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Verknuepfung',
+              hint: 'Mitgliedsantrag, Beitragsregel, Team',
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
   List<Widget> _chatFields() {
     return const [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Nachricht'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Antwort', hint: 'Nachricht schreiben...', maxLines: 4),
-      ])),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow('Nachricht'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Antwort',
+              hint: 'Nachricht schreiben...',
+              maxLines: 4,
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
   List<Widget> _eventFields() {
     return const [
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Termin'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Titel', hint: 'Intervalltraining'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Ort', hint: 'Sportplatz'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Notiz', hint: 'Teilnehmerinfo, Material, Absagegrund...', maxLines: 3),
-      ])),
+      AirmiusPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Eyebrow('Termin'),
+            SizedBox(height: 12),
+            AirmiusTextField(label: 'Titel', hint: 'Intervalltraining'),
+            SizedBox(height: 12),
+            AirmiusTextField(label: 'Ort', hint: 'Sportplatz'),
+            SizedBox(height: 12),
+            AirmiusTextField(
+              label: 'Notiz',
+              hint: 'Teilnehmerinfo, Material, Absagegrund...',
+              maxLines: 3,
+            ),
+          ],
+        ),
+      ),
     ];
   }
 
@@ -291,6 +458,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
     }
 
     final services = AirmiusServicesScope.of(context);
+    final t = AirmiusScope.of(context).t;
     final authState = services.authState;
     final user = authState.user;
     final firstName = _firstNameController.text.trim();
@@ -299,12 +467,12 @@ class _EditFormScreenState extends State<EditFormScreen> {
     final birthDate = user?.birthDate;
 
     if (firstName.isEmpty || lastName.isEmpty || _gender.isEmpty) {
-      setState(() => _error = 'Bitte Vorname, Nachname und Geschlecht ausfuellen.');
+      setState(() => _error = t('profile.edit.validation'));
       return;
     }
 
     if (birthDate == null || country.length != 2) {
-      setState(() => _error = 'Bitte vervollstaendige zuerst Geburtsdatum und Land.');
+      setState(() => _error = t('profile.edit.birthCountryMissing'));
       return;
     }
 

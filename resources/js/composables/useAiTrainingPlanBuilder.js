@@ -1,5 +1,7 @@
 ﻿import { computed, reactive, ref } from 'vue'
 
+import { useI18n } from 'vue-i18n'
+
 const sourceValue = (source) => {
     if (typeof source === 'function') return source()
     if (source && typeof source === 'object' && 'value' in source) return source.value
@@ -16,6 +18,9 @@ export function useAiTrainingPlanBuilder({
     plans,
     sportChoices,
 }) {
+    const { t } = useI18n()
+    const tx = (key, params = {}) => t(key, params)
+
     const aiPlanStep = ref(0)
     const aiTrainingPlanPreview = ref(null)
     const aiTrainingPlanError = ref('')
@@ -69,13 +74,13 @@ export function useAiTrainingPlanBuilder({
     const aiPlanTooLarge = computed(() => aiPlanRequestedItems.value > aiPlanMaxItems.value)
     const aiPlanWeeksTooLong = computed(() => Math.max(1, Number(aiPlanForm.weeks || 0)) > aiPlanMaxWeeks.value)
     const aiPlanCannotGenerate = computed(() => !aiTrainingPlanAvailable.value || aiPlanTooLarge.value || aiPlanWeeksTooLong.value)
-    const aiPlanTierLabel = computed(() => aiTrainingPlan.value.tier_label || 'Free')
+    const aiPlanTierLabel = computed(() => aiTrainingPlan.value.tier_label || tx('training_workspace.ai.free'))
     const aiPlanLimitLabel = computed(() => {
         if (aiPlanMonthlyLimit.value === null || aiPlanMonthlyLimit.value === undefined) {
-            return `Stufe ${aiPlanTierLabel.value}: bis ${aiPlanMaxWeeks.value} Wochen`
+            return tx('training_workspace.ai.limit_without_monthly', { tier: aiPlanTierLabel.value, weeks: aiPlanMaxWeeks.value })
         }
 
-        return `Stufe ${aiPlanTierLabel.value}: ${Math.max(0, Number(aiPlanMonthlyRemaining.value ?? 0))}/${aiPlanMonthlyLimit.value} KI-Pläne diesen Monat, bis ${aiPlanMaxWeeks.value} Wochen`
+        return tx('training_workspace.ai.limit_with_monthly', { tier: aiPlanTierLabel.value, remaining: Math.max(0, Number(aiPlanMonthlyRemaining.value ?? 0)), limit: aiPlanMonthlyLimit.value, weeks: aiPlanMaxWeeks.value })
     })
     const aiTrainingProviderLabel = computed(() => {
         const provider = aiTrainingPlan.value.primary_provider || resolvedAiCapabilities.value?.primary_provider || 'ionos'
@@ -86,8 +91,8 @@ export function useAiTrainingPlanBuilder({
     const aiGeneratedPlans = computed(() => resolvedPlans.value.filter((plan) => plan.settings?.ai_generation))
     const aiGeneratedPlanInsights = computed(() => aiGeneratedPlans.value
         .flatMap((plan) => [
-            ...(plan.settings?.ai_generation?.analysis_tips || []).map((text) => ({ plan, text, label: 'Analyse' })),
-            ...(plan.settings?.ai_generation?.adjustment_tips || []).map((text) => ({ plan, text, label: 'Anpassung' })),
+            ...(plan.settings?.ai_generation?.analysis_tips || []).map((text) => ({ plan, text, label: tx('training_workspace.ai.analysis') })),
+            ...(plan.settings?.ai_generation?.adjustment_tips || []).map((text) => ({ plan, text, label: tx('training_workspace.ai.adjustment') })),
         ])
         .filter((item) => item.text)
         .slice(0, 6))
@@ -163,7 +168,7 @@ export function useAiTrainingPlanBuilder({
 
         if (plan) {
             aiPlanSourcePlan.value = plan
-            aiPlanForm.title = `${plan.title || 'Trainingsplan'} angepasst`
+            aiPlanForm.title = tx('training_workspace.ai.adjusted_title', { title: plan.title || tx('training_workspace.ai.training_plan') })
             aiPlanForm.goal = plan.settings?.goal || ''
             aiPlanForm.phase = plan.settings?.phase || 'build'
             aiPlanForm.level = plan.settings?.level || 'intermediate'
@@ -187,28 +192,28 @@ export function useAiTrainingPlanBuilder({
 
     const generateAiTrainingPlan = async (revise = false, allowProfileEstimate = false) => {
         if (!aiTrainingPlanAvailable.value) {
-            aiTrainingPlanError.value = aiTrainingPlan.value.access_reason || 'KI-Trainingspläne sind für dein aktuelles Kontingent nicht verfügbar.'
+            aiTrainingPlanError.value = aiTrainingPlan.value.access_reason || tx('training_workspace.ai.unavailable')
             return
         }
 
         if (!aiPlanForm.goal?.trim()) {
-            aiTrainingPlanError.value = 'Bitte gib zuerst ein klares Trainingsziel ein.'
+            aiTrainingPlanError.value = tx('training_workspace.ai.goal_required')
             aiPlanStep.value = 0
             return
         }
 
         if (revise && !aiPlanForm.revision_instruction?.trim()) {
-            aiTrainingPlanError.value = 'Bitte schreibe kurz, was die KI am Plan verändern soll.'
+            aiTrainingPlanError.value = tx('training_workspace.ai.revision_required')
             return
         }
 
         if (aiPlanWeeksTooLong.value) {
-            aiTrainingPlanError.value = `Deine aktuelle Stufe erlaubt KI-Trainingspläne bis ${aiPlanMaxWeeks.value} Wochen. Bitte wähle eine kürzere Dauer oder nutze die nächste Stufe.`
+            aiTrainingPlanError.value = tx('training_workspace.ai.too_many_weeks', { weeks: aiPlanMaxWeeks.value })
             aiPlanStep.value = 1
             return
         }
         if (aiPlanTooLarge.value) {
-            aiTrainingPlanError.value = `Dieser Plan hätte ${aiPlanRequestedItems.value} Einheiten. Bitte reduziere Wochen oder Einheiten pro Woche auf maximal ${aiPlanMaxItems.value} Einheiten.`
+            aiTrainingPlanError.value = tx('training_workspace.ai.too_many_items', { requested: aiPlanRequestedItems.value, max: aiPlanMaxItems.value })
             aiPlanStep.value = 1
             return
         }
@@ -243,7 +248,7 @@ export function useAiTrainingPlanBuilder({
             })
 
             aiTrainingPlanPreview.value = response.data?.plan || null
-            aiTrainingPlanMessage.value = response.data?.message || 'KI-Vorschlag erstellt.'
+            aiTrainingPlanMessage.value = response.data?.message || tx('training_workspace.ai.preview_created')
             aiProfileMissingFields.value = []
             aiProfileCompletionUrl.value = ''
             aiProfileMissingMessage.value = ''
@@ -259,14 +264,14 @@ export function useAiTrainingPlanBuilder({
                 aiTrainingPlanMessage.value = ''
                 aiProfileMissingFields.value = missingFields
                 aiProfileCompletionUrl.value = responseData.profile_completion_url || route('auth.settings', { tab: 'sport-profile' })
-                aiProfileMissingMessage.value = responseData.message || 'Für einen zuverlässigen Plan fehlen noch Sportprofil-Daten.'
+                aiProfileMissingMessage.value = responseData.message || tx('training_workspace.ai.profile_missing')
                 aiProfileEstimateAllowed.value = Boolean(responseData.profile_estimate_allowed)
                 aiPlanForm.allow_profile_estimate = false
                 aiPlanStep.value = 1
                 return
             }
 
-            aiTrainingPlanError.value = responseData.message || 'KI-Trainingsplan konnte nicht erstellt werden.'
+            aiTrainingPlanError.value = responseData.message || tx('training_workspace.ai.generation_failed')
         } finally {
             aiTrainingPlanGenerating.value = false
         }
@@ -307,7 +312,7 @@ export function useAiTrainingPlanBuilder({
 
             onPlanSaved?.()
         } catch (error) {
-            aiTrainingPlanError.value = error.response?.data?.message || 'KI-Plan konnte nicht gespeichert werden.'
+            aiTrainingPlanError.value = error.response?.data?.message || tx('training_workspace.ai.save_failed')
         } finally {
             aiTrainingPlanSaving.value = false
         }
@@ -355,4 +360,3 @@ export function useAiTrainingPlanBuilder({
         setAiPlanDurationPreset,
     }
 }
-

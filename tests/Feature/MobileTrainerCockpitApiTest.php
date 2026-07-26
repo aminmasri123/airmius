@@ -1,0 +1,140 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Club;
+use App\Models\Team;
+use App\Models\TrainingLog;
+use App\Models\TrainingPlan;
+use App\Models\TrainingPlanItem;
+use App\Models\User;
+use App\Support\TeamRoles;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class MobileTrainerCockpitApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_coach_receives_only_managed_team_control_data(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+        $foreignOwner = User::factory()->create();
+        $foreignClub = Club::query()->create([
+            'owner_id' => $foreignOwner->id,
+            'name' => 'Foreign Club',
+        ]);
+        $foreignTeam = Team::factory()->create([
+            'club_id' => $foreignClub->id,
+            'name' => 'Foreign Team',
+        ]);
+        $foreignTeam->users()->attach(User::factory()->create(), ['role' => TeamRoles::PLAYER]);
+
+        $plan = TrainingPlan::query()->create([
+            'created_by' => $coach->id,
+            'team_id' => $team->id,
+            'title' => 'Safe race week',
+            'status' => 'active',
+        ]);
+        TrainingPlanItem::query()->create([
+            'training_plan_id' => $plan->id,
+            'title' => 'Recovery run',
+            'scheduled_at' => now()->subDay(),
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'trainer_id' => $coach->id,
+            'team_id' => $team->id,
+            'training_plan_id' => $plan->id,
+            'title' => 'Hard intervals',
+            'status' => 'completed',
+            'performed_at' => now()->subDay(),
+            'duration_minutes' => 55,
+            'distance_meters' => 9000,
+            'intensity' => 'high',
+            'metrics' => ['wellness' => ['rpe' => 9, 'energy' => 4, 'pain' => 3]],
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/trainer-cockpit')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.teams')
+            ->assertJsonPath('data.teams.0.id', $team->id)
+            ->assertJsonPath('data.summary.athletes', 2)
+            ->assertJsonPath('data.summary.risk_athletes', 1)
+            ->assertJsonPath('data.coachWeekly.risk_athletes.0.name', $athlete->name)
+            ->assertJsonMissing(['name' => 'Foreign Team']);
+    }
+
+    public function test_regular_user_cannot_open_mobile_trainer_cockpit(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
+    }
+
+    public function test_coach_can_send_feedback_only_for_visible_training_log(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+        $visibleLog = TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'trainer_id' => $coach->id,
+            'team_id' => $team->id,
+            'title' => 'Tempo run',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'metrics' => ['privacy_scope' => 'trainer'],
+        ]);
+        $foreignLog = TrainingLog::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'created_by' => User::factory()->create()->id,
+            'title' => 'Private session',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'metrics' => ['privacy_scope' => 'private'],
+        ]);
+        Sanctum::actingAs($coach);
+
+        $this->postJson("/api/v1/trainer-cockpit/logs/{$visibleLog->id}/feedback", [
+            'body' => 'Sehr kontrollierte Belastung. Morgen locker trainieren.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.role', 'trainer');
+
+        $this->postJson("/api/v1/trainer-cockpit/logs/{$foreignLog->id}/feedback", [
+            'body' => 'Unbefugter Zugriff',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('training_log_feedback', [
+            'training_log_id' => $visibleLog->id,
+            'user_id' => $coach->id,
+        ]);
+    }
+
+    /**
+     * @return array{User, User, Team}
+     */
+    private function coachTeam(): array
+    {
+        $coach = User::factory()->create(['name' => 'Mina Coach']);
+        $athlete = User::factory()->create(['name' => 'Mira Runner']);
+        $owner = User::factory()->create();
+        $club = Club::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Airmius Club',
+        ]);
+        $team = Team::factory()->create([
+            'club_id' => $club->id,
+            'name' => 'U18 Performance',
+            'sport_type' => 'running',
+        ]);
+        $team->users()->attach($coach->id, ['role' => TeamRoles::COACH]);
+        $team->users()->attach($athlete->id, ['role' => TeamRoles::PLAYER]);
+
+        return [$coach, $athlete, $team];
+    }
+}

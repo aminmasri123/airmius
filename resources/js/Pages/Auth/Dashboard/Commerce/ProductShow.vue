@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -12,6 +13,8 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const selectedGalleryImage = ref(null)
 const form = useForm({
     provider: 'bank_transfer',
@@ -28,7 +31,7 @@ const form = useForm({
     customer_vat_id: '',
 })
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
@@ -202,4 +205,3 @@ const attributeOptions = (value) => String(value || '')
         </section>
     </div>
 </template>
-

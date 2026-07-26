@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'chat_detail_screen.dart';
+import 'conversations_center_screen.dart';
+import 'event_management_screen.dart';
+import 'file_manager_screen.dart';
+import 'file_preview_screen.dart';
 import 'team_operations_screen.dart';
+import 'training_event_detail_screen.dart';
+
+String _safeTeamError(BuildContext context, Object error) {
+  return error is AirmiusApiException
+      ? error.userMessage
+      : AirmiusScope.of(context).t('common.errorDetails');
+}
 
 class TeamDetailScreen extends StatefulWidget {
-  const TeamDetailScreen({super.key, required this.title, required this.mode, this.teamId, this.team});
+  const TeamDetailScreen({
+    super.key,
+    required this.title,
+    required this.mode,
+    this.teamId,
+    this.team,
+  });
 
   final String title;
   final String mode;
@@ -29,6 +49,24 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _reviewingJoinRequest = false;
   int? _updatingRoleUserId;
 
+  String _tr(String key) => AirmiusScope.of(context).t(key);
+
+  String _errorMessage(Object error) => error is AirmiusApiException
+      ? error.userMessage
+      : _tr('common.errorDetails');
+
+  String _sectionLabel(String section) => switch (section) {
+    'Profil' => _tr('teamDetail.tab.profile'),
+    'Kader' => _tr('teamDetail.tab.roster'),
+    'Rollen' => _tr('teamDetail.tab.roles'),
+    'Einladungen' => _tr('teamDetail.tab.invitations'),
+    'Kalender' => _tr('teamDetail.tab.calendar'),
+    'Dateien' => _tr('teamDetail.tab.files'),
+    'Chat' => _tr('teamDetail.tab.chat'),
+    'Strafen' => _tr('teamDetail.tab.penalties'),
+    _ => section,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -40,7 +78,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     super.didChangeDependencies();
     final teamId = widget.teamId;
     if (_teamFuture == null && teamId != null && teamId > 0) {
-      _teamFuture = AirmiusServicesScope.of(context).repositories.clubs.team(teamId);
+      _teamFuture = AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.team(teamId);
     }
   }
 
@@ -48,22 +88,39 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     final teamId = widget.teamId;
     if (teamId == null || teamId <= 0) return;
     setState(() {
-      _teamFuture = AirmiusServicesScope.of(context).repositories.clubs.team(teamId);
+      _teamFuture = AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.team(teamId);
     });
   }
 
   Future<void> _deleteTeam(AirmiusTeam team) async {
-    final confirmed = await confirmDanger(context, 'Team "${team.name}" löschen', 'Dieses Team wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.', 'Löschen');
+    final confirmed = await confirmDanger(
+      context,
+      '${_tr('teamDetail.deleteTeam')} "${team.name}"',
+      _tr('teamDetail.deleteWarning'),
+      _tr('teamDetail.delete'),
+    );
     if (confirmed != true || !mounted) return;
 
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.deleteTeam(team.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.deleteTeam(team.id);
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team gelöscht.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('teamDetail.deleted'))));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht gelöscht werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('teamDetail.deleteFailed')}: ${_errorMessage(error)}',
+          ),
+        ),
+      );
     }
   }
 
@@ -72,32 +129,55 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     setState(() => _requestingJoin = true);
 
     try {
-      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.requestTeamJoin(team.id);
+      final updatedTeam = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.requestTeamJoin(team.id);
       if (!mounted) return;
       setState(() {
         _teamFuture = Future.value(updatedTeam);
         _requestingJoin = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Beitrittsanfrage gesendet.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('teamDetail.joinSent'))));
     } catch (error) {
       if (!mounted) return;
       setState(() => _requestingJoin = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Beitrittsanfrage konnte nicht gesendet werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('teamDetail.joinFailed')}: ${_errorMessage(error)}',
+          ),
+        ),
+      );
     }
   }
 
-  Future<void> _reviewJoinRequest(AirmiusTeam team, AirmiusTeamJoinRequest request, {required bool approve}) async {
+  Future<void> _reviewJoinRequest(
+    AirmiusTeam team,
+    AirmiusTeamJoinRequest request, {
+    required bool approve,
+  }) async {
     if (_reviewingJoinRequest) return;
     final confirmed = approve
         ? true
-        : await confirmDanger(context, 'Team-Anfrage ablehnen', 'Moechtest du die Anfrage von ${request.name} ablehnen?', 'Ablehnen');
+        : await confirmDanger(
+            context,
+            _tr('teamDetail.declineRequest'),
+            '${_tr('teamDetail.declineRequestBefore')} ${request.name}?',
+            _tr('teamDetail.decline'),
+          );
     if (confirmed != true || !mounted) return;
 
     setState(() => _reviewingJoinRequest = true);
     try {
       final repository = AirmiusServicesScope.of(context).repositories.clubs;
       final updatedTeam = approve
-          ? await repository.approveTeamJoinRequest(team.id, request.id, role: request.roleHint ?? 'Player')
+          ? await repository.approveTeamJoinRequest(
+              team.id,
+              request.id,
+              role: request.roleHint ?? 'Player',
+            )
           : await repository.declineTeamJoinRequest(team.id, request.id);
       if (!mounted) return;
       setState(() {
@@ -105,31 +185,59 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         _section = 'Einladungen';
         _reviewingJoinRequest = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Team-Anfrage angenommen.' : 'Team-Anfrage abgelehnt.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approve
+                ? _tr('teamDetail.requestApproved')
+                : _tr('teamDetail.requestDeclined'),
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _reviewingJoinRequest = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team-Anfrage konnte nicht verarbeitet werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('teamDetail.requestFailed')}: ${_errorMessage(error)}',
+          ),
+        ),
+      );
     }
   }
 
-  Future<void> _updateTeamMemberRole(AirmiusTeam team, AirmiusUser user, String role) async {
+  Future<void> _updateTeamMemberRole(
+    AirmiusTeam team,
+    AirmiusUser user,
+    String role,
+  ) async {
     if (_updatingRoleUserId != null || user.role == role) return;
     setState(() => _updatingRoleUserId = user.id);
 
     try {
-      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.updateTeamMemberRole(team.id, user.id, role);
+      final updatedTeam = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.updateTeamMemberRole(team.id, user.id, role);
       if (!mounted) return;
       setState(() {
         _teamFuture = Future.value(updatedTeam);
         _section = 'Kader';
         _updatingRoleUserId = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teamrolle aktualisiert.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('teamDetail.roleUpdated'))));
     } catch (error) {
       if (!mounted) return;
       setState(() => _updatingRoleUserId = null);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Teamrolle konnte nicht gespeichert werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('teamDetail.roleFailed')}: ${_errorMessage(error)}',
+          ),
+        ),
+      );
     }
   }
 
@@ -143,15 +251,26 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       future: future,
       builder: (context, snapshot) {
         final team = snapshot.data ?? widget.team;
-        return _buildScaffold(team, isLoading: snapshot.connectionState == ConnectionState.waiting && team == null, error: snapshot.error);
+        return _buildScaffold(
+          team,
+          isLoading:
+              snapshot.connectionState == ConnectionState.waiting &&
+              team == null,
+          error: snapshot.error,
+        );
       },
     );
   }
 
-  Widget _buildScaffold(AirmiusTeam? team, {bool isLoading = false, Object? error}) {
+  Widget _buildScaffold(
+    AirmiusTeam? team, {
+    bool isLoading = false,
+    Object? error,
+  }) {
     final title = team?.name ?? widget.title;
     final subtitle = _teamSubtitle(team);
-    final canManageTeam = team?.canManage == true || (team == null && widget.teamId == null);
+    final canManageTeam =
+        team?.canManage == true || (team == null && widget.teamId == null);
     final sections = [
       'Profil',
       'Kader',
@@ -160,117 +279,921 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       'Kalender',
       'Dateien',
       'Chat',
+      'Strafen',
     ];
     if (!sections.contains(_section)) {
       _section = 'Profil';
     }
-    if (canManageTeam && (team?.pendingJoinRequests.isNotEmpty ?? false) && _section == 'Kader') {
+    if (canManageTeam &&
+        (team?.pendingJoinRequests.isNotEmpty ?? false) &&
+        _section == 'Kader') {
       _section = 'Einladungen';
     }
     return Scaffold(
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Team', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          _tr('teamDetail.team'),
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: PageFrame(
         title: title,
         subtitle: subtitle,
-        trailing: StatusPill(team?.visibility ?? 'Teamspace'),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
-              AirmiusAvatar(title, imageUrl: team?.logoUrl),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Eyebrow('Teamprofil'),
-                const SizedBox(height: 4),
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
-                Text(subtitle, style: const TextStyle(color: AirmiusColors.muted)),
-              ])),
-            ]),
-            if (isLoading) ...[
-              const SizedBox(height: 12),
-              const LinearProgressIndicator(color: AirmiusColors.blue, backgroundColor: AirmiusColors.cardSoft),
-            ],
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              Text('Teamdetails konnten gerade nicht geladen werden: $error', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
-            ],
+        trailing: StatusPill(team?.visibility ?? _tr('teamDetail.teamspace')),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      AirmiusAvatar(title, imageUrl: team?.logoUrl),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Eyebrow(_tr('teamDetail.teamProfile')),
+                            const SizedBox(height: 4),
+                            Text(
+                              title,
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isLoading) ...[
+                    const SizedBox(height: 12),
+                    LinearProgressIndicator(
+                      color: airmiusAccentColor(context),
+                      backgroundColor: airmiusSurfaceSoftColor(context),
+                    ),
+                  ],
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      '${_tr('teamDetail.loadFailed')}: ${_errorMessage(error)}',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: sections
+                        .map(
+                          (item) => ChoiceChip(
+                            selected: _section == item,
+                            label: Text(_sectionLabel(item)),
+                            onSelected: (_) => setState(() => _section = item),
+                            selectedColor: airmiusAccentColor(
+                              context,
+                            ).withValues(alpha: 0.22),
+                            backgroundColor: airmiusSurfaceSoftColor(context),
+                            side: BorderSide(
+                              color: _section == item
+                                  ? airmiusAccentColor(context)
+                                  : airmiusBorderColor(context),
+                            ),
+                            labelStyle: TextStyle(
+                              color: _section == item
+                                  ? airmiusAccentColor(context)
+                                  : airmiusMutedColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: sections.map((item) => ChoiceChip(
-              selected: _section == item,
-              label: Text(item),
-              onSelected: (_) => setState(() => _section = item),
-              selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-              backgroundColor: AirmiusColors.cardSoft,
-              side: BorderSide(color: _section == item ? AirmiusColors.blue : AirmiusColors.border),
-              labelStyle: TextStyle(color: _section == item ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
-            )).toList()),
-          ])),
-          const SizedBox(height: 14),
-          Row(children: [
-            Expanded(child: MetricCard(value: '${team?.usersCount ?? '-'}', label: 'Kader')),
-            const SizedBox(width: 10),
-            Expanded(child: MetricCard(value: '${team?.eventsCount ?? '-'}', label: 'Events')),
-            const SizedBox(width: 10),
-            Expanded(child: MetricCard(value: '${team?.attendanceStats?.trainingsTotal ?? '-'}', label: 'Trainings')),
-          ]),
-          const SizedBox(height: 14),
-          if (_section == 'Profil')
-            _ProfilePanel(
-              team: team,
-              fallbackTitle: title,
-              canManageTeam: canManageTeam,
-              joinRequests: _joinRequests,
-              teamChat: _teamChat,
-              guardianGate: _guardianGate,
-              onJoin: (value) => setState(() => _joinRequests = value),
-              onChat: (value) => setState(() => _teamChat = value),
-              onGuardian: (value) => setState(() => _guardianGate = value),
-              onUpdated: (updatedTeam) => setState(() {
-                _teamFuture = Future.value(updatedTeam);
-              }),
+            Row(
+              children: [
+                Expanded(
+                  child: MetricCard(
+                    value: '${team?.usersCount ?? '-'}',
+                    label: _tr('teamDetail.roster'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: MetricCard(
+                    value: '${team?.eventsCount ?? '-'}',
+                    label: _tr('teamDetail.events'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: MetricCard(
+                    value: '${team?.attendanceStats?.trainingsTotal ?? '-'}',
+                    label: _tr('teamDetail.trainings'),
+                  ),
+                ),
+              ],
             ),
-          if (_section == 'Kader')
-            _RosterPanel(
-              team: team,
-              canManageTeam: canManageTeam,
-              updatingUserId: _updatingRoleUserId,
-              onRoleChanged: team == null ? null : (user, role) => _updateTeamMemberRole(team, user, role),
+            const SizedBox(height: 14),
+            if (_section == 'Profil')
+              _ProfilePanel(
+                team: team,
+                fallbackTitle: title,
+                canManageTeam: canManageTeam,
+                joinRequests: _joinRequests,
+                teamChat: _teamChat,
+                guardianGate: _guardianGate,
+                onJoin: (value) => setState(() => _joinRequests = value),
+                onChat: (value) => setState(() => _teamChat = value),
+                onGuardian: (value) => setState(() => _guardianGate = value),
+                onUpdated: (updatedTeam) => setState(() {
+                  _teamFuture = Future.value(updatedTeam);
+                }),
+              ),
+            if (_section == 'Kader')
+              _RosterPanel(
+                team: team,
+                canManageTeam: canManageTeam,
+                updatingUserId: _updatingRoleUserId,
+                onRoleChanged: team == null
+                    ? null
+                    : (user, role) => _updateTeamMemberRole(team, user, role),
+              ),
+            if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
+            if (_section == 'Einladungen' && canManageTeam)
+              _InvitePanel(
+                team: team,
+                isReviewing: _reviewingJoinRequest,
+                onApprove: team == null
+                    ? null
+                    : (request) =>
+                          _reviewJoinRequest(team, request, approve: true),
+                onDecline: team == null
+                    ? null
+                    : (request) =>
+                          _reviewJoinRequest(team, request, approve: false),
+              ),
+            if (_section == 'Kalender') _CalendarPanel(team: team),
+            if (_section == 'Dateien' && team != null)
+              _TeamFilesPanel(team: team),
+            if (_section == 'Dateien' && team == null) const _FilesPanel(),
+            if (_section == 'Chat' && team != null) _TeamChatPanel(team: team),
+            if (_section == 'Chat' && team == null) const _ChatPanel(),
+            if (_section == 'Strafen' && team != null)
+              _PenaltiesPanel(team: team, canManageTeam: canManageTeam),
+            const SizedBox(height: 14),
+            if (team?.viewerPendingJoinRequestId != null) ...[
+              const _JoinRequestPendingNotice(),
+              const SizedBox(height: 10),
+            ],
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (team?.canRequestJoin == true)
+                  AirmiusButton(
+                    label: _requestingJoin
+                        ? _tr('teamDetail.sending')
+                        : _tr('teamDetail.requestJoin'),
+                    icon: Icons.how_to_reg_outlined,
+                    onPressed: _requestingJoin
+                        ? null
+                        : () => _requestJoin(team!),
+                  ),
+                if (widget.teamId != null && widget.teamId! > 0)
+                  AirmiusButton(
+                    label: _tr('teamDetail.reload'),
+                    icon: Icons.refresh_outlined,
+                    onPressed: _reloadTeam,
+                  ),
+                if (team?.canDelete == true)
+                  AirmiusButton(
+                    label: _tr('teamDetail.deleteTeam'),
+                    icon: Icons.delete_outline,
+                    danger: true,
+                    onPressed: () => _deleteTeam(team!),
+                  ),
+                if (canManageTeam)
+                  AirmiusButton(
+                    label: _tr('teamDetail.operations'),
+                    icon: Icons.tune_outlined,
+                    secondary: true,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TeamOperationsScreen(),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
-          if (_section == 'Einladungen' && canManageTeam)
-            _InvitePanel(
-              team: team,
-              isReviewing: _reviewingJoinRequest,
-              onApprove: team == null ? null : (request) => _reviewJoinRequest(team, request, approve: true),
-              onDecline: team == null ? null : (request) => _reviewJoinRequest(team, request, approve: false),
-            ),
-          if (_section == 'Kalender') const _CalendarPanel(),
-          if (_section == 'Dateien') const _FilesPanel(),
-          if (_section == 'Chat') const _ChatPanel(),
-          const SizedBox(height: 14),
-          if (team?.viewerPendingJoinRequestId != null) ...[
-            const _JoinRequestPendingNotice(),
-            const SizedBox(height: 10),
           ],
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            if (team?.canRequestJoin == true) AirmiusButton(label: _requestingJoin ? 'Wird gesendet...' : 'Beitritt anfragen', icon: Icons.how_to_reg_outlined, onPressed: _requestingJoin ? null : () => _requestJoin(team!)),
-            if (widget.teamId != null && widget.teamId! > 0) AirmiusButton(label: 'Neu laden', icon: Icons.refresh_outlined, onPressed: _reloadTeam),
-            if (team?.canDelete == true) AirmiusButton(label: 'Team löschen', icon: Icons.delete_outline, danger: true, onPressed: () => _deleteTeam(team!)),
-            if (canManageTeam) AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
-          ]),
-        ]),
+        ),
       ),
     );
   }
 
   String _teamSubtitle(AirmiusTeam? team) {
-    if (team == null) return 'Teamprofil, Kader, Rollen, Einladungen, Kalender und Dateien';
+    if (team == null) return _tr('teamDetail.subtitle');
     final parts = [
       team.clubName,
       team.sportType,
       team.ageGroup,
       team.description,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
-    return parts.isEmpty ? 'Teamprofil, Kader, Rollen, Einladungen, Kalender und Dateien' : parts.join(' - ');
+    return parts.isEmpty ? _tr('teamDetail.subtitle') : parts.join(' - ');
+  }
+}
+
+Map<String, dynamic> _teamPenaltyMap(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+
+List<Map<String, dynamic>> _teamPenaltyList(Object? value) => value is List
+    ? value
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList()
+    : <Map<String, dynamic>>[];
+
+String _teamPenaltyText(Object? value, [String fallback = '']) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
+double _teamPenaltyNumber(Object? value) => value is num
+    ? value.toDouble()
+    : double.tryParse('$value'.replaceAll(',', '.')) ?? 0;
+
+int _teamPenaltyInt(Object? value) => _teamPenaltyNumber(value).round();
+
+bool _teamPenaltyBool(Object? value) =>
+    value == true || value == 1 || value?.toString() == '1';
+
+String _teamPenaltyMoney(Object? value) =>
+    '${_teamPenaltyNumber(value).toStringAsFixed(2)} EUR';
+
+String _teamPenaltyTriggerLabel(String value, String Function(String) t) =>
+    switch (value) {
+      'late' => t('teamDetail.penaltyTriggerLate'),
+      'absence' => t('teamDetail.penaltyTriggerAbsence'),
+      'forgotten_equipment' => t('teamDetail.penaltyTriggerEquipment'),
+      'custom' => t('teamDetail.penaltyTriggerCustom'),
+      _ => value,
+    };
+
+String _teamPenaltyCalculationLabel(String value, String Function(String) t) =>
+    switch (value) {
+      'fixed' => t('teamDetail.penaltyCalculationFixed'),
+      'per_minute' => t('teamDetail.penaltyCalculationMinute'),
+      'threshold_fixed' => t('teamDetail.penaltyCalculationThreshold'),
+      'item' => t('teamDetail.penaltyCalculationItem'),
+      _ => value,
+    };
+
+class _PenaltiesPanel extends StatefulWidget {
+  const _PenaltiesPanel({required this.team, required this.canManageTeam});
+
+  final AirmiusTeam team;
+  final bool canManageTeam;
+
+  @override
+  State<_PenaltiesPanel> createState() => _PenaltiesPanelState();
+}
+
+class _PenaltiesPanelState extends State<_PenaltiesPanel> {
+  Future<AirmiusJson>? _future;
+  bool _busy = false;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _client.teamPenalties(widget.team.id);
+  }
+
+  void _reload() {
+    setState(() => _future = _client.teamPenalties(widget.team.id));
+  }
+
+  Future<void> _run(
+    Future<dynamic> Function() action, {
+    required String success,
+  }) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(success)));
+      _reload();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_safeTeamError(context, error))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _addRule() async {
+    final titleController = TextEditingController();
+    final amountController = TextEditingController();
+    final descriptionController = TextEditingController();
+    var trigger = 'late';
+    var calculation = 'fixed';
+    String? formError;
+    final payload = await showDialog<AirmiusJson>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('teamDetail.addPenaltyRule')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyTitle'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: trigger,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyTrigger'),
+                  ),
+                  items: [
+                    for (final value in const [
+                      'late',
+                      'absence',
+                      'forgotten_equipment',
+                      'custom',
+                    ])
+                      DropdownMenuItem(
+                        value: value,
+                        child: Text(_teamPenaltyTriggerLabel(value, t)),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => trigger = value ?? trigger),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: calculation,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyCalculation'),
+                  ),
+                  items: [
+                    for (final value in const [
+                      'fixed',
+                      'per_minute',
+                      'threshold_fixed',
+                      'item',
+                    ])
+                      DropdownMenuItem(
+                        value: value,
+                        child: Text(_teamPenaltyCalculationLabel(value, t)),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => calculation = value ?? calculation),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: amountController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyAmount'),
+                    hintText: '5,00',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyDescription'),
+                  ),
+                ),
+                if (formError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    formError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                final amount = double.tryParse(
+                  amountController.text.trim().replaceAll(',', '.'),
+                );
+                if (title.isEmpty ||
+                    (calculation != 'item' && amount == null)) {
+                  setDialogState(
+                    () => formError = t('teamDetail.penaltyRequired'),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, <String, dynamic>{
+                  'title': title,
+                  'trigger': trigger,
+                  'calculation_type': calculation,
+                  'amount': amount,
+                  'currency': 'EUR',
+                  'description': descriptionController.text.trim().isEmpty
+                      ? null
+                      : descriptionController.text.trim(),
+                  'is_active': true,
+                });
+              },
+              child: Text(t('teamDetail.savePenaltyRule')),
+            ),
+          ],
+        ),
+      ),
+    );
+    titleController.dispose();
+    amountController.dispose();
+    descriptionController.dispose();
+    if (payload == null || !mounted) return;
+    await _run(
+      () => _client.createTeamPenaltyRule(widget.team.id, payload),
+      success: t('teamDetail.penaltyRuleSaved'),
+    );
+  }
+
+  Future<void> _addFee() async {
+    if (widget.team.users.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('teamDetail.noMembers'))));
+      return;
+    }
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+    var selectedUser = widget.team.users.first.id;
+    String? formError;
+    final payload = await showDialog<AirmiusJson>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('teamDetail.addPenaltyFee')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: selectedUser,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.member'),
+                  ),
+                  items: [
+                    for (final user in widget.team.users)
+                      DropdownMenuItem(value: user.id, child: Text(user.name)),
+                  ],
+                  onChanged: (value) => setDialogState(
+                    () => selectedUser = value ?? selectedUser,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: amountController,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyAmount'),
+                    hintText: '5,00',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: noteController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: t('teamDetail.penaltyNote'),
+                  ),
+                ),
+                if (formError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    formError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final amount = double.tryParse(
+                  amountController.text.trim().replaceAll(',', '.'),
+                );
+                if (amount == null || amount <= 0) {
+                  setDialogState(
+                    () => formError = t('teamDetail.penaltyRequired'),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, <String, dynamic>{
+                  'user_id': selectedUser,
+                  'amount': amount,
+                  if (noteController.text.trim().isNotEmpty)
+                    'note': noteController.text.trim(),
+                });
+              },
+              child: Text(t('teamDetail.savePenaltyFee')),
+            ),
+          ],
+        ),
+      ),
+    );
+    amountController.dispose();
+    noteController.dispose();
+    if (payload == null || !mounted) return;
+    await _run(
+      () => _client.createTeamPenaltyFee(widget.team.id, payload),
+      success: t('teamDetail.penaltyFeeSaved'),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<AirmiusJson>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const AirmiusPanel(
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return AirmiusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(t('teamDetail.penaltiesLoadFailed')),
+                const SizedBox(height: 10),
+                AirmiusButton(
+                  label: t('teamDetail.reload'),
+                  icon: Icons.refresh_outlined,
+                  onPressed: _reload,
+                ),
+              ],
+            ),
+          );
+        }
+        final payload = _teamPenaltyMap(
+          snapshot.data?['data'] ?? snapshot.data,
+        );
+        final rules = _teamPenaltyList(payload['rules']);
+        final fees = _teamPenaltyList(payload['fees']);
+        final summary = _teamPenaltyMap(payload['summary']);
+        final canManage =
+            widget.canManageTeam && payload['can_manage'] != false;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t('teamDetail.penalties'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: t('teamDetail.reload'),
+                        onPressed: _busy ? null : _reload,
+                        icon: const Icon(Icons.refresh_outlined),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    t('teamDetail.penaltiesBody'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _PenaltyMetric(
+                        value: _teamPenaltyMoney(summary['open_amount']),
+                        label: t('teamDetail.openPenalties'),
+                      ),
+                      _PenaltyMetric(
+                        value: '${_teamPenaltyInt(summary['open_count'])}',
+                        label: t('teamDetail.openPenaltyCount'),
+                      ),
+                      if (canManage)
+                        AirmiusButton(
+                          label: t('teamDetail.addPenaltyRule'),
+                          icon: Icons.add_task_outlined,
+                          secondary: true,
+                          onPressed: _busy ? null : _addRule,
+                        ),
+                      if (canManage)
+                        AirmiusButton(
+                          label: t('teamDetail.addPenaltyFee'),
+                          icon: Icons.receipt_long_outlined,
+                          secondary: true,
+                          onPressed: _busy ? null : _addFee,
+                        ),
+                    ],
+                  ),
+                  if (_busy) ...[
+                    const SizedBox(height: 10),
+                    const LinearProgressIndicator(minHeight: 3),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            _PenaltyListPanel(
+              title: t('teamDetail.penaltyRules'),
+              empty: t('teamDetail.noPenaltyRules'),
+              children: rules
+                  .map(
+                    (rule) => _PenaltyRuleRow(
+                      rule: rule,
+                      canManage: canManage,
+                      onDeactivate: () => _run(
+                        () => _client.deactivateTeamPenaltyRule(
+                          widget.team.id,
+                          _teamPenaltyInt(rule['id']),
+                        ),
+                        success: t('teamDetail.penaltyRuleDeactivated'),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 10),
+            _PenaltyListPanel(
+              title: t('teamDetail.penaltyFees'),
+              empty: t('teamDetail.noPenaltyFees'),
+              children: fees
+                  .map(
+                    (fee) => _PenaltyFeeRow(
+                      fee: fee,
+                      canManage: canManage,
+                      onPaid: () => _run(
+                        () => _client.markTeamPenaltyFeePaid(
+                          widget.team.id,
+                          _teamPenaltyInt(fee['id']),
+                        ),
+                        success: t('teamDetail.penaltyFeePaid'),
+                      ),
+                      onCancel: () => _run(
+                        () => _client.cancelTeamPenaltyFee(
+                          widget.team.id,
+                          _teamPenaltyInt(fee['id']),
+                        ),
+                        success: t('teamDetail.penaltyFeeCancelled'),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PenaltyMetric extends StatelessWidget {
+  const _PenaltyMetric({required this.value, required this.label});
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => MetricCard(value: value, label: label);
+}
+
+class _PenaltyListPanel extends StatelessWidget {
+  const _PenaltyListPanel({
+    required this.title,
+    required this.empty,
+    required this.children,
+  });
+
+  final String title;
+  final String empty;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => AirmiusPanel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 8),
+        if (children.isEmpty)
+          Text(empty, style: TextStyle(color: airmiusMutedColor(context)))
+        else
+          ...children,
+      ],
+    ),
+  );
+}
+
+class _PenaltyRuleRow extends StatelessWidget {
+  const _PenaltyRuleRow({
+    required this.rule,
+    required this.canManage,
+    required this.onDeactivate,
+  });
+
+  final Map<String, dynamic> rule;
+  final bool canManage;
+  final VoidCallback onDeactivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final amount = _teamPenaltyNumber(rule['amount']);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.rule_outlined, color: airmiusAccentColor(context)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _teamPenaltyText(
+                      rule['title'],
+                      t('teamDetail.penaltyRule'),
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${_teamPenaltyTriggerLabel(_teamPenaltyText(rule['trigger']), t)} · ${_teamPenaltyCalculationLabel(_teamPenaltyText(rule['calculation_type']), t)}${amount > 0 ? ' · ${_teamPenaltyMoney(amount)}' : ''}',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ],
+              ),
+            ),
+            if (canManage && _teamPenaltyBool(rule['is_active']))
+              IconButton(
+                tooltip: t('teamDetail.deactivatePenaltyRule'),
+                onPressed: onDeactivate,
+                icon: const Icon(Icons.pause_circle_outline),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PenaltyFeeRow extends StatelessWidget {
+  const _PenaltyFeeRow({
+    required this.fee,
+    required this.canManage,
+    required this.onPaid,
+    required this.onCancel,
+  });
+
+  final Map<String, dynamic> fee;
+  final bool canManage;
+  final VoidCallback onPaid;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final member = _teamPenaltyMap(fee['member']);
+    final status = _teamPenaltyText(fee['status'], 'open');
+    final statusLabel = switch (status) {
+      'paid' => t('teamDetail.penaltyPaid'),
+      'cancelled' => t('teamDetail.penaltyCancelled'),
+      _ => t('teamDetail.penaltyOpen'),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _teamPenaltyText(member['name'], t('teamDetail.member')),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+                StatusPill(statusLabel),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${_teamPenaltyMoney(fee['amount'])}${_teamPenaltyText(fee['note']).isEmpty ? '' : ' · ${_teamPenaltyText(fee['note'])}'}',
+              style: TextStyle(color: airmiusMutedColor(context)),
+            ),
+            if (canManage && status == 'open') ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: onPaid,
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: Text(t('teamDetail.markPenaltyPaid')),
+                  ),
+                  TextButton.icon(
+                    onPressed: onCancel,
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: Text(t('teamDetail.cancelPenalty')),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -279,24 +1202,52 @@ class _JoinRequestPendingNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.blue.withValues(alpha: 0.10),
+        color: airmiusAccentColor(context).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: airmiusAccentColor(context).withValues(alpha: 0.35),
+        ),
       ),
-      child: const Row(children: [
-        Icon(Icons.hourglass_top_outlined, color: AirmiusColors.blue, size: 20),
-        SizedBox(width: 10),
-        Expanded(child: Text('Deine Beitrittsanfrage wartet auf Freigabe.', style: TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-      ]),
+      child: Row(
+        children: [
+          Icon(
+            Icons.hourglass_top_outlined,
+            color: airmiusAccentColor(context),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              t('teamDetail.joinPending'),
+              style: TextStyle(
+                color: airmiusAccentColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ProfilePanel extends StatelessWidget {
-  const _ProfilePanel({required this.team, required this.fallbackTitle, required this.canManageTeam, required this.joinRequests, required this.teamChat, required this.guardianGate, required this.onJoin, required this.onChat, required this.onGuardian, required this.onUpdated});
+  const _ProfilePanel({
+    required this.team,
+    required this.fallbackTitle,
+    required this.canManageTeam,
+    required this.joinRequests,
+    required this.teamChat,
+    required this.guardianGate,
+    required this.onJoin,
+    required this.onChat,
+    required this.onGuardian,
+    required this.onUpdated,
+  });
 
   final AirmiusTeam? team;
   final String fallbackTitle;
@@ -311,34 +1262,123 @@ class _ProfilePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Eyebrow('Teamdaten'),
-      const SizedBox(height: 12),
-      _TeamInfoGrid(rows: [
-        _TeamInfoData(label: 'Teamname', value: team?.name ?? fallbackTitle, icon: Icons.groups_2_outlined),
-        _TeamInfoData(label: 'Verein', value: team?.clubName ?? 'Nicht angegeben', icon: Icons.shield_outlined),
-        _TeamInfoData(label: 'Sportart', value: team?.sportType ?? 'Nicht angegeben', icon: Icons.sports_soccer_outlined),
-        _TeamInfoData(label: 'Altersgruppe', value: team?.ageGroup ?? 'Nicht angegeben', icon: Icons.group_outlined),
-        _TeamInfoData(label: 'Sichtbarkeit', value: team?.visibility ?? 'Teamspace', icon: Icons.visibility_outlined),
-        _TeamInfoData(label: 'Beschreibung', value: team?.description ?? 'Keine Beschreibung vorhanden.', icon: Icons.notes_outlined),
-      ]),
-      const SizedBox(height: 12),
-      if (team?.attendanceStats != null) ...[
-        _AttendanceStatsPanel(stats: team!.attendanceStats!),
-        const SizedBox(height: 12),
-      ],
-      if (canManageTeam && team != null) ...[
-        _TeamEditSection(team: team!, onUpdated: onUpdated),
-        const SizedBox(height: 12),
-      ],
-      if (canManageTeam) ...[
-        const Eyebrow('Mobile Teamfunktionen'),
-        const SizedBox(height: 8),
-        SwitchListTile(value: joinRequests, onChanged: onJoin, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte können sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
-        SwitchListTile(value: teamChat, onChanged: onChat, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
-        SwitchListTile(value: guardianGate, onChanged: onGuardian, activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
-      ],
-    ]));
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamData')),
+          const SizedBox(height: 12),
+          _TeamInfoGrid(
+            rows: [
+              _TeamInfoData(
+                label: t('teamDetail.teamName'),
+                value: team?.name ?? fallbackTitle,
+                icon: Icons.groups_2_outlined,
+              ),
+              _TeamInfoData(
+                label: t('teamDetail.club'),
+                value: team?.clubName ?? t('teamDetail.notProvided'),
+                icon: Icons.shield_outlined,
+              ),
+              _TeamInfoData(
+                label: t('teamDetail.sport'),
+                value: team?.sportType ?? t('teamDetail.notProvided'),
+                icon: Icons.sports_soccer_outlined,
+              ),
+              _TeamInfoData(
+                label: t('teamDetail.ageGroup'),
+                value: team?.ageGroup ?? t('teamDetail.notProvided'),
+                icon: Icons.group_outlined,
+              ),
+              _TeamInfoData(
+                label: t('teamDetail.visibility'),
+                value: team?.visibility ?? t('teamDetail.teamspace'),
+                icon: Icons.visibility_outlined,
+              ),
+              _TeamInfoData(
+                label: t('teamDetail.description'),
+                value: team?.description ?? t('teamDetail.noDescription'),
+                icon: Icons.notes_outlined,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (team?.attendanceStats != null) ...[
+            _AttendanceStatsPanel(stats: team!.attendanceStats!),
+            const SizedBox(height: 12),
+          ],
+          if (canManageTeam && team != null) ...[
+            _TeamEditSection(team: team!, onUpdated: onUpdated),
+            const SizedBox(height: 12),
+          ],
+          if (canManageTeam) ...[
+            Eyebrow(t('teamDetail.mobileFunctions')),
+            const SizedBox(height: 8),
+            Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile(
+                value: joinRequests,
+                onChanged: onJoin,
+                activeThumbColor: airmiusAccentColor(context),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  t('teamDetail.allowJoinRequests'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                subtitle: Text(
+                  t('teamDetail.allowJoinRequestsBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ),
+            ),
+            Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile(
+                value: teamChat,
+                onChanged: onChat,
+                activeThumbColor: airmiusAccentColor(context),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  t('teamDetail.teamChatActive'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                subtitle: Text(
+                  t('teamDetail.teamChatBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ),
+            ),
+            Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile(
+                value: guardianGate,
+                onChanged: onGuardian,
+                activeThumbColor: airmiusAccentColor(context),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  t('teamDetail.guardianCheck'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                subtitle: Text(
+                  t('teamDetail.guardianCheckBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
@@ -357,24 +1397,30 @@ class _TeamEditSectionState extends State<_TeamEditSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      AirmiusButton(
-        label: _editing ? 'Bearbeitung schließen' : 'Teamdaten bearbeiten',
-        icon: _editing ? Icons.close_outlined : Icons.edit_outlined,
-        secondary: true,
-        onPressed: () => setState(() => _editing = !_editing),
-      ),
-      if (_editing) ...[
-        const SizedBox(height: 10),
-        _TeamEditPanel(
-          team: widget.team,
-          onUpdated: (team) {
-            widget.onUpdated(team);
-            if (mounted) setState(() => _editing = false);
-          },
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AirmiusButton(
+          label: _editing
+              ? t('teamDetail.closeEditing')
+              : t('teamDetail.editData'),
+          icon: _editing ? Icons.close_outlined : Icons.edit_outlined,
+          secondary: true,
+          onPressed: () => setState(() => _editing = !_editing),
         ),
+        if (_editing) ...[
+          const SizedBox(height: 10),
+          _TeamEditPanel(
+            team: widget.team,
+            onUpdated: (team) {
+              widget.onUpdated(team);
+              if (mounted) setState(() => _editing = false);
+            },
+          ),
+        ],
       ],
-    ]);
+    );
   }
 }
 
@@ -406,7 +1452,9 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
+    _sportsFuture ??= AirmiusServicesScope.of(
+      context,
+    ).repositories.sports.sports().then((page) => page.items);
   }
 
   @override
@@ -423,17 +1471,30 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
 
     setState(() => _saving = true);
     try {
-      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.updateTeam(widget.team.id, {
-        'name': name,
-        'sport_type': sportType.isEmpty ? null : sportType,
-      });
+      final updatedTeam = await AirmiusServicesScope.of(context)
+          .repositories
+          .clubs
+          .updateTeam(widget.team.id, {
+            'name': name,
+            'sport_type': sportType.isEmpty ? null : sportType,
+          });
       if (!mounted) return;
       widget.onUpdated(updatedTeam);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teamdaten gespeichert.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('teamDetail.dataSaved')),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Teamdaten konnten nicht gespeichert werden: $message')));
+      final message = _safeTeamError(context, error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${AirmiusScope.of(context).t('teamDetail.dataSaveFailed')}: $message',
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -441,51 +1502,64 @@ class _TeamEditPanelState extends State<_TeamEditPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Eyebrow('Teamdaten bearbeiten'),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _nameController,
-          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-          decoration: const InputDecoration(labelText: 'Teamname'),
-        ),
-        const SizedBox(height: 10),
-        FutureBuilder<List<AirmiusSport>>(
-          future: _sportsFuture,
-          builder: (context, snapshot) {
-            final sports = snapshot.data ?? const <AirmiusSport>[];
-            return _TeamSportField(
-              controller: _sportController,
-              sports: sports,
-              loading: snapshot.connectionState == ConnectionState.waiting,
-              onTextChanged: () => _selectedSportSlug = null,
-              onSelected: (sport) {
-                _sportController.text = sport.name;
-                _selectedSportSlug = sport.slug;
-              },
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        AirmiusButton(
-          label: _saving ? 'Speichert...' : 'Teamdaten speichern',
-          icon: Icons.save_outlined,
-          onPressed: _saving ? null : _save,
-        ),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.editData')),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _nameController,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+            decoration: InputDecoration(labelText: t('teamDetail.teamName')),
+          ),
+          const SizedBox(height: 10),
+          FutureBuilder<List<AirmiusSport>>(
+            future: _sportsFuture,
+            builder: (context, snapshot) {
+              final sports = snapshot.data ?? const <AirmiusSport>[];
+              return _TeamSportField(
+                controller: _sportController,
+                sports: sports,
+                loading: snapshot.connectionState == ConnectionState.waiting,
+                onTextChanged: () => _selectedSportSlug = null,
+                onSelected: (sport) {
+                  _sportController.text = sport.name;
+                  _selectedSportSlug = sport.slug;
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: _saving ? t('teamDetail.saving') : t('teamDetail.saveData'),
+            icon: Icons.save_outlined,
+            onPressed: _saving ? null : _save,
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _TeamSportField extends StatelessWidget {
-  const _TeamSportField({required this.controller, required this.sports, required this.loading, required this.onTextChanged, required this.onSelected});
+  const _TeamSportField({
+    required this.controller,
+    required this.sports,
+    required this.loading,
+    required this.onTextChanged,
+    required this.onSelected,
+  });
 
   final TextEditingController controller;
   final List<AirmiusSport> sports;
@@ -495,50 +1569,79 @@ class _TeamSportField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     if (sports.isEmpty) {
       return TextField(
         controller: controller,
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-        decoration: InputDecoration(labelText: 'Sportart', hintText: loading ? 'Sportarten werden geladen...' : 'Sportart suchen'),
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+        decoration: InputDecoration(
+          labelText: t('teamDetail.sport'),
+          hintText: loading
+              ? t('teamDetail.sportsLoading')
+              : t('teamDetail.searchSport'),
+        ),
         onChanged: (_) => onTextChanged(),
       );
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Sportart', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      Autocomplete<AirmiusSport>(
-        initialValue: TextEditingValue(text: controller.text),
-        displayStringForOption: (sport) => sport.name,
-        optionsBuilder: (value) {
-          final query = value.text.trim().toLowerCase();
-          final options = query.isEmpty
-              ? sports
-              : sports.where((sport) {
-                  final name = sport.name.toLowerCase();
-                  final slug = sport.slug.toLowerCase();
-                  return name.contains(query) || slug.contains(query);
-                });
-          return options.take(10);
-        },
-        onSelected: onSelected,
-        fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-          if (textController.text.isEmpty && controller.text.isNotEmpty) {
-            textController.text = controller.text;
-          }
-          return TextField(
-            controller: textController,
-            focusNode: focusNode,
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-            decoration: const InputDecoration(hintText: 'Sportart suchen', suffixIcon: Icon(Icons.search, color: AirmiusColors.muted)),
-            onChanged: (value) {
-              controller.text = value;
-              onTextChanged();
-            },
-          );
-        },
-      ),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('teamDetail.sport'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Autocomplete<AirmiusSport>(
+          initialValue: TextEditingValue(text: controller.text),
+          displayStringForOption: (sport) => sport.name,
+          optionsBuilder: (value) {
+            final query = value.text.trim().toLowerCase();
+            final options = query.isEmpty
+                ? sports
+                : sports.where((sport) {
+                    final name = sport.name.toLowerCase();
+                    final slug = sport.slug.toLowerCase();
+                    return name.contains(query) || slug.contains(query);
+                  });
+            return options.take(10);
+          },
+          onSelected: onSelected,
+          fieldViewBuilder:
+              (context, textController, focusNode, onFieldSubmitted) {
+                if (textController.text.isEmpty && controller.text.isNotEmpty) {
+                  textController.text = controller.text;
+                }
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: t('teamDetail.searchSport'),
+                    suffixIcon: Icon(
+                      Icons.search,
+                      color: airmiusMutedColor(context),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    controller.text = value;
+                    onTextChanged();
+                  },
+                );
+              },
+        ),
+      ],
+    );
   }
 }
 
@@ -549,47 +1652,103 @@ class _AttendanceStatsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final members = stats.members.take(8).toList();
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Expanded(child: Eyebrow('Trainingsbeteiligung')),
-          StatusPill('${stats.trainingsTotal} Trainings', color: AirmiusColors.blue),
-        ]),
-        const SizedBox(height: 10),
-        if (members.isEmpty)
-          const Text('Noch keine Trainingsteilnahmen vorhanden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
-        else
-          ...members.map((member) => Padding(
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Eyebrow(t('teamDetail.trainingAttendance'))),
+              StatusPill(
+                '${stats.trainingsTotal} ${t('teamDetail.trainings')}',
+                color: airmiusAccentColor(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (members.isEmpty)
+            Text(
+              t('teamDetail.noAttendance'),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            ...members.map(
+              (member) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Row(children: [
-                    Expanded(child: Text(member.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-                    Text('${member.attendanceRate.toStringAsFixed(1)}%', style: const TextStyle(color: AirmiusColors.green, fontWeight: FontWeight.w900)),
-                  ]),
-                  const SizedBox(height: 5),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: LinearProgressIndicator(
-                      value: (member.attendanceRate / 100).clamp(0, 1).toDouble(),
-                      minHeight: 7,
-                      color: AirmiusColors.blue,
-                      backgroundColor: AirmiusColors.card,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            member.name,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${member.attendanceRate.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: AirmiusColors.green,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text('Dabei ${member.yes} · Verspätet ${member.late} · Absage ${member.no} · Keine Antwort ${member.noResponse}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
-                ]),
-              )),
-      ]),
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: (member.attendanceRate / 100)
+                            .clamp(0, 1)
+                            .toDouble(),
+                        minHeight: 7,
+                        color: airmiusAccentColor(context),
+                        backgroundColor: airmiusSurfaceColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${t('teamDetail.attendance.yes')} ${member.yes} · '
+                      '${t('teamDetail.attendance.late')} ${member.late} · '
+                      '${t('teamDetail.attendance.no')} ${member.no} · '
+                      '${t('teamDetail.attendance.noResponse')} ${member.noResponse}',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _TeamInfoData {
-  const _TeamInfoData({required this.label, required this.value, required this.icon});
+  const _TeamInfoData({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   final String label;
   final String value;
@@ -612,7 +1771,11 @@ class _TeamInfoGrid extends StatelessWidget {
           spacing: gap,
           runSpacing: gap,
           children: [
-            for (final row in rows) SizedBox(width: width, child: _TeamInfoTile(row: row)),
+            for (final row in rows)
+              SizedBox(
+                width: width,
+                child: _TeamInfoTile(row: row),
+              ),
           ],
         );
       },
@@ -628,24 +1791,59 @@ class _TeamInfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 78,
+      constraints: const BoxConstraints(minHeight: 78),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Icon(row.icon, color: AirmiusColors.blue, size: 20),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(row.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 3),
-          Text(row.value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.2)),
-        ])),
-      ]),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(row.icon, color: airmiusAccentColor(context), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  row.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  row.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _RosterPanel extends StatelessWidget {
-  const _RosterPanel({required this.team, required this.canManageTeam, required this.updatingUserId, required this.onRoleChanged});
+  const _RosterPanel({
+    required this.team,
+    required this.canManageTeam,
+    required this.updatingUserId,
+    required this.onRoleChanged,
+  });
 
   final AirmiusTeam? team;
   final bool canManageTeam;
@@ -654,23 +1852,37 @@ class _RosterPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final users = team?.users ?? const <AirmiusUser>[];
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Eyebrow('Kader'),
-      const SizedBox(height: 12),
-      if (users.isEmpty)
-        const Text('Noch keine Teammitglieder geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
-      else
-        for (final user in users) ...[
-          _MemberRow(
-            user: user,
-            canManageTeam: canManageTeam,
-            isUpdating: updatingUserId == user.id,
-            onRoleChanged: onRoleChanged == null ? null : (role) => onRoleChanged!(user, role),
-          ),
-          const SizedBox(height: 10),
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.roster')),
+          const SizedBox(height: 12),
+          if (users.isEmpty)
+            Text(
+              t('teamDetail.noMembers'),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            for (final user in users) ...[
+              _MemberRow(
+                user: user,
+                canManageTeam: canManageTeam,
+                isUpdating: updatingUserId == user.id,
+                onRoleChanged: onRoleChanged == null
+                    ? null
+                    : (role) => onRoleChanged!(user, role),
+              ),
+              const SizedBox(height: 10),
+            ],
         ],
-    ]));
+      ),
+    );
   }
 }
 
@@ -679,20 +1891,40 @@ class _RolesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-      Eyebrow('Teamrollen'),
-      SizedBox(height: 12),
-      _RoleRow(role: 'Trainer', rights: 'Kader, Plaene, Feedback, Events'),
-      SizedBox(height: 10),
-      _RoleRow(role: 'Captain', rights: 'Teilnahme, Chatmoderation, Anwesenheit'),
-      SizedBox(height: 10),
-      _RoleRow(role: 'Spieler', rights: 'Profil, Log, Chat, Dateien ansehen'),
-    ]));
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamRoles')),
+          const SizedBox(height: 12),
+          _RoleRow(
+            role: t('teamDetail.role.coach'),
+            rights: t('teamDetail.role.coachRights'),
+          ),
+          const SizedBox(height: 10),
+          _RoleRow(
+            role: t('teamDetail.role.captain'),
+            rights: t('teamDetail.role.captainRights'),
+          ),
+          const SizedBox(height: 10),
+          _RoleRow(
+            role: t('teamDetail.role.player'),
+            rights: t('teamDetail.role.playerRights'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _InvitePanel extends StatefulWidget {
-  const _InvitePanel({required this.team, required this.isReviewing, required this.onApprove, required this.onDecline});
+  const _InvitePanel({
+    required this.team,
+    required this.isReviewing,
+    required this.onApprove,
+    required this.onDecline,
+  });
 
   final AirmiusTeam? team;
   final bool isReviewing;
@@ -708,6 +1940,8 @@ class _InvitePanelState extends State<_InvitePanel> {
   String _role = 'Player';
   bool _sending = false;
 
+  String _tr(String key) => AirmiusScope.of(context).t(key);
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -721,14 +1955,27 @@ class _InvitePanelState extends State<_InvitePanel> {
 
     setState(() => _sending = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.inviteTeamMember(team.id, email: email, role: _role);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.inviteTeamMember(team.id, email: email, role: _role);
       if (!mounted) return;
       _emailController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Einladung wurde als ${_teamRoleLabel(_role)} gesendet.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('teamDetail.invitationSentAs')} '
+            '${_teamRoleLabel(_role, _tr)}.',
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Einladung konnte nicht gesendet werden: $message')));
+      final message = _safeTeamError(context, error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_tr('teamDetail.invitationFailed')}: $message'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -736,75 +1983,133 @@ class _InvitePanelState extends State<_InvitePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final requests = widget.team?.pendingJoinRequests.where((request) => request.status == 'pending').toList() ?? const <AirmiusTeamJoinRequest>[];
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        const Expanded(child: Eyebrow('Offene Team-Anfragen')),
-        StatusPill('${requests.length} offen', color: requests.isEmpty ? AirmiusColors.green : AirmiusColors.amber),
-      ]),
-      const SizedBox(height: 12),
-      if (requests.isEmpty)
-        const Text('Keine offenen Team-Anfragen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
-      else
-        for (final request in requests) ...[
-          _TeamJoinRequestCard(
-            request: request,
-            isBusy: widget.isReviewing,
-            onApprove: widget.onApprove == null ? null : () => widget.onApprove!(request),
-            onDecline: widget.onDecline == null ? null : () => widget.onDecline!(request),
+    final t = AirmiusScope.of(context).t;
+    final requests =
+        widget.team?.pendingJoinRequests
+            .where((request) => request.status == 'pending')
+            .toList() ??
+        const <AirmiusTeamJoinRequest>[];
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Eyebrow(t('teamDetail.openRequests'))),
+              StatusPill(
+                '${requests.length} ${t('teamDetail.openAfter')}',
+                color: requests.isEmpty
+                    ? AirmiusColors.green
+                    : AirmiusColors.amber,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (requests.isEmpty)
+            Text(
+              t('teamDetail.noOpenRequests'),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            for (final request in requests) ...[
+              _TeamJoinRequestCard(
+                request: request,
+                isBusy: widget.isReviewing,
+                onApprove: widget.onApprove == null
+                    ? null
+                    : () => widget.onApprove!(request),
+                onDecline: widget.onDecline == null
+                    ? null
+                    : () => widget.onDecline!(request),
+              ),
+              const SizedBox(height: 10),
+            ],
+          const SizedBox(height: 10),
+          Divider(color: airmiusBorderColor(context)),
+          const SizedBox(height: 10),
+          Eyebrow(t('teamDetail.sendInvitation')),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            enabled: !_sending && widget.team != null,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+            decoration: InputDecoration(
+              labelText: t('teamDetail.email'),
+              hintText: 'mitglied@example.com',
+              prefixIcon: Icon(Icons.mail_outline),
+            ),
           ),
           const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: _role,
+            isExpanded: true,
+            dropdownColor: airmiusSurfaceColor(context),
+            decoration: InputDecoration(
+              labelText: t('teamDetail.role'),
+              labelStyle: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+              prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: airmiusBorderColor(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: airmiusAccentColor(context)),
+              ),
+              filled: true,
+              fillColor: airmiusSurfaceSoftColor(context),
+            ),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+            items: [
+              for (final item in _teamRoleValues)
+                DropdownMenuItem(
+                  value: item,
+                  child: Text(_teamRoleLabel(item, t)),
+                ),
+            ],
+            onChanged: _sending
+                ? null
+                : (value) => setState(() => _role = value ?? 'Player'),
+          ),
+          const SizedBox(height: 10),
+          AirmiusButton(
+            label: _sending
+                ? t('teamDetail.invitationSending')
+                : t('teamDetail.sendInvitation'),
+            icon: Icons.send_outlined,
+            onPressed: _sending || widget.team == null ? null : _sendInvitation,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            t('teamDetail.invitationExplanation'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
         ],
-      const SizedBox(height: 10),
-      const Divider(color: AirmiusColors.border),
-      const SizedBox(height: 10),
-      const Eyebrow('Einladung senden'),
-      const SizedBox(height: 12),
-      TextField(
-        controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        enabled: !_sending && widget.team != null,
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-        decoration: const InputDecoration(
-          labelText: 'E-Mail',
-          hintText: 'mitglied@example.com',
-          prefixIcon: Icon(Icons.mail_outline),
-        ),
       ),
-      const SizedBox(height: 10),
-      DropdownButtonFormField<String>(
-        initialValue: _role,
-        isExpanded: true,
-        dropdownColor: AirmiusColors.card,
-        decoration: InputDecoration(
-          labelText: 'Rolle',
-          labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
-          prefixIcon: const Icon(Icons.admin_panel_settings_outlined),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
-          filled: true,
-          fillColor: AirmiusColors.cardSoft,
-        ),
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-        items: [
-          for (final item in _teamRoleValues) DropdownMenuItem(value: item, child: Text(_teamRoleLabel(item))),
-        ],
-        onChanged: _sending ? null : (value) => setState(() => _role = value ?? 'Player'),
-      ),
-      const SizedBox(height: 10),
-      AirmiusButton(
-        label: _sending ? 'Einladung wird gesendet...' : 'Einladung senden',
-        icon: Icons.send_outlined,
-        onPressed: _sending || widget.team == null ? null : _sendInvitation,
-      ),
-      const SizedBox(height: 10),
-      const Text('Registrierte Airmius-User erhalten eine In-App-Benachrichtigung, externe E-Mail-Adressen eine Einladung per Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-    ]));
+    );
   }
 }
 
 class _TeamJoinRequestCard extends StatelessWidget {
-  const _TeamJoinRequestCard({required this.request, required this.isBusy, required this.onApprove, required this.onDecline});
+  const _TeamJoinRequestCard({
+    required this.request,
+    required this.isBusy,
+    required this.onApprove,
+    required this.onDecline,
+  });
 
   final AirmiusTeamJoinRequest request;
   final bool isBusy;
@@ -813,26 +2118,73 @@ class _TeamJoinRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          AirmiusAvatar(request.name),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(request.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 2),
-            Text(request.email.isEmpty ? 'Keine E-Mail hinterlegt' : request.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-          ])),
-          StatusPill(request.roleHint ?? 'Spieler'),
-        ]),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          AirmiusButton(label: isBusy ? 'Wird gespeichert...' : 'Annehmen', icon: Icons.check_circle_outline, onPressed: isBusy ? null : onApprove),
-          AirmiusButton(label: 'Ablehnen', icon: Icons.cancel_outlined, danger: true, secondary: true, onPressed: isBusy ? null : onDecline),
-        ]),
-      ]),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AirmiusAvatar(request.name),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      request.email.isEmpty
+                          ? t('teamDetail.noEmail')
+                          : request.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(_teamRoleLabel(request.roleHint ?? 'Player', t)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              AirmiusButton(
+                label: isBusy ? t('teamDetail.saving') : t('teamDetail.accept'),
+                icon: Icons.check_circle_outline,
+                onPressed: isBusy ? null : onApprove,
+              ),
+              AirmiusButton(
+                label: t('teamDetail.decline'),
+                icon: Icons.cancel_outlined,
+                danger: true,
+                secondary: true,
+                onPressed: isBusy ? null : onDecline,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -850,27 +2202,533 @@ class _LegacyInvitePanel extends StatelessWidget {
       SizedBox(height: 10),
       AirmiusTextField(label: 'Rolle', hint: 'Spieler, Trainer, Captain', icon: Icons.admin_panel_settings_outlined),
       SizedBox(height: 10),
-      Text('Einladungstoken, Ablaufdatum und Guardian-Prüfung werden später über die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+      Text('Einladungstoken, Ablaufdatum und Guardian-Prüfung werden später über die API erzeugt.', style: TextStyle(color: airmiusMutedColor(context), height: 1.35)),
     ]));
   }
 }
 
 */
-class _CalendarPanel extends StatelessWidget {
-  const _CalendarPanel();
+class _CalendarPanel extends StatefulWidget {
+  const _CalendarPanel({this.team});
+
+  final AirmiusTeam? team;
+
+  @override
+  State<_CalendarPanel> createState() => _CalendarPanelState();
+}
+
+class _CalendarPanelState extends State<_CalendarPanel> {
+  Future<AirmiusEventWorkspace>? _workspaceFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_workspaceFuture == null && widget.team != null) {
+      _workspaceFuture = _loadWorkspace();
+    }
+  }
+
+  Future<AirmiusEventWorkspace> _loadWorkspace() {
+    return AirmiusServicesScope.of(context).repositories.events.workspace(
+      teamId: widget.team!.id,
+      period: 'upcoming',
+    );
+  }
+
+  void _reload() {
+    setState(() => _workspaceFuture = _loadWorkspace());
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-      Eyebrow('Teamkalender'),
-      SizedBox(height: 12),
-      _EventLine(title: 'Intervalltraining', body: 'Morgen 18:30 - Sportplatz', status: 'Offen'),
-      SizedBox(height: 10),
-      _EventLine(title: 'Auswaertsspiel', body: 'Samstag 15:00 - Treffpunkt 13:45', status: 'Geplant'),
-      SizedBox(height: 10),
-      _EventLine(title: 'Kraftblock', body: 'Montag 19:00 - Halle', status: 'Plan'),
-    ]));
+    final t = AirmiusScope.of(context).t;
+    final team = widget.team;
+    if (team == null) {
+      return _calendarFallback(context, t);
+    }
+
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamCalendar')),
+          const SizedBox(height: 12),
+          FutureBuilder<AirmiusEventWorkspace>(
+            future: _workspaceFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: airmiusAccentColor(context),
+                    ),
+                  ),
+                );
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('teamDetail.calendarLoadFailed'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: t('teamDetail.reload'),
+                      icon: Icons.refresh_outlined,
+                      secondary: true,
+                      onPressed: _reload,
+                    ),
+                  ],
+                );
+              }
+              final workspace = snapshot.data;
+              final events =
+                  [
+                      ...(workspace?.calendarEvents ?? const <AirmiusEvent>[]),
+                      ...(workspace?.events ?? const <AirmiusEvent>[]),
+                    ].fold<List<AirmiusEvent>>([], (items, event) {
+                      if (items.every((item) => item.id != event.id)) {
+                        items.add(event);
+                      }
+                      return items;
+                    })
+                    ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+              final visibleEvents = events.take(6).toList();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (visibleEvents.isEmpty)
+                    Text(
+                      t('teamDetail.noEvents'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    )
+                  else
+                    ...visibleEvents.map(
+                      (event) => _TeamCalendarEventTile(event: event),
+                    ),
+                  if (events.length > visibleEvents.length) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      t('teamDetail.moreEvents'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('teamDetail.openCalendar'),
+            icon: Icons.event_outlined,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EventManagementScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
   }
+
+  Widget _calendarFallback(BuildContext context, String Function(String) t) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamCalendar')),
+          const SizedBox(height: 12),
+          Text(
+            t('teamDetail.noEvents'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('teamDetail.openCalendar'),
+            icon: Icons.event_outlined,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EventManagementScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamCalendarEventTile extends StatelessWidget {
+  const _TeamCalendarEventTile({required this.event});
+
+  final AirmiusEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final date = DateFormat.yMMMd(
+      locale,
+    ).add_Hm().format(event.startsAt.toLocal());
+    final location = [
+      event.locationName,
+      event.locationCity,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ');
+    final subtitle = [date, if (location.isNotEmpty) location].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Semantics(
+        button: true,
+        label: '${event.title}, $subtitle',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _openTeamEvent(context, event),
+            child: Ink(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: airmiusSurfaceColor(context).withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: airmiusBorderColor(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.event_available_outlined,
+                    color: airmiusAccentColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _openTeamEvent(BuildContext context, AirmiusEvent event) {
+  final fallbackBody = [
+    DateFormat.yMMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).add_Hm().format(event.startsAt.toLocal()),
+    event.location,
+    event.teamName,
+  ].whereType<String>().where((value) => value.isNotEmpty).join(' · ');
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TrainingEventDetailScreen(
+        event: event,
+        fallbackBody: event.notes?.isNotEmpty == true
+            ? event.notes!
+            : fallbackBody,
+      ),
+    ),
+  );
+}
+
+class _TeamFilesPanel extends StatefulWidget {
+  const _TeamFilesPanel({required this.team});
+
+  final AirmiusTeam team;
+
+  @override
+  State<_TeamFilesPanel> createState() => _TeamFilesPanelState();
+}
+
+class _TeamFilesPanelState extends State<_TeamFilesPanel> {
+  Future<AirmiusFileWorkspace>? _workspaceFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _workspaceFuture ??= _loadWorkspace();
+  }
+
+  Future<AirmiusFileWorkspace> _loadWorkspace() {
+    return AirmiusServicesScope.of(
+      context,
+    ).repositories.files.workspace(scope: 'team', teamId: widget.team.id);
+  }
+
+  void _reload() {
+    setState(() => _workspaceFuture = _loadWorkspace());
+  }
+
+  void _openFile(AirmiusManagedFile file) {
+    final t = AirmiusScope.of(context).t;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FilePreviewScreen(
+          title: file.name,
+          body: file.type.isEmpty ? t('files.backendPreview') : file.type,
+          status: t('files.backend'),
+          icon: _teamFileIcon(file.type),
+          fileId: file.id,
+          fileMeta: file.type.isEmpty ? t('files') : file.type,
+          fileUrl: file.url.isEmpty ? null : file.url,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamFiles')),
+          const SizedBox(height: 12),
+          FutureBuilder<AirmiusFileWorkspace>(
+            future: _workspaceFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: airmiusAccentColor(context),
+                    ),
+                  ),
+                );
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('teamDetail.filesLoadFailed'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: t('teamDetail.reload'),
+                      icon: Icons.refresh_outlined,
+                      secondary: true,
+                      onPressed: _reload,
+                    ),
+                  ],
+                );
+              }
+
+              final workspace = snapshot.data;
+              final files = workspace?.files ?? const <AirmiusManagedFile>[];
+              final folders = workspace?.folders ?? const <AirmiusFolder>[];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (folders.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        '${t('teamDetail.teamFolderCount')}: ${folders.length}',
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  if (files.isEmpty)
+                    Text(
+                      t('teamDetail.noFiles'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    )
+                  else
+                    ...files
+                        .take(6)
+                        .map(
+                          (file) => _TeamFileTile(
+                            file: file,
+                            onTap: () => _openFile(file),
+                          ),
+                        ),
+                  if (files.length > 6)
+                    Text(
+                      t('teamDetail.moreFiles'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('teamDetail.openFiles'),
+            icon: Icons.folder_open_outlined,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FileManagerScreen(
+                  initialScope: 'team',
+                  initialTeamId: widget.team.id,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamFileTile extends StatelessWidget {
+  const _TeamFileTile({required this.file, required this.onTap});
+
+  final AirmiusManagedFile file;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = [
+      if (file.type.trim().isNotEmpty) file.type,
+      if (file.size > 0) _teamFileSize(file.size),
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Semantics(
+        button: true,
+        label: '${file.name}${meta.isEmpty ? '' : ', $meta'}',
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Ink(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: airmiusSurfaceColor(context).withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: airmiusBorderColor(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _teamFileIcon(file.type),
+                    color: airmiusAccentColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          file.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (meta.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            meta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _teamFileIcon(String type) {
+  final normalized = type.toLowerCase();
+  if (normalized.contains('pdf')) return Icons.picture_as_pdf_outlined;
+  if (normalized.contains('image') ||
+      normalized.contains('png') ||
+      normalized.contains('jpg') ||
+      normalized.contains('jpeg')) {
+    return Icons.image_outlined;
+  }
+  if (normalized.contains('video')) return Icons.video_file_outlined;
+  if (normalized.contains('audio')) return Icons.audio_file_outlined;
+  if (normalized.contains('zip') || normalized.contains('archive')) {
+    return Icons.folder_zip_outlined;
+  }
+  return Icons.insert_drive_file_outlined;
+}
+
+String _teamFileSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  final kb = bytes / 1024;
+  if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+  final mb = kb / 1024;
+  if (mb < 1024) return '${mb.toStringAsFixed(1)} MB';
+  return '${(mb / 1024).toStringAsFixed(1)} GB';
 }
 
 class _FilesPanel extends StatelessWidget {
@@ -878,13 +2736,274 @@ class _FilesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-      Eyebrow('Teamdateien'),
-      SizedBox(height: 12),
-      _EventLine(title: 'Trainingsordnung.pdf', body: 'Aus Vereins-Dateimanager verknüpft', status: 'Pflicht'),
-      SizedBox(height: 10),
-      _EventLine(title: 'Spielplan.xlsx', body: 'Nur Trainer und Captain dürfen bearbeiten', status: 'Team'),
-    ]));
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamFiles')),
+          const SizedBox(height: 12),
+          Text(
+            t('teamDetail.noFiles'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('teamDetail.openFiles'),
+            icon: Icons.folder_open_outlined,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FileManagerScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamChatPanel extends StatefulWidget {
+  const _TeamChatPanel({required this.team});
+
+  final AirmiusTeam team;
+
+  @override
+  State<_TeamChatPanel> createState() => _TeamChatPanelState();
+}
+
+class _TeamChatPanelState extends State<_TeamChatPanel> {
+  Future<List<AirmiusConversation>>? _conversationsFuture;
+  bool _creating = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _conversationsFuture ??= _loadConversations();
+  }
+
+  Future<List<AirmiusConversation>> _loadConversations() async {
+    final page = await AirmiusServicesScope.of(
+      context,
+    ).repositories.conversations.conversations(teamId: widget.team.id);
+    return page.items.where((conversation) {
+      return conversation.teamId == widget.team.id;
+    }).toList();
+  }
+
+  void _reload() {
+    setState(() => _conversationsFuture = _loadConversations());
+  }
+
+  Future<void> _createTeamChat() async {
+    if (_creating) return;
+    setState(() => _creating = true);
+    try {
+      final conversation = await AirmiusServicesScope.of(context)
+          .repositories
+          .conversations
+          .createConversation(type: 'team', teamId: widget.team.id);
+      if (!mounted) return;
+      setState(() => _creating = false);
+      _openConversation(conversation);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _creating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AirmiusScope.of(context).t('teamDetail.chatCreateFailed'),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openConversation(AirmiusConversation conversation) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatDetailScreen(
+          conversationId: conversation.id,
+          title: conversation.title.isEmpty
+              ? AirmiusScope.of(context).t('teamDetail.teamChat')
+              : conversation.title,
+          kind: conversation.kind,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamChat')),
+          const SizedBox(height: 12),
+          FutureBuilder<List<AirmiusConversation>>(
+            future: _conversationsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting ||
+                  _creating) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: airmiusAccentColor(context),
+                    ),
+                  ),
+                );
+              }
+              if (snapshot.hasError) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('teamDetail.chatLoadFailed'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: t('teamDetail.reload'),
+                      icon: Icons.refresh_outlined,
+                      secondary: true,
+                      onPressed: _reload,
+                    ),
+                  ],
+                );
+              }
+              final conversations = snapshot.data ?? const [];
+              if (conversations.isEmpty) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('teamDetail.noChat'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    if (widget.team.viewerIsMember ||
+                        widget.team.canManage) ...[
+                      const SizedBox(height: 10),
+                      AirmiusButton(
+                        label: _creating
+                            ? t('teamDetail.chatOpening')
+                            : t('teamDetail.createChat'),
+                        icon: Icons.add_comment_outlined,
+                        onPressed: _creating ? null : _createTeamChat,
+                      ),
+                    ],
+                  ],
+                );
+              }
+              final conversation = conversations.first;
+              return _TeamConversationTile(
+                conversation: conversation,
+                onTap: () => _openConversation(conversation),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('teamDetail.openChat'),
+            icon: Icons.chat_bubble_outline,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ConversationsCenterScreen(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamConversationTile extends StatelessWidget {
+  const _TeamConversationTile({
+    required this.conversation,
+    required this.onTap,
+  });
+
+  final AirmiusConversation conversation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final memberLabel = conversation.membersCount == null
+        ? null
+        : '${conversation.membersCount} ${t('teamDetail.chatMembers')}';
+    final meta = [
+      ?memberLabel,
+      if (conversation.lastMessage.trim().isNotEmpty) conversation.lastMessage,
+    ].join(' · ');
+    return Semantics(
+      button: true,
+      label: conversation.title,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: airmiusSurfaceColor(context).withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: airmiusBorderColor(context)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.forum_outlined, color: airmiusAccentColor(context)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        conversation.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (meta.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          meta,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -893,18 +3012,42 @@ class _ChatPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-      Eyebrow('Teamchat'),
-      SizedBox(height: 12),
-      _EventLine(title: 'Trainer', body: 'Bitte Teilnahme für morgen bestätigen.', status: 'Neu'),
-      SizedBox(height: 10),
-      AirmiusTextField(label: 'Nachricht', hint: 'Nachricht an das Team', icon: Icons.chat_bubble_outline, maxLines: 2),
-    ]));
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('teamDetail.teamChat')),
+          const SizedBox(height: 12),
+          Text(
+            t('teamDetail.noChat'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          AirmiusButton(
+            label: t('teamDetail.openChat'),
+            icon: Icons.chat_bubble_outline,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ConversationsCenterScreen(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.user, required this.canManageTeam, required this.isUpdating, required this.onRoleChanged});
+  const _MemberRow({
+    required this.user,
+    required this.canManageTeam,
+    required this.isUpdating,
+    required this.onRoleChanged,
+  });
 
   final AirmiusUser user;
   final bool canManageTeam;
@@ -913,59 +3056,119 @@ class _MemberRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final role = _teamRoleValues.contains(user.role) ? user.role : 'Player';
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          AirmiusAvatar(user.name, imageUrl: user.avatarUrl),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(user.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            Text(user.email.isNotEmpty ? user.email : _teamRoleLabel(role), style: const TextStyle(color: AirmiusColors.muted)),
-          ])),
-          StatusPill(_teamRoleLabel(role), color: role == 'Coach' ? AirmiusColors.blue : role == 'Captain' ? AirmiusColors.green : AirmiusColors.amber),
-        ]),
-        if (canManageTeam) ...[
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            initialValue: role,
-            isExpanded: true,
-            dropdownColor: AirmiusColors.card,
-            decoration: InputDecoration(
-              labelText: isUpdating ? 'Speichert...' : 'Teamrolle',
-              labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
-              filled: true,
-              fillColor: AirmiusColors.card,
-            ),
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-            items: [
-              for (final item in _teamRoleValues) DropdownMenuItem(value: item, child: Text(_teamRoleLabel(item))),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AirmiusAvatar(user.name, imageUrl: user.avatarUrl),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      user.email.isNotEmpty
+                          ? user.email
+                          : _teamRoleLabel(role, t),
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(
+                _teamRoleLabel(role, t),
+                color: role == 'Coach'
+                    ? airmiusAccentColor(context)
+                    : role == 'Captain'
+                    ? AirmiusColors.green
+                    : AirmiusColors.amber,
+              ),
             ],
-            onChanged: isUpdating || onRoleChanged == null ? null : (value) {
-              if (value != null) onRoleChanged!(value);
-            },
           ),
+          if (canManageTeam) ...[
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              initialValue: role,
+              isExpanded: true,
+              dropdownColor: airmiusSurfaceColor(context),
+              decoration: InputDecoration(
+                labelText: isUpdating
+                    ? t('teamDetail.saving')
+                    : t('teamDetail.teamRole'),
+                labelStyle: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: airmiusBorderColor(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: airmiusAccentColor(context)),
+                ),
+                filled: true,
+                fillColor: airmiusSurfaceColor(context),
+              ),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+              items: [
+                for (final item in _teamRoleValues)
+                  DropdownMenuItem(
+                    value: item,
+                    child: Text(_teamRoleLabel(item, t)),
+                  ),
+              ],
+              onChanged: isUpdating || onRoleChanged == null
+                  ? null
+                  : (value) {
+                      if (value != null) onRoleChanged!(value);
+                    },
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
 
-const _teamRoleValues = ['Coach', 'Captain', 'Player', 'Treasurer', 'ClubPresident', 'ParentContact'];
+const _teamRoleValues = [
+  'Coach',
+  'Captain',
+  'Player',
+  'Treasurer',
+  'ClubPresident',
+  'ParentContact',
+];
 
-String _teamRoleLabel(String role) => switch (role) {
-      'Coach' => 'Trainer',
-      'Captain' => 'Kapitän',
-      'Player' => 'Spieler',
-      'Treasurer' => 'Kassenwart',
-      'ClubPresident' => 'Vorsitzender',
-      'ParentContact' => 'Elternkontakt',
-      _ => role,
-    };
+String _teamRoleLabel(String role, String Function(String) t) => switch (role) {
+  'Coach' => t('teamDetail.role.coach'),
+  'Captain' => t('teamDetail.role.captain'),
+  'Player' => t('teamDetail.role.player'),
+  'Treasurer' => t('teamDetail.role.treasurer'),
+  'ClubPresident' => t('teamDetail.role.president'),
+  'ParentContact' => t('teamDetail.role.parentContact'),
+  _ => role,
+};
 
 class _RoleRow extends StatelessWidget {
   const _RoleRow({required this.role, required this.rights});
@@ -975,19 +3178,30 @@ class _RoleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(role, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(rights, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))]));
-  }
-}
-
-class _EventLine extends StatelessWidget {
-  const _EventLine({required this.title, required this.body, required this.status});
-
-  final String title;
-  final String body;
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))])), StatusPill(status)]));
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            role,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            rights,
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+        ],
+      ),
+    );
   }
 }

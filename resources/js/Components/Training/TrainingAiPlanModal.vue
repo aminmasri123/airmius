@@ -163,7 +163,7 @@ const aiSafetyAcceptedModel = computed({
                                     </button>
                                 </div>
                                 <div class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
-                                    Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.
+                                    Ausgewogene Planung aktiv: Die KI ordnet jede Einheit automatisch einem passenden Typ zu, z. B. Long Run, Intervalle, Technik oder Regeneration.
                                 </div>
                             </div>
                         </div>
@@ -400,7 +400,6 @@ const aiSafetyAcceptedModel = computed({
                     </div>
                 </form>
 </template>
-
 
 
 

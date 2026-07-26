@@ -1,8 +1,12 @@
 ﻿<script setup>
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 defineProps({
     award: Object,
@@ -10,7 +14,7 @@ defineProps({
 </script>
 
 <template>
-    <Head :title="award?.badge?.name || 'Badge'" />
+    <Head :title="award?.badge?.name || tx('Badge')" />
 
     <section class="surface-card mx-auto max-w-2xl p-6">
         <div class="flex items-start gap-4">
@@ -22,19 +26,19 @@ defineProps({
                 <p class="mt-2 text-secondary">{{ award?.badge?.description }}</p>
                 <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                     <div>
-                        <dt class="text-secondary">Typ</dt>
+                        <dt class="text-secondary">{{ tx('Typ') }}</dt>
                         <dd class="font-semibold text-primary">{{ award?.badge?.actor_type }}</dd>
                     </div>
                     <div>
-                        <dt class="text-secondary">Grund</dt>
+                        <dt class="text-secondary">{{ tx('Grund') }}</dt>
                         <dd class="font-semibold text-primary">{{ award?.reason || award?.badge?.trigger }}</dd>
                     </div>
                     <div v-if="award?.meta?.xp !== undefined">
-                        <dt class="text-secondary">XP bei Vergabe</dt>
+                        <dt class="text-secondary">{{ tx('XP bei Vergabe') }}</dt>
                         <dd class="font-semibold text-primary">{{ award.meta.xp }}</dd>
                     </div>
                     <div v-if="award?.meta?.level !== undefined">
-                        <dt class="text-secondary">Level bei Vergabe</dt>
+                        <dt class="text-secondary">{{ tx('Level bei Vergabe') }}</dt>
                         <dd class="font-semibold text-primary">{{ award.meta.level }}</dd>
                     </div>
                 </dl>
@@ -42,4 +46,3 @@ defineProps({
         </div>
     </section>
 </template>
-

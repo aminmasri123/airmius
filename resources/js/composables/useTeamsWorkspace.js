@@ -5,6 +5,7 @@ import { useTeamsJobs } from '@/composables/useTeamsJobs'
 export function useTeamsWorkspace({ props, t, te }) {
 const page = usePage()
 const user = page.props.auth?.user
+const tx = (key, fallback, params = {}) => te(`teams_workspace.${key}`) ? t(`teams_workspace.${key}`, params) : fallback
 
 const showClubModal = ref(false)
 const showTeamModal = ref(false)
@@ -23,11 +24,11 @@ const errors = computed(() => page.props.errors || {})
 
 const clubCreateStep = ref(1)
 
-const clubCreateSteps = [
-    { number: 1, label: 'Basis' },
-    { number: 2, label: 'Adresse' },
-    { number: 3, label: 'Prüfen' },
-]
+const clubCreateSteps = computed(() => [
+    { number: 1, label: tx('steps.basic', 'Basis') },
+    { number: 2, label: tx('steps.address', 'Adresse') },
+    { number: 3, label: tx('steps.review', 'Prüfen') },
+])
 
 const filtersForm = ref({
     search: props.filters.search || '',
@@ -75,7 +76,7 @@ const initials = (name) =>
     name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
 const sportLabel = (value) => {
-    if (!value) return 'Sportart offen'
+    if (!value) return tx('sport_open', 'Sportart offen')
 
     const sport = props.sports.find((sport) => sport.slug === value || sport.name === value)
     const slug = sport?.slug || value
@@ -85,35 +86,35 @@ const sportLabel = (value) => {
 }
 
 const clubRoleLabel = (role) => ({
-    owner: 'Owner',
-    admin: 'Verein-Admin',
-    manager: 'Manager',
-    academy_manager: 'Akademie-Manager',
-    financial_controller: 'Kassierer',
-    trainer: 'Trainer',
-    member: 'Mitglied',
+    owner: tx('roles.owner', 'Owner'),
+    admin: tx('roles.admin', 'Verein-Admin'),
+    manager: tx('roles.manager', 'Manager'),
+    academy_manager: tx('roles.academy_manager', 'Akademie-Manager'),
+    financial_controller: tx('roles.financial_controller', 'Kassierer'),
+    trainer: tx('roles.trainer', 'Trainer'),
+    member: tx('roles.member', 'Mitglied'),
 }[role] || role)
 const clubRoleList = (member) => Array.isArray(member.pivot.roles) && member.pivot.roles.length
     ? member.pivot.roles
     : [member.pivot.role || 'member']
 
 const teamRoleLabel = (role) => ({
-    Coach: 'Trainer',
-    Captain: 'Kapitän',
-    Player: 'Spieler',
+    Coach: tx('team_roles.coach', 'Trainer'),
+    Captain: tx('team_roles.captain', 'Kapitän'),
+    Player: tx('team_roles.player', 'Spieler'),
 }[role] || role)
 
 const toggleClub = (club) => {
     openClubId.value = openClubId.value === club.id ? null : club.id
 }
 
-const clubEditTabItems = [
-    { key: 'basis', label: 'Basis' },
-    { key: 'sichtbarkeit', label: 'Sichtbarkeit' },
-    { key: 'adresse', label: 'Adresse' },
-    { key: 'bank', label: 'Bankkonto' },
-    { key: 'sponsoren', label: 'Sponsoren' },
-]
+const clubEditTabItems = computed(() => [
+    { key: 'basis', label: tx('tabs.basic', 'Basis') },
+    { key: 'sichtbarkeit', label: tx('tabs.visibility', 'Sichtbarkeit') },
+    { key: 'adresse', label: tx('tabs.address', 'Adresse') },
+    { key: 'bank', label: tx('tabs.bank', 'Bankkonto') },
+    { key: 'sponsoren', label: tx('tabs.sponsors', 'Sponsoren') },
+])
 
 const activeClubEditTab = (club) => clubEditTabs.value[club.id] || 'basis'
 
@@ -135,7 +136,7 @@ const closeClubModal = () => {
 }
 
 const nextClubStep = () => {
-    if (clubCreateStep.value < clubCreateSteps.length) {
+    if (clubCreateStep.value < clubCreateSteps.value.length) {
         clubCreateStep.value++
     }
 }
@@ -216,7 +217,7 @@ const loadTeamInsights = async (team) => {
         teamInsights.value[team.id] = response.data?.data || null
     } catch (error) {
         teamInsights.value[team.id] = {
-            error: error.response?.data?.message || 'Team-Alltag konnte nicht geladen werden.',
+            error: error.response?.data?.message || tx('messages.insights_error', 'Team-Alltag konnte nicht geladen werden.'),
         }
     } finally {
         teamInsightsLoading.value.delete(team.id)
@@ -280,6 +281,7 @@ const {
     submitJob,
 } = useTeamsJobs({
     openDeleteModal,
+    tx,
     setActionNotice: (type, message) => {
         if (type === null) {
             actionNotice.value = null
@@ -316,11 +318,11 @@ const createClub = () => {
         onSuccess: () => {
             resetClubForm()
             closeClubModal()
-            setActionNotice('success', 'Verein wurde registriert.')
+            setActionNotice('success', tx('messages.club_registered', 'Verein wurde registriert.'))
         },
         onError: (errors) => {
             const firstMessage = Object.values(errors)[0]
-            clubModalNotice.value = firstMessage || 'Verein konnte nicht registriert werden. Bitte prüfe die markierten Eingaben.'
+            clubModalNotice.value = firstMessage || tx('messages.club_register_error', 'Verein konnte nicht registriert werden. Bitte prüfe die markierten Eingaben.')
 
             if (errors.name || errors.sport_type || errors.country || errors.official_club_number) {
                 clubCreateStep.value = 1
@@ -371,9 +373,9 @@ const createTeam = () => {
             }
 
             closeTeamModal()
-            setActionNotice('success', 'Team wurde erstellt.')
+            setActionNotice('success', tx('messages.team_created', 'Team wurde erstellt.'))
         },
-        onError: () => setActionNotice('error', 'Team konnte nicht erstellt werden. Bitte prüfe die Eingaben.'),
+        onError: () => setActionNotice('error', tx('messages.team_create_error', 'Team konnte nicht erstellt werden. Bitte prüfe die Eingaben.')),
         preserveScroll: true,
     })
 }
@@ -387,7 +389,7 @@ const inviteUser = (team) => {
         onSuccess: () => {
             decrementInvitationLimit(clubForTeam(team))
             inviteFormFor(team).email = ''
-            setInviteNotice(team, 'success', 'Einladung wurde erfolgreich gesendet.')
+            setInviteNotice(team, 'success', tx('messages.invite_sent', 'Einladung wurde erfolgreich gesendet.'))
         },
         onError: (errors) => {
             const message = errors.email
@@ -396,7 +398,7 @@ const inviteUser = (team) => {
                 || errors.general
                 || errors.message
                 || Object.values(errors)[0]
-                || 'Einladung konnte nicht gesendet werden.'
+                || tx('messages.invite_error', 'Einladung konnte nicht gesendet werden.')
             setInviteNotice(team, 'error', message)
         },
     })
@@ -410,7 +412,7 @@ const addTeamMember = (team) => {
         preserveScroll: true,
         onSuccess: () => {
             teamMemberForms.value[team.id] = { user_id: '', role: 'Player' }
-            setInviteNotice(team, 'success', 'Mitglied wurde zum Team hinzugefügt.')
+            setInviteNotice(team, 'success', tx('messages.member_added', 'Mitglied wurde zum Team hinzugefügt.'))
         },
         onError: (errors) => {
             const message = errors.user_id
@@ -418,7 +420,7 @@ const addTeamMember = (team) => {
                 || errors.general
                 || errors.message
                 || Object.values(errors)[0]
-                || 'Mitglied konnte nicht hinzugefügt werden.'
+                || tx('messages.member_add_error', 'Mitglied konnte nicht hinzugefügt werden.')
             setInviteNotice(team, 'error', message)
         },
     })
@@ -429,8 +431,8 @@ const acceptInvitation = (invitation) => {
 
     router.post(route('auth.team-invitations.accept', invitation.id), {}, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Team-Einladung wurde angenommen.'),
-        onError: () => setActionNotice('error', 'Team-Einladung konnte nicht angenommen werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.invitation_accepted', 'Team-Einladung wurde angenommen.')),
+        onError: () => setActionNotice('error', tx('messages.invitation_accept_error', 'Team-Einladung konnte nicht angenommen werden.')),
     })
 }
 
@@ -439,8 +441,8 @@ const declineInvitation = (invitation) => {
 
     router.post(route('auth.team-invitations.decline', invitation.id), {}, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Team-Einladung wurde abgelehnt.'),
-        onError: () => setActionNotice('error', 'Team-Einladung konnte nicht abgelehnt werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.invitation_declined', 'Team-Einladung wurde abgelehnt.')),
+        onError: () => setActionNotice('error', tx('messages.invitation_decline_error', 'Team-Einladung konnte nicht abgelehnt werden.')),
     })
 }
 
@@ -454,10 +456,10 @@ const requestJoinTeam = (team) => {
     router.post(route('auth.teams.join-requests.store', team.id), {}, {
         preserveScroll: true,
         onSuccess: () => {
-            setJoinRequestNotice(team, 'success', 'Team-Beitrittsanfrage wurde gesendet.')
+            setJoinRequestNotice(team, 'success', tx('messages.join_request_sent', 'Team-Beitrittsanfrage wurde gesendet.'))
         },
         onError: (errors) => {
-            setJoinRequestNotice(team, 'error', errors.team || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht gesendet werden.')
+            setJoinRequestNotice(team, 'error', errors.team || errors.general || errors.message || tx('messages.join_request_send_error', 'Team-Beitrittsanfrage konnte nicht gesendet werden.'))
         },
         onFinish: () => processingJoinTeamIds.value.delete(team.id),
     })
@@ -471,8 +473,8 @@ const approveJoinRequest = (request) => {
 
     router.post(route('auth.team-join-requests.approve', request.id), { role: 'Player' }, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Team-Beitrittsanfrage wurde angenommen.'),
-        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht angenommen werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.join_request_approved', 'Team-Beitrittsanfrage wurde angenommen.')),
+        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || tx('messages.join_request_approve_error', 'Team-Beitrittsanfrage konnte nicht angenommen werden.')),
         onFinish: () => processingJoinRequestIds.value.delete(request.id),
     })
 }
@@ -485,8 +487,8 @@ const declineJoinRequest = (request) => {
 
     router.post(route('auth.team-join-requests.decline', request.id), {}, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Team-Beitrittsanfrage wurde abgelehnt.'),
-        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht abgelehnt werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.join_request_declined', 'Team-Beitrittsanfrage wurde abgelehnt.')),
+        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || tx('messages.join_request_decline_error', 'Team-Beitrittsanfrage konnte nicht abgelehnt werden.')),
         onFinish: () => processingJoinRequestIds.value.delete(request.id),
     })
 }
@@ -502,8 +504,8 @@ const updateClubMemberRole = (club, member) => {
         roles: [selectedRole],
     }, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Vereinsrolle wurde gespeichert.'),
-        onError: () => setActionNotice('error', 'Vereinsrolle konnte nicht gespeichert werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.club_role_saved', 'Vereinsrolle wurde gespeichert.')),
+        onError: () => setActionNotice('error', tx('messages.club_role_error', 'Vereinsrolle konnte nicht gespeichert werden.')),
     })
 }
 
@@ -568,9 +570,9 @@ const updateClub = (club) => {
         preserveScroll: true,
         onSuccess: () => {
             editingClubId.value = null
-            setActionNotice('success', 'Vereinsdaten wurden gespeichert.')
+            setActionNotice('success', tx('messages.club_saved', 'Vereinsdaten wurden gespeichert.'))
         },
-        onError: () => setActionNotice('error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte prüfe die Eingaben.'),
+        onError: () => setActionNotice('error', tx('messages.club_save_error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte prüfe die Eingaben.')),
     })
 }
 
@@ -620,9 +622,9 @@ const submitSponsor = (club) => {
         preserveScroll: true,
         onSuccess: () => {
             resetSponsorForm(club)
-            setActionNotice('success', sponsorId ? 'Sponsor wurde aktualisiert.' : 'Sponsor wurde erstellt.')
+            setActionNotice('success', sponsorId ? tx('messages.sponsor_updated', 'Sponsor wurde aktualisiert.') : tx('messages.sponsor_created', 'Sponsor wurde erstellt.'))
         },
-        onError: () => setActionNotice('error', 'Sponsor konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
+        onError: () => setActionNotice('error', tx('messages.sponsor_save_error', 'Sponsor konnte nicht gespeichert werden. Bitte prüfe die Eingaben.')),
     }
 
     sponsorId
@@ -632,12 +634,12 @@ const submitSponsor = (club) => {
 
 const deleteSponsor = (club, sponsor) => {
     openDeleteModal({
-        title: `Sponsor "${sponsor.name}" löschen`,
-        description: 'Der Sponsor wird aus diesem Verein entfernt. Diese Aktion kann nicht rückgaengig gemacht werden.',
+        title: tx('messages.sponsor_remove_title', `Sponsor "${sponsor.name}" löschen`, { name: sponsor.name }),
+        description: tx('messages.sponsor_remove_message', 'Der Sponsor wird aus diesem Verein entfernt. Diese Aktion kann nicht rückgängig gemacht werden.'),
         route: 'auth.clubs.sponsors.destroy',
         params: [club.id, sponsor.id],
-        successMessage: 'Sponsor wurde gelöscht.',
-        errorMessage: 'Sponsor konnte nicht gelöscht werden.',
+        successMessage: tx('messages.sponsor_removed', 'Sponsor wurde gelöscht.'),
+        errorMessage: tx('messages.sponsor_remove_error', 'Sponsor konnte nicht gelöscht werden.'),
     })
 }
 
@@ -650,8 +652,8 @@ const updateTeamMemberRole = (team, member) => {
         role: member.pivot.role,
     }, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', 'Teamrolle wurde gespeichert.'),
-        onError: () => setActionNotice('error', 'Teamrolle konnte nicht gespeichert werden.'),
+        onSuccess: () => setActionNotice('success', tx('messages.team_role_saved', 'Teamrolle wurde gespeichert.')),
+        onError: () => setActionNotice('error', tx('messages.team_role_error', 'Teamrolle konnte nicht gespeichert werden.')),
     })
 }
 
@@ -659,47 +661,50 @@ const removeTeamMember = (team, member) => {
     const isLeavingSelf = member.id === user?.id
 
     openDeleteModal({
-        title: isLeavingSelf ? `Team "${team.name}" verlassen` : `${member.name} aus "${team.name}" entfernen`,
+        title: isLeavingSelf
+            ? tx('messages.leave_team_title', `Team "${team.name}" verlassen`, { name: team.name })
+            : tx('messages.remove_member_title', `${member.name} aus "${team.name}" entfernen`, { member: member.name, team: team.name }),
         description: isLeavingSelf
-            ? 'Du kannst dieses Team nur verlassen, wenn alle offenen Rechnungen im zugehoerigen Verein ausgeglichen sind.'
-            : 'Das Mitglied wird aus diesem Team entfernt. Die Vereinsmitgliedschaft bleibt bestehen.',
+            ? tx('messages.leave_team_message', 'Du kannst dieses Team nur verlassen, wenn alle offenen Rechnungen im zugehörigen Verein ausgeglichen sind.')
+            : tx('messages.remove_member_message', 'Das Mitglied wird aus diesem Team entfernt. Die Vereinsmitgliedschaft bleibt bestehen.'),
         route: 'auth.teams.members.destroy',
         params: [team.id, member.id],
         confirmText: isLeavingSelf ? 'verlassen' : 'entfernen',
-        buttonLabel: isLeavingSelf ? 'Team verlassen' : 'Mitglied entfernen',
+        buttonLabel: isLeavingSelf ? tx('messages.leave_team_button', 'Team verlassen') : tx('messages.remove_member_button', 'Mitglied entfernen'),
         requiresReason: isLeavingSelf,
-        successMessage: isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied wurde aus dem Team entfernt.',
+        successMessage: isLeavingSelf ? tx('messages.team_left', 'Du hast das Team verlassen.') : tx('messages.member_removed', 'Mitglied wurde aus dem Team entfernt.'),
         errorMessage: isLeavingSelf
-            ? 'Team konnte nicht verlassen werden. Bitte prüfe, ob noch offene Rechnungen vorhanden sind.'
-            : 'Mitglied konnte nicht entfernt werden.',
+            ? tx('messages.leave_team_error', 'Team konnte nicht verlassen werden. Bitte prüfe, ob noch offene Rechnungen vorhanden sind.')
+            : tx('messages.member_remove_error', 'Mitglied konnte nicht entfernt werden.'),
     })
 }
 
 const deleteClub = (club) => {
     openDeleteModal({
-        title: `Verein "${club.name}" löschen`,
-        description: 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgaengig gemacht werden.',
+        title: tx('messages.delete_club_title', `Verein "${club.name}" löschen`, { name: club.name }),
+        description: tx('messages.delete_club_message', 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.'),
         route: 'auth.clubs.destroy',
         params: club.id,
-        successMessage: 'Verein wurde gelöscht.',
-        errorMessage: 'Verein konnte nicht gelöscht werden.',
+        successMessage: tx('messages.club_deleted', 'Verein wurde gelöscht.'),
+        errorMessage: tx('messages.club_delete_error', 'Verein konnte nicht gelöscht werden.'),
     })
 }
 
 const deleteTeam = (team) => {
     openDeleteModal({
-        title: `Team "${team.name}" löschen`,
-        description: 'Das Team und seine Zuordnungen werden entfernt. Diese Aktion kann nicht rückgaengig gemacht werden.',
+        title: tx('messages.delete_team_title', `Team "${team.name}" löschen`, { name: team.name }),
+        description: tx('messages.delete_team_message', 'Das Team und seine Zuordnungen werden entfernt. Diese Aktion kann nicht rückgängig gemacht werden.'),
         route: 'auth.teams.destroy',
         params: team.id,
-        successMessage: 'Team wurde gelöscht.',
-        errorMessage: 'Team konnte nicht gelöscht werden.',
+        successMessage: tx('messages.team_deleted', 'Team wurde gelöscht.'),
+        errorMessage: tx('messages.team_delete_error', 'Team konnte nicht gelöscht werden.'),
     })
 }
 
     return {
         page,
         user,
+        tx,
         showClubModal,
         showTeamModal,
         showFilterModal,

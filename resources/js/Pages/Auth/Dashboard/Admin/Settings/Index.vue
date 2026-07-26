@@ -2,8 +2,19 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, te, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+const formatDate = (value) => {
+    if (!value) return '-'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    return new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}
 
 const props = defineProps({
     settings: {
@@ -63,12 +74,20 @@ const tokenDotClass = (severity) => ({
 }[severity] || 'bg-secondary')
 
 const tokenExpiryLabel = (token) => {
-    if (!token.has_api_key) return 'Kein API-Key gesetzt'
-    if (!token.has_model) return 'Kein Modell gesetzt'
-    if (!token.expires_at_human) return 'Kein Ablaufdatum im Key erkennbar'
+    if (!token.has_api_key) return t('admin_settings.ai_tokens.no_api_key')
+    if (!token.has_model) return t('admin_settings.ai_tokens.no_model')
+    if (!token.expires_at) return t('admin_settings.ai_tokens.no_expiry')
 
-    return token.expires_at_human
+    return formatDate(token.expires_at)
 }
+
+const tokenStatusLabel = (token) => token.status_key && te(`admin_settings.ai_tokens.status.${token.status_key}`)
+    ? t(`admin_settings.ai_tokens.status.${token.status_key}`)
+    : (token.status_label || '-')
+
+const tokenMessage = (token) => token.message_key && te(token.message_key)
+    ? t(token.message_key)
+    : (token.message || '')
 
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
@@ -106,15 +125,15 @@ const save = () => {
 </script>
 
 <template>
-    <Head title="Systemeinstellungen" />
+    <Head :title="t('Systemeinstellungen')" />
 
     <div class="space-y-5">
         <section class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
-                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Admin</p>
-                <h1 class="mt-1 text-2xl font-semibold text-primary">Systemeinstellungen</h1>
+                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Admin') }}</p>
+                <h1 class="mt-1 text-2xl font-semibold text-primary">{{ t('Systemeinstellungen') }}</h1>
                 <p class="mt-2 max-w-2xl text-sm text-secondary">
-                    Steuere zentrale Plattformfunktionen, die sofort für alle Benutzer wirken.
+                    {{ t('Steuere zentrale Plattformfunktionen, die sofort für alle Benutzer wirken.') }}
                 </p>
             </div>
 
@@ -127,12 +146,12 @@ const save = () => {
                 >
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide">KI-Anbieter Warnung</p>
-                            <h2 class="mt-1 text-base font-semibold">{{ alert.label }}: {{ alert.status_label }}</h2>
-                            <p class="mt-1 text-sm">{{ alert.message }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide">{{ t('KI-Anbieter Warnung') }}</p>
+                            <h2 class="mt-1 text-base font-semibold">{{ alert.label }}: {{ tokenStatusLabel(alert) }}</h2>
+                            <p class="mt-1 text-sm">{{ tokenMessage(alert) }}</p>
                         </div>
                         <span class="rounded-full border border-current/30 px-3 py-1 text-xs font-semibold">
-                            Ablauf: {{ tokenExpiryLabel(alert) }}
+                            {{ t('admin_settings.ai_tokens.expiry') }}: {{ tokenExpiryLabel(alert) }}
                         </span>
                     </div>
                 </div>
@@ -143,13 +162,13 @@ const save = () => {
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h2 class="text-lg font-semibold text-primary">KI-Token & Anbieter</h2>
+                                <h2 class="text-lg font-semibold text-primary">{{ t('KI-Token & Anbieter') }}</h2>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Kontrolliere Ablaufdatum und Konfiguration deiner KI-Anbieter. Tokens werden aus Sicherheitsgründen nie angezeigt.
+                                    {{ t('Kontrolliere Ablaufdatum und Konfiguration deiner KI-Anbieter. Tokens werden aus Sicherheitsgründen nie angezeigt.') }}
                                 </p>
                             </div>
                             <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
-                                {{ aiProviderTokens.length }} Anbieter
+                                {{ formatNumber(aiProviderTokens.length) }} {{ t('Anbieter') }}
                             </span>
                         </div>
 
@@ -162,56 +181,56 @@ const save = () => {
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="text-sm font-semibold text-primary">{{ token.label }}</p>
-                                        <p class="mt-1 text-xs text-secondary">{{ token.model || 'Kein Modell gesetzt' }}</p>
+                                        <p class="mt-1 text-xs text-secondary">{{ token.model || t('admin_settings.ai_tokens.no_model') }}</p>
                                     </div>
                                     <span class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold" :class="tokenSeverityClass(token.severity)">
                                         <span class="h-2 w-2 rounded-full" :class="tokenDotClass(token.severity)"></span>
-                                        {{ token.status_label }}
+                                        {{ tokenStatusLabel(token) }}
                                     </span>
                                 </div>
 
                                 <dl class="mt-4 space-y-2 text-sm">
                                     <div class="flex justify-between gap-3">
-                                        <dt class="text-secondary">API-Key</dt>
+                                        <dt class="text-secondary">{{ t('API-Key') }}</dt>
                                         <dd class="font-semibold" :class="token.has_api_key ? 'text-success' : 'text-error'">
-                                            {{ token.has_api_key ? 'gesetzt' : 'fehlt' }}
+                                            {{ token.has_api_key ? t('admin_settings.ai_tokens.set') : t('admin_settings.ai_tokens.missing') }}
                                         </dd>
                                     </div>
                                     <div class="flex justify-between gap-3">
-                                        <dt class="text-secondary">Ablaufdatum</dt>
+                                        <dt class="text-secondary">{{ t('admin_settings.ai_tokens.expiry') }}</dt>
                                         <dd class="text-right font-semibold text-primary">{{ tokenExpiryLabel(token) }}</dd>
                                     </div>
                                     <div v-if="token.days_remaining !== null" class="flex justify-between gap-3">
-                                        <dt class="text-secondary">Restzeit</dt>
+                                        <dt class="text-secondary">{{ t('Restzeit') }}</dt>
                                         <dd class="font-semibold text-primary">
-                                            {{ token.days_remaining > 0 ? `${token.days_remaining} Tage` : 'abgelaufen' }}
+                                            {{ token.days_remaining > 0 ? `${formatNumber(token.days_remaining)} ${t('Tage')}` : t('admin_settings.ai_tokens.expired_short') }}
                                         </dd>
                                     </div>
                                 </dl>
 
                                 <p class="mt-3 rounded-lg border px-3 py-2 text-xs leading-5" :class="tokenSeverityClass(token.severity)">
-                                    {{ token.message }}
+                                    {{ tokenMessage(token) }}
                                 </p>
                             </div>
                         </div>
 
                         <p class="mt-3 text-xs text-secondary">
-                            Airmius prüft die Tokens stündlich per Scheduler und sendet Admin-Benachrichtigungen, wenn ein Anbieter abläuft oder nicht korrekt konfiguriert ist.
+                            {{ t('Airmius prüft die Tokens stündlich per Scheduler und sendet Admin-Benachrichtigungen, wenn ein Anbieter abläuft oder nicht korrekt konfiguriert ist.') }}
                         </p>
                     </div>
 
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h2 class="text-lg font-semibold text-primary">Wartemodus</h2>
+                                <h2 class="text-lg font-semibold text-primary">{{ t('Wartemodus') }}</h2>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Wenn aktiv, sehen alle nicht berechtigten Benutzer nur die Warteseite.
+                                    {{ t('Wenn aktiv, sehen alle nicht berechtigten Benutzer nur die Warteseite.') }}
                                 </p>
                             </div>
 
                             <label class="inline-flex cursor-pointer items-center gap-3">
                                 <span class="text-sm font-semibold text-secondary">
-                                    {{ form.maintenance_enabled ? 'Aktiv' : 'Inaktiv' }}
+                                    {{ form.maintenance_enabled ? t('Aktiv') : t('Inaktiv') }}
                                 </span>
                                 <input v-model="form.maintenance_enabled" type="checkbox" class="peer sr-only">
                                 <span
@@ -229,7 +248,7 @@ const save = () => {
 
                     <div class="grid gap-4">
                         <div>
-                            <label for="maintenance_title" class="text-sm font-semibold text-primary">Titel</label>
+                            <label for="maintenance_title" class="text-sm font-semibold text-primary">{{ t('Titel') }}</label>
                             <input
                                 id="maintenance_title"
                                 v-model="form.maintenance_title"
@@ -244,7 +263,7 @@ const save = () => {
                         </div>
 
                         <div>
-                            <label for="maintenance_message" class="text-sm font-semibold text-primary">Nachricht</label>
+                            <label for="maintenance_message" class="text-sm font-semibold text-primary">{{ t('Nachricht') }}</label>
                             <textarea
                                 id="maintenance_message"
                                 v-model="form.maintenance_message"
@@ -262,9 +281,9 @@ const save = () => {
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h2 class="text-lg font-semibold text-primary">Rechtliche Rechnungsdaten</h2>
+                                <h2 class="text-lg font-semibold text-primary">{{ t('Rechtliche Rechnungsdaten') }}</h2>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Diese Angaben erscheinen auf allen Airmius-PDFs. Leere Felder werden im PDF als Platzhalter markiert.
+                                    {{ t('Diese Angaben erscheinen auf allen Airmius-PDFs. Leere Felder werden im PDF als Platzhalter markiert.') }}
                                 </p>
                             </div>
                             <span class="rounded-full bg-air-orange/15 px-3 py-1 text-xs font-semibold text-air-orange">
@@ -274,7 +293,7 @@ const save = () => {
 
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label for="billing_brand_name" class="text-sm font-semibold text-primary">Markenname für PDF-Header</label>
+                                <label for="billing_brand_name" class="text-sm font-semibold text-primary">{{ t('Markenname für PDF-Header') }}</label>
                                 <input
                                     id="billing_brand_name"
                                     v-model="form.billing_brand_name"
@@ -288,65 +307,65 @@ const save = () => {
                                 </p>
                             </div>
                             <div>
-                                <label for="billing_company_name" class="text-sm font-semibold text-primary">Marke / Rechnungsname</label>
+                                <label for="billing_company_name" class="text-sm font-semibold text-primary">{{ t('Marke / Rechnungsname') }}</label>
                                 <input id="billing_company_name" v-model="form.billing_company_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Airmius">
                             </div>
                             <div>
-                                <label for="billing_legal_name" class="text-sm font-semibold text-primary">Rechtlicher Firmenname</label>
+                                <label for="billing_legal_name" class="text-sm font-semibold text-primary">{{ t('Rechtlicher Firmenname') }}</label>
                                 <input id="billing_legal_name" v-model="form.billing_legal_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Airmius GmbH">
                             </div>
                             <div>
-                                <label for="billing_company_street" class="text-sm font-semibold text-primary">Straße und Hausnummer</label>
+                                <label for="billing_company_street" class="text-sm font-semibold text-primary">{{ t('Straße und Hausnummer') }}</label>
                                 <input id="billing_company_street" v-model="form.billing_company_street" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div class="grid gap-4 sm:grid-cols-[8rem_1fr]">
                                 <div>
-                                    <label for="billing_company_postal_code" class="text-sm font-semibold text-primary">PLZ</label>
+                                    <label for="billing_company_postal_code" class="text-sm font-semibold text-primary">{{ t('PLZ') }}</label>
                                     <input id="billing_company_postal_code" v-model="form.billing_company_postal_code" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 </div>
                                 <div>
-                                    <label for="billing_company_city" class="text-sm font-semibold text-primary">Ort</label>
+                                    <label for="billing_company_city" class="text-sm font-semibold text-primary">{{ t('Ort') }}</label>
                                     <input id="billing_company_city" v-model="form.billing_company_city" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 </div>
                             </div>
                             <div>
-                                <label for="billing_company_country" class="text-sm font-semibold text-primary">Land</label>
+                                <label for="billing_company_country" class="text-sm font-semibold text-primary">{{ t('Land') }}</label>
                                 <input id="billing_company_country" v-model="form.billing_company_country" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_company_email" class="text-sm font-semibold text-primary">Rechnungs-E-Mail</label>
+                                <label for="billing_company_email" class="text-sm font-semibold text-primary">{{ t('Rechnungs-E-Mail') }}</label>
                                 <input id="billing_company_email" v-model="form.billing_company_email" type="email" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_company_website" class="text-sm font-semibold text-primary">Website</label>
+                                <label for="billing_company_website" class="text-sm font-semibold text-primary">{{ t('Website') }}</label>
                                 <input id="billing_company_website" v-model="form.billing_company_website" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_managing_director" class="text-sm font-semibold text-primary">Vertreten durch</label>
+                                <label for="billing_managing_director" class="text-sm font-semibold text-primary">{{ t('Vertreten durch') }}</label>
                                 <input id="billing_managing_director" v-model="form.billing_managing_director" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_tax_number" class="text-sm font-semibold text-primary">Steuernummer</label>
+                                <label for="billing_tax_number" class="text-sm font-semibold text-primary">{{ t('Steuernummer') }}</label>
                                 <input id="billing_tax_number" v-model="form.billing_tax_number" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_vat_id" class="text-sm font-semibold text-primary">USt-IdNr.</label>
+                                <label for="billing_vat_id" class="text-sm font-semibold text-primary">{{ t('USt-IdNr.') }}</label>
                                 <input id="billing_vat_id" v-model="form.billing_vat_id" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="DE...">
                             </div>
                             <div>
-                                <label for="billing_court" class="text-sm font-semibold text-primary">Registergericht</label>
+                                <label for="billing_court" class="text-sm font-semibold text-primary">{{ t('Registergericht') }}</label>
                                 <input id="billing_court" v-model="form.billing_court" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div>
-                                <label for="billing_registration_number" class="text-sm font-semibold text-primary">Registernummer</label>
+                                <label for="billing_registration_number" class="text-sm font-semibold text-primary">{{ t('Registernummer') }}</label>
                                 <input id="billing_registration_number" v-model="form.billing_registration_number" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div class="sm:col-span-2">
-                                <label for="billing_small_business_notice" class="text-sm font-semibold text-primary">Kleinunternehmer- / Steuerhinweis</label>
+                                <label for="billing_small_business_notice" class="text-sm font-semibold text-primary">{{ t('Kleinunternehmer- / Steuerhinweis') }}</label>
                                 <input id="billing_small_business_notice" v-model="form.billing_small_business_notice" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Gem. § 19 UStG wird keine Umsatzsteuer berechnet.">
                             </div>
                             <div class="sm:col-span-2">
-                                <label for="billing_invoice_note" class="text-sm font-semibold text-primary">Allgemeiner Rechnungshinweis</label>
+                                <label for="billing_invoice_note" class="text-sm font-semibold text-primary">{{ t('Allgemeiner Rechnungshinweis') }}</label>
                                 <input id="billing_invoice_note" v-model="form.billing_invoice_note" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                         </div>
@@ -355,9 +374,9 @@ const save = () => {
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h2 class="text-lg font-semibold text-primary">Airmius Zahlung per Überweisung</h2>
+                                <h2 class="text-lg font-semibold text-primary">{{ t('Airmius Zahlung per Überweisung') }}</h2>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Diese Bankdaten werden bei Abo-Zahlung per Rechnung/Überweisung angezeigt.
+                                    {{ t('Diese Bankdaten werden bei Abo-Zahlung per Rechnung/Überweisung angezeigt.') }}
                                 </p>
                             </div>
                             <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
@@ -367,7 +386,7 @@ const save = () => {
 
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label for="billing_bank_account_holder" class="text-sm font-semibold text-primary">Kontoinhaber</label>
+                                <label for="billing_bank_account_holder" class="text-sm font-semibold text-primary">{{ t('Kontoinhaber') }}</label>
                                 <input id="billing_bank_account_holder" v-model="form.billing_bank_account_holder" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 <p v-if="form.errors.billing_bank_account_holder" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_bank_account_holder }}
@@ -375,7 +394,7 @@ const save = () => {
                             </div>
 
                             <div>
-                                <label for="billing_bank_name" class="text-sm font-semibold text-primary">Bank</label>
+                                <label for="billing_bank_name" class="text-sm font-semibold text-primary">{{ t('Bank') }}</label>
                                 <input id="billing_bank_name" v-model="form.billing_bank_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 <p v-if="form.errors.billing_bank_name" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_bank_name }}
@@ -383,7 +402,7 @@ const save = () => {
                             </div>
 
                             <div>
-                                <label for="billing_iban" class="text-sm font-semibold text-primary">IBAN</label>
+                                <label for="billing_iban" class="text-sm font-semibold text-primary">{{ t('IBAN') }}</label>
                                 <input id="billing_iban" v-model="form.billing_iban" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="DE...">
                                 <p v-if="form.errors.billing_iban" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_iban }}
@@ -391,7 +410,7 @@ const save = () => {
                             </div>
 
                             <div>
-                                <label for="billing_bic" class="text-sm font-semibold text-primary">BIC</label>
+                                <label for="billing_bic" class="text-sm font-semibold text-primary">{{ t('BIC') }}</label>
                                 <input id="billing_bic" v-model="form.billing_bic" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 <p v-if="form.errors.billing_bic" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_bic }}
@@ -399,7 +418,7 @@ const save = () => {
                             </div>
 
                             <div>
-                                <label for="billing_payment_terms_days" class="text-sm font-semibold text-primary">Zahlungsziel in Tagen</label>
+                                <label for="billing_payment_terms_days" class="text-sm font-semibold text-primary">{{ t('Zahlungsziel in Tagen') }}</label>
                                 <input id="billing_payment_terms_days" v-model="form.billing_payment_terms_days" type="number" min="1" max="60" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                                 <p v-if="form.errors.billing_payment_terms_days" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_payment_terms_days }}
@@ -411,13 +430,13 @@ const save = () => {
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <h2 class="text-lg font-semibold text-primary">E-Mail-Vorlagen</h2>
+                                <h2 class="text-lg font-semibold text-primary">{{ t('E-Mail-Vorlagen') }}</h2>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Bearbeite Betreff, Anrede, Inhalt und Buttontexte aller System-E-Mails.
+                                    {{ t('Bearbeite Betreff, Anrede, Inhalt und Buttontexte aller System-E-Mails.') }}
                                 </p>
                             </div>
                             <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
-                                {{ emailTemplates.length }} Vorlagen
+                                {{ formatNumber(emailTemplates.length) }} {{ t('Vorlagen') }}
                             </span>
                         </div>
 
@@ -438,14 +457,14 @@ const save = () => {
 
                             <div v-if="activeEmailTemplate && form.email_templates[activeEmailTemplate.key]" class="space-y-4 rounded-lg border border-border bg-card p-4">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Aktive Vorlage') }}</p>
                                     <h3 class="mt-1 text-lg font-semibold text-primary">{{ activeEmailTemplate.label }}</h3>
                                     <p class="mt-1 text-sm text-secondary">{{ activeEmailTemplate.description }}</p>
                                 </div>
 
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <div>
-                                        <label class="text-sm font-semibold text-primary">Betreff</label>
+                                        <label class="text-sm font-semibold text-primary">{{ t('Betreff') }}</label>
                                         <input
                                             v-model="form.email_templates[activeEmailTemplate.key].subject"
                                             type="text"
@@ -454,7 +473,7 @@ const save = () => {
                                     </div>
 
                                     <div>
-                                        <label class="text-sm font-semibold text-primary">Anrede</label>
+                                        <label class="text-sm font-semibold text-primary">{{ t('Anrede') }}</label>
                                         <input
                                             v-model="form.email_templates[activeEmailTemplate.key].greeting"
                                             type="text"
@@ -464,29 +483,29 @@ const save = () => {
                                 </div>
 
                                 <div>
-                                    <label class="text-sm font-semibold text-primary">Inhalt</label>
+                                    <label class="text-sm font-semibold text-primary">{{ t('Inhalt') }}</label>
                                     <textarea
                                         v-model="form.email_templates[activeEmailTemplate.key].body"
                                         rows="10"
                                         class="mt-1 block w-full rounded-lg border-border bg-inputBg font-mono text-sm text-primary"
                                     />
                                     <p class="mt-1 text-xs text-secondary">
-                                        Jede neue Zeile wird als eigener Absatz in der E-Mail ausgegeben.
+                                        {{ t('Jede neue Zeile wird als eigener Absatz in der E-Mail ausgegeben.') }}
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label class="text-sm font-semibold text-primary">Buttontext</label>
+                                    <label class="text-sm font-semibold text-primary">{{ t('Buttontext') }}</label>
                                     <input
                                         v-model="form.email_templates[activeEmailTemplate.key].action_label"
                                         type="text"
                                         class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
-                                        placeholder="Leer lassen, wenn diese E-Mail keinen Button hat"
+                                        :placeholder="t('Leer lassen, wenn diese E-Mail keinen Button hat')"
                                     >
                                 </div>
 
                                 <div class="rounded-lg border border-border bg-bg p-3">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Platzhalter</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Platzhalter') }}</p>
                                     <div class="mt-2 flex flex-wrap gap-2">
                                         <span
                                             v-for="variable in activeEmailTemplate.variables"
@@ -512,14 +531,14 @@ const save = () => {
                             :class="{ 'opacity-60': form.processing }"
                             :disabled="form.processing"
                         >
-                            Speichern
+                            {{ t('Speichern') }}
                         </button>
                     </div>
                 </form>
 
                 <aside class="border-t border-border bg-bg p-5 lg:border-l lg:border-t-0">
                     <div class="rounded-lg border border-border bg-card p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Vorschau</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('Vorschau') }}</p>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-5">
                             <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary">
                                 <i class="las la-tools text-2xl"></i>
@@ -537,30 +556,30 @@ const save = () => {
                     </div>
 
                     <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
-                        Benutzer mit der Berechtigung <span class="font-semibold text-primary">system.manage</span>
-                        können Airmius weiterhin normal verwenden.
+                        {{ t('Benutzer mit der Berechtigung') }} <span class="font-semibold text-primary">system.manage</span>
+                        {{ t('können Airmius weiterhin normal verwenden.') }}
                     </div>
 
                     <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
-                        <p class="font-semibold text-primary">Überweisungsdaten</p>
+                        <p class="font-semibold text-primary">{{ t('Überweisungsdaten') }}</p>
                         <dl class="mt-3 space-y-2">
                             <div class="flex justify-between gap-3">
-                                <dt>Kontoinhaber</dt>
+                                <dt>{{ t('Kontoinhaber') }}</dt>
                                 <dd class="text-right text-primary">{{ form.billing_bank_account_holder || '-' }}</dd>
                             </div>
                             <div class="flex justify-between gap-3">
-                                <dt>IBAN</dt>
+                                <dt>{{ t('IBAN') }}</dt>
                                 <dd class="text-right text-primary">{{ form.billing_iban || '-' }}</dd>
                             </div>
                             <div class="flex justify-between gap-3">
-                                <dt>Zahlungsziel</dt>
-                                <dd class="text-right text-primary">{{ form.billing_payment_terms_days }} Tage</dd>
+                                <dt>{{ t('Zahlungsziel') }}</dt>
+                                <dd class="text-right text-primary">{{ formatNumber(form.billing_payment_terms_days) }} {{ t('Tage') }}</dd>
                             </div>
                         </dl>
                     </div>
 
                     <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">PDF-Branding Vorschau</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('PDF-Branding Vorschau') }}</p>
                         <div class="mt-3 flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-buttonPrimary/10 text-sm font-bold text-buttonTextPrimary">
                                 {{ billingBrandBadge }}

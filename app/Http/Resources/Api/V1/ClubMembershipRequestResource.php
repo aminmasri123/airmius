@@ -19,11 +19,28 @@ class ClubMembershipRequestResource extends JsonResource
             'message' => $this->message,
             'application_data' => $this->application_data ?: [],
             'accepted_documents' => $this->accepted_documents ?: [],
+            'consent' => [
+                'version' => $this->consent_version ?: 'membership-v1',
+                'signature' => $this->consent_signature,
+                'signed_at' => $this->consent_at?->toJSON() ?: $this->applicant_confirmed_at?->toJSON(),
+                'method' => $this->consent_signature ? 'typed_signature' : 'checkbox_confirmation',
+                'document_versions' => collect($this->accepted_documents ?: [])
+                    ->filter(fn ($document) => is_array($document) && filled($document['id'] ?? null))
+                    ->mapWithKeys(fn (array $document) => [
+                        (string) $document['id'] => $document['version'] ?? null,
+                    ])
+                    ->all(),
+            ],
             'preferred_payment_method' => $this->preferred_payment_method,
             'requested_billing_interval' => $this->requested_billing_interval,
             'requested_pause_from' => $this->requested_pause_from?->toDateString(),
             'requested_pause_until' => $this->requested_pause_until?->toDateString(),
+            'requested_termination_on' => $this->requested_termination_on?->toDateString(),
+            'termination_reason' => $this->termination_reason,
             'preview_amount' => $this->preview_amount,
+            'preview_base_amount' => $this->preview_base_amount,
+            'preview_discount_amount' => $this->preview_discount_amount,
+            'preview_rule_type' => $this->preview_rule_type,
             'preview_interval' => $this->preview_interval,
             'submitted_at' => $this->created_at?->toJSON(),
             'withdrawn_at' => $this->status === 'withdrawn' ? $this->reviewed_at?->toJSON() : null,

@@ -1,8 +1,12 @@
 ﻿<script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 defineProps({
     awards: { type: Array, default: () => [] },
@@ -10,14 +14,12 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Meine Badges" />
+    <Head :title="tx('Meine Badges')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
-            <h1 class="text-2xl font-bold text-primary">Meine Badges</h1>
-            <p class="mt-1 text-sm text-secondary">
-                Auszeichnungen aus deinem Profil, Trainerarbeit, Teams und Vereinen.
-            </p>
+            <h1 class="text-2xl font-bold text-primary">{{ tx('Meine Badges') }}</h1>
+            <p class="mt-1 text-sm text-secondary">{{ tx('Auszeichnungen aus deinem Profil, Trainerarbeit, Teams und Vereinen.') }}</p>
         </section>
 
         <section v-if="awards.length" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -38,7 +40,7 @@ defineProps({
                             {{ award.badge?.actor_type }} - {{ award.reason || award.badge?.trigger }}
                         </p>
                         <p v-if="award.meta?.xp !== undefined" class="mt-1 text-xs text-secondary">
-                            {{ award.meta.xp }} XP - Level {{ award.meta.level }}
+                            {{ award.meta.xp }} XP - {{ tx('Level') }} {{ award.meta.level }}
                         </p>
                     </div>
                 </div>
@@ -46,8 +48,7 @@ defineProps({
         </section>
 
         <section v-else class="surface-card p-6 text-sm text-secondary">
-            Noch keine Badges vorhanden.
+            {{ tx('Noch keine Badges vorhanden.') }}
         </section>
     </div>
 </template>
-

@@ -1,32 +1,52 @@
 import 'package:flutter/material.dart';
-import 'public_growth_operations_screen.dart';
 
+import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ad_campaign_screen.dart';
 import 'certificate_verification_screen.dart';
 import 'legal_document_screen.dart';
 import 'public_blog_reader_screen.dart';
 import 'public_interest_screen.dart';
 import 'public_top_content_screen.dart';
 
+/// Localized compatibility page for older public-detail links.
+///
+/// The former screen contained static roadmap copy. It now communicates the
+/// public scope clearly and routes visitors into real guest-safe screens.
 class PublicDetailScreen extends StatelessWidget {
-  const PublicDetailScreen({super.key, required this.title, required this.body, required this.icon, required this.kind});
+  const PublicDetailScreen({
+    super.key,
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.kind,
+  });
 
   final String title;
   final String body;
   final IconData icon;
   final String kind;
 
+  bool get _isBlog => icon == Icons.article_outlined;
+  bool get _isMarketplace => icon == Icons.storefront_outlined;
+  bool get _isLearning => icon == Icons.school_outlined;
+  bool get _isSponsors => icon == Icons.handshake_outlined;
+  bool get _isTopContent => icon == Icons.auto_awesome_outlined;
+
+  String _kindLabel(AirmiusScope scope) => kind == 'Legal'
+      ? scope.t('publicDetail.kindLegal')
+      : scope.t('publicDetail.kindPublic');
+
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.campaign_outlined), label: const Text('Growth Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicGrowthOperationsScreen(initialTab: 'Leads')))),
-        
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: PageFrame(
         title: title,
@@ -42,19 +62,46 @@ class PublicDetailScreen extends StatelessWidget {
                   Container(
                     width: 60,
                     height: 60,
-                    decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(18), border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.38))),
-                    child: Icon(icon, color: AirmiusColors.blue, size: 30),
+                    decoration: BoxDecoration(
+                      color: airmiusAccentColor(
+                        context,
+                      ).withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: airmiusAccentColor(
+                          context,
+                        ).withValues(alpha: 0.38),
+                      ),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: airmiusAccentColor(context),
+                      size: 30,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Eyebrow(kind),
+                        Eyebrow(_kindLabel(AirmiusScope.of(context))),
                         const SizedBox(height: 6),
-                        Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                         const SizedBox(height: 6),
-                        Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                        Text(
+                          body,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            height: 1.35,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -62,7 +109,34 @@ class PublicDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            ..._sections(context),
+            AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('publicDetail.eyebrow')),
+                  const SizedBox(height: 10),
+                  Text(
+                    t('publicDetail.publicDataTitle'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(t('publicDetail.publicDataBody')),
+                  const SizedBox(height: 12),
+                  _InfoLine(
+                    icon: Icons.verified_user_outlined,
+                    title: t('publicDetail.safeTitle'),
+                    body: t('publicDetail.safeBody'),
+                  ),
+                  _InfoLine(
+                    icon: Icons.open_in_new_outlined,
+                    title: t('publicDetail.nextTitle'),
+                    body: t('publicDetail.nextBody'),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 14),
             ..._actions(context),
           ],
@@ -72,183 +146,152 @@ class PublicDetailScreen extends StatelessWidget {
   }
 
   List<Widget> _actions(BuildContext context) {
-    final lower = title.toLowerCase();
+    final t = AirmiusScope.of(context).t;
     if (kind == 'Legal') {
       return [
-        AirmiusButton(label: 'Rechtstext öffnen', icon: Icons.description_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalDocumentScreen(initialDocument: title)))),
+        AirmiusButton(
+          label: t('publicDetail.openLegal'),
+          icon: Icons.description_outlined,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LegalDocumentScreen(initialDocument: title),
+            ),
+          ),
+        ),
         const SizedBox(height: 10),
-        AirmiusButton(label: 'Kontakt & Melden', icon: Icons.contact_support_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalDocumentScreen(initialDocument: 'Kontakt & Melden')))),
+        AirmiusButton(
+          label: t('publicDetail.contact'),
+          icon: Icons.contact_support_outlined,
+          secondary: true,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const LegalDocumentScreen(
+                initialDocument: 'Kontakt & Melden',
+              ),
+            ),
+          ),
+        ),
       ];
     }
-    if (lower.contains('top-inhalte')) {
+    if (_isTopContent) {
       return [
-        AirmiusButton(label: 'Top-Inhalte öffnen', icon: Icons.auto_awesome_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicTopContentScreen()))),
+        AirmiusButton(
+          label: t('publicDetail.openTopContent'),
+          icon: Icons.auto_awesome_outlined,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PublicTopContentScreen()),
+          ),
+        ),
       ];
     }
-    if (lower.contains('jobs')) {
+    if (_isBlog) {
       return [
-        AirmiusButton(label: 'Interesse senden', icon: Icons.send_outlined, onPressed: () => _openInterest(context, 'Job', 'Jobs')),
+        AirmiusButton(
+          label: t('publicDetail.openBlog'),
+          icon: Icons.article_outlined,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PublicBlogReaderScreen()),
+          ),
+        ),
       ];
     }
-    if (lower.contains('sponsoren')) {
+    if (_isLearning) {
       return [
-        AirmiusButton(label: 'Sponsor kontaktieren', icon: Icons.handshake_outlined, onPressed: () => _openInterest(context, 'Sponsoring', 'Partner')),
+        AirmiusButton(
+          label: t('publicDetail.courseInterest'),
+          icon: Icons.school_outlined,
+          onPressed: () => _openInterest(
+            context,
+            t('publicDetail.learningTopic'),
+            'learning_interest',
+          ),
+        ),
         const SizedBox(height: 10),
-        AirmiusButton(label: 'Kampagne ansehen', icon: Icons.campaign_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdCampaignScreen(title: 'Sponsor Kampagne', status: 'Aktiv')))),
+        AirmiusButton(
+          label: t('publicDetail.verifyCertificate'),
+          icon: Icons.fact_check_outlined,
+          secondary: true,
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const CertificateVerificationScreen(),
+            ),
+          ),
+        ),
       ];
     }
-    if (lower.contains('werbeagentur')) {
+    if (_isMarketplace || _isSponsors) {
       return [
-        AirmiusButton(label: 'Projekt anfragen', icon: Icons.request_quote_outlined, onPressed: () => _openInterest(context, 'Werbeagentur', 'Lead')),
-        const SizedBox(height: 10),
-        AirmiusButton(label: 'Ads planen', icon: Icons.campaign_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdCampaignScreen(title: 'Werbeagentur Kampagne', status: 'Planung')))),
-      ];
-    }
-    if (lower.contains('preise')) {
-      return [
-        AirmiusButton(label: 'Plan anfragen', icon: Icons.sell_outlined, onPressed: () => _openInterest(context, 'Preise', 'Plans')),
-      ];
-    }
-    if (lower.contains('marketplace')) {
-      return [
-        AirmiusButton(label: 'Anbieter kontaktieren', icon: Icons.storefront_outlined, onPressed: () => _openInterest(context, 'Marketplace', 'Shop')),
-        const SizedBox(height: 10),
-        AirmiusButton(label: 'Marketplace Ad', icon: Icons.campaign_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdCampaignScreen(title: 'Marketplace Ad', status: 'Aktiv')))),
-      ];
-    }
-    if (lower.contains('blog')) {
-      return [
-        AirmiusButton(label: 'Blog lesen', icon: Icons.article_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicBlogReaderScreen()))),
-        const SizedBox(height: 10),
-        AirmiusButton(label: 'RSS & Kategorien', icon: Icons.rss_feed_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicBlogReaderScreen(initialCategory: 'Alle')))),
-      ];
-    }
-    if (lower.contains('e-learning')) {
-      return [
-        AirmiusButton(label: 'Kursinteresse senden', icon: Icons.school_outlined, onPressed: () => _openInterest(context, 'E-Learning', 'Kurse')),
-        const SizedBox(height: 10),
-        AirmiusButton(label: 'Zertifikat prüfen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CertificateVerificationScreen()))),
+        AirmiusButton(
+          label: t('publicDetail.contactProvider'),
+          icon: _isSponsors
+              ? Icons.handshake_outlined
+              : Icons.storefront_outlined,
+          onPressed: () => _openInterest(
+            context,
+            title,
+            _isSponsors ? 'partner_interest' : 'marketplace_interest',
+          ),
+        ),
       ];
     }
     return [
-      AirmiusButton(label: 'Mehr erfahren', icon: Icons.info_outline, secondary: true, onPressed: () => _openInterest(context, title, kind)),
+      AirmiusButton(
+        label: t('publicDetail.contact'),
+        icon: Icons.send_outlined,
+        secondary: true,
+        onPressed: () => _openInterest(context, title, kind),
+      ),
     ];
   }
 
   void _openInterest(BuildContext context, String topic, String interestKind) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => PublicInterestScreen(topic: topic, kind: interestKind, icon: icon)));
-  }
-
-  List<Widget> _sections(BuildContext context) {
-    final lower = title.toLowerCase();
-    if (lower.contains('vereine')) return _clubs();
-    if (lower.contains('marketplace')) return _marketplace();
-    if (lower.contains('e-learning')) return _learning();
-    if (lower.contains('blog')) return _blog();
-    if (lower.contains('jobs')) return _jobs();
-    if (lower.contains('sponsoren')) return _sponsors();
-    if (lower.contains('gamification')) return _gamification();
-    if (lower.contains('werbeagentur')) return _agency();
-    if (lower.contains('top-inhalte')) return _topContent();
-    if (kind == 'Legal') return _legal();
-    if (lower.contains('preise')) return _pricing();
-    return _generic();
-  }
-
-  List<Widget> _clubs() => const [
-        _PublicInfoCard(icon: Icons.search, title: 'Vereinssuche', body: 'Öffentliche Vereinsliste mit Ort, Mitgliederzahl, Status und Beitrittsmöglichkeit.', status: 'Public'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.assignment_outlined, title: 'Mitgliedschaftsanfrage', body: 'Interessierte können nach Login ein Formular ausfuellen und Dokumente bestätigen.', status: 'Login'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.verified_outlined, title: 'Verifizierung', body: 'Verifizierte Vereine erscheinen mit Status und sichtbaren Profilinformationen.', status: 'Trust'),
-      ];
-
-  List<Widget> _marketplace() => const [
-        _PublicInfoCard(icon: Icons.storefront_outlined, title: 'Produkte & Anbieter', body: 'Produktkarten, Anbieterprofile, Varianten und öffentliche Produktdetails.', status: 'Shop'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.shopping_cart_outlined, title: 'Checkout', body: 'Warenkorb und Gast-/User-Checkout werden später an Commerce-API angeschlossen.', status: 'Checkout'),
-      ];
-
-  List<Widget> _learning() => const [
-        _PublicInfoCard(icon: Icons.school_outlined, title: 'Kurskatalog', body: 'Öffentliche Kurse, Lektionen, Bewertungen und Zertifikatsprüfung.', status: 'Kurse'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.verified_outlined, title: 'Zertifikat verifizieren', body: 'Code prüfen und Zertifikatsstatus anzeigen.', status: 'Verify'),
-      ];
-
-  List<Widget> _blog() => const [
-        _PublicInfoCard(icon: Icons.article_outlined, title: 'Artikel-Liste', body: 'Kategorien, Suchauszug, Autor, Lesezeit und Veröffentlichungsdatum.', status: 'Blog'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.rss_feed_outlined, title: 'RSS & Kategorien', body: 'RSS und Kategorien bleiben als Public-Content-Struktur sichtbar.', status: 'RSS'),
-      ];
-
-  List<Widget> _jobs() => const [
-        _PublicInfoCard(icon: Icons.work_outline, title: 'Stellen & Engagement', body: 'Jobkarten mit Organisation, Ort, Beschreibung und Interesse senden.', status: 'Jobs'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.send_outlined, title: 'Interesse senden', body: 'Kontaktformular für Bewerber oder Interessenten.', status: 'Form'),
-      ];
-
-  List<Widget> _sponsors() => const [
-        _PublicInfoCard(icon: Icons.handshake_outlined, title: 'Sponsorenprofile', body: 'Partnerkarten, Sichtbarkeit, Kampagnen und Kontakt.', status: 'Partner'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.campaign_outlined, title: 'Kampagnen', body: 'Sponsoring- und Anzeigenbereiche für Vereine.', status: 'Ads'),
-      ];
-
-  List<Widget> _gamification() => const [
-        _PublicInfoCard(icon: Icons.workspace_premium_outlined, title: 'Badges & Fortschritt', body: 'Motivation, Regeln, Aktivitaet und Belohnungen.', status: 'Badges'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.leaderboard_outlined, title: 'Engagement', body: 'Leaderboard- und Aktivitaetsbereiche später über API.', status: 'Score'),
-      ];
-
-  List<Widget> _agency() => const [
-        _PublicInfoCard(icon: Icons.web_outlined, title: 'Vereinswebsite', body: 'Landingpage, Anfrageformular, Kampagnen und digitale Praesenz.', status: 'Website'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.request_quote_outlined, title: 'Anfrage senden', body: 'Projektumfang, Kontakt und Angebotsstatus.', status: 'Lead'),
-      ];
-
-  List<Widget> _pricing() => const [
-        _PublicInfoCard(icon: Icons.sell_outlined, title: 'Preisplaene', body: 'User-, Club- und Zusatzpakete mit Leistungsübersicht.', status: 'Plans'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.payments_outlined, title: 'Checkout-Einstieg', body: 'Stripe, PayPal oder Banktransfer werden später angebunden.', status: 'Pay'),
-      ];
-
-  List<Widget> _topContent() => const [
-        _PublicInfoCard(icon: Icons.auto_awesome_outlined, title: 'Kuratierte Inhalte', body: 'Blog, Kurse, Marketplace, Vereine, Sponsoren und Gamification als mobile Public-Auswahl.', status: 'Top'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.query_stats_outlined, title: 'Beliebtheit & Sichtbarkeit', body: 'Später sortiert Laravel nach Relevanz, Kategorie, Sprache und Public-Freigabe.', status: 'Ranking'),
-      ];
-
-  List<Widget> _legal() => const [
-        _PublicInfoCard(icon: Icons.description_outlined, title: 'Rechtstext', body: 'Struktur für Abschnitte, Stand, Kontakt und Download.', status: 'Legal'),
-        SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.report_outlined, title: 'Kontakt & Melden', body: 'Meldungen, Support und rechtliche Kontaktwege.', status: 'Support'),
-      ];
-
-  List<Widget> _generic() => const [
-        _PublicInfoCard(icon: Icons.public_outlined, title: 'Public Content', body: 'Native Detailseite für öffentliche Inhalte vorbereitet.', status: 'Public'),
-      ];
-}
-
-class _PublicInfoCard extends StatelessWidget {
-  const _PublicInfoCard({required this.icon, required this.title, required this.body, required this.status});
-
-  final IconData icon;
-  final String title;
-  final String body;
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AirmiusColors.blue),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))])),
-          StatusPill(status),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            PublicInterestScreen(topic: topic, kind: interestKind, icon: icon),
       ),
     );
   }
 }
 
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                Text(body),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

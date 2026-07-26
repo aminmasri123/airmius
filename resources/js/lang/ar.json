@@ -466,7 +466,8 @@
         "arena": "هادئ ومتين واحترافي.",
         "pulse": "ديناميكي ومحفّز.",
         "trail": "طبيعي ومناسب للتحمل وراسخ.",
-        "bazaar": "حيوي ومناسب للبيع ومنعش لتجارب السوق."
+        "bazaar": "حيوي ومناسب للبيع ومنعش لتجارب السوق.",
+        "vital": "منعش وواضح ورياضي مع أخضر قوي."
       }
     },
     "address": {
@@ -637,7 +638,7 @@
       "connected": "متصل",
       "connect": "ربط",
       "sport_apps_title": "مزامنة تطبيقات الرياضة",
-      "sport_apps_description": "اربط تطبيقات الرياضة حتى تنتقل بيانات التدريب لاحقاً إلى ملفك في Airmius.",
+      "sport_apps_description": "اربط تطبيقات الرياضة لمزامنة بيانات التدريب بأمان مع ملفك في Airmius.",
       "last_synced": "آخر مزامنة: {date}",
       "google_status": "حالة Google:",
       "google_error": "خطأ Google:",
@@ -662,7 +663,7 @@
       "provider_descriptions": {
         "strava": "يربط Strava بيانات الجري وركوب الدراجة والسباحة والتمارين عبر واجهة OAuth الرسمية.",
         "garmin": "تحتاج Garmin Health API إلى موافقة مزود. يمكن للمستخدمين تسجيل الاهتمام حتى تصبح موافقة الشريك فعالة.",
-        "google_fit": "الربط عبر Google OAuth. سيتم بناء استيراد الأنشطة لاحقاً على الرموز المحفوظة.",
+        "google_fit": "الربط عبر Google OAuth. يمكن الآن مزامنة الأنشطة باستخدام الرموز المحفوظة.",
         "mi_fitness": "لا يملك Mi Fitness ربط OAuth قياسياً بسيطاً في المشروع. يتم تسجيل الربط كرغبة.",
         "polar": "يوفر Polar AccessLink بيانات التدريب والنشاط عبر OAuth/API. تم تسجيل التكامل كرغبة.",
         "fitbit": "يمكن لـ Fitbit Web API توفير الأنشطة والخطوات والمسافة والسعرات وبيانات الصحة عبر OAuth. تم تسجيل التكامل كرغبة."
@@ -754,7 +755,11 @@
   "notifications": {
     "new": "إشعار جديد",
     "empty": "لا توجد إشعارات",
-    "unread_count": "{count} غير مقروء"
+    "unread_count": "{count} غير مقروء",
+    "read": "مقروء",
+    "unread": "غير مقروء",
+    "label": "إشعار",
+    "removal_objection_message": "أعترض على الإزالة وأطلب مراجعتها."
   },
   "sport_map": {
     "eyebrow": "المسارات والتتبع وأماكن الرياضة",
@@ -897,7 +902,9 @@
     },
     "none": {
       "club": "بدون نادي",
-      "team": "بدون فريق"
+      "team": "بدون فريق",
+      "not_required": "غير مطلوب",
+      "team_assigned": "يحدده الفريق"
     },
     "types": {
       "training": "تدريب",
@@ -942,6 +949,25 @@
       "friday": "جمعة",
       "saturday": "سبت",
       "sunday": "أحد"
+    },
+    "free_limit": "الحساب المجاني: تبقى {remaining} من أصل {limit} فعالية هذا الشهر. الفعاليات المتكررة غير متاحة.",
+    "steps": {
+      "base": "الأساسيات",
+      "time": "الوقت",
+      "details": "التفاصيل",
+      "review": "مراجعة"
+    },
+    "validation": {
+      "title": "يرجى إدخال عنوان.",
+      "private_team": "تحتاج الفعاليات الخاصة إلى فريق.",
+      "organization_club": "تحتاج فعاليات المؤسسة إلى نادٍ.",
+      "start": "يرجى تحديد وقت البدء.",
+      "end_before_start": "لا يمكن أن يسبق الانتهاء وقت البدء.",
+      "reminder_after_start": "يجب أن يسبق التذكير وقت البدء.",
+      "recurrence_end": "يرجى تحديد تاريخ انتهاء التكرار.",
+      "recurrence_before_start": "يجب أن يأتي انتهاء التكرار بعد البدء.",
+      "recurrence_days": "يرجى اختيار يوم واحد على الأقل.",
+      "participants": "يجب أن يكون حد المشاركين 1 على الأقل."
     }
   },
   "roles": {
@@ -962,6 +988,72 @@
     "cta": {
       "start": "ابدأ مجاناً",
       "explore": "اكتشف Airmius"
+    },
+    "events": {
+      "meta_title": "اكتشف الفعاليات الرياضية",
+      "meta_description": "اعثر على التدريبات والمباريات واللقاءات والفعاليات الرياضية العامة للأندية والفرق على إيرميوس.",
+      "eyebrow": "الفعاليات",
+      "title": "اعثر على الفعاليات الرياضية والتدريبات واللقاءات العامة.",
+      "plan": "خطط لفعاليتك",
+      "search_placeholder": "فعالية أو ناد أو فريق",
+      "search_label": "ابحث عن فعالية أو ناد أو فريق",
+      "type_label": "نوع الفعالية",
+      "all_types": "كل الأنواع",
+      "location_placeholder": "مدينة أو بلد",
+      "location_label": "ابحث عن مدينة أو بلد",
+      "search": "بحث",
+      "find_club": "اعثر على ناد",
+      "join": "شارك",
+      "empty": "لا توجد فعاليات عامة تطابق معايير البحث."
+    },
+    "sports": {
+      "meta_title": "الرياضات على إيرميوس",
+      "meta_description": "اكتشف الرياضات النشطة على إيرميوس واعثر على الأندية والفرق والفعاليات والعروض الرياضية الرقمية المناسبة.",
+      "eyebrow": "الرياضات",
+      "title": "اعثر على الرياضة والأندية والفرق المناسبة.",
+      "find_clubs": "ابحث عن الأندية",
+      "search_placeholder": "ابحث عن رياضة",
+      "search_label": "ابحث عن رياضة",
+      "category_label": "فئة الرياضة",
+      "all_categories": "كل الفئات",
+      "filter": "تصفية",
+      "sport": "رياضة",
+      "clubs": "الأندية",
+      "teams": "الفرق",
+      "show_clubs": "عرض الأندية",
+      "events": "الفعاليات",
+      "empty": "لا توجد رياضات تطابق معايير البحث."
+    },
+    "sponsors": {
+      "meta_title": "رعاة إيرميوس",
+      "meta_description": "اكتشف الرعاة والشركاء الذين يدعمون إيرميوس والأندية والعروض الرياضية.",
+      "eyebrow": "شركاء إيرميوس",
+      "title": "رعاة يجعلون الرياضة أكثر ظهوراً وأقل تكلفة.",
+      "intro": "يجد الزوار هنا جميع رعاة إيرميوس وشركاء الأندية النشطين. من عروض المنصة إلى الداعمين المحليين، توضح كل بطاقة من يقف وراء الخصومات والعروض ودعم الأندية.",
+      "visible_title": "مرئي للزوار",
+      "visible_text": "يظهر الرعاة من منطقة الإدارة تلقائياً ما دامت فترة رعايتهم نشطة.",
+      "search_placeholder": "ابحث عن راع أو ناد أو موقع",
+      "all": "الكل",
+      "airmius": "إيرميوس",
+      "outfit": "الملابس",
+      "clubs": "الأندية",
+      "website": "زيارة الموقع",
+      "empty_title": "لم يتم العثور على رعاة.",
+      "empty_text": "عدّل البحث أو الفلتر.",
+      "scope_platform": "منصة إيرميوس",
+      "scope_outfit": "اشتراك الملابس",
+      "scope_club": "راعٍ للنادي",
+      "scope_platform_text": "يدعم عروض ومزايا منصة إيرميوس.",
+      "scope_outfit_text": "يدعم اشتراكات الملابس وعروض الرعاية للرياضيين.",
+      "scope_club_text": "يدعم عروض الأندية والمشاريع الرياضية المحلية."
+    },
+    "gamification": {
+      "per_action": "لكل إجراء",
+      "cap": "الحد"
+    },
+    "admin_badges": {
+      "delete_title": "حذف الشارة",
+      "delete_message": "هل تريد حذف الشارة \"{name}\" فعلاً؟"
     },
     "top": {
       "hero": {
@@ -1115,6 +1207,18 @@
         "subtitle": "وحدات تعليمية قصيرة للمدربين ومديري الفرق واللاعبين ومسؤولي الأندية."
       },
       "start": "ابدأ التعلم",
+      "cta": {
+        "room": "فتح مساحة التعلم",
+        "buy": "شراء الدورة",
+        "paid": "دورة مدفوعة",
+        "free": "التسجيل مجاناً",
+        "price": "السعر:",
+        "certificate": "الشهادة:",
+        "lesson_unlock": "ستُفتح هذه الدرس في {date}."
+      },
+      "status": {
+        "cancelled": "مسحوب"
+      },
       "steps": {
         "learn": "تعلم بسرعة",
         "apply": "طبّق مباشرة",
@@ -1714,7 +1818,7 @@
     "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "تصفح أقل ونتائج أسرع: فئات وعروض وقوائم مختارة بدلاً من عرض كل المنتجات دفعة واحدة.",
     "Jetzt entdecken": "اكتشف الآن",
     "Hilfe & Bestellung": "المساعدة والطلب",
-    "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "طلب الضيف وطلب الحساب وعروض البائعين جاهزة.",
+    "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "طلبات الضيوف والطلبات بعد تسجيل الدخول وعروض المزودين متاحة.",
     "Anbieter werden": "كن بائعاً",
     "Vereine, Trainer und Shops können Angebote einstellen.": "يمكن للأندية والمدربين والمتاجر نشر العروض.",
     "Produkte, Camps und Kurse aus deinem Sportnetzwerk.": "منتجات ومعسكرات ودورات من شبكتك الرياضية.",
@@ -3143,7 +3247,7 @@
     "Ausgangsplan: . Die KI erstellt eine neue bestätigbare Version, damit dein alter Plan nachvollziehbar bleibt.": "خطة البدء: . تُنشئ الذكاء الاصطناعي نسخة جديدة قابلة للتأكيد، لضمان استمرار تحليل خطةك القديمة.",
     "Ausgestellt": "مُعَد",
     "Ausgestellt am": "مُعَد في",
-    "Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.": "الخطة المُوازنة مُفعَّلة: تُحصل الوحدات الفردية لاحقًا تلقائيًا على نوعها، مثل Long Run، Intervalle، التدريبات، أو التمرينات التأهيلية.",
+    "Ausgewogene Planung aktiv: Die KI ordnet jede Einheit automatisch einem passenden Typ zu, z. B. Long Run, Intervalle, Technik oder Regeneration.": "الخطة المتوازنة مفعّلة: يعيّن الذكاء الاصطناعي لكل وحدة نوعًا مناسبًا تلقائيًا، مثل الجري الطويل أو الفترات أو التقنية أو الاستشفاء.",
     "Ausgewählt": "مُختَار",
     "Ausgewählte Produkte": "المنتجات المُختَارة",
     "Ausgewählter Tag": "اليوم المُختَار",
@@ -5402,6 +5506,124 @@
   "teams": {
     "empty": "لا توجد فرق أو أندية."
   },
+  "teams_workspace": {
+    "sport_open": "الرياضة غير محددة",
+    "roles": { "owner": "المالك", "admin": "مسؤول النادي", "manager": "المدير", "academy_manager": "مدير الأكاديمية", "financial_controller": "المسؤول المالي", "trainer": "المدرب", "member": "عضو" },
+    "team_roles": { "coach": "المدرب", "captain": "القائد", "player": "اللاعب" },
+    "steps": { "basic": "الأساسيات", "address": "العنوان", "review": "المراجعة" },
+    "tabs": { "basic": "الأساسيات", "visibility": "الرؤية", "address": "العنوان", "bank": "الحساب البنكي", "sponsors": "الرعاة" },
+    "messages": {
+      "insights_error": "تعذر تحميل نشاط الفريق.", "job_created": "تم إنشاء الإدخال.", "job_updated": "تم تحديث الإدخال.", "job_save_error": "تعذر حفظ الإدخال. تحقق من الحقول المحددة.", "job_delete_title": "حذف الوظيفة \"{title}\"", "job_delete_message": "سيتم حذف هذا الإدخال نهائياً ولن يظهر في صفحة الوظائف.", "job_deleted": "تم حذف الإدخال.", "job_delete_error": "تعذر حذف الإدخال.", "job_delete_button": "حذف الوظيفة", "club_registered": "تم تسجيل النادي.", "club_register_error": "تعذر تسجيل النادي. تحقق من الحقول المحددة.",
+      "team_created": "تم إنشاء الفريق.", "team_create_error": "تعذر إنشاء الفريق. تحقق من الحقول.", "invite_sent": "تم إرسال الدعوة بنجاح.", "invite_error": "تعذر إرسال الدعوة.",
+      "member_added": "تمت إضافة العضو إلى الفريق.", "member_add_error": "تعذر إضافة العضو.", "invitation_accepted": "تم قبول دعوة الفريق.", "invitation_accept_error": "تعذر قبول دعوة الفريق.", "invitation_declined": "تم رفض دعوة الفريق.", "invitation_decline_error": "تعذر رفض دعوة الفريق.",
+      "join_request_sent": "تم إرسال طلب الانضمام إلى الفريق.", "join_request_send_error": "تعذر إرسال طلب الانضمام.", "join_request_approved": "تم قبول طلب الانضمام إلى الفريق.", "join_request_approve_error": "تعذر قبول طلب الانضمام.", "join_request_declined": "تم رفض طلب الانضمام إلى الفريق.", "join_request_decline_error": "تعذر رفض طلب الانضمام.",
+      "club_role_saved": "تم حفظ دور النادي.", "club_role_error": "تعذر حفظ دور النادي.", "club_saved": "تم حفظ بيانات النادي.", "club_save_error": "تعذر حفظ بيانات النادي. تحقق من الحقول.",
+      "sponsor_updated": "تم تحديث الراعي.", "sponsor_created": "تم إنشاء الراعي.", "sponsor_save_error": "تعذر حفظ الراعي. تحقق من الحقول.", "sponsor_remove_title": "حذف الراعي \"{name}\"", "sponsor_remove_message": "ستتم إزالة هذا الراعي من النادي. لا يمكن التراجع عن ذلك.", "sponsor_removed": "تم حذف الراعي.", "sponsor_remove_error": "تعذر حذف الراعي.",
+      "team_role_saved": "تم حفظ دور الفريق.", "team_role_error": "تعذر حفظ دور الفريق.", "leave_team_title": "مغادرة فريق \"{name}\"", "remove_member_title": "إزالة {member} من \"{team}\"", "leave_team_message": "لا يمكنك مغادرة هذا الفريق قبل تسوية فواتير النادي المستحقة.", "remove_member_message": "ستتم إزالة العضو من هذا الفريق، وتبقى عضوية النادي فعالة.", "leave_team_button": "مغادرة الفريق", "remove_member_button": "إزالة العضو", "team_left": "لقد غادرت الفريق.", "member_removed": "تمت إزالة العضو من الفريق.", "leave_team_error": "تعذر مغادرة الفريق. تحقق من الفواتير المستحقة.", "member_remove_error": "تعذر إزالة العضو.",
+      "delete_club_title": "حذف النادي \"{name}\"", "delete_club_message": "سيؤدي ذلك أيضاً إلى حذف جميع فرق النادي. لا يمكن التراجع عن ذلك.", "club_deleted": "تم حذف النادي.", "club_delete_error": "تعذر حذف النادي.", "delete_team_title": "حذف الفريق \"{name}\"", "delete_team_message": "ستتم إزالة الفريق وتعييناته. لا يمكن التراجع عن ذلك.", "team_deleted": "تم حذف الفريق.", "team_delete_error": "تعذر حذف الفريق."
+    }
+  },
+  "teams_profile": {
+    "messages": {
+      "deactivate_rule": "هل تريد تعطيل القاعدة \"{title}\"؟ ستبقى القيود الحالية محفوظة.",
+      "cancel_fee": "هل تريد إلغاء هذا القيد؟"
+    }
+  },
+  "clubs_profile": {
+    "messages": {
+      "withdraw_request": "هل تريد حقًا سحب طلب العضوية من \"{name}\"؟",
+      "leave_club": "هل تريد حقًا مغادرة \"{name}\"؟ ستتم إزالتك أيضًا من جميع فرق هذا النادي. لا يمكن تنفيذ ذلك مع وجود فواتير معلقة."
+    }
+  },
+  "operating_contracts": {
+    "deadline": {
+      "since": "منذ {days} يومًا",
+      "today": "اليوم",
+      "tomorrow": "غدًا",
+      "in_days": "بعد {days} أيام"
+    },
+    "messages": {
+      "delete": "هل تريد حقًا حذف \"{name}\"؟"
+    }
+  },
+  "Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge.": "ملف الفريق والانتماء والأعضاء والمنشورات المرئية.",
+  "Individuelle Regeln für": "قواعد مخصصة لـ",
+  "und offene Strafbuchungen.": "والغرامات المفتوحة.",
+  "Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden.": "ستظهر فرق هذا النادي هنا عند إنشائها.",
+  "Angenommene Mitglieder werden in dieser Liste sichtbar.": "يظهر الأعضاء المقبولون في هذه القائمة.",
+  "Vereinsdaten speichern": "حفظ بيانات النادي",
+  "Speichert...": "جارٍ الحفظ…",
+  "Vereinsdaten werden gespeichert...": "جارٍ حفظ بيانات النادي…",
+  "ab": "ابتداءً من",
+  "Min.": "د",
+  "max.": "الحد الأقصى",
+  "wird gespeichert…": "جارٍ الحفظ…",
+  "Unbekannt": "غير معروف",
+  "Diese Buchung stornieren?": "هل تريد إلغاء هذا القيد؟",
+  "fällig": "مستحق",
+  "bezahlt": "مدفوع",
+  "Strafkatalog konnte nicht geladen werden.": "تعذر تحميل سجل الغرامات.",
+  "Regel konnte nicht gespeichert werden.": "تعذر حفظ القاعدة.",
+  "Regel konnte nicht deaktiviert werden.": "تعذر تعطيل القاعدة.",
+  "Strafe konnte nicht gebucht werden.": "تعذر تسجيل الغرامة.",
+  "Buchung konnte nicht bezahlt markiert werden.": "تعذر وضع القيد كمدفوع.",
+  "Buchung konnte nicht storniert werden.": "تعذر إلغاء القيد.",
+  "Änderung gespeichert.": "تم حفظ التغيير.",
+  "Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.": "تعذر حفظ التغيير. يرجى التحقق من الإدخالات.",
+  "Karten": "الخرائط",
+  "Routenplanung": "تخطيط المسار",
+  "Künstliche Intelligenz": "الذكاء الاصطناعي",
+  "Kartenaufrufe": "تحميلات الخريطة",
+  "Credits/Anfragen": "الأرصدة/الطلبات",
+  "Text-Anfragen": "طلبات النصوص",
+  "Trips": "الرحلات",
+  "Trips + aktive Nutzer": "الرحلات + المستخدمون النشطون",
+  "Info": "معلومات",
+  "Eigene Routing-Infrastruktur:": "بنية توجيه مستضافة داخليًا:",
+  "Zielkosten ca.": "التكلفة المستهدفة تقريبًا",
+  "frei enthalten.": "مضمنة مجانًا.",
+  "Plan im aktuellen Volumen nutzbar.": "الخطة مناسبة للحجم الحالي.",
+  "Behalte Karte, Routing, Navigation und KI im Blick. Die Zahlen helfen zu erkennen, wann Mapbox, GraphHopper, openrouteservice, eigene Infrastruktur oder KI-Anbieter gewechselt werden sollten.": "راقب الخرائط والتوجيه والملاحة والذكاء الاصطناعي لمعرفة وقت تغيير المزوّد.",
+  "Kosten steigen, wenn sehr viele Nutzer die Sportkarte laden.": "تزداد التكاليف عند تحميل عدد كبير من المستخدمين للخريطة الرياضية.",
+  "GraphHopper Free ist nur für Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.": "خدمة GraphHopper المجانية مخصصة للتطوير فقط. توفر المسارات المحفوظة الأرصدة والتكاليف.",
+  "Echte Live-Navigation kostet pro Nutzer und pro Trip.": "تكلفة الملاحة المباشرة تُحسب لكل مستخدم ورحلة.",
+  "Für Ernährung, Training und Blogtexte werden Tokens gezählt.": "تُحسب الرموز للتغذية والتدريب ونصوص المدونة.",
+  "Webkarte": "خريطة الويب",
+  "Live-Navigation": "الملاحة المباشرة",
+  "KI-Text": "نص الذكاء الاصطناعي",
+  "KI-Bildanalyse": "تحليل الصور بالذكاء الاصطناعي",
+  "GraphHopper Free/Dev wird eng": "تقترب خدمة GraphHopper المجانية/التطويرية من الحد",
+  "Kartenaufrufe steigen": "تزداد تحميلات الخريطة",
+  "Navigation SDK getrennt betrachten": "راجع حزمة الملاحة بشكل منفصل",
+  "KI-Daten minimieren": "قلّل بيانات الذكاء الاصطناعي",
+  "Noch entspannt": "الاستخدام ما زال ضمن الحدود",
+  "Fristen": "المواعيد النهائية",
+  "Kein Anbieter": "لا يوجد مزوّد",
+  "Vertrag bearbeiten": "تعديل العقد",
+  "WLAN Büro, Handyvertrag, Fahrzeugleasing ...": "شبكة المكتب والاشتراك الهاتفي وتأجير المركبة…",
+  "Neuer Vertrag": "عقد جديد",
+  "Automatisch aus Ende minus Frist": "محسوب من تاريخ الانتهاء مطروحًا منه مهلة الإلغاء",
+  "Anlegen": "إنشاء",
+  "Büro & Standort": "المكتب والموقع",
+  "Vertrag löschen": "حذف العقد",
+  "-": "-",
+  "Beendet": "منتهٍ",
+  "WLAN & Internet": "الواي فاي والإنترنت",
+  "Handy & Mobilfunk": "الهاتف المحمول والاتصالات",
+  "Leasing": "التأجير",
+  "Software": "البرمجيات",
+  "Hosting & Domains": "الاستضافة والنطاقات",
+  "Versicherung": "التأمين",
+  "Marketing": "التسويق",
+  "Finanzen & Steuer": "المالية والضرائب",
+  "Dienstleister": "مقدّم الخدمة",
+  "Quartalsweise": "ربع سنوي",
+  "Lastschrift": "خصم مباشر",
+  "« Previous": "« السابق",
+  "Next »": "التالي »",
+  "Neue Regel": "قاعدة جديدة",
+  "Regel bearbeiten": "تعديل القاعدة",
+  "Regel anlegen": "إنشاء القاعدة",
   "Schließen": "إغلاق",
   "AIRMIUS": "AIRMIUS",
   "AIRMIUS Marketplace": "سوق AIRMIUS",
@@ -5424,7 +5646,7 @@
   "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "تصفح أقل ونتائج أسرع: فئات وعروض وقوائم مختارة بدلاً من عرض كل المنتجات دفعة واحدة.",
   "Jetzt entdecken": "استكشف الآن",
   "Hilfe & Bestellung": "المساعدة والطلب",
-  "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "طلب الضيف وطلب الحساب وعروض البائعين جاهزة.",
+  "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "طلبات الضيوف والطلبات بعد تسجيل الدخول وعروض المزودين متاحة.",
   "Anbieter werden": "كن بائعاً",
   "Vereine, Trainer und Shops können Angebote einstellen.": "يمكن للأندية والمدربين والمتاجر نشر العروض.",
   "Alle anzeigen": "عرض الكل",
@@ -6442,5 +6664,137 @@
   "Kalender": "التقويم",
   "Öffnen": "فتح",
   "Noch keine kommenden Termine geplant.": "لا توجد مواعيد قادمة مخططة بعد.",
-  "Noch kein Termin": "لا يوجد موعد بعد"
+  "Noch kein Termin": "لا يوجد موعد بعد",
+  "Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.": "يبدأ الرياضيون والآباء مجانًا. تدفع الأندية بعدل حسب حجمها، ويحصل المدربون والرعاة والمزودون على مسارات تناسب نمو وظائفهم.",
+  "Kostenlos starten, sportlich sichtbar werden.": "ابدأ مجانًا واظهر رياضيًا.",
+  "Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen später für Portfolio, Statistiken und mehr Sichtbarkeit.": "يبقى الاستخدام الأساسي للرياضيين مجانيًا، وتضيف Pro الملف الرياضي والإحصاءات ومزيدًا من الظهور.",
+  "Training organisieren, Teams begleiten, Wissen verkaufen.": "نظّم التدريب ورافق الفرق وبع خبرتك.",
+  "Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen später eigene Gruppen, Camps und Kursverkauf.": "يعمل المدربون مجانًا ضمن خطة النادي، ويمكن للمدرب المستقل لاحقًا إدارة مجموعاته ومعسكراته وبيع دوراته.",
+  "Vereinsverwaltung, Community und Kommunikation in einem System.": "إدارة النادي والمجتمع والتواصل في نظام واحد.",
+  "Die Vereinspläne sind der Hauptumsatz: Mitglieder, Teams, Beiträge, Rechnungen, Dateien und Sponsoren.": "تغطي خطط النادي العمليات الأساسية: الأعضاء والفرق والرسوم والفواتير والملفات والرعاة.",
+  "Sicherheit für Minderjährige bleibt kostenlos.": "تبقى حماية القاصرين مجانية.",
+  "Elternzustimmung, Widerruf und Kinderüberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.": "موافقة الوالدين وسحبها ونظرة الأطفال وظائف ثقة ولا تُفرض عليها رسوم منفصلة.",
+  "Regionale Sichtbarkeit im Sportumfeld.": "ظهور إقليمي في محيط الرياضة.",
+  "Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsäule, sobald genug Aktivität vorhanden ist.": "تصبح ملفات الرعاة والحملات والإعلانات المحلية مصدر دخل للشركات عند توفر نشاط كافٍ.",
+  "Marketplace für Produkte, Kurse und Services.": "سوق للمنتجات والدورات والخدمات.",
+  "Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.": "يمكن للمزودين إضافة المنتجات والمعسكرات والدورات والخدمات الرياضية مع نمو السوق.",
+  "Websites, Kampagnen und digitale Sichtbarkeit für Vereine.": "مواقع وحملات وظهور رقمي للأندية.",
+  "Airmius bietet Vereinen Website-Erstellung, Landingpages und digitale Kampagnen als Angebotsservice nach Anfrage.": "تقدم Airmius للأندية مواقع وصفحات هبوط وحملات رقمية بعرض سعر عند الطلب.",
+  "Individuelle Lösungen für Verbände und große Organisationen.": "حلول مخصصة للاتحادات والمنظمات الكبيرة.",
+  "Enterprise ist für Mandantenfähigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.": "صُممت Enterprise لتعدد العملاء والترحيل والتكامل والتدريب واتفاقيات الخدمة.",
+  "Funktionslogik": "منطق الوظائف",
+  "Ausbauplan": "خارطة الطريق",
+  "Reihenfolge für die fehlenden Vereins- und Trainerfunktionen": "ترتيب وظائف النادي والمدرب المتبقية",
+  "training_log": {
+    "title": "حصة تدريبية",
+    "status": { "draft": "مسودة", "planned": "مخططة", "in_progress": "قيد التنفيذ", "completed": "مكتملة" },
+    "exact": "مطابق",
+    "equal": "متساوٍ",
+    "roles": { "athlete": "رياضي", "trainer": "مدرب", "team_staff": "فريق", "admin": "مسؤول" },
+    "metrics": { "time": "الوقت", "duration": "المدة", "distance": "المسافة", "calories": "السعرات", "intensity": "الشدة" },
+    "labels": { "athlete": "الرياضي:", "team": "الفريق:", "sport": "الرياضة:", "reps": "التكرارات:", "weight": "الوزن:", "time": "الوقت:", "distance": "المسافة:", "intensity": "الشدة:" },
+    "actions": { "new": "حصة جديدة", "overview": "العودة إلى النظرة العامة" },
+    "comparison": { "eyebrow": "الخطة مقابل الفعلي", "title": "مقارنة الحصة المخططة بالتنفيذ", "value": "القيمة", "planned": "مخطط", "actual": "فعلي", "delta": "الفرق", "scheduled": "الموعد المخطط", "documented": "موثق", "details": "التفاصيل" },
+    "entries": "إدخالات",
+    "documentation": "التوثيق",
+    "exercises": "التمارين والقيم",
+    "set": "مجموعة",
+    "media": "عرض الوسائط",
+    "no_details": "لم يتم تسجيل قيم تفصيلية.",
+    "notes": "ملاحظات",
+    "trainer_note": "ملاحظة المدرب",
+    "wellness": { "title": "الحمل والحالة", "rpe": "RPE", "energy": "الطاقة", "pain": "الألم", "sleep": "النوم" },
+    "plan_reference": "مرجع الخطة",
+    "feedback": "ملاحظات",
+    "feedback_title": "المحادثة بين الرياضي والمدرب",
+    "unknown": "غير معروف",
+    "no_feedback": "لا توجد ملاحظات بعد. اكتب أول رد مباشرة على هذه الحصة التدريبية.",
+    "reply": "كتابة رد",
+    "placeholder": "ملاحظة أو سؤال أو نصيحة تقنية أو تركيز قادم",
+    "send": "إرسال الملاحظات"
+  },
+  "users_edit": { "suspension": { "no_change": "عدم التغيير", "lift": "رفع الإيقاف", "one_day": "إيقاف ليوم واحد", "three_days": "إيقاف لثلاثة أيام", "seven_days": "إيقاف لسبعة أيام", "ten_days": "إيقاف لعشرة أيام", "fourteen_days": "إيقاف لأربعة عشر يوماً", "thirty_days": "إيقاف لثلاثين يوماً", "sixty_days": "إيقاف لستين يوماً", "ninety_days": "إيقاف لتسعين يوماً" } },
+  "training_workspace": {
+    "sports": { "all": "الكل", "laufen": "الجري", "schwimmen": "السباحة", "gym": "الصالة الرياضية", "fussball": "كرة القدم", "tanzen": "الرقص", "golf": "الغولف", "cycling": "ركوب الدراجات", "yoga": "اليوغا" },
+    "metrics": { "Distanz km": "المسافة كم", "Pace Ziel": "الوتيرة المستهدفة", "Höhenmeter": "الارتفاع", "RPE": "RPE", "Bahnen": "الأطوال", "Stil": "الأسلوب", "Intervall": "الفاصل", "Pausenzeit": "وقت الراحة", "Sätze": "المجموعات", "Wiederholungen": "التكرارات", "Gewicht kg": "الوزن كغ", "Pause": "الراحة", "Schwerpunkt": "التركيز", "Spielfeld": "الملعب", "Spielerzahl": "عدد اللاعبين", "Drill": "التمرين", "Choreo": "التصميم الحركي", "Takte": "الإيقاعات", "Tempo": "الإيقاع", "Löcher": "الحفر", "Schläger": "العصي", "Zielscore": "النتيجة المستهدفة", "Watt Ziel": "الواط المستهدف", "Kadenz": "الإيقاع", "Flow": "التدفق", "Atemfokus": "تركيز التنفس", "Level": "المستوى", "Haltezeit": "مدة الثبات" },
+    "plan_types": { "gym": "الصالة", "run_interval": "فواصل", "long_run": "جري طويل", "swim": "سباحة", "football": "كرة القدم", "cycling": "دراجة", "generic": "حر" },
+    "sections": { "overview": { "label": "نظرة عامة", "hint": "البداية" }, "plans": { "label": "الخطط", "hint": "البناء" }, "week": { "label": "الأسبوع", "hint": "التقويم" }, "logs": { "label": "السجلات", "hint": "التوثيق" }, "analysis": { "label": "التحليل", "hint": "الإشارات" } },
+    "plan_steps": { "0": { "label": "الأساسيات", "hint": "الاسم والإيقاع" }, "1": { "label": "الهدف", "hint": "الفترة والمستوى" }, "2": { "label": "المشاركة", "hint": "الفريق والرياضيون" }, "3": { "label": "الحصة", "hint": "التدريب الأول" } },
+    "ai_steps": { "0": { "label": "الهدف", "hint": "ما الذي تريد تحسينه؟" }, "1": { "label": "الإطار", "hint": "الوقت والمستوى والقواعد" }, "2": { "label": "المعاينة", "hint": "المراجعة والحفظ" } },
+    "duration_presets": { "0": { "label": "شهر واحد", "hint": "بداية سريعة" }, "1": { "label": "شهران", "hint": "البناء" }, "2": { "label": "ثلاثة أشهر", "hint": "كتلة مستقرة" }, "3": { "label": "ستة أشهر", "hint": "طويل المدى" } },
+    "cadence": { "single": "مرة واحدة", "daily": "يومي", "weekly": "أسبوعي", "monthly": "شهري" },
+    "phase": { "base": "الأساس", "build": "البناء", "peak": "الذروة", "recovery": "التعافي", "rehab": "إعادة التأهيل" },
+    "level": { "beginner": "مبتدئ", "intermediate": "متوسط", "advanced": "متقدم", "elite": "احترافي" },
+    "load": { "low": "خفيف", "medium": "متوسط", "high": "عالٍ", "test": "اختبار" },
+    "permission": { "read": "قراءة فقط", "write": "قابل للتعديل" },
+    "status": { "missed": "لم يُنجز" },
+    "item_status": { "completed": "مكتمل", "missed": "لم يُنجز", "due": "مستحق", "planned": "مخطط" },
+    "units": { "hours": "س", "minutes": "د" },
+    "fallback_training": "تدريب",
+    "page_title": "التدريب",
+    "eyebrow": "مركز التدريب",
+    "tagline": "خطط · نفّذ · شارك",
+    "title": "خطط التدريب",
+    "next_training": "التدريب التالي",
+    "empty_next": "لا يوجد شيء مخطط بعد",
+    "empty_next_mobile": "ابدأ مباشرة من الأسفل.",
+    "empty_next_desktop": "أنشئ خطة أو وثّق تدريباً عفوياً.",
+    "no_appointment": "لا توجد حصة مجدولة بعد.",
+    "actions": { "start": "ابدأ", "create_plan": "إنشاء خطة", "ai_plan": "خطة بالذكاء الاصطناعي", "document": "توثيق" },
+    "stats": { "plans": "الخطط", "logs": "السجلات", "completed": "المكتمل", "teams": "الفرق" },
+    "ai": { "free": "مجاني", "limit_without_monthly": "الفئة {tier}: حتى {weeks} أسبوعاً", "limit_with_monthly": "الفئة {tier}: {remaining}/{limit} خطة ذكاء اصطناعي هذا الشهر، حتى {weeks} أسبوعاً", "analysis": "تحليل", "adjustment": "تعديل", "adjusted_title": "{title} بعد التعديل", "training_plan": "خطة تدريب", "unavailable": "خطط التدريب بالذكاء الاصطناعي غير متاحة ضمن حصتك الحالية.", "goal_required": "أدخل هدفاً تدريبياً واضحاً أولاً.", "revision_required": "اكتب باختصار ما الذي يجب على الذكاء الاصطناعي تغييره في الخطة.", "too_many_weeks": "تسمح فئتك الحالية بخطط ذكاء اصطناعي حتى {weeks} أسبوعاً. اختر مدة أقصر أو قم بالترقية.", "too_many_items": "ستتضمن هذه الخطة {requested} حصة. قلل الأسابيع أو عدد الحصص إلى {max} حصة كحد أقصى.", "preview_created": "تم إنشاء اقتراح الذكاء الاصطناعي.", "profile_missing": "نحتاج إلى مزيد من بيانات الملف الرياضي لإنشاء خطة موثوقة.", "generation_failed": "تعذر إنشاء خطة التدريب بالذكاء الاصطناعي.", "save_failed": "تعذر حفظ خطة الذكاء الاصطناعي." },
+    "log_create": {
+      "page_title": "توثيق التدريب", "eyebrow": "التدريب", "title": "توثيق حصة", "intro": "سجّل الأساسيات بسرعة، علّم المجموعات وأضف التفاصيل لاحقاً عند الحاجة.", "back": "رجوع", "template": "القالب", "status": "الحالة", "quality": "الجودة", "step": "الخطوة", "training_type": "نوع التدريب", "swipe_hint": "مرر بين القوالب على الهاتف.", "selected": "محدد", "change": "تغيير", "athlete": "الرياضي", "planned_session": "الحصة المخططة", "spontaneous": "تدريب عفوي", "sport": "الرياضة", "sport_search": "ابحث عن رياضة", "self": "أنا", "quick_choice": "اختيار سريع",
+      "autosave": { "saving": "جارٍ حفظ المسودة...", "dirty": "سيتم حفظ التغييرات قريباً", "saved": "تم حفظ المسودة", "at": "في", "none": "لا توجد مسودة" },
+      "summary": { "gym": "{exercises} تمارين · أُنجز {completed}/{sets} مجموعات", "long_run": "تكفي البيانات الإجمالية · المقاطع اختيارية", "entries": "{count} صفوف تفصيلية" },
+      "checklist": { "basics": "البيانات الأساسية", "time": "الوقت", "load": "الحمل", "details": "التفاصيل", "wellness": "الحالة", "notes_media": "ملاحظات أو وسائط", "visibility": "الظهور" },
+      "steps": { "1": { "label": "اختر التدريب", "short": "ابدأ" }, "2": { "label": "التوثيق", "short": "التفاصيل" }, "3": { "label": "الإنهاء", "short": "إنهاء" } },
+      "types": { "gym": { "label": "الصالة / القوة", "short": "الصالة", "detail": "التمارين والمجموعات" }, "run_interval": { "label": "فواصل الجري", "short": "فواصل", "detail": "الفواصل" }, "long_run": { "label": "جري طويل", "short": "جري طويل", "detail": "مقاطع المسار" }, "swim": { "label": "السباحة", "short": "سباحة", "detail": "المجموعات والتقنية" }, "football": { "label": "كرة القدم", "short": "كرة القدم", "detail": "التمارين والألعاب" }, "cycling": { "label": "ركوب الدراجات", "short": "دراجة", "detail": "مقاطع المسار" }, "generic": { "label": "تدريب حر", "short": "حر", "detail": "التمارين / القيم" } },
+      "more_fields": "معلومات إضافية", "optional": "اختياري", "notes_placeholder": "الشعور أو التقنية أو الألم أو ملاحظات أخرى", "live_mode": "الوضع المباشر", "live_hint": "بدء سريع للتدريب في الملعب أو الصالة أو أثناء التنقل.", "live_start": "بدء جلسة مباشرة", "live_end": "إنهاء الجلسة المباشرة", "live_take_time": "استخدام الوقت المنقضي", "duration_set": "تعيين المدة", "finish": "إنهاء", "save": "حفظ التدريب", "next": "التالي", "next_document": "متابعة التوثيق", "finish_title": "إنهاء التدريب", "finish_intro": "هذه القيم في النهاية عمداً. أدخل فقط ما تعرفه فعلاً.", "work_mode": "وضع العمل", "active_template": "القالب النشط", "gym_hint": "أدخل التمرين أولاً، ثم كل مجموعة مع تكراراتها ووزنها.", "general_hint": "تتكيّف الحقول مع نوع التدريب. المقاطع اختيارية في الجري الطويل.", "moment": "الوقت", "quality_check": "فحص الجودة", "volume": "الحجم",
+      "fields": { "title": "العنوان", "status": "الحالة", "time": "الوقت", "duration": "المدة بالدقائق", "distance": "المسافة بالكيلومتر", "notes": "ملاحظات", "trainer_note": "ملاحظة المدرب", "visibility": "الظهور", "intensity": "الشدة", "calories": "السعرات المحروقة" },
+      "visibility": { "trainer": "المدرب والمشرفون المصرح لهم", "private": "أنا فقط", "team": "الفريق" },
+      "notify": { "athlete": "إبلاغ الرياضي عند الحفظ", "trainer": "إبلاغ المدرب عند الحفظ", "hint": "مفعّل افتراضياً. عند تعطيله لا يتم إرسال إشعار، وتبقى الحصة مرئية للمصرح لهم." },
+      "intensity": { "none": "غير محدد", "easy": "خفيف", "medium": "متوسط", "hard": "شديد", "recovery": "تعافٍ" },
+      "wellness": { "title": "الحالة (اختياري)", "hint": "املأه فقط إذا أردت توثيق شعورك. 1 منخفض و10 مرتفع.", "rpe": "الجهد 1–10", "energy": "الطاقة 1–10", "pain": "الألم 0–10", "sleep": "النوم بالساعات" },
+      "back_to_details": "العودة إلى التفاصيل"
+    }
+  },
+  "files": {
+    "page_title": "الملفات", "scope_label": "النطاق", "select": "اختيار", "manager": "مدير الملفات", "folders": "مجلدات", "files": "ملفات", "search_sort": "البحث والترتيب", "add_file_folder": "إضافة ملف أو مجلد", "upload": "رفع ملف", "root": "المستوى الرئيسي", "choose_file": "اختيار ملف", "storage_full": "مساحة التخزين ممتلئة. احذف ملفات أو قم بالترقية.", "upload_running": "جارٍ الرفع...", "uploading": "جارٍ رفع الملف...", "create_folder": "إنشاء مجلد", "new_folder": "مجلد جديد", "folder_name": "اسم المجلد", "folder_creating": "جارٍ إنشاء المجلد...", "created": "تم الإنشاء...", "create": "إنشاء", "search_placeholder": "بحث...", "search_aria": "البحث في الملفات والمجلدات", "search_clear": "مسح البحث", "per_page": "العناصر في الصفحة", "per_page_option": "في الصفحة: {count}", "sort_aria": "ترتيب المجلدات والملفات", "sort_option": "الترتيب: {value}", "parent_folder": "الانتقال إلى المجلد الأعلى", "back": "رجوع", "next": "التالي", "open_folder": "فتح المجلد", "share": "مشاركة", "share_folder": "مشاركة المجلد", "share_file": "مشاركة الملف", "rename": "إعادة تسمية", "rename_folder": "إعادة تسمية المجلد", "rename_file": "إعادة تسمية الملف", "delete": "حذف", "delete_folder": "حذف المجلد", "delete_file": "حذف الملف", "delete_file_message": "سيتم حذف هذا الملف.", "delete_folder_message": "سيتم حذف المجلد وملفاته.", "download": "تنزيل", "download_file": "تنزيل الملف", "storage": "التخزين", "free": "متاح", "used": "مستخدم", "total": "الإجمالي", "used_of_total": "{used} مستخدم من إجمالي {limit} غيغابايت", "storage_mobile": "التخزين: {used} من {limit} غيغابايت", "empty_folder": "هذا المجلد فارغ.", "no_results": "لا توجد نتائج لـ \"{query}\"", "refreshing": "جارٍ تحديث القائمة...", "page_status": "صفحة المجلدات {foldersPage} / {foldersLast}، صفحة الملفات {filesPage} / {filesLast}", "result_status": "النتيجة: {folders} مجلد و{files} ملف", "range_files": "الملفات {start}–{end} من {total}", "range_folders": "المجلدات {start}–{end} من {total}", "folder_page": "صفحة المجلدات {current} / {last}", "file_page": "صفحة الملفات {current} / {last}", "delete_final": "حذف نهائي", "delete_confirmation_hint": "اكتب كلمة حذف للمتابعة.", "delete_word": "حذف", "cancel": "إلغاء", "deleting": "جارٍ الحذف...", "save": "حفظ", "folder": "مجلد", "file": "ملف", "friend": "صديق", "external_email": "بريد إلكتروني خارجي", "friend_search": "البحث عن صديق",
+    "scope": { "user": "ملفاتي", "team": "الفريق", "club": "النادي", "event": "الفعالية" },
+    "sort": { "name_asc": "الاسم (أ–ي)", "name_desc": "الاسم (ي–أ)", "newest": "الأحدث أولاً", "oldest": "الأقدم أولاً" }
+  },
+  "chat": {
+    "title": "الدردشة", "choose_hint": "اختر شخصاً أو مجموعة ثم افتحها.", "new_conversation": "محادثة جديدة", "search_placeholder": "ابحث عن أشخاص أو فرق أو تدريب", "group_invitations": "دعوات المجموعة", "invited_by": "من", "member": "عضو", "accept": "قبول", "decline": "رفض", "empty_title": "لا توجد محادثات بعد", "empty_description": "ابدأ محادثة جديدة لتظهر الرسائل هنا.", "no_matches_title": "لا توجد محادثات مطابقة", "no_matches_description": "غيّر عامل التصفية أو ابحث عن اسم آخر.", "back": "رجوع", "chat_suffix": "", "members": "أعضاء", "muted": "صامت", "unmute": "تفعيل الإشعارات", "mute": "كتم الدردشة", "group_profile": "ملف المجموعة", "add_people": "إضافة أشخاص", "leave_group": "مغادرة المجموعة", "message_search": "البحث عن رسائل في هذه الدردشة", "clear_search": "مسح البحث", "loading_older": "جارٍ تحميل الرسائل الأقدم...", "load_older": "تحميل الرسائل الأقدم", "reactions_hint": "انقر على الرسالة للتفاعلات", "direct_chat": "دردشة مباشرة", "team_chat": "دردشة الفريق", "event_chat": "دردشة الفعالية", "group_chat": "دردشة المجموعة", "no_messages": "لا توجد رسائل بعد", "system_notice": "تنبيه النظام", "you": "أنت", "image_sent": "تم إرسال صورة", "video_sent": "تم إرسال فيديو", "file_sent": "تم إرسال ملف", "message": "رسالة", "file": "ملف",
+    "filters": { "direct": "الأشخاص", "team": "الفرق", "group": "المجموعات", "event": "التدريب", "all": "الكل" },
+    "types": { "direct": "مباشر", "group": "مجموعة", "team": "فريق", "event": "تدريب" },
+    "status": { "sending": "جارٍ الإرسال", "failed": "لم يُرسل", "sent": "تم الإرسال", "delivered": "تم التسليم", "read": "مقروء" },
+    "errors": { "upload_cancelled": "تم إلغاء الرفع.", "rate_limited": "رسائل كثيرة خلال وقت قصير.", "send_failed": "فشل الإرسال." }
+  },
+  "commerce": {
+    "page_title": "المتجر والفواتير", "eyebrow": "المشتريات والاشتراكات", "title": "المتجر والفواتير والعروض", "intro": "أدر مشتريات السوق والدورات والإعلانات واشتراكات الملابس والحساب والسلة والفواتير من مكان واحد.",
+    "order": { "status": { "delivered": "مكتمل", "paid": "مدفوع", "pending": "مفتوح", "awaiting_transfer": "بانتظار التحويل", "cancelled": "ملغى", "refunded": "مُسترد" }, "hints": { "delivered": "تم توصيل طلبك.", "processing": "تم استلام الدفع ويجري تجهيز طلبك.", "pending": "الدفع ما زال معلقاً", "awaiting_transfer": "ننتظر استلام الدفع.", "cancelled": "تم إلغاء هذا الطلب.", "refunded": "تم رد قيمة هذا الطلب." }, "cancel": { "title": "إلغاء الطلب", "message": "هل تريد إلغاء هذا الطلب؟ لا يمكن ذلك إلا قبل شحنه.", "confirm": "إلغاء" } },
+    "shipping": { "status": { "open": "مفتوح", "prepared": "قيد التجهيز", "shipped": "تم الشحن", "delivered": "تم التوصيل" } },
+    "issue": { "status": { "reported": "تم الإبلاغ عن مشكلة", "reviewing": "قيد المراجعة", "resolved": "تم الحل", "refunded": "مُسترد", "cancelled": "ملغى" } },
+    "payout": { "status": { "requested": "تم الطلب", "prepared": "قيد المراجعة", "paid": "تم الدفع", "cancelled": "ملغى" } },
+    "shop": { "learning_title": "الدورات والتعلم الإلكتروني", "learning_description": "اشترِ دورات عبر الإنترنت وخطط تدريب وعروضاً تعليمية رقمية.", "categories": { "all": "الكل", "courses": "الدورات / التعلم الإلكتروني", "outfit": "اشتراك الملابس", "account": "اشتراك الحساب والإضافات" } },
+    "payment": { "bank_transfer": "تحويل بنكي", "stripe": "Stripe", "paypal": "PayPal" },
+    "checkout": { "confirm": "تأكيد الدفع" },
+    "provider_location": { "remove": { "title": "إزالة الموقع", "message": "إزالة {name} من ملف البائع؟", "confirm": "إزالة" } },
+    "tabs": { "shop": "المتجر", "cart": "السلة", "invoices": "الفواتير", "ads": "الإعلانات", "create": "البيع", "provider": "ملف البائع", "payouts": "الدفعة" }
+  },
+  "users_admin": { "page_title": "إدارة المستخدمين", "title": "لوحة الإدارة – المستخدمون", "intro": "نظرة عامة على جميع المستخدمين المسجلين.", "search": "البحث بالاسم أو البريد الإلكتروني...", "empty": "لم يتم العثور على مستخدمين.", "tabs": { "users": "المستخدمون", "warnings": "التنبيهات", "inactivity": "الخمول واللائحة العامة لحماية البيانات" }, "filters": { "all": "كل الحالات" }, "status": { "active": "نشط", "suspended": "موقوف", "suspended_until": "موقوف حتى {date}" }, "actions": { "edit": "تعديل", "delete": "حذف" }, "inactivity": { "12": "12 شهراً فأكثر", "18": "18 شهراً فأكثر", "24": "24 شهراً فأكثر", "36": "36 شهراً فأكثر", "mail_failed": "أخطاء البريد" }, "stage": { "first": "موعد الرسالة الأولى", "second": "موعد الرسالة الثانية", "scheduled": "إخفاء الملف", "anonymize": "مراجعة إخفاء الهوية", "waiting": "قيد الانتظار", "active": "نشط", "check": "مراجعة" } },
+  "learning_studio": { "page_title": "مدرسة Airmius الرياضية", "eyebrow": "مدرسة Airmius الرياضية", "title": "استوديو الدورات للمدربين والمعلمين", "intro": "خطط لدورات حقيقية عبر الإنترنت مع فصول ودروس وواجبات ومرفقات واختبارات وملاحظات وتواصل.", "new_course": "تخطيط دورة جديدة", "create_course": "إنشاء الدورة", "my_courses": "دوراتي", "upload_failed": "فشل الرفع.", "units": { "minutes": "دقيقة", "hours": "س" }, "categories": { "training": "التدريب", "nutrition": "التغذية", "mindset": "العقلية", "tactics": "التكتيك", "rehab": "التأهيل والوقاية", "coaching": "التدريب والإرشاد", "club_management": "إدارة النادي" }, "levels": { "beginner": "مبتدئ", "intermediate": "متوسط", "advanced": "متقدم", "pro": "محترف" }, "lesson_types": { "lesson": "درس", "video": "فيديو", "exercise": "تمرين", "assignment": "مهمة", "live_session": "جلسة مباشرة" } },
+  "friends": { "page_title": "الأصدقاء", "title": "الأصدقاء", "intro": "ادعُ الأصدقاء واقبل الطلبات وتابع شركاءك الرياضيين.", "invite_title": "دعوة صديق", "invite_hint": "أدخل عنوان بريد إلكتروني. سيتلقى المستخدمون الحاليون طلباً، ويتلقى الآخرون دعوة عبر البريد.", "invite": "دعوة", "invite_success": "تم إرسال الدعوة بنجاح.", "invite_failed": "تعذر إرسال الدعوة.", "pending": "الطلبات المعلقة", "accept": "قبول", "accepting": "جارٍ القبول...", "accepted": "تم قبول طلب الصداقة.", "accept_failed": "تعذر قبول الطلب.", "decline": "رفض", "mine": "أصدقائي", "empty": "لا يوجد أصدقاء بعد. ادعُ شخصاً للبدء.", "sent": "مرسلة", "sent_empty": "لا توجد دعوات مرسلة معلقة.", "actions_for": "إجراءات لـ {name}", "end": "إنهاء", "end_friendship": "إنهاء الصداقة", "remove_title": "إنهاء الصداقة", "remove_message": "هل تريد حقاً إنهاء صداقتك مع {name}؟", "report": "إبلاغ", "report_friend": "الإبلاغ عن الصديق", "report_title": "الإبلاغ عن الملف", "report_message": "الإبلاغ عن {name}؟ سيتم إرسال البلاغ إلى الإشراف." },
+  "rides": { "blocks": { "driver": "أنت سائق هذه الرحلة.", "already_joined": "لقد انضممت بالفعل.", "pending_request": "الطلب قيد الانتظار.", "full": "هذه الرحلة المشتركة مكتملة.", "past": "وقت المغادرة مضى.", "not_allowed": "لا تملك صلاحية الوصول إلى هذه الرحلة.", "unavailable": "هذه الرحلة غير متاحة حالياً." }, "states": { "driver": "رحلتي", "pending": "الطلب مفتوح", "full": "مكتملة", "past": "منتهية", "past_short": "منتهية", "not_visible": "غير مرئية", "unavailable": "غير متاحة" }, "legend": { "not_allowed": "لا وصول (الرؤية/الحالة).", "full": "الرحلة مكتملة.", "past": "رحلة منتهية.", "pending": "الطلب قيد الانتظار." }, "role": { "driver": "السائق", "joined": "منضم" }, "hints": { "can_join": "يمكنك إرسال طلب. ستظهر نقطة الالتقاء الخاصة وبيانات الاتصال بعد الموافقة.", "pending": "طلبك بانتظار الرد. يمكنك سحبه في أي وقت.", "joined": "أنت منضم ويمكنك رؤية نقطة الالتقاء وبيانات الاتصال المصرح بها.", "driver_pending": "راجع الطلبات المفتوحة وحدّث المقاعد المتاحة.", "driver": "أنت تدير هذه الرحلة." }, "not_set": "غير محدد", "seats": "مقاعد", "seat_hint": "إشغال المقاعد" },
+  "outfit_workspace": { "page_title": "اشتراك الملابس", "eyebrow": "مركز الاشتراك", "overview": "كل شيء في لمحة", "active_subscriptions": "الاشتراكات النشطة", "next_delivery": "التوصيل التالي", "style_profile": "ملف الأسلوب", "subscriptions_title": "اشتراكاتك وعمليات التوصيل", "subscriptions_hint": "الحالة وشهر التوصيل والتتبع في مكان واحد.", "choose_plan": "اختيار خطة", "not_planned": "لم يُخطط بعد", "status": { "active": "نشط", "paused": "متوقف مؤقتاً", "payment_paused": "متوقف بسبب الدفع", "cancels_at_period_end": "ملغى عند نهاية المدة", "pending_payment": "الدفع معلق", "pending_confirmation": "بانتظار الموافقة", "cancelled": "ملغى", "planned": "مخطط", "preparing": "قيد التجهيز", "shipped": "تم الشحن", "delivered": "تم التوصيل", "skipped": "متوقف" }, "issue_types": { "exchange": "استبدال", "return": "إرجاع", "damaged": "تالف", "missing_item": "عنصر مفقود", "wrong_item": "عنصر خاطئ", "other": "أخرى" }, "issue_status": { "open": "مفتوح", "reviewing": "قيد المراجعة", "approved": "تمت الموافقة", "return_waiting": "الإرجاع معلق", "replacement_preparing": "يجري تجهيز البديل", "resolved": "تم الحل", "rejected": "مغلق" }, "payment": { "bank_transfer": "تحويل بنكي", "paypal": "PayPal" }, "actions": { "cancel_pending": "إلغاء", "cancel": "إلغاء الاشتراك" }, "contract_terms": { "monthly": "اشتراك الملابس شهري مع دفع متكرر.", "payment": "يُجهز التوصيل الأول بعد تأكيد الدفع.", "future": "يسري الإيقاف والإلغاء على عمليات التوصيل المستقبلية فقط." }, "branding": { "sponsor": "علامة الراعي", "club": "علامة النادي", "custom": "علامة مخصصة", "default": "العلامة التجارية" }, "feedback": { "profile_saved": "تم حفظ ملف الأسلوب.", "profile_failed": "تعذر حفظ الملف. يرجى التحقق من البيانات." } },
+  "moderation": { "page_title": "الإشراف", "eyebrow": "الإدارة", "title": "الإشراف", "intro": "راجع المحتوى المُبلغ عنه أو المُعلّم تلقائياً من الخلاصة والتعليقات والدردشة.", "users": "مستخدمون", "reported_by": "أبلغ عنه", "unknown_user": "غير معروف", "unknown_date": "غير معروف", "note": "ملاحظة:", "source": "المصدر:", "user": "المستخدم:", "system": "النظام", "metrics": { "reports": "البلاغات المفتوحة", "flags": "العلامات التلقائية", "warnings": "التنبيهات (90 يوماً)", "suspended": "الحسابات الموقوفة" }, "tabs": { "reports": "البلاغات", "flags": "المعلّمة تلقائياً", "warnings": "التنبيهات" }, "actions": { "dismiss": "إغلاق كغير مهم", "actioned": "وضع علامة تمت المعالجة", "remove": "إزالة المحتوى" }, "empty": { "reports": "لا توجد بلاغات.", "flags": "لا توجد علامات تلقائية.", "warnings": "لا توجد تنبيهات لهذا الفلتر." }, "deleted_content": "محتوى محذوف", "remove_title": "إزالة المحتوى", "remove_message": "ستتم إزالة هذا المحتوى نهائياً. هل تريد المتابعة؟", "remove_confirm": "إزالة نهائياً" },
+"outfit_admin": {"plan_delete_title":"حذف الخطة أو تعطيلها","plan_delete_message":"هل تريد حذف الخطة أو تعطيلها \"{name}\"؟","continue":"متابعة","mark_unpaid_title":"وضع الدفعة كمفتوحة","mark_unpaid_message":"هل تريد وضع هذا الاشتراك النشط كدفعة مفتوحة؟ ستبدأ آلية التذكير تلقائياً.","mark_unpaid_confirm":"وضع كمفتوحة"}, "global_feedback": {"permission_denied":"لا تملك صلاحية تنفيذ ذلك.","generic":"تعذر إكمال الإجراء. يرجى التحقق من الإدخالات.","session_expired":"انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.","not_found":"لم يتم العثور على المحتوى المطلوب.","session_reload":"انتهت الجلسة. أعد تحميل الصفحة وحاول مرة أخرى.","validation":"يرجى التحقق من الإدخالات.","server":"خطأ في الخادم. حاول مرة أخرى قريباً.","action_failed":"تعذر إكمال الإجراء.","unexpected":"حدث خطأ غير متوقع. حاول مرة أخرى."}, "feed": {"types":{"normal":"عادي","question":"سؤال","knowledge":"معرفة","training_drill":"تمرين","tactic":"تكتيك","analysis":"تحليل","experience":"تجربة","club_update":"تحديث النادي"},"visibility":{"public":"عام","organization":"النادي","team":"الفريق"}}, "subscriptions": {"unlimited":"غير محدود","actor":{"all":"الكل","sportler":"الرياضيون","trainer":"المدربون","verein":"الأندية","eltern":"الوالدان","sponsor":"الرعاة","anbieter":"المزودون","enterprise":"المؤسسات"},"status":{"trialing":"تجريبي","active":"نشط","past_due":"الدفع مفتوح","cancelled":"ملغى","cancels_at_period_end":"ملغى عند نهاية المدة"}}, "club_memberships": {"empty_audit":"لا توجد سجلات تدقيق بعد.","finance":{"type":{"income":"دخل","expense":"مصروف"},"account":{"cash":"نقداً","bank":"بنك"}}}, "admin_finance": {"eyebrow":"المالية","payments_title":"المدفوعات","payments_intro":"جميع مدفوعات النادي والمنصة المسجلة في مكان واحد.","subscription_invoices":"فواتير الاشتراك","count":"المدفوعات","paid":"مدفوع","open":"مفتوح","revenue_paid":"الإيراد المحصل","manual_title":"تسجيل دفعة يدوية","manual_hint":"سجل دفعة واربطها اختيارياً بفاتورة مفتوحة.","create_payment":"إنشاء دفعة","delete":"حذف","empty_payments":"لا توجد مدفوعات بعد.","payment_delete_title":"حذف الدفعة","payment_delete_message":"هل تريد حذف الدفعة #{id}؟","status":{"paid":"مدفوع","pending":"مفتوح","open":"مفتوح","failed":"فشل","cancelled":"ملغى","overdue":"تجاوز تاريخ الاستحقاق.","awaiting_transfer":"بانتظار التحويل"},"method":{"paypal":"PayPal","stripe":"Stripe","bank_transfer":"تحويل بنكي","cash":"نقداً","card":"بطاقة"},"invoices_title":"مركز الفواتير","invoices_intro":"أنشئ وراجع فواتير الاشتراكات والملابس ومشتريات المتجر والدورات والإعلانات والرعاية وخدمات الوكالة مثل المواقع والشعارات.","create_invoice":"إنشاء فاتورة","all_invoices":"كل الفواتير","invoice_list":"قائمة الفواتير","all_sources":"كل المصادر في مكان واحد","new":"جديد","empty_invoices":"لا توجد فواتير بعد.","new_invoice":"فاتورة جديدة","invoice_create_hint":"أدخل السبب والمستلم وتفاصيل الخدمة. سيتم إخطار الشخص تلقائياً.","cancel":"إلغاء","save_status":"حفظ الحالة","invoice_delete_title":"حذف الفاتورة","invoice_delete_message":"هل تريد حذف الفاتورة {number}؟","invoice_hints":{"open":"تم إنشاء الفاتورة ولم تُدفع بعد.","pending":"الدفع أو المراجعة قيد التنفيذ.","paid":"سيتم وضع علامة مدفوع على الفاتورة.","overdue":"تجاوز تاريخ الاستحقاق.","cancelled":"الفاتورة لم تعد نشطة."},"subscription_invoice_title":"فواتير اشتراك Airmius","billing":"الفوترة","subscription_invoice_intro":"راجع فواتير الاشتراكات وحدّث حالتها ونزّل ملفات PDF من مكان واحد.","manage_subscriptions":"إدارة الاشتراكات","empty_subscription_invoices":"لا توجد فواتير اشتراك Airmius بعد."}
+  ,"gamification_rules": {"page_title":"إدارة التحفيز","eyebrow":"الإدارة","title":"قواعد التحفيز","intro":"أدر نقاط XP والحدود اليومية وتأثيرات الثقة والقواعد النشطة مركزياً. تنطبق التغييرات على الإجراءات الجديدة وتحافظ على نظام عادل وقابل للضبط ومناسب للشباب.","save":"حفظ","actors":{"sportler":"الرياضيون","trainer":"المدربون","verein":"الأندية","team":"الفرق"},"metrics":{"quality":"الجودة","active_rules":"القواعد النشطة","daily_limits":"الحدود اليومية","penalties":"العقوبات","max_xp":"الحد الأقصى لـ XP","average_xp":"متوسط XP","today":"اليوم","capped":"تم الوصول للحد","daily_limit_hits":"مرات بلوغ الحد اليومي"},"balance_heading":"ملاحظات التوازن","rules_count":"{count} قواعد","penalty":"عقوبة","active":"نشط","fields":{"daily_limit":"الحد اليومي","no_limit":"بلا حد","trust":"الثقة"},"risk":{"paused":"متوقف مؤقتاً","safety":"أمان","high_reward":"مكافأة عالية جداً","no_daily_limit":"بلا حد يومي","balanced":"متوازن"},"risk_notes":{"many_without_limit":"قواعد إيجابية كثيرة بلا حد يومي","high_reward_exists":"توجد مكافأة واحدة عالية جداً على الأقل","xp_sign_mismatch":"إشارة XP لا تطابق نوع القاعدة","no_penalty_rule":"لا توجد قاعدة عقوبة لسوء الاستخدام","all_paused":"كل القواعد متوقفة مؤقتاً"}}
+  ,"media_guidelines":{"page_title":"مقاسات الصور","eyebrow":"الوسائط والمحتوى","title":"مقاسات الصور الموصى بها","intro":"نظرة مركزية للمحررين والمديرين والأندية: ما أبعاد الصور الأنسب للملفات الشخصية والمدونات والمنشورات والفيديوهات وغيرها من الوسائط.","search_placeholder":"بحث...","all_areas":"كل المجالات","images":"صور","remove":"إزالة","empty":"لم يتم العثور على مقاسات صور مطابقة.","cards":{"standard_upload":"رفع قياسي","standard_upload_hint":"تعمل هذه الصيغ في معظم مناطق الصور.","login_slider":"شريط تسجيل الدخول","one_or_more":"واحدة أو أكثر","login_slider_hint":"شريط عمودي ديناميكي لصفحة تسجيل الدخول اليمنى.","global_banners":"لافتات عامة","global_banners_hint":"أدر صور المتجر واشتراك الملابس مركزياً."},"editor":{"eyebrow":"التحكم المركزي بالصور","title":"تعديل الصور العامة مباشرة","intro":"يمكن إدارة شريط تسجيل الدخول ولافتات المتجر والصورة الرئيسية لاشتراك الملابس من هنا. تبقى الصور الخاصة بالمحتوى مع الملف الشخصي أو النادي أو المدونة أو المنتج المعني.","save":"حفظ الصور"},"slider":{"eyebrow":"شريط ديناميكي","title":"شريط تسجيل الدخول (يمين)","intro":"ارفع صورة واحدة أو عدة صور. يتبع ترتيبها القائمة. الموصى به: 1080 × 1920 بكسل.","upload_multiple":"رفع عدة صور","upload_hint":"تُضاف التحميلات الجديدة إلى صور الشريط الحالية عند الحفظ.","add_slot":"إضافة خانة فارغة","image_alt":"صورة شريط تسجيل الدخول {count}"},"fields":{"source":"رابط أو مسار محفوظ","upload":"رفع صورة"},"table":{"area":"المجال","type":"نوع الصورة","recommended":"موصى به","ratio":"النسبة","format":"الصيغة","max":"الحد الأقصى","note":"ملاحظة","editing":"التعديل"},"action":{"editable":"قابل للتعديل هنا","content":"عدّل من المحتوى المعني"},"feedback":{"saved":"تم حفظ الصور.","failed":"تعذر حفظ الصور. يرجى التحقق من الملفات أو المسارات."}}
+  ,"mail_center":{"page_title":"مركز البريد","eyebrow":"النظام","title":"مركز البريد","intro":"راقب الإرسال وقائمة الانتظار والأخطاء وقواعد المرسلين للبريد الإلكتروني للمعاملات.","local_test_notice":"تُعامل الاختبارات المحلية كبريد سجل ما دامت الرسائل الحقيقية معطلة محلياً.","summary":{"total":"السجل","sent":"تم الإرسال","failed":"فشل","skipped":"مُقيّد","resolved":"تمت المعالجة"},"sender_rules":{"title":"قواعد المرسل","hint":"للفواتير، يمكنك تبديل المرسل الأساسي والاحتياطي دون تغيير الشفرة.","primary":"أساسي","no_fallback":"لا يوجد احتياطي"},"actions":{"save":"حفظ","test_mail":"بريد تجريبي","filter":"تصفية","resend":"إعادة الإرسال","resolve":"وضع كمعالج"},"sender":{"local_log":"محلي: سجل","ready":"جاهز","incomplete":"غير مكتمل","disabled":"معطل","mailer":"المرسل:","active":"صندوق البريد نشط","password_status":"كلمة المرور: {status}","password_set":"مضبوطة","password_unset":"غير مضبوطة","last_updated":"آخر تحديث {date}","never_shown":"لا يتم عرضها أبداً."},"fields":{"from_address":"عنوان المرسل","from_name":"الاسم المعروض","smtp_host":"مضيف SMTP","smtp_user":"مستخدم SMTP","encryption":"التشفير","default":"افتراضي","new_password":"تعيين كلمة مرور جديدة","password_placeholder":"اتركه فارغاً للإبقاء على كلمة المرور الحالية"},"queue":{"title":"قائمة الانتظار والوظائف الفاشلة","pending":"وظائف مفتوحة","failed":"وظائف فاشلة","empty":"لم يتم العثور على وظائف فاشلة حالية.","job":"وظيفة"},"audit":{"title":"تدقيق صندوق البريد","hint":"تُسجل التغييرات والاختبارات دون كلمات مرور نصية.","empty":"لا توجد سجلات تدقيق بعد.","password_changed":"تم تعيين كلمة المرور من جديد.","sender":"المرسل:","error":"خطأ:"},"log":{"title":"سجل الإرسال","hint":"تظهر الإدخالات الجديدة للرسائل التي تمر عبر طبقة البريد المركزية.","empty":"لا توجد إدخالات بريد بعد."},"filters":{"all_statuses":"كل الحالات","all_types":"كل الأنواع"},"table":{"status":"الحالة","type":"النوع","recipient":"المستلم","sender":"المرسل","time":"الوقت","error":"الخطأ","actions":"الإجراءات","category":"الفئة","action":"الإجراء","admin":"المسؤول","details":"التفاصيل"},"status":{"sent":"تم الإرسال","failed":"فشل","skipped":"مُقيّد","resolved":"تمت المعالجة"},"categories":{"system":"النظام","billing":"الفوترة","support":"الدعم","marketplace":"المتجر","academy":"الأكاديمية","security":"الأمان","partners":"الشركاء","legal":"الشؤون القانونية"}}
+  ,"admin_settings":{"ai_tokens":{"expiry":"تاريخ الانتهاء","set":"مُعيّن","missing":"مفقود","expired_short":"منتهي","no_api_key":"لم يتم تعيين مفتاح API","no_model":"لم يتم تعيين نموذج","no_expiry":"لم يتم العثور على تاريخ انتهاء في المفتاح","status":{"ok":"جاهز","inactive":"غير نشط","missing_key":"مفتاح API مفقود","missing_model":"النموذج مفقود","expired":"منتهي","expiring_soon":"ينتهي قريباً","valid_until":"صالح"},"messages":{"ok":"تم تعيين مفتاح API. لم يتم العثور على تاريخ انتهاء في المفتاح.","inactive":"هذا المزوّد غير مضبوط حالياً كمزوّد أساسي أو احتياطي.","missing_key":"لا يمكن استخدام هذا المزوّد من دون مفتاح API.","missing_model":"يرجى تعيين نموذج في إعدادات البيئة.","expired":"انتهت صلاحية الرمز. يرجى إدخال مفتاح API جديد.","expiring_soon":"ستنتهي صلاحية الرمز قريباً. يرجى تجديده في الوقت المناسب.","valid_until":"الرمز صالح حالياً."}}}
+  ,"sports_admin":{"page_title":"إدارة الرياضات","eyebrow":"مسؤول النظام","title":"إدارة الرياضات","intro":"أدر الرياضات المركزية وحالتها وترتيبها. توضح أرقام الاستخدام عدد الفرق والأندية والملفات والمنشورات لكل رياضة.","search_placeholder":"الاسم أو الرابط أو الفئة","no_category":"بلا فئة","delete_title":"حذف الرياضة","delete_message":"هل تريد حقاً حذف الرياضة \"{name}\"؟ لا يمكن التراجع عن هذا الإجراء.","delete_used_hint":"يرجى تعطيل الرياضات المستخدمة بدلاً من حذفها.","metrics":{"sports":"الرياضات","active":"نشطة","teams":"الفرق","clubs":"الأندية"},"list":{"all":"كل الرياضات","empty":"لم يتم العثور على رياضات."},"filters":{"all":"الكل","active":"نشط","inactive":"غير نشط"},"actions":{"create_sport":"إنشاء رياضة","save":"حفظ","delete":"حذف","cancel":"إلغاء","saving":"جارٍ الحفظ...","create":"إنشاء"},"fields":{"name":"الاسم","slug":"الرابط","slug_placeholder":"يُنشأ من الاسم","category":"الفئة","sort_order":"الترتيب","active_in_selects":"إظهارها كنشطة في قوائم الاختيار","optional":"اختياري"},"create":{"title":"رياضة جديدة","hint":"يمكن ترك الرابط فارغاً وسيتم إنشاؤه تلقائياً."},"usage":{"teams":"{count} فرق","clubs":"{count} أندية","profiles":"{count} ملفات","posts":"{count} منشورات","skills":"مهارات مسجلة","total":"إجمالي الاستخدامات"}}
+  ,"blog_categories":{"page_title":"فئات المدونة","eyebrow":"نظام إدارة الموقع","title":"فئات المدونة","intro":"أدر الفئات المتاحة عند إنشاء منشور مدونة.","back":"العودة إلى المدونات","empty":"لا توجد فئات بعد.","delete_title":"حذف الفئة","delete_message":"هل تريد حذف الفئة \"{name}\"؟","fields":{"name":"الاسم","slug":"الرابط","sort_order":"الترتيب","status":"الحالة","posts":"المنشورات","actions":"الإجراءات","description":"الوصف"},"status":{"active":"نشطة","inactive":"غير نشطة"},"actions":{"edit":"تعديل","delete":"حذف","new":"جديد","update":"تحديث","create":"إنشاء"},"form":{"edit_eyebrow":"تعديل الفئة","new_eyebrow":"فئة جديدة","create_title":"إنشاء فئة","slug_placeholder":"يُنشأ عند تركه فارغاً"}}
+  ,"blogs_editor":{"page_title":"المدونات","eyebrow":"نظام إدارة الموقع","title":"استوديو المدونة","intro":"اكتب منشورات بعناوين وقوائم وتمييز وروابط واقتباسات وعرض عام واضح.","categories":"الفئات","search":"بحث...","filter":"تصفية","revisions":"مراجعات","latest_revision":"آخر حفظ: {date} مع SEO بنسبة {score}%","empty":"لا توجد منشورات مدونة بعد.","form":{"edit_eyebrow":"تعديل المنشور","new_eyebrow":"منشور جديد","write_title":"كتابة","new_button":"جديد"},"fields":{"title":"العنوان","slug":"الرابط","slug_placeholder":"يُنشأ عند تركه فارغاً","category":"الفئة","category_placeholder":"اختر فئة","status":"الحالة","publish_at":"النشر في","excerpt":"نص مختصر","content":"المحتوى","cover":"صورة الغلاف","tags":"الوسوم"},"toolbar":{"bold":"عريض","italic":"مائل","underline":"تحته خط","strike":"يتوسطه خط","list":"قائمة","numbered_list":"قائمة مرقمة","quote":"اقتباس","left":"محاذاة لليسار","center":"توسيط","right":"محاذاة لليمين","ltr":"من اليسار إلى اليمين","rtl":"من اليمين إلى اليسار","link":"رابط","insert_image":"إدراج صورة في المحتوى","remove_format":"إزالة التنسيق"},"styles":{"choose":"اختر نمط النص","paragraph":"فقرة","article_title":"عنوان المقال","lead":"عنوان فرعي / مقدمة","section":"قسم","subheading":"عنوان فرعي","quote":"اقتباس","callout":"مربع تنبيه","code":"رمز / ملاحظة"},"inline":{"choose":"لون / تمييز","primary":"نص قياسي","secondary":"معلومة ثانوية","accent":"تمييز","success":"إيجابي","warning":"مهم","danger":"تحذير","mark":"تمييز"},"editor":{"text_placeholder":"أدخل النص...","callout_label":"ملاحظة"},"prompts":{"link_title":"إدراج رابط","link_message":"أدخل الرابط الكامل المراد إضافته في المقال.","url":"الرابط","insert":"إدراج","image_title":"وصف الصورة","image_message":"يساعد النص البديل في إمكانية الوصول وتحسين SEO.","alt_text":"النص البديل","upload_image":"رفع الصورة"},"seo":{"title":"SEO","title_label":"العنوان مناسب للبحث","title_hint":"35–65 حرفاً","meta_label":"الوصف التعريفي جذاب","meta_hint":"110–160 حرفاً","excerpt_label":"النص المختصر موجود","excerpt_hint":"80 حرفاً على الأقل","depth_label":"المقال مفصل بما يكفي","words_hint":"{count} كلمة","category_label":"تم تحديد الفئة","category_hint":"للأرشيف ومسار التنقل والمنشورات المرتبطة","cover_label":"تم تحديد الغلاف","cover_hint":"يوصى بـ 1600 × 900 بكسل","publish_blocked":"يتطلب النشر جودة SEO بنسبة 85% على الأقل."},"delete_title":"حذف منشور المدونة","delete_message":"هل تريد حذف منشور المدونة \"{title}\"؟","filters":{"all":"كل الحالات"}}
 }

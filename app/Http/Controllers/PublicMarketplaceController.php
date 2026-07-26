@@ -18,6 +18,7 @@ use App\Services\MarketplacePricingService;
 use App\Support\CommerceOrderNotifier;
 use App\Support\EuVatId;
 use App\Support\UploadStorage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,6 +29,59 @@ use Illuminate\Validation\ValidationException;
 class PublicMarketplaceController extends Controller
 {
     public function __construct(private MarketplacePricingService $pricing) {}
+
+    /**
+     * Return the same published marketplace catalogue for native guest clients.
+     * Only public card fields are exposed; checkout and account actions remain
+     * on the protected/web flows.
+     */
+    public function indexJson(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'in:product,course,camp,service'],
+            'segment' => ['nullable', 'in:shoes,apparel,equipment,recovery,analysis,nutrition,plans,camps,team'],
+            'country' => ['nullable', 'string', 'size:2'],
+            'sort' => ['nullable', 'in:recommended,newest,price_asc,price_desc'],
+            'availability' => ['nullable', 'in:available,digital,shippable'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $country = strtoupper((string) ($filters['country'] ?? 'DE'));
+        $products = $this->applyMarketplaceSort(
+            $this->marketplaceProductQuery($filters, $country),
+            $filters['sort'] ?? 'recommended',
+        )
+            ->paginate($filters['per_page'] ?? 24, ['*'], 'page', $filters['page'] ?? 1);
+
+        $data = collect($products->items())
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country))
+            ->map(fn (array $card) => [
+                'id' => $card['id'],
+                'title' => $card['title'],
+                'description' => $card['description'],
+                'category' => $card['category'],
+                'offer_type' => $card['offer_type'],
+                'image_url' => $card['image_url'],
+                'price_cents' => $card['price_cents'],
+                'currency' => $card['currency'],
+                'provider_name' => $card['provider_name'],
+                'delivery_label' => $card['delivery_label'],
+                'segment' => $card['segment'],
+                'badge' => $card['badge'],
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ],
+        ]);
+    }
 
     public function index(Request $request)
     {

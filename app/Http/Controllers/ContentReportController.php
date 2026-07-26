@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\Club;
 use App\Models\ContentReport;
 use App\Models\Message;
 use App\Models\ModerationFlag;
@@ -21,7 +22,7 @@ class ContentReportController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => ['required', Rule::in(['post', 'comment', 'message', 'story', 'user'])],
+            'type' => ['required', Rule::in(['post', 'comment', 'message', 'story', 'user', 'club'])],
             'id' => ['required', 'integer'],
             'reason' => ['required', Rule::in(['insult', 'bullying', 'hate', 'sexual', 'violence', 'threat', 'image_rights', 'spam', 'other'])],
             'details' => ['nullable', 'string', 'max:1000'],
@@ -133,6 +134,7 @@ class ContentReportController extends Controller
             'message' => Message::findOrFail($id),
             'story' => Story::findOrFail($id),
             'user' => User::findOrFail($id),
+            'club' => Club::findOrFail($id),
         };
     }
 
@@ -162,6 +164,13 @@ class ContentReportController extends Controller
 
         if ($model instanceof User) {
             abort_unless(! $model->is(auth()->user()), 422);
+
+            return;
+        }
+
+        if ($model instanceof Club) {
+            $this->authorize('view', $model);
+            abort_if((int) $model->owner_id === (int) auth()->id(), 422);
         }
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\OutfitStyleProfile;
 use App\Models\OutfitDelivery;
+use App\Models\OutfitStyleProfile;
 use App\Models\OutfitSubscription;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -27,7 +28,7 @@ class OutfitSubscriptionController extends Controller
 {
     public function index(Request $request)
     {
-        return Inertia::render('Auth/Dashboard/OutfitSubscriptions/Index', [
+        $payload = [
             'plans' => OutfitSubscriptionPlan::query()
                 ->with('sponsor:id,name,logo,logo_light,logo_dark,website')
                 ->where('is_active', true)
@@ -52,7 +53,13 @@ class OutfitSubscriptionController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),
             'contractRules' => $this->contractRules(null),
-        ]);
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => $payload]);
+        }
+
+        return Inertia::render('Auth/Dashboard/OutfitSubscriptions/Index', $payload);
     }
 
     public function updateProfile(Request $request)
@@ -70,10 +77,17 @@ class OutfitSubscriptionController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        OutfitStyleProfile::query()->updateOrCreate(
+        $profile = OutfitStyleProfile::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
             $data,
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Style-Profil gespeichert.',
+                'data' => $profile->fresh(),
+            ]);
+        }
 
         return back()->with('success', 'Style-Profil gespeichert.');
     }
@@ -106,6 +120,12 @@ class OutfitSubscriptionController extends Controller
             ->first();
 
         if ($existingSubscription) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'plan' => 'Du hast diesen Outfit-Abo-Plan bereits angefragt oder aktiviert.',
+                ]);
+            }
+
             return back()->with('error', 'Du hast diesen Outfit-Abo-Plan bereits angefragt oder aktiviert.');
         }
 
@@ -122,12 +142,24 @@ class OutfitSubscriptionController extends Controller
         ])->filter(fn ($label, $field) => blank($shippingAddress[$field] ?? null));
 
         if ($missingAddressFields->isNotEmpty()) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'shipping_address' => 'Bitte vervollständige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.',
+                ]);
+            }
+
             return back()
                 ->withErrors(['shipping_address' => 'Bitte vervollständige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.'])
                 ->withInput();
         }
 
         if ($paymentProvider === 'bank_transfer' && blank($bankTransfer['iban'])) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'payment_provider' => 'Bankverbindung für Überweisung ist noch nicht konfiguriert.',
+                ]);
+            }
+
             return back()->with('error', 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
@@ -166,6 +198,19 @@ class OutfitSubscriptionController extends Controller
 
             $this->notifyOutfitSubscriptionRequested($request, $plan, $subscription);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'PayPal-Zahlung kann fortgesetzt werden.',
+                    'data' => $this->subscriptionPayload(
+                        $subscription->fresh(['plan.sponsor', 'sponsor', 'deliveries']),
+                    ),
+                    'payment_action' => [
+                        'type' => 'redirect',
+                        'url' => $checkoutUrl,
+                    ],
+                ], 201);
+            }
+
             return Inertia::location($checkoutUrl);
         }
 
@@ -181,6 +226,21 @@ class OutfitSubscriptionController extends Controller
         ]);
 
         $this->notifyOutfitSubscriptionRequested($request, $plan, $subscription);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Outfit-Abo wurde angefragt.',
+                'data' => $this->subscriptionPayload(
+                    $subscription->fresh(['plan.sponsor', 'sponsor', 'deliveries']),
+                ),
+                'payment_action' => [
+                    'type' => 'bank_transfer',
+                    'bank_transfer' => $subscription->payment_payload['bank_transfer'] ?? null,
+                    'reference' => $subscription->payment_reference,
+                    'due_at' => $subscription->payment_due_at?->toJSON(),
+                ],
+            ], 201);
+        }
 
         return back()->with('success', 'Outfit-Abo wurde angefragt. Es wird erst nach Zahlung aktiviert.');
     }
@@ -278,6 +338,12 @@ class OutfitSubscriptionController extends Controller
         $pauseAllowedAt = $this->pauseAllowedAt($subscription);
 
         if ($pauseAllowedAt && $pauseAllowedAt->isFuture()) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'subscription' => 'Dieses Outfit-Abo kann erst ab dem '.$pauseAllowedAt->format('d.m.Y').' pausiert werden.',
+                ]);
+            }
+
             return back()->with('error', 'Dieses Outfit-Abo kann erst ab dem '.$pauseAllowedAt->format('d.m.Y').' pausiert werden.');
         }
 
@@ -286,6 +352,10 @@ class OutfitSubscriptionController extends Controller
         }
 
         $subscription->update(['status' => 'paused']);
+
+        if ($request->expectsJson()) {
+            return $this->subscriptionJsonResponse($subscription, 'Abo wurde pausiert.');
+        }
 
         return back()->with('success', 'Abo wurde pausiert.');
     }
@@ -303,6 +373,10 @@ class OutfitSubscriptionController extends Controller
             'next_delivery_at' => $subscription->next_delivery_at ?: now()->addMonth()->startOfDay(),
         ]);
 
+        if ($request->expectsJson()) {
+            return $this->subscriptionJsonResponse($subscription, 'Abo wurde fortgesetzt.');
+        }
+
         return back()->with('success', 'Abo wurde fortgesetzt.');
     }
 
@@ -314,6 +388,12 @@ class OutfitSubscriptionController extends Controller
         $minimumTermEndsAt = $this->minimumTermEndsAt($subscription);
 
         if (! $wasPending && $minimumTermEndsAt && $minimumTermEndsAt->isFuture()) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'subscription' => 'Dieses Outfit-Abo kann erst nach der Mindestlaufzeit ab dem '.$minimumTermEndsAt->format('d.m.Y').' gekündigt werden.',
+                ]);
+            }
+
             return back()->with('error', 'Dieses Outfit-Abo kann erst nach der Mindestlaufzeit ab dem '.$minimumTermEndsAt->format('d.m.Y').' gekündigt werden.');
         }
 
@@ -325,6 +405,10 @@ class OutfitSubscriptionController extends Controller
                 'next_delivery_at' => null,
                 'current_period_ends_at' => null,
             ]);
+
+            if ($request->expectsJson()) {
+                return $this->subscriptionJsonResponse($subscription, 'Outfit-Abo-Anfrage wurde abgebrochen.');
+            }
 
             return back()->with('success', 'Outfit-Abo-Anfrage wurde abgebrochen.');
         }
@@ -344,6 +428,13 @@ class OutfitSubscriptionController extends Controller
                 : null,
         ]);
 
+        if ($request->expectsJson()) {
+            return $this->subscriptionJsonResponse(
+                $subscription,
+                'Outfit-Abo wurde zum '.$effectiveAt->format('d.m.Y').' gekündigt.',
+            );
+        }
+
         return back()->with('success', 'Outfit-Abo wurde zum '.$effectiveAt->format('d.m.Y').' gekündigt.');
     }
 
@@ -355,10 +446,22 @@ class OutfitSubscriptionController extends Controller
         abort_unless($subscription && (int) $subscription->user_id === (int) $request->user()->id, 403);
 
         if (! in_array($delivery->status, ['shipped', 'delivered'], true)) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'delivery' => 'Ein Problem kann erst gemeldet werden, wenn die Lieferung versendet oder zugestellt wurde.',
+                ]);
+            }
+
             return back()->with('error', 'Ein Problem kann erst gemeldet werden, wenn die Lieferung versendet oder zugestellt wurde.');
         }
 
         if (in_array($delivery->issue_status, ['open', 'reviewing', 'approved', 'return_waiting', 'replacement_preparing'], true)) {
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages([
+                    'delivery' => 'Für diese Lieferung ist bereits ein offener Vorgang vorhanden.',
+                ]);
+            }
+
             return back()->with('error', 'Für diese Lieferung ist bereits ein offener Vorgang vorhanden.');
         }
 
@@ -384,7 +487,26 @@ class OutfitSubscriptionController extends Controller
 
         $this->notifyOutfitDeliveryIssueRequested($request, $delivery->fresh(['subscription.plan']));
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Deine Meldung wurde gesendet.',
+                'data' => $delivery->fresh(),
+            ], 201);
+        }
+
         return back()->with('success', 'Deine Meldung wurde gesendet. Unser Team prüft die Lieferung.');
+    }
+
+    private function subscriptionJsonResponse(
+        OutfitSubscription $subscription,
+        string $message,
+    ) {
+        return response()->json([
+            'message' => $message,
+            'data' => $this->subscriptionPayload(
+                $subscription->fresh(['plan.sponsor', 'sponsor', 'deliveries']),
+            ),
+        ]);
     }
 
     private function authorizeSubscription(Request $request, OutfitSubscription $subscription): void

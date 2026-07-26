@@ -9,6 +9,8 @@ enum AirmiusDeepLinkTargetType {
   message,
   notification,
   profile,
+  passwordReset,
+  emailVerification,
   unknown,
 }
 
@@ -31,7 +33,9 @@ class AirmiusDeepLinkTarget {
 
   bool get requiresAuth => switch (type) {
     AirmiusDeepLinkTargetType.club => false,
-    AirmiusDeepLinkTargetType.invitation => false,
+    AirmiusDeepLinkTargetType.invitation => true,
+    AirmiusDeepLinkTargetType.passwordReset => false,
+    AirmiusDeepLinkTargetType.emailVerification => false,
     AirmiusDeepLinkTargetType.unknown => false,
     _ => true,
   };
@@ -47,6 +51,8 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.message => 'message',
     AirmiusDeepLinkTargetType.notification => 'notification',
     AirmiusDeepLinkTargetType.profile => 'profile',
+    AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
+    AirmiusDeepLinkTargetType.emailVerification => 'email_verification',
     AirmiusDeepLinkTargetType.unknown => 'unknown',
   };
 }
@@ -77,6 +83,33 @@ class AirmiusDeepLinkResolver {
     final root = pathSegments.first.toLowerCase();
     final id = pathSegments.length > 1 ? int.tryParse(pathSegments[1]) : null;
 
+    final isApiEmailVerification =
+        pathSegments.length >= 6 &&
+        root == 'api' &&
+        pathSegments[1].toLowerCase() == 'v1' &&
+        pathSegments[2].toLowerCase() == 'auth' &&
+        pathSegments[3].toLowerCase() == 'verify-email';
+    final isDirectEmailVerification =
+        pathSegments.length >= 3 && root == 'verify-email';
+    if (isApiEmailVerification || isDirectEmailVerification) {
+      final idIndex = isApiEmailVerification ? 4 : 1;
+      final hashIndex = isApiEmailVerification ? 5 : 2;
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.emailVerification,
+        path: path,
+        id: int.tryParse(pathSegments[idIndex]),
+        token: pathSegments[hashIndex],
+        query: query,
+      );
+    }
+    if (root == 'reset-password') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.passwordReset,
+        path: path,
+        token: query['token'],
+        query: query,
+      );
+    }
     if (root == 'clubs' && id != null) {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.club,
@@ -144,10 +177,16 @@ class AirmiusDeepLinkResolver {
       );
     }
     if (root == 'profile') {
+      final profileId = pathSegments.length > 1
+          ? int.tryParse(pathSegments[1])
+          : null;
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.profile,
         path: path,
-        section: pathSegments.length > 1 ? pathSegments[1] : null,
+        id: profileId,
+        section: profileId == null
+            ? (pathSegments.length > 1 ? pathSegments[1] : null)
+            : (pathSegments.length > 2 ? pathSegments[2] : null),
         query: query,
       );
     }

@@ -12,13 +12,21 @@ const props = defineProps({
     viewer: Object,
 })
 
-const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
-const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const page = usePage()
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
-const { t, te } = useI18n()
+const { t, te, locale, messages } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
+const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+const tAuto = (value, params = {}) => {
+    const source = String(value ?? '').trim()
+    if (!source || locale.value === 'de') return source
+    const dictionary = messages.value?.[locale.value]?.auto || {}
+    if (dictionary[source]) return dictionary[source]
+    return te(source) ? t(source, params) : source
+}
 const sportLabel = (value) => {
-    if (!value) return 'Team'
+    if (!value) return tAuto('Team')
 
     const key = `sports.${value}`
 
@@ -71,21 +79,27 @@ const selectedPenaltyRule = computed(() => activePenaltyRules.value.find((rule) 
 const ruleNeedsMinuteThreshold = computed(() => ruleForm.value.calculation_type === 'threshold_fixed')
 const attendanceStats = computed(() => props.teamProfile.attendance_stats || null)
 
-const triggerLabels = {
-    late: 'Zu spät',
-    absence: 'Fehlt',
-    forgotten_equipment: 'Ausrüstung vergessen',
-    custom: 'Individuell',
-}
+const triggerLabels = computed(() => ({
+    late: tAuto('Zu spät'),
+    absence: tAuto('Fehlt'),
+    forgotten_equipment: tAuto('Ausrüstung vergessen'),
+    custom: tAuto('Individuell'),
+}))
 
-const calculationLabels = {
-    fixed: 'Fester Betrag',
-    per_minute: 'Pro Minute',
-    threshold_fixed: 'Ab Minuten-Grenze',
-    item: 'Sachstrafe',
-}
+const calculationLabels = computed(() => ({
+    fixed: tAuto('Fester Betrag'),
+    per_minute: tAuto('Pro Minute'),
+    threshold_fixed: tAuto('Ab Minuten-Grenze'),
+    item: tAuto('Sachstrafe'),
+}))
 
-const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const feeStatusLabel = (status) => ({
+    open: tAuto('Offen'),
+    paid: tAuto('Bezahlt'),
+    cancelled: tAuto('Storniert'),
+}[status] || tAuto(status || 'Unbekannt'))
+
+const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format(Number(amount || 0))
@@ -117,8 +131,8 @@ const resetFeeForm = () => {
 }
 
 const penaltyRuleLabel = (rule) => {
-    if (!rule) return 'Manueller Betrag'
-    if (rule.calculation_type === 'item') return `${rule.title} (${rule.unit_label || 'Sachstrafe'})`
+    if (!rule) return tAuto('Manueller Betrag')
+    if (rule.calculation_type === 'item') return `${rule.title} (${rule.unit_label || tAuto('Sachstrafe')})`
     if (rule.calculation_type === 'per_minute') return `${rule.title} (${formatMoney(rule.amount, rule.currency)} / Min.)`
     if (rule.calculation_type === 'threshold_fixed') return `${rule.title} (ab ${rule.threshold_minutes || 0} Min.)`
     return `${rule.title} (${formatMoney(rule.amount, rule.currency)})`
@@ -132,7 +146,7 @@ const loadPenalties = async () => {
         const response = await window.axios.get(route('auth.teams.penalties.index', props.teamProfile.id))
         penalties.value = response.data.data
     } catch (error) {
-        penaltiesError.value = error.response?.data?.message || 'Strafkatalog konnte nicht geladen werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Strafkatalog konnte nicht geladen werden.')
     } finally {
         penaltiesLoading.value = false
     }
@@ -195,7 +209,7 @@ const submitRule = async () => {
         }
     } catch (error) {
         penalties.value.rules = previousRules
-        penaltiesError.value = error.response?.data?.message || 'Regel konnte nicht gespeichert werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Regel konnte nicht gespeichert werden.')
     }
 }
 
@@ -215,13 +229,13 @@ const editRule = (rule) => {
 }
 
 const deactivateRule = async (rule) => {
-    if (!confirm(`Regel "${rule.title}" deaktivieren? Bestehende Buchungen bleiben erhalten.`)) return
+    if (!window.confirm(t('teams_profile.messages.deactivate_rule', { title: rule.title }))) return
 
     try {
         await window.axios.delete(route('auth.teams.penalty-rules.destroy', [props.teamProfile.id, rule.id]))
         await loadPenalties()
     } catch (error) {
-        penaltiesError.value = error.response?.data?.message || 'Regel konnte nicht deaktiviert werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Regel konnte nicht deaktiviert werden.')
     }
 }
 
@@ -241,7 +255,7 @@ const submitFee = async () => {
         resetFeeForm()
         await loadPenalties()
     } catch (error) {
-        penaltiesError.value = error.response?.data?.message || 'Strafe konnte nicht gebucht werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Strafe konnte nicht gebucht werden.')
     }
 }
 
@@ -250,18 +264,18 @@ const markFeePaid = async (fee) => {
         await window.axios.post(route('auth.teams.penalty-fees.paid', [props.teamProfile.id, fee.id]))
         await loadPenalties()
     } catch (error) {
-        penaltiesError.value = error.response?.data?.message || 'Buchung konnte nicht bezahlt markiert werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Buchung konnte nicht bezahlt markiert werden.')
     }
 }
 
 const cancelFee = async (fee) => {
-    if (!confirm('Diese Buchung stornieren?')) return
+    if (!window.confirm(t('teams_profile.messages.cancel_fee'))) return
 
     try {
         await window.axios.post(route('auth.teams.penalty-fees.cancel', [props.teamProfile.id, fee.id]))
         await loadPenalties()
     } catch (error) {
-        penaltiesError.value = error.response?.data?.message || 'Buchung konnte nicht storniert werden.'
+        penaltiesError.value = error.response?.data?.message || tAuto('Buchung konnte nicht storniert werden.')
     }
 }
 
@@ -301,7 +315,7 @@ const uploadImage = (field, event) => {
         <div class="mx-auto max-w-5xl space-y-6">
             <ClubWorkspaceNav
                 active="structure"
-                description="Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge."
+                :description="tAuto('Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge.')"
             />
 
             <section class="overflow-hidden rounded-lg border border-border bg-card">
@@ -313,7 +327,7 @@ const uploadImage = (field, event) => {
                         class="absolute bottom-3 right-3 rounded-lg bg-card/90 px-3 py-2 text-sm font-semibold text-primary shadow hover:bg-card"
                         @click="coverInput?.click()"
                     >
-                        <i class="las la-camera"></i> Titelbild
+                        <i class="las la-camera"></i> {{ tAuto('Titelbild') }}
                     </button>
                     <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="uploadImage('cover_image', $event)" />
                 </div>
@@ -344,17 +358,17 @@ const uploadImage = (field, event) => {
 
                         <div class="flex gap-2">
                             <Link :href="route('auth.teams.index')" class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
-                                Teams
+                                {{ tAuto('Teams') }}
                             </Link>
                             <button
                                 v-if="!viewer.is_member && !viewer.has_pending_join_request"
                                 class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                                 @click="requestJoin"
                             >
-                                Beitritt anfragen
+                                {{ tAuto('Beitritt anfragen') }}
                             </button>
                             <span v-else-if="viewer.has_pending_join_request" class="rounded-lg border border-border px-4 py-2 text-sm text-secondary">
-                                Anfrage gesendet
+                                {{ tAuto('Anfrage gesendet') }}
                             </span>
                         </div>
                     </div>
@@ -364,34 +378,34 @@ const uploadImage = (field, event) => {
             <section class="grid gap-4 sm:grid-cols-3">
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ teamProfile.users_count }}</div>
-                    <div class="text-sm text-secondary">Mitglieder</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Mitglieder') }}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ teamProfile.events_count }}</div>
-                    <div class="text-sm text-secondary">Events</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Events') }}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ teamProfile.files_count }}</div>
-                    <div class="text-sm text-secondary">Dateien</div>
+                    <div class="text-sm text-secondary">{{ tAuto('Dateien') }}</div>
                 </div>
             </section>
 
             <section v-if="attendanceStats" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Training</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Trainingsbeteiligung</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Training') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto('Trainingsbeteiligung') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Gezählt werden abgeschlossene Trainingseinheiten. Zusage und Verspätet zählen als Teilnahme.
+                            {{ tAuto('Gezählt werden abgeschlossene Trainingseinheiten. Zusage und Verspätet zählen als Teilnahme.') }}
                         </p>
                     </div>
                     <div class="grid grid-cols-2 gap-3 text-sm sm:min-w-72">
                         <div class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Trainings</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Trainings') }}</p>
                             <p class="mt-1 text-2xl font-bold text-primary">{{ attendanceStats.trainings_total }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Mitglieder</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Mitglieder') }}</p>
                             <p class="mt-1 text-2xl font-bold text-primary">{{ attendanceStats.members_total }}</p>
                         </div>
                     </div>
@@ -399,18 +413,18 @@ const uploadImage = (field, event) => {
 
                 <div class="mt-5 overflow-hidden rounded-lg border border-border">
                     <div class="hidden grid-cols-[1.4fr_repeat(6,minmax(72px,1fr))] gap-3 bg-inputBg px-4 py-3 text-xs font-bold uppercase tracking-wide text-secondary lg:grid">
-                        <span>Spieler</span>
-                        <span>Dabei</span>
-                        <span>Spät</span>
-                        <span>Vielleicht</span>
-                        <span>Absage</span>
-                        <span>Keine Antw.</span>
-                        <span>Quote</span>
+                        <span>{{ tAuto('Spieler') }}</span>
+                        <span>{{ tAuto('Dabei') }}</span>
+                        <span>{{ tAuto('Spät') }}</span>
+                        <span>{{ tAuto('Vielleicht') }}</span>
+                        <span>{{ tAuto('Absage') }}</span>
+                        <span>{{ tAuto('Keine Antw.') }}</span>
+                        <span>{{ tAuto('Quote') }}</span>
                     </div>
                     <div v-for="member in attendanceStats.members" :key="member.user_id" class="border-t border-border bg-card p-4 first:border-t-0 lg:grid lg:grid-cols-[1.4fr_repeat(6,minmax(72px,1fr))] lg:items-center lg:gap-3">
                         <div class="min-w-0">
                             <p class="truncate font-semibold text-primary">{{ member.name }}</p>
-                            <p class="text-xs text-secondary">{{ member.attended }} von {{ member.trainings_total }} Trainings</p>
+                            <p class="text-xs text-secondary">{{ member.attended }} {{ tAuto('von') }} {{ member.trainings_total }} {{ tAuto('Trainings') }}</p>
                         </div>
                         <div class="mt-3 grid grid-cols-3 gap-2 text-sm lg:contents">
                             <span class="rounded-lg bg-success/10 px-2 py-1 font-semibold text-success lg:bg-transparent lg:p-0">{{ member.yes }}</span>
@@ -422,7 +436,7 @@ const uploadImage = (field, event) => {
                         </div>
                     </div>
                     <div v-if="!attendanceStats.members.length" class="bg-card p-4 text-sm text-secondary">
-                        Noch keine Mitglieder oder Trainingseinheiten vorhanden.
+                        {{ tAuto('Noch keine Mitglieder oder Trainingseinheiten vorhanden.') }}
                     </div>
                 </div>
             </section>
@@ -430,10 +444,10 @@ const uploadImage = (field, event) => {
             <section class="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Teamkasse</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Strafkatalog & Kasse</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Teamkasse') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto('Strafkatalog & Kasse') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Individuelle Regeln für {{ teamProfile.name }} und offene Strafbuchungen.
+                            {{ tAuto('Individuelle Regeln für') }} {{ teamProfile.name }} {{ tAuto('und offene Strafbuchungen.') }}
                         </p>
                     </div>
                     <button
@@ -442,7 +456,7 @@ const uploadImage = (field, event) => {
                         :disabled="penaltiesLoading"
                         @click="loadPenalties"
                     >
-                        <i class="las la-sync"></i> Aktualisieren
+                        <i class="las la-sync"></i> {{ tAuto('Aktualisieren') }}
                     </button>
                 </div>
 
@@ -452,15 +466,15 @@ const uploadImage = (field, event) => {
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-3">
                     <div class="rounded-lg border border-border bg-inputBg p-4">
-                        <p class="text-xs font-semibold uppercase text-secondary">Offen</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Offen') }}</p>
                         <p class="mt-1 text-2xl font-bold text-primary">{{ formatMoney(penalties.summary?.open_amount) }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-inputBg p-4">
-                        <p class="text-xs font-semibold uppercase text-secondary">Bezahlt</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Bezahlt') }}</p>
                         <p class="mt-1 text-2xl font-bold text-primary">{{ formatMoney(penalties.summary?.paid_amount) }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-inputBg p-4">
-                        <p class="text-xs font-semibold uppercase text-secondary">Offene Fälle</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Offene Fälle') }}</p>
                         <p class="mt-1 text-2xl font-bold text-primary">{{ penalties.summary?.open_count || 0 }}</p>
                     </div>
                 </div>
@@ -469,57 +483,57 @@ const uploadImage = (field, event) => {
                     <div class="min-w-0 space-y-4">
                         <form v-if="canManagePenalties" class="rounded-lg border border-border bg-inputBg p-4" @submit.prevent="submitRule">
                             <div class="flex items-center justify-between gap-3">
-                                <h3 class="font-bold text-primary">{{ editingRuleId ? 'Regel bearbeiten' : 'Neue Regel' }}</h3>
+                                <h3 class="font-bold text-primary">{{ editingRuleId ? tAuto('Regel bearbeiten') : tAuto('Neue Regel') }}</h3>
                                 <button v-if="editingRuleId" type="button" class="text-sm font-semibold text-secondary hover:text-primary" @click="resetRuleForm">
-                                    Abbrechen
+                                    {{ tAuto('Abbrechen') }}
                                 </button>
                             </div>
 
                             <div class="mt-4 grid gap-3">
                                 <label class="text-sm font-semibold text-primary">
-                                    Titel
-                                    <input v-model="ruleForm.title" required class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Zu spät zum Training">
+                                    {{ tAuto('Titel') }}
+                                    <input v-model="ruleForm.title" required class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="tAuto('Zu spät zum Training')">
                                 </label>
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <label class="text-sm font-semibold text-primary">
-                                        Auslöser
+                                        {{ tAuto('Auslöser') }}
                                         <select v-model="ruleForm.trigger" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
-                                            <option value="late">Zu spät</option>
-                                            <option value="absence">Fehlt</option>
-                                            <option value="forgotten_equipment">Ausrüstung vergessen</option>
-                                            <option value="custom">Individuell</option>
+                                            <option value="late">{{ tAuto('Zu spät') }}</option>
+                                            <option value="absence">{{ tAuto('Fehlt') }}</option>
+                                            <option value="forgotten_equipment">{{ tAuto('Ausrüstung vergessen') }}</option>
+                                            <option value="custom">{{ tAuto('Individuell') }}</option>
                                         </select>
                                     </label>
                                     <label class="text-sm font-semibold text-primary">
-                                        Berechnung
+                                        {{ tAuto('Berechnung') }}
                                         <select v-model="ruleForm.calculation_type" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
-                                            <option value="fixed">Fester Betrag</option>
-                                            <option value="per_minute">Pro Minute</option>
-                                            <option value="threshold_fixed">Ab Minuten-Grenze</option>
-                                            <option value="item">Sachstrafe</option>
+                                            <option value="fixed">{{ tAuto('Fester Betrag') }}</option>
+                                            <option value="per_minute">{{ tAuto('Pro Minute') }}</option>
+                                            <option value="threshold_fixed">{{ tAuto('Ab Minuten-Grenze') }}</option>
+                                            <option value="item">{{ tAuto('Sachstrafe') }}</option>
                                         </select>
                                     </label>
                                 </div>
                                 <div class="grid gap-3" :class="ruleNeedsMinuteThreshold ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                                     <label class="text-sm font-semibold text-primary">
-                                        Betrag
+                                        {{ tAuto('Betrag') }}
                                         <input v-model="ruleForm.amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="1.00">
                                     </label>
                                     <label v-if="ruleNeedsMinuteThreshold" class="text-sm font-semibold text-primary">
-                                        Grenze Min.
+                                        {{ tAuto('Grenze Min.') }}
                                         <input v-model="ruleForm.threshold_minutes" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="10">
                                     </label>
                                     <label class="text-sm font-semibold text-primary">
-                                        Max.
+                                        {{ tAuto('Max.') }}
                                         <input v-model="ruleForm.max_amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="optional">
                                     </label>
                                 </div>
                                 <label class="text-sm font-semibold text-primary">
-                                    Sachstrafe / Einheit
+                                    {{ tAuto('Sachstrafe / Einheit') }}
                                     <input v-model="ruleForm.unit_label" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Kiste, Kuchen, Teamdienst">
                                 </label>
                                 <label class="text-sm font-semibold text-primary">
-                                    Beschreibung
+                                    {{ tAuto('Beschreibung') }}
                                     <textarea v-model="ruleForm.description" rows="2" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Optionaler Hinweis für das Team"></textarea>
                                 </label>
                                 <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary">
@@ -527,31 +541,31 @@ const uploadImage = (field, event) => {
                                     <span class="flex h-5 w-5 items-center justify-center rounded-md border border-border bg-card text-xs font-black text-transparent transition peer-checked:border-buttonPrimary peer-checked:bg-buttonPrimary peer-checked:text-buttonTextPrimary">
                                         ✓
                                     </span>
-                                    Aktiv
+                                    {{ tAuto('Aktiv') }}
                                 </label>
                             </div>
 
                             <button type="submit" class="mt-4 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                                {{ editingRuleId ? 'Regel speichern' : 'Regel anlegen' }}
+                                {{ editingRuleId ? tAuto('Regel speichern') : tAuto('Regel anlegen') }}
                             </button>
                         </form>
 
                         <form v-if="canManagePenalties" class="rounded-lg border border-border bg-inputBg p-4" @submit.prevent="submitFee">
-                            <h3 class="font-bold text-primary">Strafe buchen</h3>
+                            <h3 class="font-bold text-primary">{{ tAuto('Strafe buchen') }}</h3>
                             <div class="mt-4 grid gap-3">
                                 <label class="text-sm font-semibold text-primary">
-                                    Mitglied
+                                    {{ tAuto('Mitglied') }}
                                     <select v-model="feeForm.user_id" required class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
-                                        <option value="">Auswählen</option>
+                                        <option value="">{{ tAuto('Auswählen') }}</option>
                                         <option v-for="member in teamProfile.members" :key="member.id" :value="member.id">
                                             {{ member.name }}
                                         </option>
                                     </select>
                                 </label>
                                 <label class="text-sm font-semibold text-primary">
-                                    Regel
+                                    {{ tAuto('Regel') }}
                                     <select v-model="feeForm.penalty_rule_id" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
-                                        <option value="">Manueller Betrag</option>
+                                        <option value="">{{ tAuto('Manueller Betrag') }}</option>
                                         <option v-for="rule in activePenaltyRules" :key="rule.id" :value="rule.id">
                                             {{ penaltyRuleLabel(rule) }}
                                         </option>
@@ -559,32 +573,32 @@ const uploadImage = (field, event) => {
                                 </label>
                                 <div class="grid gap-3 sm:grid-cols-3">
                                     <label class="text-sm font-semibold text-primary">
-                                        Minuten
+                                        {{ tAuto('Minuten') }}
                                         <input v-model="feeForm.minutes" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="0">
                                     </label>
                                     <label class="text-sm font-semibold text-primary">
-                                        Betrag
+                                        {{ tAuto('Betrag') }}
                                         <input v-model="feeForm.amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="selectedPenaltyRule ? 'Automatisch' : '5.00'">
                                     </label>
                                     <label class="text-sm font-semibold text-primary">
-                                        Fällig
+                                        {{ tAuto('Fällig') }}
                                         <input v-model="feeForm.due_date" type="date" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
                                     </label>
                                 </div>
                                 <label class="text-sm font-semibold text-primary">
-                                    Notiz
+                                    {{ tAuto('Notiz') }}
                                     <input v-model="feeForm.note" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="z.B. Training Dienstag">
                                 </label>
                             </div>
                             <button type="submit" class="mt-4 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                                Strafe buchen
+                                {{ tAuto('Strafe buchen') }}
                             </button>
                         </form>
                     </div>
 
                     <div class="min-w-0 space-y-4">
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <h3 class="font-bold text-primary">Aktive Regeln</h3>
+                            <h3 class="font-bold text-primary">{{ tAuto('Aktive Regeln') }}</h3>
                             <div class="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
                                 <div v-for="rule in activePenaltyRules" :key="rule.id" class="bg-card p-3">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -593,57 +607,57 @@ const uploadImage = (field, event) => {
                                             <p class="mt-1 text-xs text-secondary">
                                                 {{ triggerLabels[rule.trigger] || rule.trigger }} · {{ calculationLabels[rule.calculation_type] || rule.calculation_type }}
                                                 <span v-if="rule.calculation_type !== 'item'"> · {{ formatMoney(rule.amount, rule.currency) }}</span>
-                                                <span v-if="rule.threshold_minutes"> · ab {{ rule.threshold_minutes }} Min.</span>
-                                                <span v-if="rule.max_amount"> · max. {{ formatMoney(rule.max_amount, rule.currency) }}</span>
+                                                <span v-if="rule.threshold_minutes"> · {{ tAuto('ab') }} {{ rule.threshold_minutes }} {{ tAuto('Min.') }}</span>
+                                                <span v-if="rule.max_amount"> · {{ tAuto('max.') }} {{ formatMoney(rule.max_amount, rule.currency) }}</span>
                                                 <span v-if="rule.unit_label"> · {{ rule.unit_label }}</span>
-                                                <span v-if="rule.is_saving"> · wird gespeichert…</span>
+                                                <span v-if="rule.is_saving"> · {{ tAuto('wird gespeichert…') }}</span>
                                             </p>
                                             <p v-if="rule.description" class="mt-2 text-sm text-secondary">{{ rule.description }}</p>
                                         </div>
                                         <div v-if="canManagePenalties" class="flex gap-2">
                                             <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-inputBg" @click="editRule(rule)">
-                                                Bearbeiten
+                                                {{ tAuto('Bearbeiten') }}
                                             </button>
                                             <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-secondary hover:text-error" @click="deactivateRule(rule)">
-                                                Deaktivieren
+                                                {{ tAuto('Deaktivieren') }}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                                 <div v-if="!activePenaltyRules.length" class="bg-card p-4 text-sm text-secondary">
-                                    Noch keine aktiven Regeln.
+                                    {{ tAuto('Noch keine aktiven Regeln.') }}
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <h3 class="font-bold text-primary">Buchungen</h3>
+                            <h3 class="font-bold text-primary">{{ tAuto('Buchungen') }}</h3>
                             <div class="mt-4 overflow-hidden rounded-lg border border-border">
                                 <div v-for="fee in penalties.fees" :key="fee.id" class="border-b border-border bg-card p-3 last:border-b-0">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
-                                            <p class="font-semibold text-primary">{{ fee.member?.name || 'Mitglied' }}</p>
+                                            <p class="font-semibold text-primary">{{ fee.member?.name || tAuto('Mitglied') }}</p>
                                             <p class="mt-1 text-sm text-secondary">
-                                                {{ fee.rule?.title || fee.note || 'Strafe' }} · {{ formatMoney(fee.amount, fee.currency) }}
+                                                {{ fee.rule?.title || fee.note || tAuto('Strafe') }} · {{ formatMoney(fee.amount, fee.currency) }}
                                             </p>
                                             <p class="mt-1 text-xs text-secondary">
-                                                Status: {{ fee.status }}
-                                                <span v-if="fee.due_date"> · fällig {{ formatDate(fee.due_date) }}</span>
-                                                <span v-if="fee.paid_at"> · bezahlt {{ formatDate(fee.paid_at) }}</span>
+                                                {{ tAuto('Status:') }} {{ feeStatusLabel(fee.status) }}
+                                                <span v-if="fee.due_date"> · {{ tAuto('fällig') }} {{ formatDate(fee.due_date) }}</span>
+                                                <span v-if="fee.paid_at"> · {{ tAuto('bezahlt') }} {{ formatDate(fee.paid_at) }}</span>
                                             </p>
                                         </div>
                                         <div v-if="canManagePenalties && fee.status === 'open'" class="flex gap-2">
                                             <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="markFeePaid(fee)">
-                                                Bezahlt
+                                                {{ tAuto('Bezahlt') }}
                                             </button>
                                             <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-secondary hover:text-error" @click="cancelFee(fee)">
-                                                Storno
+                                                {{ tAuto('Storno') }}
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                                 <div v-if="!penalties.fees.length" class="bg-card p-4 text-sm text-secondary">
-                                    Noch keine Buchungen.
+                                    {{ tAuto('Noch keine Buchungen.') }}
                                 </div>
                             </div>
                         </div>
@@ -665,29 +679,29 @@ const uploadImage = (field, event) => {
                         </div>
                         <p class="mt-3 whitespace-pre-line text-sm leading-6 text-primary">{{ post.content }}</p>
                         <div class="mt-3 flex gap-4 text-xs text-secondary">
-                            <span>{{ post.likes_count }} Likes</span>
-                            <span>{{ post.comments_count }} Kommentare</span>
+                            <span>{{ post.likes_count }} {{ tAuto('Likes') }}</span>
+                            <span>{{ post.comments_count }} {{ tAuto('Kommentare') }}</span>
                         </div>
                     </article>
                     <div v-if="!posts.length" class="rounded-lg border border-border bg-card p-8 text-center text-sm text-secondary">
-                        Noch keine sichtbaren Beiträge.
+                        {{ tAuto('Noch keine sichtbaren Beiträge.') }}
                     </div>
                 </section>
 
                 <aside class="rounded-lg border border-border bg-card p-4">
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tAuto('Mitglieder') }}</h2>
                     <div class="mt-4 space-y-3">
                         <Link v-for="member in teamProfile.members" :key="member.id" :href="route('auth.users.show', member.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
                             <img :src="member.profile_photo_url" :alt="member.name" width="36" height="36" loading="lazy" decoding="async" class="h-9 w-9 rounded-full object-cover">
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
-                                <p class="text-xs text-secondary">{{ member.pivot?.role || 'Mitglied' }}</p>
+                                <p class="text-xs text-secondary">{{ tAuto(member.pivot?.role || 'Mitglied') }}</p>
                             </div>
                         </Link>
                         <AppEmptyState
                             v-if="!teamProfile.members.length"
-                            title="Noch keine Mitglieder"
-                            description="Teammitglieder erscheinen hier, sobald sie dem Team zugeordnet wurden."
+                            :title="tAuto('Noch keine Mitglieder')"
+                            :description="tAuto('Teammitglieder erscheinen hier, sobald sie dem Team zugeordnet wurden.')"
                             compact
                         >
                             <template #icon>

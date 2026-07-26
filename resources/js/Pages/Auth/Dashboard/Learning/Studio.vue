@@ -2,10 +2,17 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { majorToCents } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     courses: { type: Array, default: () => [] },
@@ -18,40 +25,41 @@ const editingLesson = ref(null)
 const replyForms = ref({})
 const uploadState = ref({ key: '', error: '' })
 
-const courseCategories = [
-    ['training', 'Training'],
-    ['nutrition', 'Ernährung'],
-    ['mindset', 'Mindset'],
-    ['tactics', 'Taktik'],
-    ['rehab', 'Reha & Prävention'],
-    ['coaching', 'Coaching'],
-    ['club_management', 'Vereinsführung'],
-]
+const courseCategories = computed(() => [
+    ['training', tx('learning_studio.categories.training', 'Training')],
+    ['nutrition', tx('learning_studio.categories.nutrition', 'Ernährung')],
+    ['mindset', tx('learning_studio.categories.mindset', 'Mindset')],
+    ['tactics', tx('learning_studio.categories.tactics', 'Taktik')],
+    ['rehab', tx('learning_studio.categories.rehab', 'Reha & Prävention')],
+    ['coaching', tx('learning_studio.categories.coaching', 'Coaching')],
+    ['club_management', tx('learning_studio.categories.club_management', 'Vereinsführung')],
+])
 
-const levels = [
-    ['beginner', 'Einsteiger'],
-    ['intermediate', 'Fortgeschritten'],
-    ['advanced', 'Ambitioniert'],
-    ['pro', 'Profi'],
-]
+const levels = computed(() => [
+    ['beginner', tx('learning_studio.levels.beginner', 'Einsteiger')],
+    ['intermediate', tx('learning_studio.levels.intermediate', 'Fortgeschritten')],
+    ['advanced', tx('learning_studio.levels.advanced', 'Ambitioniert')],
+    ['pro', tx('learning_studio.levels.pro', 'Profi')],
+])
 
-const lessonTypes = [
-    ['lesson', 'Lektion'],
-    ['video', 'Video'],
-    ['exercise', 'Übung'],
-    ['assignment', 'Aufgabe'],
-    ['live_session', 'Live-Session'],
-]
+const lessonTypes = computed(() => [
+    ['lesson', tx('learning_studio.lesson_types.lesson', 'Lektion')],
+    ['video', tx('learning_studio.lesson_types.video', 'Video')],
+    ['exercise', tx('learning_studio.lesson_types.exercise', 'Übung')],
+    ['assignment', tx('learning_studio.lesson_types.assignment', 'Aufgabe')],
+    ['live_session', tx('learning_studio.lesson_types.live_session', 'Live-Session')],
+])
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
 
 const formatMinutes = (minutes) => {
     const value = Number(minutes || 0)
-    if (value < 60) return `${value} Min.`
-    return `${Math.floor(value / 60)} Std. ${value % 60} Min.`
+    if (value < 60) return `${value} ${tx('learning_studio.units.minutes', 'Min.')}`
+    return `${Math.floor(value / 60)} ${tx('learning_studio.units.hours', 'Std.')} ${value % 60} ${tx('learning_studio.units.minutes', 'Min.')}`
 }
 
 const formatPercent = (part, total) => {
@@ -77,7 +85,7 @@ const uploadLearningAsset = async (purpose, file, onUploaded) => {
     } catch (error) {
         uploadState.value = {
             key: purpose,
-            error: error?.response?.data?.message || 'Upload fehlgeschlagen.',
+            error: error?.response?.data?.message || tx('learning_studio.upload_failed', 'Upload fehlgeschlagen.'),
         }
         return
     }
@@ -497,16 +505,16 @@ const submitQuestionReply = (question) => {
 </script>
 
 <template>
-    <Head title="Airmius Sportschule" />
+    <Head :title="tx('learning_studio.page_title', 'Airmius Sportschule')" />
 
     <div class="space-y-6">
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius Sportschule</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Kurs-Studio für Trainer und Tutoren</h1>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('learning_studio.eyebrow', 'Airmius Sportschule') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('learning_studio.title', 'Kurs-Studio für Trainer und Tutoren') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhängen, Quiz, Notizen und Kurskommunikation.
+                        {{ tx('learning_studio.intro', 'Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhängen, Quiz, Notizen und Kurskommunikation.') }}
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -524,7 +532,7 @@ const submitQuestionReply = (question) => {
         <section class="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
             <aside class="space-y-4">
                 <article class="surface-card p-4">
-                    <h2 class="text-base font-semibold text-primary">Neuen Kurs planen</h2>
+                    <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio.new_course', 'Neuen Kurs planen') }}</h2>
                     <form class="mt-4 grid gap-3" @submit.prevent="createCourse">
                         <input v-model="newCourseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurstitel">
                         <p v-if="newCourseForm.errors.title" class="text-sm text-error">{{ newCourseForm.errors.title }}</p>
@@ -541,14 +549,14 @@ const submitQuestionReply = (question) => {
                         <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Worum geht es in diesem Kurs?"></textarea>
                         <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="newCourseForm.processing">
-                            Kurs anlegen
+                            {{ tx('learning_studio.create_course', 'Kurs anlegen') }}
                         </button>
                     </form>
                 </article>
 
                 <article class="surface-card overflow-hidden">
                     <div class="border-b border-border p-4">
-                        <h2 class="text-base font-semibold text-primary">Meine Kurse</h2>
+                        <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio.my_courses', 'Meine Kurse') }}</h2>
                     </div>
                     <div class="divide-y divide-border">
                         <Link
@@ -1095,4 +1103,3 @@ const submitQuestionReply = (question) => {
         </section>
     </div>
 </template>
-

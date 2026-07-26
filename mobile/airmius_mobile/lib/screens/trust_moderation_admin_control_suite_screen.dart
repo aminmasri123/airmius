@@ -8,27 +8,87 @@ class TrustModerationAdminControlSuiteScreen extends StatefulWidget {
   const TrustModerationAdminControlSuiteScreen({super.key});
 
   @override
-  State<TrustModerationAdminControlSuiteScreen> createState() => _TrustModerationAdminControlSuiteScreenState();
+  State<TrustModerationAdminControlSuiteScreen> createState() =>
+      _TrustModerationAdminControlSuiteScreenState();
 }
 
-class _TrustModerationAdminControlSuiteScreenState extends State<TrustModerationAdminControlSuiteScreen> {
+class _TrustModerationAdminControlSuiteScreenState
+    extends State<TrustModerationAdminControlSuiteScreen> {
   String _filter = 'Alle';
   bool _showTrust = true;
   bool _showModeration = true;
   bool _showAdmin = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Moderation Queue', 'Moderation', 'Review', 'Gemeldete Inhalte, Nutzer, Vereine, Kommentare und Entscheidungsstatus.', Icons.report_gmailerrorred_outlined, Color(0xFFFF6B6B)),
-    _SuiteItem('Report Detail', 'Moderation', 'Case', 'Fallansicht mit Beweisen, Verlauf, Entscheidung, Notizen und Audit-Spur.', Icons.fact_check_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Club Verification', 'Trust', 'Verein', 'Vereinsprüfung, Dokumente, Admins, Adresse, Status und Freigabeprozess.', Icons.verified_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Provider Verification', 'Trust', 'Anbieter', 'Anbieterprüfung, Vertrauenssignale, Kosten, Verträge und Marketplace-Zugang.', Icons.verified_user_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('System Settings', 'Admin', 'Config', 'Plattformkonfiguration, Feature Flags, Sichtbarkeit, Limits und globale Einstellungen.', Icons.settings_suggest_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Mail Center', 'Admin', 'Mail', 'Systemmails, Templates, Versandstatus, Zielgruppen und Kommunikationskontrolle.', Icons.mark_email_unread_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('User Management', 'Admin', 'Users', 'Nutzer suchen, sperren, Rollen setzen, Verifizierung und Accountstatus steuern.', Icons.manage_accounts_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Audit & Legal Status', 'Trust', 'Audit', 'Datenschutz, Nutzungsstatus, Einwilligungen, Löschfristen und Compliance-Hinweise.', Icons.policy_outlined, Color(0xFFF8B84E)),
+    _SuiteItem(
+      'Moderation Queue',
+      'Moderation',
+      'Review',
+      'Gemeldete Inhalte, Nutzer, Vereine, Kommentare und Entscheidungsstatus.',
+      Icons.report_gmailerrorred_outlined,
+      Color(0xFFFF6B6B),
+    ),
+    _SuiteItem(
+      'Report Detail',
+      'Moderation',
+      'Case',
+      'Fallansicht mit Beweisen, Verlauf, Entscheidung, Notizen und Audit-Spur.',
+      Icons.fact_check_outlined,
+      Color(0xFFF8B84E),
+    ),
+    _SuiteItem(
+      'Club Verification',
+      'Trust',
+      'Verein',
+      'Vereinsprüfung, Dokumente, Admins, Adresse, Status und Freigabeprozess.',
+      Icons.verified_outlined,
+      Color(0xFF2EE59D),
+    ),
+    _SuiteItem(
+      'Provider Verification',
+      'Trust',
+      'Anbieter',
+      'Anbieterprüfung, Vertrauenssignale, Kosten, Verträge und Marketplace-Zugang.',
+      Icons.verified_user_outlined,
+      Color(0xFF5BA7FF),
+    ),
+    _SuiteItem(
+      'System Settings',
+      'Admin',
+      'Config',
+      'Plattformkonfiguration, Feature Flags, Sichtbarkeit, Limits und globale Einstellungen.',
+      Icons.settings_suggest_outlined,
+      Color(0xFFB084FF),
+    ),
+    _SuiteItem(
+      'Mail Center',
+      'Admin',
+      'Mail',
+      'Systemmails, Templates, Versandstatus, Zielgruppen und Kommunikationskontrolle.',
+      Icons.mark_email_unread_outlined,
+      Color(0xFF5BA7FF),
+    ),
+    _SuiteItem(
+      'User Management',
+      'Admin',
+      'Users',
+      'Nutzer suchen, sperren, Rollen setzen, Verifizierung und Accountstatus steuern.',
+      Icons.manage_accounts_outlined,
+      Color(0xFF2EE59D),
+    ),
+    _SuiteItem(
+      'Audit & Legal Status',
+      'Trust',
+      'Audit',
+      'Datenschutz, Nutzungsstatus, Einwilligungen, Löschfristen und Compliance-Hinweise.',
+      Icons.policy_outlined,
+      Color(0xFFF8B84E),
+    ),
   ];
 
-  List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
+  List<_SuiteItem> get _visible => _filter == 'Alle'
+      ? _items
+      : _items.where((item) => item.area == _filter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -48,27 +108,50 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                     const _Hero(
                       eyebrow: 'TRUST CONTROL',
                       title: 'Moderation & Admin',
-                      subtitle: 'Native Mobile-UI für Moderation, Trust-Prüfungen, System Settings, Mail Center, User Management und Audit.',
+                      subtitle:
+                          'Native Mobile-UI für Moderation, Trust-Prüfungen, System Settings, Mail Center, User Management und Audit.',
                     ),
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '8', label: 'Views')),
+                        Expanded(
+                          child: _Metric(value: '8', label: 'Views'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Trust')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Trust'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Admin')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Admin'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    _Tabs(value: _filter, values: const ['Alle', 'Moderation', 'Trust', 'Admin'], onChanged: (value) => setState(() => _filter = value)),
+                    _Tabs(
+                      value: _filter,
+                      values: const ['Alle', 'Moderation', 'Trust', 'Admin'],
+                      onChanged: (value) => setState(() => _filter = value),
+                    ),
                     const SizedBox(height: 14),
                     _SwitchPanel(
                       title: 'Kontrollbereiche',
                       rows: [
-                        _SwitchRowData('Moderation anzeigen', _showModeration, (value) => setState(() => _showModeration = value)),
-                        _SwitchRowData('Trust anzeigen', _showTrust, (value) => setState(() => _showTrust = value)),
-                        _SwitchRowData('Admin anzeigen', _showAdmin, (value) => setState(() => _showAdmin = value)),
+                        _SwitchRowData(
+                          'Moderation anzeigen',
+                          _showModeration,
+                          (value) => setState(() => _showModeration = value),
+                        ),
+                        _SwitchRowData(
+                          'Trust anzeigen',
+                          _showTrust,
+                          (value) => setState(() => _showTrust = value),
+                        ),
+                        _SwitchRowData(
+                          'Admin anzeigen',
+                          _showAdmin,
+                          (value) => setState(() => _showAdmin = value),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -81,8 +164,21 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                       firstLabel: 'Case prüfen',
                       secondIcon: Icons.verified_outlined,
                       secondLabel: 'Verifizierung starten',
-                      onFirst: () => openUiAction(context, title: 'Moderation Case', body: 'Die Moderations-UI ist vorbereitet; echte Cases kommen später über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Trust Prüfung', body: 'Verifizierungs- und Audit-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(
+                        context,
+                        title: 'Moderation Case',
+                        body:
+                            'Die Moderations-UI ist vorbereitet; echte Cases kommen später über Laravel.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
+                      onSecond: () => openUiAction(
+                        context,
+                        title: 'Trust Prüfung',
+                        body: 'Verifizierungs- und Audit-UI sind vorbereitet.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
                       onSupport: () => _openSupport(context),
                     ),
                   ],
@@ -102,12 +198,21 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
 class _SuiteItem {
-  const _SuiteItem(this.title, this.area, this.status, this.body, this.icon, this.color);
+  const _SuiteItem(
+    this.title,
+    this.area,
+    this.status,
+    this.body,
+    this.icon,
+    this.color,
+  );
 
   final String title;
   final String area;
@@ -132,17 +237,36 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          const AirmiusLogo(markOnly: true, size: 34),
-          const SizedBox(width: 10),
-          const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-          IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
-        ],
-      );
+    children: [
+      const AirmiusLogo(markOnly: true, size: 34),
+      const SizedBox(width: 10),
+      const Expanded(
+        child: Text(
+          'Airmius',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      IconButton(
+        onPressed: onSupport,
+        icon: const Icon(
+          Icons.support_agent_outlined,
+          color: Color(0xFFAFC0D8),
+        ),
+      ),
+    ],
+  );
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.eyebrow, required this.title, required this.subtitle});
+  const _Hero({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
 
   final String eyebrow;
   final String title;
@@ -150,23 +274,48 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF26364D)),
-          gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: const TextStyle(
+            color: Color(0xFF5BA7FF),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(eyebrow, style: const TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            Text(subtitle, style: const TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600)),
-          ],
+        const SizedBox(height: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-      );
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            height: 1.45,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Metric extends StatelessWidget {
@@ -177,21 +326,42 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
-          ],
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-      );
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -199,26 +369,32 @@ class _Tabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 42,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: values.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final item = values[index];
-            final active = item == value;
-            return ChoiceChip(
-              label: Text(item),
-              selected: active,
-              onSelected: (_) => onChanged(item),
-              labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
-              selectedColor: const Color(0xFF173D68),
-              backgroundColor: const Color(0xFF101722),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
-            );
-          },
-        ),
-      );
+    height: 42,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: values.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final item = values[index];
+        final active = item == value;
+        return ChoiceChip(
+          label: Text(item),
+          selected: active,
+          onSelected: (_) => onChanged(item),
+          labelStyle: TextStyle(
+            color: active ? Colors.white : const Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w900,
+          ),
+          selectedColor: const Color(0xFF173D68),
+          backgroundColor: const Color(0xFF101722),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: const BorderSide(color: Color(0xFF26364D)),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _SwitchPanel extends StatelessWidget {
@@ -229,20 +405,28 @@ class _SwitchPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Panel(
-        title: title,
-        child: Column(
-          children: rows
-              .map((row) => SwitchListTile.adaptive(
-                    value: row.value,
-                    onChanged: row.onChanged,
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    activeThumbColor: const Color(0xFF5BA7FF),
-                    title: Text(row.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  ))
-              .toList(),
-        ),
-      );
+    title: title,
+    child: Column(
+      children: rows
+          .map(
+            (row) => SwitchListTile.adaptive(
+              value: row.value,
+              onChanged: row.onChanged,
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              activeThumbColor: const Color(0xFF5BA7FF),
+              title: Text(
+                row.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    ),
+  );
 }
 
 class _SuiteCard extends StatelessWidget {
@@ -252,40 +436,72 @@ class _SuiteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(color: item.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .45))),
-              child: Icon(item.icon, color: item.color, size: 28),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: item.color.withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: item.color.withValues(alpha: .45)),
+          ),
+          child: Icon(item.icon, color: item.color, size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
-                      _Pill(label: item.status, color: item.color),
-                    ],
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(item.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                  _Pill(label: item.status, color: item.color),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                item.body,
+                style: const TextStyle(
+                  color: Color(0xFFDDE7F5),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.firstIcon, required this.firstLabel, required this.secondIcon, required this.secondLabel, required this.onFirst, required this.onSecond, required this.onSupport});
+  const _ActionPanel({
+    required this.firstIcon,
+    required this.firstLabel,
+    required this.secondIcon,
+    required this.secondLabel,
+    required this.onFirst,
+    required this.onSecond,
+    required this.onSupport,
+  });
 
   final IconData firstIcon;
   final String firstLabel;
@@ -297,17 +513,21 @@ class _ActionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Panel(
-        title: 'Schnellaktionen',
-        child: Column(
-          children: [
-            _ActionButton(icon: firstIcon, label: firstLabel, onTap: onFirst),
-            const SizedBox(height: 10),
-            _ActionButton(icon: secondIcon, label: secondLabel, onTap: onSecond),
-            const SizedBox(height: 10),
-            _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
-          ],
+    title: 'Schnellaktionen',
+    child: Column(
+      children: [
+        _ActionButton(icon: firstIcon, label: firstLabel, onTap: onFirst),
+        const SizedBox(height: 10),
+        _ActionButton(icon: secondIcon, label: secondLabel, onTap: onSecond),
+        const SizedBox(height: 10),
+        _ActionButton(
+          icon: Icons.support_agent_outlined,
+          label: 'Support kontaktieren',
+          onTap: onSupport,
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _Panel extends StatelessWidget {
@@ -318,21 +538,35 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            child,
-          ],
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF0D131D),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-      );
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -340,21 +574,33 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111A27),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
-          child: Row(
-            children: [
-              Icon(icon, color: AirmiusColors.blue),
-              const SizedBox(width: 12),
-              Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
-              const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
-            ],
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AirmiusColors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
-        ),
-      );
+          const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Pill extends StatelessWidget {
@@ -365,8 +611,15 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-        child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: .55)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
+    ),
+  );
 }

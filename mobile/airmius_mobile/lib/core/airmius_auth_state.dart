@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'airmius_api_client.dart';
 import 'airmius_api_models.dart';
 import 'airmius_api_repositories.dart';
+import 'airmius_l10n.dart';
 
 class AirmiusSession {
   const AirmiusSession({
@@ -62,7 +63,15 @@ class AirmiusMemoryTokenStore implements AirmiusTokenStore {
   }
 }
 
-enum AirmiusAuthPhase { booting, guest, authenticated, expired, loading, error }
+enum AirmiusAuthPhase {
+  booting,
+  guest,
+  twoFactorRequired,
+  authenticated,
+  expired,
+  loading,
+  error,
+}
 
 class AirmiusAuthState extends ChangeNotifier {
   AirmiusAuthState({
@@ -80,6 +89,9 @@ class AirmiusAuthState extends ChangeNotifier {
   AirmiusSession? _session;
   AirmiusAuthPhase _phase = AirmiusAuthPhase.booting;
   String? _error;
+  String? _twoFactorChallengeToken;
+  String _twoFactorLocale = 'de';
+  String _locale = 'de';
 
   AirmiusSession? get session => _session;
   AirmiusAuthPhase get phase => _phase;
@@ -88,6 +100,9 @@ class AirmiusAuthState extends ChangeNotifier {
       _session?.isAuthenticated == true &&
       _phase == AirmiusAuthPhase.authenticated;
   AirmiusUser? get user => _session?.user;
+  bool get requiresTwoFactor =>
+      _phase == AirmiusAuthPhase.twoFactorRequired &&
+      _twoFactorChallengeToken != null;
 
   Future<void> restore() async {
     _setPhase(AirmiusAuthPhase.loading);
@@ -102,6 +117,7 @@ class AirmiusAuthState extends ChangeNotifier {
       _setPhase(AirmiusAuthPhase.guest);
       return;
     }
+    _locale = restored.locale;
     if (restored.isExpired) {
       _session = restored;
       _setPhase(AirmiusAuthPhase.expired);
@@ -121,30 +137,89 @@ class AirmiusAuthState extends ChangeNotifier {
     required String password,
     String locale = 'de',
   }) async {
+    _locale = locale;
     _error = null;
     _setPhase(AirmiusAuthPhase.loading);
     try {
       final guestClient = clientFactory(null);
-      final json = await guestClient.login(email: email, password: password);
+      final json = await guestClient.login(
+        email: email,
+        password: password,
+        deviceName: _mobileDeviceName,
+      );
+      final data = json['data'];
+      if (data is JsonMap && _truthy(data['two_factor_required'])) {
+        final challengeToken = data['challenge_token']?.toString().trim() ?? '';
+        if (challengeToken.isEmpty) {
+          _error = _authMessage('auth.error.unexpected');
+          _setPhase(AirmiusAuthPhase.error);
+          return;
+        }
+        _twoFactorChallengeToken = challengeToken;
+        _twoFactorLocale = locale;
+        _setPhase(AirmiusAuthPhase.twoFactorRequired);
+        return;
+      }
       await _completeTokenSignIn(
         json,
         locale: locale,
-        missingTokenMessage: 'Login fehlgeschlagen: Token vom Server fehlt.',
+        missingTokenMessage: _authMessage('auth.error.tokenLogin'),
       );
     } catch (error) {
       if (error is AirmiusApiException) {
         _error = _readableAuthError(error);
       } else {
-        _error = error.toString();
+        _error = _authMessage('auth.error.unexpected');
       }
       _setPhase(AirmiusAuthPhase.error);
     }
+  }
+
+  Future<void> completeTwoFactor({
+    required String value,
+    bool recoveryCode = false,
+  }) async {
+    _locale = _twoFactorLocale;
+    final challengeToken = _twoFactorChallengeToken;
+    final normalizedValue = value.trim();
+    if (challengeToken == null || normalizedValue.isEmpty) {
+      _error = _authMessage('auth.error.twoFactorMissing');
+      _setPhase(AirmiusAuthPhase.twoFactorRequired);
+      return;
+    }
+
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final json = await clientFactory(null).completeTwoFactorChallenge(
+        challengeToken: challengeToken,
+        code: recoveryCode ? null : normalizedValue.replaceAll(' ', ''),
+        recoveryCode: recoveryCode ? normalizedValue : null,
+      );
+      await _completeTokenSignIn(
+        json,
+        locale: _twoFactorLocale,
+        missingTokenMessage: _authMessage('auth.error.tokenLogin'),
+      );
+    } catch (error) {
+      _error = error is AirmiusApiException
+          ? _readableAuthError(error)
+          : _authMessage('auth.error.unexpected');
+      _setPhase(AirmiusAuthPhase.twoFactorRequired);
+    }
+  }
+
+  void cancelTwoFactor() {
+    _twoFactorChallengeToken = null;
+    _error = null;
+    _setPhase(AirmiusAuthPhase.guest);
   }
 
   Future<void> register({
     required JsonMap payload,
     String locale = 'de',
   }) async {
+    _locale = locale;
     _error = null;
     _setPhase(AirmiusAuthPhase.loading);
     try {
@@ -162,19 +237,33 @@ class AirmiusAuthState extends ChangeNotifier {
         }
       }
 
-      final json = await guestClient.register(payload);
+      final registrationPayload = JsonMap.from(payload)
+        ..putIfAbsent('device_name', () => _mobileDeviceName);
+      final json = await guestClient.register(registrationPayload);
       await _completeTokenSignIn(
         json,
         locale: locale,
-        missingTokenMessage:
-            'Registrierung fehlgeschlagen: Token vom Server fehlt.',
+        missingTokenMessage: _authMessage('auth.error.tokenRegister'),
       );
     } catch (error) {
       _error = error is AirmiusApiException
           ? _readableAuthError(error)
-          : error.toString();
+          : _authMessage('auth.error.unexpected');
       _setPhase(AirmiusAuthPhase.error);
     }
+  }
+
+  String get _mobileDeviceName {
+    if (kIsWeb) return 'Airmius Web App';
+
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.android => 'Airmius Android App',
+      TargetPlatform.iOS => 'Airmius iPhone App',
+      TargetPlatform.macOS => 'Airmius macOS App',
+      TargetPlatform.windows => 'Airmius Windows App',
+      TargetPlatform.linux => 'Airmius Linux App',
+      TargetPlatform.fuchsia => 'Airmius Mobile App',
+    };
   }
 
   Future<String?> _existingRegistrationEmailMessage(
@@ -189,12 +278,7 @@ class AirmiusAuthState extends ChangeNotifier {
           : _truthy(json['exists']);
       if (!exists) return null;
 
-      final message = data is JsonMap
-          ? data['message']?.toString().trim()
-          : json['message']?.toString().trim();
-      return message == null || message.isEmpty
-          ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.'
-          : message;
+      return _authMessage('auth.error.accountExists');
     } on AirmiusApiException catch (error) {
       if (error.statusCode == 404 || error.statusCode == 405) {
         return null;
@@ -209,9 +293,10 @@ class AirmiusAuthState extends ChangeNotifier {
     required String token,
     String locale = 'de',
   }) async {
+    _locale = locale;
     final normalizedToken = token.trim();
     if (normalizedToken.isEmpty) {
-      _error = 'Social Login fehlgeschlagen: Token vom Server fehlt.';
+      _error = _authMessage('auth.error.tokenSocial');
       _setPhase(AirmiusAuthPhase.error);
       return;
     }
@@ -235,7 +320,7 @@ class AirmiusAuthState extends ChangeNotifier {
     } catch (error) {
       _error = error is AirmiusApiException
           ? _readableAuthError(error)
-          : error.toString();
+          : _authMessage('auth.error.unexpected');
       _setPhase(AirmiusAuthPhase.error);
     }
   }
@@ -252,7 +337,7 @@ class AirmiusAuthState extends ChangeNotifier {
       _session = next;
       _setPhase(AirmiusAuthPhase.authenticated);
     } catch (error) {
-      _error = error.toString();
+      _error = _authMessage('auth.error.unexpected');
       _setPhase(AirmiusAuthPhase.error);
     }
   }
@@ -277,12 +362,13 @@ class AirmiusAuthState extends ChangeNotifier {
     } catch (error) {
       _error = error is AirmiusApiException
           ? _readableAuthError(error)
-          : error.toString();
+          : _authMessage('auth.error.unexpected');
       _setPhase(AirmiusAuthPhase.error);
     }
   }
 
   Future<void> updateLocale(String locale) async {
+    _locale = locale;
     final current = _session;
     if (current == null) return;
     final next = current.copyWith(locale: locale);
@@ -306,6 +392,7 @@ class AirmiusAuthState extends ChangeNotifier {
     }
     await tokenStore.clear();
     _session = null;
+    _twoFactorChallengeToken = null;
     _setPhase(AirmiusAuthPhase.guest);
   }
 
@@ -352,6 +439,7 @@ class AirmiusAuthState extends ChangeNotifier {
     final session = tokenSession.copyWith(user: user, clearUser: user == null);
     await tokenStore.write(session);
     _session = session;
+    _twoFactorChallengeToken = null;
     _setPhase(AirmiusAuthPhase.authenticated);
     _notifyAuthenticated(session);
   }
@@ -379,42 +467,39 @@ class AirmiusAuthState extends ChangeNotifier {
   String _readableAuthError(AirmiusApiException error) {
     if (error.path.contains('/auth/login') &&
         _isLikelyInvalidCredentials(error)) {
-      return 'E-Mail oder Passwort ist falsch.';
+      return _authMessage('auth.error.invalidCredentials');
     }
 
     final status = error.statusCode;
     if (status == 401 || status == 403) {
-      return 'E-Mail oder Passwort ist falsch.';
+      return _authMessage('auth.error.invalidCredentials');
     }
     if (status == 422) {
       final parsed = _extractMessage(error.body);
-      if (parsed.isNotEmpty) return parsed;
-      return 'Bitte prüfe deine Eingaben und versuche es erneut.';
+      if (_isUniqueValidationMessage(parsed)) {
+        return _authMessage('auth.error.accountExists');
+      }
+      return _authMessage('auth.error.invalidInput');
     }
     if (status == 0) {
       if (error.path.contains('/auth/login')) {
-        return 'Login nicht bestätigt. Bitte prüfe E-Mail/Passwort oder lass die Server-Verbindung/CORS-Einstellungen prüfen.';
+        return _authMessage('auth.error.networkLogin');
       }
-      return 'Netzwerkfehler: Der Server ist nicht erreichbar. Bitte URL, Internetverbindung und CORS/Sicherheit prüfen.';
+      return _authMessage('auth.error.network');
     }
     if (status == 599) {
       if (error.path.contains('/auth/login')) {
-        return 'Login nicht bestätigt. Bitte prüfe E-Mail/Passwort oder lass die Server-Verbindung/CORS-Einstellungen prüfen.';
+        return _authMessage('auth.error.connectionLogin');
       }
-      return 'Verbindung abgebrochen: Der Server konnte die Anfrage nicht korrekt beantworten (mögliche CORS-/Netzwerkproblematik).';
+      return _authMessage('auth.error.connection');
     }
     if (status >= 500) {
-      return 'Server-Fehler (HTTP $status). Bitte später erneut versuchen.';
+      return _authMessage('auth.error.server', status: status);
     }
     if (status >= 400) {
-      return 'Anfrage abgelehnt (HTTP $status). Bitte Daten prüfen oder Support kontaktieren.';
+      return _authMessage('auth.error.request', status: status);
     }
-
-    final parsed = _extractMessage(error.body);
-    if (parsed.isNotEmpty) {
-      return '$parsed (HTTP ${error.statusCode})';
-    }
-    return 'Anmeldung fehlgeschlagen (HTTP ${error.statusCode}).';
+    return _authMessage('auth.error.fallback', status: error.statusCode);
   }
 
   bool _isLikelyInvalidCredentials(AirmiusApiException error) {
@@ -453,12 +538,6 @@ class AirmiusAuthState extends ChangeNotifier {
       if (message is String && message.trim().isNotEmpty) return message.trim();
       final errors = json['errors'];
       if (errors is Map) {
-        final emailErrors = errors['email'];
-        final emailMessage = _firstValidationMessage(emailErrors);
-        if (_isUniqueValidationMessage(emailMessage)) {
-          return 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.';
-        }
-
         for (final entry in errors.values) {
           final first = _firstValidationMessage(entry);
           if (first.isNotEmpty) return _readableValidationMessage(first);
@@ -488,10 +567,20 @@ class AirmiusAuthState extends ChangeNotifier {
   }
 
   String _readableValidationMessage(String message) {
-    if (_isUniqueValidationMessage(message)) {
-      return 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.';
-    }
     return message;
+  }
+
+  AirmiusLanguage _languageForLocale(String locale) {
+    return switch (locale.toLowerCase().split(RegExp('[-_]')).first) {
+      'en' => AirmiusLanguage.en,
+      'fr' => AirmiusLanguage.fr,
+      'ar' => AirmiusLanguage.ar,
+      _ => AirmiusLanguage.de,
+    };
+  }
+
+  String _authMessage(String key, {int? status}) {
+    return airmiusAuthMessage(_languageForLocale(_locale), key, status: status);
   }
 
   bool _truthy(Object? value) {

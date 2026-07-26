@@ -1,97 +1,296 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_workspace_snapshot.dart';
 import '../widgets/airmius_widgets.dart';
+import 'admin_center_screen.dart';
+import 'club_cockpit_screen.dart';
+import 'daily_flow_screen.dart';
+import 'guest_portal_screen.dart';
+import 'settings_center_screen.dart';
+import 'trainer_cockpit_screen.dart';
 
 class WorkspaceDetailScreen extends StatefulWidget {
-  const WorkspaceDetailScreen({super.key, required this.title, required this.status});
+  const WorkspaceDetailScreen({
+    super.key,
+    required this.title,
+    required this.status,
+    this.snapshot = const AirmiusWorkspaceSnapshot.empty(),
+  });
 
   final String title;
   final String status;
+  final AirmiusWorkspaceSnapshot snapshot;
 
   @override
   State<WorkspaceDetailScreen> createState() => _WorkspaceDetailScreenState();
 }
 
 class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
-  String _context = 'Vereinsbereich';
-  bool _pinToHome = true;
-  bool _pushEnabled = true;
-  bool _inheritRoles = true;
+  String _context = 'club';
+  bool _busy = false;
+
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  Future<void> _activateContext() async {
+    final destination = switch (_context) {
+      'guest' => const GuestPortalScreen(),
+      'dashboard' => const DailyFlowScreen(),
+      'trainer' => const TrainerCockpitScreen(),
+      'admin' => const AdminCenterScreen(),
+      _ => const ClubCockpitScreen(),
+    };
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => destination),
+    );
+  }
+
+  Future<void> _acceptInvitation() async {
+    final invitation = widget.snapshot.invitations.firstOrNull;
+    if (invitation == null || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.acceptTeamInvitation(invitation.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('chat.invitationAccepted'))));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t('chat.invitationFailed'))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final text = theme.textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final muted = theme.textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final snapshot = widget.snapshot;
+    final roles = snapshot.roles.isEmpty
+        ? [t('workspace.roles')]
+        : snapshot.roles;
+    final selectedLabel = _labelFor(_context);
+
     return Scaffold(
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Arbeitsbereich', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(
+        title: Text(
+          t('workspace.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       body: PageFrame(
         title: widget.title,
-        subtitle: 'Kontext, Rollen, Einladungen und mobile Sichtbarkeit',
-        trailing: StatusPill(widget.status),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Aktiver Kontext'),
-            const SizedBox(height: 8),
-            const Text('Mobile Navigation bleibt gleich, der Arbeitskontext wechselt.', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            const Text('So kann ein User zwischen Gastseite, Verein, Team, Trainerbereich und Admin-Aufgaben wechseln, ohne die App zu verlassen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              initialValue: _context,
-              dropdownColor: AirmiusColors.card,
-              decoration: _fieldDecoration('Arbeitsbereich'),
-              items: const ['Gastseite', 'Dashboard', 'Vereinsbereich', 'Trainerbereich', 'Admin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-              onChanged: (value) => setState(() => _context = value ?? _context),
+        subtitle: t('workspace.subtitle'),
+        trailing: StatusPill(widget.status, color: primary),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('workspace.context')),
+                  const SizedBox(height: 8),
+                  Text(
+                    selectedLabel,
+                    style: TextStyle(
+                      color: text,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('workspace.body'),
+                    style: TextStyle(color: muted, height: 1.4),
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    initialValue: _context,
+                    dropdownColor: theme.colorScheme.surface,
+                    decoration: _fieldDecoration(t('workspace.context')),
+                    items:
+                        [
+                              ('guest', t('workspace.guest')),
+                              ('dashboard', t('workspace.dashboard')),
+                              ('club', t('workspace.club')),
+                              ('trainer', t('workspace.trainer')),
+                              ('admin', t('workspace.admin')),
+                            ]
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item.$1,
+                                child: Text(item.$2),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) =>
+                        setState(() => _context = value ?? _context),
+                  ),
+                ],
+              ),
             ),
-          ])),
-          const SizedBox(height: 14),
-          Row(children: const [Expanded(child: MetricCard(value: '6', label: 'Rollen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Teams')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Invite'))]),
-          const SizedBox(height: 14),
-          AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Workspace-Regeln'),
-            const SizedBox(height: 8),
-            SwitchListTile(value: _pinToHome, onChanged: (value) => setState(() => _pinToHome = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Im Home sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Arbeitsbereich erscheint im Dashboard-Schnellzugriff.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _pushEnabled, onChanged: (value) => setState(() => _pushEnabled = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Push in diesem Kontext', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigungen respektieren Rollen und Ruhezeiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _inheritRoles, onChanged: (value) => setState(() => _inheritRoles = value), activeThumbColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Vereinsrollen übernehmen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Team- und Trainerrechte aus Vereinsrollen ableiten.', style: TextStyle(color: AirmiusColors.muted))),
-          ])),
-          const SizedBox(height: 14),
-          AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-            Eyebrow('Rollen & Rechte'),
-            SizedBox(height: 12),
-            _WorkspaceRole(role: 'Vereinsadmin', rights: 'Mitglieder, Dokumente, Beiträge, Teams, Zahlungen'),
-            SizedBox(height: 10),
-            _WorkspaceRole(role: 'Trainer', rights: 'Athleten, Plaene, Feedback, Teamkalender'),
-            SizedBox(height: 10),
-            _WorkspaceRole(role: 'Mitglied', rights: 'Profil, Feed, Chat, Events, Dateien ansehen'),
-          ])),
-          const SizedBox(height: 14),
-          AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Eyebrow('Einladung'),
-            SizedBox(height: 8),
-            Text('Offene Workspace-Einladung: ZBB Verein moechte dich als Trainer hinzufuegen. Token, Ablaufdatum und Rollenprüfung werden später serverseitig geladen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-            SizedBox(height: 10),
-            Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Token offen'), StatusPill('Coach'), StatusPill('ZBB')]),
-          ])),
-          const SizedBox(height: 14),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Kontext aktivieren', icon: Icons.swap_horiz_outlined, onPressed: () => openUiAction(context, title: 'Kontext aktivieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.swap_horiz_outlined)),
-            AirmiusButton(label: 'Einladung annehmen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Einladung annehmen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.mark_email_read_outlined)),
-          ]),
-        ]),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: MetricCard(
+                    value: '${snapshot.roles.length}',
+                    label: t('workspace.roles'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: MetricCard(
+                    value: '${snapshot.teams.length}',
+                    label: t('teamsCenter.teams'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: MetricCard(
+                    value: '${snapshot.invitations.length}',
+                    label: t('workspace.invitation'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('workspace.roles')),
+                  const SizedBox(height: 12),
+                  for (final role in roles) ...[
+                    _WorkspaceRole(
+                      role: role,
+                      rights: snapshot.permissions.isEmpty
+                          ? t('workspace.permissionsUnknown')
+                          : t('workspace.permissionsCount').replaceFirst(
+                              '{count}',
+                              '${snapshot.permissions.length}',
+                            ),
+                    ),
+                    if (role != roles.last) const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (snapshot.clubs.isNotEmpty)
+              AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Eyebrow(t('workspace.club')),
+                    const SizedBox(height: 10),
+                    for (final club in snapshot.clubs.take(5))
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.apartment_outlined),
+                        title: Text(
+                          club.name,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(
+                          '${club.membersCount} ${t('clubs.members')} · ${club.teamsCount} ${t('teamsCenter.teams')}',
+                          style: TextStyle(color: muted),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            if (snapshot.invitations.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                borderColor: AirmiusColors.amber.withValues(alpha: 0.55),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Eyebrow(t('workspace.invitations')),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.invitations
+                          .map((item) => item.teamName)
+                          .join(' · '),
+                      style: TextStyle(color: muted, height: 1.35),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: t('teamDetail.accept'),
+                      icon: Icons.mark_email_read_outlined,
+                      onPressed: _busy ? null : _acceptInvitation,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(t('workspace.preferences')),
+                  const SizedBox(height: 8),
+                  Text(
+                    t('workspace.preferencesBody'),
+                    style: TextStyle(color: muted, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  AirmiusButton(
+                    label: t('workspace.openSettings'),
+                    icon: Icons.settings_outlined,
+                    secondary: true,
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SettingsCenterScreen(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            AirmiusButton(
+              label: t('workspace.switch'),
+              icon: Icons.swap_horiz_outlined,
+              onPressed: _activateContext,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  InputDecoration _fieldDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
-      filled: true,
-      fillColor: AirmiusColors.input,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.blue, width: 1.4)),
-    );
-  }
+  String _labelFor(String value) => switch (value) {
+    'guest' => t('workspace.guest'),
+    'dashboard' => t('workspace.dashboard'),
+    'trainer' => t('workspace.trainer'),
+    'admin' => t('workspace.admin'),
+    _ => t('workspace.club'),
+  };
+
+  InputDecoration _fieldDecoration(String label) => InputDecoration(
+    labelText: label,
+    filled: true,
+    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+  );
 }
 
 class _WorkspaceRole extends StatelessWidget {
@@ -101,15 +300,20 @@ class _WorkspaceRole extends StatelessWidget {
   final String rights;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(role, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(role, style: const TextStyle(fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        Text(rights, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-      ]),
-    );
-  }
+        Text(rights, style: const TextStyle(height: 1.35)),
+      ],
+    ),
+  );
 }

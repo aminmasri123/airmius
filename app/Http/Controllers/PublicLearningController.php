@@ -18,6 +18,7 @@ use App\Models\LearningSecurityEvent;
 use App\Services\AirmiusPdfDocument;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,99 @@ use Throwable;
 
 class PublicLearningController extends Controller
 {
+    /**
+     * Public learning catalogue for native clients. The response deliberately
+     * contains only published course-card data; enrollment and lesson actions
+     * remain protected by the existing authenticated routes.
+     */
+    public function indexJson(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:80'],
+            'level' => ['nullable', 'string', 'max:80'],
+            'price' => ['nullable', Rule::in(['free', 'paid'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $courses = LearningCourse::query()
+            ->with(['tutor:id,name'])
+            ->withCount(['sections', 'lessons'])
+            ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
+            ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->when($filters['q'] ?? null, function ($query, string $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('subtitle', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('sport_type', 'like', "%{$search}%");
+                });
+            })
+            ->when($filters['category'] ?? null, fn ($query, string $category) => $query->where('category', $category))
+            ->when($filters['level'] ?? null, fn ($query, string $level) => $query->where('level', $level))
+            ->when(($filters['price'] ?? null) === 'free', fn ($query) => $query->where('is_free', true))
+            ->when(($filters['price'] ?? null) === 'paid', fn ($query) => $query->where('is_free', false))
+            ->orderByDesc('featured_at')
+            ->latest('published_at')
+            ->latest('id')
+            ->paginate($filters['per_page'] ?? 24, ['*'], 'page', $filters['page'] ?? 1);
+
+        $data = collect($courses->items())->map(function (LearningCourse $course): array {
+            return [
+                'id' => $course->id,
+                'title' => $course->title,
+                'slug' => $course->slug,
+                'subtitle' => $course->subtitle,
+                'description' => $course->description,
+                'category' => $course->category,
+                'sport_type' => $course->sport_type,
+                'level' => $course->level,
+                'cover_image' => $course->cover_image,
+                'is_free' => (bool) $course->is_free,
+                'price_cents' => $course->price_cents,
+                'currency' => $course->currency,
+                'average_rating' => $course->average_rating ? round((float) $course->average_rating, 1) : null,
+                'reviews_count' => (int) ($course->reviews_count ?? 0),
+                'estimated_minutes' => $course->estimated_minutes,
+                'sections_count' => (int) ($course->sections_count ?? 0),
+                'lessons_count' => (int) ($course->lessons_count ?? 0),
+                'tutor' => $course->tutor ? [
+                    'id' => $course->tutor->id,
+                    'name' => $course->tutor->name,
+                ] : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'data' => $data,
+            'facets' => [
+                'categories' => LearningCourse::query()
+                    ->where('status', 'published')
+                    ->where('is_public', true)
+                    ->distinct()
+                    ->pluck('category')
+                    ->filter()
+                    ->values(),
+                'levels' => LearningCourse::query()
+                    ->where('status', 'published')
+                    ->where('is_public', true)
+                    ->distinct()
+                    ->pluck('level')
+                    ->filter()
+                    ->values(),
+            ],
+            'meta' => [
+                'current_page' => $courses->currentPage(),
+                'last_page' => $courses->lastPage(),
+                'per_page' => $courses->perPage(),
+                'total' => $courses->total(),
+            ],
+        ]);
+    }
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -596,6 +690,39 @@ class PublicLearningController extends Controller
                 'course_title' => $certificate->course?->title,
                 'course_subtitle' => $certificate->course?->subtitle,
                 'course_url' => $certificate->course ? route('guest.learning.courses.show', $certificate->course) : null,
+                'progress_percent' => $certificate->enrollment?->progress_percent ?: 100,
+                'tutor' => $certificate->course?->tutor,
+            ],
+        ]);
+    }
+
+    /**
+     * Return the same public certificate verification data for native clients.
+     * Only completed, active certificates are exposed; private account fields
+     * and download permissions remain protected by the existing routes.
+     */
+    public function verifyCertificateJson(string $code)
+    {
+        $certificate = LearningCertificate::query()
+            ->with(['course.tutor:id,name', 'user:id,name', 'enrollment'])
+            ->where('code', Str::upper($code))
+            ->first();
+
+        if (! $certificate ||
+            $certificate->enrollment?->status !== 'active' ||
+            ! $certificate->enrollment?->completed_at) {
+            return response()->json([
+                'message' => 'Certificate not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'code' => $certificate->code,
+                'issued_at' => optional($certificate->issued_at)->toIso8601String(),
+                'student_name' => $certificate->user?->name,
+                'course_title' => $certificate->course?->title,
+                'course_subtitle' => $certificate->course?->subtitle,
                 'progress_percent' => $certificate->enrollment?->progress_percent ?: 100,
                 'tutor' => $certificate->course?->tutor,
             ],

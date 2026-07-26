@@ -7,10 +7,12 @@ class NativeStoreReleaseAssetsSuiteScreen extends StatefulWidget {
   const NativeStoreReleaseAssetsSuiteScreen({super.key});
 
   @override
-  State<NativeStoreReleaseAssetsSuiteScreen> createState() => _NativeStoreReleaseAssetsSuiteScreenState();
+  State<NativeStoreReleaseAssetsSuiteScreen> createState() =>
+      _NativeStoreReleaseAssetsSuiteScreenState();
 }
 
-class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreReleaseAssetsSuiteScreen> {
+class _NativeStoreReleaseAssetsSuiteScreenState
+    extends State<NativeStoreReleaseAssetsSuiteScreen> {
   String _platform = 'Android';
   bool _iconReady = true;
   bool _splashReady = true;
@@ -20,16 +22,25 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Store Release Assets', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Store Release Assets',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Native Store Release Assets',
-        subtitle: 'App-Icon, Splash, Screenshots, Store-Texte, Datenschutz und Release-Gates für Play Store und App Store.',
-        trailing: const StatusPill('Store prep', color: AirmiusColors.amber),
+        subtitle:
+            'App-Icon, Splash, Screenshots, Store-Texte, Datenschutz und Release-Gates für Play Store und App Store.',
+        trailing: StatusPill(
+          'Store prep',
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,28 +51,49 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                 children: [
                   const Eyebrow('NATIVE RELEASE'),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Airmius soll wie eine echte App wirken, nicht wie eine verpackte Webseite.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Diese Ansicht sammelt alle sichtbaren Store-Bausteine: Branding, Screenshots, Beschreibungen, Datenschutzlabels, Berechtigungen und finale QA-Schritte.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.42),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['Android', 'iOS', 'Tablet', 'Review'].map((item) {
+                    children: ['Android', 'iOS', 'Tablet', 'Review'].map((
+                      item,
+                    ) {
                       return ChoiceChip(
                         selected: _platform == item,
                         label: Text(item),
                         onSelected: (_) => setState(() => _platform = item),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                        backgroundColor: AirmiusColors.panelSoft,
-                        side: BorderSide(color: _platform == item ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _platform == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                        selectedColor: airmiusAccentColor(
+                          context,
+                        ).withValues(alpha: .22),
+                        backgroundColor: airmiusSurfaceSoftColor(context),
+                        side: BorderSide(
+                          color: _platform == item
+                              ? airmiusAccentColor(context)
+                              : airmiusBorderColor(context),
+                        ),
+                        labelStyle: TextStyle(
+                          color: _platform == item
+                              ? airmiusTextColor(context)
+                              : airmiusMutedColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
                       );
                     }).toList(),
                   ),
@@ -71,11 +103,17 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '2', label: 'Stores')),
+                Expanded(
+                  child: MetricCard(value: '2', label: 'Stores'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '7', label: 'Assets')),
+                Expanded(
+                  child: MetricCard(value: '7', label: 'Assets'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'QA', label: 'Gate')),
+                Expanded(
+                  child: MetricCard(value: 'QA', label: 'Gate'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -86,35 +124,40 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                   Row(
                     children: [
                       const Expanded(child: Eyebrow('ASSET CHECKLIST')),
-                      StatusPill(_platform, color: AirmiusColors.blue),
+                      StatusPill(_platform, color: airmiusAccentColor(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
                   _AssetToggle(
                     icon: Icons.apps_outlined,
                     title: 'Airmius App-Icon',
-                    body: 'Logo in Store-Groessen, Adaptive Icon, runde Vorschau und dunkler Hintergrund passend zur Web-App.',
+                    body:
+                        'Logo in Store-Groessen, Adaptive Icon, runde Vorschau und dunkler Hintergrund passend zur Web-App.',
                     value: _iconReady,
                     onChanged: (value) => setState(() => _iconReady = value),
                   ),
                   _AssetToggle(
                     icon: Icons.phone_android_outlined,
                     title: 'Splash Screen',
-                    body: 'Kurzer nativer Start mit Airmius-Logo, dunklem Hintergrund und sauberem Übergang zur App-Shell.',
+                    body:
+                        'Kurzer nativer Start mit Airmius-Logo, dunklem Hintergrund und sauberem Übergang zur App-Shell.',
                     value: _splashReady,
                     onChanged: (value) => setState(() => _splashReady = value),
                   ),
                   _AssetToggle(
                     icon: Icons.image_outlined,
                     title: 'Store Screenshots',
-                    body: 'Login, Dashboard, Vereine, Mitgliedsantrag, Chat, Marketplace und Admin-Cockpit als mobile Screens.',
+                    body:
+                        'Login, Dashboard, Vereine, Mitgliedsantrag, Chat, Marketplace und Admin-Cockpit als mobile Screens.',
                     value: _screenshotsReady,
-                    onChanged: (value) => setState(() => _screenshotsReady = value),
+                    onChanged: (value) =>
+                        setState(() => _screenshotsReady = value),
                   ),
                   _AssetToggle(
                     icon: Icons.privacy_tip_outlined,
                     title: 'Datenschutzangaben',
-                    body: 'Datenkategorien, Zweckbindung, Konto-Löschung, Minderjaehrige, Standort, Kamera, Dateien und Push.',
+                    body:
+                        'Datenkategorien, Zweckbindung, Konto-Löschung, Minderjaehrige, Standort, Kamera, Dateien und Push.',
                     value: _privacyReady,
                     onChanged: (value) => setState(() => _privacyReady = value),
                     last: true,
@@ -129,9 +172,21 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                 children: [
                   const Eyebrow('STORE TEXTE'),
                   const SizedBox(height: 10),
-                  const _StoreCopy(title: 'Kurzbeschreibung', body: 'Airmius verbindet Vereine, Mitglieder, Teams, Training, Dateien, Kommunikation und digitale Mitgliedschaft in einer App.'),
-                  const _StoreCopy(title: 'Hauptnutzen', body: 'Verein finden, Mitgliedschaft beantragen, Teams organisieren, Nachrichten erhalten, Dokumente teilen und Zahlungen im Blick behalten.'),
-                  const _StoreCopy(title: 'Review-Hinweis', body: 'Die App ist native Flutter-UI, keine reine WebView. Laravel wird später per API angebunden.'),
+                  const _StoreCopy(
+                    title: 'Kurzbeschreibung',
+                    body:
+                        'Airmius verbindet Vereine, Mitglieder, Teams, Training, Dateien, Kommunikation und digitale Mitgliedschaft in einer App.',
+                  ),
+                  const _StoreCopy(
+                    title: 'Hauptnutzen',
+                    body:
+                        'Verein finden, Mitgliedschaft beantragen, Teams organisieren, Nachrichten erhalten, Dokumente teilen und Zahlungen im Blick behalten.',
+                  ),
+                  const _StoreCopy(
+                    title: 'Review-Hinweis',
+                    body:
+                        'Die App ist native Flutter-UI, keine reine WebView. Laravel wird später per API angebunden.',
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -148,17 +203,38 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
             ),
             const SizedBox(height: 14),
             AirmiusPanel(
-              borderColor: AirmiusColors.green.withValues(alpha: .45),
+              borderColor: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('RELEASE GATES'),
                   const SizedBox(height: 12),
-                  const _GateLine(icon: Icons.check_circle_outline, title: 'Mobile Web-App-Optik', body: 'Header, Panels, Buttons, Suche, Bottom-Navigation und Vereinsmodule bleiben im Airmius-Stil.'),
-                  const _GateLine(icon: Icons.api_outlined, title: 'API-Vertrag vorbereitet', body: 'Alle Store-relevanten Flows bleiben UI-only und können später sauber mit Laravel verbunden werden.'),
-                  const _GateLine(icon: Icons.verified_outlined, title: 'Review-Readiness', body: 'Vor Einreichung fehlen noch echte Builds, Signierung, Datenschutzformular, Screenshots und Device-QA.'),
+                  const _GateLine(
+                    icon: Icons.check_circle_outline,
+                    title: 'Mobile Web-App-Optik',
+                    body:
+                        'Header, Panels, Buttons, Suche, Bottom-Navigation und Vereinsmodule bleiben im Airmius-Stil.',
+                  ),
+                  const _GateLine(
+                    icon: Icons.api_outlined,
+                    title: 'API-Vertrag vorbereitet',
+                    body:
+                        'Alle Store-relevanten Flows bleiben UI-only und können später sauber mit Laravel verbunden werden.',
+                  ),
+                  const _GateLine(
+                    icon: Icons.verified_outlined,
+                    title: 'Review-Readiness',
+                    body:
+                        'Vor Einreichung fehlen noch echte Builds, Signierung, Datenschutzformular, Screenshots und Device-QA.',
+                  ),
                   const SizedBox(height: 10),
-                  AirmiusButton(label: 'Release später mit Build-Daten prüfen', icon: Icons.fact_check_outlined, onPressed: () {}),
+                  AirmiusButton(
+                    label: 'Release später mit Build-Daten prüfen',
+                    icon: Icons.fact_check_outlined,
+                    onPressed: () {},
+                  ),
                 ],
               ),
             ),
@@ -170,7 +246,14 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
 }
 
 class _AssetToggle extends StatelessWidget {
-  const _AssetToggle({required this.icon, required this.title, required this.body, required this.value, required this.onChanged, this.last = false});
+  const _AssetToggle({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.value,
+    required this.onChanged,
+    this.last = false,
+  });
 
   final IconData icon;
   final String title;
@@ -181,6 +264,9 @@ class _AssetToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final assetColor = value
+        ? Theme.of(context).colorScheme.secondary
+        : Theme.of(context).colorScheme.tertiary;
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 12),
       child: Row(
@@ -190,24 +276,40 @@ class _AssetToggle extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: (value ? AirmiusColors.green : AirmiusColors.amber).withValues(alpha: .14),
+              color: assetColor.withValues(alpha: .14),
               borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: value ? AirmiusColors.green.withValues(alpha: .42) : AirmiusColors.amber.withValues(alpha: .42)),
+              border: Border.all(color: assetColor.withValues(alpha: .42)),
             ),
-            child: Icon(icon, color: value ? AirmiusColors.green : AirmiusColors.amber),
+            child: Icon(icon, color: assetColor),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -226,13 +328,26 @@ class _StoreCopy extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)),
+            Text(
+              title,
+              style: TextStyle(
+                color: airmiusAccentColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(body, style: const TextStyle(color: AirmiusColors.text, height: 1.35)),
+            Text(
+              body,
+              style: TextStyle(color: airmiusTextColor(context), height: 1.35),
+            ),
           ],
         ),
       ),
@@ -241,7 +356,11 @@ class _StoreCopy extends StatelessWidget {
 }
 
 class _GateLine extends StatelessWidget {
-  const _GateLine({required this.icon, required this.title, required this.body});
+  const _GateLine({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
 
   final IconData icon;
   final String title;
@@ -255,15 +374,27 @@ class _GateLine extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(width: 2),
-          Icon(icon, color: AirmiusColors.green),
+          Icon(icon, color: Theme.of(context).colorScheme.secondary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),

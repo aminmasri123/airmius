@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -12,9 +13,12 @@ const props = defineProps({
     },
 })
 
+const { t, locale } = useI18n()
+const tx = (value, params = {}) => t(value, params)
+
 let notificationsInterval = null
 
-const formatDate = (value) => new Intl.DateTimeFormat('de-DE', {
+const formatDate = (value) => new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -83,7 +87,7 @@ const canObjectToRemoval = (notification) => (
 
 const objectToRemoval = (notification) => {
     router.post(route('auth.club-memberships.removal-objection', notification.data.club_id), {
-        message: 'Ich widerspreche der Entfernung und bitte um Prüfung.',
+        message: tx('notifications.removal_objection_message'),
     }, {
         preserveScroll: true,
         only: ['notifications', 'notificationCenter', 'auth', 'flash'],
@@ -91,7 +95,7 @@ const objectToRemoval = (notification) => {
     })
 }
 
-const notificationTitle = (notification) => notification.title || notification.data?.title || 'Neue Benachrichtigung'
+const notificationTitle = (notification) => notification.title || notification.data?.title || tx('Neue Benachrichtigung')
 const notificationBody = (notification) => notification.body || notification.data?.body || notification.data?.message || null
 const notificationActionUrl = (notification) => notification.action_url || notification.url || notification.data?.action_url || notification.data?.url || null
 
@@ -127,15 +131,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Benachrichtigungen" />
+    <Head :title="tx('Benachrichtigungen')" />
 
     <div class="mx-auto max-w-4xl space-y-6">
         <div>
             <div>
-                <h1 class="text-2xl font-bold text-primary">Benachrichtigungen</h1>
-                <p class="mt-1 text-sm text-secondary">
-                    Alles Wichtige aus Chat, Feed und Einladungen an einem Ort.
-                </p>
+                <h1 class="text-2xl font-bold text-primary">{{ tx('Benachrichtigungen') }}</h1>
+                <p class="mt-1 text-sm text-secondary">{{ tx('Alles Wichtige aus Chat, Feed und Einladungen an einem Ort.') }}</p>
             </div>
         </div>
 
@@ -175,7 +177,7 @@ onUnmounted(() => {
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
                                     @click="markAsRead(notification)"
                                 >
-                                    Öffnen
+                                    {{ tx('Öffnen') }}
                                 </a>
 
                                 <button
@@ -184,7 +186,7 @@ onUnmounted(() => {
                                     class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning transition hover:bg-warning/10"
                                     @click="objectToRemoval(notification)"
                                 >
-                                    Widersprechen
+                                    {{ tx('Widersprechen') }}
                                 </button>
 
                                 <button
@@ -192,14 +194,14 @@ onUnmounted(() => {
                                     class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:border-borderHover"
                                     @click="notification.read ? markAsUnread(notification) : markAsRead(notification)"
                                 >
-                                    {{ notification.read ? 'Ungelesen' : 'Gelesen' }}
+                                    {{ notification.read ? tx('notifications.unread') : tx('notifications.read') }}
                                 </button>
 
                                 <button
                                     type="button"
                                     class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-error/40 hover:bg-error/10 hover:text-error"
-                                    :aria-label="`Benachrichtigung ${notificationTitle(notification)} löschen`"
-                                    title="Benachrichtigung löschen"
+                                    :aria-label="`${tx('notifications.label')} ${notificationTitle(notification)} ${tx('löschen')}`"
+                                    :title="tx('Benachrichtigung löschen')"
                                     @click="deleteNotification(notification)"
                                 >
                                     <i class="las la-times text-lg"></i>
@@ -214,8 +216,8 @@ onUnmounted(() => {
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-muted text-secondary">
                     <i class="las la-bell-slash text-2xl"></i>
                 </div>
-                <h2 class="mt-4 text-lg font-semibold text-primary">Noch keine Benachrichtigungen</h2>
-                <p class="mt-1 text-sm text-secondary">Sobald etwas passiert, landet es hier.</p>
+                <h2 class="mt-4 text-lg font-semibold text-primary">{{ tx('Noch keine Benachrichtigungen') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ tx('Sobald etwas passiert, landet es hier.') }}</p>
             </div>
         </div>
 

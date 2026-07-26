@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\File;
+use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Friendship;
 use App\Models\Team;
@@ -417,6 +418,90 @@ class FileManagerFeatureTest extends TestCase
 
         $this->assertDatabaseMissing('files', ['id' => $file->id]);
         $this->assertDatabaseMissing('folders', ['id' => $folderId]);
+    }
+
+    public function test_api_file_share_creates_an_expiring_hashed_download_link(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $user = User::factory()->create();
+        $file = File::create([
+            'user_id' => $user->id,
+            'path' => 'private/shareable.pdf',
+            'display_name' => 'shareable.pdf',
+            'type' => 'application/pdf',
+            'size' => 128,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson("/api/v1/uploads/{$file->id}/share", [
+            'expires_in_days' => 7,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.file_id', $file->id)
+            ->assertJsonPath('data.expires_at', fn ($value) => is_string($value));
+
+        $token = $response->json('data.token');
+        $this->assertIsString($token);
+        $this->assertNotSame('', $token);
+        $this->assertStringContainsString('/shared-files/'.$token, $response->json('data.url'));
+        $this->assertDatabaseHas('file_shares', [
+            'file_id' => $file->id,
+            'shared_by_user_id' => $user->id,
+            'email' => strtolower($user->email),
+            'token_hash' => hash('sha256', $token),
+        ]);
+
+        $this->postJson("/api/v1/uploads/{$file->id}/share", [
+            'expires_in_days' => 31,
+        ])->assertUnprocessable();
+    }
+
+    public function test_api_folder_share_copies_the_tree_only_to_a_friend(): void
+    {
+        $owner = User::factory()->create();
+        $target = User::factory()->create();
+        $outsider = User::factory()->create();
+
+        $source = Folder::create([
+            'user_id' => $owner->id,
+            'name' => 'Teamunterlagen',
+            'parent_id' => null,
+        ]);
+        File::create([
+            'user_id' => $owner->id,
+            'folder_id' => $source->id,
+            'path' => 'private/teamunterlagen.txt',
+            'display_name' => 'teamunterlagen.txt',
+            'type' => 'text/plain',
+            'size' => 64,
+        ]);
+        Friendship::create(['user_id' => $owner->id, 'friend_id' => $target->id]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/files/folders/{$source->id}/share", [
+            'target_id' => $target->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.shared', true)
+            ->assertJsonPath('data.folder_id', $source->id)
+            ->assertJsonPath('data.target_user_id', $target->id);
+
+        $copiedFolder = Folder::query()
+            ->where('user_id', $target->id)
+            ->where('name', 'Teamunterlagen')
+            ->firstOrFail();
+        $this->assertDatabaseHas('files', [
+            'user_id' => $target->id,
+            'folder_id' => $copiedFolder->id,
+            'path' => 'private/teamunterlagen.txt',
+        ]);
+
+        $this->postJson("/api/v1/files/folders/{$source->id}/share", [
+            'target_id' => $outsider->id,
+        ])->assertForbidden();
     }
 
     public function test_web_scoped_file_and_folder_actions_respect_permissions(): void

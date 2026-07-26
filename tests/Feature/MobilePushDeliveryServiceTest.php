@@ -2,13 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Events\NotificationCreated;
 use App\Models\MobileDeviceToken;
 use App\Models\MobilePushDelivery;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\MobilePushDeliveryService;
+use App\Support\AppNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class MobilePushDeliveryServiceTest extends TestCase
@@ -19,6 +22,33 @@ class MobilePushDeliveryServiceTest extends TestCase
     {
         parent::setUp();
         config()->set('services.mobile_push.fcm.project_id', 'airmius');
+    }
+
+    public function test_friend_acceptance_automatically_queues_external_push(): void
+    {
+        Event::fake([NotificationCreated::class]);
+        $user = User::factory()->create();
+        $device = MobileDeviceToken::create([
+            'user_id' => $user->id,
+            'device_id' => 'friend-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'friend-device-token',
+            'token_hash' => hash('sha256', 'friend-device-token'),
+            'channels' => ['social_updates'],
+            'permissions' => ['notifications' => true],
+        ]);
+
+        $notification = AppNotification::send($user, 'friend.accepted', [
+            'title' => 'Freundschaftsanfrage bestätigt',
+            'body' => 'Ihr seid jetzt verbunden.',
+        ]);
+
+        $delivery = MobilePushDelivery::firstOrFail();
+        $this->assertSame($notification->id, $delivery->notification_id);
+        $this->assertSame($device->id, $delivery->mobile_device_token_id);
+        $this->assertSame('social_updates', $delivery->channel);
+        $this->assertSame('queued', $delivery->status);
     }
 
     public function test_fcm_delivery_is_only_marked_sent_after_provider_acceptance(): void
@@ -127,6 +157,36 @@ class MobilePushDeliveryServiceTest extends TestCase
         $this->assertSame(1, $summary['failed']);
         $this->assertSame('failed', MobilePushDelivery::firstOrFail()->status);
         $this->assertNotNull($device->fresh()->disabled_at);
+    }
+
+    public function test_user_channel_preferences_block_matching_push_notifications(): void
+    {
+        $user = User::factory()->create([
+            'notification_channels' => [
+                'club' => false,
+                'billing' => true,
+            ],
+        ]);
+        MobileDeviceToken::create([
+            'user_id' => $user->id,
+            'device_id' => 'club-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'club-device-token',
+            'token_hash' => hash('sha256', 'club-device-token'),
+            'channels' => ['club_billing'],
+            'permissions' => ['notifications' => true],
+        ]);
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'type' => 'club.announcement',
+            'data' => ['title' => 'Verein', 'body' => 'Neue Nachricht'],
+        ]);
+
+        $result = app(MobilePushDeliveryService::class)->queueForNotification($notification);
+
+        $this->assertSame('user_channel_disabled', $result['reason']);
+        $this->assertDatabaseCount('mobile_push_deliveries', 0);
     }
 
     private function notificationAndDevice(): array

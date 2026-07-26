@@ -1,5 +1,6 @@
 // ignore_for_file: unused_element
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -8,19 +9,24 @@ import 'package:http_parser/http_parser.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
-  const ClubMembershipManagementScreen({super.key});
+  const ClubMembershipManagementScreen({super.key, this.initialClubId});
+
+  final int? initialClubId;
 
   @override
-  State<ClubMembershipManagementScreen> createState() => _ClubMembershipManagementScreenState();
+  State<ClubMembershipManagementScreen> createState() =>
+      _ClubMembershipManagementScreenState();
 }
 
-class _ClubMembershipManagementScreenState extends State<ClubMembershipManagementScreen> {
+class _ClubMembershipManagementScreenState
+    extends State<ClubMembershipManagementScreen> {
   String _filter = 'Alle';
   String _period = 'Juni 2026';
   String _section = 'overview';
@@ -30,6 +36,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   final _inviteNameController = TextEditingController();
   final _inviteEmailController = TextEditingController();
   bool _sendingInvitation = false;
+
+  String _tr(String key) => AirmiusScope.of(context).t(key);
 
   static const _expenseCategories = [
     'Miete & Hallenkosten',
@@ -72,6 +80,60 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     'Sonstige Einnahme',
   ];
 
+  static const _clubRoleKeys = [
+    'owner',
+    'admin',
+    'manager',
+    'academy_manager',
+    'financial_controller',
+    'trainer',
+    'member',
+  ];
+
+  static const _financeCategoryTranslationKeys = {
+    'Miete & Hallenkosten': 'membership.category.rent',
+    'Material & Ausrüstung': 'membership.category.equipment',
+    'Trikots & Kleidung': 'membership.category.clothing',
+    'Trainerhonorare': 'membership.category.coachFees',
+    'Schiedsrichter & Gebühren': 'membership.category.refereeFees',
+    'Verbandsbeiträge': 'membership.category.associationFees',
+    'Versicherungen': 'membership.category.insurance',
+    'Reisekosten & Fahrtkosten': 'membership.category.travel',
+    'Verpflegung': 'membership.category.catering',
+    'Turniere & Wettkaempfe': 'membership.category.competitions',
+    'Lizenzen & Software': 'membership.category.software',
+    'Marketing & Werbung': 'membership.category.marketing',
+    'Büro & Verwaltung': 'membership.category.office',
+    'Bankgebühren': 'membership.category.bankFees',
+    'Steuern & Abgaben': 'membership.category.taxes',
+    'Reparatur & Wartung': 'membership.category.maintenance',
+    'Reinigung': 'membership.category.cleaning',
+    'Energie & Nebenkosten': 'membership.category.utilities',
+    'Telefon & Internet': 'membership.category.telecom',
+    'Fortbildung': 'membership.category.training',
+    'Veranstaltungskosten': 'membership.category.events',
+    'Sonstige Ausgabe': 'membership.category.otherExpense',
+    'Mitgliedsbeiträge': 'membership.category.memberFees',
+    'Aufnahmegebühren': 'membership.category.admissionFees',
+    'Spenden': 'membership.category.donations',
+    'Sponsoring': 'membership.category.sponsoring',
+    'Zuschüsse & Fördermittel': 'membership.category.grants',
+    'Kursgebühren': 'membership.category.courseFees',
+    'Event-Einnahmen': 'membership.category.eventIncome',
+    'Ticketverkauf': 'membership.category.tickets',
+    'Merchandise': 'membership.category.merchandise',
+    'Vermietung': 'membership.category.rental',
+    'Rückerstattung': 'membership.category.refund',
+    'Zinsen': 'membership.category.interest',
+    'Sonstige Einnahme': 'membership.category.otherIncome',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedClubId = widget.initialClubId;
+  }
+
   int _parseEuroCents(String value) {
     return ((_parseMoneyNumber(value) ?? 0) * 100).round();
   }
@@ -86,31 +148,47 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   }
 
   String _openTotalFromInvoices(List<_InvoiceEntry> invoices) {
-    final total = invoices.where((invoice) => invoice.status == 'Offen').fold<int>(0, (sum, invoice) => sum + _parseEuroCents(invoice.amount));
+    final total = invoices
+        .where((invoice) => invoice.status == 'Offen')
+        .fold<int>(0, (sum, invoice) => sum + _parseEuroCents(invoice.amount));
     return _formatEuro(total);
   }
 
   String _recurringTotalFromMembers(List<_MemberEntry> members) {
-    final total = members.fold<int>(0, (sum, member) {
-      if (member.type == 'Jugend') return sum + 900;
-      if (member.type == 'Aktiv') return sum + 1200;
-      return sum;
+    final total = members.fold<double>(0, (sum, member) {
+      final interval = _stringFromJson(member.membership, [
+        'contribution_interval',
+      ], fallback: 'none');
+      if (interval == 'none' || interval.isEmpty) return sum;
+      return sum +
+          (_parseMoneyNumber(member.membership['contribution_amount']) ?? 0);
     });
-    return _formatEuro(total);
+    return _formatEuroAmount(total);
   }
 
   String _cashBalanceFromPayments(List<_PaymentEntry> payments) {
-    final total = payments.where((payment) => payment.methodKey == 'cash').fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    final total = payments
+        .where((payment) => payment.methodKey == 'cash')
+        .fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
     return _formatEuro(total);
   }
 
   String _bankBalanceFromPayments(List<_PaymentEntry> payments) {
-    final total = payments.where((payment) => payment.methodKey == 'bank_transfer' || payment.methodKey == 'sepa_debit').fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    final total = payments
+        .where(
+          (payment) =>
+              payment.methodKey == 'bank_transfer' ||
+              payment.methodKey == 'sepa_debit',
+        )
+        .fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
     return _formatEuro(total);
   }
 
   String _totalBalanceFromPayments(List<_PaymentEntry> payments) {
-    final total = payments.fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    final total = payments.fold<int>(
+      0,
+      (sum, payment) => sum + _parseEuroCents(payment.amount),
+    );
     return _formatEuro(total);
   }
 
@@ -120,7 +198,11 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return normalized == '1' || normalized == 'true' || normalized == 'yes';
   }
 
-  String _stringFromJson(JsonMap json, List<String> keys, {String fallback = ''}) {
+  String _stringFromJson(
+    JsonMap json,
+    List<String> keys, {
+    String fallback = '',
+  }) {
     for (final key in keys) {
       final value = json[key];
       if (value != null && '$value'.trim().isNotEmpty) return '$value';
@@ -166,28 +248,91 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     final status = (member.status ?? '').toLowerCase();
     if (status == 'pending' || status == 'open') return 'Offen';
     if (role == 'external' || status == 'external') return 'Extern';
-    if (role == 'youth' || role == 'junior' || status == 'youth') return 'Jugend';
+    if (role == 'youth' || role == 'junior' || status == 'youth') {
+      return 'Jugend';
+    }
     return 'Aktiv';
   }
 
   List<_MemberEntry> _membersFromManagement(AirmiusClubManagement? management) {
     final members = management?.members ?? const <AirmiusClubMember>[];
-    return members
+    final linkedEntries = members
         .map(
           (member) => _MemberEntry(
             id: member.id,
+            externalId: null,
+            isExternal: false,
             name: member.name,
             email: member.email,
+            role: member.role ?? 'member',
+            status: member.status ?? 'active',
+            membership: member.membership,
             type: _memberType(member),
-            number: (member.memberNumber != null && member.memberNumber!.isNotEmpty) ? member.memberNumber! : 'ID-${member.id}',
-            balance: _moneyFromValue(member.membership['balance'] ?? member.membership['open_balance'] ?? member.membership['contribution_amount']),
-            sepa: _boolFromAny(member.membership['sepa_mandate_active'] ?? member.membership['sepa_ready'] ?? member.membership['has_sepa_mandate']),
+            number:
+                (member.memberNumber != null && member.memberNumber!.isNotEmpty)
+                ? member.memberNumber!
+                : 'ID-${member.id}',
+            balance: _moneyFromValue(
+              member.membership['balance'] ??
+                  member.membership['open_balance'] ??
+                  member.membership['contribution_amount'],
+            ),
+            sepa: _boolFromAny(
+              member.membership['sepa_mandate_active'] ??
+                  member.membership['sepa_ready'] ??
+                  member.membership['has_sepa_mandate'],
+            ),
           ),
         )
         .toList();
+    final externalEntries = (management?.externalMembers ?? const <JsonMap>[])
+        .map((member) {
+          final externalId = _intFromAny(member['id']);
+          final membership = <String, dynamic>{
+            'role': _stringFromJson(member, ['role'], fallback: 'member'),
+            'status': _stringFromJson(member, [
+              'membership_status',
+            ], fallback: 'active'),
+            'family_group_key': member['family_group_key'],
+            'member_number': member['member_number'],
+            'contribution_amount': member['contribution_amount'],
+            'contribution_interval': member['contribution_interval'],
+            'sepa_iban': member['sepa_iban'],
+            'sepa_bic': member['sepa_bic'],
+            'sepa_mandate_reference': member['sepa_mandate_reference'],
+            'sepa_mandate_signed_on': member['sepa_mandate_signed_on'],
+            'sepa_mandate_active': member['sepa_mandate_active'],
+            'membership_notes': member['membership_notes'],
+          };
+          return _MemberEntry(
+            id: -externalId,
+            externalId: externalId,
+            isExternal: true,
+            name: _stringFromJson(member, [
+              'name',
+              'email',
+            ], fallback: 'Externes Mitglied'),
+            email: _stringFromJson(member, ['email']),
+            role: _stringFromJson(member, ['role'], fallback: 'member'),
+            status: _stringFromJson(member, [
+              'membership_status',
+            ], fallback: 'active'),
+            membership: membership,
+            type: 'Extern',
+            number: _stringFromJson(member, [
+              'member_number',
+            ], fallback: 'ID-$externalId'),
+            balance: _moneyFromValue(member['contribution_amount']),
+            sepa: _boolFromAny(member['sepa_mandate_active']),
+          );
+        })
+        .toList();
+    return [...linkedEntries, ...externalEntries];
   }
 
-  List<_InvoiceEntry> _invoicesFromManagement(AirmiusClubManagement? management) {
+  List<_InvoiceEntry> _invoicesFromManagement(
+    AirmiusClubManagement? management,
+  ) {
     final invoices = management?.invoices ?? const <JsonMap>[];
     return invoices.map((invoice) {
       final user = invoice['user'];
@@ -195,26 +340,56 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       final person = user is JsonMap
           ? _stringFromJson(user, ['name', 'email'], fallback: 'Mitglied')
           : member is JsonMap
-              ? _stringFromJson(member, ['name', 'email'], fallback: 'Mitglied')
-              : _stringFromJson(invoice, ['member_name', 'user_name', 'recipient_name'], fallback: 'Mitglied');
-      final rawStatus = _stringFromJson(invoice, ['status', 'payment_status'], fallback: 'open').toLowerCase();
-      final paid = rawStatus == 'paid' || rawStatus == 'bezahlt' || rawStatus == 'settled';
+          ? _stringFromJson(member, ['name', 'email'], fallback: 'Mitglied')
+          : _stringFromJson(invoice, [
+              'member_name',
+              'user_name',
+              'recipient_name',
+            ], fallback: 'Mitglied');
+      final rawStatus = _stringFromJson(invoice, [
+        'status',
+        'payment_status',
+      ], fallback: 'open').toLowerCase();
+      final paid =
+          rawStatus == 'paid' ||
+          rawStatus == 'bezahlt' ||
+          rawStatus == 'settled';
       final status = paid ? 'Bezahlt' : 'Offen';
       return _InvoiceEntry(
         id: _intFromAny(invoice['id']),
-        title: _stringFromJson(invoice, ['title', 'number', 'invoice_number'], fallback: 'Rechnung'),
+        userId: _intFromAny(
+          invoice['user_id'] ??
+              (user is JsonMap ? user['id'] : null) ??
+              (member is JsonMap ? member['id'] : null),
+        ),
+        title: _stringFromJson(invoice, [
+          'title',
+          'number',
+          'invoice_number',
+        ], fallback: 'Rechnung'),
         person: person,
-        amount: _moneyFromValue(invoice['amount'] ?? invoice['amount_due'] ?? invoice['total'] ?? invoice['total_amount']),
+        amount: _moneyFromValue(
+          invoice['amount'] ??
+              invoice['amount_due'] ??
+              invoice['total'] ??
+              invoice['total_amount'],
+        ),
+        statusKey: rawStatus,
         status: status,
         color: paid ? AirmiusColors.green : AirmiusColors.amber,
       );
     }).toList();
   }
 
-  List<_PaymentEntry> _paymentsFromManagement(AirmiusClubManagement? management, List<_MemberEntry> members) {
+  List<_PaymentEntry> _paymentsFromManagement(
+    AirmiusClubManagement? management,
+    List<_MemberEntry> members,
+  ) {
     final payments = management?.payments ?? const <JsonMap>[];
     return payments.map((payment) {
-      final purpose = _stringFromJson(payment, ['purpose'], fallback: 'payment').toLowerCase();
+      final purpose = _stringFromJson(payment, [
+        'purpose',
+      ], fallback: 'payment').toLowerCase();
       final method = _stringFromJson(payment, ['method'], fallback: 'manual');
       final notes = _stringFromJson(payment, ['notes'], fallback: '');
       final reference = _stringFromJson(payment, ['reference'], fallback: '');
@@ -232,7 +407,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         method: _paymentMethodLabel(method),
         methodKey: method,
         date: _dateLabelFromValue(payment['paid_at'] ?? payment['created_at']),
-        paidAtInput: _dateLabelFromValue(payment['paid_at'] ?? payment['created_at']),
+        paidAtInput: _dateLabelFromValue(
+          payment['paid_at'] ?? payment['created_at'],
+        ),
         reference: reference,
         notes: notes,
         detail: detail,
@@ -261,7 +438,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     final invoice = payment['invoice'];
     if (invoice is JsonMap) {
-      return _stringFromJson(invoice, ['user_name', 'member_name', 'recipient_name', 'title'], fallback: 'Mitglied');
+      return _stringFromJson(invoice, [
+        'user_name',
+        'member_name',
+        'recipient_name',
+        'title',
+      ], fallback: 'Mitglied');
     }
 
     return 'Mitglied';
@@ -276,10 +458,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
   String _paymentPurposeLabel(String purpose) {
     return switch (purpose) {
-      'prepayment' => 'Vorauszahlung',
-      'donation' => 'Spende',
-      'membership_invoice' => 'Rechnungszahlung',
-      _ => 'Zahlung',
+      'prepayment' => _tr('membership.prepayment'),
+      'donation' => _tr('membership.donation'),
+      'membership_invoice' => _tr('membership.invoicePayment'),
+      _ => _tr('membership.payment'),
     };
   }
 
@@ -294,25 +476,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
   Color _paymentPurposeColor(String purpose) {
     return switch (purpose) {
-      'prepayment' => AirmiusColors.blue,
+      'prepayment' => airmiusAccentColor(context),
       'donation' => AirmiusColors.green,
       'membership_invoice' => AirmiusColors.amber,
-      _ => AirmiusColors.blue,
+      _ => airmiusAccentColor(context),
     };
   }
 
   String _financeTypeLabel(String type) {
     return switch (type) {
-      'income' => 'Einnahme',
-      'expense' => 'Ausgabe',
+      'income' => _tr('membership.financeType.income'),
+      'expense' => _tr('membership.financeType.expense'),
       _ => type,
     };
   }
 
   String _financeAccountLabel(String account) {
     return switch (account) {
-      'cash' => 'Bar',
-      'bank' => 'Bank',
+      'cash' => _tr('membership.financeAccount.cash'),
+      'bank' => _tr('membership.financeAccount.bank'),
       _ => account,
     };
   }
@@ -321,14 +503,24 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     final selected = (current ?? '').trim();
     final base = type == 'income' ? _incomeCategories : _expenseCategories;
 
-    if (selected.isEmpty || base.any((item) => item.toLowerCase() == selected.toLowerCase())) {
+    if (selected.isEmpty ||
+        base.any((item) => item.toLowerCase() == selected.toLowerCase())) {
       return base;
     }
 
     return [selected, ...base];
   }
 
-  Future<String?> _pickFinanceCategory(BuildContext context, {required String type, required String current}) async {
+  String _financeCategoryLabel(String category) {
+    final key = _financeCategoryTranslationKeys[category];
+    return key == null ? category : _tr(key);
+  }
+
+  Future<String?> _pickFinanceCategory(
+    BuildContext context, {
+    required String type,
+    required String current,
+  }) async {
     final search = TextEditingController();
     final selected = current.trim();
 
@@ -338,14 +530,21 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         builder: (context, setDialogState) {
           final query = search.text.trim().toLowerCase();
           final options = _financeCategoryOptions(type, current: selected)
-              .where((category) => query.isEmpty || category.toLowerCase().contains(query))
+              .where(
+                (category) =>
+                    query.isEmpty || category.toLowerCase().contains(query),
+              )
               .toList();
 
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
+            backgroundColor: airmiusSurfaceColor(context),
             title: Text(
-              '${_financeTypeLabel(type)}-Kategorie',
-              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+              '${_financeTypeLabel(type)} – '
+              '${_tr('membership.category')}',
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
             content: SizedBox(
               width: 420,
@@ -356,10 +555,13 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     controller: search,
                     autofocus: true,
                     onChanged: (_) => setDialogState(() {}),
-                    style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-                    decoration: const InputDecoration(
-                      labelText: 'Kategorie suchen',
-                      hintText: 'z. B. Miete, Material, Spenden',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.searchCategory'),
+                      hintText: _tr('membership.categorySearchHint'),
                       prefixIcon: Icon(Icons.search_outlined),
                     ),
                   ),
@@ -367,35 +569,50 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 320),
                     child: options.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(18),
+                        ? Padding(
+                            padding: const EdgeInsets.all(18),
                             child: Text(
-                              'Keine Kategorie gefunden.',
-                              style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+                              _tr('membership.noCategoryFound'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           )
                         : ListView.separated(
                             shrinkWrap: true,
                             itemCount: options.length,
-                            separatorBuilder: (_, _) => const Divider(height: 1, color: AirmiusColors.border),
+                            separatorBuilder: (_, _) => Divider(
+                              height: 1,
+                              color: airmiusBorderColor(context),
+                            ),
                             itemBuilder: (context, index) {
                               final category = options[index];
-                              final isSelected = category.toLowerCase() == selected.toLowerCase();
+                              final isSelected =
+                                  category.toLowerCase() ==
+                                  selected.toLowerCase();
 
                               return ListTile(
                                 dense: true,
                                 leading: Icon(
-                                  isSelected ? Icons.check_circle : Icons.label_outline,
-                                  color: isSelected ? AirmiusColors.blue : AirmiusColors.muted,
+                                  isSelected
+                                      ? Icons.check_circle
+                                      : Icons.label_outline,
+                                  color: isSelected
+                                      ? airmiusAccentColor(context)
+                                      : airmiusMutedColor(context),
                                 ),
                                 title: Text(
-                                  category,
+                                  _financeCategoryLabel(category),
                                   style: TextStyle(
-                                    color: isSelected ? AirmiusColors.text : AirmiusColors.muted,
+                                    color: isSelected
+                                        ? airmiusTextColor(context)
+                                        : airmiusMutedColor(context),
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                                onTap: () => Navigator.pop(dialogContext, category),
+                                onTap: () =>
+                                    Navigator.pop(dialogContext, category),
                               );
                             },
                           ),
@@ -404,7 +621,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
             ],
           );
         },
@@ -416,11 +636,15 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return result;
   }
 
-  Color _financeEntryColor(String type) => type == 'income' ? AirmiusColors.green : AirmiusColors.red;
+  Color _financeEntryColor(String type) =>
+      type == 'income' ? AirmiusColors.green : AirmiusColors.red;
 
-  IconData _financeEntryIcon(String type) => type == 'income' ? Icons.add_card_outlined : Icons.receipt_long_outlined;
+  IconData _financeEntryIcon(String type) =>
+      type == 'income' ? Icons.add_card_outlined : Icons.receipt_long_outlined;
 
-  List<_FinanceEntry> _financeEntriesFromManagement(AirmiusClubManagement? management) {
+  List<_FinanceEntry> _financeEntriesFromManagement(
+    AirmiusClubManagement? management,
+  ) {
     final entries = management?.financeEntries ?? const <JsonMap>[];
     return entries.map((entry) {
       final type = _stringFromJson(entry, ['type'], fallback: 'expense');
@@ -438,12 +662,16 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         id: _intFromAny(entry['id']),
         type: type,
         account: account,
-        title: _stringFromJson(entry, ['title'], fallback: _financeTypeLabel(type)),
+        title: _stringFromJson(entry, [
+          'title',
+        ], fallback: _financeTypeLabel(type)),
         category: category,
         amount: _moneyFromValue(entry['amount']),
         amountInput: _paymentAmountInput(_moneyFromValue(entry['amount'])),
         date: _dateLabelFromValue(entry['booked_on'] ?? entry['created_at']),
-        bookedOnInput: _dateLabelFromValue(entry['booked_on'] ?? entry['created_at']),
+        bookedOnInput: _dateLabelFromValue(
+          entry['booked_on'] ?? entry['created_at'],
+        ),
         reference: reference,
         description: description,
         detail: detail,
@@ -453,18 +681,24 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }).toList();
   }
 
-  List<_BankEntry> _bankEntriesFromManagement(AirmiusClubManagement? management) {
+  List<_BankEntry> _bankEntriesFromManagement(
+    AirmiusClubManagement? management,
+  ) {
     final entries = management?.bankTransactions ?? const <JsonMap>[];
     return entries
         .map(
           (entry) => _BankEntry(
-            title: _stringFromJson(entry, ['debtor_name', 'counterparty', 'booking_text', 'title'], fallback: 'Banktransaktion'),
-            detail: '${_moneyFromValue(entry['amount'])} - ${_stringFromJson(entry, [
-                  'purpose',
-                  'remittance_information',
-                  'description',
-                  'status',
-                ], fallback: 'nicht zugeordnet')}',
+            id: _intFromAny(entry['id']),
+            invoiceId: _intFromAny(entry['invoice_id']),
+            status: _stringFromJson(entry, ['status'], fallback: 'unmatched'),
+            title: _stringFromJson(entry, [
+              'debtor_name',
+              'counterparty',
+              'booking_text',
+              'title',
+            ], fallback: 'Banktransaktion'),
+            detail:
+                '${_moneyFromValue(entry['amount'])} - ${_stringFromJson(entry, ['purpose', 'remittance_information', 'description', 'status'], fallback: 'nicht zugeordnet')}',
           ),
         )
         .toList();
@@ -486,7 +720,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   Future<_ManagedMembershipData?> _loadManagedClub() async {
     final services = AirmiusServicesScope.of(context);
     final page = await services.repositories.clubs.searchClubs(mine: true);
-    final managed = page.items.map(ClubSummary.fromAirmiusClub).where((club) => club.canManage).toList();
+    final managed = page.items
+        .map(ClubSummary.fromAirmiusClub)
+        .where((club) => club.canManage)
+        .toList();
     if (managed.isEmpty) return null;
     var selected = managed.first;
     for (final club in managed) {
@@ -497,7 +734,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
     _selectedClubId = selected.id;
     final detail = await services.repositories.clubs.club(selected.id);
-    final data = _ManagedMembershipData(clubs: managed, selectedClub: ClubSummary.fromAirmiusClub(detail));
+    final data = _ManagedMembershipData(
+      clubs: managed,
+      selectedClub: ClubSummary.fromAirmiusClub(detail),
+    );
     _currentData = data;
     return data;
   }
@@ -514,7 +754,13 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     final updatedClub = current.selectedClub.copyWith(management: management);
     final updatedData = _ManagedMembershipData(
-      clubs: current.clubs.map((club) => club.id == updatedClub.id ? club.copyWith(management: management) : club).toList(),
+      clubs: current.clubs
+          .map(
+            (club) => club.id == updatedClub.id
+                ? club.copyWith(management: management)
+                : club,
+          )
+          .toList(),
       selectedClub: updatedClub,
     );
 
@@ -529,15 +775,17 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     final email = _inviteEmailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte gib eine E-Mail-Adresse ein.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('membership.emailRequired'))));
       return;
     }
 
     setState(() => _sendingInvitation = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.inviteClubMember(club.id, {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.inviteClubMember(club.id, {
         'email': email,
         'name': _inviteNameController.text.trim(),
         'send_invitation': true,
@@ -547,26 +795,1168 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       if (!mounted) return;
       _inviteNameController.clear();
       _inviteEmailController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Einladung wurde versendet.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('membership.invitationSent'))));
       setState(() => _sendingInvitation = false);
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : _tr('common.errorDetails');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Einladung konnte nicht gesendet werden: $message')),
+        SnackBar(
+          content: Text('${_tr('membership.invitationFailed')}: $message'),
+        ),
       );
       setState(() => _sendingInvitation = false);
     }
   }
 
+  Future<void> _storeExternalMember(ClubSummary club) async {
+    final email = _inviteEmailController.text.trim();
+    if (email.isEmpty) {
+      _toast(_tr('membership.emailRequired'));
+      return;
+    }
+
+    await _runManagementAction(
+      () => AirmiusServicesScope.of(context).repositories.clubs
+          .inviteClubMember(club.id, {
+            'email': email,
+            'name': _inviteNameController.text.trim(),
+            'send_invitation': false,
+            'membership_status': 'active',
+          }),
+      success: _tr('membership.externalSaved'),
+    );
+    _inviteNameController.clear();
+    _inviteEmailController.clear();
+  }
+
+  Future<void> _runManagementAction(
+    Future<AirmiusClubManagement> Function() action, {
+    required String success,
+  }) async {
+    try {
+      final management = await action();
+      if (!mounted) return;
+      _applyManagement(management);
+      _toast(success);
+    } catch (error) {
+      if (mounted) _toast(_errorText(error));
+    }
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _errorText(Object error) => error is AirmiusApiException
+      ? error.userMessage
+      : _tr('common.errorDetails');
+
+  Uri _apiUri(String path) {
+    final base = Uri.parse(
+      AirmiusServicesScope.of(context).environment.apiBaseUrl,
+    );
+    final prefix = base.path.endsWith('/') ? base.path : '${base.path}/';
+    return base.replace(
+      path: '$prefix${path.startsWith('/') ? path.substring(1) : path}',
+      query: null,
+      fragment: null,
+    );
+  }
+
+  Map<String, String> _apiHeaders({bool json = false}) {
+    final services = AirmiusServicesScope.of(context);
+    return {
+      'Accept': 'application/json',
+      'X-Airmius-Locale': services.environment.locale,
+      if (json) 'Content-Type': 'application/json',
+      if (services.authState.session?.token.isNotEmpty == true)
+        'Authorization': 'Bearer ${services.authState.session!.token}',
+    };
+  }
+
+  Future<void> _downloadApiFile({
+    required String path,
+    required String fileName,
+    required List<String> extensions,
+  }) async {
+    try {
+      final response = await http.get(_apiUri(path), headers: _apiHeaders());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: path,
+        );
+      }
+
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: _tr('membership.saveFile'),
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: extensions,
+        bytes: Uint8List.fromList(response.bodyBytes),
+      );
+      if (mounted && saved != null) {
+        _toast(_tr('membership.fileSaved'));
+      }
+    } catch (error) {
+      if (mounted) _toast(_errorText(error));
+    }
+  }
+
+  Future<void> _uploadImport(ClubSummary club, {required bool bank}) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: bank ? const ['csv'] : const ['csv', 'xlsx', 'xls'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null) return;
+
+    Map<String, dynamic>? importMapping;
+    final path = bank
+        ? '/api/v1/clubs/${club.id}/bank-transactions/import'
+        : '/api/v1/clubs/${club.id}/members/import';
+    try {
+      if (!bank) {
+        var preview = await _previewMembershipImport(club, file);
+        if (preview['needs_mapping'] == true) {
+          importMapping = await _chooseMembershipImportMapping(preview);
+          if (importMapping == null) return;
+          preview = await _previewMembershipImport(
+            club,
+            file,
+            mapping: importMapping,
+          );
+        }
+        if (!mounted) return;
+        final confirmed = await _confirmMembershipImport(preview);
+        if (!confirmed) return;
+      }
+      final request = http.MultipartRequest('POST', _apiUri(path))
+        ..headers.addAll(_apiHeaders());
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+      } else if (file.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            file.path!,
+            filename: file.name,
+          ),
+        );
+      } else {
+        throw StateError(_tr('membership.fileUnreadable'));
+      }
+      if (importMapping != null) {
+        request.fields['mapping'] = jsonEncode(importMapping);
+      }
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: path,
+        );
+      }
+      if (!mounted) return;
+      _toast(
+        bank
+            ? _tr('membership.bankImportComplete')
+            : _tr('membership.membersImported'),
+      );
+      _reloadClub();
+    } catch (error) {
+      if (mounted) _toast(_errorText(error));
+    }
+  }
+
+  Future<Map<String, dynamic>> _previewMembershipImport(
+    ClubSummary club,
+    PlatformFile file, {
+    Map<String, dynamic>? mapping,
+  }) async {
+    const pathSuffix = '/members/import-preview';
+    final path = '/api/v1/clubs/${club.id}$pathSuffix';
+    final request = http.MultipartRequest('POST', _apiUri(path))
+      ..headers.addAll(_apiHeaders());
+    if (mapping != null) {
+      request.fields['mapping'] = jsonEncode(mapping);
+    }
+    if (file.bytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name),
+      );
+    } else if (file.path != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: file.name,
+        ),
+      );
+    } else {
+      throw StateError(_tr('membership.fileUnreadable'));
+    }
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: path,
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    final data = decoded is Map ? decoded['data'] : null;
+    if (data is! Map) {
+      throw StateError(_tr('common.errorDetails'));
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, dynamic>?> _chooseMembershipImportMapping(
+    Map<String, dynamic> preview,
+  ) async {
+    final rawColumns = preview['columns'];
+    final columns = rawColumns is List
+        ? rawColumns.map((value) => '$value').toList()
+        : const <String>[];
+    if (columns.isEmpty) {
+      _toast(_tr('membership.importMappingRequired'));
+      return null;
+    }
+
+    final rawSuggested = preview['mapping'];
+    final suggested = rawSuggested is Map
+        ? rawSuggested.map(
+            (key, value) => MapEntry('$key', int.tryParse('$value') ?? -1),
+          )
+        : <String, int>{};
+    final fields = <Map<String, String>>[
+      {'key': 'email', 'label': _tr('membership.importMappingEmail')},
+      {'key': 'name', 'label': _tr('membership.importMappingName')},
+      {
+        'key': 'membership_status',
+        'label': _tr('membership.importMappingStatus'),
+      },
+      {
+        'key': 'family_group_key',
+        'label': _tr('membership.importMappingFamilyGroup'),
+      },
+      {
+        'key': 'contribution_amount',
+        'label': _tr('membership.importMappingAmount'),
+      },
+      {
+        'key': 'contribution_interval',
+        'label': _tr('membership.importMappingInterval'),
+      },
+    ];
+    final selected = <String, int>{
+      for (final field in fields) field['key']!: suggested[field['key']] ?? -1,
+    };
+    final mapping = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_tr('membership.importMappingTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(_tr('membership.importMappingBody')),
+                const SizedBox(height: 14),
+                for (final field in fields) ...[
+                  DropdownButtonFormField<int>(
+                    initialValue:
+                        selected[field['key']]! >= 0 &&
+                            selected[field['key']]! < columns.length
+                        ? selected[field['key']]
+                        : -1,
+                    decoration: InputDecoration(labelText: field['label']),
+                    items: [
+                      DropdownMenuItem(
+                        value: -1,
+                        child: Text(_tr('membership.importMappingNotMapped')),
+                      ),
+                      for (var index = 0; index < columns.length; index++)
+                        DropdownMenuItem(
+                          value: index,
+                          child: Text('${index + 1}: ${columns[index]}'),
+                        ),
+                    ],
+                    onChanged: (value) => setDialogState(() {
+                      selected[field['key']!] = value ?? -1;
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(_tr('membership.importPreviewCancel')),
+            ),
+            FilledButton(
+              onPressed: selected['email']! < 0
+                  ? null
+                  : () => Navigator.pop(dialogContext, {
+                      for (final entry in selected.entries)
+                        if (entry.value >= 0) entry.key: entry.value,
+                    }),
+              child: Text(_tr('membership.importPreviewContinue')),
+            ),
+          ],
+        ),
+      ),
+    );
+    return mapping;
+  }
+
+  Future<bool> _confirmMembershipImport(Map<String, dynamic> preview) async {
+    final total = preview['total_rows']?.toString() ?? '0';
+    final valid = preview['valid_rows']?.toString() ?? '0';
+    final errors = preview['error_count']?.toString() ?? '0';
+    final errorItems = preview['errors'] is List
+        ? (preview['errors'] as List).whereType<Map>().take(5).toList()
+        : const <Map>[];
+    final summary = _tr('membership.importPreviewSummary')
+        .replaceFirst('{valid}', valid)
+        .replaceFirst('{total}', total)
+        .replaceFirst('{errors}', errors);
+    final canImport = preview['can_import'] == true && valid != '0';
+
+    return (await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            final text = airmiusTextColor(dialogContext);
+            final muted = airmiusMutedColor(dialogContext);
+            return AlertDialog(
+              title: Text(_tr('membership.importPreviewTitle')),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        summary,
+                        style: TextStyle(color: muted, height: 1.4),
+                      ),
+                      if (errorItems.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          _tr('membership.importPreviewErrors'),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        for (final error in errorItems)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 5),
+                            child: Text(
+                              _tr('membership.importPreviewRow')
+                                  .replaceFirst(
+                                    '{row}',
+                                    '${error['row'] ?? '?'}',
+                                  )
+                                  .replaceFirst(
+                                    '{reason}',
+                                    '${error['reason'] ?? ''}',
+                                  ),
+                              style: TextStyle(color: muted, height: 1.3),
+                            ),
+                          ),
+                      ],
+                      if (!canImport) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _tr('membership.importPreviewNoValid'),
+                          style: TextStyle(
+                            color: AirmiusColors.red,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(_tr('membership.importPreviewCancel')),
+                ),
+                if (canImport)
+                  FilledButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: Text(_tr('membership.importPreviewContinue')),
+                  ),
+              ],
+            );
+          },
+        )) ??
+        false;
+  }
+
+  Future<void> _createInvoice(
+    ClubSummary club,
+    List<_MemberEntry> members, {
+    _MemberEntry? initialMember,
+  }) async {
+    if (members.isEmpty) {
+      _toast(_tr('membership.noLinkedMember'));
+      return;
+    }
+
+    var memberId = initialMember?.id ?? members.first.id;
+    final title = TextEditingController(
+      text: _tr('membership.defaultContributionTitle'),
+    );
+    final amount = TextEditingController();
+    final dueDate = TextEditingController(
+      text: _dateOnly(DateTime.now().add(const Duration(days: 14))),
+    );
+    final description = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_tr('membership.createInvoice')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  initialValue: memberId,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.member'),
+                  ),
+                  items: members
+                      .map(
+                        (member) => DropdownMenuItem(
+                          value: member.id,
+                          child: Text(
+                            member.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setDialogState(() => memberId = value ?? memberId),
+                ),
+                TextField(
+                  controller: title,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.invoiceTitle'),
+                  ),
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.amountEur'),
+                  ),
+                ),
+                TextField(
+                  controller: dueDate,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.dueDate'),
+                  ),
+                ),
+                TextField(
+                  controller: description,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.descriptionOptional'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_tr('membership.create')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _runManagementAction(
+        () => AirmiusServicesScope.of(context).repositories.clubs
+            .createClubMemberInvoice(club.id, memberId, {
+              'title': title.text.trim(),
+              'amount': _normalizePaymentAmount(amount.text),
+              'due_date': dueDate.text.trim(),
+              'description': description.text.trim().isEmpty
+                  ? null
+                  : description.text.trim(),
+            }),
+        success: _tr('membership.invoiceCreated'),
+      );
+    }
+    title.dispose();
+    amount.dispose();
+    dueDate.dispose();
+    description.dispose();
+  }
+
+  Future<void> _invoiceActions(ClubSummary club, _InvoiceEntry invoice) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.notification_important_outlined),
+              title: Text(_tr('membership.sendPaymentReminder')),
+              enabled: invoice.statusKey != 'paid',
+              onTap: () => Navigator.pop(context, 'reminder'),
+            ),
+            ListTile(
+              leading: Icon(Icons.task_alt_outlined),
+              title: Text(_tr('membership.markPaid')),
+              onTap: () => Navigator.pop(context, 'paid'),
+            ),
+            ListTile(
+              leading: Icon(Icons.cancel_outlined),
+              title: Text(_tr('membership.cancelInvoice')),
+              onTap: () => Navigator.pop(context, 'cancelled'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    final repo = AirmiusServicesScope.of(context).repositories.clubs;
+    await _runManagementAction(
+      () => action == 'reminder'
+          ? repo.sendClubInvoiceReminder(club.id, invoice.id)
+          : repo.updateClubInvoiceStatus(club.id, invoice.id, action),
+      success: action == 'reminder'
+          ? _tr('membership.reminderSent')
+          : _tr('membership.invoiceStatusUpdated'),
+    );
+  }
+
+  Future<void> _memberActions(
+    ClubSummary club,
+    _MemberEntry member,
+    List<_MemberEntry> members,
+  ) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.edit_outlined),
+              title: Text(_tr('membership.editMemberData')),
+              onTap: () => Navigator.pop(context, 'edit'),
+            ),
+            if (!member.isExternal &&
+                member.role != 'owner' &&
+                (club.management?.canEditMemberPermissions ?? false))
+              ListTile(
+                leading: Icon(Icons.admin_panel_settings_outlined),
+                title: Text(_tr('membership.permissions')),
+                onTap: () => Navigator.pop(context, 'permissions'),
+              ),
+            if (member.isExternal)
+              ListTile(
+                leading: Icon(Icons.mark_email_read_outlined),
+                title: Text(_tr('membership.sendInvitation')),
+                onTap: () => Navigator.pop(context, 'invite'),
+              ),
+            if (member.isExternal)
+              ListTile(
+                leading: Icon(Icons.person_remove_outlined),
+                title: Text(_tr('membership.removeFromClub')),
+                textColor: AirmiusColors.red,
+                iconColor: AirmiusColors.red,
+                onTap: () => Navigator.pop(context, 'remove'),
+              ),
+            if (!member.isExternal) ...[
+              ListTile(
+                leading: Icon(Icons.pin_outlined),
+                title: Text(_tr('membership.generateMemberNumber')),
+                onTap: () => Navigator.pop(context, 'number'),
+              ),
+              ListTile(
+                leading: Icon(Icons.receipt_long_outlined),
+                title: Text(_tr('membership.createInvoice')),
+                onTap: () => Navigator.pop(context, 'invoice'),
+              ),
+              ListTile(
+                leading: Icon(Icons.person_remove_outlined),
+                title: Text(_tr('membership.removeFromClub')),
+                textColor: AirmiusColors.red,
+                iconColor: AirmiusColors.red,
+                onTap: () => Navigator.pop(context, 'remove'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    final repo = AirmiusServicesScope.of(context).repositories.clubs;
+    if (action == 'invite' && member.externalId != null) {
+      await _runManagementAction(
+        () => repo.inviteClubExternalMember(club.id, member.externalId!),
+        success: _tr('membership.invitationSent'),
+      );
+    } else if (action == 'number') {
+      await _runManagementAction(
+        () => repo.generateClubMemberNumber(club.id, member.id),
+        success: _tr('membership.memberNumberGenerated'),
+      );
+    } else if (action == 'invoice') {
+      await _createInvoice(
+        club,
+        members.where((entry) => !entry.isExternal).toList(),
+        initialMember: member,
+      );
+    } else if (action == 'edit') {
+      await _editMember(club, member);
+    } else if (action == 'permissions') {
+      await _editMemberPermissions(club, member);
+    } else if (action == 'remove') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(_tr('membership.removeMemberQuestion')),
+          content: Text(
+            '${member.name} ${_tr('membership.removeMemberBodyAfter')}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(_tr('membership.remove')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        await _runManagementAction(
+          () => member.isExternal && member.externalId != null
+              ? repo.removeClubExternalMember(club.id, member.externalId!)
+              : repo.removeClubMember(club.id, member.id),
+          success: _tr('membership.memberRemoved'),
+        );
+      }
+    }
+  }
+
+  Future<void> _editMemberPermissions(
+    ClubSummary club,
+    _MemberEntry member,
+  ) async {
+    try {
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      final data = await repository.clubMemberPermissions(club.id, member.id);
+      if (!mounted) return;
+
+      final catalog = data['catalog'] is List
+          ? (data['catalog'] as List).whereType<JsonMap>().toList()
+          : <JsonMap>[];
+      final effective = data['effective'] is JsonMap
+          ? Map<String, dynamic>.from(data['effective'] as JsonMap)
+          : <String, dynamic>{};
+      final defaults = data['defaults'] is List
+          ? (data['defaults'] as List).whereType<String>().toSet()
+          : <String>{};
+      final initialOverrides = data['overrides'] is JsonMap
+          ? Map<String, dynamic>.from(data['overrides'] as JsonMap)
+          : <String, dynamic>{};
+      final overrides = Map<String, dynamic>.from(initialOverrides);
+      final removed = <String>{};
+
+      final payload = await showDialog<JsonMap>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: airmiusSurfaceColor(context),
+              title: Text(_tr('membership.permissionsTitle')),
+              content: SizedBox(
+                width: 460,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _tr('membership.permissionsBody'),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final item in catalog)
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            '${item['label'] ?? item['key']}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: overrides.containsKey(item['key'])
+                              ? Text(_tr('membership.permissionsCustom'))
+                              : Text(_tr('membership.permissionsDefault')),
+                          value: effective[item['key']] == true,
+                          onChanged: (value) {
+                            final key = '${item['key']}';
+                            final next = value == true;
+                            setDialogState(() {
+                              effective[key] = next;
+                              if (next == defaults.contains(key)) {
+                                overrides.remove(key);
+                                removed.add(key);
+                              } else {
+                                overrides[key] = next;
+                                removed.remove(key);
+                              }
+                            });
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(_tr('membership.cancel')),
+                ),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(dialogContext, {
+                    'permissions': <String, dynamic>{
+                      ...overrides,
+                      for (final key in removed) key: null,
+                    },
+                  }),
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(_tr('membership.permissionsSave')),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+      if (payload == null || !mounted) return;
+
+      await repository.updateClubMemberPermissions(club.id, member.id, payload);
+      if (!mounted) return;
+      _reloadClub();
+      _toast(_tr('membership.permissionsUpdated'));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('membership.permissionsFailed')}: ${_errorText(error)}',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _editMember(ClubSummary club, _MemberEntry member) async {
+    var role = member.role;
+    var status = member.status;
+    var interval = _stringFromJson(member.membership, [
+      'contribution_interval',
+    ], fallback: 'none');
+    var sepaActive = _boolFromAny(member.membership['sepa_mandate_active']);
+    final number = TextEditingController(
+      text: _stringFromJson(member.membership, ['member_number']),
+    );
+    final amount = TextEditingController(
+      text: _stringFromJson(member.membership, ['contribution_amount']),
+    );
+    final iban = TextEditingController(
+      text: _stringFromJson(member.membership, ['sepa_iban']),
+    );
+    final bic = TextEditingController(
+      text: _stringFromJson(member.membership, ['sepa_bic']),
+    );
+    final mandate = TextEditingController(
+      text: _stringFromJson(member.membership, ['sepa_mandate_reference']),
+    );
+    final mandateDate = TextEditingController(
+      text: _stringFromJson(member.membership, ['sepa_mandate_signed_on']),
+    );
+    final familyGroup = TextEditingController(
+      text: _stringFromJson(member.membership, ['family_group_key']),
+    );
+    final notes = TextEditingController(
+      text: _stringFromJson(member.membership, ['membership_notes']),
+    );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('${member.name} ${_tr('membership.editAfter')}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: _clubRoleKeys.contains(role) ? role : 'member',
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.role'),
+                  ),
+                  items: [
+                    for (final roleKey in _clubRoleKeys)
+                      DropdownMenuItem(
+                        value: roleKey,
+                        child: Text(_tr('membership.role.$roleKey')),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => role = value ?? role),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: status,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.status'),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'active',
+                      child: Text(_tr('membership.status.active')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'non_member',
+                      child: Text(_tr('membership.status.nonMember')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'pending',
+                      child: Text(_tr('membership.status.pending')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'paused',
+                      child: Text(_tr('membership.status.paused')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'former',
+                      child: Text(_tr('membership.status.former')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => status = value ?? status),
+                ),
+                TextField(
+                  controller: number,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.memberNumber'),
+                  ),
+                ),
+                TextField(
+                  controller: familyGroup,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.familyGroupKey'),
+                    helperText: _tr('membership.familyGroupKeyHint'),
+                  ),
+                  textCapitalization: TextCapitalization.none,
+                ),
+                TextField(
+                  controller: amount,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.contributionEur'),
+                  ),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: interval,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.interval'),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'none',
+                      child: Text(_tr('membership.interval.none')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'monthly',
+                      child: Text(_tr('membership.interval.monthly')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'quarterly',
+                      child: Text(_tr('membership.interval.quarterly')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'four_monthly',
+                      child: Text(_tr('membership.interval.fourMonthly')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'semi_yearly',
+                      child: Text(_tr('membership.interval.semiYearly')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'yearly',
+                      child: Text(_tr('membership.interval.yearly')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'once',
+                      child: Text(_tr('membership.interval.once')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => interval = value ?? interval),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: sepaActive,
+                  title: Text(_tr('membership.sepaMandateActive')),
+                  onChanged: (value) =>
+                      setDialogState(() => sepaActive = value),
+                ),
+                TextField(
+                  controller: iban,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.iban'),
+                  ),
+                ),
+                TextField(
+                  controller: bic,
+                  decoration: InputDecoration(labelText: _tr('membership.bic')),
+                ),
+                TextField(
+                  controller: mandate,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.mandateReference'),
+                  ),
+                ),
+                TextField(
+                  controller: mandateDate,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.mandateDate'),
+                  ),
+                ),
+                TextField(
+                  controller: notes,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: _tr('membership.notes'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_tr('membership.save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final payload = <String, dynamic>{
+        'role': role,
+        'roles': [role],
+        'membership_status': status,
+        'member_number': number.text.trim().isEmpty ? null : number.text.trim(),
+        'family_group_key': familyGroup.text.trim().isEmpty
+            ? null
+            : familyGroup.text.trim(),
+        'contribution_amount': amount.text.trim().isEmpty
+            ? null
+            : _normalizePaymentAmount(amount.text),
+        'contribution_interval': interval,
+        'sepa_iban': iban.text.trim().isEmpty ? null : iban.text.trim(),
+        'sepa_bic': bic.text.trim().isEmpty ? null : bic.text.trim(),
+        'sepa_mandate_reference': mandate.text.trim().isEmpty
+            ? null
+            : mandate.text.trim(),
+        'sepa_mandate_signed_on': mandateDate.text.trim().isEmpty
+            ? null
+            : mandateDate.text.trim(),
+        'sepa_mandate_active': sepaActive,
+        'membership_notes': notes.text.trim().isEmpty
+            ? null
+            : notes.text.trim(),
+      };
+      await _runManagementAction(
+        () => member.isExternal && member.externalId != null
+            ? AirmiusServicesScope.of(
+                context,
+              ).repositories.clubs.updateClubExternalMember(
+                club.id,
+                member.externalId!,
+                payload,
+              )
+            : AirmiusServicesScope.of(context).repositories.clubs
+                  .updateClubMember(club.id, member.id, payload),
+        success: _tr('membership.memberDataSaved'),
+      );
+    }
+    for (final controller in [
+      number,
+      amount,
+      iban,
+      bic,
+      mandate,
+      mandateDate,
+      familyGroup,
+      notes,
+    ]) {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _configureAccounting(
+    ClubSummary club, {
+    required bool sepa,
+    required JsonMap settings,
+  }) async {
+    final first = TextEditingController(
+      text: _stringFromJson(settings, [
+        sepa ? 'sepa_creditor_id' : 'datev_consultant_number',
+      ]),
+    );
+    final second = TextEditingController(
+      text: _stringFromJson(settings, [
+        sepa ? 'sepa_account_holder' : 'datev_client_number',
+      ]),
+    );
+    final third = TextEditingController(
+      text: _stringFromJson(settings, [
+        sepa ? 'sepa_iban' : 'datev_revenue_account',
+      ]),
+    );
+    final fourth = TextEditingController(
+      text: _stringFromJson(settings, [
+        sepa ? 'sepa_bic' : 'datev_bank_account',
+      ]),
+    );
+    final labels = sepa
+        ? [
+            _tr('membership.creditorId'),
+            _tr('membership.accountHolder'),
+            _tr('membership.clubIban'),
+            _tr('membership.bic'),
+          ]
+        : [
+            _tr('membership.consultantNumber'),
+            _tr('membership.clientNumber'),
+            _tr('membership.revenueAccount'),
+            _tr('membership.bankAccount'),
+          ];
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          sepa
+              ? _tr('membership.configureSepa')
+              : _tr('membership.configureDatev'),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final pair in [
+                (first, labels[0]),
+                (second, labels[1]),
+                (third, labels[2]),
+                (fourth, labels[3]),
+              ])
+                TextField(
+                  controller: pair.$1,
+                  decoration: InputDecoration(labelText: pair.$2),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_tr('membership.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_tr('membership.save')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final repo = AirmiusServicesScope.of(context).repositories.clubs;
+      await _runManagementAction(
+        () => sepa
+            ? repo.updateClubSepaSettings(club.id, {
+                'sepa_creditor_id': first.text.trim(),
+                'sepa_account_holder': second.text.trim(),
+                'sepa_iban': third.text.trim(),
+                'sepa_bic': fourth.text.trim(),
+              })
+            : repo.updateClubDatevSettings(club.id, {
+                'datev_consultant_number': first.text.trim(),
+                'datev_client_number': second.text.trim(),
+                'datev_revenue_account': third.text.trim(),
+                'datev_bank_account': fourth.text.trim(),
+              }),
+        success:
+            '${sepa ? 'SEPA' : 'DATEV'} ${_tr('membership.settingsSavedAfter')}',
+      );
+    }
+    first.dispose();
+    second.dispose();
+    third.dispose();
+    fourth.dispose();
+  }
+
   String _paymentMethodLabel(String method) {
     return switch (method) {
-      'cash' => 'Barzahlung',
-      'bank_transfer' => 'Überweisung',
-      'sepa_debit' => 'SEPA-Lastschrift',
-      'manual' => 'Manuell',
+      'cash' => _tr('membership.payment.cash'),
+      'bank_transfer' => _tr('membership.payment.bankTransfer'),
+      'sepa_debit' => _tr('membership.payment.sepaDebit'),
+      'manual' => _tr('membership.payment.manual'),
       _ => method,
     };
   }
@@ -585,15 +1975,19 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
   String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
-  String _dateOnly(DateTime value) => '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)}';
+  String _dateOnly(DateTime value) =>
+      '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)}';
 
-  String _dateDisplay(DateTime value) => '${_twoDigits(value.day)}.${_twoDigits(value.month)}.${value.year}';
+  String _dateDisplay(DateTime value) =>
+      '${_twoDigits(value.day)}.${_twoDigits(value.month)}.${value.year}';
 
   String? _dateInputForApi(String value) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return null;
 
-    final german = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(trimmed);
+    final german = RegExp(
+      r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$',
+    ).firstMatch(trimmed);
     if (german != null) {
       final day = _twoDigits(int.tryParse(german.group(1) ?? '') ?? 0);
       final month = _twoDigits(int.tryParse(german.group(2) ?? '') ?? 0);
@@ -612,14 +2006,21 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return parsed != null && parsed.year == DateTime.now().year;
   }
 
-  String _dateRangeLabel(DateTimeRange range) => '${_dateDisplay(range.start)} bis ${_dateDisplay(range.end)}';
+  String _dateRangeLabel(DateTimeRange range) =>
+      '${_dateDisplay(range.start)} ${_tr('membership.to')} '
+      '${_dateDisplay(range.end)}';
 
   String _memberPickerLabel(_MemberEntry member) {
-    return member.email.trim().isEmpty ? member.name : '${member.name} - ${member.email}';
+    return member.email.trim().isEmpty
+        ? member.name
+        : '${member.name} - ${member.email}';
   }
 
   _MemberEntry _memberById(List<_MemberEntry> members, int memberId) {
-    return members.firstWhere((member) => member.id == memberId, orElse: () => members.first);
+    return members.firstWhere(
+      (member) => member.id == memberId,
+      orElse: () => members.first,
+    );
   }
 
   Widget _memberPickerField({
@@ -636,8 +2037,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         if (picked != null) onChanged(picked.id);
       },
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Mitglied',
+        decoration: InputDecoration(
+          labelText: _tr('membership.member'),
           prefixIcon: Icon(Icons.search_outlined),
           suffixIcon: Icon(Icons.expand_more),
         ),
@@ -645,43 +2046,66 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
           _memberPickerLabel(selected),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
   }
 
-  Future<_MemberEntry?> _pickMember(BuildContext context, List<_MemberEntry> members, int selectedMemberId) async {
+  Future<_MemberEntry?> _pickMember(
+    BuildContext context,
+    List<_MemberEntry> members,
+    int selectedMemberId,
+  ) async {
     final search = TextEditingController();
     try {
       return await showModalBottomSheet<_MemberEntry>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: AirmiusColors.card,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        backgroundColor: airmiusSurfaceColor(context),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         builder: (sheetContext) => StatefulBuilder(
           builder: (context, setSheetState) {
             final query = search.text.trim().toLowerCase();
             final filtered = query.isEmpty
                 ? members
                 : members.where((member) {
-                    final haystack = '${member.name} ${member.email} ${member.number}'.toLowerCase();
+                    final haystack =
+                        '${member.name} ${member.email} ${member.number}'
+                            .toLowerCase();
                     return haystack.contains(query);
                   }).toList();
 
             return SafeArea(
               child: Padding(
-                padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 16 + MediaQuery.of(sheetContext).viewInsets.bottom,
+                ),
                 child: SizedBox(
                   height: MediaQuery.of(sheetContext).size.height * .72,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('Mitglied auswählen', style: TextStyle(color: AirmiusColors.text, fontSize: 20, fontWeight: FontWeight.w900)),
+                      Text(
+                        _tr('membership.chooseMember'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       AirmiusTextField(
-                        label: 'Suchen',
-                        hint: 'Name, E-Mail oder Mitgliedsnummer',
+                        label: _tr('membership.search'),
+                        hint: _tr('membership.memberSearchHint'),
                         icon: Icons.search_outlined,
                         controller: search,
                         onChanged: (_) => setSheetState(() {}),
@@ -689,33 +2113,80 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                       const SizedBox(height: 12),
                       Expanded(
                         child: filtered.isEmpty
-                            ? const Center(child: Text('Kein Mitglied gefunden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)))
+                            ? Center(
+                                child: Text(
+                                  _tr('membership.noMemberFound'),
+                                  style: TextStyle(
+                                    color: airmiusMutedColor(context),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              )
                             : ListView.separated(
                                 itemCount: filtered.length,
-                                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
                                   final member = filtered[index];
-                                  final selected = member.id == selectedMemberId;
+                                  final selected =
+                                      member.id == selectedMemberId;
                                   return ListTile(
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(14),
-                                      side: BorderSide(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+                                      side: BorderSide(
+                                        color: selected
+                                            ? airmiusAccentColor(context)
+                                            : airmiusBorderColor(context),
+                                      ),
                                     ),
-                                    tileColor: selected ? AirmiusColors.blue.withValues(alpha: .18) : AirmiusColors.cardSoft,
+                                    tileColor: selected
+                                        ? airmiusAccentColor(
+                                            context,
+                                          ).withValues(alpha: .18)
+                                        : airmiusSurfaceSoftColor(context),
                                     leading: CircleAvatar(
-                                      backgroundColor: selected ? AirmiusColors.blue : AirmiusColors.input,
+                                      backgroundColor: selected
+                                          ? airmiusAccentColor(context)
+                                          : airmiusInputColor(context),
                                       foregroundColor: Colors.white,
-                                      child: Text(member.name.isEmpty ? '?' : member.name.substring(0, 1).toUpperCase()),
+                                      child: Text(
+                                        member.name.isEmpty
+                                            ? '?'
+                                            : member.name
+                                                  .substring(0, 1)
+                                                  .toUpperCase(),
+                                      ),
                                     ),
-                                    title: Text(member.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                                    subtitle: Text(
-                                      [member.email, member.number].where((value) => value.trim().isNotEmpty).join(' - '),
+                                    title: Text(
+                                      member.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700),
+                                      style: TextStyle(
+                                        color: airmiusTextColor(context),
+                                        fontWeight: FontWeight.w900,
+                                      ),
                                     ),
-                                    trailing: selected ? const Icon(Icons.check_circle, color: AirmiusColors.blue) : null,
-                                    onTap: () => Navigator.pop(sheetContext, member),
+                                    subtitle: Text(
+                                      [member.email, member.number]
+                                          .where(
+                                            (value) => value.trim().isNotEmpty,
+                                          )
+                                          .join(' - '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: airmiusMutedColor(context),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    trailing: selected
+                                        ? Icon(
+                                            Icons.check_circle,
+                                            color: airmiusAccentColor(context),
+                                          )
+                                        : null,
+                                    onTap: () =>
+                                        Navigator.pop(sheetContext, member),
                                   );
                                 },
                               ),
@@ -733,18 +2204,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
   }
 
-  Future<void> _recordPayment(ClubSummary club, List<_InvoiceEntry> invoices) async {
-    final openInvoices = invoices.where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt').toList();
+  Future<void> _recordPayment(
+    ClubSummary club,
+    List<_InvoiceEntry> invoices,
+  ) async {
+    final openInvoices = invoices
+        .where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt')
+        .toList();
     if (openInvoices.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keine offene Rechnung zum Bezahlen gefunden.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('membership.noOpenInvoice'))));
       return;
     }
 
     var selectedInvoiceId = openInvoices.first.id;
     var method = 'cash';
-    final amount = TextEditingController(text: _paymentAmountInput(openInvoices.first.amount));
+    final amount = TextEditingController(
+      text: _paymentAmountInput(openInvoices.first.amount),
+    );
     final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
     final reference = TextEditingController();
     final notes = TextEditingController();
@@ -754,61 +2232,113 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
-            title: const Text('Zahlung erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusSurfaceColor(context),
+            title: Text(
+              _tr('membership.recordPayment'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<int>(
-                  initialValue: selectedInvoiceId,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Rechnung'),
-                  items: [
-                    for (final invoice in openInvoices)
-                      DropdownMenuItem<int>(
-                        value: invoice.id,
-                        child: Text('${invoice.title} - ${invoice.person} - ${invoice.amount}', overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    final nextId = value ?? selectedInvoiceId;
-                    final selected = openInvoices.firstWhere((invoice) => invoice.id == nextId, orElse: () => openInvoices.first);
-                    setDialogState(() {
-                      selectedInvoiceId = nextId;
-                      amount.text = _paymentAmountInput(selected.amount);
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: method,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
-                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => method = value ?? method),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Bezahlt am', hint: 'TT.MM.JJJJ', controller: paidAt),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedInvoiceId,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.invoice'),
+                    ),
+                    items: [
+                      for (final invoice in openInvoices)
+                        DropdownMenuItem<int>(
+                          value: invoice.id,
+                          child: Text(
+                            '${invoice.title} - ${invoice.person} - ${invoice.amount}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      final nextId = value ?? selectedInvoiceId;
+                      final selected = openInvoices.firstWhere(
+                        (invoice) => invoice.id == nextId,
+                        orElse: () => openInvoices.first,
+                      );
+                      setDialogState(() {
+                        selectedInvoiceId = nextId;
+                        amount.text = _paymentAmountInput(selected.amount);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.amountEur'),
+                    hint: '0,00',
+                    controller: amount,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.paymentMethod'),
+                    ),
+                    items: const ['cash', 'bank_transfer']
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_paymentMethodLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => method = value ?? method),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.paidOn'),
+                    hint: _tr('membership.dateHint'),
+                    controller: paidAt,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.reference'),
+                    hint: _tr('membership.optional'),
+                    controller: reference,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.note'),
+                    hint: _tr('membership.optional'),
+                    controller: notes,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton.icon(
                 onPressed: () => Navigator.pop(dialogContext, {
                   'invoice_id': selectedInvoiceId,
-                  'amount': amount.text.trim().isEmpty ? null : _normalizePaymentAmount(amount.text),
+                  'amount': amount.text.trim().isEmpty
+                      ? null
+                      : _normalizePaymentAmount(amount.text),
                   'method': method,
                   'paid_at': _dateInputForApi(paidAt.text),
-                  'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                  'reference': reference.text.trim().isEmpty
+                      ? null
+                      : reference.text.trim(),
                   'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
                 }),
-                icon: const Icon(Icons.payments_outlined),
-                label: const Text('Speichern'),
+                icon: Icon(Icons.payments_outlined),
+                label: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -826,26 +2356,39 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     try {
       final invoiceId = _intFromAny(payload['invoice_id']);
-      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
+      final management = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
       if (!mounted) return;
       _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Zahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+        SnackBar(
+          content: Text(
+            '${_tr('membership.paymentRecordedBefore')} '
+            '${_paymentMethodLabel('${payload['method']}')} '
+            '${_tr('membership.recordedAfter')}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = _errorText(error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Zahlung konnte nicht erfasst werden: $message')),
+        SnackBar(
+          content: Text('${_tr('membership.paymentRecordFailed')}: $message'),
+        ),
       );
     }
   }
 
-  Future<void> _recordDonation(ClubSummary club, List<_MemberEntry> members) async {
+  Future<void> _recordDonation(
+    ClubSummary club,
+    List<_MemberEntry> members,
+  ) async {
     final availableMembers = members.where((member) => member.id > 0).toList();
     if (availableMembers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keine Mitglieder für eine Spende gefunden.')),
+        SnackBar(content: Text(_tr('membership.noDonationMembers'))),
       );
       return;
     }
@@ -862,50 +2405,95 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
-            title: const Text('Spende erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusSurfaceColor(context),
+            title: Text(
+              _tr('membership.recordDonation'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                _memberPickerField(
-                  context: dialogContext,
-                  members: availableMembers,
-                  selectedMemberId: selectedMemberId,
-                  onChanged: (value) => setDialogState(() => selectedMemberId = value),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: method,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
-                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => method = value ?? method),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _memberPickerField(
+                    context: dialogContext,
+                    members: availableMembers,
+                    selectedMemberId: selectedMemberId,
+                    onChanged: (value) =>
+                        setDialogState(() => selectedMemberId = value),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.amountEur'),
+                    hint: '0,00',
+                    controller: amount,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.paymentMethod'),
+                    ),
+                    items: const ['cash', 'bank_transfer']
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_paymentMethodLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => method = value ?? method),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.receivedOn'),
+                    hint: _tr('membership.dateHint'),
+                    controller: paidAt,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.reference'),
+                    hint: _tr('membership.optional'),
+                    controller: reference,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.note'),
+                    hint: _tr('membership.optional'),
+                    controller: notes,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton.icon(
                 onPressed: () {
                   if (amount.text.trim().isEmpty) return;
                   Navigator.pop(dialogContext, {
-                          'user_id': selectedMemberId,
-                          'amount': _normalizePaymentAmount(amount.text),
-                          'method': method,
-                          'paid_at': _dateInputForApi(paidAt.text),
-                          'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
-                          'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
-                        });
+                    'user_id': selectedMemberId,
+                    'amount': _normalizePaymentAmount(amount.text),
+                    'method': method,
+                    'paid_at': _dateInputForApi(paidAt.text),
+                    'reference': reference.text.trim().isEmpty
+                        ? null
+                        : reference.text.trim(),
+                    'notes': notes.text.trim().isEmpty
+                        ? null
+                        : notes.text.trim(),
+                  });
                 },
-                icon: const Icon(Icons.volunteer_activism_outlined),
-                label: const Text('Speichern'),
+                icon: Icon(Icons.volunteer_activism_outlined),
+                label: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -922,26 +2510,39 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     if (!mounted) return;
 
     try {
-      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordDonation(club.id, payload);
+      final management = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.recordDonation(club.id, payload);
       if (!mounted) return;
       _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Spende per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+        SnackBar(
+          content: Text(
+            '${_tr('membership.donationRecordedBefore')} '
+            '${_paymentMethodLabel('${payload['method']}')} '
+            '${_tr('membership.recordedAfter')}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = _errorText(error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Spende konnte nicht erfasst werden: $message')),
+        SnackBar(
+          content: Text('${_tr('membership.donationRecordFailed')}: $message'),
+        ),
       );
     }
   }
 
-  Future<void> _recordPrepayment(ClubSummary club, List<_MemberEntry> members) async {
+  Future<void> _recordPrepayment(
+    ClubSummary club,
+    List<_MemberEntry> members,
+  ) async {
     final availableMembers = members.where((member) => member.id > 0).toList();
     if (availableMembers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keine Mitglieder für eine Vorauszahlung gefunden.')),
+        SnackBar(content: Text(_tr('membership.noPrepaymentMembers'))),
       );
       return;
     }
@@ -959,64 +2560,112 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
-            title: const Text('Vorauszahlung erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusSurfaceColor(context),
+            title: Text(
+              _tr('membership.recordPrepayment'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                _memberPickerField(
-                  context: dialogContext,
-                  members: availableMembers,
-                  selectedMemberId: selectedMemberId,
-                  onChanged: (value) => setDialogState(() => selectedMemberId = value),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Betrag EUR', hint: '120,00', controller: amount, keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: method,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
-                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => method = value ?? method),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
-                const SizedBox(height: 10),
-                InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () async {
-                    final now = DateTime.now();
-                    final picked = await showDateRangePicker(
-                      context: dialogContext,
-                      firstDate: DateTime(now.year - 1),
-                      lastDate: DateTime(now.year + 5),
-                      initialDateRange: coverageRange,
-                      helpText: 'Zeitraum auswählen',
-                      saveText: 'Übernehmen',
-                    );
-                    if (picked != null) {
-                      setDialogState(() => coverageRange = picked);
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Gilt für',
-                      suffixIcon: Icon(Icons.date_range_outlined),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _memberPickerField(
+                    context: dialogContext,
+                    members: availableMembers,
+                    selectedMemberId: selectedMemberId,
+                    onChanged: (value) =>
+                        setDialogState(() => selectedMemberId = value),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.amountEur'),
+                    hint: '120,00',
+                    controller: amount,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.paymentMethod'),
                     ),
-                    child: Text(
-                      coverageRange == null ? 'Zeitraum auswählen' : _dateRangeLabel(coverageRange!),
-                      style: TextStyle(color: coverageRange == null ? AirmiusColors.muted : AirmiusColors.text, fontWeight: FontWeight.w800),
+                    items: const ['cash', 'bank_transfer']
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_paymentMethodLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => method = value ?? method),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.receivedOn'),
+                    hint: _tr('membership.dateHint'),
+                    controller: paidAt,
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final picked = await showDateRangePicker(
+                        context: dialogContext,
+                        firstDate: DateTime(now.year - 1),
+                        lastDate: DateTime(now.year + 5),
+                        initialDateRange: coverageRange,
+                        helpText: _tr('membership.choosePeriod'),
+                        saveText: _tr('membership.apply'),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => coverageRange = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.appliesTo'),
+                        suffixIcon: Icon(Icons.date_range_outlined),
+                      ),
+                      child: Text(
+                        coverageRange == null
+                            ? _tr('membership.choosePeriod')
+                            : _dateRangeLabel(coverageRange!),
+                        style: TextStyle(
+                          color: coverageRange == null
+                              ? airmiusMutedColor(context)
+                              : airmiusTextColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
-              ]),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.reference'),
+                    hint: _tr('membership.optional'),
+                    controller: reference,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.note'),
+                    hint: _tr('membership.optional'),
+                    controller: notes,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton.icon(
                 onPressed: () {
                   if (amount.text.trim().isEmpty) return;
@@ -1025,15 +2674,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
                     'paid_at': _dateInputForApi(paidAt.text),
-                    'coverage_start': coverageRange == null ? null : _dateOnly(coverageRange!.start),
-                    'coverage_end': coverageRange == null ? null : _dateOnly(coverageRange!.end),
-                    'coverage_note': coverageRange == null ? null : _dateRangeLabel(coverageRange!),
-                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
-                    'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                    'coverage_start': coverageRange == null
+                        ? null
+                        : _dateOnly(coverageRange!.start),
+                    'coverage_end': coverageRange == null
+                        ? null
+                        : _dateOnly(coverageRange!.end),
+                    'coverage_note': coverageRange == null
+                        ? null
+                        : _dateRangeLabel(coverageRange!),
+                    'reference': reference.text.trim().isEmpty
+                        ? null
+                        : reference.text.trim(),
+                    'notes': notes.text.trim().isEmpty
+                        ? null
+                        : notes.text.trim(),
                   });
                 },
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                label: const Text('Speichern'),
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                label: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -1050,40 +2709,64 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     if (!mounted) return;
 
     try {
-      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordPrepayment(club.id, payload);
+      final management = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.recordPrepayment(club.id, payload);
       if (!mounted) return;
       _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Vorauszahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+        SnackBar(
+          content: Text(
+            '${_tr('membership.prepaymentRecordedBefore')} '
+            '${_paymentMethodLabel('${payload['method']}')} '
+            '${_tr('membership.recordedAfter')}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = _errorText(error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Vorauszahlung konnte nicht erfasst werden: $message')),
+        SnackBar(
+          content: Text(
+            '${_tr('membership.prepaymentRecordFailed')}: $message',
+          ),
+        ),
       );
     }
   }
 
-  Future<void> _editPayment(ClubSummary club, _PaymentEntry payment, List<_MemberEntry> members) async {
+  Future<void> _editPayment(
+    ClubSummary club,
+    _PaymentEntry payment,
+    List<_MemberEntry> members,
+  ) async {
     if (payment.id <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Diese Zahlung kann nicht bearbeitet werden, weil keine Zahlungs-ID geladen wurde.')),
+        SnackBar(content: Text(_tr('membership.paymentMissingId'))),
       );
       return;
     }
 
     final availableMembers = members.where((member) => member.id > 0).toList();
-    final canChangeMember = payment.invoiceId <= 0 && availableMembers.isNotEmpty;
+    final canChangeMember =
+        payment.invoiceId <= 0 && availableMembers.isNotEmpty;
     var selectedMemberId = payment.userId;
-    if (canChangeMember && !availableMembers.any((member) => member.id == selectedMemberId)) {
+    if (canChangeMember &&
+        !availableMembers.any((member) => member.id == selectedMemberId)) {
       selectedMemberId = availableMembers.first.id;
     }
 
     const methodOptions = ['cash', 'bank_transfer', 'sepa_debit', 'manual'];
-    var method = methodOptions.contains(payment.methodKey) ? payment.methodKey : 'manual';
+    var method = methodOptions.contains(payment.methodKey)
+        ? payment.methodKey
+        : 'manual';
     final amount = TextEditingController(text: payment.amountInput);
-    final paidAt = TextEditingController(text: payment.paidAtInput == '-' ? _dateDisplay(DateTime.now()) : payment.paidAtInput);
+    final paidAt = TextEditingController(
+      text: payment.paidAtInput == '-'
+          ? _dateDisplay(DateTime.now())
+          : payment.paidAtInput,
+    );
     final reference = TextEditingController(text: payment.reference);
     final notes = TextEditingController(text: payment.notes);
 
@@ -1092,44 +2775,95 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
-            title: Text('${payment.title} bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusSurfaceColor(context),
+            title: Text(
+              '${payment.title} ${_tr('membership.editAfter')}',
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (canChangeMember) ...[
-                  _memberPickerField(
-                    context: dialogContext,
-                    members: availableMembers,
-                    selectedMemberId: selectedMemberId,
-                    onChanged: (value) => setDialogState(() => selectedMemberId = value),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (canChangeMember) ...[
+                    _memberPickerField(
+                      context: dialogContext,
+                      members: availableMembers,
+                      selectedMemberId: selectedMemberId,
+                      onChanged: (value) =>
+                          setDialogState(() => selectedMemberId = value),
+                    ),
+                    const SizedBox(height: 10),
+                  ] else ...[
+                    InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.member'),
+                      ),
+                      child: Text(
+                        payment.person,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  AirmiusTextField(
+                    label: _tr('membership.amountEur'),
+                    hint: '0,00',
+                    controller: amount,
+                    keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 10),
-                ] else ...[
-                  InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Mitglied'),
-                    child: Text(payment.person, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  DropdownButtonFormField<String>(
+                    initialValue: method,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.paymentMethod'),
+                    ),
+                    items: methodOptions
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_paymentMethodLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => method = value ?? method),
                   ),
                   const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.receivedOn'),
+                    hint: _tr('membership.dateHint'),
+                    controller: paidAt,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.reference'),
+                    hint: _tr('membership.optional'),
+                    controller: reference,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.notePeriod'),
+                    hint: _tr('membership.optional'),
+                    controller: notes,
+                    maxLines: 3,
+                  ),
                 ],
-                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: method,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
-                  items: methodOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => method = value ?? method),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Notiz / Zeitraum', hint: 'optional', controller: notes, maxLines: 3),
-              ]),
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton.icon(
                 onPressed: () {
                   if (amount.text.trim().isEmpty) return;
@@ -1138,12 +2872,16 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
                     'paid_at': _dateInputForApi(paidAt.text),
-                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
-                    'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                    'reference': reference.text.trim().isEmpty
+                        ? null
+                        : reference.text.trim(),
+                    'notes': notes.text.trim().isEmpty
+                        ? null
+                        : notes.text.trim(),
                   });
                 },
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('Speichern'),
+                icon: Icon(Icons.save_outlined),
+                label: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -1160,31 +2898,45 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     if (!mounted) return;
 
     try {
-      final management = await AirmiusServicesScope.of(context).repositories.clubs.updatePayment(club.id, payment.id, payload);
+      final management = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.updatePayment(club.id, payment.id, payload);
       if (!mounted) return;
       _applyManagement(management);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zahlung wurde aktualisiert.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_tr('membership.paymentUpdated'))));
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = _errorText(error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Zahlung konnte nicht aktualisiert werden: $message')),
+        SnackBar(
+          content: Text('${_tr('membership.paymentUpdateFailed')}: $message'),
+        ),
       );
     }
   }
 
-  Future<void> _editFinanceEntry(ClubSummary club, {String initialType = 'expense', _FinanceEntry? entry}) async {
+  Future<void> _editFinanceEntry(
+    ClubSummary club, {
+    String initialType = 'expense',
+    _FinanceEntry? entry,
+  }) async {
     final isEdit = entry != null && entry.id > 0;
     const typeOptions = ['income', 'expense'];
     const accountOptions = ['cash', 'bank'];
     var type = typeOptions.contains(entry?.type) ? entry!.type : initialType;
-    var account = accountOptions.contains(entry?.account) ? entry!.account : 'cash';
+    var account = accountOptions.contains(entry?.account)
+        ? entry!.account
+        : 'cash';
     final title = TextEditingController(text: entry?.title ?? '');
     final category = TextEditingController(text: entry?.category ?? '');
     final amount = TextEditingController(text: entry?.amountInput ?? '');
-    final bookedOn = TextEditingController(text: entry == null || entry.bookedOnInput == '-' ? _dateDisplay(DateTime.now()) : entry.bookedOnInput);
+    final bookedOn = TextEditingController(
+      text: entry == null || entry.bookedOnInput == '-'
+          ? _dateDisplay(DateTime.now())
+          : entry.bookedOnInput,
+    );
     final reference = TextEditingController(text: entry?.reference ?? '');
     final description = TextEditingController(text: entry?.description ?? '');
 
@@ -1193,97 +2945,180 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
+            backgroundColor: airmiusSurfaceColor(context),
             title: Text(
-              isEdit ? 'Buchung bearbeiten' : '${_financeTypeLabel(type)} buchen',
-              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+              isEdit
+                  ? _tr('membership.editBooking')
+                  : '${_financeTypeLabel(type)} '
+                        '${_tr('membership.bookAfter')}',
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<String>(
-                  initialValue: type,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Typ'),
-                  items: typeOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeTypeLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() {
-                    type = value ?? type;
-                    final categoryText = category.text.trim();
-                    final options = _financeCategoryOptions(type);
-                    if (categoryText.isNotEmpty && !options.any((item) => item.toLowerCase() == categoryText.toLowerCase())) {
-                      category.clear();
-                    }
-                  }),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  initialValue: account,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Konto'),
-                  items: accountOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeAccountLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => account = value ?? account),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Titel', hint: 'z. B. Hallenmiete', controller: title),
-                const SizedBox(height: 10),
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () async {
-                    final selected = await _pickFinanceCategory(dialogContext, type: type, current: category.text);
-                    if (selected == null) return;
-                    setDialogState(() => category.text = selected);
-                  },
-                  child: InputDecorator(
-                    isEmpty: category.text.trim().isEmpty,
-                    decoration: const InputDecoration(labelText: 'Kategorie'),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            category.text.trim().isEmpty ? 'Kategorie auswählen' : category.text.trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: category.text.trim().isEmpty ? AirmiusColors.muted : AirmiusColors.text,
-                              fontWeight: FontWeight.w900,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.type'),
+                    ),
+                    items: typeOptions
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_financeTypeLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setDialogState(() {
+                      type = value ?? type;
+                      final categoryText = category.text.trim();
+                      final options = _financeCategoryOptions(type);
+                      if (categoryText.isNotEmpty &&
+                          !options.any(
+                            (item) =>
+                                item.toLowerCase() ==
+                                categoryText.toLowerCase(),
+                          )) {
+                        category.clear();
+                      }
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: account,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.account'),
+                    ),
+                    items: accountOptions
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(_financeAccountLabel(item)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => account = value ?? account),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.invoiceTitle'),
+                    hint: _tr('membership.bookingTitleHint'),
+                    controller: title,
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      final selected = await _pickFinanceCategory(
+                        dialogContext,
+                        type: type,
+                        current: category.text,
+                      );
+                      if (selected == null) return;
+                      setDialogState(() => category.text = selected);
+                    },
+                    child: InputDecorator(
+                      isEmpty: category.text.trim().isEmpty,
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.category'),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              category.text.trim().isEmpty
+                                  ? _tr('membership.chooseCategory')
+                                  : _financeCategoryLabel(category.text.trim()),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: category.text.trim().isEmpty
+                                    ? airmiusMutedColor(context)
+                                    : airmiusTextColor(context),
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.search_outlined, color: AirmiusColors.muted, size: 20),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.arrow_drop_down, color: AirmiusColors.muted),
-                      ],
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.search_outlined,
+                            color: airmiusMutedColor(context),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_drop_down,
+                            color: airmiusMutedColor(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Datum', hint: 'TT.MM.JJJJ', controller: bookedOn),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Referenz', hint: 'Belegnummer oder Kontoauszug', controller: reference),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Beschreibung', hint: 'Optional', controller: description, maxLines: 3),
-              ]),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.amountEur'),
+                    hint: '0,00',
+                    controller: amount,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.date'),
+                    hint: _tr('membership.dateHint'),
+                    controller: bookedOn,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.reference'),
+                    hint: _tr('membership.referenceHint'),
+                    controller: reference,
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.description'),
+                    hint: _tr('membership.optional'),
+                    controller: description,
+                    maxLines: 3,
+                  ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton.icon(
                 onPressed: () {
-                  if (title.text.trim().isEmpty || amount.text.trim().isEmpty) return;
+                  if (title.text.trim().isEmpty || amount.text.trim().isEmpty) {
+                    return;
+                  }
                   Navigator.pop(dialogContext, {
                     'type': type,
                     'account': account,
                     'title': title.text.trim(),
-                    'category': category.text.trim().isEmpty ? null : category.text.trim(),
+                    'category': category.text.trim().isEmpty
+                        ? null
+                        : category.text.trim(),
                     'amount': _normalizePaymentAmount(amount.text),
                     'booked_on': _dateInputForApi(bookedOn.text),
-                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
-                    'description': description.text.trim().isEmpty ? null : description.text.trim(),
+                    'reference': reference.text.trim().isEmpty
+                        ? null
+                        : reference.text.trim(),
+                    'description': description.text.trim().isEmpty
+                        ? null
+                        : description.text.trim(),
                   });
                 },
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('Speichern'),
+                icon: Icon(Icons.save_outlined),
+                label: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -1303,64 +3138,111 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     try {
       final repositories = AirmiusServicesScope.of(context).repositories.clubs;
-      final management = isEdit ? await repositories.updateFinanceEntry(club.id, entry.id, payload) : await repositories.createFinanceEntry(club.id, payload);
+      final management = isEdit
+          ? await repositories.updateFinanceEntry(club.id, entry.id, payload)
+          : await repositories.createFinanceEntry(club.id, payload);
       if (!mounted) return;
       _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isEdit ? 'Buchung wurde aktualisiert.' : '${_financeTypeLabel('${payload['type']}')} wurde gebucht.')),
+        SnackBar(
+          content: Text(
+            isEdit
+                ? _tr('membership.bookingUpdated')
+                : '${_financeTypeLabel('${payload['type']}')} '
+                      '${_tr('membership.bookedAfter')}',
+          ),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      final message = _errorText(error);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Buchung konnte nicht gespeichert werden: $message')),
+        SnackBar(
+          content: Text('${_tr('membership.bookingSaveFailed')}: $message'),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return FutureBuilder<_ManagedMembershipData?>(
       future: _clubFuture,
       initialData: _currentData,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
-          return const Scaffold(
-            backgroundColor: AirmiusColors.bg,
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            snapshot.data == null) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: PageFrame(
-              title: 'Mitglieder & Beiträge',
-              subtitle: 'Berechtigungen werden geprüft',
-              child: AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue)))),
+              title: t('membership.title'),
+              subtitle: t('membership.permissionsChecking'),
+              child: AirmiusPanel(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: CircularProgressIndicator(
+                      color: airmiusAccentColor(context),
+                    ),
+                  ),
+                ),
+              ),
             ),
           );
         }
 
         if (snapshot.hasError || snapshot.data == null) {
           return Scaffold(
-            backgroundColor: AirmiusColors.bg,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: AppBar(
-              backgroundColor: AirmiusColors.header,
+              backgroundColor:
+                  Theme.of(context).appBarTheme.backgroundColor ??
+                  airmiusSurfaceColor(context),
               surfaceTintColor: Colors.transparent,
-              title: const Text('Mitglieder & Beiträge', style: TextStyle(fontWeight: FontWeight.w900)),
+              title: Text(
+                t('membership.title'),
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
             ),
             body: PageFrame(
-              title: 'Keine Berechtigung',
-              subtitle: 'Nur Vereinsadmins, Manager oder Finanzrollen dürfen diese Daten sehen',
+              title: t('membership.noPermission'),
+              subtitle: t('membership.permissionRoles'),
               child: AirmiusPanel(
                 borderColor: AirmiusColors.red.withValues(alpha: .45),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(Icons.lock_outline, color: AirmiusColors.muted, size: 34),
-                    const SizedBox(height: 12),
-                    const Text('Mitglieder, Beiträge und Rechnungen sind Verwaltungsdaten.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 8),
-                    Text(
-                      snapshot.hasError ? 'Die Berechtigung konnte nicht geprüft werden: ${snapshot.error}' : 'Deine Rolle ist für diese Verwaltungsseite nicht freigeschaltet.',
-                      style: const TextStyle(color: AirmiusColors.muted, height: 1.4),
+                    Icon(
+                      Icons.lock_outline,
+                      color: airmiusMutedColor(context),
+                      size: 34,
                     ),
                     const SizedBox(height: 12),
-                    AirmiusButton(label: 'Erneut prüfen', icon: Icons.refresh_outlined, secondary: true, onPressed: _reloadClub),
+                    Text(
+                      t('membership.restrictedData'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.hasError
+                          ? '${t('membership.permissionCheckFailed')}: ${snapshot.error is AirmiusApiException ? (snapshot.error! as AirmiusApiException).userMessage : t('common.errorDetails')}'
+                          : t('membership.roleDenied'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AirmiusButton(
+                      label: t('membership.retry'),
+                      icon: Icons.refresh_outlined,
+                      secondary: true,
+                      onPressed: _reloadClub,
+                    ),
                   ],
                 ),
               ),
@@ -1376,334 +3258,683 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final bankEntries = _bankEntriesFromManagement(management);
         final payments = _paymentsFromManagement(management, members);
         final financeEntries = _financeEntriesFromManagement(management);
-        final activeMembersCount = management?.activeMembersCount ?? members.where((member) => member.type == 'Aktiv').length;
-        final linkedPeopleCount = management?.linkedPeopleCount ?? members.length;
-        final openInvoicesCount = management?.openInvoicesCount ?? invoices.where((invoice) => invoice.status == 'Offen').length;
-        final sepaReadyMembersCount = management?.sepaReadyMembersCount ?? members.where((member) => member.sepa).length;
-        final openInvoiceTotal = management == null ? _openTotalFromInvoices(invoices) : _formatEuroAmount(management.openInvoiceAmount);
-        final recurringContributionTotal = management == null ? _recurringTotalFromMembers(members) : _formatEuroAmount(management.recurringContributionTotal);
-        final cashBalance = management == null ? _cashBalanceFromPayments(payments) : _formatEuroAmount(management.cashBalance);
-        final bankBalance = management == null ? _bankBalanceFromPayments(payments) : _formatEuroAmount(management.bankBalance);
-        final totalBalance = management == null ? _totalBalanceFromPayments(payments) : _formatEuroAmount(management.totalBalance);
-        final hasBackendFinancePeriodTotals = management?.hasFinancePeriodTotals ?? false;
+        final activeMembersCount =
+            management?.activeMembersCount ??
+            members.where((member) => member.type == 'Aktiv').length;
+        final linkedPeopleCount =
+            management?.linkedPeopleCount ?? members.length;
+        final openInvoicesCount =
+            management?.openInvoicesCount ??
+            invoices.where((invoice) => invoice.status == 'Offen').length;
+        final sepaReadyMembersCount =
+            management?.sepaReadyMembersCount ??
+            members.where((member) => member.sepa).length;
+        final openInvoiceTotal = management == null
+            ? _openTotalFromInvoices(invoices)
+            : _formatEuroAmount(management.openInvoiceAmount);
+        final recurringContributionTotal = management == null
+            ? _recurringTotalFromMembers(members)
+            : _formatEuroAmount(management.recurringContributionTotal);
+        final cashBalance = management == null
+            ? _cashBalanceFromPayments(payments)
+            : _formatEuroAmount(management.cashBalance);
+        final bankBalance = management == null
+            ? _bankBalanceFromPayments(payments)
+            : _formatEuroAmount(management.bankBalance);
+        final totalBalance = management == null
+            ? _totalBalanceFromPayments(payments)
+            : _formatEuroAmount(management.totalBalance);
+        final hasBackendFinancePeriodTotals =
+            management?.hasFinancePeriodTotals ?? false;
         final incomePeriodTotal = !hasBackendFinancePeriodTotals
             ? _formatEuro(
-                payments.where((payment) => _isCurrentYearDate(payment.paidAtInput)).fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount)) +
-                    financeEntries.where((entry) => entry.type == 'income' && _isCurrentYearDate(entry.bookedOnInput)).fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)),
+                payments
+                        .where(
+                          (payment) => _isCurrentYearDate(payment.paidAtInput),
+                        )
+                        .fold<int>(
+                          0,
+                          (sum, payment) =>
+                              sum + _parseEuroCents(payment.amount),
+                        ) +
+                    financeEntries
+                        .where(
+                          (entry) =>
+                              entry.type == 'income' &&
+                              _isCurrentYearDate(entry.bookedOnInput),
+                        )
+                        .fold<int>(
+                          0,
+                          (sum, entry) => sum + _parseEuroCents(entry.amount),
+                        ),
               )
             : _formatEuroAmount(management!.incomePeriodTotal);
         final expensePeriodTotal = !hasBackendFinancePeriodTotals
-            ? _formatEuro(financeEntries.where((entry) => entry.type == 'expense' && _isCurrentYearDate(entry.bookedOnInput)).fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)))
+            ? _formatEuro(
+                financeEntries
+                    .where(
+                      (entry) =>
+                          entry.type == 'expense' &&
+                          _isCurrentYearDate(entry.bookedOnInput),
+                    )
+                    .fold<int>(
+                      0,
+                      (sum, entry) => sum + _parseEuroCents(entry.amount),
+                    ),
+              )
             : _formatEuroAmount(management!.expensePeriodTotal);
-        final financePeriodLabel = hasBackendFinancePeriodTotals ? management!.financePeriodLabel : 'Dieses Jahr';
+        final financePeriodLabel = hasBackendFinancePeriodTotals
+            ? management!.financePeriodLabel
+            : t('membership.thisYear');
         final unassignedBalance = management?.unassignedBalance ?? 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
-        surfaceTintColor: Colors.transparent,
-        title: const Text('Mitglieder & Beiträge', style: TextStyle(fontWeight: FontWeight.w900)),
-      ),
-      body: PageFrame(
-        title: 'Mitglieder & Beiträge',
-        subtitle: '${club.name} - Mitgliederdaten, Rechnungen, Zahlungen, SEPA, DATEV und Import',
-        trailing: StatusPill(club.name),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ClubMembershipClubSelector(
-              clubs: data.clubs,
-              selectedClubId: club.id,
-              onChanged: (clubId) {
-                setState(() {
-                  _selectedClubId = clubId;
-                  _filter = 'Alle';
-                  _section = 'overview';
-                  _clubFuture = _loadManagedClub();
-                });
-              },
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor:
+                Theme.of(context).appBarTheme.backgroundColor ??
+                airmiusSurfaceColor(context),
+            surfaceTintColor: Colors.transparent,
+            title: Text(
+              t('membership.title'),
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
-            const SizedBox(height: 14),
-            _MembershipSectionTabs(
-              active: _section,
-              hasRules: management != null,
-              onSelect: (value) => setState(() => _section = value),
-            ),
-            const SizedBox(height: 14),
-            if (_section == 'rules' && management != null) ...[
-              _MembershipRulesAdminPanel(club: club, management: management, onChanged: _reloadClub),
-              const SizedBox(height: 14),
-            ],
-            if (_section == 'rules' && management == null) ...[
-              const AirmiusPanel(
-                child: Text('Beitragsregeln sind fuer diesen Verein nicht geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-              ),
-              const SizedBox(height: 14),
-            ],
-            if (_section == 'overview') ...[
-              _MembershipKpiGrid(
-              cards: [
-                _MembershipKpi(title: 'Aktive Mitglieder', value: '$activeMembersCount', detail: 'von $linkedPeopleCount verknüpften Personen'),
-                _MembershipKpi(title: 'Offen', value: openInvoiceTotal, detail: '$openInvoicesCount offene Rechnung(en)'),
-                _MembershipKpi(title: 'SEPA bereit', value: '$sepaReadyMembersCount', detail: 'Mandate mit IBAN und Referenz'),
-                _MembershipKpi(title: 'Wiederkehrende Beiträge', value: recurringContributionTotal, detail: 'Summe aktiver Beitragssätze'),
+          ),
+          body: PageFrame(
+            title: t('membership.title'),
+            subtitle: '${club.name} – ${t('membership.subtitle')}',
+            trailing: StatusPill(club.name),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ClubMembershipClubSelector(
+                  clubs: data.clubs,
+                  selectedClubId: club.id,
+                  onChanged: (clubId) {
+                    setState(() {
+                      _selectedClubId = clubId;
+                      _filter = 'Alle';
+                      _section = 'overview';
+                      _clubFuture = _loadManagedClub();
+                    });
+                  },
+                ),
+                const SizedBox(height: 14),
+                _MembershipSectionTabs(
+                  active: _section,
+                  hasRules: management?.canManageMembers ?? false,
+                  canManageMembers: management?.canManageMembers ?? false,
+                  canManageFinance: management?.canManageFinance ?? false,
+                  onSelect: (value) => setState(() => _section = value),
+                ),
+                const SizedBox(height: 14),
+                if (_section == 'rules' && management != null) ...[
+                  _MembershipRulesAdminPanel(
+                    club: club,
+                    management: management,
+                    onChanged: _reloadClub,
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'rules' && management == null) ...[
+                  AirmiusPanel(
+                    child: Text(
+                      t('membership.rulesNotLoaded'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'audit' && management != null) ...[
+                  _ClubAuditPanel(logs: management.auditLogs),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'overview') ...[
+                  _MembershipKpiGrid(
+                    cards: [
+                      _MembershipKpi(
+                        title: t('membership.activeMembers'),
+                        value: '$activeMembersCount',
+                        detail:
+                            '${t('membership.of')} $linkedPeopleCount '
+                            '${t('membership.linkedPeopleAfter')}',
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.open'),
+                        value: openInvoiceTotal,
+                        detail:
+                            '$openInvoicesCount ${t('membership.openInvoicesAfter')}',
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.sepaReady'),
+                        value: '$sepaReadyMembersCount',
+                        detail: t('membership.sepaReadyBody'),
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.recurringContributions'),
+                        value: recurringContributionTotal,
+                        detail: t('membership.recurringContributionsBody'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'members') ...[
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Eyebrow(t('membership.members'))),
+                            StatusPill(t(_memberFilterTranslationKey(_filter))),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children:
+                              [
+                                'Alle',
+                                'Aktiv',
+                                'Extern',
+                                'Jugend',
+                                'Offen',
+                              ].map((item) {
+                                return ChoiceChip(
+                                  selected: _filter == item,
+                                  label: Text(
+                                    t(_memberFilterTranslationKey(item)),
+                                  ),
+                                  onSelected: (_) =>
+                                      setState(() => _filter = item),
+                                  selectedColor: airmiusAccentColor(
+                                    context,
+                                  ).withValues(alpha: 0.22),
+                                  backgroundColor: airmiusSurfaceSoftColor(
+                                    context,
+                                  ),
+                                  side: BorderSide(
+                                    color: _filter == item
+                                        ? airmiusAccentColor(context)
+                                        : airmiusBorderColor(context),
+                                  ),
+                                  labelStyle: TextStyle(
+                                    color: _filter == item
+                                        ? airmiusAccentColor(context)
+                                        : airmiusMutedColor(context),
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                );
+                              }).toList(),
+                        ),
+                        const SizedBox(height: 12),
+                        for (final member in members.where(
+                          (member) =>
+                              _filter == 'Alle' ||
+                              member.type == _filter ||
+                              (_filter == 'Offen' &&
+                                  member.balance != '0,00 EUR'),
+                        ))
+                          _MemberCard(
+                            member: member,
+                            onManage: () =>
+                                _memberActions(club, member, members),
+                            showManage: management?.canManageMembers ?? false,
+                          ),
+                        if (members.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.noMembersLoaded'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'invite') ...[
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(t('membership.importInvitation')),
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: t('membership.name'),
+                          hint: t('membership.optional'),
+                          icon: Icons.badge_outlined,
+                          controller: _inviteNameController,
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: t('membership.email'),
+                          hint: 'mitglied@example.com',
+                          icon: Icons.alternate_email,
+                          controller: _inviteEmailController,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            AirmiusButton(
+                              label: _sendingInvitation
+                                  ? t('membership.sending')
+                                  : t('membership.sendInvitation'),
+                              icon: Icons.mark_email_read_outlined,
+                              onPressed: _sendingInvitation
+                                  ? null
+                                  : () => _sendClubInvitation(club),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.importTemplate'),
+                              icon: Icons.table_view_outlined,
+                              secondary: true,
+                              onPressed: () => _downloadApiFile(
+                                path: '/api/v1/club-members/import-template',
+                                fileName:
+                                    'airmius-mitglieder-import-vorlage.xlsx',
+                                extensions: const ['xlsx'],
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.importFile'),
+                              icon: Icons.upload_file_outlined,
+                              secondary: true,
+                              onPressed: () => _uploadImport(club, bank: false),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.createExternal'),
+                              icon: Icons.person_add_alt_1_outlined,
+                              secondary: true,
+                              onPressed: () => _storeExternalMember(club),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'payments') ...[
+                  Eyebrow(t('membership.treasury')),
+                  const SizedBox(height: 10),
+                  _MembershipTreasuryKpiGrid(
+                    cards: [
+                      _MembershipKpi(
+                        title: t('membership.cashBalance'),
+                        value: cashBalance,
+                        detail: t('membership.currentBalance'),
+                        icon: Icons.account_balance_wallet_outlined,
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.bankBalance'),
+                        value: bankBalance,
+                        detail: t('membership.currentBalance'),
+                        icon: Icons.account_balance_outlined,
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.total'),
+                        value: totalBalance,
+                        detail: unassignedBalance > 0
+                            ? '${t('membership.includingManualBefore')} '
+                                  '${_formatEuroAmount(unassignedBalance)}'
+                            : t('membership.currentTotal'),
+                        icon: Icons.layers_outlined,
+                        accent: airmiusAccentColor(context),
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.income'),
+                        value: incomePeriodTotal,
+                        detail: financePeriodLabel,
+                        icon: Icons.call_received_outlined,
+                        accent: AirmiusColors.green,
+                      ),
+                      _MembershipKpi(
+                        title: t('membership.expenses'),
+                        value: expensePeriodTotal,
+                        detail: financePeriodLabel,
+                        icon: Icons.call_made_outlined,
+                        accent: AirmiusColors.red,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Eyebrow(t('membership.invoicesPayments')),
+                            ),
+                            SizedBox(
+                              width: 150,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _period,
+                                dropdownColor: airmiusSurfaceSoftColor(context),
+                                decoration: InputDecoration(
+                                  labelText: t('membership.period'),
+                                ),
+                                items:
+                                    const [
+                                          'Juni 2026',
+                                          'Mai 2026',
+                                          'Q2 2026',
+                                          '2026',
+                                        ]
+                                        .map(
+                                          (item) => DropdownMenuItem(
+                                            value: item,
+                                            child: Text(item),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged: (value) =>
+                                    setState(() => _period = value ?? _period),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        for (final invoice in invoices)
+                          _InvoiceLine(
+                            invoice: invoice,
+                            onManage: () => _invoiceActions(club, invoice),
+                          ),
+                        if (invoices.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.noInvoicesLoaded'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            AirmiusButton(
+                              label: t('membership.recordPayment'),
+                              icon: Icons.payments_outlined,
+                              onPressed: () => _recordPayment(club, invoices),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.recordDonation'),
+                              icon: Icons.volunteer_activism_outlined,
+                              secondary: true,
+                              onPressed: () => _recordDonation(club, members),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.prepayment'),
+                              icon: Icons.account_balance_wallet_outlined,
+                              secondary: true,
+                              onPressed: () => _recordPrepayment(club, members),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.bookIncome'),
+                              icon: Icons.add_card_outlined,
+                              secondary: true,
+                              onPressed: () => _editFinanceEntry(
+                                club,
+                                initialType: 'income',
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.bookExpense'),
+                              icon: Icons.receipt_long_outlined,
+                              secondary: true,
+                              onPressed: () => _editFinanceEntry(
+                                club,
+                                initialType: 'expense',
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.createInvoice'),
+                              icon: Icons.receipt_long_outlined,
+                              secondary: true,
+                              onPressed: () => _createInvoice(
+                                club,
+                                members
+                                    .where((entry) => !entry.isExternal)
+                                    .toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    borderColor: AirmiusColors.amber.withValues(alpha: 0.45),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Eyebrow(t('membership.cashbook'))),
+                            AirmiusButton(
+                              label: t('membership.booking'),
+                              icon: Icons.add_outlined,
+                              secondary: true,
+                              onPressed: () => _editFinanceEntry(
+                                club,
+                                initialType: 'expense',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        for (final entry in financeEntries)
+                          _FinanceEntryLine(
+                            entry: entry,
+                            onEdit: () => _editFinanceEntry(club, entry: entry),
+                          ),
+                        if (financeEntries.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.noFinanceEntries'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    borderColor: AirmiusColors.green.withValues(alpha: 0.45),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(t('membership.recordedPayments')),
+                        const SizedBox(height: 10),
+                        for (final payment in payments)
+                          _PaymentLine(
+                            payment: payment,
+                            onEdit: () => _editPayment(club, payment, members),
+                          ),
+                        if (payments.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.noPayments'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    borderColor: airmiusAccentColor(
+                      context,
+                    ).withValues(alpha: 0.55),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(t('membership.bankReconciliation')),
+                        const SizedBox(height: 10),
+                        for (final entry in bankEntries)
+                          _BankLine(
+                            entry: entry,
+                            onConfirm:
+                                entry.status != 'matched' && entry.invoiceId > 0
+                                ? () => _runManagementAction(
+                                    () => AirmiusServicesScope.of(context)
+                                        .repositories
+                                        .clubs
+                                        .confirmClubBankTransaction(
+                                          club.id,
+                                          entry.id,
+                                        ),
+                                    success: t('membership.bankBooked'),
+                                  )
+                                : null,
+                          ),
+                        if (bankEntries.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              t('membership.noBankTransactions'),
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            AirmiusButton(
+                              label: t('membership.importBankFile'),
+                              icon: Icons.cloud_upload_outlined,
+                              onPressed: () => _uploadImport(club, bank: true),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (_section == 'export') ...[
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Eyebrow(t('membership.exportsRules')),
+                        const SizedBox(height: 12),
+                        _ExportTile(
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: t('membership.sepaBatch'),
+                          subtitle: t('membership.sepaBatchBody'),
+                          status: t('membership.ready'),
+                        ),
+                        _ExportTile(
+                          icon: Icons.fact_check_outlined,
+                          title: t('membership.datevExport'),
+                          subtitle: t('membership.datevExportBody'),
+                          status: t('membership.configurable'),
+                        ),
+                        _ExportTile(
+                          icon: Icons.rule_folder_outlined,
+                          title: t('membership.contributionRules'),
+                          subtitle: t('membership.contributionRulesBody'),
+                          status: t('membership.active'),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            AirmiusButton(
+                              label: t('membership.configureSepa'),
+                              icon: Icons.settings_outlined,
+                              secondary: true,
+                              onPressed: () => _configureAccounting(
+                                club,
+                                sepa: true,
+                                settings:
+                                    management?.settings ??
+                                    const <String, dynamic>{},
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.exportSepa'),
+                              icon: Icons.account_balance_outlined,
+                              onPressed: () => _downloadApiFile(
+                                path:
+                                    '/api/v1/clubs/${club.id}/membership/sepa-export',
+                                fileName:
+                                    'airmius-sepa-${club.id}-${_dateOnly(DateTime.now())}.xml',
+                                extensions: const ['xml'],
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.configureDatev'),
+                              icon: Icons.tune_outlined,
+                              secondary: true,
+                              onPressed: () => _configureAccounting(
+                                club,
+                                sepa: false,
+                                settings:
+                                    management?.settings ??
+                                    const <String, dynamic>{},
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.exportDatev'),
+                              icon: Icons.ios_share_outlined,
+                              onPressed: () => _downloadApiFile(
+                                path:
+                                    '/api/v1/clubs/${club.id}/membership/datev-export',
+                                fileName:
+                                    'airmius-datev-${club.id}-${_dateOnly(DateTime.now())}.csv',
+                                extensions: const ['csv'],
+                              ),
+                            ),
+                            AirmiusButton(
+                              label: t('membership.reloadRules'),
+                              icon: Icons.refresh_outlined,
+                              secondary: true,
+                              onPressed: _reloadClub,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                const SizedBox(height: 18),
               ],
             ),
-            const SizedBox(height: 14),
-            ],
-            if (_section == 'members') ...[
-              AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Eyebrow('Mitglieder')),
-                      StatusPill(_filter),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: ['Alle', 'Aktiv', 'Extern', 'Jugend', 'Offen'].map((item) {
-                      return ChoiceChip(
-                        selected: _filter == item,
-                        label: Text(item),
-                        onSelected: (_) => setState(() => _filter = item),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-                        backgroundColor: AirmiusColors.cardSoft,
-                        side: BorderSide(color: _filter == item ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _filter == item ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  for (final member in members.where((member) => _filter == 'Alle' || member.type == _filter || (_filter == 'Offen' && member.balance != '0,00 EUR')))
-                    _MemberCard(member: member),
-                  if (members.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Keine Mitglieder aus der Vereinsverwaltung geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                    ),
-                ],
-              ),
-            ),
-              const SizedBox(height: 14),
-            ],
-            if (_section == 'invite') ...[
-              AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('Import & Einladung'),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(label: 'Name', hint: 'Optional', icon: Icons.badge_outlined, controller: _inviteNameController),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: 'E-Mail',
-                    hint: 'mitglied@example.com',
-                    icon: Icons.alternate_email,
-                    controller: _inviteEmailController,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(
-                        label: _sendingInvitation ? 'Wird gesendet...' : 'Einladung senden',
-                        icon: Icons.mark_email_read_outlined,
-                        onPressed: _sendingInvitation ? null : () => _sendClubInvitation(club),
-                      ),
-                      AirmiusButton(label: 'CSV Vorlage', icon: Icons.table_view_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'CSV Vorlage', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.table_view_outlined)),
-                      AirmiusButton(label: 'Extern anlegen', icon: Icons.person_add_alt_1_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Extern anlegen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.person_add_alt_1_outlined)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-              const SizedBox(height: 14),
-            ],
-            if (_section == 'payments') ...[
-              const Eyebrow('Vereinskasse'),
-              const SizedBox(height: 10),
-              _MembershipTreasuryKpiGrid(
-                cards: [
-                  _MembershipKpi(
-                    title: 'Barbestand',
-                    value: cashBalance,
-                    detail: 'aktueller Bestand',
-                    icon: Icons.account_balance_wallet_outlined,
-                  ),
-                  _MembershipKpi(
-                    title: 'Bankbestand',
-                    value: bankBalance,
-                    detail: 'aktueller Bestand',
-                    icon: Icons.account_balance_outlined,
-                  ),
-                  _MembershipKpi(
-                    title: 'Gesamt',
-                    value: totalBalance,
-                    detail: unassignedBalance > 0 ? 'aktuell inkl. ${_formatEuroAmount(unassignedBalance)} manuell' : 'aktueller Gesamtbestand',
-                    icon: Icons.layers_outlined,
-                    accent: AirmiusColors.blue,
-                  ),
-                  _MembershipKpi(
-                    title: 'Einnahmen',
-                    value: incomePeriodTotal,
-                    detail: financePeriodLabel,
-                    icon: Icons.call_received_outlined,
-                    accent: AirmiusColors.green,
-                  ),
-                  _MembershipKpi(
-                    title: 'Ausgaben',
-                    value: expensePeriodTotal,
-                    detail: financePeriodLabel,
-                    icon: Icons.call_made_outlined,
-                    accent: AirmiusColors.red,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Eyebrow('Rechnungen & Zahlungen')),
-                      SizedBox(
-                        width: 150,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _period,
-                          dropdownColor: AirmiusColors.cardSoft,
-                          decoration: const InputDecoration(labelText: 'Zeitraum'),
-                          items: const ['Juni 2026', 'Mai 2026', 'Q2 2026', '2026'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-                          onChanged: (value) => setState(() => _period = value ?? _period),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  for (final invoice in invoices) _InvoiceLine(invoice: invoice),
-                  if (invoices.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Keine Rechnungen fuer diesen Verein geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                    ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => _recordPayment(club, invoices)),
-                      AirmiusButton(label: 'Spende erfassen', icon: Icons.volunteer_activism_outlined, secondary: true, onPressed: () => _recordDonation(club, members)),
-                      AirmiusButton(label: 'Vorauszahlung', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => _recordPrepayment(club, members)),
-                      AirmiusButton(label: 'Einnahme buchen', icon: Icons.add_card_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'income')),
-                      AirmiusButton(label: 'Ausgabe buchen', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'expense')),
-                      AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              borderColor: AirmiusColors.amber.withValues(alpha: 0.45),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Eyebrow('Kassenbuch')),
-                      AirmiusButton(label: 'Buchung', icon: Icons.add_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'expense')),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  for (final entry in financeEntries) _FinanceEntryLine(entry: entry, onEdit: () => _editFinanceEntry(club, entry: entry)),
-                  if (financeEntries.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Noch keine freien Einnahmen oder Ausgaben erfasst.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              borderColor: AirmiusColors.green.withValues(alpha: 0.45),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('Erfasste Zahlungen'),
-                  const SizedBox(height: 10),
-                  for (final payment in payments) _PaymentLine(payment: payment, onEdit: () => _editPayment(club, payment, members)),
-                  if (payments.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Noch keine Zahlung, Spende oder Vorauszahlung erfasst.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              borderColor: AirmiusColors.blue.withValues(alpha: 0.55),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('Bankabgleich'),
-                  const SizedBox(height: 10),
-                  for (final entry in bankEntries) _BankLine(entry: entry),
-                  if (bankEntries.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      child: Text('Keine Banktransaktionen fuer diesen Verein geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                    ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(label: 'Bankdatei importieren', icon: Icons.cloud_upload_outlined, onPressed: () => openUiAction(context, title: 'Bankdatei importieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.cloud_upload_outlined)),
-                      AirmiusButton(label: 'Zuordnung bestätigen', icon: Icons.task_alt_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Zuordnung bestätigen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.task_alt_outlined)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-              const SizedBox(height: 14),
-            ],
-            if (_section == 'export') ...[
-              AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('SEPA, DATEV & Regeln'),
-                  const SizedBox(height: 12),
-                  const _ExportTile(icon: Icons.account_balance_wallet_outlined, title: 'SEPA Sammellauf', subtitle: 'Mandate prüfen, Lastschriftlauf vorbereiten und Export erzeugen.', status: 'Bereit'),
-                  const _ExportTile(icon: Icons.fact_check_outlined, title: 'DATEV Export', subtitle: 'Rechnungen, Zahlungen und Buchungssätze für Steuerberatung vorbereiten.', status: 'Konfigurierbar'),
-                  const _ExportTile(icon: Icons.rule_folder_outlined, title: 'Beitragsregeln', subtitle: 'Monatlich, alle 4 Monate, halbjährlich oder jährlich pro Mitgliedschaftstyp.', status: 'Aktiv'),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(label: 'DATEV export', icon: Icons.ios_share_outlined, onPressed: () => openUiAction(context, title: 'DATEV export', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.ios_share_outlined)),
-                      AirmiusButton(label: 'Regeln neu laden', icon: Icons.refresh_outlined, secondary: true, onPressed: _reloadClub),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-              const SizedBox(height: 14),
-            ],
-            const SizedBox(height: 18),
-          ],
-        ),
-      ),
+          ),
         );
       },
     );
@@ -1711,32 +3942,83 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 }
 
 class _ManagedMembershipData {
-  const _ManagedMembershipData({required this.clubs, required this.selectedClub});
+  const _ManagedMembershipData({
+    required this.clubs,
+    required this.selectedClub,
+  });
 
   final List<ClubSummary> clubs;
   final ClubSummary selectedClub;
+}
+
+String _memberFilterTranslationKey(String value) {
+  return switch (value) {
+    'Aktiv' => 'membership.filter.active',
+    'Extern' => 'membership.filter.external',
+    'Jugend' => 'membership.filter.youth',
+    'Offen' => 'membership.filter.open',
+    _ => 'membership.filter.all',
+  };
 }
 
 class _MembershipSectionTabs extends StatelessWidget {
   const _MembershipSectionTabs({
     required this.active,
     required this.hasRules,
+    required this.canManageMembers,
+    required this.canManageFinance,
     required this.onSelect,
   });
 
   final String active;
   final bool hasRules;
+  final bool canManageMembers;
+  final bool canManageFinance;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final tabs = [
-      const _MembershipSectionTabData('overview', 'Uebersicht', Icons.dashboard_customize_outlined),
-      if (hasRules) const _MembershipSectionTabData('rules', 'Regeln', Icons.tune_outlined),
-      const _MembershipSectionTabData('members', 'Mitglieder', Icons.groups_2_outlined),
-      const _MembershipSectionTabData('invite', 'Einladen', Icons.mark_email_read_outlined),
-      const _MembershipSectionTabData('payments', 'Finanzen', Icons.receipt_long_outlined),
-      const _MembershipSectionTabData('export', 'Export', Icons.ios_share_outlined),
+      const _MembershipSectionTabData(
+        'overview',
+        'membership.tab.overview',
+        Icons.dashboard_customize_outlined,
+      ),
+      if (hasRules)
+        const _MembershipSectionTabData(
+          'rules',
+          'membership.tab.rules',
+          Icons.tune_outlined,
+        ),
+      const _MembershipSectionTabData(
+        'members',
+        'membership.tab.members',
+        Icons.groups_2_outlined,
+      ),
+      if (canManageMembers)
+        const _MembershipSectionTabData(
+          'invite',
+          'membership.tab.invite',
+          Icons.mark_email_read_outlined,
+        ),
+      if (canManageFinance)
+        const _MembershipSectionTabData(
+          'payments',
+          'membership.tab.finance',
+          Icons.receipt_long_outlined,
+        ),
+      if (canManageFinance)
+        const _MembershipSectionTabData(
+          'export',
+          'membership.tab.export',
+          Icons.ios_share_outlined,
+        ),
+      const _MembershipSectionTabData(
+        'audit',
+        'membership.tab.audit',
+        Icons.history_outlined,
+      ),
     ];
 
     return LayoutBuilder(
@@ -1744,11 +4026,14 @@ class _MembershipSectionTabs extends StatelessWidget {
         final preferredColumns = constraints.maxWidth >= 860
             ? tabs.length
             : constraints.maxWidth >= 500
-                ? 3
-                : 2;
-        final columns = preferredColumns > tabs.length ? tabs.length : preferredColumns;
+            ? 3
+            : 2;
+        final columns = preferredColumns > tabs.length
+            ? tabs.length
+            : preferredColumns;
         const gap = 8.0;
-        final tabWidth = (constraints.maxWidth - (gap * (columns - 1))) / columns;
+        final tabWidth =
+            (constraints.maxWidth - (gap * (columns - 1))) / columns;
 
         return Wrap(
           alignment: WrapAlignment.center,
@@ -1760,6 +4045,7 @@ class _MembershipSectionTabs extends StatelessWidget {
                 width: tabWidth,
                 child: _MembershipSectionTab(
                   tab: tab,
+                  label: t(tab.labelKey),
                   selected: active == tab.value,
                   onTap: () => onSelect(tab.value),
                 ),
@@ -1772,17 +4058,74 @@ class _MembershipSectionTabs extends StatelessWidget {
 }
 
 class _MembershipSectionTabData {
-  const _MembershipSectionTabData(this.value, this.label, this.icon);
+  const _MembershipSectionTabData(this.value, this.labelKey, this.icon);
 
   final String value;
-  final String label;
+  final String labelKey;
   final IconData icon;
 }
 
+class _ClubAuditPanel extends StatelessWidget {
+  const _ClubAuditPanel({required this.logs});
+
+  final List<JsonMap> logs;
+
+  String _label(AirmiusScope scope, String type) {
+    return switch (type) {
+      'club.member.role_updated' => scope.t('membership.audit.roleUpdated'),
+      'club.member.updated' => scope.t('membership.audit.memberUpdated'),
+      _ => type,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(scope.t('membership.audit.title')),
+          const SizedBox(height: 8),
+          if (logs.isEmpty)
+            Text(
+              scope.t('membership.audit.empty'),
+              style: TextStyle(color: airmiusMutedColor(context)),
+            )
+          else
+            for (final log in logs.take(50)) ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.history_outlined,
+                  color: airmiusAccentColor(context),
+                ),
+                title: Text(
+                  _label(scope, '${log['type'] ?? ''}'),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(
+                  '${(log['actor'] as JsonMap?)?['name'] ?? scope.t('membership.audit.system')} · ${log['created_at'] ?? ''}',
+                ),
+              ),
+              if (log != logs.last) const Divider(height: 1),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
 class _MembershipSectionTab extends StatelessWidget {
-  const _MembershipSectionTab({required this.tab, required this.selected, required this.onTap});
+  const _MembershipSectionTab({
+    required this.tab,
+    this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final _MembershipSectionTabData tab;
+  final String? label;
   final bool selected;
   final VoidCallback onTap;
 
@@ -1795,19 +4138,40 @@ class _MembershipSectionTab extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AirmiusColors.blue.withValues(alpha: .18) : AirmiusColors.cardSoft,
+          color: selected
+              ? airmiusAccentColor(context).withValues(alpha: .18)
+              : airmiusSurfaceSoftColor(context),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+          border: Border.all(
+            color: selected
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.max,
           children: [
-            Icon(tab.icon, size: 18, color: selected ? AirmiusColors.blue : AirmiusColors.muted),
+            Icon(
+              tab.icon,
+              size: 18,
+              color: selected
+                  ? airmiusAccentColor(context)
+                  : airmiusMutedColor(context),
+            ),
             const SizedBox(width: 7),
-            Text(
-              tab.label,
-              style: TextStyle(color: selected ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+            Flexible(
+              child: Text(
+                label ?? tab.labelKey,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected
+                      ? airmiusTextColor(context)
+                      : airmiusMutedColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ],
         ),
@@ -1829,6 +4193,7 @@ class _ClubMembershipClubSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     var selectedClub = clubs.first;
     for (final club in clubs) {
       if (club.id == selectedClubId) {
@@ -1843,20 +4208,23 @@ class _ClubMembershipClubSelector extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(child: Eyebrow('Verein auswaehlen')),
-              StatusPill('${clubs.length} verwaltbar'),
+              Expanded(child: Eyebrow(t('membership.chooseClub'))),
+              StatusPill('${clubs.length} ${t('membership.manageableAfter')}'),
             ],
           ),
           const SizedBox(height: 10),
           if (clubs.length > 1)
             DropdownButtonFormField<int>(
               initialValue: selectedClubId,
-              dropdownColor: AirmiusColors.cardSoft,
-              decoration: const InputDecoration(
-                labelText: 'Aktiver Verein',
+              dropdownColor: airmiusSurfaceSoftColor(context),
+              decoration: InputDecoration(
+                labelText: t('membership.activeClub'),
                 prefixIcon: Icon(Icons.apartment_outlined),
               ),
-              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w800,
+              ),
               items: [
                 for (final club in clubs)
                   DropdownMenuItem<int>(
@@ -1890,21 +4258,40 @@ class _SelectedClubLine extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.apartment_outlined, color: AirmiusColors.blue),
+          Icon(Icons.apartment_outlined, color: airmiusAccentColor(context)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(club.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  club.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text([club.sportType, club.city].where((value) => value != null && value.isNotEmpty).join(' - '), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(
+                  [club.sportType, club.city]
+                      .where((value) => value != null && value.isNotEmpty)
+                      .join(' - '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1915,26 +4302,35 @@ class _SelectedClubLine extends StatelessWidget {
 }
 
 class _MembershipRulesAdminPanel extends StatefulWidget {
-  const _MembershipRulesAdminPanel({required this.club, required this.management, required this.onChanged});
+  const _MembershipRulesAdminPanel({
+    required this.club,
+    required this.management,
+    required this.onChanged,
+  });
 
   final ClubSummary club;
   final AirmiusClubManagement management;
   final VoidCallback onChanged;
 
   @override
-  State<_MembershipRulesAdminPanel> createState() => _MembershipRulesAdminPanelState();
+  State<_MembershipRulesAdminPanel> createState() =>
+      _MembershipRulesAdminPanelState();
 }
 
-class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> {
+class _MembershipRulesAdminPanelState
+    extends State<_MembershipRulesAdminPanel> {
   final _typeName = TextEditingController();
   final _typeSlug = TextEditingController();
   final _typeDescription = TextEditingController();
   final _ruleName = TextEditingController();
   final _ruleAmount = TextEditingController();
-  final _ruleValidFrom = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+  final _ruleValidFrom = TextEditingController(
+    text: DateTime.now().toIso8601String().substring(0, 10),
+  );
   final _ruleValidUntil = TextEditingController();
   final _ruleAgeMin = TextEditingController();
   final _ruleAgeMax = TextEditingController();
+  final _ruleFactorValue = TextEditingController();
   final _ruleNotes = TextEditingController();
 
   int? _editingTypeId;
@@ -1947,10 +4343,14 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   bool _pauseRequestsEnabled = false;
   bool _saving = false;
   String _ruleInterval = 'monthly';
+  String _ruleFactorKey = 'standard';
+  String _ruleFactorOperator = 'percent';
   String _rulesTab = 'application';
   Set<String> _paymentMethods = {'bank_transfer', 'cash'};
   Map<String, String> _fieldModes = {};
   List<JsonMap> _documents = [];
+
+  String _tr(String key) => AirmiusScope.of(context).t(key);
 
   @override
   void initState() {
@@ -1961,7 +4361,8 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   @override
   void didUpdateWidget(covariant _MembershipRulesAdminPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.club.id != widget.club.id || oldWidget.management.settings != widget.management.settings) {
+    if (oldWidget.club.id != widget.club.id ||
+        oldWidget.management.settings != widget.management.settings) {
       _clearForms();
       _syncSettings();
     }
@@ -1969,7 +4370,19 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 
   @override
   void dispose() {
-    for (final controller in [_typeName, _typeSlug, _typeDescription, _ruleName, _ruleAmount, _ruleValidFrom, _ruleValidUntil, _ruleAgeMin, _ruleAgeMax, _ruleNotes]) {
+    for (final controller in [
+      _typeName,
+      _typeSlug,
+      _typeDescription,
+      _ruleName,
+      _ruleAmount,
+      _ruleValidFrom,
+      _ruleValidUntil,
+      _ruleAgeMin,
+      _ruleAgeMax,
+      _ruleFactorValue,
+      _ruleNotes,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -1980,15 +4393,24 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     _requestsEnabled = _bool(settings['membership_requests_enabled']);
     _pauseRequestsEnabled = _bool(settings['member_pause_requests_enabled']);
     final methods = settings['membership_payment_methods'];
-    _paymentMethods = methods is List ? methods.map((item) => '$item').toSet() : {'bank_transfer', 'cash'};
+    _paymentMethods = methods is List
+        ? methods.map((item) => '$item').toSet()
+        : {'bank_transfer', 'cash'};
     if (_paymentMethods.isEmpty) _paymentMethods = {'bank_transfer', 'cash'};
     final fields = settings['membership_application_fields'];
     _fieldModes = {
-      for (final field in fields is List ? fields.whereType<JsonMap>() : const <JsonMap>[])
-        if (field['key'] != null) '${field['key']}': _string(field['mode'], fallback: 'off'),
+      for (final field
+          in fields is List ? fields.whereType<JsonMap>() : const <JsonMap>[])
+        if (field['key'] != null)
+          '${field['key']}': _string(field['mode'], fallback: 'off'),
     };
     final documents = settings['membership_application_documents'];
-    _documents = documents is List ? documents.whereType<JsonMap>().map((item) => Map<String, dynamic>.from(item)).toList() : [];
+    _documents = documents is List
+        ? documents
+              .whereType<JsonMap>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
+        : [];
   }
 
   void _clearForms() {
@@ -2004,17 +4426,25 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     _ruleValidUntil.clear();
     _ruleAgeMin.clear();
     _ruleAgeMax.clear();
+    _ruleFactorValue.clear();
     _ruleNotes.clear();
     _typePublic = true;
     _typeActive = true;
     _ruleActive = true;
     _ruleInterval = 'monthly';
+    _ruleFactorKey = 'standard';
+    _ruleFactorOperator = 'percent';
   }
 
-  bool _bool(Object? value) => value == true || '$value'.toLowerCase() == '1' || '$value'.toLowerCase() == 'true';
+  bool _bool(Object? value) =>
+      value == true ||
+      '$value'.toLowerCase() == '1' ||
+      '$value'.toLowerCase() == 'true';
 
   int? _intOrNull(Object? value) {
-    if (value == null || '$value'.trim().isEmpty || '$value' == 'null') return null;
+    if (value == null || '$value'.trim().isEmpty || '$value' == 'null') {
+      return null;
+    }
     return int.tryParse('$value');
   }
 
@@ -2024,34 +4454,58 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   }
 
   JsonMap _typePayload() => {
-        'name': _typeName.text.trim(),
-        'slug': _typeSlug.text.trim().isEmpty ? null : _typeSlug.text.trim(),
-        'description': _typeDescription.text.trim().isEmpty ? null : _typeDescription.text.trim(),
-        'is_public': _typePublic,
-        'is_active': _typeActive,
-      };
+    'name': _typeName.text.trim(),
+    'slug': _typeSlug.text.trim().isEmpty ? null : _typeSlug.text.trim(),
+    'description': _typeDescription.text.trim().isEmpty
+        ? null
+        : _typeDescription.text.trim(),
+    'is_public': _typePublic,
+    'is_active': _typeActive,
+  };
 
   JsonMap _rulePayload() => {
-        'club_membership_type_id': _ruleTypeId,
-        'name': _ruleName.text.trim(),
-        'amount': _ruleAmount.text.trim().replaceAll(',', '.'),
-        'billing_interval': _ruleInterval,
-        'valid_from': _ruleValidFrom.text.trim(),
-        'valid_until': _ruleValidUntil.text.trim().isEmpty ? null : _ruleValidUntil.text.trim(),
-        'age_min': _ruleAgeMin.text.trim().isEmpty ? null : int.tryParse(_ruleAgeMin.text.trim()),
-        'age_max': _ruleAgeMax.text.trim().isEmpty ? null : int.tryParse(_ruleAgeMax.text.trim()),
-        'is_active': _ruleActive,
-        'notes': _ruleNotes.text.trim().isEmpty ? null : _ruleNotes.text.trim(),
-      };
+    'club_membership_type_id': _ruleTypeId,
+    'name': _ruleName.text.trim(),
+    'amount': _ruleAmount.text.trim().replaceAll(',', '.'),
+    'billing_interval': _ruleInterval,
+    'valid_from': _ruleValidFrom.text.trim(),
+    'valid_until': _ruleValidUntil.text.trim().isEmpty
+        ? null
+        : _ruleValidUntil.text.trim(),
+    'age_min': _ruleAgeMin.text.trim().isEmpty
+        ? null
+        : int.tryParse(_ruleAgeMin.text.trim()),
+    'age_max': _ruleAgeMax.text.trim().isEmpty
+        ? null
+        : int.tryParse(_ruleAgeMax.text.trim()),
+    'factor_key': _ruleFactorKey,
+    'factor_operator': _ruleFactorKey == 'discount'
+        ? _ruleFactorOperator
+        : null,
+    'factor_value':
+        _ruleFactorKey == 'discount' && _ruleFactorValue.text.trim().isNotEmpty
+        ? _ruleFactorValue.text.trim().replaceAll(',', '.')
+        : null,
+    'is_active': _ruleActive,
+    'notes': _ruleNotes.text.trim().isEmpty ? null : _ruleNotes.text.trim(),
+  };
 
   void _showError(Object error) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Speichern fehlgeschlagen: $error')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${_tr('membership.saveFailed')}: ${error is AirmiusApiException ? error.userMessage : _tr('common.errorDetails')}',
+        ),
+      ),
+    );
   }
 
   Future<bool> _saveSettings() async {
     setState(() => _saving = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.updateMembershipSettings(widget.club.id, {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.updateMembershipSettings(widget.club.id, {
         'membership_requests_enabled': _requestsEnabled,
         'member_pause_requests_enabled': _pauseRequestsEnabled,
         'membership_payment_methods': _paymentMethods.toList(),
@@ -2076,7 +4530,11 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       if (_editingTypeId == null) {
         await repo.createMembershipType(widget.club.id, _typePayload());
       } else {
-        await repo.updateMembershipType(widget.club.id, _editingTypeId!, _typePayload());
+        await repo.updateMembershipType(
+          widget.club.id,
+          _editingTypeId!,
+          _typePayload(),
+        );
       }
       if (mounted) {
         _clearForms();
@@ -2092,14 +4550,22 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   }
 
   Future<bool> _saveRule() async {
-    if (_ruleName.text.trim().isEmpty || _ruleAmount.text.trim().isEmpty || _ruleValidFrom.text.trim().isEmpty) return false;
+    if (_ruleName.text.trim().isEmpty ||
+        _ruleAmount.text.trim().isEmpty ||
+        _ruleValidFrom.text.trim().isEmpty) {
+      return false;
+    }
     setState(() => _saving = true);
     try {
       final repo = AirmiusServicesScope.of(context).repositories.clubs;
       if (_editingRuleId == null) {
         await repo.createContributionRule(widget.club.id, _rulePayload());
       } else {
-        await repo.updateContributionRule(widget.club.id, _editingRuleId!, _rulePayload());
+        await repo.updateContributionRule(
+          widget.club.id,
+          _editingRuleId!,
+          _rulePayload(),
+        );
       }
       if (mounted) {
         _clearForms();
@@ -2132,10 +4598,19 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       _ruleName.text = _string(rule['name']);
       _ruleAmount.text = _string(rule['amount']);
       _ruleInterval = _string(rule['billing_interval'], fallback: 'monthly');
-      _ruleValidFrom.text = _string(rule['valid_from'], fallback: DateTime.now().toIso8601String().substring(0, 10));
+      _ruleValidFrom.text = _string(
+        rule['valid_from'],
+        fallback: DateTime.now().toIso8601String().substring(0, 10),
+      );
       _ruleValidUntil.text = _string(rule['valid_until']);
       _ruleAgeMin.text = _string(rule['age_min']);
       _ruleAgeMax.text = _string(rule['age_max']);
+      _ruleFactorKey = _string(rule['factor_key'], fallback: 'standard');
+      _ruleFactorOperator = _string(
+        rule['factor_operator'],
+        fallback: 'percent',
+      );
+      _ruleFactorValue.text = _string(rule['factor_value']);
       _ruleNotes.text = _string(rule['notes']);
       _ruleActive = _bool(rule['is_active']);
     });
@@ -2158,6 +4633,9 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       _ruleTypeId = null;
       _ruleName.clear();
       _ruleAmount.clear();
+      _ruleFactorKey = 'standard';
+      _ruleFactorOperator = 'percent';
+      _ruleFactorValue.clear();
       _ruleInterval = 'monthly';
       _ruleValidFrom.text = DateTime.now().toIso8601String().substring(0, 10);
       _ruleValidUntil.clear();
@@ -2170,52 +4648,56 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 
   String _intervalLabel(String value) {
     return switch (value) {
-      'none' => 'Keine',
-      'monthly' => 'Monatlich',
-      'quarterly' => 'Quartal',
-      'four_monthly' => 'Alle 4 Monate',
-      'semi_yearly' => 'Halbjaehrlich',
-      'yearly' => 'Jaehrlich',
-      'once' => 'Einmalig',
+      'none' => _tr('membership.interval.none'),
+      'monthly' => _tr('membership.interval.monthly'),
+      'quarterly' => _tr('membership.interval.quarterly'),
+      'four_monthly' => _tr('membership.interval.fourMonthly'),
+      'semi_yearly' => _tr('membership.interval.semiYearly'),
+      'yearly' => _tr('membership.interval.yearly'),
+      'once' => _tr('membership.interval.once'),
       _ => value,
     };
   }
 
   String _paymentLabel(String value) {
     return switch (value) {
-      'bank_transfer' => 'Ueberweisung',
-      'cash' => 'Barzahlung',
-      'sepa_debit' => 'SEPA-Lastschrift',
+      'bank_transfer' => _tr('membership.payment.bankTransfer'),
+      'cash' => _tr('membership.payment.cash'),
+      'sepa_debit' => _tr('membership.payment.sepaDebit'),
       _ => value,
     };
   }
 
   String _fieldModeLabel(String value) {
     return switch (value) {
-      'required' => 'Pflicht',
-      'optional' => 'Optional',
-      'off' => 'Aus',
+      'required' => _tr('membership.field.required'),
+      'optional' => _tr('membership.optional'),
+      'off' => _tr('membership.off'),
       _ => value,
     };
   }
 
   String _documentTypeLabel(String value) {
     return switch (value) {
-      'privacy' => 'Datenschutz',
-      'statutes' => 'Satzung',
-      'rules' => 'Regeln',
-      'fees' => 'Beitragsordnung',
-      'sepa' => 'SEPA-Mandat',
-      'other' => 'Sonstiges',
+      'privacy' => _tr('membership.document.privacy'),
+      'statutes' => _tr('membership.document.statutes'),
+      'rules' => _tr('membership.document.rules'),
+      'fees' => _tr('membership.document.fees'),
+      'sepa' => _tr('membership.document.sepa'),
+      'other' => _tr('membership.document.other'),
       _ => value,
     };
   }
 
   Future<void> _openDocumentDialog({int? index}) async {
-    final existing = index == null ? const <String, dynamic>{} : _documents[index];
+    final existing = index == null
+        ? const <String, dynamic>{}
+        : _documents[index];
     final title = TextEditingController(text: _string(existing['title']));
     final url = TextEditingController(text: _string(existing['url']));
-    final description = TextEditingController(text: _string(existing['description']));
+    final description = TextEditingController(
+      text: _string(existing['description']),
+    );
     var type = _string(existing['type'], fallback: 'privacy');
     var source = _string(existing['file_id']).isNotEmpty ? 'file' : 'link';
     var visible = existing.isEmpty ? true : _bool(existing['is_visible']);
@@ -2235,89 +4717,182 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
-            title: Text(index == null ? 'Dokument hinzufuegen' : 'Dokument bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            backgroundColor: airmiusSurfaceColor(context),
+            title: Text(
+              index == null
+                  ? _tr('membership.addDocument')
+                  : _tr('membership.editDocument'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             content: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<String>(
-                  initialValue: type,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Dokumenttyp'),
-                  items: const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].map((item) => DropdownMenuItem(value: item, child: Text(_documentTypeLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => type = value ?? type),
-                ),
-                const SizedBox(height: 10),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'link', icon: Icon(Icons.link_outlined), label: Text('Link')),
-                    ButtonSegment(value: 'file', icon: Icon(Icons.upload_file_outlined), label: Text('Datei')),
-                  ],
-                  selected: {source},
-                  onSelectionChanged: (selection) => setDialogState(() => source = selection.first),
-                ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Titel', hint: 'z. B. Beitragsordnung', controller: title),
-                const SizedBox(height: 10),
-                if (source == 'link')
-                  AirmiusTextField(label: 'Link', hint: 'https://...', controller: url)
-                else
-                  _DocumentUploadBox(
-                    fileName: uploadedFile == null ? pickedFile?.name : _string(uploadedFile!['display_name'], fallback: pickedFile?.name ?? 'Datei hochgeladen'),
-                    uploading: uploading,
-                    onPick: () async {
-                      final result = await FilePicker.platform.pickFiles(withData: true);
-                      final file = result?.files.single;
-                      if (file == null) return;
-                      setDialogState(() {
-                        pickedFile = file;
-                        title.text = title.text.trim().isEmpty ? file.name : title.text;
-                        uploadedFile = null;
-                      });
-                    },
-                    onUpload: pickedFile == null || uploading
-                        ? null
-                        : () async {
-                            setDialogState(() => uploading = true);
-                            try {
-                              final uploaded = await _uploadMembershipDocument(pickedFile!);
-                              setDialogState(() {
-                                uploadedFile = uploaded;
-                                url.text = _string(uploaded['url']);
-                              });
-                            } catch (error) {
-                              if (mounted) _showError(error);
-                            } finally {
-                              setDialogState(() => uploading = false);
-                            }
-                          },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.documentType'),
+                    ),
+                    items:
+                        const [
+                              'privacy',
+                              'statutes',
+                              'rules',
+                              'fees',
+                              'sepa',
+                              'other',
+                            ]
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item,
+                                child: Text(_documentTypeLabel(item)),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => type = value ?? type),
                   ),
-                const SizedBox(height: 10),
-                AirmiusTextField(label: 'Beschreibung', hint: 'optional', controller: description, maxLines: 2),
-                const SizedBox(height: 10),
-                _SettingsToggle(title: 'Im Antrag sichtbar', value: visible, onChanged: (value) => setDialogState(() => visible = value)),
-                const SizedBox(height: 8),
-                _SettingsToggle(title: 'Bestaetigung Pflicht', value: isRequired, onChanged: (value) => setDialogState(() => isRequired = value)),
-              ]),
+                  const SizedBox(height: 10),
+                  SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment(
+                        value: 'link',
+                        icon: Icon(Icons.link_outlined),
+                        label: Text(_tr('membership.link')),
+                      ),
+                      ButtonSegment(
+                        value: 'file',
+                        icon: Icon(Icons.upload_file_outlined),
+                        label: Text(_tr('membership.file')),
+                      ),
+                    ],
+                    selected: {source},
+                    onSelectionChanged: (selection) =>
+                        setDialogState(() => source = selection.first),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.invoiceTitle'),
+                    hint: _tr('membership.documentTitleHint'),
+                    controller: title,
+                  ),
+                  const SizedBox(height: 10),
+                  if (source == 'link')
+                    AirmiusTextField(
+                      label: _tr('membership.link'),
+                      hint: 'https://...',
+                      controller: url,
+                    )
+                  else
+                    _DocumentUploadBox(
+                      fileName: uploadedFile == null
+                          ? pickedFile?.name
+                          : _string(
+                              uploadedFile!['display_name'],
+                              fallback:
+                                  pickedFile?.name ??
+                                  _tr('membership.fileUploaded'),
+                            ),
+                      uploading: uploading,
+                      onPick: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          withData: true,
+                        );
+                        final file = result?.files.single;
+                        if (file == null) return;
+                        setDialogState(() {
+                          pickedFile = file;
+                          title.text = title.text.trim().isEmpty
+                              ? file.name
+                              : title.text;
+                          uploadedFile = null;
+                        });
+                      },
+                      onUpload: pickedFile == null || uploading
+                          ? null
+                          : () async {
+                              setDialogState(() => uploading = true);
+                              try {
+                                final uploaded =
+                                    await _uploadMembershipDocument(
+                                      pickedFile!,
+                                    );
+                                setDialogState(() {
+                                  uploadedFile = uploaded;
+                                  url.text = _string(uploaded['url']);
+                                });
+                              } catch (error) {
+                                if (mounted) _showError(error);
+                              } finally {
+                                setDialogState(() => uploading = false);
+                              }
+                            },
+                    ),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: _tr('membership.description'),
+                    hint: _tr('membership.optional'),
+                    controller: description,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsToggle(
+                    title: _tr('membership.visibleInApplication'),
+                    value: visible,
+                    onChanged: (value) => setDialogState(() => visible = value),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsToggle(
+                    title: _tr('membership.confirmationRequired'),
+                    value: isRequired,
+                    onChanged: (value) =>
+                        setDialogState(() => isRequired = value),
+                  ),
+                ],
+              ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(_tr('membership.cancel')),
+              ),
               FilledButton(
                 onPressed: () {
                   if (source == 'file' && uploadedFile == null) return;
-                  if (source == 'link' && title.text.trim().isEmpty && url.text.trim().isEmpty) return;
+                  if (source == 'link' &&
+                      title.text.trim().isEmpty &&
+                      url.text.trim().isEmpty) {
+                    return;
+                  }
                   Navigator.pop(context, {
-                    'id': _string(existing['id'], fallback: 'doc-${DateTime.now().millisecondsSinceEpoch}'),
+                    'id': _string(
+                      existing['id'],
+                      fallback: 'doc-${DateTime.now().millisecondsSinceEpoch}',
+                    ),
                     'type': type,
                     'title': title.text.trim(),
-                    'url': source == 'file' && uploadedFile != null ? _string(uploadedFile!['url']) : url.text.trim(),
+                    'url': source == 'file' && uploadedFile != null
+                        ? _string(uploadedFile!['url'])
+                        : url.text.trim(),
                     'description': description.text.trim(),
                     'is_visible': visible,
                     'is_required': isRequired,
-                    'file_id': source == 'file' && uploadedFile != null ? uploadedFile!['id'] : null,
-                    'file_name': source == 'file' && uploadedFile != null ? _string(uploadedFile!['display_name'], fallback: pickedFile?.name ?? '') : null,
+                    'file_id': source == 'file' && uploadedFile != null
+                        ? uploadedFile!['id']
+                        : null,
+                    'file_name': source == 'file' && uploadedFile != null
+                        ? _string(
+                            uploadedFile!['display_name'],
+                            fallback: pickedFile?.name ?? '',
+                          )
+                        : null,
                   });
                 },
-                child: const Text('Speichern'),
+                child: Text(_tr('membership.save')),
               ),
             ],
           );
@@ -2342,38 +4917,68 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   Future<JsonMap> _uploadMembershipDocument(PlatformFile file) async {
     final services = AirmiusServicesScope.of(context);
     final base = Uri.parse(services.environment.apiBaseUrl);
-    final path = '${base.path.endsWith('/') ? base.path : '${base.path}/'}api/v1/uploads';
-    final request = http.MultipartRequest('POST', base.replace(path: path, query: null, fragment: null));
+    final path =
+        '${base.path.endsWith('/') ? base.path : '${base.path}/'}api/v1/uploads';
+    final request = http.MultipartRequest(
+      'POST',
+      base.replace(path: path, query: null, fragment: null),
+    );
 
     request.headers.addAll({
       'Accept': 'application/json',
       'X-Airmius-Locale': services.environment.locale,
-      if (services.authState.session?.token.isNotEmpty == true) 'Authorization': 'Bearer ${services.authState.session!.token}',
+      if (services.authState.session?.token.isNotEmpty == true)
+        'Authorization': 'Bearer ${services.authState.session!.token}',
     });
     request.fields['scope'] = 'club';
     request.fields['club_id'] = '${widget.club.id}';
 
     if (file.bytes != null && file.bytes!.isNotEmpty) {
-      request.files.add(http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name, contentType: _contentTypeFor(file)));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          file.bytes!,
+          filename: file.name,
+          contentType: _contentTypeFor(file),
+        ),
+      );
     } else if (file.path != null && file.path!.trim().isNotEmpty) {
-      request.files.add(await http.MultipartFile.fromPath('file', file.path!, filename: file.name, contentType: _contentTypeFor(file)));
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+          filename: file.name,
+          contentType: _contentTypeFor(file),
+        ),
+      );
     } else {
-      throw const AirmiusApiException(statusCode: 0, body: 'Die ausgewaehlte Datei konnte nicht gelesen werden.', path: '/api/v1/uploads');
+      throw AirmiusApiException(
+        statusCode: 0,
+        body: _tr('membership.fileUnreadable'),
+        path: '/api/v1/uploads',
+      );
     }
 
     final response = await http.Response.fromStream(await request.send());
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: '/api/v1/uploads');
+      throw AirmiusApiException(
+        statusCode: response.statusCode,
+        body: response.body,
+        path: '/api/v1/uploads',
+      );
     }
 
     final decoded = jsonDecode(response.body);
-    final json = decoded is JsonMap ? decoded : <String, dynamic>{'data': decoded};
+    final json = decoded is JsonMap
+        ? decoded
+        : <String, dynamic>{'data': decoded};
     final data = json['data'];
     return data is JsonMap ? data : json;
   }
 
   MediaType _contentTypeFor(PlatformFile file) {
-    final extension = (file.extension ?? file.name.split('.').last).toLowerCase();
+    final extension = (file.extension ?? file.name.split('.').last)
+        .toLowerCase();
     return switch (extension) {
       'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
       'png' => MediaType('image', 'png'),
@@ -2384,19 +4989,29 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       'webm' => MediaType('video', 'webm'),
       'pdf' => MediaType('application', 'pdf'),
       'doc' => MediaType('application', 'msword'),
-      'docx' => MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document'),
+      'docx' => MediaType(
+        'application',
+        'vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ),
       'xls' => MediaType('application', 'vnd.ms-excel'),
-      'xlsx' => MediaType('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+      'xlsx' => MediaType(
+        'application',
+        'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ),
       _ => MediaType('application', 'octet-stream'),
     };
   }
 
-  Future<void> _openApplicationSettingsSheet(List<JsonMap> applicationFields) async {
+  Future<void> _openApplicationSettingsSheet(
+    List<JsonMap> applicationFields,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
           void update(VoidCallback fn) {
@@ -2406,93 +5021,198 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 
           return SafeArea(
             child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .88),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * .88,
+                ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                    const Text('Antrag & Felder', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 6),
-                    const Text('Online-Anfragen, Zahlarten und sichtbare Felder kompakt bearbeiten.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35)),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _SettingsToggle(title: 'Mitgliedsanfragen erlauben', value: _requestsEnabled, onChanged: (value) => update(() => _requestsEnabled = value)),
-                        _SettingsToggle(title: 'Pausen-Anfragen erlauben', value: _pauseRequestsEnabled, onChanged: (value) => update(() => _pauseRequestsEnabled = value)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const Eyebrow('Zahlarten'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final method in const ['bank_transfer', 'cash', 'sepa_debit'])
-                          FilterChip(
-                            selected: _paymentMethods.contains(method),
-                            label: Text(_paymentLabel(method)),
-                            onSelected: (selected) => update(() => selected ? _paymentMethods.add(method) : _paymentMethods.remove(method)),
-                            selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                            backgroundColor: AirmiusColors.cardSoft,
-                            side: BorderSide(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.border),
-                            labelStyle: TextStyle(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                          ),
-                      ],
-                    ),
-                    if (applicationFields.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      const Eyebrow('Mitgliedsantrag-Felder'),
-                      const SizedBox(height: 8),
-                      LayoutBuilder(builder: (context, constraints) {
-                        final twoColumns = constraints.maxWidth >= 620;
-                        final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
-                        return Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            for (final field in applicationFields)
-                              SizedBox(
-                                width: fieldWidth,
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: (() {
-                                    final current = _fieldModes[_string(field['key'])] ?? _string(field['mode'], fallback: 'off');
-                                    return const ['required', 'optional', 'off'].contains(current) ? current : 'off';
-                                  })(),
-                                  dropdownColor: AirmiusColors.cardSoft,
-                                  decoration: InputDecoration(labelText: _string(field['label'], fallback: _string(field['key'], fallback: 'Feld'))),
-                                  items: const ['required', 'optional', 'off'].map((mode) => DropdownMenuItem(value: mode, child: Text(_fieldModeLabel(mode)))).toList(),
-                                  onChanged: (value) {
-                                    final key = _string(field['key']);
-                                    if (key.isNotEmpty && value != null) update(() => _fieldModes[key] = value);
-                                  },
-                                ),
-                              ),
-                          ],
-                        );
-                      }),
-                    ],
-                    const SizedBox(height: 18),
-                    Row(children: [
-                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _saving
-                              ? null
-                              : () async {
-                                  final saved = await _saveSettings();
-                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
-                                },
-                          icon: const Icon(Icons.save_outlined),
-                          label: Text(_saving ? 'Speichert...' : 'Speichern'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _tr('membership.applicationFields'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ]),
-                  ]),
+                      const SizedBox(height: 6),
+                      Text(
+                        _tr('membership.applicationFieldsBody'),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _SettingsToggle(
+                            title: _tr('membership.allowRequests'),
+                            value: _requestsEnabled,
+                            onChanged: (value) =>
+                                update(() => _requestsEnabled = value),
+                          ),
+                          _SettingsToggle(
+                            title: _tr('membership.allowPauseRequests'),
+                            value: _pauseRequestsEnabled,
+                            onChanged: (value) =>
+                                update(() => _pauseRequestsEnabled = value),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Eyebrow(_tr('membership.paymentMethods')),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final method in const [
+                            'bank_transfer',
+                            'cash',
+                            'sepa_debit',
+                          ])
+                            FilterChip(
+                              selected: _paymentMethods.contains(method),
+                              label: Text(_paymentLabel(method)),
+                              onSelected: (selected) => update(
+                                () => selected
+                                    ? _paymentMethods.add(method)
+                                    : _paymentMethods.remove(method),
+                              ),
+                              selectedColor: airmiusAccentColor(
+                                context,
+                              ).withValues(alpha: .22),
+                              backgroundColor: airmiusSurfaceSoftColor(context),
+                              side: BorderSide(
+                                color: _paymentMethods.contains(method)
+                                    ? airmiusAccentColor(context)
+                                    : airmiusBorderColor(context),
+                              ),
+                              labelStyle: TextStyle(
+                                color: _paymentMethods.contains(method)
+                                    ? airmiusAccentColor(context)
+                                    : airmiusMutedColor(context),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (applicationFields.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Eyebrow(_tr('membership.applicationFieldList')),
+                        const SizedBox(height: 8),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final twoColumns = constraints.maxWidth >= 620;
+                            final fieldWidth = twoColumns
+                                ? (constraints.maxWidth - 10) / 2
+                                : constraints.maxWidth;
+                            return Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                for (final field in applicationFields)
+                                  SizedBox(
+                                    width: fieldWidth,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: (() {
+                                        final current =
+                                            _fieldModes[_string(
+                                              field['key'],
+                                            )] ??
+                                            _string(
+                                              field['mode'],
+                                              fallback: 'off',
+                                            );
+                                        return const [
+                                              'required',
+                                              'optional',
+                                              'off',
+                                            ].contains(current)
+                                            ? current
+                                            : 'off';
+                                      })(),
+                                      dropdownColor: airmiusSurfaceSoftColor(
+                                        context,
+                                      ),
+                                      decoration: InputDecoration(
+                                        labelText: _string(
+                                          field['label'],
+                                          fallback: _string(
+                                            field['key'],
+                                            fallback: _tr('membership.field'),
+                                          ),
+                                        ),
+                                      ),
+                                      items:
+                                          const ['required', 'optional', 'off']
+                                              .map(
+                                                (mode) => DropdownMenuItem(
+                                                  value: mode,
+                                                  child: Text(
+                                                    _fieldModeLabel(mode),
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                      onChanged: (value) {
+                                        final key = _string(field['key']);
+                                        if (key.isNotEmpty && value != null) {
+                                          update(
+                                            () => _fieldModes[key] = value,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              child: Text(_tr('membership.cancel')),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : () async {
+                                      final saved = await _saveSettings();
+                                      if (saved && sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+                                    },
+                              icon: Icon(Icons.save_outlined),
+                              label: Text(
+                                _saving
+                                    ? _tr('membership.saving')
+                                    : _tr('membership.save'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2512,8 +5232,10 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
           void update(VoidCallback fn) {
@@ -2523,42 +5245,101 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 
           return SafeArea(
             child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .86),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * .86,
+                ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                    Text(_editingTypeId == null ? 'Mitgliedschaftstyp erstellen' : 'Mitgliedschaftstyp bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 14),
-                    AirmiusTextField(label: 'Name', hint: 'z. B. Jugendmitglied', controller: _typeName),
-                    const SizedBox(height: 10),
-                    AirmiusTextField(label: 'Slug', hint: 'optional', controller: _typeSlug),
-                    const SizedBox(height: 10),
-                    AirmiusTextField(label: 'Beschreibung', hint: 'Beschreibung', controller: _typeDescription, maxLines: 2),
-                    const SizedBox(height: 12),
-                    Wrap(spacing: 10, runSpacing: 8, children: [
-                      _SettingsToggle(title: 'Oeffentlich sichtbar', value: _typePublic, onChanged: (value) => update(() => _typePublic = value)),
-                      _SettingsToggle(title: 'Aktiv', value: _typeActive, onChanged: (value) => update(() => _typeActive = value)),
-                    ]),
-                    const SizedBox(height: 18),
-                    Row(children: [
-                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _saving
-                              ? null
-                              : () async {
-                                  final saved = await _saveType();
-                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
-                                },
-                          icon: const Icon(Icons.badge_outlined),
-                          label: Text(_saving ? 'Speichert...' : (_editingTypeId == null ? 'Erstellen' : 'Aktualisieren')),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _editingTypeId == null
+                            ? _tr('membership.createMembershipType')
+                            : _tr('membership.editMembershipType'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ]),
-                  ]),
+                      const SizedBox(height: 14),
+                      AirmiusTextField(
+                        label: _tr('membership.name'),
+                        hint: _tr('membership.membershipTypeHint'),
+                        controller: _typeName,
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: _tr('membership.slug'),
+                        hint: _tr('membership.optional'),
+                        controller: _typeSlug,
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: _tr('membership.description'),
+                        hint: _tr('membership.description'),
+                        controller: _typeDescription,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _SettingsToggle(
+                            title: _tr('membership.publiclyVisible'),
+                            value: _typePublic,
+                            onChanged: (value) =>
+                                update(() => _typePublic = value),
+                          ),
+                          _SettingsToggle(
+                            title: _tr('membership.active'),
+                            value: _typeActive,
+                            onChanged: (value) =>
+                                update(() => _typeActive = value),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              child: Text(_tr('membership.cancel')),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : () async {
+                                      final saved = await _saveType();
+                                      if (saved && sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+                                    },
+                              icon: Icon(Icons.badge_outlined),
+                              label: Text(
+                                _saving
+                                    ? _tr('membership.saving')
+                                    : (_editingTypeId == null
+                                          ? _tr('membership.create')
+                                          : _tr('membership.update')),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2568,7 +5349,11 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     );
   }
 
-  Future<void> _openRuleSheet({JsonMap? rule, required List<JsonMap> membershipTypes, required List<String> intervals}) async {
+  Future<void> _openRuleSheet({
+    JsonMap? rule,
+    required List<JsonMap> membershipTypes,
+    required List<String> intervals,
+  }) async {
     if (rule == null) {
       _newRuleForm();
     } else {
@@ -2578,8 +5363,10 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
           void update(VoidCallback fn) {
@@ -2589,70 +5376,250 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 
           return SafeArea(
             child: Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * .9,
+                ),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-                    Text(_editingRuleId == null ? 'Beitragsregel erstellen' : 'Beitragsregel bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<int>(
-                      initialValue: _ruleTypeId ?? 0,
-                      dropdownColor: AirmiusColors.cardSoft,
-                      decoration: const InputDecoration(labelText: 'Mitgliedschaftstyp'),
-                      items: [
-                        const DropdownMenuItem<int>(value: 0, child: Text('Alle Typen')),
-                        for (final type in membershipTypes)
-                          if (_intOrNull(type['id']) != null) DropdownMenuItem<int>(value: _intOrNull(type['id'])!, child: Text(_string(type['name'], fallback: 'Typ'))),
-                      ],
-                      onChanged: (value) => update(() => _ruleTypeId = value == null || value == 0 ? null : value),
-                    ),
-                    const SizedBox(height: 10),
-                    AirmiusTextField(label: 'Regelname', hint: 'Regelname', controller: _ruleName),
-                    const SizedBox(height: 10),
-                    AirmiusTextField(label: 'Beitrag EUR', hint: '12.00', controller: _ruleAmount, keyboardType: TextInputType.number),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      initialValue: intervals.contains(_ruleInterval) ? _ruleInterval : intervals.first,
-                      dropdownColor: AirmiusColors.cardSoft,
-                      decoration: const InputDecoration(labelText: 'Intervall'),
-                      items: [for (final interval in intervals) DropdownMenuItem(value: interval, child: Text(_intervalLabel(interval)))],
-                      onChanged: (value) => update(() => _ruleInterval = value ?? _ruleInterval),
-                    ),
-                    const SizedBox(height: 10),
-                    LayoutBuilder(builder: (context, constraints) {
-                      final twoColumns = constraints.maxWidth >= 520;
-                      final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
-                      return Wrap(spacing: 10, runSpacing: 10, children: [
-                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig ab', hint: 'YYYY-MM-DD', controller: _ruleValidFrom)),
-                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig bis', hint: 'optional', controller: _ruleValidUntil)),
-                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter von', hint: 'optional', controller: _ruleAgeMin, keyboardType: TextInputType.number)),
-                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter bis', hint: 'optional', controller: _ruleAgeMax, keyboardType: TextInputType.number)),
-                      ]);
-                    }),
-                    const SizedBox(height: 10),
-                    AirmiusTextField(label: 'Notiz', hint: 'optional', controller: _ruleNotes, maxLines: 2),
-                    const SizedBox(height: 12),
-                    _SettingsToggle(title: 'Regel aktiv', value: _ruleActive, onChanged: (value) => update(() => _ruleActive = value)),
-                    const SizedBox(height: 18),
-                    Row(children: [
-                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _saving
-                              ? null
-                              : () async {
-                                  final saved = await _saveRule();
-                                  if (saved && sheetContext.mounted) Navigator.pop(sheetContext);
-                                },
-                          icon: const Icon(Icons.tune_outlined),
-                          label: Text(_saving ? 'Speichert...' : (_editingRuleId == null ? 'Erstellen' : 'Aktualisieren')),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _editingRuleId == null
+                            ? _tr('membership.createContributionRule')
+                            : _tr('membership.editContributionRule'),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                    ]),
-                  ]),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<int>(
+                        initialValue: _ruleTypeId ?? 0,
+                        dropdownColor: airmiusSurfaceSoftColor(context),
+                        decoration: InputDecoration(
+                          labelText: _tr('membership.membershipType'),
+                        ),
+                        items: [
+                          DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text(_tr('membership.allTypes')),
+                          ),
+                          for (final type in membershipTypes)
+                            if (_intOrNull(type['id']) != null)
+                              DropdownMenuItem<int>(
+                                value: _intOrNull(type['id'])!,
+                                child: Text(
+                                  _string(
+                                    type['name'],
+                                    fallback: _tr('membership.type'),
+                                  ),
+                                ),
+                              ),
+                        ],
+                        onChanged: (value) => update(
+                          () => _ruleTypeId = value == null || value == 0
+                              ? null
+                              : value,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: _tr('membership.ruleName'),
+                        hint: _tr('membership.ruleName'),
+                        controller: _ruleName,
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: _tr('membership.contributionEur'),
+                        hint: '12.00',
+                        controller: _ruleAmount,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        initialValue:
+                            const [
+                              'standard',
+                              'family',
+                              'discount',
+                              'special',
+                            ].contains(_ruleFactorKey)
+                            ? _ruleFactorKey
+                            : 'standard',
+                        dropdownColor: airmiusSurfaceSoftColor(context),
+                        decoration: InputDecoration(
+                          labelText: _tr('membership.ruleFactor'),
+                        ),
+                        items: [
+                          for (final factor in [
+                            'standard',
+                            'family',
+                            'discount',
+                            'special',
+                          ])
+                            DropdownMenuItem(
+                              value: factor,
+                              child: Text(_tr('membership.ruleFactor.$factor')),
+                            ),
+                        ],
+                        onChanged: (value) => update(() {
+                          _ruleFactorKey = value ?? 'standard';
+                        }),
+                      ),
+                      if (_ruleFactorKey == 'discount') ...[
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          initialValue: _ruleFactorOperator == 'fixed'
+                              ? 'fixed'
+                              : 'percent',
+                          dropdownColor: airmiusSurfaceSoftColor(context),
+                          decoration: InputDecoration(
+                            labelText: _tr('membership.discountOperator'),
+                          ),
+                          items: [
+                            for (final operator in ['percent', 'fixed'])
+                              DropdownMenuItem(
+                                value: operator,
+                                child: Text(
+                                  _tr('membership.discountOperator.$operator'),
+                                ),
+                              ),
+                          ],
+                          onChanged: (value) => update(() {
+                            _ruleFactorOperator = value ?? 'percent';
+                          }),
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: _tr('membership.discountValue'),
+                          hint: '10',
+                          controller: _ruleFactorValue,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        initialValue: intervals.contains(_ruleInterval)
+                            ? _ruleInterval
+                            : intervals.first,
+                        dropdownColor: airmiusSurfaceSoftColor(context),
+                        decoration: InputDecoration(
+                          labelText: _tr('membership.interval'),
+                        ),
+                        items: [
+                          for (final interval in intervals)
+                            DropdownMenuItem(
+                              value: interval,
+                              child: Text(_intervalLabel(interval)),
+                            ),
+                        ],
+                        onChanged: (value) => update(
+                          () => _ruleInterval = value ?? _ruleInterval,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final twoColumns = constraints.maxWidth >= 520;
+                          final fieldWidth = twoColumns
+                              ? (constraints.maxWidth - 10) / 2
+                              : constraints.maxWidth;
+                          return Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              SizedBox(
+                                width: fieldWidth,
+                                child: AirmiusTextField(
+                                  label: _tr('membership.validFrom'),
+                                  hint: _tr('membership.isoDateHint'),
+                                  controller: _ruleValidFrom,
+                                ),
+                              ),
+                              SizedBox(
+                                width: fieldWidth,
+                                child: AirmiusTextField(
+                                  label: _tr('membership.validUntil'),
+                                  hint: _tr('membership.optional'),
+                                  controller: _ruleValidUntil,
+                                ),
+                              ),
+                              SizedBox(
+                                width: fieldWidth,
+                                child: AirmiusTextField(
+                                  label: _tr('membership.ageFrom'),
+                                  hint: _tr('membership.optional'),
+                                  controller: _ruleAgeMin,
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              SizedBox(
+                                width: fieldWidth,
+                                child: AirmiusTextField(
+                                  label: _tr('membership.ageUntil'),
+                                  hint: _tr('membership.optional'),
+                                  controller: _ruleAgeMax,
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: _tr('membership.note'),
+                        hint: _tr('membership.optional'),
+                        controller: _ruleNotes,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      _SettingsToggle(
+                        title: _tr('membership.ruleActive'),
+                        value: _ruleActive,
+                        onChanged: (value) => update(() => _ruleActive = value),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(sheetContext),
+                              child: Text(_tr('membership.cancel')),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _saving
+                                  ? null
+                                  : () async {
+                                      final saved = await _saveRule();
+                                      if (saved && sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+                                    },
+                              icon: Icon(Icons.tune_outlined),
+                              label: Text(
+                                _saving
+                                    ? _tr('membership.saving')
+                                    : (_editingRuleId == null
+                                          ? _tr('membership.create')
+                                          : _tr('membership.update')),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2666,9 +5633,22 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   Widget build(BuildContext context) {
     final membershipTypes = widget.management.membershipTypes;
     final contributionRules = widget.management.contributionRules;
-    final applicationFields = widget.management.settings['membership_application_fields'] is List ? (widget.management.settings['membership_application_fields'] as List).whereType<JsonMap>().toList() : const <JsonMap>[];
+    final applicationFields =
+        widget.management.settings['membership_application_fields'] is List
+        ? (widget.management.settings['membership_application_fields'] as List)
+              .whereType<JsonMap>()
+              .toList()
+        : const <JsonMap>[];
     final intervals = widget.management.contributionIntervals.isEmpty
-        ? const ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once']
+        ? const [
+            'none',
+            'monthly',
+            'quarterly',
+            'four_monthly',
+            'semi_yearly',
+            'yearly',
+            'once',
+          ]
         : widget.management.contributionIntervals;
 
     final requiredFields = applicationFields.where((field) {
@@ -2676,9 +5656,15 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       final mode = _fieldModes[key] ?? _string(field['mode'], fallback: 'off');
       return mode == 'required';
     }).length;
-    final activeTypes = membershipTypes.where((type) => _bool(type['is_active'])).length;
-    final activeRules = contributionRules.where((rule) => _bool(rule['is_active'])).length;
-    final requiredDocs = _documents.where((document) => _bool(document['is_required'])).length;
+    final activeTypes = membershipTypes
+        .where((type) => _bool(type['is_active']))
+        .length;
+    final activeRules = contributionRules
+        .where((rule) => _bool(rule['is_active']))
+        .length;
+    final requiredDocs = _documents
+        .where((document) => _bool(document['is_required']))
+        .length;
 
     return AirmiusPanel(
       child: Column(
@@ -2686,8 +5672,8 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         children: [
           Row(
             children: [
-              const Expanded(child: Eyebrow('Beitragsregeln')),
-              StatusPill('$activeRules aktiv'),
+              Expanded(child: Eyebrow(_tr('membership.contributionRules'))),
+              StatusPill('$activeRules ${_tr('membership.activeAfter')}'),
             ],
           ),
           const SizedBox(height: 12),
@@ -2697,86 +5683,250 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
             runSpacing: 8,
             children: [
               for (final tab in const [
-                _MembershipSectionTabData('application', 'Antrag', Icons.assignment_outlined),
-                _MembershipSectionTabData('documents', 'Dokumente', Icons.description_outlined),
-                _MembershipSectionTabData('types', 'Typen', Icons.badge_outlined),
-                _MembershipSectionTabData('rules', 'Regeln', Icons.tune_outlined),
+                _MembershipSectionTabData(
+                  'application',
+                  'membership.rulesTab.application',
+                  Icons.assignment_outlined,
+                ),
+                _MembershipSectionTabData(
+                  'documents',
+                  'membership.rulesTab.documents',
+                  Icons.description_outlined,
+                ),
+                _MembershipSectionTabData(
+                  'types',
+                  'membership.rulesTab.types',
+                  Icons.badge_outlined,
+                ),
+                _MembershipSectionTabData(
+                  'rules',
+                  'membership.rulesTab.rules',
+                  Icons.tune_outlined,
+                ),
               ])
-                _MembershipSectionTab(tab: tab, selected: _rulesTab == tab.value, onTap: () => setState(() => _rulesTab = tab.value)),
+                _MembershipSectionTab(
+                  tab: tab,
+                  label: _tr(tab.labelKey),
+                  selected: _rulesTab == tab.value,
+                  onTap: () => setState(() => _rulesTab = tab.value),
+                ),
             ],
           ),
           const SizedBox(height: 14),
           if (_rulesTab == 'application') ...[
-            Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
-              _AdminMiniStat(icon: Icons.how_to_reg_outlined, title: 'Anfragen', value: _requestsEnabled ? 'An' : 'Aus'),
-              _AdminMiniStat(icon: Icons.pause_circle_outline, title: 'Pausen', value: _pauseRequestsEnabled ? 'An' : 'Aus'),
-              _AdminMiniStat(icon: Icons.payments_outlined, title: 'Zahlarten', value: '${_paymentMethods.length}'),
-              _AdminMiniStat(icon: Icons.fact_check_outlined, title: 'Pflichtfelder', value: '$requiredFields'),
-            ]),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _AdminMiniStat(
+                  icon: Icons.how_to_reg_outlined,
+                  title: _tr('membership.requests'),
+                  value: _requestsEnabled
+                      ? _tr('membership.on')
+                      : _tr('membership.off'),
+                ),
+                _AdminMiniStat(
+                  icon: Icons.pause_circle_outline,
+                  title: _tr('membership.pauses'),
+                  value: _pauseRequestsEnabled
+                      ? _tr('membership.on')
+                      : _tr('membership.off'),
+                ),
+                _AdminMiniStat(
+                  icon: Icons.payments_outlined,
+                  title: _tr('membership.paymentMethods'),
+                  value: '${_paymentMethods.length}',
+                ),
+                _AdminMiniStat(
+                  icon: Icons.fact_check_outlined,
+                  title: _tr('membership.requiredFields'),
+                  value: '$requiredFields',
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
-            AirmiusButton(label: 'Antrag & Felder bearbeiten', icon: Icons.edit_note_outlined, onPressed: () => _openApplicationSettingsSheet(applicationFields)),
+            AirmiusButton(
+              label: _tr('membership.editApplicationFields'),
+              icon: Icons.edit_note_outlined,
+              onPressed: () => _openApplicationSettingsSheet(applicationFields),
+            ),
           ] else if (_rulesTab == 'documents') ...[
-            Row(children: [
-              Expanded(child: Text('${_documents.length} Dokument(e), $requiredDocs Pflicht', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
-              IconButton(onPressed: () => _openDocumentDialog(), icon: const Icon(Icons.add_link_outlined), color: AirmiusColors.blue, tooltip: 'Dokument hinzufuegen'),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${_documents.length} ${_tr('membership.documentsAfter')}, '
+                    '$requiredDocs ${_tr('membership.requiredAfter')}',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _openDocumentDialog(),
+                  icon: Icon(Icons.add_link_outlined),
+                  color: airmiusAccentColor(context),
+                  tooltip: _tr('membership.addDocument'),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             if (_documents.isEmpty)
-              const _EmptyAdminHint(text: 'Noch keine Dokumente verknuepft.')
+              _EmptyAdminHint(text: _tr('membership.noDocuments'))
             else
               for (final entry in _documents.take(3).indexed)
                 _MembershipDocumentLine(
                   document: entry.$2,
-                  typeLabel: _documentTypeLabel(_string(entry.$2['type'], fallback: 'other')),
+                  typeLabel: _documentTypeLabel(
+                    _string(entry.$2['type'], fallback: 'other'),
+                  ),
                   onEdit: () => _openDocumentDialog(index: entry.$1),
                   onDelete: () => setState(() => _documents.removeAt(entry.$1)),
                 ),
-            if (_documents.length > 3) Text('+ ${_documents.length - 3} weitere Dokumente', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            if (_documents.length > 3)
+              Text(
+                '+ ${_documents.length - 3} '
+                '${_tr('membership.moreDocumentsAfter')}',
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             const SizedBox(height: 12),
-            Wrap(spacing: 10, runSpacing: 10, children: [
-              AirmiusButton(label: 'Dokument hinzufuegen', icon: Icons.add_link_outlined, secondary: true, onPressed: () => _openDocumentDialog()),
-              AirmiusButton(label: 'Dokumente speichern', icon: Icons.save_outlined, onPressed: _saving ? null : () { _saveSettings(); }),
-            ]),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                AirmiusButton(
+                  label: _tr('membership.addDocument'),
+                  icon: Icons.add_link_outlined,
+                  secondary: true,
+                  onPressed: () => _openDocumentDialog(),
+                ),
+                AirmiusButton(
+                  label: _tr('membership.saveDocuments'),
+                  icon: Icons.save_outlined,
+                  onPressed: _saving
+                      ? null
+                      : () {
+                          _saveSettings();
+                        },
+                ),
+              ],
+            ),
           ] else if (_rulesTab == 'types') ...[
-            Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
-              _AdminMiniStat(icon: Icons.badge_outlined, title: 'Typen', value: '${membershipTypes.length}'),
-              _AdminMiniStat(icon: Icons.check_circle_outline, title: 'Aktiv', value: '$activeTypes'),
-            ]),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _AdminMiniStat(
+                  icon: Icons.badge_outlined,
+                  title: _tr('membership.types'),
+                  value: '${membershipTypes.length}',
+                ),
+                _AdminMiniStat(
+                  icon: Icons.check_circle_outline,
+                  title: _tr('membership.active'),
+                  value: '$activeTypes',
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             if (membershipTypes.isEmpty)
-              const _EmptyAdminHint(text: 'Noch keine Mitgliedschaftstypen.')
+              _EmptyAdminHint(text: _tr('membership.noMembershipTypes'))
             else
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                for (final type in membershipTypes)
-                  ActionChip(
-                    label: Text(_string(type['name'], fallback: 'Typ')),
-                    onPressed: () => _openTypeSheet(type: type),
-                    avatar: Icon(_bool(type['is_active']) ? Icons.check_circle_outline : Icons.pause_circle_outline, color: AirmiusColors.blue, size: 18),
-                    backgroundColor: AirmiusColors.cardSoft,
-                    labelStyle: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-                    side: const BorderSide(color: AirmiusColors.border),
-                  ),
-              ]),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final type in membershipTypes)
+                    ActionChip(
+                      label: Text(
+                        _string(type['name'], fallback: _tr('membership.type')),
+                      ),
+                      onPressed: () => _openTypeSheet(type: type),
+                      avatar: Icon(
+                        _bool(type['is_active'])
+                            ? Icons.check_circle_outline
+                            : Icons.pause_circle_outline,
+                        color: airmiusAccentColor(context),
+                        size: 18,
+                      ),
+                      backgroundColor: airmiusSurfaceSoftColor(context),
+                      labelStyle: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                      side: BorderSide(color: airmiusBorderColor(context)),
+                    ),
+                ],
+              ),
             const SizedBox(height: 12),
-            AirmiusButton(label: 'Typ erstellen', icon: Icons.add_circle_outline, onPressed: () => _openTypeSheet()),
+            AirmiusButton(
+              label: _tr('membership.createType'),
+              icon: Icons.add_circle_outline,
+              onPressed: () => _openTypeSheet(),
+            ),
           ] else ...[
-            Row(children: [
-              Expanded(child: Text('${contributionRules.length} Regel(n), $activeRules aktiv', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
-              IconButton(onPressed: () => _openRuleSheet(membershipTypes: membershipTypes, intervals: intervals), icon: const Icon(Icons.add_circle_outline), color: AirmiusColors.blue, tooltip: 'Regel erstellen'),
-            ]),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${contributionRules.length} '
+                    '${_tr('membership.rulesAfter')}, '
+                    '$activeRules ${_tr('membership.activeAfter')}',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _openRuleSheet(
+                    membershipTypes: membershipTypes,
+                    intervals: intervals,
+                  ),
+                  icon: Icon(Icons.add_circle_outline),
+                  color: airmiusAccentColor(context),
+                  tooltip: _tr('membership.createRule'),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             if (contributionRules.isEmpty)
-              const _EmptyAdminHint(text: 'Noch keine Beitragsregeln.')
+              _EmptyAdminHint(text: _tr('membership.noContributionRules'))
             else
               for (final rule in contributionRules.take(4))
                 _ContributionRuleLine(
                   rule: rule,
                   intervalLabel: _intervalLabel,
-                  onEdit: () => _openRuleSheet(rule: rule, membershipTypes: membershipTypes, intervals: intervals),
+                  onEdit: () => _openRuleSheet(
+                    rule: rule,
+                    membershipTypes: membershipTypes,
+                    intervals: intervals,
+                  ),
                 ),
-            if (contributionRules.length > 4) Text('+ ${contributionRules.length - 4} weitere Regeln', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            if (contributionRules.length > 4)
+              Text(
+                '+ ${contributionRules.length - 4} '
+                '${_tr('membership.moreRulesAfter')}',
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             const SizedBox(height: 12),
-            AirmiusButton(label: 'Regel erstellen', icon: Icons.tune_outlined, onPressed: () => _openRuleSheet(membershipTypes: membershipTypes, intervals: intervals)),
+            AirmiusButton(
+              label: _tr('membership.createRule'),
+              icon: Icons.tune_outlined,
+              onPressed: () => _openRuleSheet(
+                membershipTypes: membershipTypes,
+                intervals: intervals,
+              ),
+            ),
           ],
         ],
       ),
@@ -2785,7 +5935,11 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
 }
 
 class _AdminMiniStat extends StatelessWidget {
-  const _AdminMiniStat({required this.icon, required this.title, required this.value});
+  const _AdminMiniStat({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
 
   final IconData icon;
   final String title;
@@ -2797,19 +5951,39 @@ class _AdminMiniStat extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 126),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: AirmiusColors.blue, size: 19),
-        const SizedBox(width: 9),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
-        ]),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: airmiusAccentColor(context), size: 19),
+          const SizedBox(width: 9),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2824,17 +5998,27 @@ class _EmptyAdminHint extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg,
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
-      child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: airmiusMutedColor(context),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _SettingsToggle extends StatelessWidget {
-  const _SettingsToggle({required this.title, required this.value, required this.onChanged});
+  const _SettingsToggle({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String title;
   final bool value;
@@ -2849,15 +6033,40 @@ class _SettingsToggle extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 170),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: value ? AirmiusColors.blue.withValues(alpha: .12) : AirmiusColors.cardSoft,
+          color: value
+              ? airmiusAccentColor(context).withValues(alpha: .12)
+              : airmiusSurfaceSoftColor(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: value ? AirmiusColors.blue : AirmiusColors.border),
+          border: Border.all(
+            color: value
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context),
+          ),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(value ? Icons.check_box_outlined : Icons.check_box_outline_blank, color: value ? AirmiusColors.blue : AirmiusColors.muted, size: 20),
-          const SizedBox(width: 8),
-          Flexible(child: Text(title, style: TextStyle(color: value ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900))),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              value ? Icons.check_box_outlined : Icons.check_box_outline_blank,
+              color: value
+                  ? airmiusAccentColor(context)
+                  : airmiusMutedColor(context),
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: value
+                      ? airmiusTextColor(context)
+                      : airmiusMutedColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2878,32 +6087,71 @@ class _DocumentUploadBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Icon(Icons.upload_file_outlined, color: AirmiusColors.blue),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              fileName == null || fileName!.trim().isEmpty ? 'Noch keine Datei ausgewaehlt.' : fileName!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.upload_file_outlined,
+                color: airmiusAccentColor(context),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  fileName == null || fileName!.trim().isEmpty
+                      ? t('membership.noFileSelected')
+                      : fileName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ]),
-        const SizedBox(height: 10),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OutlinedButton.icon(onPressed: uploading ? null : onPick, icon: const Icon(Icons.folder_open_outlined), label: const Text('Datei waehlen')),
-          FilledButton.icon(onPressed: onUpload, icon: uploading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.cloud_upload_outlined), label: Text(uploading ? 'Laedt hoch...' : 'Hochladen')),
-        ]),
-      ]),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: uploading ? null : onPick,
+                icon: Icon(Icons.folder_open_outlined),
+                label: Text(t('membership.chooseFile')),
+              ),
+              FilledButton.icon(
+                onPressed: onUpload,
+                icon: uploading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(Icons.cloud_upload_outlined),
+                label: Text(
+                  uploading
+                      ? t('membership.uploading')
+                      : t('membership.upload'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2926,11 +6174,13 @@ class _MembershipDocumentLine extends StatelessWidget {
     return text.isEmpty || text == 'null' ? fallback : text;
   }
 
-  bool _bool(Object? value) => value == true || '$value'.toLowerCase() == 'true' || '$value' == '1';
+  bool _bool(Object? value) =>
+      value == true || '$value'.toLowerCase() == 'true' || '$value' == '1';
 
   @override
   Widget build(BuildContext context) {
-    final title = _text(document['title'], fallback: 'Dokument');
+    final t = AirmiusScope.of(context).t;
+    final title = _text(document['title'], fallback: t('membership.document'));
     final url = _text(document['url']);
     final isRequired = _bool(document['is_required']);
     final visible = _bool(document['is_visible']);
@@ -2938,30 +6188,84 @@ class _MembershipDocumentLine extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(isRequired ? Icons.verified_user_outlined : Icons.description_outlined, color: isRequired ? AirmiusColors.green : AirmiusColors.blue),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text('$typeLabel - ${isRequired ? 'Pflicht' : 'Optional'} - ${visible ? 'sichtbar' : 'ausgeblendet'}', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-            if (url.isNotEmpty) ...[
-              const SizedBox(height: 2),
-              Text(url, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.blue, fontSize: 12, fontWeight: FontWeight.w700)),
-            ],
-          ]),
-        ),
-        IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined), color: AirmiusColors.blue, tooltip: 'Bearbeiten'),
-        IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline), color: AirmiusColors.red, tooltip: 'Entfernen'),
-      ]),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isRequired
+                ? Icons.verified_user_outlined
+                : Icons.description_outlined,
+            color: isRequired
+                ? AirmiusColors.green
+                : airmiusAccentColor(context),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$typeLabel – '
+                  '${isRequired ? t('membership.field.required') : t('membership.optional')} – '
+                  '${visible ? t('membership.visible') : t('membership.hidden')}',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (url.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    url,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusAccentColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onEdit,
+            icon: Icon(Icons.edit_outlined),
+            color: airmiusAccentColor(context),
+            tooltip: t('membership.edit'),
+          ),
+          IconButton(
+            onPressed: onDelete,
+            icon: Icon(Icons.delete_outline),
+            color: AirmiusColors.red,
+            tooltip: t('membership.remove'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ContributionRuleLine extends StatelessWidget {
-  const _ContributionRuleLine({required this.rule, required this.intervalLabel, required this.onEdit});
+  const _ContributionRuleLine({
+    required this.rule,
+    required this.intervalLabel,
+    required this.onEdit,
+  });
 
   final JsonMap rule;
   final String Function(String value) intervalLabel;
@@ -2974,100 +6278,96 @@ class _ContributionRuleLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = rule['is_active'] == true || '${rule['is_active']}'.toLowerCase() == 'true' || '${rule['is_active']}' == '1';
-    final type = _text(rule['membership_type_name'], fallback: 'Alle Typen');
+    final t = AirmiusScope.of(context).t;
+    final active =
+        rule['is_active'] == true ||
+        '${rule['is_active']}'.toLowerCase() == 'true' ||
+        '${rule['is_active']}' == '1';
+    final type = _text(
+      rule['membership_type_name'],
+      fallback: t('membership.allTypes'),
+    );
     final amount = _text(rule['amount'], fallback: '0');
-    final interval = intervalLabel(_text(rule['billing_interval'], fallback: 'monthly'));
+    final interval = intervalLabel(
+      _text(rule['billing_interval'], fallback: 'monthly'),
+    );
     final validFrom = _text(rule['valid_from'], fallback: '-');
-    final validUntil = _text(rule['valid_until'], fallback: 'offen');
+    final validUntil = _text(
+      rule['valid_until'],
+      fallback: t('membership.open'),
+    );
+    final factorKey = _text(rule['factor_key'], fallback: 'standard');
+    final factorLabel = t('membership.ruleFactor.$factorKey');
+    final factorValue = _text(rule['factor_value']);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(Icons.tune_outlined, color: active ? AirmiusColors.green : AirmiusColors.muted),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_text(rule['name'], fallback: 'Beitragsregel'), style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text('$type - $amount EUR - $interval', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text('Gilt $validFrom bis $validUntil', style: const TextStyle(color: AirmiusColors.mutedSoft, fontSize: 12, fontWeight: FontWeight.w700)),
-          ]),
-        ),
-        TextButton.icon(onPressed: onEdit, icon: const Icon(Icons.edit_outlined, size: 18), label: const Text('Bearbeiten')),
-      ]),
-    );
-  }
-}
-
-class _ClubMembershipHeader extends StatelessWidget {
-  const _ClubMembershipHeader({required this.onMembershipOps});
-
-  final VoidCallback onMembershipOps;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      gradient: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('VEREINSBEREICH'),
-          const SizedBox(height: 8),
-          const Text(
-            'Mitglieder & Beiträge',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 21, fontWeight: FontWeight.w900),
+          Icon(
+            Icons.tune_outlined,
+            color: active ? AirmiusColors.green : airmiusMutedColor(context),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Mitgliederdaten, Beitragssätze, Rechnungen, SEPA, DATEV und Import wie in der Web-App als native Flutter-Ansicht.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _text(
+                    rule['name'],
+                    fallback: t('membership.contributionRule'),
+                  ),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$type - $amount EUR - $interval',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (factorKey != 'standard') ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    factorKey == 'discount' && factorValue.isNotEmpty
+                        ? '$factorLabel: $factorValue'
+                        : factorLabel,
+                    style: TextStyle(
+                      color: airmiusAccentColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 2),
+                Text(
+                  '${t('membership.validFrom')} $validFrom '
+                  '${t('membership.to')} $validUntil',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AirmiusButton(
-                label: 'Mitglied importieren',
-                icon: Icons.upload_file_outlined,
-                onPressed: () => openUiAction(
-                  context,
-                  title: 'Mitglied importieren',
-                  body: 'Import-Workflow für bestehende Vereinsmitglieder, CSV und externe Mitglieder.',
-                  status: 'Import',
-                  icon: Icons.upload_file_outlined,
-                ),
-              ),
-              AirmiusButton(
-                label: 'Rechnung erstellen',
-                icon: Icons.receipt_long_outlined,
-                secondary: true,
-                onPressed: () => openUiAction(
-                  context,
-                  title: 'Rechnung erstellen',
-                  body: 'Native Vorbereitung für Mitgliedsbeitrag, Fälligkeit, Zahlungsstatus und Erinnerung.',
-                  status: 'Rechnung',
-                  icon: Icons.receipt_long_outlined,
-                ),
-              ),
-              AirmiusButton(
-                label: 'SEPA export',
-                icon: Icons.account_balance_outlined,
-                secondary: true,
-                onPressed: () => openUiAction(
-                  context,
-                  title: 'SEPA export',
-                  body: 'SEPA-Mandate prüfen und Export für Sammellauf vorbereiten.',
-                  status: 'SEPA',
-                  icon: Icons.account_balance_outlined,
-                ),
-              ),
-              AirmiusButton(label: 'Membership Ops', icon: Icons.tune_outlined, secondary: true, onPressed: onMembershipOps),
-            ],
+          TextButton.icon(
+            onPressed: onEdit,
+            icon: Icon(Icons.edit_outlined, size: 18),
+            label: Text(t('membership.edit')),
           ),
         ],
       ),
@@ -3076,7 +6376,13 @@ class _ClubMembershipHeader extends StatelessWidget {
 }
 
 class _MembershipKpi {
-  const _MembershipKpi({required this.title, required this.value, required this.detail, this.icon, this.accent});
+  const _MembershipKpi({
+    required this.title,
+    required this.value,
+    required this.detail,
+    this.icon,
+    this.accent,
+  });
 
   final String title;
   final String value;
@@ -3094,10 +6400,15 @@ class _MembershipKpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxColumns = constraints.maxWidth >= 720 ? 4 : 2;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final maxColumns = constraints.maxWidth >= 720
+            ? 4
+            : constraints.maxWidth < 400 && textScale > 1.15
+            ? 1
+            : 2;
         final columns = cards.length < maxColumns ? cards.length : maxColumns;
         const gap = 10.0;
-        const cardHeight = 150.0;
+        final cardHeight = textScale > 1.15 ? 184.0 : 150.0;
         final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
 
         return Wrap(
@@ -3105,7 +6416,12 @@ class _MembershipKpiGrid extends StatelessWidget {
           spacing: gap,
           runSpacing: gap,
           children: [
-            for (final card in cards) SizedBox(width: width, height: cardHeight, child: _MembershipKpiCard(card: card)),
+            for (final card in cards)
+              SizedBox(
+                width: width,
+                height: cardHeight,
+                child: _MembershipKpiCard(card: card),
+              ),
           ],
         );
       },
@@ -3127,7 +6443,11 @@ class _MembershipTreasuryKpiGrid extends StatelessWidget {
         const gap = 10.0;
 
         Widget tile(_MembershipKpi card, double width, double height) {
-          return SizedBox(width: width, height: height, child: _MembershipKpiCard(card: card));
+          return SizedBox(
+            width: width,
+            height: height,
+            child: _MembershipKpiCard(card: card),
+          );
         }
 
         if (constraints.maxWidth >= 720) {
@@ -3204,8 +6524,14 @@ class _MembershipKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = card.accent;
-    final borderColor = accent == null ? AirmiusColors.border : Color.lerp(AirmiusColors.border, accent, 0.55) ?? AirmiusColors.border;
-    final backgroundColor = accent == null ? AirmiusColors.card : Color.lerp(AirmiusColors.card, accent, 0.08) ?? AirmiusColors.card;
+    final borderColor = accent == null
+        ? airmiusBorderColor(context)
+        : Color.lerp(airmiusBorderColor(context), accent, 0.55) ??
+              airmiusBorderColor(context);
+    final backgroundColor = accent == null
+        ? airmiusSurfaceColor(context)
+        : Color.lerp(airmiusSurfaceColor(context), accent, 0.08) ??
+              airmiusSurfaceColor(context);
 
     return Container(
       padding: const EdgeInsets.all(13),
@@ -3226,7 +6552,12 @@ class _MembershipKpiCard extends StatelessWidget {
                   card.title.toUpperCase(),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .2),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .2,
+                  ),
                 ),
               ),
               if (card.icon != null) ...[
@@ -3235,11 +6566,19 @@ class _MembershipKpiCard extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: (accent ?? AirmiusColors.borderStrong).withValues(alpha: 0.12),
+                    color: (accent ?? Theme.of(context).colorScheme.outline)
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: (accent ?? AirmiusColors.borderStrong).withValues(alpha: 0.35)),
+                    border: Border.all(
+                      color: (accent ?? Theme.of(context).colorScheme.outline)
+                          .withValues(alpha: 0.35),
+                    ),
                   ),
-                  child: Icon(card.icon, color: accent ?? AirmiusColors.muted, size: 18),
+                  child: Icon(
+                    card.icon,
+                    color: accent ?? airmiusMutedColor(context),
+                    size: 18,
+                  ),
                 ),
               ],
             ],
@@ -3248,10 +6587,26 @@ class _MembershipKpiCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(card.value, style: const TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+            child: Text(
+              card.value,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 23,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
-          Text(card.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.25)),
+          Text(
+            card.detail,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              height: 1.25,
+            ),
+          ),
         ],
       ),
     );
@@ -3259,11 +6614,29 @@ class _MembershipKpiCard extends StatelessWidget {
 }
 
 class _MemberEntry {
-  const _MemberEntry({required this.id, required this.name, required this.email, required this.type, required this.number, required this.balance, required this.sepa});
+  const _MemberEntry({
+    required this.id,
+    required this.externalId,
+    required this.isExternal,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.status,
+    required this.membership,
+    required this.type,
+    required this.number,
+    required this.balance,
+    required this.sepa,
+  });
 
   final int id;
+  final int? externalId;
+  final bool isExternal;
   final String name;
   final String email;
+  final String role;
+  final String status;
+  final JsonMap membership;
   final String type;
   final String number;
   final String balance;
@@ -3271,12 +6644,23 @@ class _MemberEntry {
 }
 
 class _InvoiceEntry {
-  const _InvoiceEntry({required this.id, required this.title, required this.person, required this.amount, required this.status, required this.color});
+  const _InvoiceEntry({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.person,
+    required this.amount,
+    required this.statusKey,
+    required this.status,
+    required this.color,
+  });
 
   final int id;
+  final int userId;
   final String title;
   final String person;
   final String amount;
+  final String statusKey;
   final String status;
   final Color color;
 }
@@ -3356,24 +6740,44 @@ class _FinanceEntry {
 }
 
 class _BankEntry {
-  const _BankEntry({required this.title, required this.detail});
+  const _BankEntry({
+    required this.id,
+    required this.invoiceId,
+    required this.status,
+    required this.title,
+    required this.detail,
+  });
 
+  final int id;
+  final int invoiceId;
+  final String status;
   final String title;
   final String detail;
 }
 
 class _MemberCard extends StatelessWidget {
-  const _MemberCard({required this.member});
+  const _MemberCard({
+    required this.member,
+    required this.onManage,
+    this.showManage = true,
+  });
 
   final _MemberEntry member;
+  final VoidCallback onManage;
+  final bool showManage;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceSoftColor(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -3385,13 +6789,36 @@ class _MemberCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(member.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                      Text(
+                        member.name,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                       const SizedBox(height: 3),
-                      Text(member.email, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w600)),
+                      Text(
+                        member.email,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                StatusPill(member.type, color: member.type == 'Extern' ? AirmiusColors.amber : AirmiusColors.blue),
+                StatusPill(
+                  t(_memberFilterTranslationKey(member.type)),
+                  color: member.type == 'Extern'
+                      ? AirmiusColors.amber
+                      : airmiusAccentColor(context),
+                ),
+                if (showManage)
+                  IconButton(
+                    tooltip: t('membership.manageMember'),
+                    onPressed: onManage,
+                    icon: Icon(Icons.more_vert),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -3399,9 +6826,30 @@ class _MemberCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                StatusPill(member.number, color: AirmiusColors.muted),
-                StatusPill(member.sepa ? 'SEPA Mandat' : 'Überweisung', color: member.sepa ? AirmiusColors.green : AirmiusColors.amber),
-                StatusPill(member.balance == '0,00 EUR' ? 'Ausgeglichen' : 'Offen ${member.balance}', color: member.balance == '0,00 EUR' ? AirmiusColors.green : AirmiusColors.red),
+                StatusPill(member.number, color: airmiusMutedColor(context)),
+                if ('${member.membership['family_group_key'] ?? ''}'
+                    .trim()
+                    .isNotEmpty)
+                  StatusPill(
+                    '${t('membership.familyGroupKey')}: ${member.membership['family_group_key']}',
+                    color: airmiusAccentColor(context),
+                  ),
+                StatusPill(
+                  member.sepa
+                      ? t('membership.document.sepa')
+                      : t('membership.payment.bankTransfer'),
+                  color: member.sepa
+                      ? AirmiusColors.green
+                      : AirmiusColors.amber,
+                ),
+                StatusPill(
+                  member.balance == '0,00 EUR'
+                      ? t('membership.settled')
+                      : '${t('membership.open')} ${member.balance}',
+                  color: member.balance == '0,00 EUR'
+                      ? AirmiusColors.green
+                      : AirmiusColors.red,
+                ),
               ],
             ),
           ],
@@ -3412,12 +6860,14 @@ class _MemberCard extends StatelessWidget {
 }
 
 class _InvoiceLine extends StatelessWidget {
-  const _InvoiceLine({required this.invoice});
+  const _InvoiceLine({required this.invoice, required this.onManage});
 
   final _InvoiceEntry invoice;
+  final VoidCallback onManage;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -3425,21 +6875,50 @@ class _InvoiceLine extends StatelessWidget {
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-            child: const Icon(Icons.receipt_long_outlined, color: AirmiusColors.blue),
+            decoration: BoxDecoration(
+              color: airmiusSurfaceSoftColor(context),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: airmiusBorderColor(context)),
+            ),
+            child: Icon(
+              Icons.receipt_long_outlined,
+              color: airmiusAccentColor(context),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(invoice.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  invoice.title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('${invoice.person} - ${invoice.amount}', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w600)),
+                Text(
+                  '${invoice.person} - ${invoice.amount}',
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
-          StatusPill(invoice.status, color: invoice.color),
+          StatusPill(
+            invoice.statusKey == 'paid'
+                ? t('membership.paid')
+                : t('membership.open'),
+            color: invoice.color,
+          ),
+          IconButton(
+            tooltip: t('membership.manageInvoice'),
+            onPressed: onManage,
+            icon: Icon(Icons.more_vert),
+          ),
         ],
       ),
     );
@@ -3454,17 +6933,26 @@ class _PaymentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: payment.color.withValues(alpha: 0.45))),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: payment.color.withValues(alpha: 0.45)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: payment.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14), border: Border.all(color: payment.color.withValues(alpha: 0.45))),
+            decoration: BoxDecoration(
+              color: payment.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: payment.color.withValues(alpha: 0.45)),
+            ),
             child: Icon(payment.icon, color: payment.color),
           ),
           const SizedBox(width: 12),
@@ -3476,33 +6964,67 @@ class _PaymentLine extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(payment.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                      child: Text(
+                        payment.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text(payment.amount, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    Text(
+                      payment.amount,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(width: 4),
                     IconButton(
-                      tooltip: 'Bearbeiten',
+                      tooltip: t('membership.edit'),
                       visualDensity: VisualDensity.compact,
                       onPressed: onEdit,
-                      icon: Icon(Icons.edit_outlined, color: payment.color, size: 20),
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: payment.color,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(payment.person, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                Text(
+                  payment.person,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     StatusPill(payment.method, color: payment.color),
-                    StatusPill(payment.date, color: AirmiusColors.muted),
+                    StatusPill(payment.date, color: airmiusMutedColor(context)),
                   ],
                 ),
                 if (payment.detail.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(payment.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    payment.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -3521,21 +7043,34 @@ class _FinanceEntryLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final typeLabel = entry.type == 'income' ? 'Einnahme' : 'Ausgabe';
-    final accountLabel = entry.account == 'bank' ? 'Bank' : 'Bar';
+    final t = AirmiusScope.of(context).t;
+    final typeLabel = entry.type == 'income'
+        ? t('membership.financeType.income')
+        : t('membership.financeType.expense');
+    final accountLabel = entry.account == 'bank'
+        ? t('membership.financeAccount.bank')
+        : t('membership.financeAccount.cash');
     final amountPrefix = entry.type == 'income' ? '+' : '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: entry.color.withValues(alpha: 0.45))),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: entry.color.withValues(alpha: 0.45)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 42,
             height: 42,
-            decoration: BoxDecoration(color: entry.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14), border: Border.all(color: entry.color.withValues(alpha: 0.45))),
+            decoration: BoxDecoration(
+              color: entry.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: entry.color.withValues(alpha: 0.45)),
+            ),
             child: Icon(entry.icon, color: entry.color),
           ),
           const SizedBox(width: 12),
@@ -3547,16 +7082,34 @@ class _FinanceEntryLine extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(entry.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                      child: Text(
+                        entry.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text('$amountPrefix ${entry.amount}', style: TextStyle(color: entry.color, fontWeight: FontWeight.w900)),
+                    Text(
+                      '$amountPrefix ${entry.amount}',
+                      style: TextStyle(
+                        color: entry.color,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(width: 4),
                     IconButton(
-                      tooltip: 'Bearbeiten',
+                      tooltip: t('membership.edit'),
                       visualDensity: VisualDensity.compact,
                       onPressed: onEdit,
-                      icon: Icon(Icons.edit_outlined, color: entry.color, size: 20),
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: entry.color,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -3566,13 +7119,24 @@ class _FinanceEntryLine extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     StatusPill(typeLabel, color: entry.color),
-                    StatusPill(accountLabel, color: AirmiusColors.blue),
-                    StatusPill(entry.date, color: AirmiusColors.muted),
+                    StatusPill(
+                      accountLabel,
+                      color: airmiusAccentColor(context),
+                    ),
+                    StatusPill(entry.date, color: airmiusMutedColor(context)),
                   ],
                 ),
                 if (entry.detail.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(entry.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    entry.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -3584,30 +7148,54 @@ class _FinanceEntryLine extends StatelessWidget {
 }
 
 class _BankLine extends StatelessWidget {
-  const _BankLine({required this.entry});
+  const _BankLine({required this.entry, required this.onConfirm});
 
   final _BankEntry entry;
+  final VoidCallback? onConfirm;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.sync_alt_outlined, color: AirmiusColors.green),
+          Icon(Icons.sync_alt_outlined, color: AirmiusColors.green),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  entry.title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(entry.detail, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  entry.detail,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),
+          if (onConfirm != null)
+            IconButton(
+              tooltip: t('membership.confirmAssignment'),
+              onPressed: onConfirm,
+              icon: Icon(Icons.task_alt_outlined, color: AirmiusColors.green),
+            ),
         ],
       ),
     );
@@ -3615,7 +7203,12 @@ class _BankLine extends StatelessWidget {
 }
 
 class _ExportTile extends StatelessWidget {
-  const _ExportTile({required this.icon, required this.title, required this.subtitle, required this.status});
+  const _ExportTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.status,
+  });
 
   final IconData icon;
   final String title;
@@ -3632,17 +7225,33 @@ class _ExportTile extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(15), border: Border.all(color: AirmiusColors.border)),
-            child: Icon(icon, color: AirmiusColors.blue),
+            decoration: BoxDecoration(
+              color: airmiusAccentColor(context).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: airmiusBorderColor(context)),
+            ),
+            child: Icon(icon, color: airmiusAccentColor(context)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.35,
+                  ),
+                ),
               ],
             ),
           ),

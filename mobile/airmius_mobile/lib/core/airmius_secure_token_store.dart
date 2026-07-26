@@ -50,6 +50,12 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
     final payload = _encode(session);
     try {
       await _storage.write(key: _sessionKey, value: payload);
+    } catch (_) {
+      // Android can retain encrypted preferences whose old Keystore key is no
+      // longer usable after reinstalling or changing the Play signing context.
+      // Delete the unreadable entry once and recreate it with the current key.
+      await _storage.delete(key: _sessionKey);
+      await _storage.write(key: _sessionKey, value: payload);
     } finally {
       await _legacyMigrationStore.clear();
     }

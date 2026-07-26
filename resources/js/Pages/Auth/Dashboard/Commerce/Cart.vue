@@ -16,7 +16,8 @@ const props = defineProps({
     marketplaceVisuals: { type: Object, default: () => ({}) },
 })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 const initialAddress = props.profileAddress || props.shippingAddresses[0] || props.checkoutAddress || {}
 const cartCheckoutForm = useForm({
     provider: 'bank_transfer',
@@ -46,7 +47,7 @@ const sideBannerStyle = computed(() => ({
     width: `${Math.max(148, Math.min(192, Number(sideBannerDimensions.value.width || 192)))}px`,
 }))
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: currency || 'EUR',
 }).format(Number(cents || 0) / 100)

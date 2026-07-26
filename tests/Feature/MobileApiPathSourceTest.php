@@ -20,7 +20,7 @@ class MobileApiPathSourceTest extends TestCase
         $app = file_get_contents(base_path('mobile/airmius_mobile/lib/airmius_app.dart'));
         $client = file_get_contents(base_path('mobile/airmius_mobile/lib/core/airmius_api_client.dart'));
 
-        $this->assertStringContainsString("return kReleaseMode ? 'https://airmius.com' : 'http://localhost'", $app);
+        $this->assertStringContainsString("return kReleaseMode ? 'https://app.airmius.com' : 'http://localhost'", $app);
         $this->assertStringContainsString("'/api/v1/auth/login'", $client);
         $this->assertStringContainsString("'/api/v1/mobile/push-devices'", $client);
     }

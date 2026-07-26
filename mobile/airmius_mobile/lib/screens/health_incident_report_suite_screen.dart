@@ -7,10 +7,12 @@ class HealthIncidentReportSuiteScreen extends StatefulWidget {
   const HealthIncidentReportSuiteScreen({super.key});
 
   @override
-  State<HealthIncidentReportSuiteScreen> createState() => _HealthIncidentReportSuiteScreenState();
+  State<HealthIncidentReportSuiteScreen> createState() =>
+      _HealthIncidentReportSuiteScreenState();
 }
 
-class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSuiteScreen> {
+class _HealthIncidentReportSuiteScreenState
+    extends State<HealthIncidentReportSuiteScreen> {
   String incidentType = 'Training';
   bool notifyGuardian = true;
   bool notifyClubAdmin = true;
@@ -23,28 +25,32 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
       const _IncidentRow(
         title: 'Knieverletzung beim Training',
         status: 'Dokumentiert',
-        body: 'Trainer erfasst Zeitpunkt, Team, Erste-Hilfe-Notiz, betroffene Person und naechste Schritte.',
+        body:
+            'Trainer erfasst Zeitpunkt, Team, Erste-Hilfe-Notiz, betroffene Person und naechste Schritte.',
         icon: Icons.healing_outlined,
         color: AirmiusColors.amber,
       ),
       const _IncidentRow(
         title: 'Notfallkontakt informiert',
         status: 'Erledigt',
-        body: 'Guardian oder Notfallkontakt wurde informiert; Verlauf bleibt für berechtigte Rollen sichtbar.',
+        body:
+            'Guardian oder Notfallkontakt wurde informiert; Verlauf bleibt für berechtigte Rollen sichtbar.',
         icon: Icons.family_restroom_outlined,
         color: AirmiusColors.green,
       ),
       const _IncidentRow(
         title: 'Gesundheitshinweis aktualisiert',
         status: 'Privat',
-        body: 'User kann Allergien, medizinische Hinweise und Trainingsfreigaben kontrolliert bereitstellen.',
+        body:
+            'User kann Allergien, medizinische Hinweise und Trainingsfreigaben kontrolliert bereitstellen.',
         icon: Icons.health_and_safety_outlined,
         color: AirmiusColors.blue,
       ),
       const _IncidentRow(
         title: 'Vorfall eskaliert',
         status: 'Support',
-        body: 'Bei Streitfall oder schwerem Vorfall kann ein Supportticket mit Audit-Verlauf entstehen.',
+        body:
+            'Bei Streitfall oder schwerem Vorfall kann ein Supportticket mit Audit-Verlauf entstehen.',
         icon: Icons.support_agent_outlined,
         color: AirmiusColors.pink,
       ),
@@ -55,6 +61,8 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
       subtitle: 'Training, Notfall und Dokumentation',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -63,9 +71,13 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
               children: [
                 const SectionLabel('SAFETY FLOW'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Vereine brauchen mobil eine sichere Strecke für Verletzungen, Gesundheitshinweise, Notfallkontakte, Guardian-Infos, Dokumentation und Eskalation.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +106,8 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                     ButtonSegment(value: 'Support', label: Text('Support')),
                   ],
                   selected: {incidentType},
-                  onSelectionChanged: (value) => setState(() => incidentType = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => incidentType = value.first),
                 ),
               ],
             ),
@@ -106,10 +119,32 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
               children: [
                 const SectionLabel('OPTIONEN'),
                 const SizedBox(height: 8),
-                _IncidentSwitch(title: 'Guardian informieren', value: notifyGuardian, color: AirmiusColors.green, onChanged: (value) => setState(() => notifyGuardian = value)),
-                _IncidentSwitch(title: 'Vereinsadmin informieren', value: notifyClubAdmin, color: AirmiusColors.blue, onChanged: (value) => setState(() => notifyClubAdmin = value)),
-                _IncidentSwitch(title: 'Medizinische Notiz anhaengen', value: attachMedicalNote, color: AirmiusColors.amber, onChanged: (value) => setState(() => attachMedicalNote = value)),
-                _IncidentSwitch(title: 'Supportticket erstellen', value: createSupportTicket, color: AirmiusColors.pink, onChanged: (value) => setState(() => createSupportTicket = value)),
+                _IncidentSwitch(
+                  title: 'Guardian informieren',
+                  value: notifyGuardian,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) => setState(() => notifyGuardian = value),
+                ),
+                _IncidentSwitch(
+                  title: 'Vereinsadmin informieren',
+                  value: notifyClubAdmin,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) => setState(() => notifyClubAdmin = value),
+                ),
+                _IncidentSwitch(
+                  title: 'Medizinische Notiz anhaengen',
+                  value: attachMedicalNote,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) =>
+                      setState(() => attachMedicalNote = value),
+                ),
+                _IncidentSwitch(
+                  title: 'Supportticket erstellen',
+                  value: createSupportTicket,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) =>
+                      setState(() => createSupportTicket = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +161,11 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                 const SizedBox(height: 8),
                 Text(
                   'Aktueller Kontext: $incidentType. Später verbindet die API Vorfall, Training/Event, Team, Rollenrechte, Guardian, Notfallkontakt, Dokumente und Audit-Verlauf.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +174,8 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                   onPressed: () => openUiAction(
                     context,
                     title: 'Vorfall erfassen',
-                    body: 'Diese UI bereitet Vorfallmeldungen, Gesundheitshinweise, Guardian-Benachrichtigung, Dokumentation und Eskalation für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Vorfallmeldungen, Gesundheitshinweise, Guardian-Benachrichtigung, Dokumentation und Eskalation für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.report_outlined,
                   ),
@@ -182,7 +222,13 @@ class _IncidentSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -201,7 +247,10 @@ class _IncidentCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(icon: report.icon, color: report.color),
+          IconBadge(
+            icon: report.icon,
+            color: airmiusSemanticColor(context, report.color),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -209,12 +258,31 @@ class _IncidentCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(report.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                    StatusPill(report.status, color: report.color),
+                    Expanded(
+                      child: Text(
+                        report.title,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    StatusPill(
+                      report.status,
+                      color: airmiusSemanticColor(context, report.color),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(report.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                Text(
+                  report.body,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.42,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

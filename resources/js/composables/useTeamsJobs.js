@@ -1,7 +1,7 @@
 ﻿import { router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
-export function useTeamsJobs({ openDeleteModal, setActionNotice }) {
+export function useTeamsJobs({ openDeleteModal, setActionNotice, tx = (key, fallback) => fallback }) {
     const showJobModal = ref(false)
     const selectedJobClub = ref(null)
     const jobModalNotice = ref(null)
@@ -79,12 +79,12 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice }) {
             onSuccess: () => {
                 resetJobForm(club)
                 closeJobModal()
-                setActionNotice('success', isEditing ? 'Eintrag wurde aktualisiert.' : 'Eintrag wurde erstellt.')
+                setActionNotice('success', isEditing ? tx('messages.job_updated', 'Eintrag wurde aktualisiert.') : tx('messages.job_created', 'Eintrag wurde erstellt.'))
             },
             onError: () => {
                 jobModalNotice.value = {
                     type: 'error',
-                    message: 'Eintrag konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.',
+                    message: tx('messages.job_save_error', 'Eintrag konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.'),
                 }
             },
             onFinish: () => {
@@ -99,14 +99,14 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice }) {
 
     const deleteJob = (job) => {
         openDeleteModal({
-            title: `Stelle "${job.title}" löschen`,
-            description: 'Dieser Eintrag wird dauerhaft gelöscht und erscheint danach nicht mehr auf der Jobs-Seite.',
+            title: tx('messages.job_delete_title', `Stelle "${job.title}" löschen`, { title: job.title }),
+            description: tx('messages.job_delete_message', 'Dieser Eintrag wird dauerhaft gelöscht und erscheint danach nicht mehr auf der Jobs-Seite.'),
             route: 'auth.organization-jobs.destroy',
             params: job.id,
-            successMessage: 'Eintrag wurde gelöscht.',
-            errorMessage: 'Eintrag konnte nicht gelöscht werden.',
+            successMessage: tx('messages.job_deleted', 'Eintrag wurde gelöscht.'),
+            errorMessage: tx('messages.job_delete_error', 'Eintrag konnte nicht gelöscht werden.'),
             confirmText: 'löschen',
-            buttonLabel: 'Stelle löschen',
+            buttonLabel: tx('messages.job_delete_button', 'Stelle löschen'),
         })
     }
 
@@ -125,4 +125,3 @@ export function useTeamsJobs({ openDeleteModal, setActionNotice }) {
         submitJob,
     }
 }
-

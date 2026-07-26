@@ -3,8 +3,15 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     invoices: { type: Object, required: true },
@@ -136,15 +143,7 @@ const recipientLabel = (invoice) => {
     return 'Ohne Empfänger'
 }
 
-const statusLabel = (status) => ({
-    paid: 'Bezahlt',
-    open: 'Offen',
-    pending: 'Ausstehend',
-    awaiting_transfer: 'Warte auf Überweisung',
-    overdue: 'Überfällig',
-    cancelled: 'Storniert',
-    failed: 'Fehlgeschlagen',
-}[status] || status || '-')
+const statusLabel = (status) => tx(`admin_finance.status.${status}`, status || '-')
 
 const statusClasses = (status) => ({
     paid: 'bg-air-green/15 text-air-green border-air-green/30',
@@ -157,11 +156,11 @@ const statusClasses = (status) => ({
 }[status] || 'bg-muted text-secondary border-border')
 
 const statusOptions = [
-    { value: 'open', label: 'Offen', hint: 'Rechnung ist erstellt und noch nicht bezahlt.' },
-    { value: 'pending', label: 'Ausstehend', hint: 'Zahlung oder Prüfung ist noch in Bearbeitung.' },
-    { value: 'paid', label: 'Bezahlt', hint: 'Rechnung wird als bezahlt markiert.' },
-    { value: 'overdue', label: 'Überfällig', hint: 'Fälligkeit ist abgelaufen.' },
-    { value: 'cancelled', label: 'Storniert', hint: 'Rechnung ist nicht mehr aktiv.' },
+    { value: 'open', label: 'admin_finance.status.open', hint: 'admin_finance.invoice_hints.open' },
+    { value: 'pending', label: 'admin_finance.status.pending', hint: 'admin_finance.invoice_hints.pending' },
+    { value: 'paid', label: 'admin_finance.status.paid', hint: 'admin_finance.invoice_hints.paid' },
+    { value: 'overdue', label: 'admin_finance.status.overdue', hint: 'admin_finance.invoice_hints.overdue' },
+    { value: 'cancelled', label: 'admin_finance.status.cancelled', hint: 'admin_finance.invoice_hints.cancelled' },
 ]
 
 const deleteInvoice = async (invoice) => {
@@ -170,9 +169,9 @@ const deleteInvoice = async (invoice) => {
     }
 
     const confirmed = await confirmDialog({
-        title: 'Rechnung löschen',
-        message: `Soll Rechnung ${invoice.number || invoice.id} wirklich gelöscht werden?`,
-        confirmLabel: 'Löschen',
+        title: tx('admin_finance.invoice_delete_title', 'Rechnung löschen'),
+        message: tx('admin_finance.invoice_delete_message', `Soll Rechnung ${invoice.number || invoice.id} wirklich gelöscht werden?`, { number: invoice.number || invoice.id }),
+        confirmLabel: tx('admin_finance.delete', 'Löschen'),
         danger: true,
     })
 
@@ -185,17 +184,16 @@ const deleteInvoice = async (invoice) => {
 </script>
 
 <template>
-    <Head title="Rechnungen" />
+    <Head :title="tx('admin_finance.invoices_title', 'Rechnungen')" />
 
     <div class="space-y-6">
         <section class="overflow-hidden rounded-2xl border-l-4 border-l-air-blue border-border bg-card">
             <div class="grid gap-6 p-5 lg:grid-cols-[1fr_auto] lg:items-center lg:p-6">
                 <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Finanzen</p>
-                        <h1 class="mt-2 text-3xl font-black text-primary">Rechnungszentrale</h1>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">{{ tx('admin_finance.eyebrow', 'Finanzen') }}</p>
+                        <h1 class="mt-2 text-3xl font-black text-primary">{{ tx('admin_finance.invoices_title', 'Rechnungszentrale') }}</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Erstelle und prüfe Rechnungen für Konto-Abos, Outfit-Abos, Marketplace-Käufe, Kurse,
-                        ADS, Sponsoring und Werbeagentur-Leistungen wie Website, Logo oder Branding.
+                        {{ tx('admin_finance.invoices_intro', 'Erstelle und prüfe Rechnungen für Konto-Abos, Outfit-Abos, Marketplace-Käufe, Kurse, ADS, Sponsoring und Werbeagentur-Leistungen wie Website, Logo oder Branding.') }}
                     </p>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row">
@@ -205,11 +203,11 @@ const deleteInvoice = async (invoice) => {
                         @click="openCreateModal"
                     >
                         <i class="las la-plus-circle text-lg"></i>
-                        Rechnung erstellen
+                        {{ tx('admin_finance.create_invoice', 'Rechnung erstellen') }}
                     </button>
                     <Link :href="route('payments.index')" class="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-bold text-primary hover:bg-muted">
                         <i class="las la-credit-card text-lg"></i>
-                        Zahlungen
+                        {{ tx('admin_finance.payments_title', 'Zahlungen') }}
                     </Link>
                 </div>
             </div>
@@ -217,19 +215,19 @@ const deleteInvoice = async (invoice) => {
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-border bg-card p-5">
-                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Alle Rechnungen</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('admin_finance.all_invoices', 'Alle Rechnungen') }}</p>
                 <p class="mt-3 text-3xl font-black text-primary">{{ summary.count || 0 }}</p>
             </div>
             <div class="rounded-2xl border border-border bg-card p-5">
-                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Offen</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('admin_finance.open', 'Offen') }}</p>
                 <p class="mt-3 text-3xl font-black text-primary">{{ summary.open || 0 }}</p>
             </div>
             <div class="rounded-2xl border border-border bg-card p-5">
-                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Bezahlt</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('admin_finance.paid', 'Bezahlt') }}</p>
                 <p class="mt-3 text-3xl font-black text-primary">{{ summary.paid || 0 }}</p>
             </div>
             <div class="rounded-2xl border border-border bg-card p-5">
-                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Umsatz bezahlt</p>
+                <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ tx('admin_finance.revenue_paid', 'Umsatz bezahlt') }}</p>
                 <p class="mt-3 text-3xl font-black text-primary">{{ summary.revenue || '0,00 EUR' }}</p>
             </div>
         </section>
@@ -237,14 +235,14 @@ const deleteInvoice = async (invoice) => {
         <section class="rounded-2xl border-l-4 border-l-air-blue border border-border bg-card">
             <div class="flex flex-col gap-2 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Rechnungsliste</p>
-                    <h2 class="mt-1 text-lg font-black text-primary">Alle Quellen zentral</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">{{ tx('admin_finance.invoice_list', 'Rechnungsliste') }}</p>
+                    <h2 class="mt-1 text-lg font-black text-primary">{{ tx('admin_finance.all_sources', 'Alle Quellen zentral') }}</h2>
                 </div>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <p class="text-sm text-secondary">ADS, Marketplace, E-Learning, Outfit, Konto-Abo und manuelle Rechnungen</p>
                     <button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="openCreateModal">
                         <i class="las la-plus-circle text-lg"></i>
-                        Neu
+                        {{ tx('admin_finance.new', 'Neu') }}
                     </button>
                 </div>
             </div>
@@ -299,7 +297,7 @@ const deleteInvoice = async (invoice) => {
                             <td class="px-5 py-4 text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted">PDF</a>
-                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Löschen</button>
+                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">{{ tx('admin_finance.delete', 'Löschen') }}</button>
                                     <span v-if="!invoice.download_url && !invoice.delete_url" class="text-xs text-secondary">-</span>
                                 </div>
                             </td>
@@ -340,12 +338,12 @@ const deleteInvoice = async (invoice) => {
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary">PDF</a>
-                                <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Löschen</button>
+                        <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">{{ tx('admin_finance.delete', 'Löschen') }}</button>
                     </div>
                 </article>
             </div>
 
-            <p v-if="!invoices.data.length" class="px-5 py-8 text-sm text-secondary">Noch keine Rechnungen vorhanden.</p>
+            <p v-if="!invoices.data.length" class="px-5 py-8 text-sm text-secondary">{{ tx('admin_finance.empty_invoices', 'Noch keine Rechnungen vorhanden.') }}</p>
 
             <div v-if="invoices.links?.length > 3" class="flex flex-wrap gap-2 border-t border-border px-5 py-4">
                 <Link
@@ -401,8 +399,8 @@ const deleteInvoice = async (invoice) => {
                                 :class="statusForm.status === option.value ? 'border-air-blue bg-air-blue/10 text-primary' : 'border-border bg-inputBg text-secondary hover:border-borderHover hover:text-primary'"
                                 @click="statusForm.status = option.value"
                             >
-                                <span class="block text-sm font-black">{{ option.label }}</span>
-                                <span class="mt-1 block text-xs leading-5">{{ option.hint }}</span>
+                                <span class="block text-sm font-black">{{ tx(option.label, option.label) }}</span>
+                                <span class="mt-1 block text-xs leading-5">{{ tx(option.hint, option.hint) }}</span>
                             </button>
                         </div>
                         <p v-if="statusForm.errors.status" class="text-sm text-error">{{ statusForm.errors.status }}</p>
@@ -425,7 +423,7 @@ const deleteInvoice = async (invoice) => {
 
                     <div class="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-xl border border-border px-5 py-3 text-sm font-bold text-primary hover:bg-muted" :disabled="statusForm.processing" @click="closeStatusModal">
-                            Abbrechen
+                            {{ tx('admin_finance.cancel', 'Abbrechen') }}
                         </button>
                         <button
                             type="submit"
@@ -433,7 +431,7 @@ const deleteInvoice = async (invoice) => {
                             :disabled="statusForm.processing"
                         >
                             <i class="las la-sync-alt text-lg"></i>
-                            Status speichern
+                            {{ tx('admin_finance.save_status', 'Status speichern') }}
                         </button>
                     </div>
                 </form>
@@ -452,10 +450,10 @@ const deleteInvoice = async (invoice) => {
                 >
                     <div class="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-6">
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Neue Rechnung</p>
-                            <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">Rechnung erstellen</h2>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">{{ tx('admin_finance.new_invoice', 'Neue Rechnung') }}</p>
+                            <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">{{ tx('admin_finance.create_invoice', 'Rechnung erstellen') }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                Grund, Empfänger und Leistungsdetails erfassen. Danach wird die Person automatisch informiert.
+                                {{ tx('admin_finance.invoice_create_hint', 'Grund, Empfänger und Leistungsdetails erfassen. Danach wird die Person automatisch informiert.') }}
                             </p>
                         </div>
                         <button
@@ -607,7 +605,7 @@ const deleteInvoice = async (invoice) => {
 
                     <div class="flex shrink-0 flex-col-reverse gap-3 border-t border-border px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
                         <button type="button" class="rounded-xl border border-border px-5 py-3 text-sm font-bold text-primary hover:bg-muted" :disabled="form.processing" @click="closeCreateModal">
-                            Abbrechen
+                            {{ tx('admin_finance.cancel', 'Abbrechen') }}
                         </button>
                         <button
                             type="submit"
@@ -615,7 +613,7 @@ const deleteInvoice = async (invoice) => {
                             :disabled="form.processing"
                         >
                             <i class="las la-file-invoice text-lg"></i>
-                            Rechnung erstellen
+                            {{ tx('admin_finance.create_invoice', 'Rechnung erstellen') }}
                         </button>
                     </div>
                 </form>
@@ -623,4 +621,3 @@ const deleteInvoice = async (invoice) => {
         </Teleport>
     </div>
 </template>
-

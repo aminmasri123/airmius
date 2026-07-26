@@ -208,7 +208,9 @@ class OperatingContractController extends Controller
             'billing_interval' => $contract->billing_interval,
             'billing_interval_label' => $this->billingIntervalLabel($contract->billing_interval),
             'monthly_amount' => $this->money($contract->monthlyEquivalent(), $contract->currency),
+            'raw_monthly_amount' => round($contract->monthlyEquivalent(), 2),
             'yearly_amount' => $this->money($contract->yearlyEquivalent(), $contract->currency),
+            'raw_yearly_amount' => round($contract->yearlyEquivalent(), 2),
             'payment_method' => $contract->payment_method,
             'payment_method_label' => $this->paymentMethodLabel($contract->payment_method),
             'next_due_on' => $contract->next_due_on?->toDateString(),
@@ -243,6 +245,8 @@ class OperatingContractController extends Controller
 
         $monthlyTotal = $active->sum(fn (OperatingContract $contract) => $contract->monthlyEquivalent());
         $yearlyTotal = $monthlyTotal * 12;
+        $monthlyTotals = $this->totalsByCurrency($active, fn (OperatingContract $contract) => $contract->monthlyEquivalent());
+        $yearlyTotals = $this->totalsByCurrency($active, fn (OperatingContract $contract) => $contract->yearlyEquivalent());
 
         $dueSoon = $active
             ->filter(fn (OperatingContract $contract) => $this->isWithinDays($contract->next_due_on, 30))
@@ -279,20 +283,29 @@ class OperatingContractController extends Controller
 
         return [
             'active_count' => $active->count(),
-            'monthly_total' => $this->money($monthlyTotal),
-            'yearly_total' => $this->money($yearlyTotal),
+            'monthly_total' => $this->formattedTotals($monthlyTotals),
+            'raw_monthly_total' => count($monthlyTotals) === 1 ? $monthlyTotals[0]['amount'] : null,
+            'monthly_totals' => $monthlyTotals,
+            'yearly_total' => $this->formattedTotals($yearlyTotals),
+            'raw_yearly_total' => count($yearlyTotals) === 1 ? $yearlyTotals[0]['amount'] : null,
+            'yearly_totals' => $yearlyTotals,
             'due_soon_count' => $dueSoon,
             'notice_soon_count' => $noticeSoon,
             'upcoming' => $upcoming,
             'categories' => $active
                 ->groupBy('category')
-                ->map(fn ($items, $category) => [
-                    'category' => $category,
-                    'label' => $this->categoryLabel($category),
-                    'count' => $items->count(),
-                    'monthly_total' => $this->money($items->sum(fn (OperatingContract $contract) => $contract->monthlyEquivalent())),
-                    'raw_monthly_total' => round($items->sum(fn (OperatingContract $contract) => $contract->monthlyEquivalent()), 2),
-                ])
+                ->map(function ($items, $category) {
+                    $monthlyTotals = $this->totalsByCurrency($items, fn (OperatingContract $contract) => $contract->monthlyEquivalent());
+
+                    return [
+                        'category' => $category,
+                        'label' => $this->categoryLabel($category),
+                        'count' => $items->count(),
+                        'monthly_total' => $this->formattedTotals($monthlyTotals),
+                        'monthly_totals' => $monthlyTotals,
+                        'raw_monthly_total' => count($monthlyTotals) === 1 ? $monthlyTotals[0]['amount'] : null,
+                    ];
+                })
                 ->sortByDesc('raw_monthly_total')
                 ->values(),
         ];
@@ -321,6 +334,25 @@ class OperatingContractController extends Controller
     private function money(float $amount, string $currency = 'EUR'): string
     {
         return number_format($amount, 2, ',', '.').' '.$currency;
+    }
+
+    private function totalsByCurrency($contracts, callable $amount): array
+    {
+        return collect($contracts)
+            ->groupBy(fn (OperatingContract $contract) => strtoupper((string) ($contract->currency ?: 'EUR')))
+            ->map(fn ($items, $currency) => [
+                'currency' => $currency,
+                'amount' => round($items->sum($amount), 2),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function formattedTotals(array $totals): string
+    {
+        return collect($totals)
+            ->map(fn (array $total) => $this->money((float) $total['amount'], $total['currency']))
+            ->implode(' · ');
     }
 
     private function statusOptions(): array
@@ -402,5 +434,3 @@ class OperatingContractController extends Controller
         ][$method] ?? ($method ?: '-');
     }
 }
-
-

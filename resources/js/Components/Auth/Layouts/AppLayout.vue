@@ -11,8 +11,15 @@ const props = defineProps({
 })
 
 const page = usePage()
-const { t, te } = useI18n()
-const permissionDeniedMessage = 'Du hast dafür keine Berechtigung.'
+const { t, te, locale } = useI18n()
+const localeCode = computed(() => ({
+    de: 'de-DE',
+    en: 'en-US',
+    fr: 'fr-FR',
+    ar: 'ar-EG',
+}[locale.value] || 'de-DE'))
+const permissionDeniedMessage = computed(() => te('global_feedback.permission_denied') ? t('global_feedback.permission_denied') : 'Du hast dafür keine Berechtigung.')
+const feedbackText = (key, fallback, params = {}) => te(key) ? t(key, params) : fallback
 const defaultBackendPermissionMessages = new Set([
     'Forbidden',
     'This action is forbidden.',
@@ -180,7 +187,7 @@ const iconFor = (type) => ({
 const formatNotificationDate = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',
@@ -373,7 +380,7 @@ const normalizeFeedbackMessage = (message) => {
     const text = String(message || '').trim()
 
     if (defaultBackendPermissionMessages.has(text)) {
-        return permissionDeniedMessage
+        return permissionDeniedMessage.value
     }
 
     return text
@@ -383,7 +390,7 @@ const firstErrorMessage = (errors) => {
     const values = Object.values(errors || {}).flat()
     const first = values.map(normalizeFeedbackMessage).find((value) => value)
 
-    return first || 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.'
+    return first || feedbackText('global_feedback.validation', 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.')
 }
 
 const showFlashFeedback = (flash = {}) => {
@@ -401,14 +408,14 @@ const showFlashFeedback = (flash = {}) => {
 }
 
 const httpErrorMessage = (status) => {
-    if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
-    if (status === 403) return permissionDeniedMessage
-    if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
-    if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
-    if (status === 422) return 'Bitte prüfe die Eingaben.'
-    if (status >= 500) return 'Serverfehler. Bitte versuche es gleich erneut.'
+    if (status === 401) return feedbackText('global_feedback.session_expired', 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.')
+    if (status === 403) return permissionDeniedMessage.value
+    if (status === 404) return feedbackText('global_feedback.not_found', 'Der angeforderte Inhalt wurde nicht gefunden.')
+    if (status === 419) return feedbackText('global_feedback.session_reload', 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.')
+    if (status === 422) return feedbackText('global_feedback.validation', 'Bitte prüfe die Eingaben.')
+    if (status >= 500) return feedbackText('global_feedback.server', 'Serverfehler. Bitte versuche es gleich erneut.')
 
-    return 'Aktion konnte nicht abgeschlossen werden.'
+    return feedbackText('global_feedback.action_failed', 'Aktion konnte nicht abgeschlossen werden.')
 }
 
 const installGlobalFeedback = () => {

@@ -12,6 +12,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\EventService;
 use App\Support\Api\V1\ApiPagination;
+use App\Support\AppNotification;
 use App\Support\EventAttendance;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -126,6 +127,42 @@ class EventController extends Controller
         );
     }
 
+    public function comments(Request $request, Event $event)
+    {
+        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+
+        $comments = $event->comments()
+            ->with('user:id,name,profile_photo_path')
+            ->latest()
+            ->paginate($this->perPage($request));
+
+        return response()->json(ApiPagination::payload(
+            $comments,
+            $comments->getCollection()->map(fn ($comment) => $this->commentData($comment, $request))->values()->all()
+        ));
+    }
+
+    public function comment(Request $request, Event $event)
+    {
+        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+
+        $data = $request->validate([
+            'content' => ['required', 'string', 'max:1500'],
+        ]);
+
+        $comment = $event->comments()->create([
+            'user_id' => $request->user()->id,
+            'content' => $data['content'],
+        ]);
+        $comment->load('user:id,name,profile_photo_path');
+
+        $this->notifyEventCommentRecipients($event, $comment, $request->user());
+
+        return response()->json([
+            'data' => $this->commentData($comment, $request),
+        ], 201);
+    }
+
     public function store(Request $request)
     {
         $this->authorize('create', Event::class);
@@ -133,6 +170,21 @@ class EventController extends Controller
         $data = $this->validatedEventPayload($request);
         $data['status'] = 'scheduled';
         $data = $this->normalizeEventPayload($request, $data);
+
+        if (! empty($data['recurring']) && ! $this->hasUnlimitedEventCreation($request->user())) {
+            throw ValidationException::withMessages([
+                'recurring' => 'Wiederkehrende Events sind für dein Konto nicht freigeschaltet.',
+            ]);
+        }
+
+        if (
+            in_array($data['recurring'] ?? null, ['weekly', 'biweekly'], true) &&
+            empty($data['recurrence_days'])
+        ) {
+            throw ValidationException::withMessages([
+                'recurrence_days' => 'Für wöchentliche Serien muss mindestens ein Wochentag gewählt werden.',
+            ]);
+        }
 
         $event = $this->service->create($data);
 
@@ -253,6 +305,45 @@ class EventController extends Controller
         return new EventResource($this->decorateEvents(Event::query()->whereKey($event->id), $request)->firstOrFail());
     }
 
+    public function attendance(Request $request, Event $event)
+    {
+        abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
+        abort_unless(EventAttendance::canManage($request->user(), $event), 403);
+
+        $allowedUserIds = EventAttendance::allowedUserIds($event);
+        $statuses = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->whereIn('user_id', $allowedUserIds)
+            ->get(['user_id', 'status', 'response_reason'])
+            ->keyBy('user_id');
+
+        $members = User::query()
+            ->whereIn('id', $allowedUserIds)
+            ->select(['id', 'name', 'profile_photo_path'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $user) use ($statuses) {
+                $participation = $statuses->get($user->id);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'profile_photo_url' => $user->profile_photo_url,
+                    'status' => $participation?->status,
+                    'response_reason' => $participation?->response_reason,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'data' => $members,
+            'meta' => [
+                'event_id' => $event->id,
+                'statuses' => Event::PARTICIPANT_STATUSES,
+            ],
+        ]);
+    }
+
     public function recordAttendance(Request $request, Event $event)
     {
         abort_unless($this->visibleEvents($request)->whereKey($event->id)->exists(), 404);
@@ -298,7 +389,12 @@ class EventController extends Controller
             'recurring' => [...$optional(), Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
             'recurrence_days' => [...$optional(), 'array'],
             'recurrence_days.*' => ['integer', Rule::in([0, 1, 2, 3, 4, 5, 6])],
-            'recurrence_ends_at' => [...$optional(), 'date'],
+            'recurrence_ends_at' => [
+                ...$optional(),
+                'date',
+                'after:start_time',
+                ...($creating ? ['required_with:recurring'] : []),
+            ],
             'reminder_at' => [...$optional(), 'date', 'before_or_equal:start_time'],
             'event_timezone' => [...$optional(), 'timezone'],
         ]);
@@ -408,6 +504,57 @@ class EventController extends Controller
     private function perPage(Request $request): int
     {
         return min(max((int) $request->integer('per_page', 20), 1), 50);
+    }
+
+    private function commentData($comment, Request $request): array
+    {
+        return [
+            'id' => $comment->id,
+            'event_id' => $comment->event_id,
+            'content' => $comment->content,
+            'mine' => (int) $comment->user_id === (int) $request->user()->id,
+            'user' => [
+                'id' => $comment->user?->id,
+                'name' => $comment->user?->name,
+                'profile_photo_url' => $comment->user?->profile_photo_url,
+            ],
+            'created_at' => $comment->created_at?->toJSON(),
+            'updated_at' => $comment->updated_at?->toJSON(),
+        ];
+    }
+
+    private function notifyEventCommentRecipients(Event $event, $comment, User $actor): void
+    {
+        $event->loadMissing(['team.users:id', 'club.users:id', 'team.club.users:id', 'participants:id']);
+
+        $recipientIds = collect([$event->user_id])
+            ->merge($event->participants->pluck('id'));
+
+        if ($event->team_id && $event->team) {
+            $recipientIds = $recipientIds->merge($event->team->users->pluck('id'));
+        } elseif ($event->club_id && $event->club) {
+            $recipientIds = $recipientIds->merge($event->club->users->pluck('id'));
+        } elseif ($event->team?->club) {
+            $recipientIds = $recipientIds->merge($event->team->club->users->pluck('id'));
+        }
+
+        $recipientIds
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn ($id) => $id === (int) $actor->id)
+            ->each(fn ($recipientId) => AppNotification::send($recipientId, 'event.comment', [
+                'title' => $actor->name.' hat ein Event kommentiert',
+                'body' => str($comment->content)->limit(120)->toString(),
+                'url' => route('auth.events.show', $event->id),
+                'actor_id' => $actor->id,
+                'actor_name' => $actor->name,
+                'event_id' => $event->id,
+                'event_title' => $event->title,
+                'comment_id' => $comment->id,
+                'team_id' => $event->team_id,
+                'club_id' => $event->club_id ?: $event->team?->club_id,
+            ]));
     }
 
     private function eventCreationLimitsFor(User $user): array

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../core/airmius_theme.dart';
+import '../core/airmius_api_client.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import 'notification_chat_operations_screen.dart';
-import 'system_admin_operations_screen.dart';
 
 class AdminMailCenterScreen extends StatefulWidget {
   const AdminMailCenterScreen({super.key});
@@ -13,230 +13,627 @@ class AdminMailCenterScreen extends StatefulWidget {
 }
 
 class _AdminMailCenterScreenState extends State<AdminMailCenterScreen> {
-  String _type = 'System';
-  bool _includeEmail = true;
-  bool _includePush = true;
-  bool _includeInApp = true;
-  bool _requireApproval = true;
+  Future<AirmiusJson>? _future;
+  String _section = 'deliveries';
+  bool _busy = false;
 
-  final _subject = TextEditingController(text: 'Willkommen bei Airmius');
-  final _body = TextEditingController(text: 'Diese Nachricht wird als Systemmail, Push oder In-App-Mitteilung vorbereitet.');
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
 
-  final List<_MailItem> _items = const [
-    _MailItem(title: 'Willkommensmail', body: 'Neue User erhalten Hinweise zu Profil, Vereinen, Datenschutz und App-Start.', status: 'Template', channel: 'E-Mail', icon: Icons.mark_email_read_outlined, color: AirmiusColors.blue),
-    _MailItem(title: 'Mitgliedsanfrage Update', body: 'Status, Rückfrage, Annahme, Ablehnung oder Rückzug einer Vereinsanfrage.', status: 'Transaktional', channel: 'In-App', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
-    _MailItem(title: 'Zahlungshinweis', body: 'Beitrag, Intervall, Zahlmethode, offene Zahlung oder Überweisungshinweis.', status: 'Finanzen', channel: 'E-Mail', icon: Icons.payments_outlined, color: AirmiusColors.amber),
-    _MailItem(title: 'Sicherheitswarnung', body: 'Login, Passwort, 2FA, Datenschutzanfrage oder verdächtige Aktivität.', status: 'Sicherheit', channel: 'Push', icon: Icons.security_outlined, color: AirmiusColors.red),
-  ];
+  String t(String key) => AirmiusScope.of(context).t(key);
 
   @override
-  void dispose() {
-    _subject.dispose();
-    _body.dispose();
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _client.adminMailDashboard();
+  }
+
+  void _reload() {
+    setState(() {
+      _future = _client.adminMailDashboard();
+    });
+  }
+
+  Future<void> _run(
+    Future<AirmiusJson> Function() action,
+    String success,
+  ) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(success)));
+      _reload();
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const PageTitle(title: 'Admin Mail Center', subtitle: 'Systemmails, Templates, Kampagnen, Transaktionsmails, Push und In-App-Mitteilungen.'),
-                        const SizedBox(height: 16),
-                        _MailHero(onSend: _send),
-                        const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Nachrichtentyp', value: _type, values: const ['System', 'Transaktional', 'Kampagne', 'Sicherheit', 'Finanzen'], onChanged: (value) => setState(() => _type = value)),
-                        const SizedBox(height: 12),
-                        AirmiusPanel(
-                          title: 'Nachricht erstellen',
-                          child: Column(
-                            children: [
-                              AirmiusTextField(label: 'Betreff', controller: _subject),
-                              const SizedBox(height: 10),
-                              AirmiusTextField(label: 'Inhalt', controller: _body),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: 'Kanaele & Freigaben',
-                          child: Column(
-                            children: [
-                              _SwitchRow(title: 'E-Mail senden', subtitle: 'SMTP/Provider-API später über Laravel anbinden.', value: _includeEmail, onChanged: (value) => setState(() => _includeEmail = value)),
-                              _SwitchRow(title: 'Push senden', subtitle: 'Mobile Push-Nachrichten für wichtige Updates vorbereiten.', value: _includePush, onChanged: (value) => setState(() => _includePush = value)),
-                              _SwitchRow(title: 'In-App anzeigen', subtitle: 'Benachrichtigung im Airmius Notification Center anzeigen.', value: _includeInApp, onChanged: (value) => setState(() => _includeInApp = value)),
-                              _SwitchRow(title: 'Adminfreigabe erforderlich', subtitle: 'Kampagnen und sensible Nachrichten brauchen Freigabe.', value: _requireApproval, onChanged: (value) => setState(() => _requireApproval = value)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        for (final item in _items) ...[
-                          _MailCard(item: item, onOpen: () => _toast('${item.title}: Template vorbereitet')),
-                          const SizedBox(height: 12),
-                        ],
-                        AirmiusPanel(
-                          title: 'Admin-Aktionen',
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              AirmiusButton(label: 'Senden', icon: Icons.send_outlined, onPressed: _send),
-                              AirmiusButton(label: 'Chat/Push', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Push')))),
-                              AirmiusButton(label: 'System Admin', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SystemAdminOperationsScreen()))),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+      appBar: AppBar(
+        title: Text(
+          t('mailAdmin.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        actions: [
+          IconButton(
+            tooltip: t('common.refresh'),
+            onPressed: _busy ? null : _reload,
+            icon: const Icon(Icons.refresh_outlined),
+          ),
+        ],
+      ),
+      body: FutureBuilder<AirmiusJson>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: FilledButton.icon(
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_outlined),
+                label: Text(t('common.retry')),
+              ),
+            );
+          }
+          final data = _mailMap(snapshot.data?['data']);
+          return PageFrame(
+            title: t('mailAdmin.title'),
+            subtitle: t('mailAdmin.subtitle'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _hero(data),
+                const SizedBox(height: 14),
+                _tabs(),
+                if (_busy) ...[
+                  const SizedBox(height: 10),
+                  const LinearProgressIndicator(minHeight: 3),
+                ],
+                const SizedBox(height: 14),
+                _content(data),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _hero(AirmiusJson data) {
+    final summary = _mailMap(data['summary']);
+    final queue = _mailMap(data['queue']);
+    return AirmiusPanel(
+      gradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('mailAdmin.eyebrow')),
+          const SizedBox(height: 7),
+          Text(
+            t('mailAdmin.headline'),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 7),
+          Text(t('mailAdmin.body')),
+          const SizedBox(height: 15),
+          Wrap(
+            spacing: 9,
+            runSpacing: 9,
+            children: [
+              _MailMetric(
+                value: '${_mailInt(summary['last_24h'])}',
+                label: t('mailAdmin.last24h'),
+              ),
+              _MailMetric(
+                value: '${_mailInt(summary['failed'])}',
+                label: t('mailAdmin.failed'),
+              ),
+              _MailMetric(
+                value: '${_mailInt(queue['pending_jobs'])}',
+                label: t('mailAdmin.pendingJobs'),
+              ),
+              _MailMetric(
+                value: '${_mailInt(queue['failed_jobs'])}',
+                label: t('mailAdmin.failedJobs'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabs() {
+    final tabs = {
+      'deliveries': t('mailAdmin.deliveries'),
+      'senders': t('mailAdmin.senders'),
+      'rules': t('mailAdmin.rules'),
+      'queue': t('mailAdmin.queue'),
+    };
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: tabs.entries
+            .map(
+              (entry) => Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: ChoiceChip(
+                  selected: _section == entry.key,
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Text(entry.value),
                   ),
+                  onSelected: (_) => setState(() => _section = entry.key),
                 ),
               ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _content(AirmiusJson data) => switch (_section) {
+    'senders' => _senders(data),
+    'rules' => _rules(data),
+    'queue' => _queue(data),
+    _ => _deliveries(data),
+  };
+
+  Widget _deliveries(AirmiusJson data) {
+    final values = _mailList(data['deliveries']);
+    final categories = _mailList(
+      data['categories'],
+    ).map((value) => '$value').toList();
+    if (values.isEmpty) return EmptyPanel(t('mailAdmin.noDeliveries'));
+    return Column(
+      children: values.map((raw) {
+        final item = _mailMap(raw);
+        final recipient = _mailMap(item['recipient']);
+        final status = '${item['status'] ?? 'unknown'}';
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: AirmiusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${item['mail_type'] ?? '—'}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: StatusPill(t('mailAdmin.status.$status')),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${recipient['name'] ?? '—'} · ${recipient['email'] ?? '—'}\n'
+                  '${item['used_category'] ?? item['primary_category'] ?? '—'} · '
+                  '${item['created_at'] ?? '—'}',
+                ),
+                if ('${item['error_message'] ?? ''}'.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${item['error_message']}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (item['resendable'] == true)
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _resend(item, categories),
+                        icon: const Icon(Icons.replay_outlined),
+                        label: Text(t('mailAdmin.resend')),
+                      ),
+                    if (status != 'resolved')
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _resolve(item),
+                        icon: const Icon(Icons.task_alt_outlined),
+                        label: Text(t('mailAdmin.resolve')),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _senders(AirmiusJson data) {
+    final canManageSecrets =
+        _mailMap(data['abilities'])['manage_secrets'] == true;
+    final values = _mailList(data['senders']);
+    if (values.isEmpty) return EmptyPanel(t('mailAdmin.noSenders'));
+    return Column(
+      children: values.map((raw) {
+        final sender = _mailMap(raw);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: AirmiusPanel(
+            title: '${sender['category'] ?? '—'}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${sender['name'] ?? '—'} · ${sender['address'] ?? '—'}\n'
+                  '${sender['mailer'] ?? '—'} · ${sender['host'] ?? '—'}:${sender['port'] ?? '—'}',
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: StatusPill(
+                    sender['ready'] == true
+                        ? t('mailAdmin.ready')
+                        : t('mailAdmin.notReady'),
+                  ),
+                ),
+                if (canManageSecrets) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _editSender(sender),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(t('common.edit')),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _run(
+                                () => _client.adminTestMailSender(
+                                  '${sender['category']}',
+                                ),
+                                t('mailAdmin.testSent'),
+                              ),
+                        icon: const Icon(Icons.mark_email_read_outlined),
+                        label: Text(t('mailAdmin.sendTest')),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _rules(AirmiusJson data) {
+    final preferences = _mailMap(data['preferences']);
+    return AirmiusPanel(
+      title: t('mailAdmin.invoiceRouting'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${t('mailAdmin.primary')}: ${preferences['invoice_primary_category'] ?? '—'}\n'
+            '${t('mailAdmin.fallback')}: ${preferences['invoice_fallback_category'] ?? '—'}\n'
+            '${t('mailAdmin.disabled')}: ${_mailList(preferences['disabled_categories']).join(', ')}',
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FilledButton.icon(
+              onPressed: _busy ? null : () => _editRules(data),
+              icon: const Icon(Icons.alt_route_outlined),
+              label: Text(t('mailAdmin.editRules')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _queue(AirmiusJson data) {
+    final queue = _mailMap(data['queue']);
+    final failures = _mailList(queue['recent_failed_jobs']);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AirmiusPanel(
+          title: t('mailAdmin.queue'),
+          child: Text(
+            '${t('mailAdmin.pendingJobs')}: ${_mailInt(queue['pending_jobs'])}\n'
+            '${t('mailAdmin.failedJobs')}: ${_mailInt(queue['failed_jobs'])}',
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (failures.isEmpty)
+          EmptyPanel(t('mailAdmin.noQueueErrors'))
+        else
+          ...failures.map((raw) {
+            final item = _mailMap(raw);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AirmiusPanel(
+                title: '${item['queue'] ?? t('mailAdmin.queue')}',
+                child: Text('${item['error'] ?? '—'}'),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Future<void> _resolve(AirmiusJson item) async {
+    final yes = await _confirm(
+      t('mailAdmin.resolve'),
+      t('mailAdmin.resolveBody'),
+    );
+    if (!yes) return;
+    await _run(
+      () => _client.adminResolveMailDelivery(_mailInt(item['id'])),
+      t('mailAdmin.resolved'),
+    );
+  }
+
+  Future<void> _resend(AirmiusJson item, List<String> categories) async {
+    if (categories.isEmpty) return;
+    var category = '${item['primary_category'] ?? categories.first}';
+    if (!categories.contains(category)) category = categories.first;
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(t('mailAdmin.selectSender')),
+        children: categories
+            .map(
+              (value) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialogContext, value),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(value),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+    if (selected == null) return;
+    await _run(
+      () => _client.adminResendMailDelivery(_mailInt(item['id']), selected),
+      t('mailAdmin.resent'),
+    );
+  }
+
+  Future<void> _editRules(AirmiusJson data) async {
+    final categories = _mailList(
+      data['categories'],
+    ).map((value) => '$value').toList();
+    if (categories.isEmpty) return;
+    final current = _mailMap(data['preferences']);
+    var primary = '${current['invoice_primary_category'] ?? categories.first}';
+    var fallback =
+        '${current['invoice_fallback_category'] ?? categories.first}';
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('mailAdmin.editRules')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: primary,
+                decoration: InputDecoration(labelText: t('mailAdmin.primary')),
+                items: _options(categories),
+                onChanged: (value) =>
+                    setDialogState(() => primary = value ?? primary),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: fallback,
+                decoration: InputDecoration(labelText: t('mailAdmin.fallback')),
+                items: _options(categories),
+                onChanged: (value) =>
+                    setDialogState(() => fallback = value ?? fallback),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, [primary, fallback]),
+              child: Text(t('common.save')),
             ),
           ],
         ),
       ),
     );
+    if (result == null) return;
+    await _run(
+      () => _client.adminUpdateMailPreferences({
+        'invoice_primary_category': result[0],
+        'invoice_fallback_category': result[1],
+        'disabled_categories': current['disabled_categories'] ?? [],
+      }),
+      t('mailAdmin.rulesSaved'),
+    );
   }
 
-  void _send() {
-    _toast('Admin-Mail vorbereiten: $_type');
+  Future<void> _editSender(AirmiusJson sender) async {
+    final address = TextEditingController(text: '${sender['address'] ?? ''}');
+    final name = TextEditingController(text: '${sender['name'] ?? ''}');
+    final host = TextEditingController(text: '${sender['host'] ?? ''}');
+    final port = TextEditingController(text: '${sender['port'] ?? ''}');
+    final username = TextEditingController(text: '${sender['username'] ?? ''}');
+    final password = TextEditingController();
+    var active = sender['active'] == true;
+    final result = await showModalBottomSheet<AirmiusJson>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            18,
+            18,
+            18,
+            18 + MediaQuery.viewInsetsOf(sheetContext).bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t('mailAdmin.editSender'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 14),
+                for (final pair in [
+                  (address, t('mailAdmin.address')),
+                  (name, t('mailAdmin.name')),
+                  (host, t('mailAdmin.host')),
+                  (port, t('mailAdmin.port')),
+                  (username, t('mailAdmin.username')),
+                  (password, t('mailAdmin.newPassword')),
+                ]) ...[
+                  TextField(
+                    controller: pair.$1,
+                    obscureText: pair.$1 == password,
+                    decoration: InputDecoration(labelText: pair.$2),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: active,
+                  title: Text(t('mailAdmin.active')),
+                  onChanged: (value) => setSheetState(() => active = value),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(sheetContext, {
+                    'from_address': address.text.trim(),
+                    'from_name': name.text.trim(),
+                    'host': host.text.trim(),
+                    'port': int.tryParse(port.text.trim()),
+                    'username': username.text.trim(),
+                    'new_password': password.text.trim(),
+                    'scheme': sender['scheme'] ?? '',
+                    'active': active,
+                  }),
+                  child: Text(t('common.save')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    for (final controller in [address, name, host, port, username, password]) {
+      controller.dispose();
+    }
+    if (result == null) return;
+    await _run(
+      () => _client.adminUpdateMailSender('${sender['category']}', result),
+      t('mailAdmin.senderSaved'),
+    );
   }
 
-  void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
+  Future<bool> _confirm(String title, String body) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(t('common.confirm')),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
+  List<DropdownMenuItem<String>> _options(List<String> values) => values
+      .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+      .toList();
 }
 
-class _MailHero extends StatelessWidget {
-  const _MailHero({required this.onSend});
+class _MailMetric extends StatelessWidget {
+  const _MailMetric({required this.value, required this.label});
 
-  final VoidCallback onSend;
+  final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF10243B), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 130),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: .72),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AirmiusLogo(size: 42),
-              const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MAIL CENTER'), SizedBox(height: 4), Text('Plattformnachrichten steuern', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
-              AirmiusButton(label: 'Senden', icon: Icons.send_outlined, onPressed: onSend),
+              Text(
+                value,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              Text(label),
             ],
           ),
-          const SizedBox(height: 14),
-          const Text('Admins können Systemmails, Transaktionsmails, Kampagnen, Pushes und In-App-Mitteilungen als mobile UI vorbereiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Templates')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Kanaele')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Freigabe'))]),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ChoicePanel extends StatelessWidget {
-  const _ChoicePanel({required this.title, required this.value, required this.values, required this.onChanged});
+AirmiusJson _mailMap(dynamic value) =>
+    value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 
-  final String title;
-  final String value;
-  final List<String> values;
-  final ValueChanged<String> onChanged;
+List<dynamic> _mailList(dynamic value) => value is List ? value : const [];
 
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final item in values)
-            ChoiceChip(
-              label: Text(item),
-              selected: value == item,
-              onSelected: (_) => onChanged(item),
-              selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-              backgroundColor: AirmiusColors.card,
-              labelStyle: TextStyle(color: value == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              side: BorderSide(color: value == item ? AirmiusColors.blue : AirmiusColors.border),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
-
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-        Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
-      ]),
-    );
-  }
-}
-
-class _MailCard extends StatelessWidget {
-  const _MailCard({required this.item, required this.onOpen});
-
-  final _MailItem item;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: item.title,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: item.color.withValues(alpha: .18), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .5))), child: Icon(item.icon, color: item.color)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [StatusPill(item.status, color: item.color), const SizedBox(height: 8), Text(item.channel, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)), const SizedBox(height: 6), Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700))])),
-          IconButton(onPressed: onOpen, icon: const Icon(Icons.chevron_right, color: AirmiusColors.muted)),
-        ],
-      ),
-    );
-  }
-}
-
-class _MailItem {
-  const _MailItem({required this.title, required this.body, required this.status, required this.channel, required this.icon, required this.color});
-
-  final String title;
-  final String body;
-  final String status;
-  final String channel;
-  final IconData icon;
-  final Color color;
-}
+int _mailInt(dynamic value) =>
+    value is num ? value.toInt() : int.tryParse('$value') ?? 0;

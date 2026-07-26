@@ -7,24 +7,40 @@ class InputKeyboardAccessibilityParitySuiteScreen extends StatefulWidget {
   const InputKeyboardAccessibilityParitySuiteScreen({super.key});
 
   @override
-  State<InputKeyboardAccessibilityParitySuiteScreen> createState() => _InputKeyboardAccessibilityParitySuiteScreenState();
+  State<InputKeyboardAccessibilityParitySuiteScreen> createState() =>
+      _InputKeyboardAccessibilityParitySuiteScreenState();
 }
 
-class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeyboardAccessibilityParitySuiteScreen> {
+class _InputKeyboardAccessibilityParitySuiteScreenState
+    extends State<InputKeyboardAccessibilityParitySuiteScreen> {
   String _fieldGroup = 'Mitgliedsantrag';
   String _keyboard = 'Text';
   bool _showValidation = true;
   bool _largeTouchTargets = true;
   bool _screenReaderHints = true;
 
-  static const _groups = ['Mitgliedsantrag', 'Account', 'Zahlung', 'Club Admin', 'Training'];
-  static const _keyboards = ['Text', 'E-Mail', 'Telefon', 'Datum', 'Nummer', 'Passwort'];
+  static const _groups = [
+    'Mitgliedsantrag',
+    'Account',
+    'Zahlung',
+    'Club Admin',
+    'Training',
+  ];
+  static const _keyboards = [
+    'Text',
+    'E-Mail',
+    'Telefon',
+    'Datum',
+    'Nummer',
+    'Passwort',
+  ];
 
   static const _fields = <_InputFieldPattern>[
     _InputFieldPattern(
       group: 'Mitgliedsantrag',
       title: 'Personendaten',
-      body: 'Vorname, Nachname, Geburtsdatum, Geschlecht, Guardian-Felder und Pflichtfeldmarkierung als mobile Formularsektion.',
+      body:
+          'Vorname, Nachname, Geburtsdatum, Geschlecht, Guardian-Felder und Pflichtfeldmarkierung als mobile Formularsektion.',
       inputType: 'Text + Datum',
       icon: Icons.person_outline,
       status: 'Required',
@@ -35,7 +51,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Mitgliedsantrag',
       title: 'Adresse und Kontakt',
-      body: 'Land, Straße, Hausnummer, PLZ, Stadt, Bundesland, E-Mail und Telefon mit passenden Tastaturen und Validierung.',
+      body:
+          'Land, Straße, Hausnummer, PLZ, Stadt, Bundesland, E-Mail und Telefon mit passenden Tastaturen und Validierung.',
       inputType: 'Adresse',
       icon: Icons.home_outlined,
       status: 'Validated',
@@ -46,7 +63,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Account',
       title: 'Login und Registrierung',
-      body: 'E-Mail, Passwort, Passwort bestätigen, 2FA-Code, Recovery-Code und Fehlermeldungen mit sicherem Fokus.',
+      body:
+          'E-Mail, Passwort, Passwort bestätigen, 2FA-Code, Recovery-Code und Fehlermeldungen mit sicherem Fokus.',
       inputType: 'E-Mail + Passwort',
       icon: Icons.lock_outline,
       status: 'Secure',
@@ -57,7 +75,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Account',
       title: 'Profil bearbeiten',
-      body: 'Name, Bio, Sprache, Sichtbarkeit, Sportprofil und optionale Felder als klare mobile Eingabesektionen.',
+      body:
+          'Name, Bio, Sprache, Sichtbarkeit, Sportprofil und optionale Felder als klare mobile Eingabesektionen.',
       inputType: 'Profil',
       icon: Icons.account_circle_outlined,
       status: 'Profile',
@@ -68,7 +87,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Zahlung',
       title: 'IBAN und Zahlungsdaten',
-      body: 'IBAN, BIC, Kontoinhaber, Beitrag, Zahlungsrhythmus, Barzahlung und Überweisung mit Formatierung und Fehlertext.',
+      body:
+          'IBAN, BIC, Kontoinhaber, Beitrag, Zahlungsrhythmus, Barzahlung und Überweisung mit Formatierung und Fehlertext.',
       inputType: 'Bank',
       icon: Icons.payments_outlined,
       status: 'Payment',
@@ -79,7 +99,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Zahlung',
       title: 'Checkout Eingaben',
-      body: 'Rechnungsadresse, Banktransfer, Coupon, Bestellnotiz und Zahlungsstatus mit Mobile-Keyboards und Retry-Zustand.',
+      body:
+          'Rechnungsadresse, Banktransfer, Coupon, Bestellnotiz und Zahlungsstatus mit Mobile-Keyboards und Retry-Zustand.',
       inputType: 'Checkout',
       icon: Icons.receipt_long_outlined,
       status: 'Checkout',
@@ -90,7 +111,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Club Admin',
       title: 'Mitgliedschaftsformular konfigurieren',
-      body: 'Vereine wählen Pflichtfelder, optionale Felder, Uploadpflicht, Datenschutztexte und Zahlungsfelder als Admin-Form.',
+      body:
+          'Vereine wählen Pflichtfelder, optionale Felder, Uploadpflicht, Datenschutztexte und Zahlungsfelder als Admin-Form.',
       inputType: 'Builder',
       icon: Icons.format_list_bulleted_outlined,
       status: 'Admin',
@@ -101,7 +123,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Club Admin',
       title: 'Beitragsregel bearbeiten',
-      body: 'Betrag, Frequenz, Zahlungsart, Faelligkeit, Mahnung, Rabatt, Dokument und Sichtbarkeit mit validierten Eingaben.',
+      body:
+          'Betrag, Frequenz, Zahlungsart, Faelligkeit, Mahnung, Rabatt, Dokument und Sichtbarkeit mit validierten Eingaben.',
       inputType: 'Number + Select',
       icon: Icons.rule_folder_outlined,
       status: 'Rules',
@@ -112,7 +135,8 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Training',
       title: 'Training Log erfassen',
-      body: 'Dauer, Distanz, Wiederholungen, Gewicht, Puls, Notiz, RPE und Medienanhang mit numerischen Tastaturen.',
+      body:
+          'Dauer, Distanz, Wiederholungen, Gewicht, Puls, Notiz, RPE und Medienanhang mit numerischen Tastaturen.',
       inputType: 'Sportwerte',
       icon: Icons.fitness_center_outlined,
       status: 'Log',
@@ -122,21 +146,25 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     ),
   ];
 
-  List<_InputFieldPattern> get _visibleFields => _fields.where((field) => field.group == _fieldGroup).toList();
+  List<_InputFieldPattern> get _visibleFields =>
+      _fields.where((field) => field.group == _fieldGroup).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
       body: SafeArea(
         child: PageFrame(
           title: 'Input Keyboard Accessibility Parity',
-          subtitle: 'Mobile Eingaben, Tastaturen, Validierung und Accessibility.',
+          subtitle:
+              'Mobile Eingaben, Tastaturen, Validierung und Accessibility.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -151,7 +179,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
                 title: 'Formularbereich',
                 items: _groups,
                 active: _fieldGroup,
-                color: AirmiusColors.blue,
+                color: airmiusAccentColor(context),
                 onChanged: (value) => setState(() => _fieldGroup = value),
               ),
               const SizedBox(height: 16),
@@ -159,7 +187,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
                 title: 'Mobile Keyboard',
                 items: _keyboards,
                 active: _keyboard,
-                color: AirmiusColors.green,
+                color: Theme.of(context).colorScheme.secondary,
                 onChanged: (value) => setState(() => _keyboard = value),
               ),
               const SizedBox(height: 16),
@@ -167,9 +195,11 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
                 showValidation: _showValidation,
                 largeTouchTargets: _largeTouchTargets,
                 screenReaderHints: _screenReaderHints,
-                onValidation: (value) => setState(() => _showValidation = value),
+                onValidation: (value) =>
+                    setState(() => _showValidation = value),
                 onTouch: (value) => setState(() => _largeTouchTargets = value),
-                onScreenReader: (value) => setState(() => _screenReaderHints = value),
+                onScreenReader: (value) =>
+                    setState(() => _screenReaderHints = value),
               ),
               const SizedBox(height: 16),
               _InputPreview(
@@ -183,13 +213,17 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
                 _InputFieldCard(field: field, showValidation: _showValidation),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFields.isEmpty) const EmptyPanel('Keine Eingabemuster für diesen Bereich sichtbar.'),
+              if (_visibleFields.isEmpty)
+                const EmptyPanel(
+                  'Keine Eingabemuster für diesen Bereich sichtbar.',
+                ),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
                   context,
                   title: 'Input Accessibility Parity',
-                  body: 'Mobile Keyboards, Pflichtfelder, Masken, Validierung, Fokusreihenfolge, Touch Targets, Screenreader-Hinweise und Autofill sind als UI-Muster vorbereitet.',
+                  body:
+                      'Mobile Keyboards, Pflichtfelder, Masken, Validierung, Fokusreihenfolge, Touch Targets, Screenreader-Hinweise und Autofill sind als UI-Muster vorbereitet.',
                   status: 'Input UX',
                   icon: Icons.accessibility_new_outlined,
                 ),
@@ -224,14 +258,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('INPUT UX'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Formulare müssen sich auf dem Handy leicht anfuehlen.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter übersetzt Web-Formulare in mobile Eingaben mit passender Tastatur, Masken, Pflichtfeldern, Fokus, Autofill, Fehlertext und Accessibility.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -280,9 +322,16 @@ class _ChoicePanel extends StatelessWidget {
                   label: Text(item),
                   onSelected: (_) => onChanged(item),
                   selectedColor: color.withValues(alpha: .24),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: active == item ? color : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: airmiusSurfaceSoftColor(context),
+                  side: BorderSide(
+                    color: active == item ? color : airmiusBorderColor(context),
+                  ),
+                  labelStyle: TextStyle(
+                    color: active == item
+                        ? airmiusTextColor(context)
+                        : airmiusMutedColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -313,11 +362,24 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Mobile Formularregeln',
-      subtitle: 'Diese Regeln machen Web-Formulare als Flutter-Eingaben ergonomisch.',
+      subtitle:
+          'Diese Regeln machen Web-Formulare als Flutter-Eingaben ergonomisch.',
       children: [
-        _SwitchLine(title: 'Validierung direkt am Feld anzeigen', value: showValidation, onChanged: onValidation),
-        _SwitchLine(title: 'Große Touch Targets verwenden', value: largeTouchTargets, onChanged: onTouch),
-        _SwitchLine(title: 'Screenreader-Hinweise vorbereiten', value: screenReaderHints, onChanged: onScreenReader),
+        _SwitchLine(
+          title: 'Validierung direkt am Feld anzeigen',
+          value: showValidation,
+          onChanged: onValidation,
+        ),
+        _SwitchLine(
+          title: 'Große Touch Targets verwenden',
+          value: largeTouchTargets,
+          onChanged: onTouch,
+        ),
+        _SwitchLine(
+          title: 'Screenreader-Hinweise vorbereiten',
+          value: screenReaderHints,
+          onChanged: onScreenReader,
+        ),
       ],
     );
   }
@@ -338,7 +400,9 @@ class _InputPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = validation ? AirmiusColors.green : AirmiusColors.blue;
+    final color = validation
+        ? Theme.of(context).colorScheme.secondary
+        : airmiusAccentColor(context);
     return AirmiusPanel(
       borderColor: color,
       child: Column(
@@ -349,7 +413,14 @@ class _InputPreview extends StatelessWidget {
               Icon(_iconForKeyboard(keyboard), color: color, size: 30),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('Keyboard: $keyboard', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+                child: Text(
+                  'Keyboard: $keyboard',
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
               StatusPill(largeTouchTargets ? '48dp+' : 'Kompakt', color: color),
             ],
@@ -361,8 +432,12 @@ class _InputPreview extends StatelessWidget {
               labelText: _labelForKeyboard(keyboard),
               hintText: _hintForKeyboard(keyboard),
               suffixIcon: Icon(_iconForKeyboard(keyboard), color: color),
-              errorText: validation ? null : 'Dieses Feld braucht eine gültige Eingabe.',
-              helperText: screenReaderHints ? 'Screenreader: ${_labelForKeyboard(keyboard)}, Pflichtfeld, ${_hintForKeyboard(keyboard)}' : null,
+              errorText: validation
+                  ? null
+                  : 'Dieses Feld braucht eine gültige Eingabe.',
+              helperText: screenReaderHints
+                  ? 'Screenreader: ${_labelForKeyboard(keyboard)}, Pflichtfeld, ${_hintForKeyboard(keyboard)}'
+                  : null,
             ),
           ),
           const SizedBox(height: 14),
@@ -376,7 +451,8 @@ class _InputPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Mobile Eingabe',
-                  body: 'Keyboard $keyboard, Touch Targets $largeTouchTargets, Validierung $validation und Screenreader $screenReaderHints als Formularmuster.',
+                  body:
+                      'Keyboard $keyboard, Touch Targets $largeTouchTargets, Validierung $validation und Screenreader $screenReaderHints als Formularmuster.',
                   status: 'Input',
                   icon: Icons.keyboard_outlined,
                 ),
@@ -388,7 +464,8 @@ class _InputPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Accessibility Check',
-                  body: 'Label, Hint, Error, Fokusreihenfolge, Touch Target, Kontrast, Autofill und Screenreader für $keyboard prüfen.',
+                  body:
+                      'Label, Hint, Error, Fokusreihenfolge, Touch Target, Kontrast, Autofill und Screenreader für $keyboard prüfen.',
                   status: 'A11y',
                   icon: Icons.accessibility_new_outlined,
                 ),
@@ -402,18 +479,16 @@ class _InputPreview extends StatelessWidget {
 }
 
 class _InputFieldCard extends StatelessWidget {
-  const _InputFieldCard({
-    required this.field,
-    required this.showValidation,
-  });
+  const _InputFieldCard({required this.field, required this.showValidation});
 
   final _InputFieldPattern field;
   final bool showValidation;
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, field.color);
     return AirmiusPanel(
-      borderColor: field.color.withValues(alpha: .55),
+      borderColor: color.withValues(alpha: .55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -424,31 +499,58 @@ class _InputFieldCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: field.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: field.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(field.icon, color: field.color),
+                child: Icon(field.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(field.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      field.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(field.inputType, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      field.inputType,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(field.status, color: field.color),
+              StatusPill(field.status, color: color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(field.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            field.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           if (showValidation) ...[
             const SizedBox(height: 10),
-            const Text('Validierung: Pflichtfeld, Format, Laenge, API-Fehler und Offline-Draft werden am Feld sichtbar.', style: TextStyle(color: AirmiusColors.green, height: 1.35, fontWeight: FontWeight.w900)),
+            Text(
+              'Validierung: Pflichtfeld, Format, Laenge, API-Fehler und Offline-Draft werden am Feld sichtbar.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.secondary,
+                height: 1.35,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ],
           const SizedBox(height: 14),
           Wrap(
@@ -473,7 +575,8 @@ class _InputFieldCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: field.secondary,
-                  body: 'Keyboard, Maske, Fokus, Autofill, Screenreader, Pflichtfeld und API-Fehler für ${field.title}.',
+                  body:
+                      'Keyboard, Maske, Fokus, Autofill, Screenreader, Pflichtfeld und API-Fehler für ${field.title}.',
                   status: 'Input Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -497,12 +600,24 @@ class _Checklist extends StatelessWidget {
       title: 'Input-/Accessibility-Paritaet',
       subtitle: 'Was aus Web-Formularen mobil übersetzt wird.',
       children: [
-        const _CheckLine('Jedes Feld bekommt passende Tastatur, Label, Hint, Fehlertext und Fokusverhalten.'),
-        const _CheckLine('Pflichtfelder, optionale Felder, Uploads und API-Fehler bleiben direkt im Formular sichtbar.'),
-        const _CheckLine('Touch Targets, Kontrast, Screenreader und Autofill sind als UI-Regeln vorbereitet.'),
-        const _CheckLine('Mitgliedsantrag, Zahlung, Account, Club Admin und Training nutzen gemeinsame Eingabemuster.'),
+        const _CheckLine(
+          'Jedes Feld bekommt passende Tastatur, Label, Hint, Fehlertext und Fokusverhalten.',
+        ),
+        const _CheckLine(
+          'Pflichtfelder, optionale Felder, Uploads und API-Fehler bleiben direkt im Formular sichtbar.',
+        ),
+        const _CheckLine(
+          'Touch Targets, Kontrast, Screenreader und Autofill sind als UI-Regeln vorbereitet.',
+        ),
+        const _CheckLine(
+          'Mitgliedsantrag, Zahlung, Account, Club Admin und Training nutzen gemeinsame Eingabemuster.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Input-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Input-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -525,14 +640,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -551,9 +678,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -561,10 +701,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -574,16 +711,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

@@ -98,7 +98,7 @@ class Event extends Model
     public function participants()
     {
         return $this->belongsToMany(User::class, 'event_participants')
-            ->withPivot(['status', 'response_reason', 'response_mode', 'responded_at'])
+            ->withPivot(['status', 'response_reason', 'response_mode', 'responded_at', 'checked_in_at', 'check_in_method'])
             ->withTimestamps();
     }
 

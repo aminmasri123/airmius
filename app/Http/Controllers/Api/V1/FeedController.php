@@ -62,6 +62,26 @@ class FeedController extends Controller
         return PostResource::collection($posts);
     }
 
+    public function show(Request $request, Post $post)
+    {
+        $this->authorize('view', $post);
+
+        $post->load([
+            'user',
+            'club',
+            'team',
+            'sport',
+            'sportSkills',
+            'attachments.file',
+        ])->loadCount(['comments', 'likes', 'helpfuls'])
+            ->loadExists([
+                'likes as liked_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
+                'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
+            ]);
+
+        return new PostResource($post);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

@@ -639,7 +639,7 @@
       "connected": "Connected",
       "connect": "Connect",
       "sport_apps_title": "Sync sport apps",
-      "sport_apps_description": "Connect sport apps so training data can flow into your Airmius profile later.",
+      "sport_apps_description": "Connect sport apps to safely sync training data into your Airmius profile.",
       "last_synced": "Last synced: {date}",
       "google_status": "Google status:",
       "google_error": "Google error:",
@@ -664,7 +664,7 @@
       "provider_descriptions": {
         "strava": "Strava connects running, cycling, swimming and workout data through the official OAuth API.",
         "garmin": "Garmin Health API requires provider approval. Users can mark interest until partner approval is active.",
-        "google_fit": "Connection through Google OAuth. Activity import will be built on the saved tokens as the next step.",
+        "google_fit": "Connection through Google OAuth. Activities can now be synced through the saved tokens.",
         "mi_fitness": "Mi Fitness does not have a simple standard OAuth integration in the project. The connection is marked as requested.",
         "polar": "Polar AccessLink provides training and activity data through OAuth/API. Integration is marked as requested.",
         "fitbit": "Fitbit Web API can provide activities, steps, distance, calories and health data through OAuth. Integration is marked as requested."
@@ -756,7 +756,11 @@
   "notifications": {
     "new": "New notification",
     "empty": "No notifications",
-    "unread_count": "{count} unread"
+    "unread_count": "{count} unread",
+    "read": "Read",
+    "unread": "Unread",
+    "label": "Notification",
+    "removal_objection_message": "I object to the removal and ask for a review."
   },
   "sport_map": {
     "eyebrow": "Routes, tracking and sport places",
@@ -906,7 +910,9 @@
     },
     "none": {
       "club": "No club",
-      "team": "No team"
+      "team": "No team",
+      "not_required": "Not required",
+      "team_assigned": "Set through the team"
     },
     "types": {
       "training": "Training",
@@ -944,6 +950,25 @@
       "friday": "Fri",
       "saturday": "Sat",
       "sunday": "Sun"
+    },
+    "free_limit": "Free account: {remaining} of {limit} events remaining this month. Recurring events are not available.",
+    "steps": {
+      "base": "Basics",
+      "time": "Time",
+      "details": "Details",
+      "review": "Review"
+    },
+    "validation": {
+      "title": "Please enter a title.",
+      "private_team": "Private events need a team.",
+      "organization_club": "Organization events need a club.",
+      "start": "Please set a start time.",
+      "end_before_start": "The end cannot be before the start.",
+      "reminder_after_start": "The reminder must be before the start.",
+      "recurrence_end": "Please set an end date for the recurrence.",
+      "recurrence_before_start": "The recurrence end must be after the start.",
+      "recurrence_days": "Please choose at least one weekday.",
+      "participants": "The participant limit must be at least 1."
     }
   },
   "roles": {
@@ -964,6 +989,72 @@
     "cta": {
       "start": "Start for free",
       "explore": "Explore Airmius"
+    },
+    "events": {
+      "meta_title": "Discover sports events",
+      "meta_description": "Find public training sessions, matches, meetups and sports events from clubs and teams on Airmius.",
+      "eyebrow": "Events",
+      "title": "Find public sports events, training sessions and meetups.",
+      "plan": "Plan your own event",
+      "search_placeholder": "Event, club or team",
+      "search_label": "Search event, club or team",
+      "type_label": "Event type",
+      "all_types": "All types",
+      "location_placeholder": "City or country",
+      "location_label": "Search city or country",
+      "search": "Search",
+      "find_club": "Find a club",
+      "join": "Join in",
+      "empty": "No public events match these search criteria."
+    },
+    "sports": {
+      "meta_title": "Sports on Airmius",
+      "meta_description": "Explore active sports on Airmius and find matching clubs, teams, events and digital sports offers.",
+      "eyebrow": "Sports",
+      "title": "Find the right sport, clubs and teams.",
+      "find_clubs": "Search clubs",
+      "search_placeholder": "Search sport",
+      "search_label": "Search sport",
+      "category_label": "Sport category",
+      "all_categories": "All categories",
+      "filter": "Filter",
+      "sport": "Sport",
+      "clubs": "Clubs",
+      "teams": "Teams",
+      "show_clubs": "Show clubs",
+      "events": "Events",
+      "empty": "No sports match these search criteria."
+    },
+    "sponsors": {
+      "meta_title": "Airmius sponsors",
+      "meta_description": "Discover the sponsors and partners supporting Airmius, clubs and sports offers.",
+      "eyebrow": "Airmius partners",
+      "title": "Sponsors that make sport more visible and affordable.",
+      "intro": "Guests can find all active Airmius sponsors and club partners here. From platform deals to local supporters, every card shows who stands behind discounts, offers and club support.",
+      "visible_title": "Visible to guests",
+      "visible_text": "Sponsors from the admin area appear here automatically while their run is active.",
+      "search_placeholder": "Search sponsor, club or website",
+      "all": "All",
+      "airmius": "Airmius",
+      "outfit": "Outfit",
+      "clubs": "Clubs",
+      "website": "Visit website",
+      "empty_title": "No sponsors found.",
+      "empty_text": "Adjust your search or filter.",
+      "scope_platform": "Airmius platform",
+      "scope_outfit": "Outfit subscription",
+      "scope_club": "Club sponsor",
+      "scope_platform_text": "Supports Airmius offers and platform benefits.",
+      "scope_outfit_text": "Supports outfit subscriptions and sponsor deals for athletes.",
+      "scope_club_text": "Supports club offers and local sports projects."
+    },
+    "gamification": {
+      "per_action": "per action",
+      "cap": "cap"
+    },
+    "admin_badges": {
+      "delete_title": "Delete badge",
+      "delete_message": "Really delete the badge \"{name}\"?"
     },
     "top": {
       "hero": {
@@ -1117,6 +1208,18 @@
         "subtitle": "Compact learning modules for coaches, team managers, players and club leaders."
       },
       "start": "Start learning",
+      "cta": {
+        "room": "Open learning room",
+        "buy": "Buy course",
+        "paid": "Paid course",
+        "free": "Enroll for free",
+        "price": "Price:",
+        "certificate": "Certificate:",
+        "lesson_unlock": "This lesson unlocks on {date}."
+      },
+      "status": {
+        "cancelled": "Revoked"
+      },
       "steps": {
         "learn": "Learn quickly",
         "apply": "Apply directly",
@@ -1715,7 +1818,7 @@
     "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "Less scrolling, faster discovery: categories, promotions and curated rows instead of all products at once.",
     "Jetzt entdecken": "Explore now",
     "Hilfe & Bestellung": "Help & orders",
-    "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "Guest checkout, logged-in orders and seller offers are ready.",
+    "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "Guest checkout, logged-in orders and seller offers are available.",
     "Anbieter werden": "Become a seller",
     "Vereine, Trainer und Shops können Angebote einstellen.": "Clubs, coaches and shops can list offers.",
     "Produkte, Camps und Kurse aus deinem Sportnetzwerk.": "Products, camps and courses from your sports network.",
@@ -3135,7 +3238,7 @@
     "Ausgangsplan: . Die KI erstellt eine neue bestätigbare Version, damit dein alter Plan nachvollziehbar bleibt.": "Starting plan: . The AI creates a new verifiable version so your old plan remains traceable.",
     "Ausgestellt": "Issued",
     "Ausgestellt am": "Issued on",
-    "Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.": "Balanced planning active: Each unit will later automatically receive its type, e: Long Run, Intervals, Technique, or Recovery.",
+    "Ausgewogene Planung aktiv: Die KI ordnet jede Einheit automatisch einem passenden Typ zu, z. B. Long Run, Intervalle, Technik oder Regeneration.": "Balanced planning is active: AI assigns each unit a suitable type automatically, such as a long run, intervals, technique or recovery.",
     "Ausgewählt": "Selected",
     "Ausgewählte Produkte": "Selected products",
     "Ausgewählter Tag": "Selected day",
@@ -5403,6 +5506,124 @@
   "teams": {
     "empty": "No teams/clubs available."
   },
+  "teams_workspace": {
+    "sport_open": "Sport not set",
+    "roles": { "owner": "Owner", "admin": "Club admin", "manager": "Manager", "academy_manager": "Academy manager", "financial_controller": "Financial controller", "trainer": "Coach", "member": "Member" },
+    "team_roles": { "coach": "Coach", "captain": "Captain", "player": "Player" },
+    "steps": { "basic": "Basics", "address": "Address", "review": "Review" },
+    "tabs": { "basic": "Basics", "visibility": "Visibility", "address": "Address", "bank": "Bank account", "sponsors": "Sponsors" },
+    "messages": {
+      "insights_error": "Team activity could not be loaded.", "job_created": "Entry created.", "job_updated": "Entry updated.", "job_save_error": "The entry could not be saved. Please check the highlighted fields.", "job_delete_title": "Delete position \"{title}\"", "job_delete_message": "This entry will be deleted permanently and will no longer appear on the jobs page.", "job_deleted": "Entry deleted.", "job_delete_error": "The entry could not be deleted.", "job_delete_button": "Delete position", "club_registered": "Club registered.", "club_register_error": "The club could not be registered. Please check the highlighted fields.",
+      "team_created": "Team created.", "team_create_error": "The team could not be created. Please check the fields.", "invite_sent": "Invitation sent successfully.", "invite_error": "Invitation could not be sent.",
+      "member_added": "Member added to the team.", "member_add_error": "Member could not be added.", "invitation_accepted": "Team invitation accepted.", "invitation_accept_error": "Team invitation could not be accepted.", "invitation_declined": "Team invitation declined.", "invitation_decline_error": "Team invitation could not be declined.",
+      "join_request_sent": "Team join request sent.", "join_request_send_error": "Team join request could not be sent.", "join_request_approved": "Team join request approved.", "join_request_approve_error": "Team join request could not be approved.", "join_request_declined": "Team join request declined.", "join_request_decline_error": "Team join request could not be declined.",
+      "club_role_saved": "Club role saved.", "club_role_error": "Club role could not be saved.", "club_saved": "Club details saved.", "club_save_error": "Club details could not be saved. Please check the fields.",
+      "sponsor_updated": "Sponsor updated.", "sponsor_created": "Sponsor created.", "sponsor_save_error": "Sponsor could not be saved. Please check the fields.", "sponsor_remove_title": "Delete sponsor \"{name}\"", "sponsor_remove_message": "This sponsor will be removed from the club. This cannot be undone.", "sponsor_removed": "Sponsor deleted.", "sponsor_remove_error": "Sponsor could not be deleted.",
+      "team_role_saved": "Team role saved.", "team_role_error": "Team role could not be saved.", "leave_team_title": "Leave team \"{name}\"", "remove_member_title": "Remove {member} from \"{team}\"", "leave_team_message": "You can leave this team only after all outstanding club invoices are settled.", "remove_member_message": "The member will be removed from this team. Club membership remains active.", "leave_team_button": "Leave team", "remove_member_button": "Remove member", "team_left": "You left the team.", "member_removed": "Member removed from the team.", "leave_team_error": "The team could not be left. Please check for outstanding invoices.", "member_remove_error": "Member could not be removed.",
+      "delete_club_title": "Delete club \"{name}\"", "delete_club_message": "This also deletes all teams in the club. This cannot be undone.", "club_deleted": "Club deleted.", "club_delete_error": "Club could not be deleted.", "delete_team_title": "Delete team \"{name}\"", "delete_team_message": "The team and its assignments will be removed. This cannot be undone.", "team_deleted": "Team deleted.", "team_delete_error": "Team could not be deleted."
+    }
+  },
+  "teams_profile": {
+    "messages": {
+      "deactivate_rule": "Disable rule \"{title}\"? Existing bookings will remain.",
+      "cancel_fee": "Cancel this booking?"
+    }
+  },
+  "clubs_profile": {
+    "messages": {
+      "withdraw_request": "Do you really want to withdraw your membership request from \"{name}\"?",
+      "leave_club": "Do you really want to leave \"{name}\"? You will also be removed from all teams in this club. This is only possible when no invoices are outstanding."
+    }
+  },
+  "operating_contracts": {
+    "deadline": {
+      "since": "{days} days ago",
+      "today": "today",
+      "tomorrow": "tomorrow",
+      "in_days": "in {days} days"
+    },
+    "messages": {
+      "delete": "Do you really want to delete \"{name}\"?"
+    }
+  },
+  "Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge.": "Team profile, affiliation, members and visible team posts.",
+  "Individuelle Regeln für": "Custom rules for",
+  "und offene Strafbuchungen.": "and open fine bookings.",
+  "Teams dieses Vereins erscheinen hier, sobald sie erstellt wurden.": "This club's teams appear here once they are created.",
+  "Angenommene Mitglieder werden in dieser Liste sichtbar.": "Accepted members appear in this list.",
+  "Vereinsdaten speichern": "Save club details",
+  "Speichert...": "Saving...",
+  "Vereinsdaten werden gespeichert...": "Club details are being saved...",
+  "ab": "from",
+  "Min.": "min.",
+  "max.": "max.",
+  "wird gespeichert…": "saving…",
+  "Unbekannt": "Unknown",
+  "Diese Buchung stornieren?": "Cancel this booking?",
+  "fällig": "due",
+  "bezahlt": "paid",
+  "Strafkatalog konnte nicht geladen werden.": "The fine catalog could not be loaded.",
+  "Regel konnte nicht gespeichert werden.": "The rule could not be saved.",
+  "Regel konnte nicht deaktiviert werden.": "The rule could not be disabled.",
+  "Strafe konnte nicht gebucht werden.": "The fine could not be recorded.",
+  "Buchung konnte nicht bezahlt markiert werden.": "The booking could not be marked as paid.",
+  "Buchung konnte nicht storniert werden.": "The booking could not be cancelled.",
+  "Änderung gespeichert.": "Changes saved.",
+  "Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.": "The change could not be saved. Please check your input.",
+  "Karten": "Maps",
+  "Routenplanung": "Route planning",
+  "Künstliche Intelligenz": "Artificial intelligence",
+  "Kartenaufrufe": "Map loads",
+  "Credits/Anfragen": "Credits/requests",
+  "Text-Anfragen": "Text requests",
+  "Trips": "Trips",
+  "Trips + aktive Nutzer": "Trips + active users",
+  "Info": "Info",
+  "Eigene Routing-Infrastruktur:": "Self-hosted routing infrastructure:",
+  "Zielkosten ca.": "Target cost approx.",
+  "frei enthalten.": "included free.",
+  "Plan im aktuellen Volumen nutzbar.": "Plan is usable at the current volume.",
+  "Behalte Karte, Routing, Navigation und KI im Blick. Die Zahlen helfen zu erkennen, wann Mapbox, GraphHopper, openrouteservice, eigene Infrastruktur oder KI-Anbieter gewechselt werden sollten.": "Monitor maps, routing, navigation and AI. These figures help show when to switch Mapbox, GraphHopper, openrouteservice, self-hosting or AI providers.",
+  "Kosten steigen, wenn sehr viele Nutzer die Sportkarte laden.": "Costs increase when many users load the sports map.",
+  "GraphHopper Free ist nur für Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.": "GraphHopper Free is for development only. Saved routes reduce credits and costs.",
+  "Echte Live-Navigation kostet pro Nutzer und pro Trip.": "Live navigation costs per user and trip.",
+  "Für Ernährung, Training und Blogtexte werden Tokens gezählt.": "Tokens are counted for nutrition, training and blog text.",
+  "Webkarte": "Web map",
+  "Live-Navigation": "Live navigation",
+  "KI-Text": "AI text",
+  "KI-Bildanalyse": "AI image analysis",
+  "GraphHopper Free/Dev wird eng": "GraphHopper Free/Dev is nearing its limit",
+  "Kartenaufrufe steigen": "Map loads are increasing",
+  "Navigation SDK getrennt betrachten": "Review the navigation SDK separately",
+  "KI-Daten minimieren": "Minimise AI data",
+  "Noch entspannt": "Usage is still comfortable",
+  "Fristen": "Deadlines",
+  "Kein Anbieter": "No provider",
+  "Vertrag bearbeiten": "Edit contract",
+  "WLAN Büro, Handyvertrag, Fahrzeugleasing ...": "Office Wi-Fi, mobile plan, vehicle lease ...",
+  "Neuer Vertrag": "New contract",
+  "Automatisch aus Ende minus Frist": "Calculated from end date minus notice period",
+  "Anlegen": "Create",
+  "Büro & Standort": "Office & location",
+  "Vertrag löschen": "Delete contract",
+  "-": "-",
+  "Beendet": "Ended",
+  "WLAN & Internet": "Wi-Fi & internet",
+  "Handy & Mobilfunk": "Mobile & cellular",
+  "Leasing": "Leasing",
+  "Software": "Software",
+  "Hosting & Domains": "Hosting & domains",
+  "Versicherung": "Insurance",
+  "Marketing": "Marketing",
+  "Finanzen & Steuer": "Finance & tax",
+  "Dienstleister": "Service provider",
+  "Quartalsweise": "Quarterly",
+  "Lastschrift": "Direct debit",
+  "« Previous": "« Previous",
+  "Next »": "Next »",
+  "Neue Regel": "New rule",
+  "Regel bearbeiten": "Edit rule",
+  "Regel anlegen": "Create rule",
   "Schließen": "Close",
   "AIRMIUS": "AIRMIUS",
   "AIRMIUS Marketplace": "AIRMIUS Marketplace",
@@ -5425,7 +5646,7 @@
   "Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.": "Less scrolling, faster discovery: categories, promotions and curated rows instead of all products at once.",
   "Jetzt entdecken": "Explore now",
   "Hilfe & Bestellung": "Help & orders",
-  "Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.": "Guest checkout, logged-in orders and seller offers are ready.",
+  "Gastbestellung, Login-Bestellung und Anbieterangebote sind verfügbar.": "Guest checkout, logged-in orders and seller offers are available.",
   "Anbieter werden": "Become a seller",
   "Vereine, Trainer und Shops können Angebote einstellen.": "Clubs, coaches and shops can list offers.",
   "Alle anzeigen": "Show all",
@@ -6443,5 +6664,137 @@
   "Noch kein Termin": "No appointment yet",
   "Rückgabe:": "Return:",
   "Eine Vereinswebsite, die Mitglieder gewinnt, Sponsoren überzeugt und Arbeit spart.": "A club website that attracts members, convinces sponsors and saves work.",
-  "Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.": "A pricing model for everyone who organizes, experiences or supports sport."
+  "Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.": "A pricing model for everyone who organizes, experiences or supports sport.",
+  "Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.": "Athletes and parents start free. Clubs pay fairly by size. Coaches, sponsors and providers get their own paths as their features grow.",
+  "Kostenlos starten, sportlich sichtbar werden.": "Start free and become visible in sport.",
+  "Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen später für Portfolio, Statistiken und mehr Sichtbarkeit.": "Athletes remain free at their core. Pro features add portfolios, statistics and more visibility as the product grows.",
+  "Training organisieren, Teams begleiten, Wissen verkaufen.": "Organize training, support teams and sell knowledge.",
+  "Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen später eigene Gruppen, Camps und Kursverkauf.": "Coaches work free in the club plan. Solo coaches can add their own groups, camps and course sales as they grow.",
+  "Vereinsverwaltung, Community und Kommunikation in einem System.": "Club administration, community and communication in one system.",
+  "Die Vereinspläne sind der Hauptumsatz: Mitglieder, Teams, Beiträge, Rechnungen, Dateien und Sponsoren.": "Club plans cover the core operations: members, teams, fees, invoices, files and sponsors.",
+  "Sicherheit für Minderjährige bleibt kostenlos.": "Safety for minors remains free.",
+  "Elternzustimmung, Widerruf und Kinderüberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.": "Parental consent, revocation and the child overview are trust features and are not monetized separately.",
+  "Regionale Sichtbarkeit im Sportumfeld.": "Regional visibility in the sports community.",
+  "Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsäule, sobald genug Aktivität vorhanden ist.": "Sponsor profiles, campaigns and local ads become a B2B revenue stream once activity is high enough.",
+  "Marketplace für Produkte, Kurse und Services.": "A marketplace for products, courses and services.",
+  "Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.": "Providers can add products, camps, courses and sports services as the marketplace grows.",
+  "Websites, Kampagnen und digitale Sichtbarkeit für Vereine.": "Websites, campaigns and digital visibility for clubs.",
+  "Airmius bietet Vereinen Website-Erstellung, Landingpages und digitale Kampagnen als Angebotsservice nach Anfrage.": "Airmius offers clubs websites, landing pages and digital campaigns as a quoted service on request.",
+  "Individuelle Lösungen für Verbände und große Organisationen.": "Tailored solutions for federations and large organizations.",
+  "Enterprise ist für Mandantenfähigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.": "Enterprise is designed for multi-tenancy, migration, integrations, training and SLAs.",
+  "Funktionslogik": "Feature logic",
+  "Ausbauplan": "Product roadmap",
+  "Reihenfolge für die fehlenden Vereins- und Trainerfunktionen": "Sequence for the remaining club and coach capabilities",
+  "training_log": {
+    "title": "Training session",
+    "status": { "draft": "Draft", "planned": "Planned", "in_progress": "In progress", "completed": "Completed" },
+    "exact": "exact",
+    "equal": "same",
+    "roles": { "athlete": "Athlete", "trainer": "Coach", "team_staff": "Team", "admin": "Admin" },
+    "metrics": { "time": "Time", "duration": "Duration", "distance": "Distance", "calories": "Calories", "intensity": "Intensity" },
+    "labels": { "athlete": "Athlete:", "team": "Team:", "sport": "Sport:", "reps": "Reps:", "weight": "Weight:", "time": "Time:", "distance": "Distance:", "intensity": "Intensity:" },
+    "actions": { "new": "New session", "overview": "Back to overview" },
+    "comparison": { "eyebrow": "Plan vs. actual", "title": "Compare the planned session with its execution", "value": "Value", "planned": "Planned", "actual": "Actual", "delta": "Difference", "scheduled": "Scheduled", "documented": "Documented", "details": "Details" },
+    "entries": "entries",
+    "documentation": "Documentation",
+    "exercises": "Exercises and values",
+    "set": "Set",
+    "media": "View media",
+    "no_details": "No detailed values have been recorded.",
+    "notes": "Notes",
+    "trainer_note": "Coach note",
+    "wellness": { "title": "Load & wellbeing", "rpe": "RPE", "energy": "Energy", "pain": "Pain", "sleep": "Sleep" },
+    "plan_reference": "Plan reference",
+    "feedback": "Feedback",
+    "feedback_title": "Conversation between athlete and coach",
+    "unknown": "Unknown",
+    "no_feedback": "No feedback yet. Write the first response directly on this training session.",
+    "reply": "Write a reply",
+    "placeholder": "Feedback, question, technique note or next focus",
+    "send": "Send feedback"
+  },
+  "users_edit": { "suspension": { "no_change": "No change", "lift": "Lift suspension", "one_day": "Suspend for 1 day", "three_days": "Suspend for 3 days", "seven_days": "Suspend for 7 days", "ten_days": "Suspend for 10 days", "fourteen_days": "Suspend for 14 days", "thirty_days": "Suspend for 30 days", "sixty_days": "Suspend for 60 days", "ninety_days": "Suspend for 90 days" } },
+  "training_workspace": {
+    "sports": { "all": "All", "laufen": "Running", "schwimmen": "Swimming", "gym": "Gym", "fussball": "Football", "tanzen": "Dance", "golf": "Golf", "cycling": "Cycling", "yoga": "Yoga" },
+    "metrics": { "Distanz km": "Distance km", "Pace Ziel": "Target pace", "Höhenmeter": "Elevation", "RPE": "RPE", "Bahnen": "Laps", "Stil": "Style", "Intervall": "Interval", "Pausenzeit": "Rest time", "Sätze": "Sets", "Wiederholungen": "Repetitions", "Gewicht kg": "Weight kg", "Pause": "Rest", "Schwerpunkt": "Focus", "Spielfeld": "Pitch", "Spielerzahl": "Players", "Drill": "Drill", "Choreo": "Choreography", "Takte": "Bars", "Tempo": "Tempo", "Löcher": "Holes", "Schläger": "Clubs", "Zielscore": "Target score", "Watt Ziel": "Target watts", "Kadenz": "Cadence", "Flow": "Flow", "Atemfokus": "Breath focus", "Level": "Level", "Haltezeit": "Hold time" },
+    "plan_types": { "gym": "Gym", "run_interval": "Intervals", "long_run": "Long run", "swim": "Swim", "football": "Football", "cycling": "Bike", "generic": "Free" },
+    "sections": { "overview": { "label": "Overview", "hint": "Start" }, "plans": { "label": "Plans", "hint": "Build" }, "week": { "label": "Week", "hint": "Calendar" }, "logs": { "label": "Logs", "hint": "Documentation" }, "analysis": { "label": "Analysis", "hint": "Signals" } },
+    "plan_steps": { "0": { "label": "Basics", "hint": "Name & rhythm" }, "1": { "label": "Goal", "hint": "Period & level" }, "2": { "label": "Sharing", "hint": "Team & athletes" }, "3": { "label": "Session", "hint": "First training" } },
+    "ai_steps": { "0": { "label": "Goal", "hint": "What should improve?" }, "1": { "label": "Framework", "hint": "Time, level, rules" }, "2": { "label": "Preview", "hint": "Review and save" } },
+    "duration_presets": { "0": { "label": "1 month", "hint": "Quick start" }, "1": { "label": "2 months", "hint": "Build" }, "2": { "label": "3 months", "hint": "Stable block" }, "3": { "label": "6 months", "hint": "Long term" } },
+    "cadence": { "single": "Once", "daily": "Daily", "weekly": "Weekly", "monthly": "Monthly" },
+    "phase": { "base": "Base", "build": "Build", "peak": "Peak", "recovery": "Recovery", "rehab": "Rehab" },
+    "level": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced", "elite": "Performance" },
+    "load": { "low": "Easy", "medium": "Moderate", "high": "High", "test": "Test" },
+    "permission": { "read": "Read only", "write": "Can edit" },
+    "status": { "missed": "Missed" },
+    "item_status": { "completed": "Completed", "missed": "Missed", "due": "Due", "planned": "Planned" },
+    "units": { "hours": "hr", "minutes": "min" },
+    "fallback_training": "Training",
+    "page_title": "Training",
+    "eyebrow": "Training hub",
+    "tagline": "Plan · Train · Share",
+    "title": "Training plans",
+    "next_training": "Next training",
+    "empty_next": "Nothing planned yet",
+    "empty_next_mobile": "Start directly below.",
+    "empty_next_desktop": "Create a plan or document a spontaneous session.",
+    "no_appointment": "No session scheduled yet.",
+    "actions": { "start": "Start", "create_plan": "Create plan", "ai_plan": "AI plan", "document": "Document" },
+    "stats": { "plans": "Plans", "logs": "Logs", "completed": "Completed", "teams": "Teams" },
+    "ai": { "free": "Free", "limit_without_monthly": "{tier} tier: up to {weeks} weeks", "limit_with_monthly": "{tier} tier: {remaining}/{limit} AI plans this month, up to {weeks} weeks", "analysis": "Analysis", "adjustment": "Adjustment", "adjusted_title": "{title} adjusted", "training_plan": "Training plan", "unavailable": "AI training plans are not available for your current allowance.", "goal_required": "Enter a clear training goal first.", "revision_required": "Briefly describe what the AI should change in the plan.", "too_many_weeks": "Your current tier allows AI training plans up to {weeks} weeks. Choose a shorter duration or upgrade.", "too_many_items": "This plan would contain {requested} sessions. Reduce weeks or sessions per week to {max} sessions or fewer.", "preview_created": "AI proposal created.", "profile_missing": "More sport-profile data is needed for a reliable plan.", "generation_failed": "The AI training plan could not be created.", "save_failed": "The AI plan could not be saved." },
+    "log_create": {
+      "page_title": "Document training", "eyebrow": "Training", "title": "Document a session", "intro": "Capture the essentials quickly, check off sets and add details later if needed.", "back": "Back", "template": "Template", "status": "Status", "quality": "Quality", "step": "Step", "training_type": "Training type", "swipe_hint": "Swipe through templates on mobile.", "selected": "Selected", "change": "Change", "athlete": "Athlete", "planned_session": "Planned session", "spontaneous": "Spontaneous training", "sport": "Sport", "sport_search": "Search sport", "self": "Myself", "quick_choice": "Quick choice",
+      "autosave": { "saving": "Saving draft...", "dirty": "Changes will be saved shortly", "saved": "Draft saved", "at": "at", "none": "No draft yet" },
+      "summary": { "gym": "{exercises} exercises · {completed}/{sets} sets completed", "long_run": "Overall data is enough · segments optional", "entries": "{count} detail rows" },
+      "checklist": { "basics": "Basics", "time": "Time", "load": "Load", "details": "Details", "wellness": "Wellbeing", "notes_media": "Notes or media", "visibility": "Visibility" },
+      "steps": { "1": { "label": "Choose training", "short": "Start" }, "2": { "label": "Document", "short": "Details" }, "3": { "label": "Finish", "short": "Finish" } },
+      "types": { "gym": { "label": "Gym / strength", "short": "Gym", "detail": "Exercises and sets" }, "run_interval": { "label": "Run intervals", "short": "Intervals", "detail": "Intervals" }, "long_run": { "label": "Long run", "short": "Long run", "detail": "Route segments" }, "swim": { "label": "Swimming", "short": "Swim", "detail": "Sets and technique" }, "football": { "label": "Football", "short": "Football", "detail": "Drills and games" }, "cycling": { "label": "Cycling", "short": "Bike", "detail": "Route segments" }, "generic": { "label": "Free training", "short": "Free", "detail": "Exercises / values" } },
+      "more_fields": "More details", "optional": "optional", "notes_placeholder": "Feel, technique, pain or other notes", "live_mode": "Live mode", "live_hint": "Quick start for training on the pitch, in the gym or on the go.", "live_start": "Start live session", "live_end": "End live session", "live_take_time": "Use elapsed time", "duration_set": "Set duration", "finish": "Finish", "save": "Save training", "next": "Next", "next_document": "Continue documenting", "finish_title": "Finish training", "finish_intro": "These values are intentionally last. Enter only what you actually know.", "work_mode": "Work mode", "active_template": "Active template", "gym_hint": "Enter the exercise first, then each set with its own repetitions and weight.", "general_hint": "Fields adapt to the training type. For a long run, segments are optional if you want to record pace or distance blocks.", "moment": "Moment", "quality_check": "Quality check", "volume": "Volume",
+      "fields": { "title": "Title", "status": "Status", "time": "Time", "duration": "Duration in minutes", "distance": "Distance in km", "notes": "Notes", "trainer_note": "Coach note", "visibility": "Visibility", "intensity": "Intensity", "calories": "Calories burned" },
+      "visibility": { "trainer": "Coach and authorised staff", "private": "Only me", "team": "Team" },
+      "notify": { "athlete": "Notify the athlete when saving", "trainer": "Notify the coach when saving", "hint": "Enabled by default. If disabled, no notification is sent; authorised people can still view the session." },
+      "intensity": { "none": "Not specified", "easy": "Easy", "medium": "Moderate", "hard": "Hard / intense", "recovery": "Recovery" },
+      "wellness": { "title": "Wellbeing (optional)", "hint": "Fill this in only if you want to record how you feel. 1 is low and 10 is high.", "rpe": "Effort 1–10", "energy": "Energy 1–10", "pain": "Pain 0–10", "sleep": "Sleep in hours" },
+      "back_to_details": "Back to details"
+    }
+  },
+  "files": {
+    "page_title": "Files", "scope_label": "Scope", "select": "Select", "manager": "File manager", "folders": "folders", "files": "files", "search_sort": "Search and sort", "add_file_folder": "Add file or folder", "upload": "Upload file", "root": "Root", "choose_file": "Choose file", "storage_full": "Your storage is full. Delete files or upgrade.", "upload_running": "Upload in progress...", "uploading": "Uploading...", "create_folder": "Create folder", "new_folder": "New folder", "folder_name": "Folder name", "folder_creating": "Creating folder...", "created": "Created...", "create": "Create", "search_placeholder": "Search...", "search_aria": "Search files and folders", "search_clear": "Clear search", "per_page": "Items per page", "per_page_option": "Per page: {count}", "sort_aria": "Sort folders and files", "sort_option": "Sort: {value}", "parent_folder": "Go to parent folder", "back": "Back", "next": "Next", "open_folder": "Open folder", "share": "Share", "share_folder": "Share folder", "share_file": "Share file", "rename": "Rename", "rename_folder": "Rename folder", "rename_file": "Rename file", "delete": "Delete", "delete_folder": "Delete folder", "delete_file": "Delete file", "delete_file_message": "This file will be removed.", "delete_folder_message": "The folder and its files will be removed.", "download": "Download", "download_file": "Download file", "storage": "Storage", "free": "free", "used": "used", "total": "total", "used_of_total": "{used} used of {limit} GB total", "storage_mobile": "Storage: {used} of {limit} GB", "empty_folder": "This folder is empty.", "no_results": "No results for \"{query}\"", "refreshing": "Refreshing list...", "page_status": "Folder page {foldersPage} / {foldersLast}, file page {filesPage} / {filesLast}", "result_status": "Result: {folders} folders, {files} files", "range_files": "Files {start}–{end} of {total}", "range_folders": "Folders {start}–{end} of {total}", "folder_page": "Folder page {current} / {last}", "file_page": "File page {current} / {last}", "delete_final": "Delete permanently", "delete_confirmation_hint": "Type delete to continue.", "delete_word": "delete", "cancel": "Cancel", "deleting": "Deleting...", "save": "Save", "folder": "Folder", "file": "File", "friend": "Friend", "external_email": "External email", "friend_search": "Search friends",
+    "scope": { "user": "My files", "team": "Team", "club": "Club", "event": "Event" },
+    "sort": { "name_asc": "Name (A–Z)", "name_desc": "Name (Z–A)", "newest": "Newest first", "oldest": "Oldest first" }
+  },
+  "chat": {
+    "title": "Chat", "choose_hint": "Choose a person or group, then open it.", "new_conversation": "New conversation", "search_placeholder": "Search people, teams or training", "group_invitations": "Group invitations", "invited_by": "From", "member": "Member", "accept": "Accept", "decline": "Decline", "empty_title": "No chats yet", "empty_description": "Start a new conversation to see messages here.", "no_matches_title": "No matching chats", "no_matches_description": "Change the filter or search for another name.", "back": "Back", "chat_suffix": "chat", "members": "members", "muted": "muted", "unmute": "Enable notifications", "mute": "Mute chat", "group_profile": "Group profile", "add_people": "Add people", "leave_group": "Leave group", "message_search": "Search messages in this chat", "clear_search": "Clear search", "loading_older": "Loading older messages...", "load_older": "Load older messages", "reactions_hint": "Click a message for reactions", "direct_chat": "Direct chat", "team_chat": "Team chat", "event_chat": "Event chat", "group_chat": "Group chat", "no_messages": "No messages yet", "system_notice": "System notice", "you": "You", "image_sent": "Image sent", "video_sent": "Video sent", "file_sent": "File sent", "message": "Message", "file": "File",
+    "filters": { "direct": "People", "team": "Teams", "group": "Groups", "event": "Training", "all": "All" },
+    "types": { "direct": "Direct", "group": "Group", "team": "Team", "event": "Training" },
+    "status": { "sending": "Sending", "failed": "Not sent", "sent": "Sent", "delivered": "Delivered", "read": "Read" },
+    "errors": { "upload_cancelled": "Upload cancelled.", "rate_limited": "Too many messages in a short time.", "send_failed": "Sending failed." }
+  },
+  "commerce": {
+    "page_title": "Shop & invoices", "eyebrow": "Purchases & subscriptions", "title": "Shop, invoices and offers", "intro": "Manage marketplace purchases, courses, ads, outfit subscriptions, account plans, cart and invoices in one place.",
+    "order": { "status": { "delivered": "Completed", "paid": "Paid", "pending": "Open", "awaiting_transfer": "Awaiting transfer", "cancelled": "Cancelled", "refunded": "Refunded" }, "hints": { "delivered": "Your order has been delivered.", "processing": "Payment received; your order is being processed.", "pending": "Payment is still open", "awaiting_transfer": "We are waiting for the payment.", "cancelled": "This order was cancelled.", "refunded": "This order was refunded." }, "cancel": { "title": "Cancel order", "message": "Cancel this order? This is only possible before it has shipped.", "confirm": "Cancel" } },
+    "shipping": { "status": { "open": "Open", "prepared": "Being prepared", "shipped": "Shipped", "delivered": "Delivered" } },
+    "issue": { "status": { "reported": "Issue reported", "reviewing": "Under review", "resolved": "Resolved", "refunded": "Refunded", "cancelled": "Cancelled" } },
+    "payout": { "status": { "requested": "Requested", "prepared": "Under review", "paid": "Paid out", "cancelled": "Cancelled" } },
+    "shop": { "learning_title": "Courses and e-learning", "learning_description": "Buy online courses, training plans and digital learning offers.", "categories": { "all": "All", "courses": "Courses / e-learning", "outfit": "Outfit subscription", "account": "Account subscription & add-ons" } },
+    "payment": { "bank_transfer": "Bank transfer", "stripe": "Stripe", "paypal": "PayPal" },
+    "checkout": { "confirm": "Confirm checkout" },
+    "provider_location": { "remove": { "title": "Remove location", "message": "Remove {name} from your provider profile?", "confirm": "Remove" } },
+    "tabs": { "shop": "Shop", "cart": "Cart", "invoices": "Invoices", "ads": "Ads", "create": "Sell", "provider": "Provider profile", "payouts": "Payout" }
+  },
+  "users_admin": { "page_title": "User management", "title": "Admin dashboard – users", "intro": "Overview of all registered users.", "search": "Search by name or email...", "empty": "No users found.", "tabs": { "users": "Users", "warnings": "Warnings", "inactivity": "Inactivity & GDPR" }, "filters": { "all": "All statuses" }, "status": { "active": "Active", "suspended": "Suspended", "suspended_until": "Suspended until {date}" }, "actions": { "edit": "Edit", "delete": "Delete" }, "inactivity": { "12": "12+ months", "18": "18+ months", "24": "24+ months", "36": "36+ months", "mail_failed": "Mail errors" }, "stage": { "first": "First email due", "second": "Second email due", "scheduled": "Hide profile", "anonymize": "Review anonymisation", "waiting": "Waiting", "active": "Active", "check": "Review" } },
+  "learning_studio": { "page_title": "Airmius Sports School", "eyebrow": "Airmius Sports School", "title": "Course studio for coaches and tutors", "intro": "Plan real online courses with chapters, lessons, assignments, attachments, quizzes, notes and course communication.", "new_course": "Plan a new course", "create_course": "Create course", "my_courses": "My courses", "upload_failed": "Upload failed.", "units": { "minutes": "min.", "hours": "hrs." }, "categories": { "training": "Training", "nutrition": "Nutrition", "mindset": "Mindset", "tactics": "Tactics", "rehab": "Rehab & prevention", "coaching": "Coaching", "club_management": "Club management" }, "levels": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced", "pro": "Pro" }, "lesson_types": { "lesson": "Lesson", "video": "Video", "exercise": "Exercise", "assignment": "Assignment", "live_session": "Live session" } },
+  "friends": { "page_title": "Friends", "title": "Friends", "intro": "Invite friends, accept requests and keep track of your sports buddies.", "invite_title": "Invite a friend", "invite_hint": "Enter an email address. Existing users receive a request; external people receive an email invitation.", "invite": "Invite", "invite_success": "Invitation sent successfully.", "invite_failed": "Invitation could not be sent.", "pending": "Pending requests", "accept": "Accept", "accepting": "Accepting...", "accepted": "Friend request accepted.", "accept_failed": "Request could not be accepted.", "decline": "Decline", "mine": "My friends", "empty": "No friends yet. Invite someone to get started.", "sent": "Sent", "sent_empty": "No open sent invitations.", "actions_for": "Actions for {name}", "end": "End", "end_friendship": "End friendship", "remove_title": "End friendship", "remove_message": "Do you really want to end your friendship with {name}?", "report": "Report", "report_friend": "Report friend", "report_title": "Report profile", "report_message": "Report {name}? The report will be sent to moderation." },
+  "rides": { "blocks": { "driver": "You are the driver of this ride.", "already_joined": "You have already joined.", "pending_request": "Request pending.", "full": "This carpool is full.", "past": "The departure time is in the past.", "not_allowed": "You do not have access to this ride.", "unavailable": "This ride is currently unavailable." }, "states": { "driver": "Your ride", "pending": "Request open", "full": "Full", "past": "Past", "past_short": "Past", "not_visible": "Not visible", "unavailable": "Unavailable" }, "legend": { "not_allowed": "No access (visibility/status).", "full": "Ride is full.", "past": "Past ride.", "pending": "Request pending." }, "role": { "driver": "Driver", "joined": "Joined" }, "hints": { "can_join": "You can send a request. Private meeting-point and contact details become visible after approval.", "pending": "Your request is awaiting a response. You can withdraw it at any time.", "joined": "You have joined and can see the shared meeting-point and contact details.", "driver_pending": "Review open requests and keep seat availability up to date.", "driver": "You manage this ride." }, "not_set": "Not set", "seats": "seats", "seat_hint": "Seat availability" },
+  "outfit_workspace": { "page_title": "Outfit subscription", "eyebrow": "Subscription centre", "overview": "Everything at a glance", "active_subscriptions": "Active subscriptions", "next_delivery": "Next delivery", "style_profile": "Style profile", "subscriptions_title": "Your subscriptions and deliveries", "subscriptions_hint": "Status, delivery month and tracking in one place.", "choose_plan": "Choose a plan", "not_planned": "Not planned yet", "status": { "active": "Active", "paused": "Paused", "payment_paused": "Paused due to payment", "cancels_at_period_end": "Cancelled at end of term", "pending_payment": "Payment open", "pending_confirmation": "Awaiting approval", "cancelled": "Cancelled", "planned": "Planned", "preparing": "Preparing", "shipped": "Shipped", "delivered": "Delivered", "skipped": "Skipped" }, "issue_types": { "exchange": "Exchange", "return": "Return", "damaged": "Damaged", "missing_item": "Missing item", "wrong_item": "Wrong item", "other": "Other" }, "issue_status": { "open": "Open", "reviewing": "Under review", "approved": "Approved", "return_waiting": "Return pending", "replacement_preparing": "Replacement being prepared", "resolved": "Resolved", "rejected": "Closed" }, "payment": { "bank_transfer": "Bank transfer", "paypal": "PayPal" }, "actions": { "cancel_pending": "Cancel", "cancel": "Cancel subscription" }, "contract_terms": { "monthly": "The outfit subscription is a monthly recurring subscription.", "payment": "The first delivery is prepared after payment is confirmed.", "future": "Pausing and cancellation apply only to future deliveries." }, "branding": { "sponsor": "Sponsor branding", "club": "Club branding", "custom": "Custom branding", "default": "Branding" }, "feedback": { "profile_saved": "Style profile saved.", "profile_failed": "Style profile could not be saved. Please check your details." } },
+  "moderation": { "page_title": "Moderation", "eyebrow": "Admin", "title": "Moderation", "intro": "Review reported and automatically flagged content from the feed, comments and chat.", "users": "users", "reported_by": "Reported by", "unknown_user": "Unknown", "unknown_date": "Unknown", "note": "Note:", "source": "Source:", "user": "User:", "system": "System", "metrics": { "reports": "Open reports", "flags": "Automatic flags", "warnings": "Warnings (90 days)", "suspended": "Suspended accounts" }, "tabs": { "reports": "Reports", "flags": "Automatically flagged", "warnings": "Warnings" }, "actions": { "dismiss": "Dismiss as harmless", "actioned": "Mark as handled", "remove": "Remove content" }, "empty": { "reports": "No reports available.", "flags": "No automatic flags available.", "warnings": "No warnings for this filter." }, "deleted_content": "Deleted content", "remove_title": "Remove content", "remove_message": "This content will be removed permanently. Continue?", "remove_confirm": "Remove permanently" },
+"outfit_admin": {"plan_delete_title":"Delete or deactivate plan","plan_delete_message":"Delete or deactivate plan \"{name}\"?","continue":"Continue","mark_unpaid_title":"Mark payment as open","mark_unpaid_message":"Mark this active subscription as an open payment? Dunning will start automatically.","mark_unpaid_confirm":"Mark as open"}, "global_feedback": {"permission_denied":"You do not have permission for this.","generic":"The action could not be completed. Please check your input.","session_expired":"Your session has expired. Please sign in again.","not_found":"The requested content was not found.","session_reload":"Your session has expired. Please reload the page and try again.","validation":"Please check your input.","server":"Server error. Please try again shortly.","action_failed":"The action could not be completed.","unexpected":"An unexpected error occurred. Please try again."}, "feed": {"types":{"normal":"Normal","question":"Question","knowledge":"Knowledge","training_drill":"Training drill","tactic":"Tactics","analysis":"Analysis","experience":"Experience","club_update":"Club update"},"visibility":{"public":"Public","organization":"Club","team":"Team"}}, "subscriptions": {"unlimited":"Unlimited","actor":{"all":"All","sportler":"Athletes","trainer":"Coaches","verein":"Clubs","eltern":"Parents","sponsor":"Sponsors","anbieter":"Providers","enterprise":"Enterprise"},"status":{"trialing":"Trial","active":"Active","past_due":"Payment open","cancelled":"Cancelled","cancels_at_period_end":"Cancelled at period end"}}, "club_memberships": {"empty_audit":"No audit entries yet.","finance":{"type":{"income":"Income","expense":"Expense"},"account":{"cash":"Cash","bank":"Bank"}}}, "admin_finance": {"eyebrow":"Finance","payments_title":"Payments","payments_intro":"All recorded club and platform payments in one place.","subscription_invoices":"Subscription invoices","count":"Payments","paid":"Paid","open":"Open","revenue_paid":"Paid revenue","manual_title":"Record manual payment","manual_hint":"Record a payment and optionally assign it to an open invoice.","create_payment":"Create payment","delete":"Delete","empty_payments":"No payments yet.","payment_delete_title":"Delete payment","payment_delete_message":"Delete payment #{id}?","status":{"paid":"Paid","pending":"Open","open":"Open","failed":"Failed","cancelled":"Cancelled","overdue":"The due date has passed.","awaiting_transfer":"Awaiting transfer"},"method":{"paypal":"PayPal","stripe":"Stripe","bank_transfer":"Bank transfer","cash":"Cash","card":"Card"},"invoices_title":"Invoice centre","invoices_intro":"Create and review invoices for account subscriptions, outfit subscriptions, marketplace purchases, courses, ads, sponsorships and agency services such as websites, logos or branding.","create_invoice":"Create invoice","all_invoices":"All invoices","invoice_list":"Invoice list","all_sources":"All sources in one place","new":"New","empty_invoices":"No invoices yet.","new_invoice":"New invoice","invoice_create_hint":"Capture the reason, recipient and service details. The person will be notified automatically.","cancel":"Cancel","save_status":"Save status","invoice_delete_title":"Delete invoice","invoice_delete_message":"Delete invoice {number}?","invoice_hints":{"open":"Invoice is created and not paid yet.","pending":"Payment or review is still in progress.","paid":"Invoice will be marked as paid.","overdue":"The due date has passed.","cancelled":"Invoice is no longer active."},"subscription_invoice_title":"Airmius subscription invoices","billing":"Billing","subscription_invoice_intro":"Review subscription invoices, update statuses and download PDFs in one place.","manage_subscriptions":"Manage subscriptions","empty_subscription_invoices":"No Airmius subscription invoices yet."}
+  ,"gamification_rules": {"page_title":"Manage gamification","eyebrow":"Admin","title":"Gamification rules","intro":"Manage XP, daily limits, trust impacts and active rules centrally. Changes apply to new actions and keep the system fair, controllable and youth-friendly.","save":"Save","actors":{"sportler":"Athletes","trainer":"Coaches","verein":"Clubs","team":"Teams"},"metrics":{"quality":"Quality","active_rules":"Active rules","daily_limits":"Daily limits","penalties":"Penalties","max_xp":"Max XP","average_xp":"Average XP","today":"Today","capped":"Capped","daily_limit_hits":"Daily limit hits"},"balance_heading":"Balance notes","rules_count":"{count} rules","penalty":"Penalty","active":"Active","fields":{"daily_limit":"Daily limit","no_limit":"no limit","trust":"Trust"},"risk":{"paused":"Paused","safety":"Safety","high_reward":"Very high reward","no_daily_limit":"No daily limit","balanced":"Balanced"},"risk_notes":{"many_without_limit":"Many positive rules without a daily limit","high_reward_exists":"At least one reward is very high","xp_sign_mismatch":"XP sign does not match the rule type","no_penalty_rule":"No penalty rule for abuse","all_paused":"All rules are paused"}}
+  ,"media_guidelines":{"page_title":"Image sizes","eyebrow":"Media & content","title":"Recommended image sizes","intro":"A central overview for editors, admins and clubs: which image dimensions work best for profiles, blogs, posts, videos and other media.","search_placeholder":"Search...","all_areas":"All areas","images":"Images","remove":"Remove","empty":"No matching image sizes found.","cards":{"standard_upload":"Standard upload","standard_upload_hint":"These formats work for almost all image areas.","login_slider":"Login slider","one_or_more":"1 to several","login_slider_hint":"Dynamic portrait slider for the right-hand login page.","global_banners":"Global banners","global_banners_hint":"Manage marketplace and outfit subscription image areas centrally."},"editor":{"eyebrow":"Central image control","title":"Edit global images directly","intro":"Login slider, marketplace banners and outfit subscription hero images can be managed centrally here. Content-specific images remain with the respective profile, club, blog or product.","save":"Save images"},"slider":{"eyebrow":"Dynamic slider","title":"Login slider (right)","intro":"Upload one or more images. Their order follows the list. Recommended: 1080 × 1920 px.","upload_multiple":"Upload multiple images","upload_hint":"New uploads are appended to the existing slider images when saved.","add_slot":"Add empty slot","image_alt":"Login slider image {count}"},"fields":{"source":"URL or saved path","upload":"Upload image"},"table":{"area":"Area","type":"Image type","recommended":"Recommended","ratio":"Ratio","format":"Format","max":"Max.","note":"Note","editing":"Editing"},"action":{"editable":"Editable here","content":"Edit on the respective content"},"feedback":{"saved":"Images saved.","failed":"Images could not be saved. Please check the files or paths."}}
+  ,"mail_center":{"page_title":"Mail center","eyebrow":"System","title":"Mail center","intro":"Monitor delivery, queue, errors and sender rules for transactional emails.","local_test_notice":"Local tests are handled as log emails while real emails are disabled locally.","summary":{"total":"Log","sent":"Sent","failed":"Failed","skipped":"Throttled","resolved":"Resolved"},"sender_rules":{"title":"Sender rules","hint":"For invoices, switch primary and fallback senders without changing code.","primary":"Primary","no_fallback":"No fallback"},"actions":{"save":"Save","test_mail":"Test email","filter":"Filter","resend":"Resend","resolve":"Mark as resolved"},"sender":{"local_log":"Local: log","ready":"Ready","incomplete":"Incomplete","disabled":"Disabled","mailer":"Mailer:","active":"Mailbox active","password_status":"Password: {status}","password_set":"set","password_unset":"not set","last_updated":"last updated {date}","never_shown":"It is never displayed."},"fields":{"from_address":"Sender address","from_name":"Display name","smtp_host":"SMTP host","smtp_user":"SMTP user","encryption":"Encryption","default":"Default","new_password":"Set new password","password_placeholder":"Leave blank to keep the current password"},"queue":{"title":"Queue & failed jobs","pending":"Open jobs","failed":"Failed jobs","empty":"No current failed jobs found.","job":"Job"},"audit":{"title":"Mailbox audit","hint":"Changes and test sends are logged without plaintext passwords.","empty":"No audit entries yet.","password_changed":"Password was reset.","sender":"Sender:","error":"Error:"},"log":{"title":"Delivery log","hint":"New entries appear for emails routed through the central mail layer.","empty":"No email entries yet."},"filters":{"all_statuses":"All statuses","all_types":"All types"},"table":{"status":"Status","type":"Type","recipient":"Recipient","sender":"Sender","time":"Time","error":"Error","actions":"Actions","category":"Category","action":"Action","admin":"Admin","details":"Details"},"status":{"sent":"Sent","failed":"Failed","skipped":"Throttled","resolved":"Resolved"},"categories":{"system":"System","billing":"Billing","support":"Support","marketplace":"Marketplace","academy":"Academy","security":"Security","partners":"Partners","legal":"Legal"}}
+  ,"admin_settings":{"ai_tokens":{"expiry":"Expiry date","set":"set","missing":"missing","expired_short":"expired","no_api_key":"No API key set","no_model":"No model set","no_expiry":"No expiry date detected in the key","status":{"ok":"Ready","inactive":"Inactive","missing_key":"API key missing","missing_model":"Model missing","expired":"Expired","expiring_soon":"Expires soon","valid_until":"Valid"},"messages":{"ok":"The API key is set. No expiry date was detected in the key.","inactive":"This provider is not currently configured as a primary or fallback provider.","missing_key":"This provider cannot be used without an API key.","missing_model":"Please set a model in the environment configuration.","expired":"The token has expired. Please enter a new API key.","expiring_soon":"The token expires soon. Please renew it in time.","valid_until":"The token is currently valid."}}}
+  ,"sports_admin":{"page_title":"Manage sports","eyebrow":"System admin","title":"Manage sports","intro":"Maintain central sports, active status and sorting. Usage figures show how many teams, clubs, profiles and posts exist for each sport.","search_placeholder":"Name, slug or category","no_category":"no category","delete_title":"Delete sport","delete_message":"Do you really want to delete the sport \"{name}\"? This action cannot be undone.","delete_used_hint":"Please deactivate used sports instead of deleting them.","metrics":{"sports":"Sports","active":"Active","teams":"Teams","clubs":"Clubs"},"list":{"all":"All sports","empty":"No sports found."},"filters":{"all":"All","active":"Active","inactive":"Inactive"},"actions":{"create_sport":"Create sport","save":"Save","delete":"Delete","cancel":"Cancel","saving":"Saving...","create":"Create"},"fields":{"name":"Name","slug":"Slug","slug_placeholder":"generated from name","category":"Category","sort_order":"Sort order","active_in_selects":"Show as active in selection fields","optional":"optional"},"create":{"title":"New sport","hint":"Slug may be left empty and will be generated automatically."},"usage":{"teams":"{count} teams","clubs":"{count} clubs","profiles":"{count} profiles","posts":"{count} posts","skills":"Skills recorded","total":"total uses"}}
+  ,"blog_categories":{"page_title":"Blog categories","eyebrow":"Website CMS","title":"Blog categories","intro":"Maintain the categories available when creating a blog post.","back":"Back to blogs","empty":"No categories yet.","delete_title":"Delete category","delete_message":"Delete the category \"{name}\"?","fields":{"name":"Name","slug":"Slug","sort_order":"Order","status":"Status","posts":"Posts","actions":"Actions","description":"Description"},"status":{"active":"Active","inactive":"Inactive"},"actions":{"edit":"Edit","delete":"Delete","new":"New","update":"Update","create":"Create"},"form":{"edit_eyebrow":"Edit category","new_eyebrow":"New category","create_title":"Create category","slug_placeholder":"generated when empty"}}
+  ,"blogs_editor":{"page_title":"Blogs","eyebrow":"Website CMS","title":"Blog Studio","intro":"Write posts with headings, lists, highlights, links, quotes and a clean public presentation.","categories":"Categories","search":"Search...","filter":"Filter","revisions":"revisions","latest_revision":"Last save: {date} with {score}% SEO","empty":"No blog posts yet.","form":{"edit_eyebrow":"Edit post","new_eyebrow":"New post","write_title":"Write","new_button":"New"},"fields":{"title":"Title","slug":"Slug","slug_placeholder":"generated when empty","category":"Category","category_placeholder":"Select category","status":"Status","publish_at":"Publish at","excerpt":"Short text","content":"Content","cover":"Cover image","cover_placeholder":"https://…","cover_help":"Recommended: 1600 × 900 px landscape. Paste a link or upload an image; uploads take priority.","tags":"Tags","tags_placeholder":"Training, club, digital"},"toolbar":{"bold":"Bold","italic":"Italic","underline":"Underline","strike":"Strikethrough","list":"List","numbered_list":"Numbered list","quote":"Quote","left":"Align left","center":"Centered","right":"Align right","ltr":"Left to right","rtl":"Right to left","link":"Link","insert_image":"Insert image into content","remove_format":"Remove formatting"},"styles":{"choose":"Choose text style","paragraph":"Paragraph","article_title":"Article title","lead":"Subtitle / lead","section":"Section","subheading":"Subheading","quote":"Quote","callout":"Callout","code":"Code / note"},"inline":{"choose":"Color / highlight","primary":"Standard text","secondary":"Secondary info","accent":"Accent","success":"Positive","warning":"Important","danger":"Warning","mark":"Highlight"},"editor":{"text_placeholder":"Enter text...","callout_label":"Note"},"prompts":{"link_title":"Insert link","link_message":"Enter the full URL to link in the article.","url":"URL","insert":"Insert","image_title":"Image description","image_message":"Alt text improves accessibility and SEO.","alt_text":"Alt text","upload_image":"Upload image"},"seo":{"title":"SEO","title_label":"Title is search-friendly","title_hint":"35–65 characters","meta_label":"Meta description is compelling","meta_hint":"110–160 characters","excerpt_label":"Short text present","excerpt_hint":"At least 80 characters","depth_label":"Article has enough depth","words_hint":"{count} words","category_label":"Category set","category_hint":"For archives, breadcrumbs and related posts","cover_label":"Cover image set","cover_hint":"1600 × 900 px recommended","meta_title_placeholder":"Meta title","meta_description_placeholder":"Meta description","publish_blocked":"Publishing requires at least 85% SEO quality."},"delete_title":"Delete blog post","delete_message":"Delete the blog post \"{title}\"?","filters":{"all":"All statuses"}}
 }

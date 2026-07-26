@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 
 class ContentReportDraft {
@@ -10,15 +11,15 @@ class ContentReportDraft {
 }
 
 const _contentReportReasons = <MapEntry<String, String>>[
-  MapEntry('insult', 'Beleidigung'),
-  MapEntry('bullying', 'Mobbing oder Belaestigung'),
-  MapEntry('hate', 'Hassrede'),
-  MapEntry('sexual', 'Sexueller Inhalt'),
-  MapEntry('violence', 'Gewalt'),
-  MapEntry('threat', 'Drohung'),
-  MapEntry('image_rights', 'Bildrechte / Persoenlichkeitsrechte'),
-  MapEntry('spam', 'Spam oder Betrug'),
-  MapEntry('other', 'Sonstiges'),
+  MapEntry('insult', 'moderation.report.reason.insult'),
+  MapEntry('bullying', 'moderation.report.reason.bullying'),
+  MapEntry('hate', 'moderation.report.reason.hate'),
+  MapEntry('sexual', 'moderation.report.reason.sexual'),
+  MapEntry('violence', 'moderation.report.reason.violence'),
+  MapEntry('threat', 'moderation.report.reason.threat'),
+  MapEntry('image_rights', 'moderation.report.reason.imageRights'),
+  MapEntry('spam', 'moderation.report.reason.spam'),
+  MapEntry('other', 'moderation.report.reason.other'),
 ];
 
 Future<ContentReportDraft?> showContentReportDialog(
@@ -27,6 +28,10 @@ Future<ContentReportDraft?> showContentReportDialog(
 }) async {
   final detailsController = TextEditingController();
   var reason = 'insult';
+  final t = AirmiusScope.of(context).t;
+  final surface = airmiusSurfaceColor(context);
+  final text = airmiusTextColor(context);
+  final muted = airmiusMutedColor(context);
 
   final result = await showDialog<ContentReportDraft>(
     context: context,
@@ -34,40 +39,50 @@ Future<ContentReportDraft?> showContentReportDialog(
       return StatefulBuilder(
         builder: (dialogContext, setDialogState) {
           return AlertDialog(
-            backgroundColor: AirmiusColors.card,
+            backgroundColor: surface,
             surfaceTintColor: Colors.transparent,
-            title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            title: Text(
+              title,
+              style: TextStyle(color: text, fontWeight: FontWeight.w900),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Warum soll dieser Inhalt geprüft werden?',
-                    style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800, height: 1.35),
+                  Text(
+                    t('moderation.report.explanation'),
+                    style: TextStyle(
+                      color: muted,
+                      fontWeight: FontWeight.w800,
+                      height: 1.35,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     initialValue: reason,
-                    decoration: const InputDecoration(labelText: 'Grund'),
-                    dropdownColor: AirmiusColors.card,
+                    decoration: InputDecoration(
+                      labelText: t('moderation.report.reason'),
+                    ),
+                    dropdownColor: surface,
                     items: [
                       for (final option in _contentReportReasons)
                         DropdownMenuItem<String>(
                           value: option.key,
-                          child: Text(option.value),
+                          child: Text(t(option.value)),
                         ),
                     ],
-                    onChanged: (value) => setDialogState(() => reason = value ?? 'other'),
+                    onChanged: (value) =>
+                        setDialogState(() => reason = value ?? 'other'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: detailsController,
                     maxLines: 4,
-                    style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
-                    decoration: const InputDecoration(
-                      labelText: 'Details',
-                      hintText: 'Optional: Was ist dir aufgefallen?',
+                    style: TextStyle(color: text, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      labelText: t('moderation.report.details'),
+                      hintText: t('moderation.report.detailsHint'),
                     ),
                   ),
                 ],
@@ -76,17 +91,20 @@ Future<ContentReportDraft?> showContentReportDialog(
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Abbrechen'),
+                child: Text(t('moderation.report.cancel')),
               ),
               FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(
                     dialogContext,
-                    ContentReportDraft(reason: reason, details: detailsController.text.trim()),
+                    ContentReportDraft(
+                      reason: reason,
+                      details: detailsController.text.trim(),
+                    ),
                   );
                 },
                 icon: const Icon(Icons.flag_outlined, size: 18),
-                label: const Text('Meldung senden'),
+                label: Text(t('moderation.report.submit')),
               ),
             ],
           );

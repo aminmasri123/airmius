@@ -147,7 +147,7 @@ const drinkVessels = [
         title: 'Kleine Tasse Wasser',
         fill: 42,
         gradient: 'from-cyan-300 to-air-blue',
-        ring: 'border-cyan-300/45 hover:border-cyan-200',
+        ring: 'border-air-blue/45 hover:border-air-blue',
     },
     {
         key: 'glass',
@@ -491,12 +491,12 @@ const analyzeMealImage = async () => {
     }
 
     if (!aiMealImageFile.value) {
-        aiMealError.value = 'Bitte zuerst ein Essensbild auswählen.'
+        aiMealError.value = tAuto('Bitte zuerst ein Essensbild auswählen.')
         return
     }
 
     if (!aiMealConsent.value) {
-        aiMealError.value = 'Bitte bestätige zuerst die KI-Analyse.'
+        aiMealError.value = tAuto('Bitte bestätige zuerst die KI-Analyse.')
         return
     }
 
@@ -520,7 +520,7 @@ const analyzeMealImage = async () => {
             applyAiMealSuggestion()
         }
     } catch (error) {
-        aiMealError.value = error.response?.data?.message || 'Bildanalyse konnte nicht abgeschlossen werden.'
+        aiMealError.value = error.response?.data?.message || tAuto('Bildanalyse konnte nicht abgeschlossen werden.')
     } finally {
         aiMealAnalyzing.value = false
     }
@@ -596,7 +596,7 @@ const submitDrink = (amount = null, title = null) => {
     const selectedDate = selectedDateValue.value || props.selectedDate
 
     if (!selectedAmount || selectedAmount < 1 || selectedAmount > 5000) {
-        drinkError.value = 'Bitte Menge zwischen 1 und 5000 ml eingeben.'
+        drinkError.value = tAuto('Bitte Menge zwischen 1 und 5000 ml eingeben.')
         return
     }
 
@@ -633,7 +633,7 @@ const submitDrink = (amount = null, title = null) => {
         },
         onError: () => {
             removePendingDrinkEntry(pendingId)
-            drinkError.value = 'Trinken konnte nicht gespeichert werden. Bitte versuche es erneut.'
+            drinkError.value = tAuto('Trinken konnte nicht gespeichert werden. Bitte versuche es erneut.')
         },
     })
 }
@@ -651,7 +651,7 @@ const deleteDrinkEntry = (entry) => {
 
     let handled = false
 
-    const restoreDrinkEntry = (message = 'Getränk konnte nicht gelöscht werden. Bitte versuche es erneut.') => {
+    const restoreDrinkEntry = (message = tAuto('Getränk konnte nicht gelöscht werden. Bitte versuche es erneut.')) => {
         handled = true
         removeDeletingDrinkEntry(entry.id)
         drinkError.value = message
@@ -666,7 +666,7 @@ const deleteDrinkEntry = (entry) => {
             activeSection.value = 'drink'
         },
         onError: () => restoreDrinkEntry(),
-        onCancel: () => restoreDrinkEntry('Löschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.'),
+        onCancel: () => restoreDrinkEntry(tAuto('Löschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.')),
         onFinish: () => {
             if (!handled) {
                 restoreDrinkEntry()
@@ -720,7 +720,7 @@ const searchFoods = async () => {
     foodSearchResults.value = []
 
     if (foodSearchQuery.value.trim().length < 2) {
-        foodLookupError.value = 'Bitte mindestens 2 Zeichen eingeben.'
+        foodLookupError.value = tAuto('Bitte mindestens 2 Zeichen eingeben.')
         return
     }
 
@@ -732,10 +732,10 @@ const searchFoods = async () => {
         })
         foodSearchResults.value = response.data?.data || []
         if (!foodSearchResults.value.length) {
-            foodLookupError.value = 'Keine passenden Lebensmittel gefunden.'
+            foodLookupError.value = tAuto('Keine passenden Lebensmittel gefunden.')
         }
     } catch (error) {
-        foodLookupError.value = error.response?.data?.message || 'Lebensmittel-Suche ist gerade nicht verfügbar.'
+        foodLookupError.value = error.response?.data?.message || tAuto('Lebensmittel-Suche ist gerade nicht verfügbar.')
     } finally {
         foodLookupLoading.value = false
     }
@@ -746,7 +746,7 @@ const lookupBarcode = async () => {
     foodSearchResults.value = []
 
     if (foodBarcode.value.trim().length < 6) {
-        foodLookupError.value = 'Bitte einen gültigen Barcode eingeben.'
+        foodLookupError.value = tAuto('Bitte einen gültigen Barcode eingeben.')
         return
     }
 
@@ -761,7 +761,7 @@ const lookupBarcode = async () => {
             applyFoodResult(response.data.data)
         }
     } catch (error) {
-        foodLookupError.value = error.response?.data?.message || 'Barcode konnte nicht gefunden werden.'
+        foodLookupError.value = error.response?.data?.message || tAuto('Barcode konnte nicht gefunden werden.')
     } finally {
         foodLookupLoading.value = false
     }
@@ -877,10 +877,10 @@ onBeforeUnmount(() => {
                         </article>
                     </div>
 
-                    <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                    <div class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
-                                <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                                <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinken') }}</p>
                                 <h3 class="mt-1 text-xl font-black text-primary">{{ tAuto(`${formatWater(waterConsumedMl)} getrunken`) }}</h3>
                                 <p class="mt-1 text-sm text-secondary">
                                     {{ tAuto(`${formatWater(waterLeftMl)} bis zu deinem Tagesziel von ${formatWater(waterTargetMl)}.`) }}
@@ -891,7 +891,7 @@ onBeforeUnmount(() => {
                                     v-for="amount in quickDrinkAmounts"
                                     :key="amount"
                                     type="button"
-                                    class="rounded-xl border border-cyan-300/40 bg-card px-3 py-2 text-sm font-bold text-primary hover:bg-cyan-400/15 disabled:opacity-60"
+                                    class="rounded-xl border border-air-blue/40 bg-card px-3 py-2 text-sm font-bold text-primary hover:bg-air-blue/15 disabled:opacity-60"
                                     :disabled="drinkForm.processing"
                                     @click="submitDrink(amount)"
                                 >
@@ -902,7 +902,7 @@ onBeforeUnmount(() => {
                         <div class="mt-4 h-3 overflow-hidden rounded-full bg-card">
                             <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
                         </div>
-                        <button type="button" class="mt-3 text-sm font-bold text-cyan-200 hover:text-primary" @click="activeSection = 'drink'">
+                        <button type="button" class="mt-3 text-sm font-bold text-air-blue hover:text-primary" @click="activeSection = 'drink'">
                             {{ tAuto('Trinken genau verwalten') }}
                         </button>
                     </div>
@@ -980,16 +980,16 @@ onBeforeUnmount(() => {
                     </button>
                 </div>
 
-                <section class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                <section class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('KI-Fotoanalyse') }}</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('KI-Fotoanalyse') }}</p>
                             <h3 class="mt-1 text-base font-black text-primary">{{ tAuto('Kalorien aus Bild schützen') }}</h3>
                             <p class="mt-1 text-sm leading-6 text-secondary">
                                 {{ tAuto('Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestätigt werden.') }}
                             </p>
                         </div>
-                        <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
+                        <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-air-blue">
                             {{ aiMealImageAvailable ? aiMealProviderLabel : tAuto('Pro-Funktion') }}
                         </span>
                     </div>
@@ -1033,7 +1033,7 @@ onBeforeUnmount(() => {
                         {{ aiMealError }}
                     </p>
 
-                    <div v-if="aiMealSuggestion" class="mt-3 rounded-xl border border-cyan-300/30 bg-card p-3">
+                    <div v-if="aiMealSuggestion" class="mt-3 rounded-xl border border-air-blue/30 bg-card p-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <p class="text-sm font-black text-primary">{{ aiMealSuggestion.title }}</p>
@@ -1199,12 +1199,12 @@ onBeforeUnmount(() => {
             <form class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5" @submit.prevent="submitDrink()">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinken') }}</p>
                         <div class="mt-1 flex items-center gap-2">
                             <h2 class="text-xl font-black text-primary sm:text-2xl">{{ tAuto(`${formatWater(waterConsumedMl)} heute`) }}</h2>
                             <button
                                 type="button"
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-inputBg text-secondary hover:border-cyan-300 hover:text-primary sm:h-9 sm:w-9"
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-inputBg text-secondary hover:border-air-blue hover:text-primary sm:h-9 sm:w-9"
                                 :title="tAuto('Wasserziel einstellen')"
                                 :aria-label="tAuto('Wasserziel einstellen')"
                                 @click="activeSection = 'goals'"
@@ -1218,7 +1218,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-3 sm:mt-5 sm:p-4">
+                <div class="mt-3 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-3 sm:mt-5 sm:p-4">
                     <div class="flex items-center justify-between gap-3">
                         <span class="text-sm font-bold text-primary">{{ waterProgress }}%</span>
                         <span class="text-sm font-semibold text-secondary">{{ formatWater(waterConsumedMl) }} / {{ formatWater(waterTargetMl) }}</span>
@@ -1255,7 +1255,7 @@ onBeforeUnmount(() => {
                             v-for="amount in quickDrinkAmounts"
                             :key="`mobile-${amount}`"
                             type="button"
-                            class="rounded-xl border border-border bg-inputBg px-2 py-3 text-sm font-black text-primary hover:border-cyan-300 hover:bg-cyan-400/10 disabled:opacity-60"
+                            class="rounded-xl border border-border bg-inputBg px-2 py-3 text-sm font-black text-primary hover:border-air-blue hover:bg-air-blue/10 disabled:opacity-60"
                             :disabled="drinkForm.processing"
                             @click="submitDrink(amount)"
                         >
@@ -1270,14 +1270,14 @@ onBeforeUnmount(() => {
                             <p class="text-sm font-bold text-primary">{{ tAuto('Nach Tasse oder Glas eintragen') }}</p>
                             <p class="hidden text-xs leading-5 text-secondary sm:block">{{ tAuto('Wähle die Größe, die am besten passt. Die Menge wird direkt gespeichert.') }}</p>
                         </div>
-                        <span class="hidden text-xs font-bold uppercase text-cyan-200 sm:inline">{{ tAuto('Airmius Quick Drink') }}</span>
+                        <span class="hidden text-xs font-bold uppercase text-air-blue sm:inline">{{ tAuto('Airmius Quick Drink') }}</span>
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                         <button
                             v-for="vessel in drinkVessels"
                             :key="vessel.key"
                             type="button"
-                            class="group rounded-2xl border bg-inputBg p-3 text-left transition hover:-translate-y-0.5 hover:bg-cyan-400/10 disabled:opacity-60"
+                            class="group rounded-2xl border bg-inputBg p-3 text-left transition hover:-translate-y-0.5 hover:bg-air-blue/10 disabled:opacity-60"
                             :class="vessel.ring"
                             :disabled="drinkForm.processing"
                             @click="submitDrinkVessel(vessel)"
@@ -1287,7 +1287,7 @@ onBeforeUnmount(() => {
                                     <p class="truncate text-sm font-black text-primary">{{ tAuto(vessel.label) }}</p>
                                     <p class="mt-1 text-xs text-secondary">{{ tAuto(vessel.hint) }}</p>
                                 </div>
-                                <span class="rounded-full bg-card px-2.5 py-1 text-xs font-black text-cyan-100">{{ vessel.amount }} ml</span>
+                            <span class="rounded-full bg-card px-2.5 py-1 text-xs font-black text-air-blue">{{ vessel.amount }} ml</span>
                             </div>
                             <div class="mt-3 hidden items-end justify-center sm:flex">
                                 <div class="relative h-24 w-16">
@@ -1314,7 +1314,7 @@ onBeforeUnmount(() => {
                             v-for="amount in quickDrinkAmounts"
                             :key="amount"
                             type="button"
-                            class="rounded-xl border border-border bg-inputBg px-4 py-4 text-base font-black text-primary hover:border-cyan-300 hover:bg-cyan-400/10 disabled:opacity-60"
+                            class="rounded-xl border border-border bg-inputBg px-4 py-4 text-base font-black text-primary hover:border-air-blue hover:bg-air-blue/10 disabled:opacity-60"
                             :disabled="drinkForm.processing"
                             @click="submitDrink(amount)"
                         >
@@ -1326,7 +1326,7 @@ onBeforeUnmount(() => {
                 <div class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr),auto]">
                     <div ref="drinkSelectRef" class="relative block text-sm font-bold text-primary">
                         <span>{{ tAuto('Getränk') }}</span>
-                        <div class="mt-2 flex rounded-xl border border-border bg-inputBg focus-within:border-cyan-300">
+                <div class="mt-2 flex rounded-xl border border-border bg-inputBg focus-within:border-air-blue">
                             <input
                                 :value="drinkSearchQuery"
                                 class="min-w-0 flex-1 rounded-l-xl border-0 bg-transparent px-3 py-3 text-primary placeholder-secondary focus:ring-0"
@@ -1363,10 +1363,10 @@ onBeforeUnmount(() => {
                             <button
                                 v-if="customDrinkNameAvailable"
                                 type="button"
-                                class="mb-2 flex w-full items-center gap-3 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-3 text-left hover:bg-cyan-400/15"
+                                class="mb-2 flex w-full items-center gap-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-3 text-left hover:bg-air-blue/15"
                                 @mousedown.prevent="useCustomDrinkName"
                             >
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/20 text-cyan-100">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-air-blue/20 text-air-blue">
                                     <i class="las la-plus"></i>
                                 </span>
                                 <span class="min-w-0">
@@ -1386,7 +1386,7 @@ onBeforeUnmount(() => {
                                     <span class="block truncate text-sm font-black text-primary">{{ tAuto(drink.label) }}</span>
                                     <span class="block text-xs font-semibold text-secondary">{{ tAuto(drink.category) }}</span>
                                 </span>
-                                <span class="shrink-0 rounded-full bg-inputBg px-2.5 py-1 text-xs font-black text-cyan-100">{{ drink.amount }} ml</span>
+                                <span class="shrink-0 rounded-full bg-inputBg px-2.5 py-1 text-xs font-black text-air-blue">{{ drink.amount }} ml</span>
                             </button>
 
                             <div v-if="!filteredDrinkOptions.length && !customDrinkNameAvailable" class="rounded-xl border border-dashed border-border px-3 py-4 text-sm font-semibold text-secondary">
@@ -1409,13 +1409,13 @@ onBeforeUnmount(() => {
             </form>
 
             <aside class="space-y-4">
-                <section class="rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4 lg:p-5">
+                <section class="rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4 lg:p-5">
                     <div class="flex items-start gap-3">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/20 text-cyan-100">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-air-blue/20 text-air-blue">
                             <i class="las la-lightbulb text-2xl"></i>
                         </span>
                         <div class="min-w-0">
-                            <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trink-Tipps') }}</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trink-Tipps') }}</p>
                             <h3 class="mt-1 text-lg font-black text-primary">{{ tAuto('Kurz wissen, besser tracken') }}</h3>
                             <p class="mt-1 text-sm leading-6 text-secondary">
                                 {{ tAuto('Orientierung zu Wasserziel, Training und Alltag.') }}
@@ -1432,7 +1432,7 @@ onBeforeUnmount(() => {
                         </button>
                         <Link
                             :href="route('guest.blog.index', { search: 'Trinken' })"
-                            class="rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
+                            class="rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-bold text-primary hover:border-air-blue hover:bg-air-blue/10"
                         >
                             {{ tAuto('Blog zu Trinken') }}
                         </Link>
@@ -1448,7 +1448,7 @@ onBeforeUnmount(() => {
                         <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ drinkEntries.length }}</span>
                     </div>
 
-                    <div v-if="deletingDrinkEntries.length" class="mt-4 flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100">
+                    <div v-if="deletingDrinkEntries.length" class="mt-4 flex items-center gap-2 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue">
                         <i class="las la-sync-alt animate-spin"></i>
                         <span>{{ tAuto(`${deletingDrinkEntries.length} Eintrag wird gelöscht...`) }}</span>
                     </div>
@@ -1458,25 +1458,25 @@ onBeforeUnmount(() => {
                             v-for="entry in drinkEntries"
                             :key="entry.id"
                             class="flex items-center justify-between gap-3 rounded-xl border bg-inputBg p-3"
-                            :class="entry.is_pending ? 'border-cyan-300/50 bg-cyan-400/10' : 'border-border'"
+                            :class="entry.is_pending ? 'border-air-blue/50 bg-air-blue/10' : 'border-border'"
                         >
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-bold text-primary">{{ tAuto(entry.title) }}</p>
                                 <p class="text-xs text-secondary">
                                     {{ formatWater(entry.water_ml) }}
-                                    <span v-if="entry.is_pending" class="ml-1 font-bold text-cyan-200">{{ tAuto('wird gespeichert...') }}</span>
+                                    <span v-if="entry.is_pending" class="ml-1 font-bold text-air-blue">{{ tAuto('wird gespeichert...') }}</span>
                                 </p>
                             </div>
                             <button v-if="!entry.is_pending" type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" :title="tAuto('Löschen')" @click="deleteDrinkEntry(entry)">
                                 <i class="las la-trash"></i>
                             </button>
-                            <span v-else class="rounded-lg border border-cyan-300/30 px-2.5 py-2 text-cyan-200" :title="tAuto('Wird gespeichert')">
+                            <span v-else class="rounded-lg border border-air-blue/30 px-2.5 py-2 text-air-blue" :title="tAuto('Wird gespeichert')">
                                 <i class="las la-sync-alt animate-spin"></i>
                             </span>
                         </article>
                     </div>
                     <div v-else class="mt-4 rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
-                        <i class="las la-tint text-4xl text-cyan-200"></i>
+                        <i class="las la-tint text-4xl text-air-blue"></i>
                         <p class="mt-3 text-base font-bold text-primary">{{ tAuto('Noch nichts getrunken eingetragen.') }}</p>
                         <p class="mt-1 text-sm text-secondary">{{ tAuto('Ein Tippen auf +250 ml reicht während des Tages.') }}</p>
                     </div>
@@ -1551,7 +1551,7 @@ onBeforeUnmount(() => {
 
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                 <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinkziel heute') }}</p>
-                <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                <div class="mt-3 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                     <p class="text-3xl font-black text-primary">{{ formatWater(waterTargetMl) }}</p>
                     <p class="mt-2 text-sm leading-6 text-secondary">
                         {{ tAuto('Basis') }} {{ formatWater(waterBaseMl) }} + {{ tAuto('Training') }} {{ formatWater(waterTrainingExtraMl) }}.
@@ -1658,7 +1658,7 @@ onBeforeUnmount(() => {
             <section class="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-2xl">
                 <header class="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-5">
                     <div class="min-w-0">
-                        <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinken') }}</p>
                         <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">{{ tAuto('Tipps rund ums Trinken') }}</h2>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             {{ tAuto('Einfache Orientierung für Alltag, Training und Regeneration.') }}
@@ -1678,7 +1678,7 @@ onBeforeUnmount(() => {
                     <div class="grid gap-3">
                         <article v-for="tip in drinkTips" :key="tip.title" class="rounded-2xl border border-border bg-inputBg p-4">
                             <div class="flex gap-3">
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-air-blue/15 text-air-blue">
                                     <i :class="[tip.icon, 'text-xl']"></i>
                                 </span>
                                 <div>
@@ -1689,7 +1689,7 @@ onBeforeUnmount(() => {
                         </article>
                     </div>
 
-                    <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                    <div class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                         <p class="text-sm font-bold text-primary">{{ tAuto('Dein aktueller Stand') }}</p>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             {{ tAuto(`Heute: ${formatWater(waterConsumedMl)} von ${formatWater(waterTargetMl)}. Noch ${formatWater(waterLeftMl)} offen.`) }}
@@ -1703,7 +1703,7 @@ onBeforeUnmount(() => {
                 <footer class="grid gap-2 border-t border-border p-4 sm:grid-cols-[1fr_auto] sm:p-5">
                     <Link
                         :href="route('guest.blog.index', { search: 'Trinken' })"
-                        class="rounded-xl border border-border px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
+                        class="rounded-xl border border-border px-4 py-3 text-center text-sm font-bold text-primary hover:border-air-blue hover:bg-air-blue/10"
                         @click="showDrinkTips = false"
                     >
                         {{ tAuto('Mehr im Blog lesen') }}

@@ -1,5 +1,9 @@
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { locale } = useI18n()
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
 
 const props = defineProps({
     categoryFilter: { type: String, default: 'all' },
@@ -33,7 +37,7 @@ const filteredWarnings = computed(() => {
     )
 })
 
-const formatDate = (value) => value ? new Date(value).toLocaleString('de-DE') : '-'
+const formatDate = (value) => value ? new Date(value).toLocaleString(localeCode.value) : '-'
 
 const badgeClass = (severity) => {
     if (severity === 'high') return 'bg-error/10 text-error'

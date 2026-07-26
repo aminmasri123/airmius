@@ -3,8 +3,12 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     plans: { type: Array, default: () => [] },
@@ -278,9 +282,9 @@ let autosaveTimer = null
 let autosaveRequestId = 0
 
 const trainingSteps = [
-    { id: 1, label: 'Training wählen', short: 'Start' },
-    { id: 2, label: 'Dokumentieren', short: 'Doku' },
-    { id: 3, label: 'Abschließen', short: 'Finish' },
+    { id: 1, label: tx('training_workspace.log_create.steps.1.label'), short: tx('training_workspace.log_create.steps.1.short') },
+    { id: 2, label: tx('training_workspace.log_create.steps.2.label'), short: tx('training_workspace.log_create.steps.2.short') },
+    { id: 3, label: tx('training_workspace.log_create.steps.3.label'), short: tx('training_workspace.log_create.steps.3.short') },
 ]
 
 const trainingTypeThemes = {
@@ -337,12 +341,12 @@ const sportChoices = computed(() => {
         }))
         .filter((sport) => sport.key)
 
-    return [...fallbackSports, ...catalog]
+        return [...fallbackSports.map((sport) => ({ ...sport, label: tx(`training_workspace.sports.${sport.key}`), category: tx('training_workspace.log_create.quick_choice') })), ...catalog]
         .filter((sport, index, list) => list.findIndex((item) => item.key === sport.key) === index)
 })
 
 const athleteOptions = computed(() => [
-    { id: '', name: 'Ich selbst' },
+    { id: '', name: tx('training_workspace.log_create.self') },
     ...(props.manageableAthletes || []),
 ])
 
@@ -352,6 +356,8 @@ const plannedItems = computed(() => props.plans
 
 const selectedPlannedItem = computed(() => plannedItems.value.find((entry) => Number(entry.id) === Number(form.training_plan_item_id)) || null)
 const selectedType = computed(() => trainingTypes.find((type) => type.key === form.training_type) || trainingTypes[trainingTypes.length - 1])
+const selectedTypeLabel = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.label`))
+const selectedTypeDetailTitle = computed(() => tx(`training_workspace.log_create.types.${selectedType.value.key}.detail`))
 const visibleFields = computed(() => selectedType.value.fields || [])
 const usesGymSets = computed(() => selectedType.value.mode === 'sets')
 const selectedTemplates = computed(() => detailTemplates[selectedType.value.key] || [])
@@ -428,14 +434,14 @@ const liveElapsedLabel = computed(() => {
 
 const detailSummary = computed(() => {
     if (usesGymSets.value) {
-        return `${form.gym_exercises.length} Übungen · ${completedGymSetCount.value}/${gymSetCount.value} Sätze erledigt`
+        return tx('training_workspace.log_create.summary.gym', { exercises: form.gym_exercises.length, completed: completedGymSetCount.value, sets: gymSetCount.value })
     }
 
     if (selectedType.value.key === 'long_run' && !visibleEntries.value.length) {
-        return 'Gesamtdaten reichen aus · Abschnitte optional'
+        return tx('training_workspace.log_create.summary.long_run')
     }
 
-    return `${visibleEntries.value.length} Detailzeilen`
+    return tx('training_workspace.log_create.summary.entries', { count: visibleEntries.value.length })
 })
 
 const hasAnyMedia = computed(() => {
@@ -453,13 +459,13 @@ const hasTrainingDetails = computed(() => usesGymSets.value
         : Boolean(visibleEntries.value.length))
 
 const documentationChecklist = computed(() => [
-    { label: 'Basisdaten', done: Boolean(form.title && form.sport_type && form.status) },
-    { label: 'Zeitpunkt', done: Boolean(form.performed_at) },
-    { label: 'Belastung', done: Boolean(sessionMinutes.value || sessionDistanceKm.value || completedGymSetCount.value || form.intensity) },
-    { label: 'Details', done: hasTrainingDetails.value },
-    { label: 'Körperfeedback', done: Boolean(form.wellness.rpe || form.wellness.energy || form.wellness.pain || form.wellness.sleep_hours) },
-    { label: 'Notiz oder Medien', done: Boolean(form.notes || hasAnyMedia.value) },
-    { label: 'Sichtbarkeit', done: Boolean(form.privacy_scope) },
+    { label: tx('training_workspace.log_create.checklist.basics'), done: Boolean(form.title && form.sport_type && form.status) },
+    { label: tx('training_workspace.log_create.checklist.time'), done: Boolean(form.performed_at) },
+    { label: tx('training_workspace.log_create.checklist.load'), done: Boolean(sessionMinutes.value || sessionDistanceKm.value || completedGymSetCount.value || form.intensity) },
+    { label: tx('training_workspace.log_create.checklist.details'), done: hasTrainingDetails.value },
+    { label: tx('training_workspace.log_create.checklist.wellness'), done: Boolean(form.wellness.rpe || form.wellness.energy || form.wellness.pain || form.wellness.sleep_hours) },
+    { label: tx('training_workspace.log_create.checklist.notes_media'), done: Boolean(form.notes || hasAnyMedia.value) },
+    { label: tx('training_workspace.log_create.checklist.visibility'), done: Boolean(form.privacy_scope) },
 ])
 
 const documentationScore = computed(() => Math.round(
@@ -483,20 +489,20 @@ const toLocalDateTime = (value) => {
 
 const formatDate = (value) => {
     if (!value) return ''
-    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+    return new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 }
 
 const formatSaveTime = (value) => {
     if (!value) return ''
-    return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value))
+    return new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(value))
 }
 
 const formatShortDate = (value) => {
     if (!value) return ''
-    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(new Date(value))
+    return new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), { day: '2-digit', month: '2-digit' }).format(new Date(value))
 }
 
-const formatNumber = (value, maximumFractionDigits = 1) => Number(value || 0).toLocaleString('de-DE', { maximumFractionDigits })
+const formatNumber = (value, maximumFractionDigits = 1) => Number(value || 0).toLocaleString(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), { maximumFractionDigits })
 
 const roundedLiveMinutes = () => Math.max(1, Math.round(liveElapsedSeconds.value / 60))
 
@@ -1189,35 +1195,35 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Training dokumentieren" />
+    <Head :title="tx('training_workspace.log_create.page_title')" />
 
     <div class="space-y-3 pb-32 sm:space-y-4 xl:pb-0">
         <section class="hidden overflow-hidden rounded-2xl border border-border bg-card sm:block">
             <div class="border-b border-border bg-inputBg/30 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Training</p>
-                        <h1 class="mt-1 text-2xl font-semibold text-primary sm:text-3xl">Dokumentieren</h1>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.eyebrow') }}</p>
+                        <h1 class="mt-1 text-2xl font-semibold text-primary sm:text-3xl">{{ tx('training_workspace.log_create.title') }}</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                            Schnell erfassen, Sätze abhaken, bei Bedarf später Details ergänzen.
+                            {{ tx('training_workspace.log_create.intro') }}
                         </p>
                     </div>
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Zurück
+                        {{ tx('training_workspace.log_create.back') }}
                     </Link>
                 </div>
             </div>
             <div class="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Vorlage</p>
-                    <p class="mt-1 truncate text-sm font-semibold text-primary">{{ selectedType.label }}</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.template') }}</p>
+                    <p class="mt-1 truncate text-sm font-semibold text-primary">{{ selectedTypeLabel }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Status</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.status') }}</p>
                     <p class="mt-1 truncate text-sm font-semibold text-primary">{{ detailSummary }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Qualität</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.quality') }}</p>
                     <div class="mt-2 flex items-center gap-2">
                         <div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                             <div class="h-full rounded-full bg-air-blue" :style="{ width: `${documentationScore}%` }"></div>
@@ -1231,12 +1237,12 @@ onUnmounted(() => {
                         class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
                         :class="autosaveStatus === 'error' ? 'border-danger/40 bg-danger/10 text-danger' : autosaveStatus === 'saving' || autosaveStatus === 'dirty' ? 'border-air-blue/40 bg-air-blue/10 text-air-blue' : 'border-success/40 bg-success/10 text-success'"
                     >
-                        <span v-if="autosaveStatus === 'saving'">Entwurf wird gespeichert...</span>
-                        <span v-else-if="autosaveStatus === 'dirty'">Änderungen werden gleich gespeichert</span>
+                        <span v-if="autosaveStatus === 'saving'">{{ tx('training_workspace.log_create.autosave.saving') }}</span>
+                        <span v-else-if="autosaveStatus === 'dirty'">{{ tx('training_workspace.log_create.autosave.dirty') }}</span>
                         <span v-else-if="autosaveStatus === 'error'">{{ autosaveError }}</span>
-                        <span v-else>Entwurf gespeichert{{ autosaveSavedAt ? ` um ${formatSaveTime(autosaveSavedAt)}` : '' }}</span>
+                        <span v-else>{{ tx('training_workspace.log_create.autosave.saved') }}{{ autosaveSavedAt ? ` ${tx('training_workspace.log_create.autosave.at')} ${formatSaveTime(autosaveSavedAt)}` : '' }}</span>
                     </p>
-                    <p v-else class="text-sm font-semibold text-secondary">Noch kein Entwurf</p>
+                    <p v-else class="text-sm font-semibold text-secondary">{{ tx('training_workspace.log_create.autosave.none') }}</p>
                 </div>
             </div>
         </section>
@@ -1260,7 +1266,7 @@ onUnmounted(() => {
                         :class="currentTrainingStep === step.id ? 'bg-air-blue text-white shadow-sm shadow-air-blue/20' : 'bg-inputBg/40 text-secondary hover:bg-muted hover:text-primary'"
                         @click="currentTrainingStep = step.id"
                     >
-                        <span class="block text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">Schritt {{ step.id }}</span>
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">{{ tx('training_workspace.log_create.step') }} {{ step.id }}</span>
                         <span class="mt-0.5 block truncate text-xs font-semibold sm:mt-1 sm:text-sm">{{ step.short || step.label }}</span>
                     </button>
                 </div>
@@ -1271,8 +1277,8 @@ onUnmounted(() => {
                     <div class="md:col-span-2">
                         <div class="flex items-end justify-between gap-3">
                             <div>
-                                <p class="text-sm font-semibold text-primary">Trainingsart</p>
-                                <p class="mt-1 hidden text-xs text-secondary sm:block">Wische auf dem Handy seitlich durch die Vorlagen.</p>
+                                <p class="text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.training_type') }}</p>
+                                <p class="mt-1 hidden text-xs text-secondary sm:block">{{ tx('training_workspace.log_create.swipe_hint') }}</p>
                             </div>
                             <span class="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary sm:inline-flex">{{ detailSummary }}</span>
                         </div>
@@ -1285,11 +1291,11 @@ onUnmounted(() => {
                                 <i :class="selectedType.icon" class="text-xl"></i>
                             </span>
                             <span class="min-w-0 flex-1">
-                                <span class="block text-[11px] font-semibold uppercase tracking-wide text-secondary">Ausgewählt</span>
-                                <span class="mt-0.5 block truncate text-base font-semibold text-primary">{{ selectedType.label }}</span>
+                                <span class="block text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.selected') }}</span>
+                                <span class="mt-0.5 block truncate text-base font-semibold text-primary">{{ selectedTypeLabel }}</span>
                             </span>
                             <span class="rounded-xl bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary">
-                                Ändern
+                                {{ tx('training_workspace.log_create.change') }}
                             </span>
                         </button>
                         <div class="mt-3 hidden grid-cols-3 gap-2 sm:grid sm:grid-cols-4 xl:grid-cols-7">
@@ -1304,31 +1310,31 @@ onUnmounted(() => {
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl sm:h-8 sm:w-8" :class="trainingTypeTheme(type.key).icon">
                                     <i :class="type.icon" class="text-base sm:text-lg"></i>
                                 </span>
-                                <span class="min-w-0 truncate text-xs font-semibold sm:text-sm">{{ type.shortLabel }}</span>
+                                <span class="min-w-0 truncate text-xs font-semibold sm:text-sm">{{ tx(`training_workspace.log_create.types.${type.key}.short`) }}</span>
                             </button>
                         </div>
                     </div>
-                    <label v-if="athleteOptions.length > 1" class="block text-sm font-semibold text-primary">Sportler
+                    <label v-if="athleteOptions.length > 1" class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.athlete') }}
                         <select v-model="form.user_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                             <option v-for="athlete in athleteOptions" :key="athlete.id || 'self'" :value="athlete.id">{{ athlete.name }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Geplante Einheit
+                    <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.planned_session') }}
                         <select v-model="form.training_plan_item_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="applySelectedPlanItem">
-                            <option value="">Spontanes Training</option>
+                            <option value="">{{ tx('training_workspace.log_create.spontaneous') }}</option>
                             <option v-for="item in plannedItems" :key="item.id" :value="item.id">
                                 {{ item.plan.title }} - {{ item.title }}{{ item.scheduled_at ? ` - ${formatDate(item.scheduled_at)}` : '' }}
                             </option>
                         </select>
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Sportart
+                    <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.sport') }}
                         <SearchableSelect
                             v-model="form.sport_type"
                             class="mt-2"
                             :options="sportChoices"
                             label-key="label"
                             value-key="key"
-                            placeholder="Sportart suchen"
+                            :placeholder="tx('training_workspace.log_create.sport_search')"
                         />
                         <div v-if="recentSportChoices.length" class="mt-2 flex flex-wrap gap-2">
                             <button
@@ -1345,54 +1351,54 @@ onUnmounted(() => {
                     </label>
                     <details class="rounded-2xl border border-border bg-inputBg/30 p-3 md:hidden">
                         <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
-                            Weitere Angaben
-                            <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                            {{ tx('training_workspace.log_create.more_fields') }}
+                            <span class="ml-2 text-xs font-normal text-secondary">{{ tx('training_workspace.log_create.optional') }}</span>
                         </summary>
                         <div class="mt-3 grid gap-3">
-                            <label class="block text-sm font-semibold text-primary">Titel
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.title') }}
                                 <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Status
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.status') }}
                                 <select v-model="form.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setStatusDefaults">
-                                    <option value="completed">Abgeschlossen</option>
-                                    <option value="in_progress">Läuft gerade</option>
-                                    <option value="planned">Geplant</option>
+                                    <option value="completed">{{ tx('training_log.status.completed') }}</option>
+                                    <option value="in_progress">{{ tx('training_log.status.in_progress') }}</option>
+                                    <option value="planned">{{ tx('training_log.status.planned') }}</option>
                                 </select>
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Zeitpunkt
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.time') }}
                                 <input v-model="form.performed_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Dauer in Minuten
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.duration') }}
                                 <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label v-if="showSessionDistance" class="block text-sm font-semibold text-primary">Distanz in km
+                            <label v-if="showSessionDistance" class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.distance') }}
                                 <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Notizen
-                                <textarea v-model="form.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefühl, Technik, Schmerzen, Besonderheiten" />
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.notes') }}
+                                <textarea v-model="form.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.notes_placeholder')" />
                             </label>
                         </div>
                     </details>
-                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Titel
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.title') }}
                         <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
                     </label>
-                    <label class="hidden text-sm font-semibold text-primary md:block">Status
+                    <label class="hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.fields.status') }}
                         <select v-model="form.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setStatusDefaults">
-                            <option value="completed">Abgeschlossen</option>
-                            <option value="in_progress">Läuft gerade</option>
-                            <option value="planned">Geplant</option>
+                            <option value="completed">{{ tx('training_log.status.completed') }}</option>
+                            <option value="in_progress">{{ tx('training_log.status.in_progress') }}</option>
+                            <option value="planned">{{ tx('training_log.status.planned') }}</option>
                         </select>
                     </label>
-                    <label class="hidden text-sm font-semibold text-primary md:block">Zeitpunkt
+                    <label class="hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.fields.time') }}
                         <input v-model="form.performed_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <div class="hidden rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2 md:block">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Live-Modus</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.live_mode') }}</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">
                                     <span v-if="isLiveTraining">Training läuft seit {{ liveElapsedLabel }}</span>
-                                    <span v-else>Schnellstart für Training auf dem Platz, im Gym oder unterwegs.</span>
+                                    <span v-else>{{ tx('training_workspace.log_create.live_hint') }}</span>
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2">
@@ -1402,7 +1408,7 @@ onUnmounted(() => {
                                     class="rounded-xl border border-air-blue/40 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-air-blue/20"
                                     @click="startLiveTraining"
                                 >
-                                    Läuft gerade starten
+                                    {{ tx('training_workspace.log_create.live_start') }}
                                 </button>
                                 <button
                                     v-if="isLiveTraining"
@@ -1410,7 +1416,7 @@ onUnmounted(() => {
                                     class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="setDurationFromLive"
                                 >
-                                    Zeit übernehmen
+                                    {{ tx('training_workspace.log_create.live_take_time') }}
                                 </button>
                                 <button
                                     v-if="isLiveTraining"
@@ -1418,43 +1424,43 @@ onUnmounted(() => {
                                     class="rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                                     @click="finishLiveTraining"
                                 >
-                                    Abschließen
+                                    {{ tx('training_workspace.log_create.finish') }}
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <label class="hidden text-sm font-semibold text-primary md:block">Dauer in Minuten
+                    <label class="hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.fields.duration') }}
                         <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label v-if="showSessionDistance" class="hidden text-sm font-semibold text-primary md:block">Distanz in km
+                    <label v-if="showSessionDistance" class="hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.fields.distance') }}
                         <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Notizen
-                        <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefühl, Technik, Schmerzen, Besonderheiten" />
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.notes') }}
+                        <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.notes_placeholder')" />
                     </label>
-                    <label v-if="form.user_id" class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Trainer-Hinweis
+                    <label v-if="form.user_id" class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.trainer_note') }}
                         <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
                     </label>
-                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Sichtbarkeit
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.visibility') }}
                         <select v-model="form.privacy_scope" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            <option value="trainer">Trainer und berechtigte Betreuer</option>
-                            <option value="private">Nur ich</option>
-                            <option value="team">Team</option>
+                            <option value="trainer">{{ tx('training_workspace.log_create.visibility.trainer') }}</option>
+                            <option value="private">{{ tx('training_workspace.log_create.visibility.private') }}</option>
+                            <option value="team">{{ tx('training_workspace.log_create.visibility.team') }}</option>
                         </select>
                     </label>
                     <label class="hidden items-start gap-3 rounded-xl border border-border bg-inputBg/40 p-3 text-sm font-semibold text-primary md:col-span-2 md:flex">
                         <input v-model="form.notify_people" type="checkbox" class="mt-1 rounded border-border bg-inputBg" />
                         <span>
-                            <span>{{ form.user_id ? 'Sportler beim Speichern informieren' : 'Trainer beim Speichern informieren' }}</span>
+                            <span>{{ form.user_id ? tx('training_workspace.log_create.notify.athlete') : tx('training_workspace.log_create.notify.trainer') }}</span>
                             <span class="mt-1 block text-xs font-normal leading-5 text-secondary">
-                                Standard ist aktiv. Wenn du es deaktivierst, wird keine Benachrichtigung verschickt; berechtigte Personen können die Einheit weiterhin sehen.
+                                {{ tx('training_workspace.log_create.notify.hint') }}
                             </span>
                         </span>
                     </label>
                     <div class="flex justify-end md:col-span-2">
                         <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 2">
-                            <span class="sm:hidden">Weiter</span>
-                            <span class="hidden sm:inline">Weiter dokumentieren</span>
+                            <span class="sm:hidden">{{ tx('training_workspace.log_create.next') }}</span>
+                            <span class="hidden sm:inline">{{ tx('training_workspace.log_create.next_document') }}</span>
                             <i class="las la-arrow-right text-lg sm:hidden"></i>
                         </button>
                     </div>
@@ -1463,41 +1469,41 @@ onUnmounted(() => {
 
             <section v-show="currentTrainingStep === 3" class="min-w-0 space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
-                    <h2 class="mt-1 text-xl font-semibold text-primary">Training abschließen</h2>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.step') }} 3</p>
+                    <h2 class="mt-1 text-xl font-semibold text-primary">{{ tx('training_workspace.log_create.finish_title') }}</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        Diese Werte sind bewusst am Ende. Du musst nur eintragen, was du wirklich weißt.
+                        {{ tx('training_workspace.log_create.finish_intro') }}
                     </p>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
-                    <label class="block text-sm font-semibold text-primary">Intensität
+                    <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.intensity') }}
                         <select v-model="form.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            <option value="">Keine Angabe</option>
-                            <option value="locker">Leicht / locker</option>
-                            <option value="mittel">Mittel</option>
-                            <option value="hart">Hart / intensiv</option>
-                            <option value="recovery">Regeneration</option>
+                            <option value="">{{ tx('training_workspace.log_create.intensity.none') }}</option>
+                            <option value="locker">{{ tx('training_workspace.log_create.intensity.easy') }}</option>
+                            <option value="mittel">{{ tx('training_workspace.log_create.intensity.medium') }}</option>
+                            <option value="hart">{{ tx('training_workspace.log_create.intensity.hard') }}</option>
+                            <option value="recovery">{{ tx('training_workspace.log_create.intensity.recovery') }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Verbrannte Kalorien
-                        <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Optional" />
+                    <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.fields.calories') }}
+                        <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.optional')" />
                     </label>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2">
-                        <p class="text-sm font-semibold text-primary">Körpergefühl optional</p>
+                        <p class="text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.wellness.title') }}</p>
                         <p class="mt-1 text-xs leading-5 text-secondary">
-                            Nur ausfüllen, wenn du dein Befinden dokumentieren willst. 1 bedeutet niedrig, 10 bedeutet hoch.
+                            {{ tx('training_workspace.log_create.wellness.hint') }}
                         </p>
                         <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <label class="block text-sm font-semibold text-primary">Anstrengung 1-10
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.wellness.rpe') }}
                                 <input v-model="form.wellness.rpe" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Energie 1-10
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.wellness.energy') }}
                                 <input v-model="form.wellness.energy" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Schmerzen 0-10
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.wellness.pain') }}
                                 <input v-model="form.wellness.pain" type="number" min="0" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Schlaf in Stunden
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.wellness.sleep') }}
                                 <input v-model="form.wellness.sleep_hours" type="number" min="0" max="24" step="0.5" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                             </label>
                         </div>
@@ -1505,10 +1511,10 @@ onUnmounted(() => {
                 </div>
                 <div class="flex flex-wrap justify-between gap-2">
                     <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="currentTrainingStep = 2">
-                        Zurück zur Doku
+                        {{ tx('training_workspace.log_create.back_to_details') }}
                     </button>
                     <button type="submit" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
-                        Training speichern
+                        {{ tx('training_workspace.log_create.save') }}
                     </button>
                 </div>
             </section>
@@ -1516,8 +1522,8 @@ onUnmounted(() => {
             <section class="hidden rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4 lg:block 2xl:hidden">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Arbeitsmodus</p>
-                        <p class="mt-1 text-sm font-semibold text-primary">{{ selectedType.label }} · {{ detailSummary }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.work_mode') }}</p>
+                        <p class="mt-1 text-sm font-semibold text-primary">{{ selectedTypeLabel }} · {{ detailSummary }}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button
@@ -1526,7 +1532,7 @@ onUnmounted(() => {
                             class="rounded-xl border border-air-blue/40 bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-air-blue/10"
                             @click="startLiveTraining"
                         >
-                            Live starten
+                            {{ tx('training_workspace.log_create.live_start') }}
                         </button>
                         <button
                             v-else
@@ -1534,10 +1540,10 @@ onUnmounted(() => {
                             class="rounded-xl border border-air-blue/40 bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-air-blue/10"
                             @click="finishLiveTraining"
                         >
-                            Live beenden
+                            {{ tx('training_workspace.log_create.live_end') }}
                         </button>
                         <button type="submit" class="rounded-xl bg-buttonPrimary px-5 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
-                            Training speichern
+                            {{ tx('training_workspace.log_create.save') }}
                         </button>
                     </div>
                 </div>
@@ -1545,18 +1551,18 @@ onUnmounted(() => {
 
             <aside class="hidden min-w-0 space-y-4 2xl:sticky 2xl:top-20 2xl:col-start-2 2xl:row-start-2 2xl:block 2xl:self-start">
                 <section class="rounded-2xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
-                    <h2 class="mt-1 text-lg font-semibold text-primary">{{ selectedType.label }}</h2>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.active_template') }}</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">{{ selectedTypeLabel }}</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        {{ usesGymSets ? 'Erfasse zuerst die Übung und darunter jeden Satz einzeln mit eigenen Wiederholungen und Gewicht.' : 'Die Felder passen sich der Trainingsart an. Bei Long Run sind Abschnitte optional, falls du Tempo- oder Kilometerblöcke dokumentieren willst.' }}
+                        {{ usesGymSets ? tx('training_workspace.log_create.gym_hint') : tx('training_workspace.log_create.general_hint') }}
                     </p>
                     <div class="mt-4 rounded-xl border border-border bg-inputBg/40 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Moment</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.moment') }}</p>
                         <p class="mt-1 text-sm font-semibold text-primary">{{ detailSummary }}</p>
                     </div>
                     <div class="mt-3 rounded-xl border border-border bg-inputBg/40 p-3">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualitätscheck</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.quality_check') }}</p>
                             <p class="text-sm font-semibold" :class="documentationScoreClass">{{ documentationScore }}%</p>
                         </div>
                         <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted">
@@ -1570,14 +1576,14 @@ onUnmounted(() => {
                         </div>
                     </div>
                     <div v-if="isLiveTraining" class="mt-3 rounded-xl border border-success/40 bg-success/10 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-success">Läuft gerade</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-success">{{ tx('training_log.status.in_progress') }}</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ liveElapsedLabel }}</p>
                         <div class="mt-3 grid grid-cols-2 gap-2">
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="setDurationFromLive">
-                                Dauer setzen
+                                {{ tx('training_workspace.log_create.duration_set') }}
                             </button>
                             <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="finishLiveTraining">
-                                Fertig
+                                {{ tx('training_workspace.log_create.finish') }}
                             </button>
                         </div>
                     </div>
@@ -1599,7 +1605,7 @@ onUnmounted(() => {
                             <p class="mt-1 text-sm font-semibold text-primary">{{ sessionSpeedKmh }}</p>
                         </div>
                         <div v-if="usesGymSets && gymVolumeKg" class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Volumen</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.volume') }}</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ formatNumber(gymVolumeKg, 0) }} kg</p>
                         </div>
                     </div>
@@ -1614,7 +1620,7 @@ onUnmounted(() => {
                     </div>
                 </section>
                 <button type="submit" class="w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
-                    Training speichern
+                    {{ tx('training_workspace.log_create.save') }}
                 </button>
             </aside>
 
@@ -1622,7 +1628,7 @@ onUnmounted(() => {
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Details</p>
-                        <h2 class="text-xl font-semibold text-primary">{{ selectedType.detailTitle }}</h2>
+                        <h2 class="text-xl font-semibold text-primary">{{ selectedTypeDetailTitle }}</h2>
                     </div>
                     <button v-if="!usesGymSets" type="button" class="rounded-xl border border-border bg-inputBg/40 px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addEntry">
                         Zeile hinzufügen
@@ -1675,7 +1681,7 @@ onUnmounted(() => {
                         <details class="mt-3 rounded-xl border border-border bg-card p-3 md:hidden">
                             <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
                                 Übungsdetails
-                                <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                                <span class="ml-2 text-xs font-normal text-secondary">{{ tx('training_workspace.log_create.optional') }}</span>
                             </summary>
                             <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Übung
                                 <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
@@ -1772,7 +1778,7 @@ onUnmounted(() => {
                                 <details class="rounded-xl border border-border bg-card/70 p-3 sm:col-span-2 md:hidden">
                                     <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
                                         Satzdetails
-                                        <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                                        <span class="ml-2 text-xs font-normal text-secondary">{{ tx('training_workspace.log_create.optional') }}</span>
                                     </summary>
                                     <div class="mt-3 grid gap-3">
                                         <label class="block text-sm font-semibold text-primary">Zeit min
@@ -1877,7 +1883,7 @@ onUnmounted(() => {
                         Zurück
                     </button>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 3">
-                        Abschließen
+                        {{ tx('training_workspace.log_create.finish') }}
                     </button>
                 </div>
             </section>
@@ -1995,7 +2001,7 @@ onUnmounted(() => {
                 <div v-else class="mx-auto max-w-4xl space-y-2">
                     <div class="flex items-center gap-3">
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-primary">{{ form.title || selectedType.label }}</p>
+                            <p class="truncate text-sm font-semibold text-primary">{{ form.title || selectedTypeLabel }}</p>
                             <p class="truncate text-xs text-secondary">
                                 {{ isLiveTraining ? `Läuft ${liveElapsedLabel}` : detailSummary }}
                             </p>
@@ -2004,7 +2010,7 @@ onUnmounted(() => {
                             Start
                         </button>
                         <button v-else type="button" class="rounded-xl border border-border px-3 py-3 text-xs font-semibold text-primary" @click="finishLiveTraining">
-                            Fertig
+                            {{ tx('training_workspace.log_create.finish') }}
                         </button>
                         <button type="submit" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
                             Speichern

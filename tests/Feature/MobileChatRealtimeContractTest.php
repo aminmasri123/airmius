@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\Conversation;
+use App\Models\ConversationInvitation;
 use App\Models\Friendship;
 use App\Models\Message;
 use App\Models\MessageReceipt;
@@ -99,6 +100,12 @@ class MobileChatRealtimeContractTest extends TestCase
             'conversation_id' => $teamConversationId,
             'user_id' => $teamMate->id,
         ]);
+
+        $this->getJson('/api/v1/chat/conversations?team_id='.$team->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $teamConversationId)
+            ->assertJsonPath('data.0.team_id', $team->id);
     }
 
     public function test_mobile_chat_exposes_typing_state_and_marks_messages_as_read(): void
@@ -146,6 +153,75 @@ class MobileChatRealtimeContractTest extends TestCase
 
         $this->assertNotNull($receipt->fresh()->read_at);
         $this->assertTrue($notification->fresh()->read);
+    }
+
+    public function test_mobile_group_chat_has_full_management_and_invitation_lifecycle(): void
+    {
+        $owner = User::factory()->create(['name' => 'Group Owner']);
+        $member = User::factory()->create(['name' => 'Group Member']);
+        $invitee = User::factory()->create(['name' => 'New Friend']);
+        $conversation = Conversation::create([
+            'type' => 'group',
+            'owner_id' => $owner->id,
+            'name' => 'Alte Gruppe',
+        ]);
+        $conversation->users()->attach([$owner->id, $member->id], ['joined_at' => now()]);
+        $this->befriend($owner, $invitee);
+
+        Sanctum::actingAs($owner);
+
+        $this->putJson("/api/v1/chat/conversations/{$conversation->id}", [
+            'name' => 'Neue Laufgruppe',
+            'description' => 'Montags und mittwochs',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Neue Laufgruppe');
+
+        $this->putJson("/api/v1/chat/conversations/{$conversation->id}/mute", [
+            'minutes' => 480,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.id', $conversation->id);
+
+        $this->postJson("/api/v1/chat/conversations/{$conversation->id}/members", [
+            'participant_ids' => [$invitee->id],
+        ])->assertOk();
+
+        $invitationId = ConversationInvitation::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('recipient_id', $invitee->id)
+            ->value('id');
+
+        Sanctum::actingAs($invitee);
+        $this->getJson('/api/v1/chat/conversation-invitations')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $invitationId)
+            ->assertJsonPath('data.0.inviter.name', 'Group Owner')
+            ->assertJsonPath('data.0.conversation.name', 'Neue Laufgruppe');
+
+        $this->postJson("/api/v1/chat/conversation-invitations/{$invitationId}/accept")
+            ->assertOk()
+            ->assertJsonFragment(['id' => $invitee->id]);
+
+        Sanctum::actingAs($member);
+        $this->putJson("/api/v1/chat/conversations/{$conversation->id}", [
+            'name' => 'Nicht erlaubt',
+        ])->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $this->deleteJson("/api/v1/chat/conversations/{$conversation->id}/members/{$member->id}")
+            ->assertOk();
+        $this->putJson("/api/v1/chat/conversations/{$conversation->id}/owner", [
+            'user_id' => $invitee->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.owner_id', $invitee->id);
+
+        $this->assertDatabaseMissing('conversation_users', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $member->id,
+        ]);
+        $this->assertSame($invitee->id, $conversation->fresh()->owner_id);
     }
 
     private function befriend(User $first, User $second): void

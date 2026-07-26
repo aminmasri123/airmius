@@ -9,6 +9,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ClubMembershipImportFlowTest extends TestCase
@@ -68,5 +69,81 @@ class ClubMembershipImportFlowTest extends TestCase
 
         $this->assertSame('paused', $pause->membership_status);
         $this->assertSame('monthly', $pause->contribution_interval);
+    }
+
+    public function test_api_membership_import_preview_detects_duplicates_without_writing_members(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $starter = SubscriptionPlan::query()->where('slug', 'starter')->firstOrFail();
+        ClubSubscription::query()->updateOrCreate(
+            ['club_id' => $club->id],
+            [
+                'subscription_plan_id' => $starter->id,
+                'status' => 'active',
+            ],
+        );
+
+        $csv = implode("\n", [
+            'Name;E-Mail;Mitgliedschaft;Beitrag;Intervall',
+            'Neue Person;new@example.org;aktiv;12,50;monatlich',
+            'Doppelt;new@example.org;aktiv;10,00;monatlich',
+            'Ohne Mail;ungueltig;aktiv;9,00;monatlich',
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/members/import-preview", [
+            'file' => UploadedFile::fake()->createWithContent('preview.csv', $csv),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.total_rows', 3)
+            ->assertJsonPath('data.valid_rows', 1)
+            ->assertJsonPath('data.error_count', 2)
+            ->assertJsonPath('data.can_import', true)
+            ->assertJsonPath('data.rows.0.email', 'new@example.org')
+            ->assertJsonPath('data.rows.0.action', 'create_external_member')
+            ->assertJsonPath('data.errors.0.row', 3)
+            ->assertJsonPath('data.errors.1.row', 4);
+
+        $this->assertDatabaseCount('club_external_members', 0);
+    }
+
+    public function test_api_membership_import_preview_accepts_manager_column_mapping(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $starter = SubscriptionPlan::query()->where('slug', 'starter')->firstOrFail();
+        ClubSubscription::query()->updateOrCreate(
+            ['club_id' => $club->id],
+            ['subscription_plan_id' => $starter->id, 'status' => 'active'],
+        );
+
+        $csv = implode("\n", [
+            'Person;Kontaktadresse;Status;Familiengruppe;Jahresbeitrag',
+            'Ada Beispiel;ada@example.org;aktiv;family-7;120,00',
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/members/import-preview", [
+            'file' => UploadedFile::fake()->createWithContent('mapped.csv', $csv),
+            'mapping' => json_encode([
+                'name' => 0,
+                'email' => 1,
+                'membership_status' => 2,
+                'family_group_key' => 3,
+                'contribution_amount' => 4,
+            ], JSON_THROW_ON_ERROR),
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.needs_mapping', false)
+            ->assertJsonPath('data.mapping.email', 1)
+            ->assertJsonPath('data.valid_rows', 1)
+            ->assertJsonPath('data.rows.0.name', 'Ada Beispiel')
+            ->assertJsonPath('data.rows.0.email', 'ada@example.org')
+            ->assertJsonPath('data.rows.0.family_group_key', 'family-7');
+
+        $this->assertDatabaseCount('club_external_members', 0);
     }
 }

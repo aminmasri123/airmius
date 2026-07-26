@@ -9,10 +9,12 @@ class WorkspaceCollaborationScreen extends StatefulWidget {
   const WorkspaceCollaborationScreen({super.key});
 
   @override
-  State<WorkspaceCollaborationScreen> createState() => _WorkspaceCollaborationScreenState();
+  State<WorkspaceCollaborationScreen> createState() =>
+      _WorkspaceCollaborationScreenState();
 }
 
-class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScreen> {
+class _WorkspaceCollaborationScreenState
+    extends State<WorkspaceCollaborationScreen> {
   String _filter = 'Alle';
   bool _showMembers = true;
   bool _showFiles = true;
@@ -25,37 +27,56 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
       area: 'Verein',
       status: 'Aktiv',
       meta: 'ZBB',
-      description: 'Zentrale Arbeitsflaeche für Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
+      description:
+          'Zentrale Arbeitsflaeche für Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
       icon: Icons.apartment_outlined,
       color: Color(0xFF5BA7FF),
-      points: ['Mitgliederlisten', 'Vereinsdateien', 'Aufgabenboard', 'Rollenrechte'],
+      points: [
+        'Mitgliederlisten',
+        'Vereinsdateien',
+        'Aufgabenboard',
+        'Rollenrechte',
+      ],
     ),
     _WorkspaceItem(
       title: 'Team-Workspace',
       area: 'Team',
       status: 'Team',
       meta: 'U16',
-      description: 'Mobile Teamseite für Trainer, Spieler, Eltern, Termine, Training und schnelle Absprachen.',
+      description:
+          'Mobile Teamseite für Trainer, Spieler, Eltern, Termine, Training und schnelle Absprachen.',
       icon: Icons.groups_2_outlined,
       color: Color(0xFF2EE59D),
-      points: ['Trainerzugriff', 'Teamdateien', 'Trainingstermine', 'Elterninfos'],
+      points: [
+        'Trainerzugriff',
+        'Teamdateien',
+        'Trainingstermine',
+        'Elterninfos',
+      ],
     ),
     _WorkspaceItem(
       title: 'Projekt-Workspace',
       area: 'Projekt',
       status: 'Planung',
       meta: 'Event',
-      description: 'Planungsbereich für Turniere, Vereinsfeste, Sponsoring-Aktionen und wiederkehrende Projekte.',
+      description:
+          'Planungsbereich für Turniere, Vereinsfeste, Sponsoring-Aktionen und wiederkehrende Projekte.',
       icon: Icons.task_alt_outlined,
       color: Color(0xFFF8B84E),
-      points: ['Checklisten', 'Zustaendigkeiten', 'Budgetnotizen', 'Dateianhaenge'],
+      points: [
+        'Checklisten',
+        'Zustaendigkeiten',
+        'Budgetnotizen',
+        'Dateianhaenge',
+      ],
     ),
     _WorkspaceItem(
       title: 'Geschuetzter Bereich',
       area: 'Rechte',
       status: 'Rollen',
       meta: 'Admin',
-      description: 'Sensible Arbeitsbereiche mit Rollen, Sichtbarkeit, Datenschutz-Hinweisen und Zugriffskontrolle.',
+      description:
+          'Sensible Arbeitsbereiche mit Rollen, Sichtbarkeit, Datenschutz-Hinweisen und Zugriffskontrolle.',
       icon: Icons.lock_outline,
       color: Color(0xFFFF6B6B),
       points: ['Admin-only', 'DSGVO-Dokumente', 'Freigaben', 'Audit-Hinweise'],
@@ -85,22 +106,35 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
                     const _PageIntro(
                       eyebrow: 'ARBEITSBEREICHE',
                       title: 'Workspaces',
-                      subtitle: 'Mobile Zusammenarbeit für Vereine, Teams, Projekte, Dateien und Rechte.',
+                      subtitle:
+                          'Mobile Zusammenarbeit für Vereine, Teams, Projekte, Dateien und Rechte.',
                     ),
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _MetricTile(value: '4', label: 'Workspaces')),
+                        Expanded(
+                          child: _MetricTile(value: '4', label: 'Workspaces'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricTile(value: '12', label: 'Mitglieder')),
+                        Expanded(
+                          child: _MetricTile(value: '12', label: 'Mitglieder'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _MetricTile(value: '9', label: 'Dateien')),
+                        Expanded(
+                          child: _MetricTile(value: '9', label: 'Dateien'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
                     _FilterBar(
                       value: _filter,
-                      values: const ['Alle', 'Verein', 'Team', 'Projekt', 'Rechte'],
+                      values: const [
+                        'Alle',
+                        'Verein',
+                        'Team',
+                        'Projekt',
+                        'Rechte',
+                      ],
                       onChanged: (value) => setState(() => _filter = value),
                     ),
                     const SizedBox(height: 14),
@@ -109,10 +143,12 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
                       showFiles: _showFiles,
                       showTasks: _showTasks,
                       showPermissions: _showPermissions,
-                      onMembers: (value) => setState(() => _showMembers = value),
+                      onMembers: (value) =>
+                          setState(() => _showMembers = value),
                       onFiles: (value) => setState(() => _showFiles = value),
                       onTasks: (value) => setState(() => _showTasks = value),
-                      onPermissions: (value) => setState(() => _showPermissions = value),
+                      onPermissions: (value) =>
+                          setState(() => _showPermissions = value),
                     ),
                     const SizedBox(height: 14),
                     for (final item in _visibleItems) ...[
@@ -129,10 +165,13 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
                       onCreate: () => openUiAction(
                         context,
                         title: 'Workspace erstellen',
-                        message: 'Im API-Schritt wird hier ein neuer Vereins- oder Team-Workspace angelegt.',
+                        message:
+                            'Im API-Schritt wird hier ein neuer Vereins- oder Team-Workspace angelegt.',
                       ),
                       onFiles: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => FileOperationsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => FileOperationsScreen(),
+                        ),
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -147,7 +186,9 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -187,7 +228,12 @@ class _TopBar extends StatelessWidget {
         const Expanded(
           child: Text(
             'Airmius',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: .2),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: .2,
+            ),
           ),
         ),
         IconButton(
@@ -200,7 +246,11 @@ class _TopBar extends StatelessWidget {
 }
 
 class _PageIntro extends StatelessWidget {
-  const _PageIntro({required this.eyebrow, required this.title, required this.subtitle});
+  const _PageIntro({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
 
   final String eyebrow;
   final String title;
@@ -222,11 +272,32 @@ class _PageIntro extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(eyebrow, style: const TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            eyebrow,
+            style: const TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600)),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -251,9 +322,22 @@ class _MetricTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -261,7 +345,11 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.value, required this.values, required this.onChanged});
+  const _FilterBar({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -282,10 +370,16 @@ class _FilterBar extends StatelessWidget {
             label: Text(item),
             selected: active,
             onSelected: (_) => onChanged(item),
-            labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -320,10 +414,26 @@ class _SettingsPanel extends StatelessWidget {
       title: 'Sichtbarkeit wie in der Web-App',
       child: Column(
         children: [
-          _SwitchLine(label: 'Mitglieder anzeigen', value: showMembers, onChanged: onMembers),
-          _SwitchLine(label: 'Dateien anzeigen', value: showFiles, onChanged: onFiles),
-          _SwitchLine(label: 'Aufgaben anzeigen', value: showTasks, onChanged: onTasks),
-          _SwitchLine(label: 'Rechte und Rollen anzeigen', value: showPermissions, onChanged: onPermissions),
+          _SwitchLine(
+            label: 'Mitglieder anzeigen',
+            value: showMembers,
+            onChanged: onMembers,
+          ),
+          _SwitchLine(
+            label: 'Dateien anzeigen',
+            value: showFiles,
+            onChanged: onFiles,
+          ),
+          _SwitchLine(
+            label: 'Aufgaben anzeigen',
+            value: showTasks,
+            onChanged: onTasks,
+          ),
+          _SwitchLine(
+            label: 'Rechte und Rollen anzeigen',
+            value: showPermissions,
+            onChanged: onPermissions,
+          ),
         ],
       ),
     );
@@ -331,7 +441,11 @@ class _SettingsPanel extends StatelessWidget {
 }
 
 class _SwitchLine extends StatelessWidget {
-  const _SwitchLine({required this.label, required this.value, required this.onChanged});
+  const _SwitchLine({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -345,7 +459,13 @@ class _SwitchLine extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
@@ -401,9 +521,22 @@ class _WorkspaceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('${item.meta} - ${item.area}', style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+                    Text(
+                      '${item.meta} - ${item.area}',
+                      style: const TextStyle(
+                        color: Color(0xFFAFC0D8),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -411,14 +544,19 @@ class _WorkspaceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text(item.description, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+          Text(
+            item.description,
+            style: const TextStyle(
+              color: Color(0xFFDDE7F5),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              for (final detail in details) _SmallTag(label: detail),
-            ],
+            children: [for (final detail in details) _SmallTag(label: detail)],
           ),
         ],
       ),
@@ -427,7 +565,11 @@ class _WorkspaceCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onCreate, required this.onFiles, required this.onSupport});
+  const _ActionPanel({
+    required this.onCreate,
+    required this.onFiles,
+    required this.onSupport,
+  });
 
   final VoidCallback onCreate;
   final VoidCallback onFiles;
@@ -439,11 +581,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.add_circle_outline, label: 'Workspace erstellen', onTap: onCreate),
+          _ActionButton(
+            icon: Icons.add_circle_outline,
+            label: 'Workspace erstellen',
+            onTap: onCreate,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.folder_copy_outlined, label: 'Dateimanager öffnen', onTap: onFiles),
+          _ActionButton(
+            icon: Icons.folder_copy_outlined,
+            label: 'Dateimanager öffnen',
+            onTap: onFiles,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -468,7 +622,13 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -478,7 +638,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -498,9 +662,17 @@ class _ActionButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: AirmiusColors.blue),
+            Icon(icon, color: airmiusAccentColor(context)),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -524,7 +696,14 @@ class _Pill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: .55)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
@@ -543,7 +722,14 @@ class _SmallTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFF26364D)),
       ),
-      child: Text(label, style: const TextStyle(color: Color(0xFFDDE7F5), fontSize: 12, fontWeight: FontWeight.w800)),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFDDE7F5),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }

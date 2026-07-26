@@ -12,12 +12,20 @@ Schedule::command('airmius:send-membership-billing-reminders')
     ->dailyAt('08:00')
     ->withoutOverlapping();
 
+Schedule::command('airmius:process-membership-terminations')
+    ->dailyAt('08:05')
+    ->withoutOverlapping();
+
 Schedule::command('airmius:generate-recurring-contribution-invoices')
     ->dailyAt('07:30')
     ->withoutOverlapping();
 
 Schedule::command('airmius:send-subscription-invoice-emails')
     ->dailyAt('08:15')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:send-notification-digests')
+    ->dailyAt('18:00')
     ->withoutOverlapping();
 
 Schedule::command('airmius:process-subscription-lifecycle')

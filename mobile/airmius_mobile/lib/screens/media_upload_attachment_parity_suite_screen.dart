@@ -7,10 +7,12 @@ class MediaUploadAttachmentParitySuiteScreen extends StatefulWidget {
   const MediaUploadAttachmentParitySuiteScreen({super.key});
 
   @override
-  State<MediaUploadAttachmentParitySuiteScreen> createState() => _MediaUploadAttachmentParitySuiteScreenState();
+  State<MediaUploadAttachmentParitySuiteScreen> createState() =>
+      _MediaUploadAttachmentParitySuiteScreenState();
 }
 
-class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAttachmentParitySuiteScreen> {
+class _MediaUploadAttachmentParitySuiteScreenState
+    extends State<MediaUploadAttachmentParitySuiteScreen> {
   String _source = 'Dateien';
   String _purpose = 'Vereinsdokument';
   bool _autoLinkToManager = true;
@@ -18,14 +20,22 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
   bool _showUploadProgress = true;
 
   static const _sources = ['Dateien', 'Kamera', 'Galerie', 'Scan'];
-  static const _purposes = ['Vereinsdokument', 'Profilbild', 'Chat', 'Blog', 'Marketplace', 'Training'];
+  static const _purposes = [
+    'Vereinsdokument',
+    'Profilbild',
+    'Chat',
+    'Blog',
+    'Marketplace',
+    'Training',
+  ];
 
   static const _flows = <_UploadFlow>[
     _UploadFlow(
       title: 'Vereinsdokument hochladen',
       route: 'ClubPolicyDocuments + Files/Index',
       purpose: 'Vereinsdokument',
-      body: 'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln können hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknuepft werden.',
+      body:
+          'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln können hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknuepft werden.',
       status: 'Pflichtdokument',
       icon: Icons.rule_folder_outlined,
       primary: 'Dokument hochladen',
@@ -36,7 +46,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Mitgliedsantrag Anlage',
       route: 'MembershipApplicationForm',
       purpose: 'Vereinsdokument',
-      body: 'Ausweis, Lizenz, Einwilligung, Guardian-Nachweis oder club-spezifische Pflichtanlage mit Uploadstatus und Rückzugsschutz.',
+      body:
+          'Ausweis, Lizenz, Einwilligung, Guardian-Nachweis oder club-spezifische Pflichtanlage mit Uploadstatus und Rückzugsschutz.',
       status: 'Antragsanlage',
       icon: Icons.assignment_ind_outlined,
       primary: 'Anlage auswählen',
@@ -47,7 +58,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Profilbild und Club-Logo',
       route: 'Profile/Show + ClubProfileEditor',
       purpose: 'Profilbild',
-      body: 'Avatar, Vereinslogo, Banner, Zuschnitt, Vorschau, Entfernen und Sichtbarkeit werden als mobile Medienkarte vorbereitet.',
+      body:
+          'Avatar, Vereinslogo, Banner, Zuschnitt, Vorschau, Entfernen und Sichtbarkeit werden als mobile Medienkarte vorbereitet.',
       status: 'Bild',
       icon: Icons.image_outlined,
       primary: 'Bild wählen',
@@ -58,7 +70,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Chat-Anhang',
       route: 'Chat/Index + Conversations',
       purpose: 'Chat',
-      body: 'Bilder, PDFs, Trainingsplaene oder Vereinsdateien werden als Message Attachment mit Preview, Uploadstatus und Zugriffskontext gezeigt.',
+      body:
+          'Bilder, PDFs, Trainingsplaene oder Vereinsdateien werden als Message Attachment mit Preview, Uploadstatus und Zugriffskontext gezeigt.',
       status: 'Attachment',
       icon: Icons.attach_file,
       primary: 'Anhang senden',
@@ -69,7 +82,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Blog- und Mediencenter',
       route: 'Blogs/Index + BlogMediaCenter',
       purpose: 'Blog',
-      body: 'Titelbild, Galerie, Alt-Text, Copyright, Public Preview, Freigabe und Kategoriebezug als mobile Uploadstrecke.',
+      body:
+          'Titelbild, Galerie, Alt-Text, Copyright, Public Preview, Freigabe und Kategoriebezug als mobile Uploadstrecke.',
       status: 'Editorial',
       icon: Icons.article_outlined,
       primary: 'Medium laden',
@@ -80,7 +94,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Marketplace Produktbilder',
       route: 'Commerce/ProductShow',
       purpose: 'Marketplace',
-      body: 'Produktbilder, Variantenbilder, Anbieter-Assets, Reihenfolge, Preview und Moderationsstatus für mobile Commerce-UI.',
+      body:
+          'Produktbilder, Variantenbilder, Anbieter-Assets, Reihenfolge, Preview und Moderationsstatus für mobile Commerce-UI.',
       status: 'Product Media',
       icon: Icons.inventory_2_outlined,
       primary: 'Produktbild',
@@ -91,7 +106,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Trainingsnachweis',
       route: 'Training/LogCreate + LogShow',
       purpose: 'Training',
-      body: 'Foto, Video, Dokument, Route oder Messwert-Anhang für Trainingslog mit Coach-Sichtbarkeit und Maturity-Gate.',
+      body:
+          'Foto, Video, Dokument, Route oder Messwert-Anhang für Trainingslog mit Coach-Sichtbarkeit und Maturity-Gate.',
       status: 'Evidence',
       icon: Icons.fitness_center_outlined,
       primary: 'Nachweis',
@@ -100,14 +116,17 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
     ),
   ];
 
-  List<_UploadFlow> get _visibleFlows => _flows.where((flow) => flow.purpose == _purpose).toList();
+  List<_UploadFlow> get _visibleFlows =>
+      _flows.where((flow) => flow.purpose == _purpose).toList();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
@@ -130,7 +149,8 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
                 onOpen: () => openUiAction(
                   context,
                   title: 'Upload starten',
-                  body: 'Quelle $_source, Zweck $_purpose, Datenschutz $_needsPrivacyScope und Dateimanager-Verknuepfung $_autoLinkToManager als mobile Upload-Aktion vorbereiten.',
+                  body:
+                      'Quelle $_source, Zweck $_purpose, Datenschutz $_needsPrivacyScope und Dateimanager-Verknuepfung $_autoLinkToManager als mobile Upload-Aktion vorbereiten.',
                   status: 'Upload',
                   icon: Icons.upload_file_outlined,
                 ),
@@ -156,9 +176,12 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
                 autoLinkToManager: _autoLinkToManager,
                 needsPrivacyScope: _needsPrivacyScope,
                 showUploadProgress: _showUploadProgress,
-                onAutoLink: (value) => setState(() => _autoLinkToManager = value),
-                onPrivacy: (value) => setState(() => _needsPrivacyScope = value),
-                onProgress: (value) => setState(() => _showUploadProgress = value),
+                onAutoLink: (value) =>
+                    setState(() => _autoLinkToManager = value),
+                onPrivacy: (value) =>
+                    setState(() => _needsPrivacyScope = value),
+                onProgress: (value) =>
+                    setState(() => _showUploadProgress = value),
               ),
               const SizedBox(height: 16),
               if (_showUploadProgress) const _ProgressPanel(),
@@ -167,13 +190,17 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
                 _UploadFlowCard(flow: flow),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Upload-Flows für diesen Zweck sichtbar.'),
+              if (_visibleFlows.isEmpty)
+                const EmptyPanel(
+                  'Keine Upload-Flows für diesen Zweck sichtbar.',
+                ),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
                   context,
                   title: 'Upload Parity',
-                  body: 'Dateien, Bilder, Scans, Chat-Anhaenge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile UI-Flows vorbereitet.',
+                  body:
+                      'Dateien, Bilder, Scans, Chat-Anhaenge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile UI-Flows vorbereitet.',
                   status: 'Media Upload',
                   icon: Icons.cloud_upload_outlined,
                 ),
@@ -208,14 +235,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('UPLOADS & MEDIEN'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Uploads müssen mobil einfach, sicher und verknuepft sein.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter bildet Upload-Auswahl, Kamera/Galerie, Scan, Vorschau, Fortschritt, Datenschutz, Zweckbindung und Dateimanager-Verknuepfung als native App-Flows ab.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -224,8 +259,14 @@ class _Hero extends StatelessWidget {
             children: [
               _Metric(value: source, label: 'Quelle'),
               _Metric(value: purpose, label: 'Zweck'),
-              _Metric(value: autoLinkToManager ? 'Auto' : 'Manuell', label: 'Dateimanager'),
-              _Metric(value: showUploadProgress ? 'Live' : 'Still', label: 'Fortschritt'),
+              _Metric(
+                value: autoLinkToManager ? 'Auto' : 'Manuell',
+                label: 'Dateimanager',
+              ),
+              _Metric(
+                value: showUploadProgress ? 'Live' : 'Still',
+                label: 'Fortschritt',
+              ),
             ],
           ),
         ],
@@ -235,10 +276,7 @@ class _Hero extends StatelessWidget {
 }
 
 class _UploadDropZone extends StatelessWidget {
-  const _UploadDropZone({
-    required this.source,
-    required this.onOpen,
-  });
+  const _UploadDropZone({required this.source, required this.onOpen});
 
   final String source;
   final VoidCallback onOpen;
@@ -246,29 +284,50 @@ class _UploadDropZone extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      borderColor: AirmiusColors.blue,
+      borderColor: airmiusAccentColor(context),
       child: Column(
         children: [
           Container(
             width: 74,
             height: 74,
             decoration: BoxDecoration(
-              color: AirmiusColors.blue.withValues(alpha: .14),
+              color: airmiusAccentColor(context).withValues(alpha: .14),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AirmiusColors.blue.withValues(alpha: .65)),
+              border: Border.all(
+                color: airmiusAccentColor(context).withValues(alpha: .65),
+              ),
             ),
-            child: const Icon(Icons.cloud_upload_outlined, color: AirmiusColors.blue, size: 34),
+            child: Icon(
+              Icons.cloud_upload_outlined,
+              color: airmiusAccentColor(context),
+              size: 34,
+            ),
           ),
           const SizedBox(height: 12),
-          Text('Quelle: $source', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            'Quelle: $source',
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Datei auswählen, Kamera starten, Bild scannen oder bestehende Vereinsdatei verknuepfen.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Upload simulieren', icon: Icons.upload_file_outlined, onPressed: onOpen),
+          AirmiusButton(
+            label: 'Upload simulieren',
+            icon: Icons.upload_file_outlined,
+            onPressed: onOpen,
+          ),
         ],
       ),
     );
@@ -292,7 +351,13 @@ class _ChoicePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = green ? AirmiusColors.green : AirmiusColors.blue;
+    final color = green
+        ? Theme.of(context).colorScheme.secondary
+        : airmiusAccentColor(context);
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return AirmiusPanel(
       title: title,
       children: [
@@ -306,9 +371,12 @@ class _ChoicePanel extends StatelessWidget {
                   selected: active == item,
                   onSelected: (_) => onChanged(item),
                   selectedColor: color.withValues(alpha: .24),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: active == item ? color : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: surfaceColor,
+                  side: BorderSide(color: active == item ? color : borderColor),
+                  labelStyle: TextStyle(
+                    color: active == item ? textColor : mutedColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -339,11 +407,24 @@ class _SwitchPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Upload-Regeln',
-      subtitle: 'Diese Optionen werden später aus Route, Verein, Rolle und Laravel-API geladen.',
+      subtitle:
+          'Diese Optionen werden später aus Route, Verein, Rolle und Laravel-API geladen.',
       children: [
-        _SwitchLine(title: 'Automatisch im Dateimanager verknuepfen', value: autoLinkToManager, onChanged: onAutoLink),
-        _SwitchLine(title: 'Datenschutz-/Zweckbindung verlangen', value: needsPrivacyScope, onChanged: onPrivacy),
-        _SwitchLine(title: 'Upload-Fortschritt anzeigen', value: showUploadProgress, onChanged: onProgress),
+        _SwitchLine(
+          title: 'Automatisch im Dateimanager verknuepfen',
+          value: autoLinkToManager,
+          onChanged: onAutoLink,
+        ),
+        _SwitchLine(
+          title: 'Datenschutz-/Zweckbindung verlangen',
+          value: needsPrivacyScope,
+          onChanged: onPrivacy,
+        ),
+        _SwitchLine(
+          title: 'Upload-Fortschritt anzeigen',
+          value: showUploadProgress,
+          onChanged: onProgress,
+        ),
       ],
     );
   }
@@ -356,11 +437,20 @@ class _ProgressPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Uploadstatus',
-      subtitle: 'Mobile Vorschau für Fortschritt, Validierung und Verarbeitung.',
+      subtitle:
+          'Mobile Vorschau für Fortschritt, Validierung und Verarbeitung.',
       children: const [
         _ProgressLine(label: 'Auswahl validieren', value: .92, status: 'OK'),
-        _ProgressLine(label: 'Upload zu Laravel Storage', value: .64, status: 'Läuft'),
-        _ProgressLine(label: 'Dateimanager verknuepfen', value: .38, status: 'Wartet'),
+        _ProgressLine(
+          label: 'Upload zu Laravel Storage',
+          value: .64,
+          status: 'Läuft',
+        ),
+        _ProgressLine(
+          label: 'Dateimanager verknuepfen',
+          value: .38,
+          status: 'Wartet',
+        ),
       ],
     );
   }
@@ -384,10 +474,24 @@ class _ProgressLine extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(child: Text(label, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-              StatusPill(status, color: value > .8 ? AirmiusColors.green : AirmiusColors.amber),
+              Text(
+                label,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              StatusPill(
+                status,
+                color: value > .8
+                    ? Theme.of(context).colorScheme.secondary
+                    : Theme.of(context).colorScheme.tertiary,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -395,8 +499,12 @@ class _ProgressLine extends StatelessWidget {
             value: value,
             minHeight: 8,
             borderRadius: BorderRadius.circular(99),
-            backgroundColor: AirmiusColors.cardSoft,
-            valueColor: AlwaysStoppedAnimation<Color>(value > .8 ? AirmiusColors.green : AirmiusColors.blue),
+            backgroundColor: airmiusSurfaceSoftColor(context),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              value > .8
+                  ? Theme.of(context).colorScheme.secondary
+                  : airmiusAccentColor(context),
+            ),
           ),
         ],
       ),
@@ -411,8 +519,9 @@ class _UploadFlowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, flow.color);
     return AirmiusPanel(
-      borderColor: flow.color.withValues(alpha: .55),
+      borderColor: color.withValues(alpha: .55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -423,28 +532,56 @@ class _UploadFlowCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: flow.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: flow.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(flow.icon, color: flow.color),
+                child: Icon(flow.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(flow.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      flow.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(flow.route, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      flow.route,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(flow.status, color: flow.color),
             ],
           ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: StatusPill(flow.status, color: color),
+          ),
           const SizedBox(height: 12),
-          Text(flow.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            flow.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -468,7 +605,8 @@ class _UploadFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Dateimanager, Vorschau, Datenschutz, Version, Zweckbindung und Audit für ${flow.title}.',
+                  body:
+                      'Dateimanager, Vorschau, Datenschutz, Version, Zweckbindung und Audit für ${flow.title}.',
                   status: 'Verknuepfung',
                   icon: Icons.link_outlined,
                 ),
@@ -492,12 +630,24 @@ class _Checklist extends StatelessWidget {
       title: 'Upload-Paritaet',
       subtitle: 'Was mobile Uploads aus der Web-App übernehmen.',
       children: [
-        const _CheckLine('Kamera, Galerie, Dateien und Scan werden als Quellen vorbereitet.'),
-        const _CheckLine('Jeder Upload hat Zweckbindung, Datenschutzstatus, Vorschau und Fortschritt.'),
-        const _CheckLine('Vereinsdokumente können automatisch im Dateimanager verknuepft werden.'),
-        const _CheckLine('Chat, Blog, Marketplace, Training und Profil nutzen ein gemeinsames Medienmuster.'),
+        const _CheckLine(
+          'Kamera, Galerie, Dateien und Scan werden als Quellen vorbereitet.',
+        ),
+        const _CheckLine(
+          'Jeder Upload hat Zweckbindung, Datenschutzstatus, Vorschau und Fortschritt.',
+        ),
+        const _CheckLine(
+          'Vereinsdokumente können automatisch im Dateimanager verknuepft werden.',
+        ),
+        const _CheckLine(
+          'Chat, Blog, Marketplace, Training und Profil nutzen ein gemeinsames Medienmuster.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Upload-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Upload-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -520,14 +670,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -546,9 +708,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -556,10 +731,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -569,16 +741,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

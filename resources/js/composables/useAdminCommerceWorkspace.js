@@ -3,8 +3,14 @@ import { computed, ref } from 'vue'
 import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
 import { useAdminCommerceProducts } from '@/composables/useAdminCommerceProducts'
+import { useI18n } from 'vue-i18n'
 
 export function useAdminCommerceWorkspace(props) {
+    const { t, locale } = useI18n()
+    const tx = (key, fallback, values = {}) => {
+        const translated = t(key, values)
+        return translated === key ? fallback : translated
+    }
     const page = usePage()
     const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
     const activeTab = ref(queryTab || 'marketplace')
@@ -258,7 +264,8 @@ export function useAdminCommerceWorkspace(props) {
         rejected: 'Abgelehnt',
     }[status] || status || '-')
     
-    const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
+    const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+    const formatMoney = (cents) => new Intl.NumberFormat(localeCode.value, {
         style: 'currency',
         currency: 'EUR',
     }).format(Number(cents || 0) / 100)
@@ -281,7 +288,7 @@ export function useAdminCommerceWorkspace(props) {
             return '-'
         }
     
-        return new Intl.DateTimeFormat('de-DE', {
+        return new Intl.DateTimeFormat(localeCode.value, {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -292,38 +299,35 @@ export function useAdminCommerceWorkspace(props) {
     
     const orderPaymentLabel = (order) => {
         if (order.status === 'completed') {
-            return order.shipping_status === 'delivered' ? 'Abgeschlossen' : 'Bezahlt'
+            return order.shipping_status === 'delivered'
+                ? tx('commerce.order.status.delivered', 'Abgeschlossen')
+                : tx('commerce.order.status.paid', 'Bezahlt')
         }
     
         return {
-            pending: 'Offen',
-            awaiting_transfer: 'Wartet auf Überweisung',
-            cancelled: 'Storniert',
-            refunded: 'Erstattet',
+            pending: tx('commerce.order.status.pending', 'Offen'),
+            awaiting_transfer: tx('commerce.order.status.awaiting_transfer', 'Wartet auf Überweisung'),
+            cancelled: tx('commerce.order.status.cancelled', 'Storniert'),
+            refunded: tx('commerce.order.status.refunded', 'Erstattet'),
         }[order.status] || order.status
     }
     
     const orderPaymentHint = (order) => {
         if (order.status === 'completed') {
             return order.shipping_status === 'delivered'
-                ? 'Zahlung und Zustellung erledigt'
-                : 'Zahlung eingegangen, Versand läuft noch'
+                ? tx('commerce.order.hints.delivered', 'Zahlung und Zustellung erledigt')
+                : tx('commerce.order.hints.processing', 'Zahlung eingegangen, Versand läuft noch')
         }
     
         return {
-            pending: 'Zahlung noch offen',
-            awaiting_transfer: 'Banküberweisung muss bestätigt werden',
-            cancelled: 'Bestellung wurde storniert',
-            refunded: 'Betrag wurde erstattet',
+            pending: tx('commerce.order.hints.pending', 'Zahlung noch offen'),
+            awaiting_transfer: tx('commerce.order.hints.awaiting_transfer', 'Banküberweisung muss bestätigt werden'),
+            cancelled: tx('commerce.order.hints.cancelled', 'Bestellung wurde storniert'),
+            refunded: tx('commerce.order.hints.refunded', 'Betrag wurde erstattet'),
         }[order.status] || ''
     }
     
-    const orderShippingLabel = (status) => ({
-        open: 'Offen',
-        prepared: 'Wird vorbereitet',
-        shipped: 'Versendet',
-        delivered: 'Zugestellt',
-    }[status || 'open'] || status)
+    const orderShippingLabel = (status) => tx(`commerce.shipping.status.${status || 'open'}`, status || 'open')
     
     const trackingUrlFor = (carrier, trackingNumber) => {
         const number = String(trackingNumber || '').replace(/\s+/g, '').toUpperCase()
@@ -519,9 +523,9 @@ export function useAdminCommerceWorkspace(props) {
     
     const destroyProviderLocation = async (location) => {
         const confirmed = await confirmDialog({
-            title: 'Standort entfernen',
-            message: `${location.name} wirklich aus dem Anbieterprofil entfernen?`,
-            confirmLabel: 'Entfernen',
+            title: tx('commerce.provider_location.remove.title', 'Standort entfernen'),
+            message: tx('commerce.provider_location.remove.message', `${location.name} wirklich aus dem Anbieterprofil entfernen?`, { name: location.name }),
+            confirmLabel: tx('commerce.provider_location.remove.confirm', 'Entfernen'),
             danger: true,
         })
     
@@ -950,4 +954,3 @@ export function useAdminCommerceWorkspace(props) {
         updatePayoutProfile,
     }
 }
-

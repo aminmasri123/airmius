@@ -7,12 +7,35 @@ class AirmiusMvpSurface {
   );
 
   static const mvpModuleTitles = <String>{
+    'Arbeitsbereiche',
+    'Rollen & Rechte',
     'Vereins-Cockpit',
     'Vereine & Teams',
     'Teams',
+    'Sportarten',
+    'Sport-Apps & Gesundheitsdaten',
     'Feed',
     'Nachrichten',
     'Events & Training',
+    'Trainer-Cockpit',
+    'Ernährung',
+    'Sportkarte',
+    'Freunde',
+    'Fahrgemeinschaften',
+    'Badges',
+    'Gamification-Regeln',
+    'Altersfreigaben',
+    'Kurse',
+    'Sponsoren',
+    'Medienrichtlinien',
+    'Blog & Medien',
+    'Nutzer',
+    'Marketplace',
+    'Commerce',
+    'Admin',
+    'Abos & Rechnungen',
+    'Outfit-Abos',
+    'Eltern & Jugendschutz',
     'Dateien',
     'Einstellungen',
   };
@@ -38,13 +61,17 @@ class AirmiusMvpSurface {
     'Legal & Support',
   };
 
-  static bool isModuleVisible(ModuleDefinition module) => isModuleTitleVisible(module.title);
+  static bool isModuleVisible(ModuleDefinition module) =>
+      isModuleTitleVisible(module.title);
 
-  static bool isModuleTitleVisible(String title) => showDeveloperSuites || mvpModuleTitles.contains(title);
+  static bool isModuleTitleVisible(String title) =>
+      showDeveloperSuites || mvpModuleTitles.contains(title);
 
-  static bool isDashboardWidgetVisible(String key) => showDeveloperSuites || mvpDashboardWidgetKeys.contains(key);
+  static bool isDashboardWidgetVisible(String key) =>
+      showDeveloperSuites || mvpDashboardWidgetKeys.contains(key);
 
-  static bool isOperationVisible(String title) => showDeveloperSuites || mvpOperationTitles.contains(title);
+  static bool isOperationVisible(String title) =>
+      showDeveloperSuites || mvpOperationTitles.contains(title);
 
   static bool get isOperationsHubVisible => showDeveloperSuites;
 }

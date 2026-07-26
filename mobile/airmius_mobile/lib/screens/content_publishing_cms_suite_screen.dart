@@ -7,10 +7,12 @@ class ContentPublishingCmsSuiteScreen extends StatefulWidget {
   const ContentPublishingCmsSuiteScreen({super.key});
 
   @override
-  State<ContentPublishingCmsSuiteScreen> createState() => _ContentPublishingCmsSuiteScreenState();
+  State<ContentPublishingCmsSuiteScreen> createState() =>
+      _ContentPublishingCmsSuiteScreenState();
 }
 
-class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSuiteScreen> {
+class _ContentPublishingCmsSuiteScreenState
+    extends State<ContentPublishingCmsSuiteScreen> {
   String channel = 'Vereinsnews';
   bool requireApproval = true;
   bool schedulePublishing = true;
@@ -23,28 +25,32 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
       const _ContentRow(
         title: 'Neue Saison startet',
         status: 'Geplant',
-        body: 'Vereinsnews mit Titelbild, Ausspielung im Clubprofil, Feed-Hinweis und Push-Benachrichtigung.',
+        body:
+            'Vereinsnews mit Titelbild, Ausspielung im Clubprofil, Feed-Hinweis und Push-Benachrichtigung.',
         icon: Icons.article_outlined,
         color: AirmiusColors.blue,
       ),
       const _ContentRow(
         title: 'Sponsor des Monats',
         status: 'Freigabe',
-        body: 'Gesponserter Inhalt mit Creative Review, Zielgruppe, Laufzeit und Moderationsstatus.',
+        body:
+            'Gesponserter Inhalt mit Creative Review, Zielgruppe, Laufzeit und Moderationsstatus.',
         icon: Icons.campaign_outlined,
         color: AirmiusColors.amber,
       ),
       const _ContentRow(
         title: 'Newsletter Juni',
         status: 'Entwurf',
-        body: 'Newsletter mit Vereinsupdates, Events, Marketplace-Angeboten und Kurs-Hinweisen.',
+        body:
+            'Newsletter mit Vereinsupdates, Events, Marketplace-Angeboten und Kurs-Hinweisen.',
         icon: Icons.mail_outline,
         color: AirmiusColors.green,
       ),
       const _ContentRow(
         title: 'Öffentlicher Blogartikel',
         status: 'Public',
-        body: 'Gastseiten-Inhalt mit SEO, Autor, Kategorie, Sichtbarkeit und Vorschau.',
+        body:
+            'Gastseiten-Inhalt mit SEO, Autor, Kategorie, Sichtbarkeit und Vorschau.',
         icon: Icons.public_outlined,
         color: AirmiusColors.pink,
       ),
@@ -55,6 +61,8 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
       subtitle: 'Blog, Vereinsnews und Newsletter',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -63,9 +71,13 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
               children: [
                 const SectionLabel('CMS FLOW'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Vereine und Plattformadmins brauchen eine mobile Redaktionsstrecke für Blog, Vereinsnews, Newsletter, Sponsorinhalte, Vorschau und Freigaben.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +106,8 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                     ButtonSegment(value: 'Sponsor', label: Text('Sponsor')),
                   ],
                   selected: {channel},
-                  onSelectionChanged: (value) => setState(() => channel = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => channel = value.first),
                 ),
               ],
             ),
@@ -106,10 +119,32 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _ContentSwitch(title: 'Freigabe erforderlich', value: requireApproval, color: AirmiusColors.amber, onChanged: (value) => setState(() => requireApproval = value)),
-                _ContentSwitch(title: 'Verarbeitung planen', value: schedulePublishing, color: AirmiusColors.blue, onChanged: (value) => setState(() => schedulePublishing = value)),
-                _ContentSwitch(title: 'Newsletter senden', value: sendNewsletter, color: AirmiusColors.green, onChanged: (value) => setState(() => sendNewsletter = value)),
-                _ContentSwitch(title: 'Sponsorplatzierung', value: sponsorPlacement, color: AirmiusColors.pink, onChanged: (value) => setState(() => sponsorPlacement = value)),
+                _ContentSwitch(
+                  title: 'Freigabe erforderlich',
+                  value: requireApproval,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) => setState(() => requireApproval = value),
+                ),
+                _ContentSwitch(
+                  title: 'Verarbeitung planen',
+                  value: schedulePublishing,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) =>
+                      setState(() => schedulePublishing = value),
+                ),
+                _ContentSwitch(
+                  title: 'Newsletter senden',
+                  value: sendNewsletter,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) => setState(() => sendNewsletter = value),
+                ),
+                _ContentSwitch(
+                  title: 'Sponsorplatzierung',
+                  value: sponsorPlacement,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) =>
+                      setState(() => sponsorPlacement = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +161,11 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                 const SizedBox(height: 8),
                 Text(
                   'Aktueller Kanal: $channel. Später verbindet die API Entwurf, Vorschau, SEO, Medien, Freigabe, Newsletter, Push und Ausspielungsstatus.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +174,8 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                   onPressed: () => openUiAction(
                     context,
                     title: 'Inhalt vorbereiten',
-                    body: 'Diese UI bereitet CMS-Entwürfe, Vorschau, Medien, Freigaben, Newsletter und öffentliche Ausspielung für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet CMS-Entwürfe, Vorschau, Medien, Freigaben, Newsletter und öffentliche Ausspielung für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.edit_note_outlined,
                   ),
@@ -182,7 +222,13 @@ class _ContentSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -204,20 +250,44 @@ class _ContentCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBadge(icon: article.icon, color: article.color),
+              IconBadge(
+                icon: article.icon,
+                color: airmiusSemanticColor(context, article.color),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(child: Text(article.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                        StatusPill(article.status, color: article.color),
+                        Text(
+                          article.title,
+                          softWrap: true,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        StatusPill(
+                          article.status,
+                          color: airmiusSemanticColor(context, article.color),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(article.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                    Text(
+                      article.body,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.42,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -234,7 +304,8 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Vorschau',
-                  body: 'Vorschau, Medien, SEO, Zielgruppe und Ausspielungsstatus werden für die spätere API vorbereitet.',
+                  body:
+                      'Vorschau, Medien, SEO, Zielgruppe und Ausspielungsstatus werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.preview_outlined,
                 ),
@@ -246,7 +317,8 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Freigabe',
-                  body: 'Freigaben können später Verein, Plattformadmin, Sponsorreview und Audit-Verlauf verbinden.',
+                  body:
+                      'Freigaben können später Verein, Plattformadmin, Sponsorreview und Audit-Verlauf verbinden.',
                   status: 'UI vorbereitet',
                   icon: Icons.verified_user_outlined,
                 ),
@@ -258,7 +330,8 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Inhalt senden',
-                  body: 'Newsletter, Push, Feed-Hinweis und öffentliche Veröffentlichung werden als Publishing-Flow vorbereitet.',
+                  body:
+                      'Newsletter, Push, Feed-Hinweis und öffentliche Veröffentlichung werden als Publishing-Flow vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.send_outlined,
                 ),

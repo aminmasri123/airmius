@@ -9,10 +9,15 @@ use Illuminate\Support\Facades\DB;
 class RideService
 {
     public const RESULT_APPROVED = 'approved';
+
     public const RESULT_ALREADY_JOINED = 'already_joined';
+
     public const RESULT_ALREADY_REQUESTED = 'already_requested';
+
     public const RESULT_FULL = 'full';
+
     public const RESULT_REQUESTED = 'requested';
+
     public const RESULT_NOT_FOUND = 'not_found';
 
     public function create(User $user, array $data): Ride
@@ -20,7 +25,9 @@ class RideService
         return DB::transaction(function () use ($user, $data) {
             return Ride::create([
                 ...$data,
-                'club_id' => $data['visibility'] === 'club' ? ($data['club_id'] ?? null) : null,
+                'club_id' => in_array($data['visibility'], ['club', 'team'], true)
+                    ? ($data['club_id'] ?? null)
+                    : null,
                 'team_id' => $data['visibility'] === 'team' ? ($data['team_id'] ?? null) : null,
                 'driver_id' => $user->id,
             ]);
@@ -72,7 +79,7 @@ class RideService
                         ->where('id', $membership->id)
                         ->update([
                             'message' => $message,
-                        'updated_at' => now(),
+                            'updated_at' => now(),
                         ]);
                 }
 

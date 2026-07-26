@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LearningCourse;
-use App\Models\LearningCourseSection;
+use App\Models\CommerceOrderItem;
 use App\Models\LearningAssignment;
 use App\Models\LearningAssignmentSubmission;
-use App\Models\LearningCoupon;
+use App\Models\LearningCourse;
+use App\Models\LearningCourseSection;
 use App\Models\LearningEnrollment;
 use App\Models\LearningLesson;
 use App\Models\LearningLessonComment;
@@ -15,15 +15,14 @@ use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\LearningQuizQuestion;
 use App\Models\LearningSecurityEvent;
-use App\Models\CommerceOrderItem;
 use App\Models\MarketplaceProduct;
 use App\Models\User;
 use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -41,7 +40,7 @@ class LearningStudioController extends Controller
 
         $selectedCourse = $courses->firstWhere('id', (int) $request->integer('course')) ?: $courses->first();
 
-        return Inertia::render('Auth/Dashboard/Learning/Studio', [
+        $payload = [
             'courses' => $courses,
             'selectedCourse' => $selectedCourse
                 ? $this->courseResource(
@@ -64,7 +63,13 @@ class LearningStudioController extends Controller
                         ->findOrFail($selectedCourse->id)
                 )
                 : null,
-        ]);
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json(['data' => $payload]);
+        }
+
+        return Inertia::render('Auth/Dashboard/Learning/Studio', $payload);
     }
 
     public function storeCourse(Request $request)
@@ -91,6 +96,10 @@ class LearningStudioController extends Controller
             'position' => 1,
         ]);
 
+        if ($request->expectsJson()) {
+            return $this->courseJsonResponse($course, 'Kurs wurde angelegt.', 201);
+        }
+
         return redirect()
             ->route('auth.learning.studio.index', ['course' => $course->id])
             ->with('success', 'Kurs wurde angelegt. Du kannst jetzt Kapitel und Lektionen planen.');
@@ -113,6 +122,10 @@ class LearningStudioController extends Controller
             'published_at' => ($data['status'] ?? $course->status) === 'published' && ! $course->published_at ? now() : $course->published_at,
         ]);
 
+        if ($request->expectsJson()) {
+            return $this->courseJsonResponse($course, 'Kurs wurde gespeichert.');
+        }
+
         return back()->with('success', 'Kurs wurde gespeichert.');
     }
 
@@ -125,10 +138,17 @@ class LearningStudioController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $course->sections()->create([
+        $section = $course->sections()->create([
             ...$data,
             'position' => $course->sections()->max('position') + 1,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Kapitel wurde hinzugefügt.',
+                'data' => $section,
+            ], 201);
+        }
 
         return back()->with('success', 'Kapitel wurde hinzugefügt.');
     }
@@ -139,13 +159,20 @@ class LearningStudioController extends Controller
 
         $data = $this->lessonData($request, $course);
 
-        $course->lessons()->create([
+        $lesson = $course->lessons()->create([
             ...$data,
             'attachments' => $this->attachments($request->input('attachments_text')),
             'position' => $data['position'] ?? ($course->lessons()->where('learning_course_section_id', $data['learning_course_section_id'])->max('position') + 1),
         ]);
 
         $this->recalculateCourseDuration($course);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Lektion wurde hinzugefügt.',
+                'data' => $lesson->fresh(),
+            ], 201);
+        }
 
         return back()->with('success', 'Lektion wurde hinzugefügt.');
     }
@@ -162,6 +189,13 @@ class LearningStudioController extends Controller
 
         $this->recalculateCourseDuration($course);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Lektion wurde gespeichert.',
+                'data' => $lesson->fresh(),
+            ]);
+        }
+
         return back()->with('success', 'Lektion wurde gespeichert.');
     }
 
@@ -174,6 +208,10 @@ class LearningStudioController extends Controller
         $lesson->delete();
         $this->normalizeLessonPositions($course, $sectionId);
         $this->recalculateCourseDuration($course);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Lektion wurde gelöscht.']);
+        }
 
         return back()->with('success', 'Lektion wurde gelöscht.');
     }
@@ -193,6 +231,10 @@ class LearningStudioController extends Controller
                 ->where('learning_course_id', $course->id)
                 ->whereKey($row['id'])
                 ->update(['position' => (int) $row['position']]);
+        }
+
+        if ($request->expectsJson()) {
+            return $this->courseJsonResponse($course, 'Lektionsreihenfolge wurde gespeichert.');
         }
 
         return back()->with('success', 'Lektionsreihenfolge wurde gespeichert.');
@@ -232,6 +274,13 @@ class LearningStudioController extends Controller
             ]);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Quiz wurde angelegt.',
+                'data' => $quiz->fresh('questions'),
+            ], 201);
+        }
+
         return back()->with('success', 'Quiz wurde angelegt.');
     }
 
@@ -241,6 +290,10 @@ class LearningStudioController extends Controller
         abort_unless($quiz->learning_course_id === $course->id, 404);
 
         $quiz->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Quiz wurde gelöscht.']);
+        }
 
         return back()->with('success', 'Quiz wurde gelöscht.');
     }
@@ -283,6 +336,10 @@ class LearningStudioController extends Controller
             'status' => $data['status'],
             'resolved_at' => $data['status'] === 'resolved' ? now() : null,
         ]);
+
+        if ($request->expectsJson()) {
+            return $this->courseJsonResponse($course, 'Fragenstatus wurde aktualisiert.');
+        }
 
         return back()->with('success', 'Fragenstatus wurde aktualisiert.');
     }
@@ -329,6 +386,10 @@ class LearningStudioController extends Controller
             ]);
         }
 
+        if ($request->expectsJson()) {
+            return $this->courseJsonResponse($course, 'Antwort wurde an den Teilnehmer gesendet.', 201);
+        }
+
         return back()->with('success', 'Antwort wurde an den Teilnehmer gesendet.');
     }
 
@@ -345,7 +406,7 @@ class LearningStudioController extends Controller
             'is_active' => ['boolean'],
         ]);
 
-        $course->coupons()->updateOrCreate(
+        $coupon = $course->coupons()->updateOrCreate(
             ['code' => strtoupper(trim($data['code']))],
             [
                 ...$data,
@@ -353,6 +414,13 @@ class LearningStudioController extends Controller
                 'is_active' => (bool) ($data['is_active'] ?? true),
             ],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Gutschein wurde gespeichert.',
+                'data' => $coupon->fresh(),
+            ], 201);
+        }
 
         return back()->with('success', 'Gutschein wurde gespeichert.');
     }
@@ -370,11 +438,18 @@ class LearningStudioController extends Controller
             'is_required' => ['boolean'],
         ]);
 
-        $course->assignments()->create([
+        $assignment = $course->assignments()->create([
             ...$data,
             'points' => (int) ($data['points'] ?? 100),
             'is_required' => (bool) ($data['is_required'] ?? true),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Aufgabe wurde angelegt.',
+                'data' => $assignment,
+            ], 201);
+        }
 
         return back()->with('success', 'Aufgabe wurde angelegt.');
     }
@@ -412,6 +487,13 @@ class LearningStudioController extends Controller
             $data['feedback'] ?? '',
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Bewertung wurde gespeichert.',
+                'data' => $submission->fresh(),
+            ]);
+        }
+
         return back()->with('success', 'Bewertung wurde gespeichert.');
     }
 
@@ -441,6 +523,13 @@ class LearningStudioController extends Controller
             route('guest.learning.courses.show', $course),
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => "Zugang für {$user->name} wurde freigeschaltet.",
+                'data' => $enrollment->fresh('user:id,name,email,profile_photo_path'),
+            ], 201);
+        }
+
         return back()->with('success', "Zugang für {$user->name} wurde freigeschaltet.");
     }
 
@@ -450,6 +539,13 @@ class LearningStudioController extends Controller
         abort_unless($enrollment->learning_course_id === $course->id, 404);
 
         $enrollment->update(['status' => 'cancelled']);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Kurszugang wurde deaktiviert.',
+                'data' => $enrollment->fresh(),
+            ]);
+        }
 
         return back()->with('success', 'Kurszugang wurde deaktiviert.');
     }
@@ -603,24 +699,24 @@ class LearningStudioController extends Controller
                 ->flatMap(fn (LearningLesson $lesson) => $lesson->comments
                     ->whereNull('parent_id')
                     ->map(fn (LearningLessonComment $comment) => [
-                    'id' => $comment->id,
-                    'lesson_id' => $lesson->id,
-                    'lesson_title' => $lesson->title,
-                    'body' => $comment->body,
-                    'status' => $comment->status ?: 'open',
-                    'created_at' => optional($comment->created_at)->toIso8601String(),
-                    'resolved_at' => optional($comment->resolved_at)->toIso8601String(),
-                    'user' => $comment->user,
-                    'replies' => $comment->replies
-                        ->sortBy('created_at')
-                        ->map(fn (LearningLessonComment $reply) => [
-                            'id' => $reply->id,
-                            'body' => $reply->body,
-                            'created_at' => optional($reply->created_at)->toIso8601String(),
-                            'user' => $reply->user,
-                        ])
-                        ->values(),
-                ]))
+                        'id' => $comment->id,
+                        'lesson_id' => $lesson->id,
+                        'lesson_title' => $lesson->title,
+                        'body' => $comment->body,
+                        'status' => $comment->status ?: 'open',
+                        'created_at' => optional($comment->created_at)->toIso8601String(),
+                        'resolved_at' => optional($comment->resolved_at)->toIso8601String(),
+                        'user' => $comment->user,
+                        'replies' => $comment->replies
+                            ->sortBy('created_at')
+                            ->map(fn (LearningLessonComment $reply) => [
+                                'id' => $reply->id,
+                                'body' => $reply->body,
+                                'created_at' => optional($reply->created_at)->toIso8601String(),
+                                'user' => $reply->user,
+                            ])
+                            ->values(),
+                    ]))
                 ->sortByDesc('created_at')
                 ->values(),
             'reviews' => $course->reviews->values(),
@@ -671,6 +767,35 @@ class LearningStudioController extends Controller
                 ])
                 ->values(),
         ];
+    }
+
+    private function courseJsonResponse(
+        LearningCourse $course,
+        string $message,
+        int $status = 200,
+    ) {
+        $course = LearningCourse::query()
+            ->where('user_id', $course->user_id)
+            ->with([
+                'sections.lessons.comments.user:id,name,email,profile_photo_path',
+                'sections.lessons.comments.replies.user:id,name,email,profile_photo_path',
+                'sections.lessons.assignments.submissions.user:id,name,email,profile_photo_path',
+                'quizzes.questions',
+                'enrollments.user:id,name,email,profile_photo_path',
+                'enrollments.lessonProgress',
+                'enrollments.quizAttempts',
+                'enrollments.certificate',
+                'enrollments.assignmentSubmissions.assignment',
+                'reviews.user:id,name,profile_photo_path',
+                'coupons',
+                'assignments.submissions.user:id,name,email,profile_photo_path',
+            ])
+            ->findOrFail($course->id);
+
+        return response()->json([
+            'message' => $message,
+            'data' => $this->courseResource($course),
+        ], $status);
     }
 
     private function authorizeCourse(Request $request, LearningCourse $course): void

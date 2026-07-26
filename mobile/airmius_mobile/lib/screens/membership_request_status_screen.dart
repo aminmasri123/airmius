@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'clubs_screen.dart';
@@ -7,28 +11,124 @@ import 'membership_application_form_screen.dart';
 import 'notification_chat_operations_screen.dart';
 
 class MembershipRequestStatusScreen extends StatefulWidget {
-  const MembershipRequestStatusScreen({super.key});
+  const MembershipRequestStatusScreen({
+    super.key,
+    this.clubId,
+    this.applicationId,
+  });
+
+  final int? clubId;
+  final int? applicationId;
 
   @override
-  State<MembershipRequestStatusScreen> createState() => _MembershipRequestStatusScreenState();
+  State<MembershipRequestStatusScreen> createState() =>
+      _MembershipRequestStatusScreenState();
 }
 
-class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusScreen> {
+class _MembershipRequestStatusScreenState
+    extends State<MembershipRequestStatusScreen> {
   bool _showPersonalData = true;
   bool _showPaymentData = true;
   bool _showDocuments = true;
+  bool _withdrawing = false;
+  bool _withdrawn = false;
+  bool _requestLoadStarted = false;
+  AirmiusClubMembershipRequest? _request;
+  String? _requestLoadError;
 
-  final List<_TimelineItem> _timeline = const [
-    _TimelineItem(title: 'Anfrage gesendet', body: 'Dein Antrag wurde an ZBB übermittelt.', status: 'Erledigt', icon: Icons.send_outlined, color: AirmiusColors.green),
-    _TimelineItem(title: 'Datenprüfung', body: 'Der Verein prüft Pflichtfelder, Dokumente und Zahlungsangaben.', status: 'Läuft', icon: Icons.manage_search_outlined, color: AirmiusColors.blue),
-    _TimelineItem(title: 'Rückfrage möglich', body: 'Falls Angaben fehlen, bekommst du eine Nachricht im Chat.', status: 'Bereit', icon: Icons.forum_outlined, color: AirmiusColors.amber),
-    _TimelineItem(title: 'Entscheidung', body: 'Der Verein kann annehmen, ablehnen oder weitere Daten anfordern.', status: 'Ausstehend', icon: Icons.verified_outlined, color: AirmiusColors.muted),
-  ];
+  List<_TimelineItem> _timeline(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final club = _request?.clubName?.trim().isNotEmpty == true
+        ? _request!.clubName!.trim()
+        : t('membership.club');
+    return [
+      _TimelineItem(
+        title: t('membership.status.sent'),
+        body: t('membership.status.sentBody').replaceFirst('{club}', club),
+        status: t('membership.status.completed'),
+        icon: Icons.send_outlined,
+        color: airmiusSemanticColor(context, AirmiusColors.green),
+      ),
+      _TimelineItem(
+        title: t('membership.status.review'),
+        body: t('membership.status.reviewBody'),
+        status: t('membership.status.inProgress'),
+        icon: Icons.manage_search_outlined,
+        color: airmiusAccentColor(context),
+      ),
+      _TimelineItem(
+        title: t('membership.status.question'),
+        body: t('membership.status.questionBody'),
+        status: t('membership.status.ready'),
+        icon: Icons.forum_outlined,
+        color: airmiusSemanticColor(context, AirmiusColors.amber),
+      ),
+      _TimelineItem(
+        title: t('membership.status.decision'),
+        body: t('membership.status.decisionBody'),
+        status: t('membership.status.pending'),
+        icon: Icons.verified_outlined,
+        color: airmiusMutedColor(context),
+      ),
+    ];
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requestLoadStarted ||
+        (widget.clubId == null && widget.applicationId == null)) {
+      return;
+    }
+    _requestLoadStarted = true;
+    _loadRequest();
+  }
+
+  Future<void> _loadRequest() async {
+    try {
+      final memberships = AirmiusServicesScope.of(
+        context,
+      ).repositories.memberships;
+      final loadFailedMessage = AirmiusScope.of(
+        context,
+      ).t('membership.statusLoadFailed');
+      var clubId = widget.clubId;
+      var applicationId = widget.applicationId;
+      if (applicationId != null) {
+        final application = await memberships.application(applicationId);
+        clubId = application.clubId;
+      }
+      if (clubId == null || clubId <= 0) {
+        throw const FormatException('Missing membership club');
+      }
+      final requests = await memberships.clubRequests(clubId);
+      final matching = applicationId == null
+          ? null
+          : requests.items.where((item) => item.id == applicationId);
+      if (!mounted) return;
+      setState(() {
+        _request = matching == null
+            ? (requests.items.isEmpty ? null : requests.items.first)
+            : (matching.isEmpty ? null : matching.first);
+        if (applicationId != null && _request == null) {
+          _requestLoadError = loadFailedMessage;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _requestLoadError = error is AirmiusApiException
+            ? error.userMessage
+            : AirmiusScope.of(context).t('membership.statusLoadFailed');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -41,45 +141,157 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Meine Mitgliedsanfrage', subtitle: 'Status, eingereichte Daten, Rückfragen, Dokumente und Anfrage zurückziehen.'),
+                        PageTitle(
+                          title: AirmiusScope.of(
+                            context,
+                          ).t('membership.statusTitle'),
+                          subtitle: AirmiusScope.of(
+                            context,
+                          ).t('membership.statusSubtitle'),
+                        ),
                         const SizedBox(height: 16),
-                        _StatusHero(onWithdraw: _confirmWithdraw),
+                        if (_requestLoadError != null)
+                          AirmiusPanel(
+                            borderColor: airmiusSemanticColor(
+                              context,
+                              AirmiusColors.red,
+                            ).withValues(alpha: .45),
+                            child: Text(_requestLoadError!),
+                          ),
+                        if (_requestLoadError != null)
+                          const SizedBox(height: 12),
+                        _StatusHero(
+                          onWithdraw: _confirmWithdraw,
+                          disabled: _withdrawing || _withdrawn,
+                          clubName: _request?.clubName,
+                          requestStatus: _request?.status,
+                        ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Eingereichte Daten anzeigen',
+                          title: t('membership.status.submittedData'),
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Personendaten', subtitle: 'Name, Geburtstag, Sprache und Basisdaten anzeigen.', value: _showPersonalData, onChanged: (value) => setState(() => _showPersonalData = value)),
-                              _SwitchRow(title: 'Zahlungsdaten', subtitle: 'Intervall, Zahlmethode und SEPA-Hinweise anzeigen.', value: _showPaymentData, onChanged: (value) => setState(() => _showPaymentData = value)),
-                              _SwitchRow(title: 'Dokumente', subtitle: 'Datenschutz, Regeln, Beitragsordnung und Mandate anzeigen.', value: _showDocuments, onChanged: (value) => setState(() => _showDocuments = value)),
+                              _SwitchRow(
+                                title: t('membership.status.personalData'),
+                                subtitle: t(
+                                  'membership.status.personalDataHint',
+                                ),
+                                value: _showPersonalData,
+                                onChanged: (value) =>
+                                    setState(() => _showPersonalData = value),
+                              ),
+                              _SwitchRow(
+                                title: t('membership.status.paymentData'),
+                                subtitle: t(
+                                  'membership.status.paymentDataHint',
+                                ),
+                                value: _showPaymentData,
+                                onChanged: (value) =>
+                                    setState(() => _showPaymentData = value),
+                              ),
+                              _SwitchRow(
+                                title: t('membership.status.documents'),
+                                subtitle: t('membership.status.documentsHint'),
+                                value: _showDocuments,
+                                onChanged: (value) =>
+                                    setState(() => _showDocuments = value),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
-                        if (_showPersonalData) const _DataPanel(title: 'Personendaten', rows: ['Vorname: ZBB', 'Nachname: Konto', 'Geburtsdatum: 01.01.2000', 'Adresse: Saargemuender Str. 110, 66271 Kleinblittersdorf']),
-                        if (_showPaymentData) const _DataPanel(title: 'Zahlungsdaten', rows: ['Zahlmethode: Überweisung', 'Intervall: Monatlich', 'Beitragsregel: Allgemeine Mitgliedschaft', 'Status: Noch nicht faellig']),
-                        if (_showDocuments) const _DataPanel(title: 'Dokumente', rows: ['Datenschutz gelesen', 'Vereinsregeln akzeptiert', 'Beitragsordnung verknuepft', 'SEPA optional']),
+                        if (_showPersonalData)
+                          _DataPanel(
+                            title: t('membership.status.personalData'),
+                            rows: _personalRows(context),
+                          ),
+                        if (_showPaymentData)
+                          _DataPanel(
+                            title: t('membership.status.paymentData'),
+                            rows: _paymentRows(context),
+                          ),
+                        if (_showDocuments)
+                          _DataPanel(
+                            title: t('membership.status.documents'),
+                            rows: _documentRows(context),
+                          ),
+                        if (_request?.consent != null)
+                          _DataPanel(
+                            title: t('membership.status.consent'),
+                            rows: _consentRows(context),
+                          ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Statusverlauf',
-                          child: Column(children: [for (final item in _timeline) _TimelineRow(item: item)]),
+                          title: t('membership.status.timeline'),
+                          child: Column(
+                            children: [
+                              for (final item in _timeline(context))
+                                _TimelineRow(item: item),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Aktionen',
+                          title: t('membership.status.actions'),
                           child: Wrap(
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Rückfrage senden', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
-                                AirmiusButton(label: 'Daten nachreichen', icon: Icons.edit_document, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipApplicationFormScreen()))),
                               AirmiusButton(
-                                label: 'Andere Vereine',
+                                label: t('membership.status.sendQuestion'),
+                                icon: Icons.forum_outlined,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        NotificationChatOperationsScreen(
+                                          initialTab: 'Chat',
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              AirmiusButton(
+                                label: t('membership.status.addData'),
+                                icon: Icons.edit_document,
+                                secondary: true,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        MembershipApplicationFormScreen(
+                                          clubId: widget.clubId,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              AirmiusButton(
+                                label: t('membership.status.otherClubs'),
                                 icon: Icons.groups_2_outlined,
                                 secondary: true,
-                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubsScreen(requestedClubIds: const {}, onRequestClub: (_) {}, onWithdrawClub: (_) {}))),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ClubsScreen(
+                                      requestedClubIds: const {},
+                                      onRequestClub: (_) {},
+                                      onWithdrawClub: (_) {},
+                                    ),
+                                  ),
+                                ),
                               ),
-                              AirmiusButton(label: 'Zurückziehen', icon: Icons.undo_outlined, secondary: true, onPressed: _confirmWithdraw),
+                              AirmiusButton(
+                                label: _withdrawn
+                                    ? t('membership.status.withdrawn')
+                                    : (_withdrawing
+                                          ? t('membership.status.withdrawing')
+                                          : t('membership.status.withdraw')),
+                                icon: Icons.undo_outlined,
+                                secondary: true,
+                                onPressed: _withdrawing || _withdrawn
+                                    ? null
+                                    : _confirmWithdraw,
+                              ),
                             ],
                           ),
                         ),
@@ -95,77 +307,303 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
     );
   }
 
+  List<String> _personalRows(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final data = _request?.applicationData ?? const <String, dynamic>{};
+    final rows = <String>[];
+    final name = [
+      data['first_name'],
+      data['last_name'],
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' ');
+    if (name.isNotEmpty) rows.add('${t('membership.status.name')}: $name');
+    if ((data['birth_date'] ?? '').toString().isNotEmpty) {
+      rows.add('${t('membership.status.birthDate')}: ${data['birth_date']}');
+    }
+    if ((data['email'] ?? '').toString().isNotEmpty) {
+      rows.add('${t('membership.status.email')}: ${data['email']}');
+    }
+    final address = [
+      data['street'],
+      data['house_number'],
+      data['postal_code'],
+      data['city'],
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' ');
+    if (address.isNotEmpty) {
+      rows.add('${t('membership.status.address')}: $address');
+    }
+    return rows.isEmpty ? [t('membership.status.noPersonalData')] : rows;
+  }
+
+  List<String> _paymentRows(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final request = _request;
+    if (request == null) {
+      return [t('membership.status.noPayment')];
+    }
+    return [
+      if (request.preferredPaymentMethod?.isNotEmpty == true)
+        '${t('membership.status.paymentMethod')}: ${request.preferredPaymentMethod}',
+      if (request.requestedBillingInterval?.isNotEmpty == true)
+        '${t('membership.status.interval')}: ${request.requestedBillingInterval}',
+      if (request.previewAmount?.isNotEmpty == true)
+        '${t('membership.status.preview')}: ${request.previewAmount}',
+      if (request.previewBaseAmount?.isNotEmpty == true &&
+          request.previewBaseAmount != request.previewAmount)
+        '${t('membership.status.baseAmount')}: ${request.previewBaseAmount}',
+      if (request.previewDiscountAmount?.isNotEmpty == true &&
+          request.previewDiscountAmount != '0.00')
+        '${t('membership.status.discountAmount')}: -${request.previewDiscountAmount}',
+      if (request.preferredPaymentMethod?.isEmpty != false &&
+          request.requestedBillingInterval?.isEmpty != false)
+        t('membership.status.noPayment'),
+    ];
+  }
+
+  List<String> _documentRows(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final documents = _request?.acceptedDocuments ?? const <String>[];
+    if (documents.isEmpty) return [t('membership.status.noDocuments')];
+    return documents
+        .map(
+          (document) => t(
+            'membership.status.acceptedDocument',
+          ).replaceFirst('{name}', document),
+        )
+        .toList();
+  }
+
+  List<String> _consentRows(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final consent = _request?.consent;
+    if (consent == null) return [t('membership.status.noConsent')];
+    final method = consent.method == 'typed_signature'
+        ? t('membership.status.typedSignature')
+        : t('membership.status.checkboxConfirmation');
+    return [
+      '${t('membership.status.consentVersion')}: ${consent.version}',
+      '${t('membership.status.consentMethod')}: $method',
+      if (consent.signature?.trim().isNotEmpty == true)
+        '${t('membership.status.signature')}: ${consent.signature}',
+      if (consent.signedAt != null)
+        '${t('membership.status.signedAt')}: ${consent.signedAt!.toLocal()}',
+    ];
+  }
+
   Future<void> _confirmWithdraw() async {
+    final t = AirmiusScope.of(context).t;
+    final services = AirmiusServicesScope.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AirmiusColors.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AirmiusColors.border)),
-        title: const Text('Anfrage zurückziehen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-        content: const Text('Moechtest du deine Mitgliedsanfrage bei ZBB wirklich zurückziehen?', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+        backgroundColor: airmiusSurfaceColor(context),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: airmiusBorderColor(context)),
+        ),
+        title: Text(
+          t('membership.status.withdrawTitle'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        content: Text(
+          t('membership.status.withdrawConfirm'),
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t('membership.status.cancel')),
+          ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AirmiusColors.red, foregroundColor: Colors.white),
+            style: FilledButton.styleFrom(
+              backgroundColor: airmiusSemanticColor(context, AirmiusColors.red),
+              foregroundColor: airmiusOnColor(
+                airmiusSemanticColor(context, AirmiusColors.red),
+              ),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Zurückziehen'),
+            child: Text(t('membership.status.withdraw')),
           ),
         ],
       ),
     );
-    if (confirm == true) {
-      _toast('Anfrage zurückziehen vorbereitet');
+    if (confirm != true || widget.clubId == null) {
+      if (confirm == true) {
+        _toast(t('membership.withdrawUnavailable'));
+      }
+      return;
+    }
+    setState(() => _withdrawing = true);
+    try {
+      await services.repositories.memberships.withdrawClubRequest(
+        widget.clubId!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _withdrawing = false;
+        _withdrawn = true;
+      });
+      _toast(t('membership.withdrawn'));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _withdrawing = false);
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : t('membership.withdrawFailed');
+      _toast(message);
     }
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
 class _StatusHero extends StatelessWidget {
-  const _StatusHero({required this.onWithdraw});
+  const _StatusHero({
+    required this.onWithdraw,
+    this.disabled = false,
+    this.clubName,
+    this.requestStatus,
+  });
 
   final VoidCallback onWithdraw;
+  final bool disabled;
+  final String? clubName;
+  final String? requestStatus;
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final resolvedClub = clubName?.trim().isNotEmpty == true
+        ? clubName!.trim()
+        : t('membership.club');
+    final resolvedStatus = requestStatus?.trim().isNotEmpty == true
+        ? requestStatus!.trim()
+        : t('membership.status.sent');
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF10243B), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+          colors: [
+            airmiusSurfaceSoftColor(context),
+            airmiusSurfaceColor(context),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const AirmiusAvatar('ZBB', large: true),
-              const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MITGLIEDSANFRAGE'), SizedBox(height: 4), Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)), Text('Anfrage gesendet - Prüfung läuft', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))])),
-              StatusPill('Gesendet', color: AirmiusColors.green),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final identity = Row(
+                children: [
+                  AirmiusAvatar((clubName ?? 'Verein').trim(), large: true),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Eyebrow(t('membership.status.statusEyebrow')),
+                        const SizedBox(height: 4),
+                        Text(
+                          resolvedClub,
+                          softWrap: true,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          requestStatus == null
+                              ? t('membership.status.review')
+                              : '${t('membership.status')}: $resolvedStatus',
+                          softWrap: true,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+              final status = StatusPill(
+                resolvedStatus,
+                color: airmiusSemanticColor(context, AirmiusColors.green),
+              );
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    identity,
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: status,
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: identity),
+                  const SizedBox(width: 12),
+                  status,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
-          const Text('Du kannst sehen, welche Daten übermittelt wurden, Rückfragen beantworten und die Anfrage zurückziehen, falls sie versehentlich gesendet wurde.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Zurückziehen', icon: Icons.undo_outlined, secondary: true, onPressed: onWithdraw),
-            AirmiusButton(
-              label: 'Status ansehen',
-              icon: Icons.timeline_outlined,
-              secondary: true,
-              onPressed: () => openUiAction(
-                context,
-                title: 'Status',
-                body: 'Statusdetail vorbereitet',
-                status: 'Status',
-                icon: Icons.timeline_outlined,
-              ),
+          Text(
+            t('membership.status.heroBody'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
             ),
-          ]),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              AirmiusButton(
+                label: disabled
+                    ? t('membership.status.withdrawn')
+                    : t('membership.status.withdraw'),
+                icon: Icons.undo_outlined,
+                secondary: true,
+                onPressed: disabled ? null : onWithdraw,
+              ),
+              AirmiusButton(
+                label: t('membership.status.view'),
+                icon: Icons.timeline_outlined,
+                secondary: true,
+                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AirmiusScope.of(context).t('membership.statusLoaded'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -173,7 +611,12 @@ class _StatusHero extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String title;
   final String subtitle;
@@ -185,11 +628,42 @@ class _SwitchRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Row(
         children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-          Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: airmiusAccentColor(context),
+          ),
         ],
       ),
     );
@@ -214,7 +688,25 @@ class _DataPanel extends StatelessWidget {
             for (final row in rows)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Row(children: [const Icon(Icons.check_circle_outline, size: 17, color: AirmiusColors.green), const SizedBox(width: 8), Expanded(child: Text(row, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)))]),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 17,
+                      color: airmiusSemanticColor(context, AirmiusColors.green),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        row,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -233,22 +725,80 @@ class _TimelineRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(item.icon, color: item.color),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700))])),
-          StatusPill(item.status, color: item.color),
-        ],
+      decoration: BoxDecoration(
+        color: airmiusInputColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final title = Text(
+            item.title,
+            softWrap: true,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          );
+          final body = Text(
+            item.body,
+            softWrap: true,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          );
+          final copy = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [title, const SizedBox(height: 4), body],
+          );
+          final status = StatusPill(item.status, color: item.color);
+          if (constraints.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(item.icon, color: item.color),
+                    const SizedBox(width: 12),
+                    Expanded(child: title),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                body,
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: status,
+                ),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(item.icon, color: item.color),
+              const SizedBox(width: 12),
+              Expanded(child: copy),
+              const SizedBox(width: 10),
+              status,
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class _TimelineItem {
-  const _TimelineItem({required this.title, required this.body, required this.status, required this.icon, required this.color});
+  const _TimelineItem({
+    required this.title,
+    required this.body,
+    required this.status,
+    required this.icon,
+    required this.color,
+  });
 
   final String title;
   final String body;
@@ -256,4 +806,3 @@ class _TimelineItem {
   final IconData icon;
   final Color color;
 }
-

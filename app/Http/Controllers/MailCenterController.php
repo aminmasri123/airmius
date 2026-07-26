@@ -53,8 +53,8 @@ class MailCenterController extends Controller
                 'error_message' => $delivery->error_message,
                 'context' => $delivery->context ?: [],
                 'resendable' => $this->resendable($delivery),
-                'sent_at' => $delivery->sent_at?->format('d.m.Y H:i'),
-                'created_at' => $delivery->created_at?->format('d.m.Y H:i'),
+                'sent_at' => $delivery->sent_at?->toIso8601String(),
+                'created_at' => $delivery->created_at?->toIso8601String(),
             ]);
 
         return Inertia::render('Auth/Dashboard/Admin/MailCenter/Index', [
@@ -291,7 +291,7 @@ class MailCenterController extends Controller
                     ->map(fn ($job) => [
                         'id' => $job->id,
                         'queue' => $job->queue,
-                        'failed_at' => $job->failed_at ? Carbon::parse($job->failed_at)->format('d.m.Y H:i') : null,
+                        'failed_at' => $job->failed_at ? Carbon::parse($job->failed_at)->toIso8601String() : null,
                         'error' => str($job->exception)->before("\n")->limit(180)->toString(),
                     ])
                 : [],
@@ -319,7 +319,7 @@ class MailCenterController extends Controller
                     'scheme' => $setting?->scheme ?: '',
                     'active' => $setting ? $setting->active : ! in_array($category, $mail->disabledCategories(), true),
                     'has_password' => filled($setting?->password) || filled(config('mail.mailers.'.($sender['mailer'] ?? 'smtp').'.password')),
-                    'password_updated_at' => $setting?->password_updated_at?->format('d.m.Y H:i'),
+                    'password_updated_at' => $setting?->password_updated_at?->toIso8601String(),
                     'resolved' => $resolved,
                     'ready' => $this->senderReady($resolved['mailer'] ?? ($sender['mailer'] ?? null)),
                     'disabled' => in_array($category, $mail->disabledCategories(), true) || ($setting && ! $setting->active),
@@ -342,7 +342,7 @@ class MailCenterController extends Controller
                 'actor_id' => $audit->actor_id,
                 'before' => $audit->before,
                 'after' => $audit->after,
-                'created_at' => $audit->created_at?->format('d.m.Y H:i'),
+                'created_at' => $audit->created_at?->toIso8601String(),
             ])
             ->all();
     }

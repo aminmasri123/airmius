@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,6 +9,10 @@ class PostResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $imageProxyUrl = $this->image
+            ? route('api.v1.posts.image', $this->resource)
+            : null;
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -19,10 +22,11 @@ class PostResource extends JsonResource
             'post_type' => $this->post_type,
             'content_origin' => $this->content_origin,
             'content' => $this->content,
-            'image' => $this->image,
-            'uploads_base_url' => config('filesystems.uploads_url'),
-            'image_url' => UploadStorage::url($this->image),
-            'image_proxy_url' => $this->image ? route('api.v1.posts.image', $this->resource) : null,
+            // Do not expose the storage path or a public disk URL. Private posts
+            // must remain protected by the same visibility policy as the feed.
+            'image' => $imageProxyUrl,
+            'image_url' => $imageProxyUrl,
+            'image_proxy_url' => $imageProxyUrl,
             'visibility' => $this->visibility,
             'moderation_status' => $this->moderation_status,
             'user' => new UserResource($this->whenLoaded('user')),

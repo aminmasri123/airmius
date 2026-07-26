@@ -7,6 +7,7 @@ import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'auth_flows_screen.dart';
 import 'guest_portal_screen.dart';
+import 'password_recovery_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -28,6 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -42,6 +45,18 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final scope = AirmiusScope.of(context);
+    final emailIsValid = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    setState(() {
+      _emailError = emailIsValid ? null : scope.t('login.invalidEmail');
+      _passwordError = password.isEmpty
+          ? scope.t('login.passwordRequired')
+          : null;
+    });
+    if (_emailError != null || _passwordError != null) {
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
     widget.onLogin(email, password);
   }
 
@@ -49,7 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final isLoading = widget.authState.phase == AirmiusAuthPhase.loading;
-    final error = widget.authState.phase == AirmiusAuthPhase.error ? widget.authState.error : null;
+    final error = widget.authState.phase == AirmiusAuthPhase.error
+        ? widget.authState.error
+        : null;
     final text = _loginText(context);
     final muted = _loginMuted(context);
 
@@ -80,11 +97,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             scope.t('login.title'),
                             maxLines: 1,
-                            style: TextStyle(color: text, fontSize: 30, fontWeight: FontWeight.w900, height: 1.04),
+                            style: TextStyle(
+                              color: text,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w900,
+                              height: 1.04,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(scope.t('login.subtitle'), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, height: 1.35)),
+                        Text(
+                          scope.t('login.subtitle'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: muted, height: 1.35),
+                        ),
                       ],
                     ),
                   ),
@@ -95,27 +122,47 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         AirmiusTextField(
-                          label: 'E-Mail',
-                          hint: 'konto@example.com',
+                          label: scope.t('login.email'),
+                          hint: scope.t('login.emailHint'),
                           icon: Icons.mail_outline,
                           controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          onChanged: (_) {
+                            if (_emailError != null) {
+                              setState(() => _emailError = null);
+                            }
+                          },
                         ),
+                        if (_emailError != null) _LoginFieldError(_emailError!),
                         const SizedBox(height: 12),
                         AirmiusTextField(
-                          label: 'Passwort',
-                          hint: 'Passwort',
+                          label: scope.t('login.password'),
+                          hint: scope.t('login.passwordHint'),
                           icon: Icons.lock_outline,
                           controller: _passwordController,
                           obscureText: !_isPasswordVisible,
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
                           suffixIcon: IconButton(
-                            tooltip: _isPasswordVisible ? 'Passwort ausblenden' : 'Passwort einblenden',
+                            tooltip: _isPasswordVisible
+                                ? scope.t('login.hidePassword')
+                                : scope.t('login.showPassword'),
                             icon: Icon(
-                              _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              _isPasswordVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
                               color: muted,
                             ),
-                            onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                            onPressed: () => setState(
+                              () => _isPasswordVisible = !_isPasswordVisible,
+                            ),
                           ),
                         ),
+                        if (_passwordError != null)
+                          _LoginFieldError(_passwordError!),
                         const SizedBox(height: 14),
                         Row(
                           children: [
@@ -124,7 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: 'Google',
                                 icon: Icons.g_mobiledata,
                                 secondary: true,
-                                onPressed: isLoading ? null : () => widget.onSocialLogin('google'),
+                                onPressed: isLoading
+                                    ? null
+                                    : () => widget.onSocialLogin('google'),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -133,18 +182,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                 label: 'Outlook',
                                 icon: Icons.mail_outline,
                                 secondary: true,
-                                onPressed: isLoading ? null : () => widget.onSocialLogin('microsoft'),
+                                onPressed: isLoading
+                                    ? null
+                                    : () => widget.onSocialLogin('microsoft'),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         if (error != null) ...[
-                          Text(error, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w700)),
+                          Text(
+                            error,
+                            style: const TextStyle(
+                              color: AirmiusColors.red,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 10),
                         ],
                         AirmiusButton(
-                          label: isLoading ? 'Anmeldung läuft...' : scope.t('login.button'),
+                          label: isLoading
+                              ? scope.t('login.loading')
+                              : scope.t('login.button'),
                           icon: Icons.login,
                           onPressed: isLoading ? null : _onSubmit,
                         ),
@@ -155,19 +214,41 @@ class _LoginScreenState extends State<LoginScreen> {
                           runSpacing: 2,
                           children: [
                             TextButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
-                              icon: const Icon(Icons.manage_accounts_outlined, size: 18),
-                              label: const Text('Registrieren'),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AuthFlowsScreen(
+                                    onSocialLogin: widget.onSocialLogin,
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.manage_accounts_outlined,
+                                size: 18,
+                              ),
+                              label: Text(scope.t('login.register')),
                             ),
                             TextButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PasswordRecoveryScreen(
+                                    initialEmail: _emailController.text.trim(),
+                                  ),
+                                ),
+                              ),
                               icon: const Icon(Icons.help_outline, size: 18),
-                              label: const Text('Passwort'),
+                              label: Text(scope.t('passwordRecovery.forgot')),
                             ),
                             TextButton.icon(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GuestPortalScreen())),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => GuestPortalScreen(),
+                                ),
+                              ),
                               icon: const Icon(Icons.open_in_new, size: 18),
-                              label: const Text('Gast'),
+                              label: Text(scope.t('login.guest')),
                             ),
                           ],
                         ),
@@ -177,6 +258,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginFieldError extends StatelessWidget {
+  const _LoginFieldError(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6, left: 4),
+        child: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.error,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
           ),
         ),
       ),
@@ -227,7 +333,8 @@ class _LoginTopBar extends StatelessWidget {
               child: _MenuLine(
                 icon: Icons.dark_mode_outlined,
                 label: 'Dunkel',
-                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.dark,
+                selected:
+                    AirmiusThemeModeScope.of(context).mode == ThemeMode.dark,
               ),
             ),
             PopupMenuItem(
@@ -235,7 +342,8 @@ class _LoginTopBar extends StatelessWidget {
               child: _MenuLine(
                 icon: Icons.light_mode_outlined,
                 label: 'Normal',
-                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.light,
+                selected:
+                    AirmiusThemeModeScope.of(context).mode == ThemeMode.light,
               ),
             ),
             PopupMenuItem(
@@ -243,7 +351,8 @@ class _LoginTopBar extends StatelessWidget {
               child: _MenuLine(
                 icon: Icons.phone_iphone_outlined,
                 label: 'System',
-                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.system,
+                selected:
+                    AirmiusThemeModeScope.of(context).mode == ThemeMode.system,
               ),
             ),
           ],
@@ -319,10 +428,18 @@ class _MenuLine extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 19),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900))),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+        ),
         if (trailing != null) ...[
           const SizedBox(width: 14),
-          Text(trailing!, style: TextStyle(color: muted, fontWeight: FontWeight.w900)),
+          Text(
+            trailing!,
+            style: TextStyle(color: muted, fontWeight: FontWeight.w900),
+          ),
         ],
         if (selected) ...[
           const SizedBox(width: 10),
@@ -337,7 +454,9 @@ AirmiusThemePalette _loginPalette(BuildContext context) {
   try {
     return AirmiusThemeModeScope.of(context).palette;
   } on StateError {
-    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+    return Theme.of(context).brightness == Brightness.dark
+        ? AirmiusThemePalette.dark
+        : AirmiusThemePalette.air;
   }
 }
 
@@ -360,7 +479,9 @@ Color _loginAccent(BuildContext context) {
 
 Color _loginBackground(BuildContext context) {
   final palette = _loginPalette(context);
-  return _loginDarkUi(context) ? palette.darkBackground : palette.lightBackground;
+  return _loginDarkUi(context)
+      ? palette.darkBackground
+      : palette.lightBackground;
 }
 
 Color _loginSurface(BuildContext context) {
@@ -370,7 +491,9 @@ Color _loginSurface(BuildContext context) {
 
 Color _loginSurfaceSoft(BuildContext context) {
   final palette = _loginPalette(context);
-  return _loginDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+  return _loginDarkUi(context)
+      ? palette.darkSurfaceSoft
+      : palette.lightSurfaceSoft;
 }
 
 Color _loginText(BuildContext context) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_push_device_registry.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
@@ -17,30 +19,86 @@ class NotificationPreferencesScreen extends StatefulWidget {
 
 class _NotificationPreferencesScreenState
     extends State<NotificationPreferencesScreen> {
-  static const _pushChannel = 'Push-Benachrichtigungen';
+  static const _pushChannel = 'push';
+  static const _channelsStorageKey = 'airmius.notifications.channels.v1';
+  static const _quietTimeStorageKey = 'airmius.notifications.quiet_time.v1';
 
   final Map<String, bool> _channels = {
     _pushChannel: false,
-    'E-Mail-Erinnerungen': true,
-    'Chat-Erwähnungen': true,
-    'Vereinsanfragen': true,
-    'Zahlungen & Rechnungen': true,
-    'Marketing & Sponsoren': false,
+    'email': true,
+    'chat': true,
+    'club': true,
+    'billing': true,
+    'marketing': false,
   };
 
-  String _quietTime = '22:00 - 07:00';
+  String _quietTime = 'late';
   bool _savingPush = false;
+  bool _savingPreferences = false;
+  bool _preferencesLoaded = false;
   String? _pushStatus;
   AirmiusPushDeviceRegistration? _pushRegistration;
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPushState());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPreferences());
   }
 
-  Future<void> _loadPushState() async {
-    final registry = AirmiusServicesScope.of(context).pushDevices;
+  Future<void> _loadPreferences() async {
+    if (_preferencesLoaded) return;
+    _preferencesLoaded = true;
+    final services = AirmiusServicesScope.of(context);
+    final store = services.pushDevices.store;
+    final rawChannels = await store.readString(_channelsStorageKey);
+    final rawQuietTime = await store.readString(_quietTimeStorageKey);
+    if (rawChannels != null && rawChannels.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawChannels);
+        if (decoded is Map) {
+          for (final channel in _channels.keys) {
+            if (decoded[channel] is bool) {
+              _channels[channel] = decoded[channel] as bool;
+            }
+          }
+        }
+      } catch (_) {
+        // Keep safe defaults when a previous preference payload is malformed.
+      }
+    }
+    if (rawQuietTime != null &&
+        const {'none', 'late', 'early', 'weekend'}.contains(rawQuietTime)) {
+      _quietTime = rawQuietTime;
+    }
+    try {
+      final payload = await _client.settings();
+      final data = payload['data'];
+      final preferences = data is Map ? data['notification_preferences'] : null;
+      if (preferences is Map) {
+        final channels = preferences['channels'];
+        if (channels is Map) {
+          for (final channel in _channels.keys) {
+            if (channels[channel] is bool) {
+              _channels[channel] = channels[channel] as bool;
+            }
+          }
+        }
+        final quietTime = preferences['quiet_time']?.toString();
+        if (quietTime != null &&
+            const {'none', 'late', 'early', 'weekend'}.contains(quietTime)) {
+          _quietTime = quietTime;
+        }
+      }
+    } catch (_) {
+      // Keep the local preference cache available when the account is offline
+      // or this screen is opened before authentication has finished.
+    }
+    final registry = services.pushDevices;
     final enabled = await registry.optInEnabled();
     final registration = await registry.lastRegistration();
     if (!mounted) return;
@@ -49,7 +107,7 @@ class _NotificationPreferencesScreenState
       _pushRegistration = registration;
       _pushStatus = registration == null
           ? null
-          : 'Registriert: ${registration.provider}/${registration.platform}';
+          : '${_t('notificationSettings.registered')}: ${registration.provider}/${registration.platform}';
     });
   }
 
@@ -59,7 +117,7 @@ class _NotificationPreferencesScreenState
     if (session == null || !session.isAuthenticated) {
       setState(() {
         _channels[_pushChannel] = false;
-        _pushStatus = 'Bitte zuerst anmelden.';
+        _pushStatus = _t('notificationSettings.loginRequired');
       });
       return;
     }
@@ -67,8 +125,8 @@ class _NotificationPreferencesScreenState
     setState(() {
       _savingPush = true;
       _pushStatus = enabled
-          ? 'Push wird registriert...'
-          : 'Push wird deaktiviert...';
+          ? _t('notificationSettings.pushRegistering')
+          : _t('notificationSettings.pushDisabling');
     });
 
     try {
@@ -94,7 +152,7 @@ class _NotificationPreferencesScreenState
       if (!mounted) return;
       setState(() {
         _channels[_pushChannel] = !enabled;
-        _pushStatus = error.toString();
+        _pushStatus = _t('common.errorDetails');
       });
     } finally {
       if (mounted) setState(() => _savingPush = false);
@@ -106,16 +164,63 @@ class _NotificationPreferencesScreenState
     AirmiusPushDeviceRegistration? registration,
   ) {
     if (result.status == 'missing_token') {
-      return result.message ?? 'Push-Token ist noch nicht verfuegbar.';
+      return result.message ?? _t('notificationSettings.tokenMissing');
     }
-    if (result.status == 'disabled') return 'Deaktiviert';
+    if (result.status == 'disabled') return _t('notificationSettings.disabled');
     final device = registration;
-    if (device == null) return 'Aktiv';
-    return 'Registriert: ${device.provider}/${device.platform}';
+    if (device == null) return _t('notificationSettings.active');
+    return '${_t('notificationSettings.registered')}: ${device.provider}/${device.platform}';
+  }
+
+  String _t(String key) => AirmiusScope.of(context).t(key);
+
+  String _channelLabel(String key) => _t('notificationSettings.channel.$key');
+
+  String _quietTimeLabel(String key) => _t('notificationSettings.quiet.$key');
+
+  Future<void> _savePreferences() async {
+    if (_savingPreferences) return;
+    setState(() => _savingPreferences = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final store = services.pushDevices.store;
+      await store.writeString(_channelsStorageKey, jsonEncode(_channels));
+      await store.writeString(_quietTimeStorageKey, _quietTime);
+      final session = services.authState.session;
+      if (session?.isAuthenticated == true) {
+        try {
+          await _client.updateSettings({
+            'notification_channels': Map<String, bool>.from(_channels),
+            'notification_quiet_time': _quietTime,
+          });
+        } on AirmiusApiException catch (error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${_t('notificationSettings.serverSaveFailed')}: ${error.userMessage}',
+                ),
+              ),
+            );
+          return;
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(_t('notificationSettings.saved'))),
+        );
+    } finally {
+      if (mounted) setState(() => _savingPreferences = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final accent = _notificationPreferenceAccent(context);
     final text = _notificationPreferenceText(context);
     final muted = _notificationPreferenceMuted(context);
@@ -126,16 +231,22 @@ class _NotificationPreferencesScreenState
         backgroundColor: _notificationPreferenceHeader(context),
         foregroundColor: text,
         surfaceTintColor: Colors.transparent,
-        title: const Text(
-          'Notification Settings',
-          style: TextStyle(fontWeight: FontWeight.w900),
+        title: Text(
+          t('notificationSettings.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          IconButton(
+            tooltip: t('notificationSettings.save'),
+            onPressed: _savingPreferences ? null : _savePreferences,
+            icon: const Icon(Icons.save_outlined),
+          ),
+        ],
       ),
       body: PageFrame(
-        title: 'Benachrichtigungen einstellen',
-        subtitle:
-            'Push, E-Mail, Chat, Zahlungen, Events, Ruhezeiten und Bulk-Aktionen',
-        trailing: const StatusPill('Push'),
+        title: t('notificationSettings.title'),
+        subtitle: t('notificationSettings.subtitle'),
+        trailing: StatusPill(t('notificationSettings.local')),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -144,10 +255,10 @@ class _NotificationPreferencesScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Notification Center'),
+                  Eyebrow(t('notificationSettings.eyebrow')),
                   const SizedBox(height: 8),
                   Text(
-                    'Du entscheidest, welche Signale wichtig sind.',
+                    t('notificationSettings.headline'),
                     style: TextStyle(
                       color: text,
                       fontSize: 23,
@@ -156,7 +267,7 @@ class _NotificationPreferencesScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Diese UI bereitet Push-Preferences, E-Mail-Regeln, Ruhezeiten, Read-State und serverseitige Benachrichtigungsfilter vor.',
+                    t('notificationSettings.body'),
                     style: TextStyle(color: muted, height: 1.4),
                   ),
                 ],
@@ -164,17 +275,28 @@ class _NotificationPreferencesScreenState
             ),
             const SizedBox(height: 14),
             Row(
-              children: const [
+              children: [
                 Expanded(
-                  child: MetricCard(value: '4', label: 'Ungelesen'),
+                  child: MetricCard(
+                    value: '${_channels.length}',
+                    label: t('notificationSettings.channels'),
+                  ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: MetricCard(value: '6', label: 'Kanaele'),
+                  child: MetricCard(
+                    value: '${_channels.values.where((value) => value).length}',
+                    label: t('notificationSettings.active'),
+                  ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: MetricCard(value: '2FA', label: 'Sicher'),
+                  child: MetricCard(
+                    value: _quietTime == 'none'
+                        ? t('notificationSettings.off')
+                        : t('notificationSettings.on'),
+                    label: t('notificationSettings.quietTime'),
+                  ),
                 ),
               ],
             ),
@@ -183,32 +305,35 @@ class _NotificationPreferencesScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Kanaele'),
+                  Eyebrow(t('notificationSettings.channels')),
                   const SizedBox(height: 8),
                   for (final entry in _channels.entries)
-                    SwitchListTile(
-                      value: entry.value,
-                      onChanged: _savingPush && entry.key == _pushChannel
-                          ? null
-                          : (value) {
-                              if (entry.key == _pushChannel) {
-                                _setPushEnabled(value);
-                                return;
-                              }
-                              setState(() => _channels[entry.key] = value);
-                            },
-                      activeThumbColor: accent,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        entry.key,
-                        style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.w900,
+                    Material(
+                      color: Colors.transparent,
+                      child: SwitchListTile(
+                        value: entry.value,
+                        onChanged: _savingPush && entry.key == _pushChannel
+                            ? null
+                            : (value) {
+                                if (entry.key == _pushChannel) {
+                                  _setPushEnabled(value);
+                                  return;
+                                }
+                                setState(() => _channels[entry.key] = value);
+                              },
+                        activeThumbColor: accent,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          _channelLabel(entry.key),
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        _channelSubtitle(entry),
-                        style: TextStyle(color: muted),
+                        subtitle: Text(
+                          _channelSubtitle(entry),
+                          style: TextStyle(color: muted),
+                        ),
                       ),
                     ),
                 ],
@@ -219,59 +344,48 @@ class _NotificationPreferencesScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Ruhezeit & Prioritaet'),
+                  Eyebrow(t('notificationSettings.priorityTitle')),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: _quietTime,
                     dropdownColor: surfaceSoft,
-                    decoration: const InputDecoration(labelText: 'Ruhezeit'),
-                    items:
-                        const [
-                              'Keine',
-                              '22:00 - 07:00',
-                              '20:00 - 08:00',
-                              'Nur Wochenende',
-                            ]
-                            .map(
-                              (item) => DropdownMenuItem(
-                                value: item,
-                                child: Text(item),
-                              ),
-                            )
-                            .toList(),
+                    decoration: InputDecoration(
+                      labelText: t('notificationSettings.quietTime'),
+                    ),
+                    items: const ['none', 'late', 'early', 'weekend']
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(_quietTimeLabel(item)),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) =>
                         setState(() => _quietTime = value ?? _quietTime),
                   ),
                   const SizedBox(height: 12),
-                  const _PriorityLine(
+                  _PriorityLine(
                     icon: Icons.priority_high_outlined,
-                    title: 'Hohe Prioritaet',
-                    body:
-                        'Sicherheitsmeldungen, Zahlungsprobleme und Guardian Consent trotzdem anzeigen.',
-                    status: 'Immer',
+                    title: t('notificationSettings.highPriority'),
+                    body: t('notificationSettings.highPriorityBody'),
+                    status: t('notificationSettings.always'),
                   ),
-                  const _PriorityLine(
+                  _PriorityLine(
                     icon: Icons.done_all_outlined,
-                    title: 'Bulk-Aktionen',
-                    body:
-                        'Alle als gelesen markieren, archivieren oder nach Typ filtern.',
-                    status: 'Bereit',
+                    title: t('notificationSettings.bulkActions'),
+                    body: t('notificationSettings.bulkActionsBody'),
+                    status: t('notificationSettings.ready'),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             AirmiusButton(
-              label: 'Einstellungen speichern',
+              label: _savingPreferences
+                  ? t('notificationSettings.saving')
+                  : t('notificationSettings.save'),
               icon: Icons.save_outlined,
-              onPressed: () => openUiAction(
-                context,
-                title: 'Einstellungen speichern',
-                body:
-                    'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.',
-                status: 'UI bereit',
-                icon: Icons.save_outlined,
-              ),
+              onPressed: _savingPreferences ? null : _savePreferences,
             ),
           ],
         ),
@@ -281,12 +395,18 @@ class _NotificationPreferencesScreenState
 
   String _channelSubtitle(MapEntry<String, bool> entry) {
     if (entry.key != _pushChannel) {
-      return entry.value ? 'Aktiv' : 'Ausgeschaltet';
+      return entry.value
+          ? _t('notificationSettings.active')
+          : _t('notificationSettings.disabled');
     }
-    if (_savingPush) return _pushStatus ?? 'Wird gespeichert...';
+    if (_savingPush) {
+      return _pushStatus ?? _t('notificationSettings.saving');
+    }
     if (_pushStatus != null) return _pushStatus!;
-    if (_pushRegistration != null) return 'Registriert';
-    return entry.value ? 'Aktiv' : 'Ausgeschaltet';
+    if (_pushRegistration != null) return _t('notificationSettings.registered');
+    return entry.value
+        ? _t('notificationSettings.active')
+        : _t('notificationSettings.disabled');
   }
 }
 

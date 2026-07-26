@@ -7,13 +7,16 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'training_event_detail_screen.dart';
+import 'training_plans_logs_screen.dart';
 
 enum _EventPeriod { upcoming, past, all }
 
 enum _EventViewMode { calendar, list }
 
 class TrainingCenterScreen extends StatefulWidget {
-  const TrainingCenterScreen({super.key});
+  const TrainingCenterScreen({super.key, this.initialSearch = ''});
+
+  final String initialSearch;
 
   @override
   State<TrainingCenterScreen> createState() => _TrainingCenterScreenState();
@@ -37,6 +40,13 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   bool _filtersOpen = false;
   int? _savingEventId;
   bool _creatingEvent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = widget.initialSearch;
+    _searchController.text = widget.initialSearch;
+  }
 
   @override
   void didChangeDependencies() {
@@ -87,7 +97,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   }
 
   Future<void> _respond(AirmiusEvent event, String status) async {
-    if (_savingEventId != null || !event.canJoin || event.status == 'cancelled') {
+    if (_savingEventId != null ||
+        !event.canJoin ||
+        event.status == 'cancelled') {
       return;
     }
     if (status == 'yes' && _isFull(event)) return;
@@ -137,6 +149,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         visibilities:
             workspace?.visibilities ??
             const ['private', 'organization', 'public'],
+        allowsRecurring: workspace?.allowsRecurring ?? false,
       ),
     );
     if (payload == null || _creatingEvent) return;
@@ -172,9 +185,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         _selectedDate = _dateOnly(event.startsAt);
         _creatingEvent = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Event erstellt.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('events.created'))),
+      );
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
       setState(() => _creatingEvent = false);
@@ -185,7 +198,11 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       if (!mounted) return;
       setState(() => _creatingEvent = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Event konnte nicht erstellt werden: $error')),
+        SnackBar(
+          content: Text(
+            '${AirmiusScope.of(context).t('events.createError')} ${error is AirmiusApiException ? error.userMessage : AirmiusScope.of(context).t('common.errorDetails')}',
+          ),
+        ),
       );
     }
   }
@@ -195,11 +212,11 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     final scope = AirmiusScope.of(context);
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor: airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: Text(
           scope.t('training.title'),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
@@ -207,8 +224,8 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         subtitle: '',
         showHeader: false,
         child: RefreshIndicator(
-          color: AirmiusColors.blue,
-          backgroundColor: AirmiusColors.card,
+          color: airmiusAccentColor(context),
+          backgroundColor: airmiusSurfaceColor(context),
           onRefresh: () async {
             _reload();
             await _workspaceFuture;
@@ -233,6 +250,11 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                       workspace: workspace,
                       creating: _creatingEvent,
                       onCreate: _openCreateEventDialog,
+                      onOpenPlansAndLogs: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const TrainingPlansLogsScreen(),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     if (snapshot.hasError) ...[
@@ -367,11 +389,13 @@ class _WebParityHeader extends StatelessWidget {
     required this.workspace,
     required this.creating,
     required this.onCreate,
+    required this.onOpenPlansAndLogs,
   });
 
   final AirmiusEventWorkspace workspace;
   final bool creating;
   final VoidCallback onCreate;
+  final VoidCallback onOpenPlansAndLogs;
 
   @override
   Widget build(BuildContext context) {
@@ -396,31 +420,45 @@ class _WebParityHeader extends StatelessWidget {
                   children: [
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 460),
-                      child: const Row(
+                      child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           IconBadge(
                             icon: Icons.event_available_outlined,
-                            color: AirmiusColors.blue,
+                            color: airmiusAccentColor(context),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Eyebrow('Events & Training'),
-                                SizedBox(height: 10),
-                                _EventsTitle(),
+                                Eyebrow(scope.t('events.area')),
+                                const SizedBox(height: 10),
+                                const _EventsTitle(),
                               ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                    AirmiusButton(
-                      label: creating ? 'Speichern...' : 'Erstellen',
-                      icon: Icons.add,
-                      onPressed: creating ? null : onCreate,
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        AirmiusButton(
+                          label: scope.t('trainingHub.plansAndLogs'),
+                          icon: Icons.fitness_center_outlined,
+                          secondary: true,
+                          onPressed: onOpenPlansAndLogs,
+                        ),
+                        AirmiusButton(
+                          label: creating
+                              ? scope.t('events.creating')
+                              : scope.t('events.create'),
+                          icon: Icons.add,
+                          onPressed: creating ? null : onCreate,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -431,14 +469,14 @@ class _WebParityHeader extends StatelessWidget {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const StatusPill(
-                        'Naechstes Event',
-                        color: AirmiusColors.green,
+                      StatusPill(
+                        scope.t('events.nextEvent'),
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                       Text(
-                        '${nextEvent.title} - ${_eventDateTimeLabel(nextEvent)}',
-                        style: const TextStyle(
-                          color: AirmiusColors.muted,
+                        '${nextEvent.title} - ${_eventDateTimeLabel(context, nextEvent)}',
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -448,13 +486,13 @@ class _WebParityHeader extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: AirmiusColors.border),
+          Divider(height: 1, color: airmiusBorderColor(context)),
           LayoutBuilder(
             builder: (context, constraints) {
               final narrow = constraints.maxWidth < 420;
               final cards = [
                 _StatCell(
-                  label: 'Kommend',
+                  label: scope.t('events.upcoming'),
                   value: '${workspace.stats.upcoming}',
                 ),
                 _StatCell(
@@ -462,7 +500,7 @@ class _WebParityHeader extends StatelessWidget {
                   value: '${workspace.stats.today}',
                 ),
                 _StatCell(
-                  label: 'Abgesagt',
+                  label: scope.t('events.cancelledFilter'),
                   value: '${workspace.stats.cancelled}',
                 ),
               ];
@@ -505,7 +543,9 @@ class _StatCell extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border(
-          right: BorderSide(color: AirmiusColors.border.withValues(alpha: 0.7)),
+          right: BorderSide(
+            color: airmiusBorderColor(context).withValues(alpha: 0.7),
+          ),
         ),
       ),
       child: Column(
@@ -513,8 +553,8 @@ class _StatCell extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: AirmiusColors.muted,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -522,8 +562,8 @@ class _StatCell extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontSize: 24,
               fontWeight: FontWeight.w900,
             ),
@@ -541,8 +581,8 @@ class _EventsTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       AirmiusScope.of(context).t('training.title'),
-      style: const TextStyle(
-        color: AirmiusColors.text,
+      style: TextStyle(
+        color: airmiusTextColor(context),
         fontSize: 28,
         height: 1.05,
         fontWeight: FontWeight.w900,
@@ -574,6 +614,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
       child: Column(
         children: [
@@ -581,13 +622,13 @@ class _FilterBar extends StatelessWidget {
             controller: controller,
             onChanged: onSearchChanged,
             onSubmitted: (_) => onSubmit(),
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w800,
             ),
-            decoration: const InputDecoration(
-              hintText: 'Suche nach Titel, Ort, Team oder Verein',
-              prefixIcon: Icon(Icons.search, color: AirmiusColors.muted),
+            decoration: InputDecoration(
+              hintText: scope.t('events.searchHint'),
+              prefixIcon: Icon(Icons.search, color: airmiusMutedColor(context)),
             ),
           ),
           const SizedBox(height: 12),
@@ -596,33 +637,33 @@ class _FilterBar extends StatelessWidget {
             runSpacing: 8,
             children: [
               _PeriodButton(
-                label: 'Kommend',
+                label: scope.t('events.upcoming'),
                 selected: period == _EventPeriod.upcoming,
                 onTap: () => onPeriodChanged(_EventPeriod.upcoming),
               ),
               _PeriodButton(
-                label: 'Vergangen',
+                label: scope.t('events.past'),
                 selected: period == _EventPeriod.past,
                 onTap: () => onPeriodChanged(_EventPeriod.past),
               ),
               _PeriodButton(
-                label: 'Alle',
+                label: scope.t('events.all'),
                 selected: period == _EventPeriod.all,
                 onTap: () => onPeriodChanged(_EventPeriod.all),
               ),
               OutlinedButton.icon(
                 onPressed: onToggleFilters,
-                icon: const Icon(Icons.tune, size: 18),
+                icon: Icon(Icons.tune, size: 18),
                 label: Text(
                   activeFilterCount == 0
-                      ? 'Filter'
-                      : 'Filter $activeFilterCount',
+                      ? scope.t('events.filters')
+                      : '${scope.t('events.filters')} $activeFilterCount',
                 ),
               ),
               FilledButton.icon(
                 onPressed: onSubmit,
-                icon: const Icon(Icons.search, size: 18),
-                label: const Text('Suchen'),
+                icon: Icon(Icons.search, size: 18),
+                label: Text(scope.t('events.search')),
               ),
             ],
           ),
@@ -649,13 +690,17 @@ class _PeriodButton extends StatelessWidget {
       selected: selected,
       label: Text(label),
       onSelected: (_) => onTap(),
-      selectedColor: AirmiusColors.blue,
-      backgroundColor: AirmiusColors.cardSoft,
+      selectedColor: airmiusAccentColor(context),
+      backgroundColor: airmiusSurfaceSoftColor(context),
       side: BorderSide(
-        color: selected ? AirmiusColors.blue : AirmiusColors.border,
+        color: selected
+            ? airmiusAccentColor(context)
+            : airmiusBorderColor(context),
       ),
       labelStyle: TextStyle(
-        color: selected ? Colors.white : AirmiusColors.muted,
+        color: selected
+            ? airmiusOnColor(airmiusAccentColor(context))
+            : airmiusMutedColor(context),
         fontWeight: FontWeight.w900,
       ),
     );
@@ -697,32 +742,41 @@ class _AdvancedFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
             initialValue: type,
-            decoration: const InputDecoration(labelText: 'Typ'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(labelText: scope.t('events.type')),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Alle Typen')),
+              DropdownMenuItem(
+                value: '',
+                child: Text(scope.t('events.allTypes')),
+              ),
               for (final item in eventTypes)
-                DropdownMenuItem(value: item, child: Text(_typeLabel(item))),
+                DropdownMenuItem(
+                  value: item,
+                  child: Text(_typeLabel(context, item)),
+                ),
             ],
             onChanged: (value) => onTypeChanged(value ?? ''),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: visibility,
-            decoration: const InputDecoration(labelText: 'Sichtbarkeit'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(
+              labelText: scope.t('events.visibility'),
+            ),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
-              const DropdownMenuItem(value: '', child: Text('Alle')),
+              DropdownMenuItem(value: '', child: Text(scope.t('events.all'))),
               for (final item in visibilities)
                 DropdownMenuItem(
                   value: item,
-                  child: Text(_visibilityLabel(item)),
+                  child: Text(_visibilityLabel(context, item)),
                 ),
             ],
             onChanged: (value) => onVisibilityChanged(value ?? ''),
@@ -730,12 +784,12 @@ class _AdvancedFilters extends StatelessWidget {
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(
             initialValue: clubId,
-            decoration: const InputDecoration(labelText: 'Verein'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(labelText: scope.t('events.club')),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
-              const DropdownMenuItem<int?>(
+              DropdownMenuItem<int?>(
                 value: null,
-                child: Text('Alle Vereine'),
+                child: Text(scope.t('events.allClubs')),
               ),
               for (final club in clubs)
                 DropdownMenuItem<int?>(value: club.id, child: Text(club.name)),
@@ -745,12 +799,12 @@ class _AdvancedFilters extends StatelessWidget {
           const SizedBox(height: 12),
           DropdownButtonFormField<int?>(
             initialValue: teamId,
-            decoration: const InputDecoration(labelText: 'Team'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(labelText: scope.t('events.team')),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
-              const DropdownMenuItem<int?>(
+              DropdownMenuItem<int?>(
                 value: null,
-                child: Text('Alle Teams'),
+                child: Text(scope.t('events.allTeams')),
               ),
               for (final team in teams.where(
                 (team) => clubId == null || team.clubId == clubId,
@@ -766,13 +820,13 @@ class _AdvancedFilters extends StatelessWidget {
             alignment: WrapAlignment.end,
             children: [
               AirmiusButton(
-                label: 'Zurücksetzen',
+                label: scope.t('events.resetFilters'),
                 icon: Icons.restart_alt,
                 onPressed: onReset,
                 secondary: true,
               ),
               AirmiusButton(
-                label: 'Filter anwenden',
+                label: scope.t('events.applyFilters'),
                 icon: Icons.check,
                 onPressed: onApply,
               ),
@@ -815,6 +869,7 @@ class _EventsSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
       padding: EdgeInsets.zero,
       child: Column(
@@ -822,18 +877,23 @@ class _EventsSurface extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Expanded(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 280),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Eyebrow('Ansicht'),
-                      SizedBox(height: 4),
+                      Eyebrow(scope.t('events.view')),
+                      const SizedBox(height: 4),
                       Text(
-                        'Kalender & Liste',
+                        scope.t('events.calendarAndList'),
                         style: TextStyle(
-                          color: AirmiusColors.text,
+                          color: airmiusTextColor(context),
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -842,16 +902,16 @@ class _EventsSurface extends StatelessWidget {
                   ),
                 ),
                 SegmentedButton<_EventViewMode>(
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: _EventViewMode.calendar,
                       icon: Icon(Icons.calendar_month),
-                      label: Text('Kalender'),
+                      label: Text(scope.t('events.calendar')),
                     ),
                     ButtonSegment(
                       value: _EventViewMode.list,
                       icon: Icon(Icons.list),
-                      label: Text('Liste'),
+                      label: Text(scope.t('events.list')),
                     ),
                   ],
                   selected: {viewMode},
@@ -861,7 +921,7 @@ class _EventsSurface extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: AirmiusColors.border),
+          Divider(height: 1, color: airmiusBorderColor(context)),
           if (viewMode == _EventViewMode.calendar)
             _CalendarView(
               events: calendarEvents,
@@ -915,6 +975,8 @@ class _CalendarView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final localizations = MaterialLocalizations.of(context);
     final days = _calendarDays(cursor);
     final byDate = <DateTime, List<AirmiusEvent>>{};
     for (final event in events) {
@@ -929,22 +991,25 @@ class _CalendarView extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: () => onMove(-1),
-                icon: const Icon(Icons.chevron_left),
+                icon: Icon(Icons.chevron_left),
               ),
               Expanded(
                 child: Text(
-                  _monthLabel(cursor),
+                  _monthLabel(context, cursor),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AirmiusColors.text,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              TextButton(onPressed: onToday, child: const Text('Heute')),
+              TextButton(
+                onPressed: onToday,
+                child: Text(scope.t('events.today')),
+              ),
               IconButton(
                 onPressed: () => onMove(1),
-                icon: const Icon(Icons.chevron_right),
+                icon: Icon(Icons.chevron_right),
               ),
             ],
           ),
@@ -955,20 +1020,12 @@ class _CalendarView extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 0.82,
           children: [
-            for (final label in const [
-              'Mo',
-              'Di',
-              'Mi',
-              'Do',
-              'Fr',
-              'Sa',
-              'So',
-            ])
+            for (var offset = 0; offset < 7; offset++)
               Center(
                 child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  localizations.narrowWeekdays[(DateTime.monday + offset) % 7],
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                   ),
@@ -985,27 +1042,25 @@ class _CalendarView extends StatelessWidget {
               ),
           ],
         ),
-        const Divider(height: 1, color: AirmiusColors.border),
+        Divider(height: 1, color: airmiusBorderColor(context)),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Eyebrow('Ausgewählter Tag'),
+              Eyebrow(scope.t('events.selectedDay')),
               const SizedBox(height: 4),
               Text(
-                _dateLabel(selectedDate),
-                style: const TextStyle(
-                  color: AirmiusColors.text,
+                _dateLabel(context, selectedDate),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 12),
               if (selectedEvents.isEmpty)
-                const AirmiusPanel(
-                  body: 'An diesem Tag sind keine Events im aktuellen Filter.',
-                )
+                AirmiusPanel(body: scope.t('events.noEventsSelectedDay'))
               else
                 for (final event in selectedEvents) ...[
                   _SelectedDayEvent(event: event),
@@ -1043,11 +1098,11 @@ class _CalendarDay extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: AirmiusColors.card,
+          color: airmiusSurfaceColor(context),
           border: Border.all(
             color: selected
-                ? AirmiusColors.blue
-                : AirmiusColors.border.withValues(alpha: 0.45),
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context).withValues(alpha: 0.45),
             width: selected ? 2 : 1,
           ),
         ),
@@ -1061,13 +1116,17 @@ class _CalendarDay extends StatelessWidget {
                 height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: today ? AirmiusColors.blue : Colors.transparent,
+                  color: today
+                      ? airmiusAccentColor(context)
+                      : Colors.transparent,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${date.day}',
                   style: TextStyle(
-                    color: today ? Colors.white : AirmiusColors.text,
+                    color: today
+                        ? airmiusOnColor(airmiusAccentColor(context))
+                        : airmiusTextColor(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1084,8 +1143,8 @@ class _CalendarDay extends StatelessWidget {
                   decoration: BoxDecoration(
                     color:
                         (event.status == 'cancelled'
-                                ? AirmiusColors.red
-                                : AirmiusColors.blue)
+                                ? Theme.of(context).colorScheme.error
+                                : airmiusAccentColor(context))
                             .withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(5),
                   ),
@@ -1095,8 +1154,8 @@ class _CalendarDay extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: event.status == 'cancelled'
-                          ? AirmiusColors.red
-                          : AirmiusColors.blue,
+                          ? Theme.of(context).colorScheme.error
+                          : airmiusAccentColor(context),
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1104,9 +1163,11 @@ class _CalendarDay extends StatelessWidget {
                 ),
               if (events.length > 2)
                 Text(
-                  '+${events.length - 2} mehr',
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  AirmiusScope.of(context)
+                      .t('events.more')
+                      .replaceFirst('{count}', '${events.length - 2}'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontSize: 9,
                     fontWeight: FontWeight.w800,
                   ),
@@ -1126,6 +1187,7 @@ class _SelectedDayEvent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(12),
       onTap: () => _openEvent(context, event),
@@ -1138,33 +1200,36 @@ class _SelectedDayEvent extends StatelessWidget {
               children: [
                 Text(
                   event.title,
-                  style: const TextStyle(
-                    color: AirmiusColors.text,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _eventDateTimeLabel(event),
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  _eventDateTimeLabel(context, event),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  event.location ?? 'Keine Eingabe',
+                  event.location ?? scope.t('events.locationMissing'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontSize: 13,
                   ),
                 ),
               ],
             ),
           ),
-          StatusPill(_capacityLabel(event), color: AirmiusColors.muted),
+          StatusPill(
+            _capacityLabel(context, event),
+            color: airmiusMutedColor(context),
+          ),
         ],
       ),
     );
@@ -1185,7 +1250,8 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final owner = event.clubName ?? event.teamName ?? 'Öffentlicher Bereich';
+    final owner =
+        event.clubName ?? event.teamName ?? scope.t('events.publicArea');
     return AirmiusPanel(
       onTap: () => _openEvent(context, event),
       child: Row(
@@ -1203,24 +1269,24 @@ class _EventCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         event.title,
-                        style: const TextStyle(
-                          color: AirmiusColors.text,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
                     StatusPill(
-                      _capacityLabel(event),
-                      color: AirmiusColors.muted,
+                      _capacityLabel(context, event),
+                      color: airmiusMutedColor(context),
                     ),
                   ],
                 ),
                 const SizedBox(height: 5),
                 Text(
                   owner,
-                  style: const TextStyle(
-                    color: AirmiusColors.muted,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1230,42 +1296,45 @@ class _EventCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     StatusPill(
-                      _typeLabel(event.type),
-                      color: AirmiusColors.blue,
+                      _typeLabel(context, event.type),
+                      color: airmiusAccentColor(context),
                     ),
                     StatusPill(
-                      _visibilityLabel(event.visibility),
-                      color: AirmiusColors.muted,
+                      _visibilityLabel(context, event.visibility),
+                      color: airmiusMutedColor(context),
                     ),
                     if (event.commentsCount > 0)
                       StatusPill(
                         '${event.commentsCount} ${scope.t('events.comments')}',
-                        color: AirmiusColors.amber,
+                        color: Theme.of(context).colorScheme.tertiary,
                       ),
                     if (event.status == 'cancelled')
-                      const StatusPill('Abgesagt', color: AirmiusColors.red),
+                      StatusPill(
+                        scope.t('events.cancelledFilter'),
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _eventDateTimeLabel(event),
-                  style: const TextStyle(
-                    color: AirmiusColors.text,
+                  _eventDateTimeLabel(context, event),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  event.location ?? 'Keine Eingabe',
+                  event.location ?? scope.t('events.locationMissing'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AirmiusColors.muted),
+                  style: TextStyle(color: airmiusMutedColor(context)),
                 ),
                 const SizedBox(height: 12),
                 if (saving)
-                  const LinearProgressIndicator(
-                    color: AirmiusColors.blue,
-                    backgroundColor: AirmiusColors.cardSoft,
+                  LinearProgressIndicator(
+                    color: airmiusAccentColor(context),
+                    backgroundColor: airmiusSurfaceSoftColor(context),
                   )
                 else
                   Row(
@@ -1300,7 +1369,7 @@ class _EventCard extends StatelessWidget {
                   ),
                 const SizedBox(height: 10),
                 AirmiusButton(
-                  label: 'Details',
+                  label: scope.t('events.details'),
                   icon: Icons.visibility_outlined,
                   onPressed: () => _openEvent(context, event),
                 ),
@@ -1324,32 +1393,32 @@ class _DateTile extends StatelessWidget {
       width: 58,
       padding: const EdgeInsets.symmetric(vertical: 9),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
-        border: Border.all(color: AirmiusColors.border),
+        color: airmiusSurfaceSoftColor(context),
+        border: Border.all(color: airmiusBorderColor(context)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         children: [
           Text(
-            _weekdayShort(date),
-            style: const TextStyle(
-              color: AirmiusColors.muted,
+            _weekdayShort(context, date),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
               fontSize: 10,
               fontWeight: FontWeight.w900,
             ),
           ),
           Text(
             '${date.day}',
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
           ),
           Text(
             _monthShort(date),
-            style: const TextStyle(
-              color: AirmiusColors.muted,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
               fontSize: 10,
               fontWeight: FontWeight.w900,
             ),
@@ -1381,18 +1450,18 @@ class _RsvpButton extends StatelessWidget {
         event.status == 'cancelled' ||
         (value == 'yes' && _isFull(event));
     final color = switch (value) {
-      'yes' => AirmiusColors.green,
-      'maybe' => AirmiusColors.blue,
-      _ => AirmiusColors.red,
+      'yes' => Theme.of(context).colorScheme.secondary,
+      'maybe' => airmiusAccentColor(context),
+      _ => Theme.of(context).colorScheme.error,
     };
     return OutlinedButton(
       onPressed: disabled ? null : () => onRespond(event, value),
       style: OutlinedButton.styleFrom(
-        foregroundColor: selected ? color : AirmiusColors.muted,
+        foregroundColor: selected ? color : airmiusMutedColor(context),
         backgroundColor: selected
             ? color.withValues(alpha: 0.14)
             : Colors.transparent,
-        side: BorderSide(color: selected ? color : AirmiusColors.border),
+        side: BorderSide(color: selected ? color : airmiusBorderColor(context)),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -1400,7 +1469,7 @@ class _RsvpButton extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
       ),
     );
   }
@@ -1412,12 +1481,14 @@ class _CreateEventDialog extends StatefulWidget {
     required this.teams,
     required this.eventTypes,
     required this.visibilities,
+    required this.allowsRecurring,
   });
 
   final List<AirmiusClub> clubs;
   final List<AirmiusTeam> teams;
   final List<String> eventTypes;
   final List<String> visibilities;
+  final bool allowsRecurring;
 
   @override
   State<_CreateEventDialog> createState() => _CreateEventDialogState();
@@ -1435,6 +1506,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   int? _clubId;
   int? _teamId;
   bool _usesPenaltyCatalog = false;
+  String? _recurring;
+  DateTime? _recurrenceEndsAt;
+  final Set<int> _recurrenceDays = {};
   DateTime _start = DateTime.now().add(const Duration(hours: 1));
   DateTime? _end;
 
@@ -1485,6 +1559,26 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     setState(() => _end = next.isBefore(_start) ? _start : next);
   }
 
+  Future<void> _pickRecurrenceEnd() async {
+    final initial = _recurrenceEndsAt ?? _start.add(const Duration(days: 28));
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial.isBefore(_start) ? _start : initial,
+      firstDate: _start,
+      lastDate: _start.add(const Duration(days: 365 * 2)),
+    );
+    if (date == null || !mounted) return;
+    setState(
+      () => _recurrenceEndsAt = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        _start.hour,
+        _start.minute,
+      ),
+    );
+  }
+
   Future<DateTime?> _pickDateTime(DateTime initial) async {
     final date = await showDatePicker(
       context: context,
@@ -1502,20 +1596,30 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   }
 
   String? get _validationMessage {
+    final scope = AirmiusScope.of(context);
     if (_step == 1) {
       if (_titleController.text.trim().isEmpty) {
-        return 'Bitte gib einen Titel ein.';
+        return scope.t('events.titleRequired');
       }
       if (_visibility == 'organization' && _clubId == null) {
-        return 'Bitte wähle einen Verein aus.';
+        return scope.t('events.clubRequired');
       }
       if (_visibility == 'private' && _teamId == null) {
-        return 'Bitte wähle ein Team aus.';
+        return scope.t('events.teamRequired');
       }
     }
     if (_step == 2) {
       if (_end != null && _end!.isBefore(_start)) {
-        return 'Das Ende darf nicht vor dem Start liegen.';
+        return scope.t('events.endError');
+      }
+      if (_recurring != null &&
+          _recurrenceEndsAt != null &&
+          !_recurrenceEndsAt!.isAfter(_start)) {
+        return scope.t('events.recurrenceEndError');
+      }
+      if ((_recurring == 'weekly' || _recurring == 'biweekly') &&
+          _recurrenceDays.isEmpty) {
+        return scope.t('events.recurrenceDayRequired');
       }
     }
     return null;
@@ -1563,6 +1667,12 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_visibility == 'private' && _teamId != null)
         'uses_penalty_catalog': _usesPenaltyCatalog,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
+      if (_recurring != null) ...{
+        'recurring': _recurring,
+        'recurrence_ends_at': _recurrenceEndsAt!.toUtc().toIso8601String(),
+        if (_recurring == 'weekly' || _recurring == 'biweekly')
+          'recurrence_days': _recurrenceDays.toList()..sort(),
+      },
       if (_locationController.text.trim().isNotEmpty)
         'location': _locationController.text.trim(),
       if (_notesController.text.trim().isNotEmpty)
@@ -1580,21 +1690,21 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         onPressed: complete ? () => setState(() => _step = number) : null,
         style: FilledButton.styleFrom(
           backgroundColor: active
-              ? Colors.white
+              ? airmiusOnColor(airmiusAccentColor(context))
               : complete
-              ? AirmiusColors.green.withValues(alpha: 0.18)
-              : AirmiusColors.cardSoft,
+              ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.18)
+              : airmiusSurfaceSoftColor(context),
           foregroundColor: active
-              ? AirmiusColors.card
+              ? airmiusSurfaceColor(context)
               : complete
-              ? AirmiusColors.green
-              : AirmiusColors.muted,
+              ? Theme.of(context).colorScheme.secondary
+              : airmiusMutedColor(context),
           disabledBackgroundColor: active
-              ? Colors.white
-              : AirmiusColors.cardSoft,
+              ? airmiusOnColor(airmiusAccentColor(context))
+              : airmiusSurfaceSoftColor(context),
           disabledForegroundColor: active
-              ? AirmiusColors.card
-              : AirmiusColors.muted,
+              ? airmiusSurfaceColor(context)
+              : airmiusMutedColor(context),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(99),
@@ -1604,7 +1714,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
         ),
       ),
     );
@@ -1620,22 +1730,23 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   }
 
   Widget _basisStep() {
+    final scope = AirmiusScope.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Basisdaten',
+        Text(
+          scope.t('events.basicData'),
           style: TextStyle(
-            color: AirmiusColors.text,
+            color: airmiusTextColor(context),
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Was für ein Event moechtest du erstellen?',
+        Text(
+          scope.t('events.basicQuestion'),
           style: TextStyle(
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1644,35 +1755,38 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           controller: _titleController,
           autofocus: true,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
-            labelText: 'Titel',
-            hintText: 'z. B. U17 Training',
+          decoration: InputDecoration(
+            labelText: scope.t('events.fieldTitle'),
+            hintText: scope.t('events.titleExample'),
           ),
           validator: (value) => value == null || value.trim().isEmpty
-              ? 'Bitte Titel eingeben.'
+              ? scope.t('events.titleRequired')
               : null,
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _type,
-          decoration: const InputDecoration(labelText: 'Typ'),
-          dropdownColor: AirmiusColors.card,
+          decoration: InputDecoration(labelText: scope.t('events.type')),
+          dropdownColor: airmiusSurfaceColor(context),
           items: [
             for (final item in _eventTypeOptions)
-              DropdownMenuItem(value: item, child: Text(_typeLabel(item))),
+              DropdownMenuItem(
+                value: item,
+                child: Text(_typeLabel(context, item)),
+              ),
           ],
           onChanged: (value) => setState(() => _type = value ?? 'training'),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _visibility,
-          decoration: const InputDecoration(labelText: 'Sichtbarkeit'),
-          dropdownColor: AirmiusColors.card,
+          decoration: InputDecoration(labelText: scope.t('events.visibility')),
+          dropdownColor: airmiusSurfaceColor(context),
           items: [
             for (final item in _visibilityOptions)
               DropdownMenuItem(
                 value: item,
-                child: Text(_visibilityLabel(item)),
+                child: Text(_visibilityLabel(context, item)),
               ),
           ],
           onChanged: (value) => setState(() {
@@ -1693,8 +1807,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: _clubId,
-            decoration: const InputDecoration(labelText: 'Verein'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(labelText: scope.t('events.club')),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
               for (final club in widget.clubs)
                 DropdownMenuItem(value: club.id, child: Text(club.name)),
@@ -1706,8 +1820,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: _teamId,
-            decoration: const InputDecoration(labelText: 'Team'),
-            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(labelText: scope.t('events.team')),
+            dropdownColor: airmiusSurfaceColor(context),
             items: [
               for (final team in widget.teams)
                 DropdownMenuItem(
@@ -1725,10 +1839,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             }),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Private Events brauchen ein Team.',
+          Text(
+            scope.t('events.privateTeamRequired'),
             style: TextStyle(
-              color: AirmiusColors.muted,
+              color: airmiusMutedColor(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -1739,28 +1853,30 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   }
 
   Widget _timeStep() {
+    final scope = AirmiusScope.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Zeit',
+        Text(
+          scope.t('events.time'),
           style: TextStyle(
-            color: AirmiusColors.text,
+            color: airmiusTextColor(context),
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Wann findet das Event statt?',
+        Text(
+          scope.t('events.timeQuestion'),
           style: TextStyle(
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 16),
         AirmiusButton(
-          label: 'Start: ${_dateLabel(_start)} ${_time(_start)}',
+          label:
+              '${scope.t('events.start')}: ${_dateLabel(context, _start)} ${_time(_start)}',
           icon: Icons.schedule,
           onPressed: _pickStart,
           secondary: true,
@@ -1768,59 +1884,156 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         const SizedBox(height: 12),
         AirmiusButton(
           label: _end == null
-              ? 'Ende optional'
-              : 'Ende: ${_dateLabel(_end!)} ${_time(_end!)}',
+              ? scope.t('events.endOptional')
+              : '${scope.t('events.end')}: ${_dateLabel(context, _end!)} ${_time(_end!)}',
           icon: Icons.update,
           onPressed: _pickEnd,
           secondary: true,
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Zeitzone: UTC für die API, Anzeige lokal in der App.',
+        Text(
+          scope.t('events.timezoneHint'),
           style: TextStyle(
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
+        if (widget.allowsRecurring) ...[
+          const SizedBox(height: 18),
+          Text(
+            scope.t('events.recurring'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            scope.t('events.recurringHint'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String?>(
+            initialValue: _recurring,
+            decoration: InputDecoration(labelText: scope.t('events.repeat')),
+            dropdownColor: airmiusSurfaceColor(context),
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Text(scope.t('events.repeat.none')),
+              ),
+              for (final value in const [
+                'daily',
+                'weekly',
+                'biweekly',
+                'monthly',
+              ])
+                DropdownMenuItem<String?>(
+                  value: value,
+                  child: Text(scope.t('events.repeat.$value')),
+                ),
+            ],
+            onChanged: (value) => setState(() {
+              _recurring = value;
+              if (value == null) {
+                _recurrenceEndsAt = null;
+                _recurrenceDays.clear();
+              } else {
+                _recurrenceEndsAt ??= _start.add(const Duration(days: 28));
+              }
+              if (value == 'weekly' || value == 'biweekly') {
+                _recurrenceDays
+                  ..clear()
+                  ..add(_start.weekday % 7);
+              }
+            }),
+          ),
+          if (_recurring != null) ...[
+            const SizedBox(height: 10),
+            AirmiusButton(
+              label: _recurrenceEndsAt == null
+                  ? scope.t('events.recurrenceEnd')
+                  : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
+              icon: Icons.event_repeat_outlined,
+              onPressed: _pickRecurrenceEnd,
+              secondary: true,
+            ),
+          ],
+          if (_recurring == 'weekly' || _recurring == 'biweekly') ...[
+            const SizedBox(height: 10),
+            Text(
+              scope.t('events.recurrenceDays'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final day in List.generate(7, (index) => index))
+                  FilterChip(
+                    label: Text(scope.t('events.day.$day')),
+                    selected: _recurrenceDays.contains(day),
+                    onSelected: (selected) => setState(() {
+                      if (selected) {
+                        _recurrenceDays.add(day);
+                      } else {
+                        _recurrenceDays.remove(day);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ],
     );
   }
 
   Widget _detailsStep() {
+    final scope = AirmiusScope.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Details',
+        Text(
+          scope.t('events.details'),
           style: TextStyle(
-            color: AirmiusColors.text,
+            color: airmiusTextColor(context),
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Optional: Ort, Teilnehmerlimit und Notizen.',
+        Text(
+          scope.t('events.detailsHint'),
           style: TextStyle(
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 16),
         TextFormField(
           controller: _locationController,
-          decoration: const InputDecoration(
-            labelText: 'Ort',
-            hintText: 'Sportplatz, Halle, Adresse',
+          decoration: InputDecoration(
+            labelText: scope.t('events.location'),
+            hintText: scope.t('events.locationExample'),
           ),
         ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _maxParticipantsController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Max. Teilnehmer optional',
+          decoration: InputDecoration(
+            labelText: scope.t('events.maxParticipants'),
           ),
         ),
         const SizedBox(height: 12),
@@ -1830,18 +2043,18 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           onChanged: _visibility == 'private' && _teamId != null
               ? (value) => setState(() => _usesPenaltyCatalog = value)
               : null,
-          activeThumbColor: AirmiusColors.blue,
-          title: const Text(
-            'Mit Strafkatalog arbeiten',
+          activeThumbColor: airmiusAccentColor(context),
+          title: Text(
+            scope.t('events.usePenaltyCatalog'),
             style: TextStyle(
-              color: AirmiusColors.text,
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
-          subtitle: const Text(
-            'Teamkasse: Strafen können im Event an anwesende Spieler vergeben werden.',
+          subtitle: Text(
+            scope.t('events.penaltyCatalogHint'),
             style: TextStyle(
-              color: AirmiusColors.muted,
+              color: airmiusMutedColor(context),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1850,13 +2063,14 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         TextFormField(
           controller: _notesController,
           maxLines: 4,
-          decoration: const InputDecoration(labelText: 'Notizen optional'),
+          decoration: InputDecoration(labelText: scope.t('events.notes')),
         ),
       ],
     );
   }
 
   Widget _reviewStep() {
+    final scope = AirmiusScope.of(context);
     var clubName = '-';
     for (final club in widget.clubs) {
       if (club.id == _clubId) clubName = club.name;
@@ -1866,24 +2080,24 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (team.id == _teamId) teamName = team.name;
     }
     final maxParticipants = _maxParticipantsController.text.trim().isEmpty
-        ? 'Unbegrenzt'
-        : '${_maxParticipantsController.text.trim()} Personen';
+        ? scope.t('events.unlimited')
+        : '${_maxParticipantsController.text.trim()} ${scope.t('events.people')}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Prüfen',
+        Text(
+          scope.t('events.review'),
           style: TextStyle(
-            color: AirmiusColors.text,
+            color: airmiusTextColor(context),
             fontSize: 17,
             fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Kontrolliere deine Angaben vor dem Speichern.',
+        Text(
+          scope.t('events.reviewHint'),
           style: TextStyle(
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1894,43 +2108,61 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _ReviewLine(
-                label: 'Titel',
+                label: scope.t('events.fieldTitle'),
                 value: _titleController.text.trim().isEmpty
                     ? '-'
                     : _titleController.text.trim(),
               ),
-              _ReviewLine(label: 'Typ', value: _typeLabel(_type)),
               _ReviewLine(
-                label: 'Sichtbarkeit',
-                value: _visibilityLabel(_visibility),
-              ),
-              _ReviewLine(label: 'Verein', value: clubName),
-              _ReviewLine(label: 'Team', value: teamName),
-              _ReviewLine(
-                label: 'Start',
-                value: '${_dateLabel(_start)} ${_time(_start)}',
+                label: AirmiusScope.of(context).t('events.type'),
+                value: _typeLabel(context, _type),
               ),
               _ReviewLine(
-                label: 'Ende',
+                label: scope.t('events.visibility'),
+                value: _visibilityLabel(context, _visibility),
+              ),
+              _ReviewLine(label: scope.t('events.club'), value: clubName),
+              _ReviewLine(label: scope.t('events.team'), value: teamName),
+              _ReviewLine(
+                label: scope.t('events.start'),
+                value: '${_dateLabel(context, _start)} ${_time(_start)}',
+              ),
+              _ReviewLine(
+                label: scope.t('events.end'),
                 value: _end == null
                     ? '-'
-                    : '${_dateLabel(_end!)} ${_time(_end!)}',
+                    : '${_dateLabel(context, _end!)} ${_time(_end!)}',
               ),
-              _ReviewLine(label: 'Teilnehmerlimit', value: maxParticipants),
+              if (_recurring != null) ...[
+                _ReviewLine(
+                  label: scope.t('events.repeat'),
+                  value: scope.t('events.repeat.$_recurring'),
+                ),
+                _ReviewLine(
+                  label: scope.t('events.recurrenceEnd'),
+                  value: _recurrenceEndsAt == null
+                      ? '-'
+                      : _dateLabel(context, _recurrenceEndsAt!),
+                ),
+              ],
               _ReviewLine(
-                label: 'Strafkatalog',
+                label: scope.t('events.participantLimit'),
+                value: maxParticipants,
+              ),
+              _ReviewLine(
+                label: scope.t('events.penaltyCatalog'),
                 value: _usesPenaltyCatalog
-                    ? 'Aktiv für dieses Team-Event'
-                    : 'Nicht aktiv',
+                    ? scope.t('events.penaltyActive')
+                    : scope.t('events.inactive'),
               ),
               _ReviewLine(
-                label: 'Ort',
+                label: scope.t('events.location'),
                 value: _locationController.text.trim().isEmpty
                     ? '-'
                     : _locationController.text.trim(),
               ),
               _ReviewLine(
-                label: 'Notizen',
+                label: scope.t('events.notesLabel'),
                 value: _notesController.text.trim().isEmpty
                     ? '-'
                     : _notesController.text.trim(),
@@ -1944,10 +2176,11 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     final validationMessage = _validationMessage;
     return Dialog(
       insetPadding: const EdgeInsets.all(10),
-      backgroundColor: AirmiusColors.card,
+      backgroundColor: airmiusSurfaceColor(context),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 740),
         child: Form(
@@ -1964,19 +2197,19 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Event erstellen',
+                          Text(
+                            scope.t('events.createTitle'),
                             style: TextStyle(
-                              color: AirmiusColors.text,
+                              color: airmiusTextColor(context),
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Schritt $_step von 4',
-                            style: const TextStyle(
-                              color: AirmiusColors.blue,
+                            '${scope.t('events.step')} $_step ${scope.t('events.of')} 4',
+                            style: TextStyle(
+                              color: airmiusAccentColor(context),
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -1985,7 +2218,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close),
                     ),
                   ],
                 ),
@@ -1994,24 +2227,24 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                 padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
                 child: Row(
                   children: [
-                    _stepButton(1, 'Basis'),
+                    _stepButton(1, scope.t('events.stepBasic')),
                     const SizedBox(width: 8),
-                    _stepButton(2, 'Zeit'),
+                    _stepButton(2, scope.t('events.time')),
                     const SizedBox(width: 8),
-                    _stepButton(3, 'Details'),
+                    _stepButton(3, scope.t('events.details')),
                     const SizedBox(width: 8),
-                    _stepButton(4, 'Prüfen'),
+                    _stepButton(4, scope.t('events.review')),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AirmiusColors.border),
+              Divider(height: 1, color: airmiusBorderColor(context)),
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(18),
                   child: _stepBody(),
                 ),
               ),
-              const Divider(height: 1, color: AirmiusColors.border),
+              Divider(height: 1, color: airmiusBorderColor(context)),
               Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -2025,14 +2258,16 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: AirmiusColors.amber.withValues(alpha: 0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.tertiary.withValues(alpha: 0.7),
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           validationMessage,
-                          style: const TextStyle(
-                            color: AirmiusColors.text,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -2043,7 +2278,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                       children: [
                         Expanded(
                           child: AirmiusButton(
-                            label: 'Zurück',
+                            label: scope.t('events.keep'),
                             icon: Icons.chevron_left,
                             onPressed: _step == 1 ? null : _previousStep,
                             secondary: true,
@@ -2052,7 +2287,9 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: AirmiusButton(
-                            label: _step == 4 ? 'Erstellen' : 'Weiter',
+                            label: _step == 4
+                                ? scope.t('events.create')
+                                : scope.t('events.next'),
                             icon: _step == 4 ? Icons.add : Icons.chevron_right,
                             onPressed: _step == 4 ? _submit : _nextStep,
                           ),
@@ -2085,8 +2322,8 @@ class _ReviewLine extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: const TextStyle(
-              color: AirmiusColors.muted,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -2094,8 +2331,8 @@ class _ReviewLine extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             value,
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w800,
               height: 1.3,
             ),
@@ -2111,13 +2348,13 @@ class _LoadingEvents extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AirmiusPanel(
+    return AirmiusPanel(
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: AirmiusColors.blue,
+            color: airmiusAccentColor(context),
           ),
         ),
       ),
@@ -2137,13 +2374,17 @@ class _ErrorEvents extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
+          Icon(
+            Icons.error_outline,
+            color: Theme.of(context).colorScheme.error,
+            size: 34,
+          ),
           const SizedBox(height: 10),
           Text(
             scope.t('events.error'),
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AirmiusColors.text,
+            style: TextStyle(
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -2168,30 +2409,31 @@ class _EmptyEvents extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
-      borderColor: AirmiusColors.border,
+      borderColor: airmiusBorderColor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(
+          Icon(
             Icons.event_busy_outlined,
-            color: AirmiusColors.muted,
+            color: airmiusMutedColor(context),
             size: 40,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Keine Events gefunden',
+          Text(
+            scope.t('events.emptyTitle'),
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AirmiusColors.text,
+              color: airmiusTextColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Es gibt aktuell keine passenden Events. Passe die Filter an oder erstelle ein neues Event.',
+          Text(
+            scope.t('events.emptyBody'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: AirmiusColors.muted, height: 1.35),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -2200,13 +2442,13 @@ class _EmptyEvents extends StatelessWidget {
             alignment: WrapAlignment.center,
             children: [
               AirmiusButton(
-                label: 'Filter zurücksetzen',
+                label: scope.t('events.resetFilters'),
                 icon: Icons.restart_alt,
                 onPressed: onReset,
                 secondary: true,
               ),
               AirmiusButton(
-                label: 'Event erstellen',
+                label: scope.t('events.createTitle'),
                 icon: Icons.add,
                 onPressed: onCreate,
               ),
@@ -2220,7 +2462,7 @@ class _EmptyEvents extends StatelessWidget {
 
 void _openEvent(BuildContext context, AirmiusEvent event) {
   final fallbackBody = [
-    _eventDateTimeLabel(event),
+    _eventDateTimeLabel(context, event),
     event.location,
     event.clubName,
     event.teamName,
@@ -2289,80 +2531,44 @@ bool _isFull(AirmiusEvent event) =>
     event.yesCount >= event.maxParticipants! &&
     event.myParticipationStatus != 'yes';
 
-String _capacityLabel(AirmiusEvent event) => event.maxParticipants == null
-    ? '${event.yesCount} Zusagen'
-    : '${event.yesCount}/${event.maxParticipants} Plaetze';
+String _capacityLabel(BuildContext context, AirmiusEvent event) {
+  final scope = AirmiusScope.of(context);
+  return event.maxParticipants == null
+      ? '${event.yesCount} ${scope.t('events.confirmations')}'
+      : '${event.yesCount}/${event.maxParticipants} ${scope.t('events.seats')}';
+}
 
-String _eventDateTimeLabel(AirmiusEvent event) {
+String _eventDateTimeLabel(BuildContext context, AirmiusEvent event) {
   final end = event.endsAt;
-  final startLabel = '${_dateLabel(event.startsAt)} ${_time(event.startsAt)}';
+  final startLabel =
+      '${_dateLabel(context, event.startsAt)} ${_time(event.startsAt)}';
   if (end == null) return startLabel;
   if (_isSameDay(event.startsAt, end)) return '$startLabel - ${_time(end)}';
-  return '$startLabel - ${_dateLabel(end)} ${_time(end)}';
+  return '$startLabel - ${_dateLabel(context, end)} ${_time(end)}';
 }
 
-String _dateLabel(DateTime value) {
-  final local = value.toLocal();
-  return '${local.day.toString().padLeft(2, '0')}.${local.month.toString().padLeft(2, '0')}.${local.year}';
-}
+String _dateLabel(BuildContext context, DateTime value) =>
+    MaterialLocalizations.of(context).formatShortDate(value.toLocal());
 
 String _time(DateTime value) {
   final local = value.toLocal();
   return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
 }
 
-String _monthLabel(DateTime value) {
-  const months = [
-    'Januar',
-    'Februar',
-    'Maerz',
-    'April',
-    'Mai',
-    'Juni',
-    'Juli',
-    'August',
-    'September',
-    'Oktober',
-    'November',
-    'Dezember',
-  ];
-  return '${months[value.month - 1]} ${value.year}';
+String _monthLabel(BuildContext context, DateTime value) =>
+    MaterialLocalizations.of(context).formatMonthYear(value);
+
+String _weekdayShort(BuildContext context, DateTime value) =>
+    MaterialLocalizations.of(context).narrowWeekdays[value.weekday % 7];
+
+String _monthShort(DateTime value) => value.month.toString().padLeft(2, '0');
+
+String _typeLabel(BuildContext context, String value) {
+  final translated = AirmiusScope.of(context).t('events.type.$value');
+  return translated == 'events.type.$value' ? value : translated;
 }
 
-String _weekdayShort(DateTime value) {
-  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  return days[value.weekday - 1];
+String _visibilityLabel(BuildContext context, String value) {
+  final translated = AirmiusScope.of(context).t('events.visibility.$value');
+  return translated == 'events.visibility.$value' ? value : translated;
 }
-
-String _monthShort(DateTime value) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mrz',
-    'Apr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Okt',
-    'Nov',
-    'Dez',
-  ];
-  return months[value.month - 1];
-}
-
-String _typeLabel(String value) => switch (value) {
-  'training' => 'Training',
-  'match' => 'Spiel',
-  'meeting' => 'Meeting',
-  'public' => 'Öffentlich',
-  _ => value,
-};
-
-String _visibilityLabel(String value) => switch (value) {
-  'private' => 'Nur Team',
-  'organization' => 'Verein',
-  'public' => 'Öffentlich',
-  _ => value,
-};

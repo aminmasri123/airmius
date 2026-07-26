@@ -19,7 +19,7 @@ class SportIntegrationController extends Controller
             'label' => 'Google Fit',
             'route_key' => 'google-fit',
             'status' => 'live_oauth',
-            'description' => 'Verknüpfung über Google OAuth. Aktivitätsimport wird als nächster Schritt auf den gespeicherten Tokens aufgebaut.',
+            'description' => 'Verknüpfung über Google OAuth. Aktivitäten können über die gespeicherten Tokens synchronisiert werden.',
             'scopes' => [
                 'openid',
                 'profile',
@@ -193,7 +193,7 @@ class SportIntegrationController extends Controller
                 'access_token' => $token['access_token'] ?? null,
                 'refresh_token' => $token['refresh_token'] ?? null,
                 'token_expires_at' => $this->tokenExpiresAt($provider, $token),
-                'sync_summary' => ['message' => 'Konto verbunden. Aktivitätsimport ist vorbereitet.'],
+                'sync_summary' => ['message' => 'Konto verbunden. Du kannst jetzt synchronisieren.'],
             ],
         );
 

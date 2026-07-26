@@ -9,30 +9,75 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repos = [
-      _RepoBinding('Auth Repository', 'User', 'Login und aktueller Nutzer laufen über typed AirmiusUser.', AirmiusColors.blue, Icons.lock_outline),
-      _RepoBinding('Club Repository', 'Club', 'Vereinssuche und Clubdetail werden auf AirmiusClub gemappt.', AirmiusColors.green, Icons.apartment_outlined),
-      _RepoBinding('Membership Repository', 'Application', 'Mitgliedsantrag senden liefert ClubMembershipRequest, Zurückziehen nutzt die club-scoped Web-Route.', AirmiusColors.amber, Icons.assignment_ind_outlined),
-      _RepoBinding('Files, Events, Billing', 'Page<T>', 'Upload-Intent, Events und Rechnungen haben klare Repository-Verträge.', AirmiusColors.pink, Icons.hub_outlined),
+      _RepoBinding(
+        'Auth Repository',
+        'User',
+        'Login und aktueller Nutzer laufen über typed AirmiusUser.',
+        AirmiusColors.blue,
+        Icons.lock_outline,
+      ),
+      _RepoBinding(
+        'Club Repository',
+        'Club',
+        'Vereinssuche und Clubdetail werden auf AirmiusClub gemappt.',
+        AirmiusColors.green,
+        Icons.apartment_outlined,
+      ),
+      _RepoBinding(
+        'Membership Repository',
+        'Application',
+        'Mitgliedsantrag senden liefert ClubMembershipRequest, Zurückziehen nutzt die club-scoped Web-Route.',
+        AirmiusColors.amber,
+        Icons.assignment_ind_outlined,
+      ),
+      _RepoBinding(
+        'Files, Events, Billing',
+        'Page<T>',
+        'Upload-Intent, Events und Rechnungen haben klare Repository-Verträge.',
+        AirmiusColors.pink,
+        Icons.hub_outlined,
+      ),
     ];
 
     final next = [
-      _NextGate('HTTP Transport', 'Echten Transport für mobile/web faehige Requests, Timeouts, Retry und Fehler-Mapping anschließen.'),
-      _NextGate('Provider/State Layer', 'RepositoryBundle in App-State, Auth-State, Cache und Screens einspeisen.'),
-      _NextGate('Screen Migration', 'Clubs, Suche, Mitgliedsantrag, Notifications, Events und Billing von Mock auf Repository umstellen.'),
-      _NextGate('Contract Tests', 'Laravel Response-Formate mit typed Models und Error-States prüfen.'),
+      _NextGate(
+        'HTTP Transport',
+        'Echten Transport für mobile/web faehige Requests, Timeouts, Retry und Fehler-Mapping anschließen.',
+      ),
+      _NextGate(
+        'Provider/State Layer',
+        'RepositoryBundle in App-State, Auth-State, Cache und Screens einspeisen.',
+      ),
+      _NextGate(
+        'Screen Migration',
+        'Clubs, Suche, Mitgliedsantrag, Notifications, Events und Billing von Mock auf Repository umstellen.',
+      ),
+      _NextGate(
+        'Contract Tests',
+        'Laravel Response-Formate mit typed Models und Error-States prüfen.',
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('API Repositories', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'API Repositories',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'API Repositories',
-        subtitle: 'Repository-Implementierungen verbinden API-Client, typed Models, Pagination und spätere Screens.',
-        trailing: const StatusPill('62% API Rest', color: AirmiusColors.amber),
+        subtitle:
+            'Repository-Implementierungen verbinden API-Client, typed Models, Pagination und spätere Screens.',
+        trailing: StatusPill(
+          '62% API Rest',
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,29 +85,52 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('REPOSITORY LAYER'),
-                  SizedBox(height: 10),
-                  Text('Die App bekommt eine echte Daten-Schicht.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
-                  SizedBox(height: 8),
-                  Text('Repositories kapseln Laravel-Requests und liefern typisierte Objekte. Damit können UI-Screens später sauber von Mock-Daten auf echte API-Daten wechseln.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                children: [
+                  const Eyebrow('REPOSITORY LAYER'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Die App bekommt eine echte Daten-Schicht.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Repositories kapseln Laravel-Requests und liefern typisierte Objekte. Damit können UI-Screens später sauber von Mock-Daten auf echte API-Daten wechseln.',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '48%', label: 'Fertig')),
+                Expanded(
+                  child: MetricCard(value: '48%', label: 'Fertig'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '52%', label: 'Rest')),
+                Expanded(
+                  child: MetricCard(value: '52%', label: 'Rest'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '38%', label: 'API')),
+                Expanded(
+                  child: MetricCard(value: '38%', label: 'API'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             for (final repo in repos) ...[
               AirmiusPanel(
-                borderColor: repo.color.withValues(alpha: .44),
+                borderColor: airmiusSemanticColor(
+                  context,
+                  repo.color,
+                ).withValues(alpha: .44),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -70,22 +138,59 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: repo.color.withValues(alpha: .14),
+                        color: airmiusSemanticColor(
+                          context,
+                          repo.color,
+                        ).withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: repo.color.withValues(alpha: .45)),
+                        border: Border.all(
+                          color: airmiusSemanticColor(
+                            context,
+                            repo.color,
+                          ).withValues(alpha: .45),
+                        ),
                       ),
-                      child: Icon(repo.icon, color: repo.color),
+                      child: Icon(
+                        repo.icon,
+                        color: airmiusSemanticColor(context, repo.color),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(repo.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(
+                            repo.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 5),
-                          Text(repo.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                          Text(
+                            repo.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
                           const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(repo.model, color: repo.color), const StatusPill('Repository')]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                repo.model,
+                                color: airmiusSemanticColor(
+                                  context,
+                                  repo.color,
+                                ),
+                              ),
+                              const StatusPill('Repository'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -138,26 +243,45 @@ class _NextGateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: .16), borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.blue.withValues(alpha: .42))),
-            child: const Icon(Icons.alt_route_outlined, color: AirmiusColors.blue, size: 19),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: airmiusAccentColor(context).withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: airmiusAccentColor(context).withValues(alpha: .42),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-              ],
+        ),
+        child: Icon(
+          Icons.alt_route_outlined,
+          color: airmiusAccentColor(context),
+          size: 19,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              item.body,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }

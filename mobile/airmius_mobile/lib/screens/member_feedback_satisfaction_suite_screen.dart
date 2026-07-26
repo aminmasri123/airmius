@@ -9,30 +9,72 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final signals = [
-      _SignalItem('Vereinszufriedenheit', '92%', 'Mitglieder bewerten Kommunikation, Training, Events und Vereinsleben.', AirmiusColors.green, Icons.sentiment_satisfied_alt_outlined),
-      _SignalItem('Kritische Hinweise', '7 offen', 'Beschwerden, Risiken, Datenschutz, Safety oder Eskalation an Admins.', AirmiusColors.red, Icons.report_problem_outlined),
-      _SignalItem('Ideen & Wuensche', '24', 'Verbesserungen, neue Teams, Events, Kurse, Ausstattung und Services.', AirmiusColors.blue, Icons.lightbulb_outlined),
-      _SignalItem('Trainerfeedback', 'Team', 'Feedback nach Training, Belastung, Stimmung und individuelle Rückmeldung.', AirmiusColors.amber, Icons.sports_outlined),
+      _SignalItem(
+        'Vereinszufriedenheit',
+        '92%',
+        'Mitglieder bewerten Kommunikation, Training, Events und Vereinsleben.',
+        AirmiusColors.green,
+        Icons.sentiment_satisfied_alt_outlined,
+      ),
+      _SignalItem(
+        'Kritische Hinweise',
+        '7 offen',
+        'Beschwerden, Risiken, Datenschutz, Safety oder Eskalation an Admins.',
+        AirmiusColors.red,
+        Icons.report_problem_outlined,
+      ),
+      _SignalItem(
+        'Ideen & Wuensche',
+        '24',
+        'Verbesserungen, neue Teams, Events, Kurse, Ausstattung und Services.',
+        AirmiusColors.blue,
+        Icons.lightbulb_outlined,
+      ),
+      _SignalItem(
+        'Trainerfeedback',
+        'Team',
+        'Feedback nach Training, Belastung, Stimmung und individuelle Rückmeldung.',
+        AirmiusColors.amber,
+        Icons.sports_outlined,
+      ),
     ];
 
     final workflow = [
-      _WorkflowItem('Feedback erfassen', 'Kurzes Formular, Skala, Freitext, Kategorie, Anonymitaet und Datei.'),
-      _WorkflowItem('Einordnen', 'Verein, Team, Event, Training, Mitgliedschaft, Zahlung, Support oder Safety.'),
-      _WorkflowItem('Bearbeiten', 'Adminantwort, interne Notiz, Aufgabe, Eskalation oder Rückfrage starten.'),
-      _WorkflowItem('Lernen', 'Trend, Score, Export, Massnahmen und Follow-up für Vereinsentwicklung.'),
+      _WorkflowItem(
+        'Feedback erfassen',
+        'Kurzes Formular, Skala, Freitext, Kategorie, Anonymitaet und Datei.',
+      ),
+      _WorkflowItem(
+        'Einordnen',
+        'Verein, Team, Event, Training, Mitgliedschaft, Zahlung, Support oder Safety.',
+      ),
+      _WorkflowItem(
+        'Bearbeiten',
+        'Adminantwort, interne Notiz, Aufgabe, Eskalation oder Rückfrage starten.',
+      ),
+      _WorkflowItem(
+        'Lernen',
+        'Trend, Score, Export, Massnahmen und Follow-up für Vereinsentwicklung.',
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Feedback & Zufriedenheit', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Feedback & Zufriedenheit',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Feedback & Zufriedenheit',
-        subtitle: 'Mitgliederfeedback, Zufriedenheit, Beschwerden, Ideen, Trainerfeedback und Follow-ups als mobile Vereins-UI.',
-        trailing: const StatusPill('Member', color: AirmiusColors.blue),
+        subtitle:
+            'Mitgliederfeedback, Zufriedenheit, Beschwerden, Ideen, Trainerfeedback und Follow-ups als mobile Vereins-UI.',
+        trailing: StatusPill('Member', color: airmiusAccentColor(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,29 +82,52 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('FEEDBACK CENTER'),
-                  SizedBox(height: 10),
-                  Text('Die App soll merken, wie es den Mitgliedern wirklich geht.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
-                  SizedBox(height: 8),
-                  Text('Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen überfuehrt.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                children: [
+                  const Eyebrow('FEEDBACK CENTER'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Die App soll merken, wie es den Mitgliedern wirklich geht.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen überfuehrt.',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '92%', label: 'Score')),
+                Expanded(
+                  child: MetricCard(value: '92%', label: 'Score'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '31', label: 'Signale')),
+                Expanded(
+                  child: MetricCard(value: '31', label: 'Signale'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '8', label: 'Tasks')),
+                Expanded(
+                  child: MetricCard(value: '8', label: 'Tasks'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             for (final signal in signals) ...[
               AirmiusPanel(
-                borderColor: signal.color.withValues(alpha: .44),
+                borderColor: airmiusSemanticColor(
+                  context,
+                  signal.color,
+                ).withValues(alpha: .44),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -70,22 +135,59 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: signal.color.withValues(alpha: .14),
+                        color: airmiusSemanticColor(
+                          context,
+                          signal.color,
+                        ).withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: signal.color.withValues(alpha: .45)),
+                        border: Border.all(
+                          color: airmiusSemanticColor(
+                            context,
+                            signal.color,
+                          ).withValues(alpha: .45),
+                        ),
                       ),
-                      child: Icon(signal.icon, color: signal.color),
+                      child: Icon(
+                        signal.icon,
+                        color: airmiusSemanticColor(context, signal.color),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(signal.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(
+                            signal.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 5),
-                          Text(signal.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                          Text(
+                            signal.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
                           const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(signal.status, color: signal.color), const StatusPill('Follow-up')]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                signal.status,
+                                color: airmiusSemanticColor(
+                                  context,
+                                  signal.color,
+                                ),
+                              ),
+                              const StatusPill('Follow-up'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -114,10 +216,26 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('VERKNUEPFUNGEN'),
                   SizedBox(height: 10),
-                  _LinkLine(label: 'Support', value: 'Kritisches Feedback wird als Ticket oder Eskalation fortgefuehrt.'),
-                  _LinkLine(label: 'Umfragen', value: 'Feedback kann in strukturierte Vereinsumfragen übergehen.'),
-                  _LinkLine(label: 'Training', value: 'Trainerfeedback beeinflusst Belastung, Planung und Teamstimmung.'),
-                  _LinkLine(label: 'Audit', value: 'Bearbeitung, Antworten, Eskalationen und Löschfristen bleiben sichtbar.'),
+                  _LinkLine(
+                    label: 'Support',
+                    value:
+                        'Kritisches Feedback wird als Ticket oder Eskalation fortgefuehrt.',
+                  ),
+                  _LinkLine(
+                    label: 'Umfragen',
+                    value:
+                        'Feedback kann in strukturierte Vereinsumfragen übergehen.',
+                  ),
+                  _LinkLine(
+                    label: 'Training',
+                    value:
+                        'Trainerfeedback beeinflusst Belastung, Planung und Teamstimmung.',
+                  ),
+                  _LinkLine(
+                    label: 'Audit',
+                    value:
+                        'Bearbeitung, Antworten, Eskalationen und Löschfristen bleiben sichtbar.',
+                  ),
                 ],
               ),
             ),
@@ -152,28 +270,47 @@ class _WorkflowRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AirmiusColors.blue.withValues(alpha: .16), borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.blue.withValues(alpha: .42))),
-            child: const Icon(Icons.arrow_forward_outlined, color: AirmiusColors.blue, size: 19),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: airmiusAccentColor(context).withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: airmiusAccentColor(context).withValues(alpha: .42),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-              ],
+        ),
+        child: Icon(
+          Icons.arrow_forward_outlined,
+          color: airmiusAccentColor(context),
+          size: 19,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              item.body,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _LinkLine extends StatelessWidget {
@@ -184,13 +321,27 @@ class _LinkLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(width: 94, child: Text(label, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))),
-          ],
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 94,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: airmiusAccentColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
-      );
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
 }

@@ -3,8 +3,12 @@ import { reactive } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 
 const props = defineProps({
     badges: { type: Array, default: () => [] },
@@ -65,9 +69,9 @@ const updateBadge = (badge) => {
 
 const deleteBadge = async (badge) => {
     const confirmed = await confirmDialog({
-        title: 'Badge löschen',
-        message: `Soll der Badge "${badge.name}" wirklich gelöscht werden?`,
-        confirmLabel: 'Löschen',
+        title: tx('guest.admin_badges.delete_title'),
+        message: tx('guest.admin_badges.delete_message', { name: badge.name }),
+        confirmLabel: tx('Löschen'),
         danger: true,
     })
 
@@ -78,23 +82,21 @@ const deleteBadge = async (badge) => {
 </script>
 
 <template>
-    <Head title="Badges verwalten" />
+    <Head :title="tx('Badges verwalten')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
-            <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Admin</p>
-            <h1 class="mt-1 text-2xl font-bold text-primary">Badges</h1>
-            <p class="mt-2 text-sm text-secondary">
-                Automatische Auszeichnungen für XP, Level, Streaks und konkrete Aktionen.
-            </p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">{{ tx('Admin') }}</p>
+            <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('Badges') }}</h1>
+            <p class="mt-2 text-sm text-secondary">{{ tx('Automatische Auszeichnungen für XP, Level, Streaks und konkrete Aktionen.') }}</p>
         </section>
 
         <form class="surface-card grid gap-3 p-5 lg:grid-cols-[1fr_1fr_150px_150px_120px_auto]" @submit.prevent="createBadge">
             <div v-if="firstError(createForm)" class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error lg:col-span-6" role="alert">
                 {{ firstError(createForm) }}
             </div>
-            <input v-model="createForm.key" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="key, z.B. player_streak_30">
-            <input v-model="createForm.name" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Name">
+            <input v-model="createForm.key" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('key, z.B. player_streak_30')">
+            <input v-model="createForm.name" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('Name')">
             <select v-model="createForm.actor_type" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                 <option v-for="actor in actorTypes" :key="actor" :value="actor">{{ actor }}</option>
             </select>
@@ -107,10 +109,10 @@ const deleteBadge = async (badge) => {
                 class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                 :disabled="createForm.processing"
             >
-                Erstellen
+                {{ tx('Erstellen') }}
             </button>
-            <input v-if="createForm.trigger === 'reason'" v-model="createForm.reason" class="lg:col-span-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="reason, z.B. knowledge_marked_helpful">
-            <textarea v-model="createForm.description" class="lg:col-span-6 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" rows="2" placeholder="Beschreibung"></textarea>
+            <input v-if="createForm.trigger === 'reason'" v-model="createForm.reason" class="lg:col-span-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('reason, z.B. knowledge_marked_helpful')">
+            <textarea v-model="createForm.description" class="lg:col-span-6 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" rows="2" :placeholder="tx('Beschreibung')"></textarea>
         </form>
 
         <section class="surface-card divide-y divide-border">
@@ -131,9 +133,9 @@ const deleteBadge = async (badge) => {
                         :disabled="formFor(badge).processing"
                         @click="updateBadge(badge)"
                     >
-                        Speichern
+                        {{ tx('Speichern') }}
                     </button>
-                    <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" @click="deleteBadge(badge)">Löschen</button>
+                    <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" @click="deleteBadge(badge)">{{ tx('Löschen') }}</button>
                 </div>
                 <div v-if="firstError(formFor(badge))" class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error xl:col-span-6" role="alert">
                     {{ firstError(formFor(badge)) }}
@@ -144,5 +146,3 @@ const deleteBadge = async (badge) => {
         </section>
     </div>
 </template>
-
-

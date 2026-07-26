@@ -4,6 +4,7 @@ import AppButton from "@/Components/UI/AppButton.vue"
 import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
 import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
 import { Head, Link } from "@inertiajs/vue3"
+import { useI18n } from "vue-i18n"
 
 defineOptions({ layout: AppLayout })
 
@@ -33,6 +34,12 @@ const props = defineProps({
     checkoutAddress: { type: Object, default: () => ({}) },
     marketplaceCategoryCommissions: { type: Array, default: () => [] },
 })
+
+const { t } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const {
     page,
@@ -240,14 +247,14 @@ const {
 </script>
 
 <template>
-    <Head title="Shop & Rechnungen" />
+    <Head :title="tx('commerce.page_title', 'Shop & Rechnungen')" />
 
     <div class="space-y-6">
         <section class="surface-card p-5">
-            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Käufe & Abos</p>
-            <h1 class="mt-1 text-2xl font-bold text-primary">Shop, Rechnungen und Angebote</h1>
+            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('commerce.eyebrow', 'Käufe & Abos') }}</p>
+            <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('commerce.title', 'Shop, Rechnungen und Angebote') }}</h1>
             <p class="mt-2 max-w-3xl text-sm text-secondary">
-                Verwalte Marketplace-Käufe, Kurse, Ads, Outfit-Abos, Konto-Abos, Warenkorb und Rechnungen an einem Ort.
+                {{ tx('commerce.intro', 'Verwalte Marketplace-Käufe, Kurse, Ads, Outfit-Abos, Konto-Abos, Warenkorb und Rechnungen an einem Ort.') }}
             </p>
             <div v-if="page.props.flash?.success" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {{ page.props.flash.success }}

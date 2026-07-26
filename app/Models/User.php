@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\MyCustomResetPassword;
 use App\Support\MinorSafety;
 use App\Support\UploadStorage;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -16,7 +16,7 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
     use HasApiTokens;
 
@@ -75,6 +75,8 @@ class User extends Authenticatable
         'profile_visibility',
         'direct_message_privacy',
         'friend_request_privacy',
+        'notification_channels',
+        'notification_quiet_time',
         'ads_personalization_consent',
         'ads_measurement_consent',
         'bio',
@@ -129,6 +131,7 @@ class User extends Authenticatable
             'event_default_sport_ids' => 'array',
             'event_default_filters' => 'array',
             'dashboard_widget_keys' => 'array',
+            'notification_channels' => 'array',
             'ads_personalization_consent' => 'boolean',
             'ads_measurement_consent' => 'boolean',
             'password' => 'hashed',

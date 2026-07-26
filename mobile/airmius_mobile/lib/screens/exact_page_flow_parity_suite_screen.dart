@@ -7,23 +7,32 @@ class ExactPageFlowParitySuiteScreen extends StatefulWidget {
   const ExactPageFlowParitySuiteScreen({super.key});
 
   @override
-  State<ExactPageFlowParitySuiteScreen> createState() => _ExactPageFlowParitySuiteScreenState();
+  State<ExactPageFlowParitySuiteScreen> createState() =>
+      _ExactPageFlowParitySuiteScreenState();
 }
 
-class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuiteScreen> {
+class _ExactPageFlowParitySuiteScreenState
+    extends State<ExactPageFlowParitySuiteScreen> {
   String _area = 'Dashboard';
   bool _showAdmin = true;
   bool _showPublic = true;
   bool _showStatusPages = true;
 
-  static const _areas = ['Dashboard', 'Commerce', 'Training', 'Admin', 'Public'];
+  static const _areas = [
+    'Dashboard',
+    'Commerce',
+    'Training',
+    'Admin',
+    'Public',
+  ];
 
   static const _flows = <_ExactFlow>[
     _ExactFlow(
       area: 'Dashboard',
       title: 'User Create / Edit / Profile',
       route: 'Auth/Dashboard/Users/Create, Edit, Profile',
-      body: 'Nutzeranlage, Bearbeitung, Rollen, Status, Profildaten, Sperren, Audit und Rücknavigation als kompakte Mobile-Formulare.',
+      body:
+          'Nutzeranlage, Bearbeitung, Rollen, Status, Profildaten, Sperren, Audit und Rücknavigation als kompakte Mobile-Formulare.',
       status: 'Create/Edit',
       icon: Icons.person_add_alt_1_outlined,
       primary: 'User-Formular',
@@ -33,7 +42,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Dashboard',
       title: 'Team Profile',
       route: 'Auth/Dashboard/Teams/Profile',
-      body: 'Team-Hero, Kader, Rollen, Trainings, Dateien, Chatrechte und Join-Status wie mobile Web-App-Detailseite.',
+      body:
+          'Team-Hero, Kader, Rollen, Trainings, Dateien, Chatrechte und Join-Status wie mobile Web-App-Detailseite.',
       status: 'Show',
       icon: Icons.groups_outlined,
       primary: 'Team ansehen',
@@ -43,7 +53,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Dashboard',
       title: 'Badge Show / User Index',
       route: 'Auth/Dashboard/Badges/Show, UserIndex',
-      body: 'Badge-Detail, Fortschritt, Regeln, Datenschutz, User-Badges und Leaderboard-Teilzustand als native Karten.',
+      body:
+          'Badge-Detail, Fortschritt, Regeln, Datenschutz, User-Badges und Leaderboard-Teilzustand als native Karten.',
       status: 'Detail',
       icon: Icons.workspace_premium_outlined,
       primary: 'Badge öffnen',
@@ -53,7 +64,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Dashboard',
       title: 'Blog Categories',
       route: 'Auth/Dashboard/Blogs/Categories',
-      body: 'Kategorieverwaltung, Sichtbarkeit, Reihenfolge, Slug, Moderationsstatus und Public Preview für Editorial Admins.',
+      body:
+          'Kategorieverwaltung, Sichtbarkeit, Reihenfolge, Slug, Moderationsstatus und Public Preview für Editorial Admins.',
       status: 'Admin UI',
       icon: Icons.category_outlined,
       primary: 'Kategorie bearbeiten',
@@ -63,7 +75,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Commerce',
       title: 'Cart / Checkout / BankTransfer',
       route: 'Commerce/Cart, BankTransfer, Subscriptions/BankTransfer',
-      body: 'Warenkorb, Zahlungsart, Bankdaten, Verwendungszweck, Rechnungsstatus und Rückkehr zur Bestellung mobil abbilden.',
+      body:
+          'Warenkorb, Zahlungsart, Bankdaten, Verwendungszweck, Rechnungsstatus und Rückkehr zur Bestellung mobil abbilden.',
       status: 'Checkout',
       icon: Icons.shopping_cart_outlined,
       primary: 'Checkout öffnen',
@@ -73,7 +86,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Commerce',
       title: 'Product Show / Order Status',
       route: 'Commerce/ProductShow, Guest/MarketplaceOrderStatus',
-      body: 'Produktdetail, Varianten, Anbieter, Wunschliste, Bestellung, Status, Zahlungshinweis und Support-CTA.',
+      body:
+          'Produktdetail, Varianten, Anbieter, Wunschliste, Bestellung, Status, Zahlungshinweis und Support-CTA.',
       status: 'Status',
       icon: Icons.inventory_2_outlined,
       primary: 'Produktdetail',
@@ -83,7 +97,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Commerce',
       title: 'Provider Show / Wishlist',
       route: 'Guest/MarketplaceProviderShow, Wishlist',
-      body: 'Anbieterprofil, Bewertungen, Produkte, Kontakt, Merkliste, Datenschutz und Public-Kaufstrecke.',
+      body:
+          'Anbieterprofil, Bewertungen, Produkte, Kontakt, Merkliste, Datenschutz und Public-Kaufstrecke.',
       status: 'Public Shop',
       icon: Icons.storefront_outlined,
       primary: 'Provider',
@@ -93,7 +108,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Training',
       title: 'Event Show / Attendance',
       route: 'Auth/Dashboard/Events/Show',
-      body: 'Eventdetail, Teilnahme, Abmeldung, Warteliste, Guardian-Gate, Kalender und Team-/Vereinskontext.',
+      body:
+          'Eventdetail, Teilnahme, Abmeldung, Warteliste, Guardian-Gate, Kalender und Team-/Vereinskontext.',
       status: 'Event',
       icon: Icons.event_available_outlined,
       primary: 'Teilnahme',
@@ -103,7 +119,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Training',
       title: 'Training Log Create / Show',
       route: 'Training/LogCreate, LogShow',
-      body: 'Training erfassen, Werte prüfen, Medien, Coach-Feedback, Sichtbarkeit und nachtraegliche Detailansicht.',
+      body:
+          'Training erfassen, Werte prüfen, Medien, Coach-Feedback, Sichtbarkeit und nachtraegliche Detailansicht.',
       status: 'Log',
       icon: Icons.edit_calendar_outlined,
       primary: 'Log erstellen',
@@ -113,7 +130,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Training',
       title: 'Training Plan Item Show',
       route: 'Training/PlanItemShow',
-      body: 'Planpunkt, Tagesziel, Uebungen, Satz-/Wiederholungswerte, Notizen, Abhaken und Coach-Kommentar.',
+      body:
+          'Planpunkt, Tagesziel, Uebungen, Satz-/Wiederholungswerte, Notizen, Abhaken und Coach-Kommentar.',
       status: 'Plan',
       icon: Icons.checklist_outlined,
       primary: 'Planpunkt',
@@ -123,7 +141,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Admin',
       title: 'Admin Invoices / Payments',
       route: 'Admin/Invoices, Payments, SubscriptionInvoices',
-      body: 'Rechnungsliste, Zahlungsfilter, Providerstatus, Export, Detailstatus, Mahnung und Korrekturaktion.',
+      body:
+          'Rechnungsliste, Zahlungsfilter, Providerstatus, Export, Detailstatus, Mahnung und Korrekturaktion.',
       status: 'Finance',
       icon: Icons.receipt_long_outlined,
       primary: 'Rechnungen',
@@ -133,7 +152,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Admin',
       title: 'Provider Costs / Operating Contracts',
       route: 'Admin/ProviderCosts, OperatingContracts',
-      body: 'Kostenstellen, Vertrage, Laufzeiten, Warnungen, Verantwortliche und Admin-Review als mobile Kontrollansicht.',
+      body:
+          'Kostenstellen, Vertrage, Laufzeiten, Warnungen, Verantwortliche und Admin-Review als mobile Kontrollansicht.',
       status: 'Ops',
       icon: Icons.assignment_outlined,
       primary: 'Vertrag',
@@ -143,7 +163,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Public',
       title: 'Learning Course Show / Certificate Verify',
       route: 'Guest/LearningCourseShow, LearningCertificateVerify',
-      body: 'Public Kursdetail, Lektionen, Preis/Freigabe, Zertifikatscode, Ergebnis, Download und Meldung.',
+      body:
+          'Public Kursdetail, Lektionen, Preis/Freigabe, Zertifikatscode, Ergebnis, Download und Meldung.',
       status: 'Public Learning',
       icon: Icons.school_outlined,
       primary: 'Kursdetail',
@@ -153,7 +174,8 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
       area: 'Public',
       title: 'Blog Show / Top Inhalte',
       route: 'Guest/Blog/Show, Top-Inhalte',
-      body: 'Public Artikel, Autorenbox, Share, Related Content, Meldung, SEO-Hinweis und kuratierte Top-Inhalte.',
+      body:
+          'Public Artikel, Autorenbox, Share, Related Content, Meldung, SEO-Hinweis und kuratierte Top-Inhalte.',
       status: 'Public Content',
       icon: Icons.article_outlined,
       primary: 'Artikel',
@@ -165,7 +187,10 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
     return _flows.where((flow) {
       if (flow.area == 'Admin' && !_showAdmin) return false;
       if (flow.area == 'Public' && !_showPublic) return false;
-      if ((flow.status == 'Status' || flow.status == 'Checkout') && !_showStatusPages) return false;
+      if ((flow.status == 'Status' || flow.status == 'Checkout') &&
+          !_showStatusPages) {
+        return false;
+      }
       return flow.area == _area;
     }).toList();
   }
@@ -173,9 +198,11 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
@@ -193,7 +220,11 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
                 showStatusPages: _showStatusPages,
               ),
               const SizedBox(height: 16),
-              _AreaTabs(areas: _areas, active: _area, onChanged: (value) => setState(() => _area = value)),
+              _AreaTabs(
+                areas: _areas,
+                active: _area,
+                onChanged: (value) => setState(() => _area = value),
+              ),
               const SizedBox(height: 16),
               _TogglePanel(
                 showAdmin: _showAdmin,
@@ -208,13 +239,17 @@ class _ExactPageFlowParitySuiteScreenState extends State<ExactPageFlowParitySuit
                 _ExactFlowCard(flow: flow),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Page-Flows für diesen Filter sichtbar.'),
+              if (_visibleFlows.isEmpty)
+                const EmptyPanel(
+                  'Keine Page-Flows für diesen Filter sichtbar.',
+                ),
               const SizedBox(height: 4),
               _ParityNote(
                 onOpen: () => openUiAction(
                   context,
                   title: 'Exact Page Flow Parity',
-                  body: 'Detail-, Create-, Edit-, Show-, Checkout-, BankTransfer- und Statusseiten sind als mobile UI-Flows dokumentiert. Backenddaten werden später per Laravel API verbunden.',
+                  body:
+                      'Detail-, Create-, Edit-, Show-, Checkout-, BankTransfer- und Statusseiten sind als mobile UI-Flows dokumentiert. Backenddaten werden später per Laravel API verbunden.',
                   status: 'Parity',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -249,14 +284,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('WEB PAGE PARITY'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Kleine Seiten, große Wirkung.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Die Web-App hat viele Detail-, Status- und Formularseiten. Diese Suite sorgt dafür, dass sie in Flutter nicht als Nebenprodukt verloren gehen, sondern als eigene Mobile-Flows sichtbar bleiben.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -266,7 +309,10 @@ class _Hero extends StatelessWidget {
               _Metric(value: area, label: 'Aktiver Bereich'),
               _Metric(value: showAdmin ? 'An' : 'Aus', label: 'Admin-Flows'),
               _Metric(value: showPublic ? 'An' : 'Aus', label: 'Public-Flows'),
-              _Metric(value: showStatusPages ? 'An' : 'Aus', label: 'Statusseiten'),
+              _Metric(
+                value: showStatusPages ? 'An' : 'Aus',
+                label: 'Statusseiten',
+              ),
             ],
           ),
         ],
@@ -299,10 +345,21 @@ class _AreaTabs extends StatelessWidget {
                   label: Text(area),
                   selected: active == area,
                   onSelected: (_) => onChanged(area),
-                  selectedColor: AirmiusColors.blue.withValues(alpha: .25),
-                  backgroundColor: AirmiusColors.card,
-                  side: BorderSide(color: active == area ? AirmiusColors.blue : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == area ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  selectedColor: airmiusAccentColor(
+                    context,
+                  ).withValues(alpha: .25),
+                  backgroundColor: airmiusSurfaceSoftColor(context),
+                  side: BorderSide(
+                    color: active == area
+                        ? airmiusAccentColor(context)
+                        : airmiusBorderColor(context),
+                  ),
+                  labelStyle: TextStyle(
+                    color: active == area
+                        ? airmiusTextColor(context)
+                        : airmiusMutedColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             )
@@ -333,11 +390,24 @@ class _TogglePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Flow-Filter',
-      subtitle: 'Später kommen diese Flags aus Rolle, Route, API-Status und Store-Device-Kontext.',
+      subtitle:
+          'Später kommen diese Flags aus Rolle, Route, API-Status und Store-Device-Kontext.',
       children: [
-        _SwitchRow(title: 'Admin-Detailseiten zeigen', value: showAdmin, onChanged: onAdmin),
-        _SwitchRow(title: 'Public-Detailseiten zeigen', value: showPublic, onChanged: onPublic),
-        _SwitchRow(title: 'Checkout- und Statusseiten zeigen', value: showStatusPages, onChanged: onStatus),
+        _SwitchRow(
+          title: 'Admin-Detailseiten zeigen',
+          value: showAdmin,
+          onChanged: onAdmin,
+        ),
+        _SwitchRow(
+          title: 'Public-Detailseiten zeigen',
+          value: showPublic,
+          onChanged: onPublic,
+        ),
+        _SwitchRow(
+          title: 'Checkout- und Statusseiten zeigen',
+          value: showStatusPages,
+          onChanged: onStatus,
+        ),
       ],
     );
   }
@@ -360,14 +430,26 @@ class _SwitchRow extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -381,11 +463,14 @@ class _ExactFlowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = flow.area == 'Admin'
-        ? AirmiusColors.amber
-        : flow.area == 'Commerce'
-            ? AirmiusColors.green
-            : AirmiusColors.blue;
+    final color = airmiusSemanticColor(
+      context,
+      flow.area == 'Admin'
+          ? AirmiusColors.amber
+          : flow.area == 'Commerce'
+          ? AirmiusColors.green
+          : AirmiusColors.blue,
+    );
     return AirmiusPanel(
       borderColor: color.withValues(alpha: .55),
       child: Column(
@@ -409,9 +494,22 @@ class _ExactFlowCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(flow.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      flow.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(flow.route, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      flow.route,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -419,7 +517,14 @@ class _ExactFlowCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(flow.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            flow.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -431,7 +536,8 @@ class _ExactFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.primary,
-                  body: '${flow.title}: ${flow.body}\n\nRoute-Gruppe: ${flow.route}',
+                  body:
+                      '${flow.title}: ${flow.body}\n\nRoute-Gruppe: ${flow.route}',
                   status: flow.status,
                   icon: flow.icon,
                 ),
@@ -443,7 +549,8 @@ class _ExactFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Detailstatus, API-Fehler, Ladezustand, Empty-State, Berechtigung und Rücknavigation für ${flow.route} anzeigen.',
+                  body:
+                      'Detailstatus, API-Fehler, Ladezustand, Empty-State, Berechtigung und Rücknavigation für ${flow.route} anzeigen.',
                   status: 'Detail Flow',
                   icon: Icons.manage_search_outlined,
                 ),
@@ -467,12 +574,24 @@ class _ParityNote extends StatelessWidget {
       title: 'Warum diese Suite wichtig ist',
       subtitle: 'Hauptmodule reichen nicht aus, wenn Detailseiten fehlen.',
       children: [
-        const _NoteLine('Show-Seiten brauchen eigene mobile Statuskarten statt nur Listen-Navigation.'),
-        const _NoteLine('Create/Edit-Seiten brauchen Formularzustand, Fehler, Pflichtfelder und Speichern-CTA.'),
-        const _NoteLine('BankTransfer/Checkout/OrderStatus brauchen klare Zahlungs- und Rückkehrzustaende.'),
-        const _NoteLine('Admin- und Public-Detailseiten bleiben getrennt, aber im gleichen Airmius-Designsystem.'),
+        const _NoteLine(
+          'Show-Seiten brauchen eigene mobile Statuskarten statt nur Listen-Navigation.',
+        ),
+        const _NoteLine(
+          'Create/Edit-Seiten brauchen Formularzustand, Fehler, Pflichtfelder und Speichern-CTA.',
+        ),
+        const _NoteLine(
+          'BankTransfer/Checkout/OrderStatus brauchen klare Zahlungs- und Rückkehrzustaende.',
+        ),
+        const _NoteLine(
+          'Admin- und Public-Detailseiten bleiben getrennt, aber im gleichen Airmius-Designsystem.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -490,9 +609,22 @@ class _NoteLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -500,10 +632,7 @@ class _NoteLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -513,16 +642,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

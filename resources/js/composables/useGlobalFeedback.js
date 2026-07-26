@@ -1,5 +1,6 @@
 ﻿import { router } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const permissionDeniedMessage = 'Du hast dafür keine Berechtigung.'
 const defaultBackendPermissionMessages = new Set([
@@ -9,6 +10,13 @@ const defaultBackendPermissionMessages = new Set([
 ])
 
 export function useGlobalFeedback(page) {
+    const { t, locale, messages } = useI18n()
+    const tx = (key, fallback, values = {}) => {
+        const auto = messages.value?.[locale.value]?.auto?.[key]
+        if (auto) return auto
+        const translated = t(key, values)
+        return translated === key ? fallback : translated
+    }
     const feedbackMessages = ref([])
 
     let feedbackId = 0
@@ -93,7 +101,7 @@ export function useGlobalFeedback(page) {
         const text = String(message || '').trim()
 
         if (defaultBackendPermissionMessages.has(text)) {
-            return permissionDeniedMessage
+            return tx('global_feedback.permission_denied', permissionDeniedMessage)
         }
 
         return text
@@ -103,7 +111,7 @@ export function useGlobalFeedback(page) {
         const values = Object.values(errors || {}).flat()
         const first = values.map(normalizeFeedbackMessage).find((value) => value)
 
-        return first || 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.'
+        return first || tx('global_feedback.generic', 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.')
     }
 
     const showFlashFeedback = (flash = {}) => {
@@ -121,14 +129,14 @@ export function useGlobalFeedback(page) {
     }
 
     const httpErrorMessage = (status) => {
-        if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
-        if (status === 403) return permissionDeniedMessage
-        if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
-        if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
-        if (status === 422) return 'Bitte prüfe die Eingaben.'
-        if (status >= 500) return 'Serverfehler. Bitte versuche es gleich erneut.'
+        if (status === 401) return tx('global_feedback.session_expired', 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.')
+        if (status === 403) return tx('global_feedback.permission_denied', permissionDeniedMessage)
+        if (status === 404) return tx('global_feedback.not_found', 'Der angeforderte Inhalt wurde nicht gefunden.')
+        if (status === 419) return tx('global_feedback.session_reload', 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.')
+        if (status === 422) return tx('global_feedback.validation', 'Bitte prüfe die Eingaben.')
+        if (status >= 500) return tx('global_feedback.server', 'Serverfehler. Bitte versuche es gleich erneut.')
 
-        return 'Aktion konnte nicht abgeschlossen werden.'
+        return tx('global_feedback.action_failed', 'Aktion konnte nicht abgeschlossen werden.')
     }
 
     const installGlobalFeedback = () => {
@@ -149,7 +157,7 @@ export function useGlobalFeedback(page) {
 
         stopInertiaException = router.on('exception', (event) => {
             event.preventDefault()
-            addFeedback('error', 'Unerwarteter Fehler. Bitte versuche es erneut.')
+            addFeedback('error', tx('global_feedback.unexpected', 'Unerwarteter Fehler. Bitte versuche es erneut.'))
         })
     }
 

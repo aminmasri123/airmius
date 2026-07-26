@@ -17,7 +17,11 @@ const props = defineProps({
     visuals: { type: Object, default: () => ({}) },
 })
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const editingPlanId = ref(null)
 const editForms = ref({})
 const deliveryForms = ref({})
@@ -75,39 +79,40 @@ const shippingAddressForm = useForm({
 const tabs = computed(() => [
     {
         id: 'payments',
-        label: 'Zahlungen',
+        label: tx('Zahlungen', 'Zahlungen'),
         icon: 'las la-receipt',
         count: props.summary.pendingPayments || 0,
     },
     {
         id: 'plans',
-        label: 'Pläne',
+        label: tx('Pläne', 'Pläne'),
         icon: 'las la-box-open',
         count: props.summary.plans || 0,
     },
     {
         id: 'deliveries',
-        label: 'Lieferungen',
+        label: tx('Lieferungen', 'Lieferungen'),
         icon: 'las la-shipping-fast',
         count: props.summary.plannedDeliveries || 0,
     },
     {
         id: 'visuals',
-        label: 'Bilder',
+        label: tx('Bilder', 'Bilder'),
         icon: 'las la-image',
         count: null,
     },
 ])
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
 
 const formatDate = (value) => {
-    if (!value) return 'Noch nicht gesetzt'
+    if (!value) return tx('Noch nicht gesetzt', 'Noch nicht gesetzt')
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -120,37 +125,11 @@ const shippingAddressLine = (address) => [
     [address?.state, address?.country].filter(Boolean).join(', '),
 ].filter(Boolean).join(', ')
 
-const statusLabel = (status) => ({
-    pending_payment: 'Zahlung offen',
-    active: 'Aktiv',
-    cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
-    paused: 'Pausiert',
-    payment_paused: 'Zahlung pausiert',
-    cancelled: 'Abgebrochen',
-    planned: 'Geplant',
-    preparing: 'In Vorbereitung',
-    shipped: 'Versendet',
-    delivered: 'Geliefert',
-})[status] || status || 'Unbekannt'
+const statusLabel = (status) => tx(`outfit_workspace.status.${status}`, status || 'Unbekannt')
 
-const issueTypeLabel = (type) => ({
-    exchange: 'Umtausch',
-    return: 'Retoure',
-    damaged: 'Beschaedigt',
-    missing_item: 'Artikel fehlt',
-    wrong_item: 'Falscher Artikel',
-    other: 'Sonstiges',
-})[type] || type || '-'
+const issueTypeLabel = (type) => tx(`outfit_workspace.issue_types.${type}`, type || '-')
 
-const issueStatusLabel = (status) => ({
-    open: 'Offen',
-    reviewing: 'In Prüfung',
-    approved: 'Freigegeben',
-    return_waiting: 'Rücksendung offen',
-    replacement_preparing: 'Ersatz wird vorbereitet',
-    resolved: 'Geloest',
-    rejected: 'Abgeschlossen',
-})[status] || status || '-'
+const issueStatusLabel = (status) => tx(`outfit_workspace.issue_status.${status}`, status || '-')
 
 const paymentStatusLabel = (status) => ({
     pending: 'Nicht bezahlt',
@@ -159,11 +138,7 @@ const paymentStatusLabel = (status) => ({
     cancelled: 'Abgebrochen',
 })[status] || status || 'Unbekannt'
 
-const paymentProviderLabel = (provider) => ({
-    bank_transfer: 'Überweisung',
-    stripe: 'Karte / Stripe',
-    paypal: 'PayPal',
-})[provider] || provider || 'Nicht gesetzt'
+const paymentProviderLabel = (provider) => tx(`outfit_workspace.payment.${provider}`, provider === 'stripe' ? 'Karte / Stripe' : provider || 'Nicht gesetzt')
 
 const badgeClass = (status) => ({
     pending: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
@@ -342,9 +317,9 @@ const savePlan = (plan) => {
 
 const destroyPlan = async (plan) => {
     const confirmed = await confirmDialog({
-        title: 'Plan löschen oder deaktivieren',
-        message: `Soll der Plan "${plan.name}" wirklich gelöscht oder deaktiviert werden?`,
-        confirmLabel: 'Fortfahren',
+        title: tx('outfit_admin.plan_delete_title', 'Plan löschen oder deaktivieren'),
+        message: tx('outfit_admin.plan_delete_message', `Soll der Plan "${plan.name}" wirklich gelöscht oder deaktiviert werden?`, { name: plan.name }),
+        confirmLabel: tx('outfit_admin.continue', 'Fortfahren'),
         danger: true,
     })
 
@@ -526,9 +501,9 @@ const markPaymentOpen = async (subscription) => {
     if (!subscription) return
 
     const confirmed = await confirmDialog({
-        title: 'Zahlung als offen markieren',
-        message: 'Dieses laufende Abo als offene Zahlung markieren? Danach startet die Mahnlogik automatisch.',
-        confirmLabel: 'Als offen markieren',
+        title: tx('outfit_admin.mark_unpaid_title', 'Zahlung als offen markieren'),
+        message: tx('outfit_admin.mark_unpaid_message', 'Dieses laufende Abo als offene Zahlung markieren? Danach startet die Mahnlogik automatisch.'),
+        confirmLabel: tx('outfit_admin.mark_unpaid_confirm', 'Als offen markieren'),
     })
 
     if (!confirmed) return
@@ -899,7 +874,7 @@ const deleteSubscription = () => {
             </div>
 
             <div v-else class="mt-5 rounded-lg border border-border bg-inputBg p-6 text-center text-secondary">
-                Noch keine Outfit-Lieferungen vorhanden.
+                {{ tx('Noch keine Outfit-Lieferungen vorhanden.', 'Noch keine Outfit-Lieferungen vorhanden.') }}
             </div>
         </section>
 
@@ -1061,7 +1036,7 @@ const deleteSubscription = () => {
             </div>
 
             <div v-else class="mt-5 rounded-lg border border-border bg-inputBg p-6 text-center text-secondary">
-                Noch keine Outfit-Abo-Anfragen vorhanden.
+                {{ tx('Noch keine Outfit-Abo-Anfragen vorhanden.', 'Noch keine Outfit-Abo-Anfragen vorhanden.') }}
             </div>
         </section>
 

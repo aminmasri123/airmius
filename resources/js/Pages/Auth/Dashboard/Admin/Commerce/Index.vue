@@ -2,8 +2,10 @@
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import { useAdminCommerceWorkspace } from "@/composables/useAdminCommerceWorkspace"
 import { Head } from "@inertiajs/vue3"
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+const { t } = useI18n()
 
 const props = defineProps({
     summary: { type: Object, default: () => ({}) },
@@ -165,14 +167,14 @@ const {
 </script>
 
 <template>
-    <Head title="Commerce" />
+    <Head :title="t('Commerce')" />
 
     <div class="space-y-6">
         <section class="surface-card p-5">
-            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Business</p>
-            <h1 class="mt-1 text-2xl font-bold text-primary">Commerce-Zentrale</h1>
+            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ t('Business') }}</p>
+            <h1 class="mt-1 text-2xl font-bold text-primary">{{ t('Commerce-Zentrale') }}</h1>
             <p class="mt-2 max-w-3xl text-sm text-secondary">
-                Coupons, Add-ons, Marketplace, Ads und Umsatzkennzahlen für die Beta zentral vorbereiten.
+                {{ t('Coupons, Add-ons, Marketplace, Ads und Umsatzkennzahlen für die Beta zentral vorbereiten.') }}
             </p>
             <div v-if="page.props.flash?.success" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {{ page.props.flash.success }}
@@ -2074,4 +2076,3 @@ const {
         </div>
     </div>
 </template>
-

@@ -1,4 +1,6 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -8,9 +10,19 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'application_screen.dart';
+import 'chat_detail_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
+import 'club_announcement_screen.dart';
+import 'club_survey_screen.dart';
+import 'global_search_screen.dart';
 import 'team_detail_screen.dart';
+
+String _safeClubError(BuildContext context, Object error) {
+  return error is AirmiusApiException
+      ? error.userMessage
+      : AirmiusScope.of(context).t('common.errorDetails');
+}
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({
@@ -45,11 +57,26 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return PageFrame(
-      title: 'Vereine & Teams',
-      subtitle: 'Verwalte Vereinsstruktur, Teams, Rollen und Einladungen',
+      title: t('clubs.workspace.title'),
+      subtitle: t('clubs.workspace.subtitle'),
       showHeader: true,
-      trailing: _CreateClubButton(onPressed: _openCreateClub),
+      trailing: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
+            ),
+            icon: Icon(Icons.search_outlined, size: 18),
+            label: Text(t('clubs.find')),
+          ),
+          _CreateClubButton(onPressed: _openCreateClub),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -57,46 +84,91 @@ class _ClubsScreenState extends State<ClubsScreen> {
             future: _clubsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _ClubWorkspaceNav(canManageClubs: false),
-                  SizedBox(height: 24),
-                  AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue)))),
-                ]);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ClubWorkspaceNav(canManageClubs: false),
+                    SizedBox(height: 24),
+                    AirmiusPanel(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(18),
+                          child: CircularProgressIndicator(
+                            color: airmiusAccentColor(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
               }
               if (snapshot.hasError) {
-                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const _ClubWorkspaceNav(canManageClubs: false),
-                  const SizedBox(height: 24),
-                  AirmiusPanel(
-                    borderColor: AirmiusColors.red.withValues(alpha: .5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text('Vereine konnten nicht geladen werden.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 8),
-                        Text('${snapshot.error}', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-                        const SizedBox(height: 12),
-                        AirmiusButton(
-                          label: 'Erneut laden',
-                          icon: Icons.refresh_outlined,
-                          secondary: true,
-                          onPressed: () => setState(() {
-                            _clubsFuture = _loadClubs();
-                          }),
-                        ),
-                      ],
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _ClubWorkspaceNav(canManageClubs: false),
+                    const SizedBox(height: 24),
+                    AirmiusPanel(
+                      borderColor: Theme.of(
+                        context,
+                      ).colorScheme.error.withValues(alpha: .5),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            t('clubs.loadFailed'),
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            snapshot.error is AirmiusApiException
+                                ? (snapshot.error! as AirmiusApiException)
+                                      .userMessage
+                                : t('common.errorDetails'),
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          AirmiusButton(
+                            label: t('clubs.reload'),
+                            icon: Icons.refresh_outlined,
+                            secondary: true,
+                            onPressed: () => setState(() {
+                              _clubsFuture = _loadClubs();
+                            }),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ]);
+                  ],
+                );
               }
               final clubs = snapshot.data ?? const <ClubSummary>[];
               final canManageClubs = clubs.any((club) => club.canManage);
               if (clubs.isEmpty) {
-                return const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _ClubWorkspaceNav(canManageClubs: false),
-                  SizedBox(height: 24),
-                  AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Keine Vereine gefunden.', style: TextStyle(color: AirmiusColors.muted))))),
-                ]);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _ClubWorkspaceNav(canManageClubs: false),
+                    const SizedBox(height: 24),
+                    AirmiusPanel(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
+                          child: Text(
+                            t('clubs.empty'),
+                            style: TextStyle(color: airmiusMutedColor(context)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,7 +179,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     _ClubCard(
                       club: entry.$2,
                       showManageActions: entry.$2.canManage,
-                      requested: widget.requestedClubIds.contains(entry.$2.id) || entry.$2.hasPendingMembershipRequest,
+                      requested:
+                          widget.requestedClubIds.contains(entry.$2.id) ||
+                          entry.$2.hasPendingMembershipRequest,
                       onRequest: widget.onRequestClub,
                       onWithdraw: widget.onWithdrawClub,
                       onReload: () => setState(() {
@@ -138,7 +212,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
         _clubsFuture = _loadClubs();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verein registriert. Der Antrag wartet jetzt auf Pruefung.')),
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('clubs.createdPending')),
+        ),
       );
     }
   }
@@ -148,7 +224,8 @@ class _ClubCreateWizardScreen extends StatefulWidget {
   const _ClubCreateWizardScreen();
 
   @override
-  State<_ClubCreateWizardScreen> createState() => _ClubCreateWizardScreenState();
+  State<_ClubCreateWizardScreen> createState() =>
+      _ClubCreateWizardScreenState();
 }
 
 class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
@@ -186,12 +263,26 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
+    _sportsFuture ??= AirmiusServicesScope.of(
+      context,
+    ).repositories.sports.sports().then((page) => page.items);
   }
 
   @override
   void dispose() {
-    for (final controller in [_name, _sportType, _officialNumber, _city, _postalCode, _state, _street, _houseNumber, _accountHolder, _iban, _bic]) {
+    for (final controller in [
+      _name,
+      _sportType,
+      _officialNumber,
+      _city,
+      _postalCode,
+      _state,
+      _street,
+      _houseNumber,
+      _accountHolder,
+      _iban,
+      _bic,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -199,7 +290,9 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
 
   void _next() {
     if (_step == 1 && _name.text.trim().isEmpty) {
-      setState(() => _notice = 'Bitte gib einen Vereinsnamen ein.');
+      setState(
+        () => _notice = AirmiusScope.of(context).t('clubs.wizard.nameRequired'),
+      );
       return;
     }
     setState(() {
@@ -224,7 +317,7 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
     if (_name.text.trim().isEmpty) {
       setState(() {
         _step = 1;
-        _notice = 'Bitte gib einen Vereinsnamen ein.';
+        _notice = AirmiusScope.of(context).t('clubs.wizard.nameRequired');
       });
       return;
     }
@@ -239,7 +332,9 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
         'name': _name.text.trim(),
         'sport_type': _selectedSportSlug ?? _nullable(_sportType.text),
         'is_official': _official,
-        'official_club_number': _official ? _nullable(_officialNumber.text) : null,
+        'official_club_number': _official
+            ? _nullable(_officialNumber.text)
+            : null,
         'country': _country,
         'street': _nullable(_street.text),
         'house_number': _nullable(_houseNumber.text),
@@ -256,7 +351,12 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
       });
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      if (mounted) setState(() => _notice = 'Verein konnte nicht gespeichert werden. $error');
+      if (mounted) {
+        setState(
+          () => _notice =
+              '${AirmiusScope.of(context).t('clubs.dataSaveFailed')}: ${_safeClubError(context, error)}',
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -265,7 +365,7 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -302,94 +402,187 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
   }
 
   Widget _basisdaten() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _WizardIntro(title: 'Basisdaten', body: 'Name, Sportart und Land des Vereins. Nach dem Absenden prueft Airmius den Antrag.'),
-      const SizedBox(height: 14),
-      _WizardField(controller: _name, label: 'Vereinsname', placeholder: 'Vereinsname'),
-      const SizedBox(height: 12),
-      FutureBuilder<List<AirmiusSport>>(
-        future: _sportsFuture,
-        builder: (context, snapshot) {
-          return _SportAutocompleteField(
-            controller: _sportType,
-            sports: snapshot.data ?? const [],
-            loading: snapshot.connectionState == ConnectionState.waiting,
-            onTextChanged: () => _selectedSportSlug = null,
-            onSelected: (sport) {
-              _selectedSportSlug = sport.slug.isNotEmpty ? sport.slug : sport.name;
-              _sportType.text = sport.name;
-            },
-          );
-        },
-      ),
-      const SizedBox(height: 12),
-      _OfficialTile(value: _official, onChanged: (value) => setState(() => _official = value)),
-      if (_official) ...[
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _WizardIntro(
+          title: t('clubs.wizard.basicData'),
+          body: t('clubs.wizard.basicDataBody'),
+        ),
+        const SizedBox(height: 14),
+        _WizardField(
+          controller: _name,
+          label: t('clubs.wizard.clubName'),
+          placeholder: t('clubs.wizard.clubName'),
+        ),
         const SizedBox(height: 12),
-        _WizardField(controller: _officialNumber, label: 'Vereinsnummer zur Pruefung', placeholder: 'z. B. Vereinsregister- oder Verbandsnummer'),
+        FutureBuilder<List<AirmiusSport>>(
+          future: _sportsFuture,
+          builder: (context, snapshot) {
+            return _SportAutocompleteField(
+              controller: _sportType,
+              sports: snapshot.data ?? const [],
+              loading: snapshot.connectionState == ConnectionState.waiting,
+              onTextChanged: () => _selectedSportSlug = null,
+              onSelected: (sport) {
+                _selectedSportSlug = sport.slug.isNotEmpty
+                    ? sport.slug
+                    : sport.name;
+                _sportType.text = sport.name;
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _OfficialTile(
+          value: _official,
+          onChanged: (value) => setState(() => _official = value),
+        ),
+        if (_official) ...[
+          const SizedBox(height: 12),
+          _WizardField(
+            controller: _officialNumber,
+            label: t('clubs.wizard.officialNumber'),
+            placeholder: t('clubs.wizard.officialNumberHint'),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _CountryField(
+          value: _country,
+          countries: _countries,
+          onChanged: (value) => setState(() => _country = value),
+        ),
       ],
-      const SizedBox(height: 12),
-      _CountryField(value: _country, countries: _countries, onChanged: (value) => setState(() => _country = value)),
-    ]);
+    );
   }
 
   Widget _adresse() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _WizardIntro(title: 'Adresse & Bankkonto', body: 'Optional: Standort und Bankkonto fuer Mitglieder-Ueberweisungen eintragen.'),
-      const SizedBox(height: 14),
-      _WizardField(controller: _city, placeholder: 'Stadt'),
-      const SizedBox(height: 12),
-      _WizardField(controller: _postalCode, placeholder: 'PLZ'),
-      const SizedBox(height: 12),
-      _WizardField(controller: _state, placeholder: 'Region'),
-      const SizedBox(height: 12),
-      _WizardField(controller: _street, placeholder: 'Strasse'),
-      const SizedBox(height: 12),
-      _WizardField(controller: _houseNumber, placeholder: 'Hausnummer'),
-      const SizedBox(height: 14),
-      AirmiusPanel(
-        padding: const EdgeInsets.all(14),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('BANKKONTO FUER VEREINSRECHNUNGEN', style: TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          const Text('Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Ueberweisung zahlen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
-          const SizedBox(height: 12),
-          _WizardField(controller: _accountHolder, placeholder: 'Kontoinhaber'),
-          const SizedBox(height: 12),
-          _WizardField(controller: _iban, placeholder: 'IBAN'),
-          const SizedBox(height: 12),
-          _WizardField(controller: _bic, placeholder: 'BIC'),
-        ]),
-      ),
-    ]);
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _WizardIntro(
+          title: t('clubs.wizard.addressBank'),
+          body: t('clubs.wizard.addressBankBody'),
+        ),
+        const SizedBox(height: 14),
+        _WizardField(controller: _city, placeholder: t('clubs.city')),
+        const SizedBox(height: 12),
+        _WizardField(
+          controller: _postalCode,
+          placeholder: t('clubs.postalCode'),
+        ),
+        const SizedBox(height: 12),
+        _WizardField(controller: _state, placeholder: t('clubs.wizard.region')),
+        const SizedBox(height: 12),
+        _WizardField(
+          controller: _street,
+          placeholder: t('clubs.wizard.street'),
+        ),
+        const SizedBox(height: 12),
+        _WizardField(
+          controller: _houseNumber,
+          placeholder: t('clubs.wizard.houseNumber'),
+        ),
+        const SizedBox(height: 14),
+        AirmiusPanel(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('clubs.wizard.bankAccount').toUpperCase(),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                t('clubs.wizard.bankAccountBody'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _WizardField(
+                controller: _accountHolder,
+                placeholder: t('clubs.wizard.accountHolder'),
+              ),
+              const SizedBox(height: 12),
+              _WizardField(controller: _iban, placeholder: 'IBAN'),
+              const SizedBox(height: 12),
+              _WizardField(controller: _bic, placeholder: 'BIC'),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _pruefen() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const _WizardIntro(title: 'Pruefen', body: 'Kontrolliere die Angaben vor dem Absenden. Der Verein wird als Antrag gespeichert.'),
-      const SizedBox(height: 14),
-      AirmiusPanel(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          _ReviewLine(label: 'Verein', value: _name.text),
-          _ReviewLine(label: 'Sportart', value: _sportType.text),
-          _ReviewLine(label: 'Offizielle Pruefung', value: _official ? 'Beantragt' : 'Nicht beantragt'),
-          if (_official) _ReviewLine(label: 'Vereinsnummer zur Pruefung', value: _officialNumber.text),
-          const _ReviewLine(label: 'Status nach Absenden', value: 'Wartet auf Pruefung'),
-          _ReviewLine(label: 'Land', value: _country),
-          _ReviewLine(label: 'Adresse', value: '${_street.text} ${_houseNumber.text}, ${_postalCode.text} ${_city.text}'),
-          _ReviewLine(label: 'Region', value: _state.text),
-          _ReviewLine(label: 'Kontoinhaber', value: _accountHolder.text),
-          _ReviewLine(label: 'IBAN', value: _iban.text),
-          _ReviewLine(label: 'BIC', value: _bic.text, last: true),
-        ]),
-      ),
-    ]);
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _WizardIntro(
+          title: t('clubs.wizard.review'),
+          body: t('clubs.wizard.reviewBody'),
+        ),
+        const SizedBox(height: 14),
+        AirmiusPanel(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ReviewLine(label: t('clubs.club'), value: _name.text),
+              _ReviewLine(label: t('clubs.sport'), value: _sportType.text),
+              _ReviewLine(
+                label: t('clubs.wizard.officialReview'),
+                value: _official
+                    ? t('clubs.wizard.requested')
+                    : t('clubs.wizard.notRequested'),
+              ),
+              if (_official)
+                _ReviewLine(
+                  label: t('clubs.wizard.officialNumber'),
+                  value: _officialNumber.text,
+                ),
+              _ReviewLine(
+                label: t('clubs.wizard.statusAfterSubmit'),
+                value: t('clubs.awaitingReview'),
+              ),
+              _ReviewLine(label: t('clubs.wizard.country'), value: _country),
+              _ReviewLine(
+                label: t('clubs.wizard.address'),
+                value:
+                    '${_street.text} ${_houseNumber.text}, ${_postalCode.text} ${_city.text}',
+              ),
+              _ReviewLine(label: t('clubs.wizard.region'), value: _state.text),
+              _ReviewLine(
+                label: t('clubs.wizard.accountHolder'),
+                value: _accountHolder.text,
+              ),
+              _ReviewLine(label: 'IBAN', value: _iban.text),
+              _ReviewLine(label: 'BIC', value: _bic.text, last: true),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
 class _WizardHeader extends StatelessWidget {
-  const _WizardHeader({required this.step, required this.onClose, required this.onStep});
+  const _WizardHeader({
+    required this.step,
+    required this.onClose,
+    required this.onStep,
+  });
 
   final int step;
   final VoidCallback? onClose;
@@ -397,35 +590,98 @@ class _WizardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
-      decoration: const BoxDecoration(color: AirmiusColors.card, border: Border(bottom: BorderSide(color: AirmiusColors.border))),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        border: Border(bottom: BorderSide(color: airmiusBorderColor(context))),
+      ),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Verein registrieren', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 4),
-              Text('Schritt $step von 3', style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, fontWeight: FontWeight.w700)),
-            ]),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t('clubs.register'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${t('clubs.wizard.step')} $step ${t('clubs.wizard.of')} 3',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: t('clubs.wizard.close'),
+                onPressed: onClose,
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: airmiusMutedColor(context),
+                ),
+              ),
+            ],
           ),
-          IconButton(tooltip: 'Schliessen', onPressed: onClose, icon: const Icon(Icons.close_rounded, color: AirmiusColors.muted)),
-        ]),
-        const SizedBox(height: 14),
-        Row(children: [
-          Expanded(child: _StepPill(label: 'Basisdaten', active: step == 1, done: step > 1, onTap: () => onStep(1))),
-          const SizedBox(width: 8),
-          Expanded(child: _StepPill(label: 'Adresse', active: step == 2, done: step > 2, onTap: () => onStep(2))),
-          const SizedBox(width: 8),
-          Expanded(child: _StepPill(label: 'Pruefen', active: step == 3, done: false, onTap: () => onStep(3))),
-        ]),
-      ]),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _StepPill(
+                  label: t('clubs.wizard.basicData'),
+                  active: step == 1,
+                  done: step > 1,
+                  onTap: () => onStep(1),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StepPill(
+                  label: t('clubs.wizard.address'),
+                  active: step == 2,
+                  done: step > 2,
+                  onTap: () => onStep(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StepPill(
+                  label: t('clubs.wizard.review'),
+                  active: step == 3,
+                  done: false,
+                  onTap: () => onStep(3),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _StepPill extends StatelessWidget {
-  const _StepPill({required this.label, required this.active, required this.done, required this.onTap});
+  const _StepPill({
+    required this.label,
+    required this.active,
+    required this.done,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -441,17 +697,40 @@ class _StepPill extends StatelessWidget {
         height: 34,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? AirmiusColors.blue : done ? AirmiusColors.green.withValues(alpha: .16) : AirmiusColors.input,
+          color: active
+              ? airmiusAccentColor(context)
+              : done
+              ? Theme.of(context).colorScheme.secondary.withValues(alpha: .16)
+              : airmiusInputColor(context),
           borderRadius: BorderRadius.circular(99),
         ),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? Colors.white : done ? AirmiusColors.green : AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w900)),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: active
+                ? airmiusOnColor(airmiusAccentColor(context))
+                : done
+                ? Theme.of(context).colorScheme.secondary
+                : airmiusMutedColor(context),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _WizardFooter extends StatelessWidget {
-  const _WizardFooter({required this.step, required this.saving, required this.onBack, required this.onNext, required this.onSave});
+  const _WizardFooter({
+    required this.step,
+    required this.saving,
+    required this.onBack,
+    required this.onNext,
+    required this.onSave,
+  });
 
   final int step;
   final bool saving;
@@ -461,26 +740,54 @@ class _WizardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(color: AirmiusColors.card, border: Border(top: BorderSide(color: AirmiusColors.border))),
-      child: Row(children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: step == 1 || saving ? null : onBack,
-            style: OutlinedButton.styleFrom(foregroundColor: AirmiusColors.muted, side: const BorderSide(color: AirmiusColors.border), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: const Text('Zurueck', style: TextStyle(fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        border: Border(top: BorderSide(color: airmiusBorderColor(context))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: step == 1 || saving ? null : onBack,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: airmiusMutedColor(context),
+                side: BorderSide(color: airmiusBorderColor(context)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                t('clubs.wizard.back'),
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: FilledButton(
-            onPressed: saving ? null : (step < 3 ? onNext : onSave),
-            style: FilledButton.styleFrom(backgroundColor: AirmiusColors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-            child: Text(saving ? 'Speichert...' : (step < 3 ? 'Weiter' : 'Speichern'), style: const TextStyle(fontWeight: FontWeight.w900)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: FilledButton(
+              onPressed: saving ? null : (step < 3 ? onNext : onSave),
+              style: FilledButton.styleFrom(
+                backgroundColor: airmiusAccentColor(context),
+                foregroundColor: airmiusOnColor(airmiusAccentColor(context)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                saving
+                    ? t('clubs.saving')
+                    : (step < 3 ? t('clubs.wizard.next') : t('clubs.save')),
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -493,16 +800,33 @@ class _WizardIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          body,
+          style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+        ),
+      ],
+    );
   }
 }
 
 class _WizardField extends StatelessWidget {
-  const _WizardField({required this.controller, this.label, required this.placeholder});
+  const _WizardField({
+    required this.controller,
+    this.label,
+    required this.placeholder,
+  });
 
   final TextEditingController controller;
   final String? label;
@@ -510,17 +834,30 @@ class _WizardField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (label != null) ...[
-        Text(label!, style: const TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label != null) ...[
+          Text(
+            label!,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+        TextField(
+          controller: controller,
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w800,
+          ),
+          decoration: InputDecoration(hintText: placeholder),
+        ),
       ],
-      TextField(
-        controller: controller,
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-        decoration: InputDecoration(hintText: placeholder),
-      ),
-    ]);
+    );
   }
 }
 
@@ -541,94 +878,146 @@ class _SportAutocompleteField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     if (sports.isEmpty) {
       return _WizardField(
         controller: controller,
-        label: 'Sportart',
-        placeholder: loading ? 'Sportarten werden geladen...' : 'Sportart suchen',
+        label: t('clubs.sport'),
+        placeholder: loading
+            ? t('teamDetail.sportsLoading')
+            : t('teamDetail.searchSport'),
       );
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Sportart', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      Autocomplete<AirmiusSport>(
-        initialValue: TextEditingValue(text: controller.text),
-        displayStringForOption: (sport) => sport.name,
-        optionsBuilder: (value) {
-          final query = value.text.trim().toLowerCase();
-          final options = query.isEmpty
-              ? sports
-              : sports.where((sport) {
-                  final name = sport.name.toLowerCase();
-                  final slug = sport.slug.toLowerCase();
-                  return name.contains(query) || slug.contains(query);
-                });
-          return options.take(10);
-        },
-        onSelected: onSelected,
-        fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
-          if (textController.text.isEmpty && controller.text.isNotEmpty) {
-            textController.text = controller.text;
-          }
-          return TextField(
-            controller: textController,
-            focusNode: focusNode,
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-            decoration: const InputDecoration(
-              hintText: 'Sportart suchen',
-              suffixIcon: Icon(Icons.search, color: AirmiusColors.muted),
-            ),
-            onChanged: (value) {
-              controller.text = value;
-              onTextChanged();
-            },
-          );
-        },
-        optionsViewBuilder: (context, onSelected, options) {
-          final items = options.toList();
-          final menuWidth = (MediaQuery.of(context).size.width - 32).clamp(180.0, 520.0).toDouble();
-          return Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: menuWidth,
-                margin: const EdgeInsets.only(top: 6),
-                constraints: const BoxConstraints(maxHeight: 260),
-                decoration: BoxDecoration(
-                  color: AirmiusColors.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AirmiusColors.border),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .35), blurRadius: 18, offset: const Offset(0, 10))],
-                ),
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  shrinkWrap: true,
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1, color: AirmiusColors.border),
-                  itemBuilder: (context, index) {
-                    final sport = items[index];
-                    return ListTile(
-                      dense: true,
-                      onTap: () => onSelected(sport),
-                      leading: const Icon(Icons.sports_outlined, color: AirmiusColors.blue),
-                      title: Text(sport.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                      subtitle: sport.slug.isEmpty ? null : Text(sport.slug, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
-                    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('clubs.sport'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Autocomplete<AirmiusSport>(
+          initialValue: TextEditingValue(text: controller.text),
+          displayStringForOption: (sport) => sport.name,
+          optionsBuilder: (value) {
+            final query = value.text.trim().toLowerCase();
+            final options = query.isEmpty
+                ? sports
+                : sports.where((sport) {
+                    final name = sport.name.toLowerCase();
+                    final slug = sport.slug.toLowerCase();
+                    return name.contains(query) || slug.contains(query);
+                  });
+            return options.take(10);
+          },
+          onSelected: onSelected,
+          fieldViewBuilder:
+              (context, textController, focusNode, onFieldSubmitted) {
+                if (textController.text.isEmpty && controller.text.isNotEmpty) {
+                  textController.text = controller.text;
+                }
+                return TextField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: t('teamDetail.searchSport'),
+                    suffixIcon: Icon(
+                      Icons.search,
+                      color: airmiusMutedColor(context),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    controller.text = value;
+                    onTextChanged();
                   },
+                );
+              },
+          optionsViewBuilder: (context, onSelected, options) {
+            final items = options.toList();
+            final menuWidth = (MediaQuery.of(context).size.width - 32)
+                .clamp(180.0, 520.0)
+                .toDouble();
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: menuWidth,
+                  margin: const EdgeInsets.only(top: 6),
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  decoration: BoxDecoration(
+                    color: airmiusSurfaceColor(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: airmiusBorderColor(context)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(
+                          context,
+                        ).shadowColor.withValues(alpha: .35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shrinkWrap: true,
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: airmiusBorderColor(context)),
+                    itemBuilder: (context, index) {
+                      final sport = items[index];
+                      return ListTile(
+                        dense: true,
+                        onTap: () => onSelected(sport),
+                        leading: Icon(
+                          Icons.sports_outlined,
+                          color: airmiusAccentColor(context),
+                        ),
+                        title: Text(
+                          sport.name,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        subtitle: sport.slug.isEmpty
+                            ? null
+                            : Text(
+                                sport.slug,
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontSize: 12,
+                                ),
+                              ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
-    ]);
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
 class _CountryField extends StatelessWidget {
-  const _CountryField({required this.value, required this.countries, required this.onChanged});
+  const _CountryField({
+    required this.value,
+    required this.countries,
+    required this.onChanged,
+  });
 
   final String value;
   final List<(String, String)> countries;
@@ -636,20 +1025,40 @@ class _CountryField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Land', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      DropdownButtonFormField<String>(
-        initialValue: value,
-        dropdownColor: AirmiusColors.card,
-        decoration: const InputDecoration(),
-        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-        items: [for (final country in countries) DropdownMenuItem(value: country.$1, child: Text(country.$2))],
-        onChanged: (value) {
-          if (value != null) onChanged(value);
-        },
-      ),
-    ]);
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t('clubs.wizard.country'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          dropdownColor: airmiusSurfaceColor(context),
+          decoration: const InputDecoration(),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w800,
+          ),
+          items: [
+            for (final country in countries)
+              DropdownMenuItem(
+                value: country.$1,
+                child: Text(t('clubs.country.${country.$1.toLowerCase()}')),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) onChanged(value);
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -661,28 +1070,77 @@ class _OfficialTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => onChanged(!value),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: value ? AirmiusColors.blue.withValues(alpha: .1) : AirmiusColors.bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: value ? AirmiusColors.blue : AirmiusColors.border)),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(color: value ? AirmiusColors.blue : AirmiusColors.input, borderRadius: BorderRadius.circular(7), border: Border.all(color: value ? AirmiusColors.blue : AirmiusColors.border)),
-            child: value ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+    final t = AirmiusScope.of(context).t;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => onChanged(!value),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: value
+                ? airmiusAccentColor(context).withValues(alpha: .1)
+                : Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: value
+                  ? airmiusAccentColor(context)
+                  : airmiusBorderColor(context),
+            ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Offizielle Pruefung beantragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-              SizedBox(height: 4),
-              Text('Der Verein wird erst nach Admin-Freigabe oeffentlich sichtbar und als offiziell markiert.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
-            ]),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: value
+                      ? airmiusAccentColor(context)
+                      : airmiusInputColor(context),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(
+                    color: value
+                        ? airmiusAccentColor(context)
+                        : airmiusBorderColor(context),
+                  ),
+                ),
+                child: value
+                    ? Icon(
+                        Icons.check,
+                        color: airmiusOnColor(airmiusAccentColor(context)),
+                        size: 16,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t('clubs.wizard.requestOfficialReview'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      t('clubs.wizard.requestOfficialReviewBody'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
     );
   }
@@ -697,14 +1155,31 @@ class _NoticeBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.red.withValues(alpha: .12), borderRadius: BorderRadius.circular(8), border: Border.all(color: AirmiusColors.red.withValues(alpha: .4))),
-      child: Text(text, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w800, height: 1.35)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.error.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.error,
+          fontWeight: FontWeight.w800,
+          height: 1.35,
+        ),
+      ),
     );
   }
 }
 
 class _ReviewLine extends StatelessWidget {
-  const _ReviewLine({required this.label, required this.value, this.last = false});
+  const _ReviewLine({
+    required this.label,
+    required this.value,
+    this.last = false,
+  });
 
   final String label;
   final String value;
@@ -712,14 +1187,26 @@ class _ReviewLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final display = value.trim().isEmpty || value.trim() == ',' ? '-' : value.trim();
+    final display = value.trim().isEmpty || value.trim() == ','
+        ? '-'
+        : value.trim();
     return Padding(
       padding: EdgeInsets.only(bottom: last ? 0 : 10),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.3),
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontSize: 14,
+            height: 1.3,
+          ),
           children: [
-            TextSpan(text: '$label: ', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            TextSpan(
+              text: '$label: ',
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             TextSpan(text: display),
           ],
         ),
@@ -735,13 +1222,17 @@ class _CreateClubButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return FilledButton.icon(
       onPressed: onPressed,
-      icon: const Icon(Icons.add, size: 18),
-      label: const Text('Verein registrieren', style: TextStyle(fontWeight: FontWeight.w900)),
+      icon: Icon(Icons.add, size: 18),
+      label: Text(
+        t('clubs.register'),
+        style: TextStyle(fontWeight: FontWeight.w900),
+      ),
       style: FilledButton.styleFrom(
-        backgroundColor: AirmiusColors.text,
-        foregroundColor: AirmiusColors.header,
+        backgroundColor: airmiusTextColor(context),
+        foregroundColor: airmiusSurfaceColor(context),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -756,6 +1247,7 @@ class _ClubWorkspaceNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
       padding: const EdgeInsets.fromLTRB(14, 14, 12, 12),
       child: Column(
@@ -764,13 +1256,29 @@ class _ClubWorkspaceNav extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('VEREINSBEREICH', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, letterSpacing: .4, fontWeight: FontWeight.w900)),
-                    SizedBox(height: 8),
-                    Text('Vereinsstruktur, Teams, Rollen und Einladungen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.45, fontWeight: FontWeight.w600)),
+                    Text(
+                      t('clubs.workspace.area').toUpperCase(),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        letterSpacing: .4,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      t('clubs.workspace.description'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 14,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -783,9 +1291,14 @@ class _ClubWorkspaceNav extends StatelessWidget {
                 Expanded(
                   child: _WorkspaceTab(
                     icon: Icons.speed_outlined,
-                    label: 'Cockpit',
+                    label: t('clubs.workspace.cockpit'),
                     selected: false,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ClubCockpitScreen(),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -793,7 +1306,7 @@ class _ClubWorkspaceNav extends StatelessWidget {
               Expanded(
                 child: _WorkspaceTab(
                   icon: Icons.account_tree_outlined,
-                  label: 'Vereine & Teams',
+                  label: t('clubs.workspace.title'),
                   selected: true,
                   onTap: () {},
                 ),
@@ -803,9 +1316,14 @@ class _ClubWorkspaceNav extends StatelessWidget {
                 Expanded(
                   child: _WorkspaceTab(
                     icon: Icons.badge_outlined,
-                    label: 'Mitglieder & Finanzen',
+                    label: t('clubs.workspace.membersFinance'),
                     selected: false,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ClubMembershipManagementScreen(),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -818,7 +1336,12 @@ class _ClubWorkspaceNav extends StatelessWidget {
 }
 
 class _WorkspaceTab extends StatelessWidget {
-  const _WorkspaceTab({required this.icon, required this.label, required this.selected, required this.onTap});
+  const _WorkspaceTab({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -827,33 +1350,48 @@ class _WorkspaceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AirmiusColors.header : AirmiusColors.text;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: Container(
-        height: 46,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: selected ? AirmiusColors.text : AirmiusColors.card,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: selected ? AirmiusColors.text : AirmiusColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 15, color: color),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
-              ),
+    final color = selected
+        ? airmiusSurfaceColor(context)
+        : airmiusTextColor(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? airmiusTextColor(context)
+                : airmiusSurfaceColor(context),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: selected
+                  ? airmiusTextColor(context)
+                  : airmiusBorderColor(context),
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -861,7 +1399,14 @@ class _WorkspaceTab extends StatelessWidget {
 }
 
 class _ClubCard extends StatefulWidget {
-  const _ClubCard({required this.club, required this.showManageActions, required this.requested, required this.onRequest, required this.onWithdraw, required this.onReload});
+  const _ClubCard({
+    required this.club,
+    required this.showManageActions,
+    required this.requested,
+    required this.onRequest,
+    required this.onWithdraw,
+    required this.onReload,
+  });
 
   final ClubSummary club;
   final bool showManageActions;
@@ -913,8 +1458,40 @@ class _ClubCardState extends State<_ClubCard> {
     });
   }
 
+  Future<void> _deleteClub() async {
+    final t = AirmiusScope.of(context).t;
+    final confirmed = await confirmDanger(
+      context,
+      '${t('clubs.deleteClub')} "${club.name}"',
+      t('clubs.deleteWarning'),
+      t('common.delete'),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.deleteClub(club.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.deleted'))));
+      widget.onReload();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.deleteFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
       onTap: _toggleExpanded,
       padding: const EdgeInsets.all(16),
@@ -929,15 +1506,36 @@ class _ClubCardState extends State<_ClubCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(club.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
+                    Text(
+                      club.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(_clubMeta(club), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.25, fontWeight: FontWeight.w700)),
+                    Text(
+                      _clubMeta(club),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        height: 1.25,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          if (widget.showManageActions || club.canDelete || widget.requested) ...[
+          if (widget.showManageActions ||
+              club.canDelete ||
+              widget.requested) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -945,22 +1543,22 @@ class _ClubCardState extends State<_ClubCard> {
               children: [
                 if (widget.showManageActions)
                   _InlineAction(
-                    label: 'Daten bearbeiten',
+                    label: t('clubs.editData'),
                     onPressed: () => _openPanel('edit'),
                   ),
                 if (widget.showManageActions)
                   _InlineAction(
-                    label: '+ Team',
+                    label: t('clubs.addTeamShort'),
                     onPressed: () => _openPanel('team'),
                   ),
                 if (club.canDelete || widget.showManageActions)
                   _InlineAction(
-                    label: 'L\u00f6schen',
+                    label: t('common.delete'),
                     danger: true,
-                    onPressed: () => confirmDanger(context, 'Verein "${club.name}" l\u00f6schen', 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgaengig gemacht werden.', 'L\u00f6schen'),
+                    onPressed: _deleteClub,
                   ),
                 if (widget.requested && !club.canManage)
-                  _InlineAction(label: 'Anfrage offen', onPressed: null),
+                  _InlineAction(label: t('clubs.requestOpen'), onPressed: null),
               ],
             ),
           ],
@@ -978,7 +1576,12 @@ class _ClubCardState extends State<_ClubCard> {
                   onOpenProfile: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ClubProfileScreen(club: detail, requested: widget.requested, onRequest: widget.onRequest, onWithdraw: widget.onWithdraw),
+                      builder: (_) => ClubProfileScreen(
+                        club: detail,
+                        requested: widget.requested,
+                        onRequest: widget.onRequest,
+                        onWithdraw: widget.onWithdraw,
+                      ),
                     ),
                   ).then((_) => widget.onReload()),
                   onReload: _reloadDetail,
@@ -992,13 +1595,21 @@ class _ClubCardState extends State<_ClubCard> {
   }
 
   String _clubMeta(ClubSummary club) {
-    final sport = (club.sportType == null || club.sportType!.trim().isEmpty) ? 'Sportart offen' : club.sportType!.trim();
+    final t = AirmiusScope.of(context).t;
+    final sport = (club.sportType == null || club.sportType!.trim().isEmpty)
+        ? t('clubs.sportOpen')
+        : club.sportType!.trim();
     final location = [
-      if (club.city.trim().isNotEmpty) club.city.trim() else 'Ort offen',
+      if (club.city.trim().isNotEmpty)
+        club.city.trim()
+      else
+        t('clubs.locationOpen'),
       if (club.postalCode?.trim().isNotEmpty == true) club.postalCode!.trim(),
     ].join(' ');
-    final country = club.country?.trim().isNotEmpty == true ? club.country!.trim() : 'Land offen';
-    return '$sport - $location - $country - ${club.teams} Teams';
+    final country = club.country?.trim().isNotEmpty == true
+        ? club.country!.trim()
+        : t('clubs.countryOpen');
+    return '$sport - $location - $country - ${club.teams} ${t('clubs.teams')}';
   }
 }
 
@@ -1021,11 +1632,16 @@ class _ClubInlineWorkspace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (panel == 'edit') ...[
-          _ClubEditInlinePanel(club: club, onOpenProfile: onOpenProfile, onSaved: onReload),
+          _ClubEditInlinePanel(
+            club: club,
+            onOpenProfile: onOpenProfile,
+            onSaved: onReload,
+          ),
           const SizedBox(height: 12),
         ],
         if (panel == 'team') ...[
@@ -1033,16 +1649,29 @@ class _ClubInlineWorkspace extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         _InlineSection(
-          title: 'Teams',
-          subtitle: '${club.teamList.isNotEmpty ? club.teamList.length : club.teams} Teams',
-          action: club.canManage ? _SmallInlineButton(label: '+ Team', onPressed: onTeam) : null,
+          title: t('clubs.teams'),
+          subtitle:
+              '${club.teamList.isNotEmpty ? club.teamList.length : club.teams} ${t('clubs.teams')}',
+          action: club.canManage
+              ? _SmallInlineButton(
+                  label: t('clubs.addTeamShort'),
+                  onPressed: onTeam,
+                )
+              : null,
           child: club.teamList.isEmpty
-              ? const Text('Noch keine Teams sichtbar.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w600))
+              ? Text(
+                  t('clubs.noTeams'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final columns = constraints.maxWidth >= 520 ? 2 : 1;
                     const gap = 10.0;
-                    final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+                    final width =
+                        (constraints.maxWidth - gap * (columns - 1)) / columns;
                     return Wrap(
                       spacing: gap,
                       runSpacing: gap,
@@ -1054,7 +1683,13 @@ class _ClubInlineWorkspace extends StatelessWidget {
                               team: team,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => TeamDetailScreen(title: team.name, mode: 'Profil', teamId: team.id)),
+                                MaterialPageRoute(
+                                  builder: (_) => TeamDetailScreen(
+                                    title: team.name,
+                                    mode: 'Profil',
+                                    teamId: team.id,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -1065,39 +1700,63 @@ class _ClubInlineWorkspace extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _InlineSection(
-          title: 'Vereinsmitglieder',
-          subtitle: '${club.management?.linkedPeopleCount ?? club.members} Personen in der Verwaltung',
-          action: club.canManage ? _SmallInlineButton(label: 'Daten bearbeiten', onPressed: onEdit) : null,
+          title: t('clubs.clubMembers'),
+          subtitle:
+              '${club.management?.linkedPeopleCount ?? club.members} ${t('clubs.peopleInManagement')}',
+          action: club.canManage
+              ? _SmallInlineButton(
+                  label: t('clubs.editData'),
+                  onPressed: onEdit,
+                )
+              : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _InlineMetricLine(icon: Icons.groups_outlined, title: 'Aktive Mitglieder', value: '${club.management?.activeMembersCount ?? club.members}'),
+              _InlineMetricLine(
+                icon: Icons.groups_outlined,
+                title: t('clubs.activeMembers'),
+                value: '${club.management?.activeMembersCount ?? club.members}',
+              ),
               const SizedBox(height: 8),
-              _InlineMetricLine(icon: Icons.account_tree_outlined, title: 'Teams', value: '${club.teams}'),
+              _InlineMetricLine(
+                icon: Icons.account_tree_outlined,
+                title: t('clubs.teams'),
+                value: '${club.teams}',
+              ),
               const SizedBox(height: 8),
-              _InlineMetricLine(icon: Icons.person_add_alt_1_outlined, title: 'Offene Vereinsanfragen', value: '${club.pendingMembershipRequests}'),
+              _InlineMetricLine(
+                icon: Icons.person_add_alt_1_outlined,
+                title: t('clubs.openClubRequests'),
+                value: '${club.pendingMembershipRequests}',
+              ),
               const SizedBox(height: 8),
-              _InlineMetricLine(icon: Icons.verified_outlined, title: 'Status', value: club.verified ? 'Freigegeben' : 'Wartet auf Prüfung'),
+              _InlineMetricLine(
+                icon: Icons.verified_outlined,
+                title: t('clubs.status'),
+                value: club.verified
+                    ? t('clubs.approved')
+                    : t('clubs.awaitingReview'),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 12),
         if (club.canManage && club.management != null) ...[
-          _ClubManagementSection(
-            club: club,
-            onReload: onReload,
-          ),
+          _ClubManagementSection(club: club, onReload: onReload),
           const SizedBox(height: 12),
         ],
         _InlineSection(
-          title: 'Schnellzugriff',
-          subtitle: 'Wie Web: direkt im Vereinsblock arbeiten',
+          title: t('clubs.quickAccess'),
+          subtitle: t('clubs.quickAccessBody'),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _SmallInlineButton(label: 'Vereinsprofil', onPressed: onOpenProfile),
-              _SmallInlineButton(label: 'Neu laden', onPressed: onReload),
+              _SmallInlineButton(
+                label: t('clubs.clubProfile'),
+                onPressed: onOpenProfile,
+              ),
+              _SmallInlineButton(label: t('clubs.reload'), onPressed: onReload),
             ],
           ),
         ),
@@ -1121,11 +1780,15 @@ class _ClubManagementSectionState extends State<_ClubManagementSection> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final club = widget.club;
     final management = club.management!;
+    final permissionMap = management.permissions['effective'];
+    final canEditRoles =
+        permissionMap is JsonMap && permissionMap['members.roles'] == true;
     return _InlineSection(
-      title: 'Verwaltungsdaten',
-      subtitle: 'Mitglieder, Anfragen, Beiträge und Abrechnung wie im Web',
+      title: t('clubs.managementData'),
+      subtitle: t('clubs.managementDataBody'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1133,52 +1796,126 @@ class _ClubManagementSectionState extends State<_ClubManagementSection> {
             builder: (context, constraints) {
               final columns = constraints.maxWidth >= 520 ? 2 : 1;
               const gap = 8.0;
-              final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+              final width =
+                  (constraints.maxWidth - gap * (columns - 1)) / columns;
               return Wrap(
                 spacing: gap,
                 runSpacing: gap,
                 children: [
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Offen', value: _formatMoney(management.openInvoiceAmount), subtitle: '${management.openInvoicesCount} Rechnung(en)')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'SEPA bereit', value: '${management.sepaReadyMembersCount}', subtitle: 'Mandate mit IBAN und Referenz')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Wiederkehrende Beiträge', value: _formatMoney(management.recurringContributionTotal), subtitle: 'Summe aktiver Beitragssaetze')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Regeln', value: '${club.contributionRulesCount}', subtitle: '${club.membershipTypesCount} Mitgliedschaftstyp(en)')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Zahlungen', value: '${club.paymentsCount}', subtitle: '${club.bankTransactionsCount} Banktransaktion(en)')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Externe Mitglieder', value: '${club.externalMembersCount}', subtitle: 'Importierte oder eingeladene Personen')),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.open'),
+                      value: _formatMoney(management.openInvoiceAmount),
+                      subtitle:
+                          '${management.openInvoicesCount} ${t('clubs.invoices')}',
+                    ),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.sepaReady'),
+                      value: '${management.sepaReadyMembersCount}',
+                      subtitle: t('clubs.sepaReadyBody'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.recurringContributions'),
+                      value: _formatMoney(
+                        management.recurringContributionTotal,
+                      ),
+                      subtitle: t('clubs.recurringContributionsBody'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.rules'),
+                      value: '${club.contributionRulesCount}',
+                      subtitle:
+                          '${club.membershipTypesCount} ${t('clubs.membershipTypes')}',
+                    ),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.payments'),
+                      value: '${club.paymentsCount}',
+                      subtitle:
+                          '${club.bankTransactionsCount} ${t('clubs.bankTransactions')}',
+                    ),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: _ManagementMetricTile(
+                      title: t('clubs.externalMembers'),
+                      value: '${club.externalMembersCount}',
+                      subtitle: t('clubs.externalMembersBody'),
+                    ),
+                  ),
                 ],
               );
             },
           ),
-          if (management.membershipRequests.isNotEmpty) ...[
+          if (management.canManageMembers &&
+              management.membershipRequests.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text('Offene Mitgliedschaftsanfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            Text(
+              t('clubs.openMembershipRequests'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 8),
             for (final request in management.membershipRequests.take(4)) ...[
               _MembershipRequestCard(
                 request: request,
-                onApprove: () => _reviewRequest(context, request, approve: true),
-                onDecline: () => _reviewRequest(context, request, approve: false),
+                onApprove: () =>
+                    _reviewRequest(context, request, approve: true),
+                onDecline: () =>
+                    _reviewRequest(context, request, approve: false),
               ),
               const SizedBox(height: 8),
             ],
           ],
-          if (management.pendingTeamJoinRequests.isNotEmpty) ...[
+          if (management.canManageMembers &&
+              management.pendingTeamJoinRequests.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Offene Team-Beitrittsanfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            Text(
+              t('clubs.openTeamRequests'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 8),
-            for (final request in management.pendingTeamJoinRequests.take(4)) ...[
+            for (final request in management.pendingTeamJoinRequests.take(
+              4,
+            )) ...[
               _RawRequestLine(request: request),
               const SizedBox(height: 8),
             ],
           ],
           if (management.members.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Mitglieder', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            Text(
+              t('clubs.members'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 8),
             for (final member in management.members.take(5)) ...[
               _MemberLine(
                 member: member,
                 isUpdating: _updatingMemberId == member.id,
-                onRoleChanged: (role) => _updateMemberRole(context, member, role),
+                canChangeRole: canEditRoles && member.role != 'owner',
+                onRoleChanged: (role) =>
+                    _updateMemberRole(context, member, role),
               ),
               const SizedBox(height: 8),
             ],
@@ -1188,48 +1925,95 @@ class _ClubManagementSectionState extends State<_ClubManagementSection> {
     );
   }
 
-  Future<void> _reviewRequest(BuildContext context, AirmiusClubMembershipRequest request, {required bool approve}) async {
+  Future<void> _reviewRequest(
+    BuildContext context,
+    AirmiusClubMembershipRequest request, {
+    required bool approve,
+  }) async {
+    final t = AirmiusScope.of(context).t;
     final ok = approve
         ? true
-        : await confirmDanger(context, 'Anfrage ablehnen', 'Moechtest du die Anfrage von ${request.applicantName ?? 'dieser Person'} ablehnen?', 'Ablehnen');
+        : await confirmDanger(
+            context,
+            t('clubs.declineRequest'),
+            '${t('clubs.declineRequestBefore')} '
+            '${request.applicantName ?? t('clubs.thisPerson')}?',
+            t('clubs.decline'),
+          );
     if (!ok || !context.mounted) return;
 
     try {
       final services = AirmiusServicesScope.of(context);
       if (approve) {
-        await services.repositories.memberships.approveClubRequest(widget.club.id, request.id);
+        await services.repositories.memberships.approveClubRequest(
+          widget.club.id,
+          request.id,
+        );
       } else {
-        await services.repositories.memberships.declineClubRequest(widget.club.id, request.id);
+        await services.repositories.memberships.declineClubRequest(
+          widget.club.id,
+          request.id,
+        );
       }
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Anfrage angenommen.' : 'Anfrage abgelehnt.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approve ? t('clubs.requestApproved') : t('clubs.requestDeclined'),
+          ),
+        ),
+      );
       widget.onReload();
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht verarbeitet werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.requestFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
     }
   }
 
-  Future<void> _updateMemberRole(BuildContext context, AirmiusClubMember member, String role) async {
+  Future<void> _updateMemberRole(
+    BuildContext context,
+    AirmiusClubMember member,
+    String role,
+  ) async {
+    final t = AirmiusScope.of(context).t;
     if (_updatingMemberId != null || member.role == role) return;
     setState(() => _updatingMemberId = member.id);
 
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.updateClubMemberRole(widget.club.id, member.id, role);
+      await AirmiusServicesScope.of(context).repositories.clubs
+          .updateClubMemberRole(widget.club.id, member.id, role);
       if (!context.mounted) return;
       setState(() => _updatingMemberId = null);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vereinsrolle aktualisiert.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.roleUpdated'))));
       widget.onReload();
     } catch (error) {
       if (!context.mounted) return;
       setState(() => _updatingMemberId = null);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vereinsrolle konnte nicht gespeichert werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.roleUpdateFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
     }
   }
 }
 
 class _ManagementMetricTile extends StatelessWidget {
-  const _ManagementMetricTile({required this.title, required this.value, required this.subtitle});
+  const _ManagementMetricTile({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+  });
 
   final String title;
   final String value;
@@ -1240,15 +2024,46 @@ class _ManagementMetricTile extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minHeight: 82),
       padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 10, fontWeight: FontWeight.w900)),
+          Text(
+            title.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, height: 1.25)),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 11,
+              height: 1.25,
+            ),
+          ),
         ],
       ),
     );
@@ -1256,7 +2071,11 @@ class _ManagementMetricTile extends StatelessWidget {
 }
 
 class _MembershipRequestCard extends StatelessWidget {
-  const _MembershipRequestCard({required this.request, required this.onApprove, required this.onDecline});
+  const _MembershipRequestCard({
+    required this.request,
+    required this.onApprove,
+    required this.onDecline,
+  });
 
   final AirmiusClubMembershipRequest request;
   final VoidCallback onApprove;
@@ -1264,41 +2083,95 @@ class _MembershipRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Container(
       padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(request.applicantName ?? 'Unbekannte Person', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text(
+            request.applicantName ?? t('clubs.unknownPerson'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 3),
-          Text(request.applicantEmail ?? request.message ?? 'Mitgliedschaftsanfrage', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.3)),
-          if (request.membershipTypeName != null || request.previewAmount != null) ...[
+          Text(
+            request.applicantEmail ??
+                request.message ??
+                t('clubs.membershipRequest'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              height: 1.3,
+            ),
+          ),
+          if (request.membershipTypeName != null ||
+              request.previewAmount != null) ...[
             const SizedBox(height: 6),
             Text(
               [
-                if (request.membershipTypeName != null) 'Typ: ${request.membershipTypeName}',
-                if (request.previewAmount != null) 'Vorschau: ${request.previewAmount} ${request.previewInterval ?? ''}'.trim(),
+                if (request.membershipTypeName != null)
+                  '${t('clubs.type')}: ${request.membershipTypeName}',
+                if (request.previewAmount != null)
+                  '${t('clubs.preview')}: ${request.previewAmount} ${request.previewInterval ?? ''}'
+                      .trim(),
+                if (request.previewBaseAmount != null &&
+                    request.previewBaseAmount != request.previewAmount)
+                  '${t('clubs.previewBase')}: ${request.previewBaseAmount}',
+                if (request.previewDiscountAmount != null &&
+                    request.previewDiscountAmount != '0.00')
+                  '${t('clubs.previewDiscount')}: -${request.previewDiscountAmount}',
               ].join(' - '),
-              style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
-          if (request.preferredPaymentMethod != null || request.requestedBillingInterval != null) ...[
+          if (request.preferredPaymentMethod != null ||
+              request.requestedBillingInterval != null) ...[
             const SizedBox(height: 6),
             Text(
               [
-                if (request.preferredPaymentMethod != null) 'Zahlung: ${request.preferredPaymentMethod}',
-                if (request.requestedBillingInterval != null) 'Intervall: ${request.requestedBillingInterval}',
+                if (request.preferredPaymentMethod != null)
+                  '${t('clubs.payment')}: ${request.preferredPaymentMethod}',
+                if (request.requestedBillingInterval != null)
+                  '${t('clubs.interval')}: ${request.requestedBillingInterval}',
               ].join(' - '),
-              style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _SmallInlineButton(label: 'Annehmen', filled: true, onPressed: onApprove)),
+              Expanded(
+                child: _SmallInlineButton(
+                  label: t('clubs.accept'),
+                  filled: true,
+                  onPressed: onApprove,
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _SmallInlineButton(label: 'Ablehnen', onPressed: onDecline)),
+              Expanded(
+                child: _SmallInlineButton(
+                  label: t('clubs.decline'),
+                  onPressed: onDecline,
+                ),
+              ),
             ],
           ),
         ],
@@ -1314,88 +2187,167 @@ class _RawRequestLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final user = request['user'];
     final team = request['team'];
-    final userName = user is JsonMap ? (user['name']?.toString() ?? 'Unbekannt') : 'Unbekannt';
-    final teamName = team is JsonMap ? (team['name']?.toString() ?? 'Team') : 'Team';
-    return _InlineMetricLine(icon: Icons.group_add_outlined, title: '$userName moechte zu $teamName', value: 'offen');
-  }
-}
-
-class _MemberLine extends StatelessWidget {
-  const _MemberLine({required this.member, required this.isUpdating, required this.onRoleChanged});
-
-  final AirmiusClubMember member;
-  final bool isUpdating;
-  final ValueChanged<String> onRoleChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final status = member.status?.isNotEmpty == true ? member.status! : 'aktiv';
-    final role = _clubRoleValues.contains(member.role) ? member.role! : 'member';
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          AirmiusAvatar(member.name, imageUrl: member.avatarUrl),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(member.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-            Text(member.email.isNotEmpty ? member.email : status, style: const TextStyle(color: AirmiusColors.muted)),
-          ])),
-          StatusPill(_clubRoleLabel(role), color: _clubRoleColor(role)),
-        ]),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          initialValue: role,
-          isExpanded: true,
-          dropdownColor: AirmiusColors.card,
-          decoration: InputDecoration(
-            labelText: isUpdating ? 'Speichert...' : 'Vereinsrolle',
-            labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
-            filled: true,
-            fillColor: AirmiusColors.card,
-          ),
-          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
-          items: [
-            for (final item in _clubRoleValues) DropdownMenuItem(value: item, child: Text(_clubRoleLabel(item))),
-          ],
-          onChanged: isUpdating ? null : (value) {
-            if (value != null) onRoleChanged(value);
-          },
-        ),
-      ]),
+    final userName = user is JsonMap
+        ? (user['name']?.toString() ?? t('clubs.unknown'))
+        : t('clubs.unknown');
+    final teamName = team is JsonMap
+        ? (team['name']?.toString() ?? t('teams'))
+        : t('teams');
+    return _InlineMetricLine(
+      icon: Icons.group_add_outlined,
+      title: '$userName ${t('clubs.wantsToJoin')} $teamName',
+      value: t('clubs.open'),
     );
   }
 }
 
-const _clubRoleValues = ['owner', 'admin', 'manager', 'academy_manager', 'financial_controller', 'trainer', 'member'];
+class _MemberLine extends StatelessWidget {
+  const _MemberLine({
+    required this.member,
+    required this.isUpdating,
+    required this.canChangeRole,
+    required this.onRoleChanged,
+  });
 
-String _clubRoleLabel(String role) => switch (role) {
-      'owner' => 'Owner',
-      'admin' => 'Verein-Admin',
-      'manager' => 'Manager',
-      'academy_manager' => 'Akademie-Manager',
-      'financial_controller' => 'Finanzen',
-      'trainer' => 'Trainer',
-      'member' => 'Mitglied',
-      _ => role,
-    };
+  final AirmiusClubMember member;
+  final bool isUpdating;
+  final bool canChangeRole;
+  final ValueChanged<String> onRoleChanged;
 
-Color _clubRoleColor(String role) => switch (role) {
-      'owner' || 'admin' => AirmiusColors.blue,
-      'manager' || 'academy_manager' || 'financial_controller' => AirmiusColors.green,
-      'trainer' => AirmiusColors.amber,
-      _ => AirmiusColors.muted,
-    };
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final status = member.status?.isNotEmpty == true
+        ? member.status!
+        : t('clubs.active');
+    final role = _clubRoleValues.contains(member.role)
+        ? member.role!
+        : 'member';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              AirmiusAvatar(member.name, imageUrl: member.avatarUrl),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      member.email.isNotEmpty ? member.email : status,
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    ),
+                  ],
+                ),
+              ),
+              StatusPill(
+                _clubRoleLabel(role, t),
+                color: _clubRoleColor(context, role),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: role,
+            isExpanded: true,
+            dropdownColor: airmiusSurfaceColor(context),
+            decoration: InputDecoration(
+              labelText: isUpdating ? t('clubs.saving') : t('clubs.clubRole'),
+              labelStyle: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: airmiusBorderColor(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: airmiusAccentColor(context)),
+              ),
+              filled: true,
+              fillColor: airmiusSurfaceColor(context),
+            ),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+            items: [
+              for (final item in _clubRoleValues)
+                DropdownMenuItem(
+                  value: item,
+                  child: Text(_clubRoleLabel(item, t)),
+                ),
+            ],
+            onChanged: !canChangeRole || isUpdating
+                ? null
+                : (value) {
+                    if (value != null) onRoleChanged(value);
+                  },
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-String _formatMoney(double value) => '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
+const _clubRoleValues = [
+  'owner',
+  'admin',
+  'manager',
+  'academy_manager',
+  'financial_controller',
+  'trainer',
+  'member',
+];
+
+String _clubRoleLabel(String role, String Function(String) t) => switch (role) {
+  'owner' => t('clubs.role.owner'),
+  'admin' => t('clubs.role.admin'),
+  'manager' => t('clubs.role.manager'),
+  'academy_manager' => t('clubs.role.academyManager'),
+  'financial_controller' => t('clubs.role.financialController'),
+  'trainer' => t('clubs.role.trainer'),
+  'member' => t('clubs.role.member'),
+  _ => role,
+};
+
+Color _clubRoleColor(BuildContext context, String role) => switch (role) {
+  'owner' || 'admin' => airmiusAccentColor(context),
+  'manager' ||
+  'academy_manager' ||
+  'financial_controller' => Theme.of(context).colorScheme.secondary,
+  'trainer' => Theme.of(context).colorScheme.tertiary,
+  _ => airmiusMutedColor(context),
+};
+
+String _formatMoney(double value) =>
+    '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
 
 class _ClubEditInlinePanel extends StatefulWidget {
-  const _ClubEditInlinePanel({required this.club, required this.onOpenProfile, required this.onSaved});
+  const _ClubEditInlinePanel({
+    required this.club,
+    required this.onOpenProfile,
+    required this.onSaved,
+  });
 
   final ClubSummary club;
   final VoidCallback onOpenProfile;
@@ -1410,34 +2362,47 @@ class _ClubEditInlinePanelState extends State<_ClubEditInlinePanel> {
   bool _saving = false;
 
   Future<void> _save() async {
+    final t = AirmiusScope.of(context).t;
     final country = widget.club.country?.trim().toUpperCase();
     if (country == null || country.length != 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Land fehlt. Oeffne Details und ergaenze den Verein zuerst.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.countryMissing'))));
       return;
     }
 
     setState(() => _saving = true);
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.updateClub(widget.club.id, {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.updateClub(widget.club.id, {
         'name': widget.club.name.trim(),
         'sport_type': widget.club.sportType?.trim(),
         'country': country,
-        'city': widget.club.city.trim().isEmpty ? null : widget.club.city.trim(),
+        'city': widget.club.city.trim().isEmpty
+            ? null
+            : widget.club.city.trim(),
         'postal_code': widget.club.postalCode?.trim(),
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vereinsdaten gespeichert.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.dataSaved'))));
       widget.onSaved();
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vereinsdaten konnten nicht gespeichert werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.dataSaveFailed')}: ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1445,29 +2410,60 @@ class _ClubEditInlinePanelState extends State<_ClubEditInlinePanel> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     final club = widget.club;
     return _InlineSection(
-      title: 'Vereinsdaten bearbeiten',
-      subtitle: 'Basisdaten, Adresse und Sportart pflegen.',
+      title: t('clubs.editClubData'),
+      subtitle: t('clubs.editClubDataBody'),
       child: Column(
         children: [
-          _ReadOnlyFormLine(label: 'Verein', value: club.name),
+          _ReadOnlyFormLine(label: t('clubs.club'), value: club.name),
           const SizedBox(height: 10),
-          _ReadOnlyFormLine(label: 'Sportart', value: club.sportType?.isNotEmpty == true ? club.sportType! : 'Sportart offen'),
+          _ReadOnlyFormLine(
+            label: t('clubs.sport'),
+            value: club.sportType?.isNotEmpty == true
+                ? club.sportType!
+                : t('clubs.sportOpen'),
+          ),
           const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(child: _ReadOnlyFormLine(label: 'Stadt', value: club.city.isNotEmpty ? club.city : 'Ort offen')),
+              Expanded(
+                child: _ReadOnlyFormLine(
+                  label: t('clubs.city'),
+                  value: club.city.isNotEmpty
+                      ? club.city
+                      : t('clubs.locationOpen'),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _ReadOnlyFormLine(label: 'PLZ', value: club.postalCode?.isNotEmpty == true ? club.postalCode! : '-')),
+              Expanded(
+                child: _ReadOnlyFormLine(
+                  label: t('clubs.postalCode'),
+                  value: club.postalCode?.isNotEmpty == true
+                      ? club.postalCode!
+                      : '-',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _SmallInlineButton(label: _saving ? 'Speichert...' : 'Speichern', filled: true, onPressed: _saving ? null : _save)),
+              Expanded(
+                child: _SmallInlineButton(
+                  label: _saving ? t('clubs.saving') : t('clubs.save'),
+                  filled: true,
+                  onPressed: _saving ? null : _save,
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _SmallInlineButton(label: 'Details', onPressed: widget.onOpenProfile)),
+              Expanded(
+                child: _SmallInlineButton(
+                  label: t('clubs.details'),
+                  onPressed: widget.onOpenProfile,
+                ),
+              ),
             ],
           ),
         ],
@@ -1503,7 +2499,9 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
+    _sportsFuture ??= AirmiusServicesScope.of(
+      context,
+    ).repositories.sports.sports().then((page) => page.items);
   }
 
   @override
@@ -1514,6 +2512,7 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
   }
 
   Future<void> _createTeam() async {
+    final t = AirmiusScope.of(context).t;
     final name = _nameController.text.trim();
     if (name.isEmpty || _saving) {
       return;
@@ -1529,13 +2528,17 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
           'sport_type': (_selectedSportSlug ?? _sportController.text).trim(),
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team erstellt.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.teamCreated'))));
       widget.onCreated();
       _nameController.clear();
     } catch (error) {
       if (!mounted) return;
-      final message = error is AirmiusApiException ? error.userMessage : '$error';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht erstellt werden: $message')));
+      final message = _safeClubError(context, error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${t('clubs.teamCreateFailed')}: $message')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1543,15 +2546,22 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _InlineSection(
-      title: 'Team hinzufuegen',
-      subtitle: 'Neues Team für ${widget.club.name} erstellen.',
+      title: t('clubs.addTeam'),
+      subtitle: '${t('clubs.addTeamFor')} ${widget.club.name}.',
       child: Column(
         children: [
           TextField(
             controller: _nameController,
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-            decoration: const InputDecoration(labelText: 'Teamname', hintText: 'z.B. U16, Herren Aktiv'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w800,
+            ),
+            decoration: InputDecoration(
+              labelText: t('clubs.teamName'),
+              hintText: t('clubs.teamNameHint'),
+            ),
           ),
           const SizedBox(height: 10),
           FutureBuilder<List<AirmiusSport>>(
@@ -1571,7 +2581,7 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
           ),
           const SizedBox(height: 12),
           _SmallInlineButton(
-            label: _saving ? 'Speichert...' : 'Team erstellen',
+            label: _saving ? t('clubs.saving') : t('clubs.createTeam'),
             filled: true,
             onPressed: _createTeam,
           ),
@@ -1582,7 +2592,12 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
 }
 
 class _InlineSection extends StatelessWidget {
-  const _InlineSection({required this.title, required this.subtitle, required this.child, this.action});
+  const _InlineSection({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+    this.action,
+  });
 
   final String title;
   final String subtitle;
@@ -1593,7 +2608,11 @@ class _InlineSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(color: AirmiusColors.bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1603,9 +2622,22 @@ class _InlineSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 3),
-                    Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1633,7 +2665,11 @@ class _InlineTeamCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
         child: Row(
           children: [
             _InitialsCircle(team.name, size: 34),
@@ -1642,14 +2678,30 @@ class _InlineTeamCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text(
+                    team.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(team.meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                  Text(
+                    team.meta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+            Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
           ],
         ),
       ),
@@ -1658,7 +2710,11 @@ class _InlineTeamCard extends StatelessWidget {
 }
 
 class _InlineMetricLine extends StatelessWidget {
-  const _InlineMetricLine({required this.icon, required this.title, required this.value});
+  const _InlineMetricLine({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
 
   final IconData icon;
   final String title;
@@ -1668,10 +2724,24 @@ class _InlineMetricLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: AirmiusColors.blue, size: 19),
+        Icon(icon, color: airmiusAccentColor(context), size: 19),
         const SizedBox(width: 10),
-        Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))),
-        Text(value, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     );
   }
@@ -1687,13 +2757,25 @@ class _ReadOnlyFormLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return InputDecorator(
       decoration: InputDecoration(labelText: label),
-      child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800)),
+      child: Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _SmallInlineButton extends StatelessWidget {
-  const _SmallInlineButton({required this.label, required this.onPressed, this.filled = false});
+  const _SmallInlineButton({
+    required this.label,
+    required this.onPressed,
+    this.filled = false,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -1705,24 +2787,30 @@ class _SmallInlineButton extends StatelessWidget {
       return FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AirmiusColors.blue,
-          foregroundColor: Colors.white,
+          backgroundColor: airmiusAccentColor(context),
+          foregroundColor: airmiusOnColor(airmiusAccentColor(context)),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+        ),
       );
     }
 
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AirmiusColors.text,
-        side: const BorderSide(color: AirmiusColors.border),
+        foregroundColor: airmiusTextColor(context),
+        side: BorderSide(color: airmiusBorderColor(context)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+      ),
     );
   }
 }
@@ -1738,18 +2826,29 @@ class _InitialsCircle extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        color: AirmiusColors.cardSoft,
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
-      child: Text(initialsFromName(name), style: const TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+      child: Text(
+        initialsFromName(name),
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }
 
 class _InlineAction extends StatelessWidget {
-  const _InlineAction({required this.label, required this.onPressed, this.danger = false});
+  const _InlineAction({
+    required this.label,
+    required this.onPressed,
+    this.danger = false,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -1761,30 +2860,42 @@ class _InlineAction extends StatelessWidget {
       return FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AirmiusColors.red,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          foregroundColor: Theme.of(context).colorScheme.onError,
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+        ),
       );
     }
 
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AirmiusColors.text,
-        side: const BorderSide(color: AirmiusColors.border),
+        foregroundColor: airmiusTextColor(context),
+        side: BorderSide(color: airmiusBorderColor(context)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+      ),
     );
   }
 }
 
 class ClubProfileScreen extends StatefulWidget {
-  const ClubProfileScreen({super.key, required this.club, required this.requested, required this.onRequest, required this.onWithdraw});
+  const ClubProfileScreen({
+    super.key,
+    required this.club,
+    required this.requested,
+    required this.onRequest,
+    required this.onWithdraw,
+  });
 
   final ClubSummary club;
   final bool requested;
@@ -1799,6 +2910,8 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
   String _activeTab = 'struktur';
   Future<ClubSummary>? _clubDetailFuture;
   bool? _requestStatusOverride;
+  bool _uploadingCover = false;
+  bool _busyProfileAction = false;
 
   ClubSummary get club => widget.club;
 
@@ -1816,15 +2929,18 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        title: Text(club.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Text(club.name, style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: PageFrame(
         title: club.name,
-        subtitle: 'Vereinsprofil, Teams, Rollen und sichtbare Beiträge',
+        subtitle: t('clubs.profileSubtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1833,21 +2949,52 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
               builder: (context, snapshot) {
                 final profileClub = snapshot.data ?? club;
                 final requested = _isRequested(profileClub);
+                final currentUserId = AirmiusServicesScope.of(
+                  context,
+                ).authState.user?.id;
+                final isOwner =
+                    profileClub.ownerId != null &&
+                    profileClub.ownerId == currentUserId;
                 return _ClubProfileHero(
                   club: profileClub,
                   requested: requested,
-                  onJoin: profileClub.acceptsMemberships && !profileClub.isMember && !requested ? () => _openApplication(context, profileClub) : null,
-                  onWithdraw: requested ? () => _withdraw(context, profileClub) : null,
+                  onJoin:
+                      profileClub.acceptsMemberships &&
+                          !profileClub.isMember &&
+                          !requested
+                      ? () => _openApplication(context, profileClub)
+                      : null,
+                  onWithdraw: requested
+                      ? () => _withdraw(context, profileClub)
+                      : null,
+                  onUpdateCover: profileClub.canManage && !_uploadingCover
+                      ? () => _pickAndUploadCover(profileClub)
+                      : null,
+                  uploadingCover: _uploadingCover,
+                  onMessage:
+                      !_busyProfileAction &&
+                          profileClub.ownerId != null &&
+                          !isOwner
+                      ? () => _startOwnerConversation(profileClub)
+                      : null,
+                  onReport: !_busyProfileAction && !isOwner
+                      ? () => _reportClub(profileClub)
+                      : null,
                 );
               },
             ),
             const SizedBox(height: 14),
             FutureBuilder<ClubSummary>(
               future: _clubDetailFuture,
-              builder: (context, snapshot) => _ClubStats(club: snapshot.data ?? club),
+              builder: (context, snapshot) =>
+                  _ClubStats(club: snapshot.data ?? club),
             ),
             const SizedBox(height: 14),
-            _ClubWorkspaceTabs(active: _activeTab, onSelect: (value) => setState(() => _activeTab = value)),
+            _ClubWorkspaceTabs(
+              active: _activeTab,
+              includeSurveys: club.isMember || club.canManage,
+              onSelect: (value) => setState(() => _activeTab = value),
+            ),
             const SizedBox(height: 14),
             FutureBuilder<ClubSummary>(
               future: _clubDetailFuture,
@@ -1858,8 +3005,19 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   tab: _activeTab,
                   club: profileClub,
                   requested: requested,
-                  onJoin: profileClub.acceptsMemberships && !profileClub.isMember && !requested ? () => _openApplication(context, profileClub) : null,
-                  onWithdraw: requested ? () => _withdraw(context, profileClub) : null,
+                  onMembershipChanged: () {
+                    if (!mounted) return;
+                    setState(() => _clubDetailFuture = _loadClubDetail());
+                  },
+                  onJoin:
+                      profileClub.acceptsMemberships &&
+                          !profileClub.isMember &&
+                          !requested
+                      ? () => _openApplication(context, profileClub)
+                      : null,
+                  onWithdraw: requested
+                      ? () => _withdraw(context, profileClub)
+                      : null,
                 );
               },
             ),
@@ -1869,47 +3027,266 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
     );
   }
 
-  Future<void> _openApplication(BuildContext context, ClubSummary selectedClub) async {
-    final sent = await Navigator.push<bool>(context, MaterialPageRoute(fullscreenDialog: true, builder: (_) => ApplicationScreen(club: selectedClub)));
+  Future<void> _openApplication(
+    BuildContext context,
+    ClubSummary selectedClub,
+  ) async {
+    final sent = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => ApplicationScreen(club: selectedClub),
+      ),
+    );
     if (sent == true && context.mounted) {
       widget.onRequest(selectedClub);
       setState(() {
         _requestStatusOverride = true;
         _activeTab = 'beitritt';
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage gesendet.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AirmiusScope.of(context).t('clubs.membershipRequestSent'),
+          ),
+        ),
+      );
     }
   }
 
   Future<void> _withdraw(BuildContext context, ClubSummary selectedClub) async {
-    final ok = await confirmDanger(context, 'Anfrage zurückziehen', 'Moechtest du deine Mitgliedschaftsanfrage bei ${selectedClub.name} wirklich zurückziehen?');
+    final t = AirmiusScope.of(context).t;
+    final ok = await confirmDanger(
+      context,
+      t('clubs.withdrawRequest'),
+      '${t('clubs.withdrawRequestBefore')} ${selectedClub.name}?',
+    );
     if (ok && context.mounted) {
       try {
         final services = AirmiusServicesScope.of(context);
-        await services.repositories.memberships.withdrawClubRequest(selectedClub.id);
+        await services.repositories.memberships.withdrawClubRequest(
+          selectedClub.id,
+        );
         if (!mounted || !context.mounted) return;
         widget.onWithdraw(selectedClub);
         setState(() => _requestStatusOverride = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage zurückgezogen.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('clubs.membershipRequestWithdrawn'))),
+        );
       } catch (error) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht zurückgezogen werden: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${t('clubs.withdrawFailed')}: ${_safeClubError(context, error)}',
+            ),
+          ),
+        );
       }
     }
   }
 
+  Future<void> _pickAndUploadCover(ClubSummary selectedClub) async {
+    final t = AirmiusScope.of(context).t;
+    final selection = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = selection?.files.single;
+    if (file == null || !mounted) return;
+
+    setState(() => _uploadingCover = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final session = services.authState.session;
+      if (session == null) throw StateError(t('clubs.cover.noSession'));
+
+      final base = Uri.parse(services.clientForSession(session).baseUrl);
+      final rootPath = base.path.endsWith('/') ? base.path : '${base.path}/';
+      final path = '${rootPath}api/v1/clubs/${selectedClub.id}/images';
+      final request =
+          http.MultipartRequest(
+              'POST',
+              base.replace(path: path, query: null, fragment: null),
+            )
+            ..headers['Authorization'] = 'Bearer ${session.token}'
+            ..headers['Accept'] = 'application/json'
+            ..headers['Accept-Language'] = AirmiusScope.of(
+              context,
+            ).language.locale.languageCode;
+
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'cover_image',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+      } else if (file.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'cover_image',
+            file.path!,
+            filename: file.name,
+          ),
+        );
+      } else {
+        throw StateError(t('clubs.cover.unreadable'));
+      }
+
+      final response = await http.Response.fromStream(await request.send());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: '/api/v1/clubs/${selectedClub.id}/images',
+        );
+      }
+
+      if (!mounted) return;
+      setState(() => _clubDetailFuture = _loadClubDetail());
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.cover.updated'))));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.cover.error')} ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingCover = false);
+    }
+  }
+
+  Future<void> _startOwnerConversation(ClubSummary selectedClub) async {
+    final t = AirmiusScope.of(context).t;
+    final ownerId = selectedClub.ownerId;
+    if (ownerId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.message.noContact'))));
+      return;
+    }
+
+    setState(() => _busyProfileAction = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final json = await services
+          .clientForSession(services.authState.session)
+          .createConversation(
+            type: 'direct',
+            participantIds: [ownerId],
+            clubId: selectedClub.id,
+          );
+      final raw = json['data'];
+      if (raw is! JsonMap) {
+        throw StateError(t('clubs.message.invalidResponse'));
+      }
+      final conversation = AirmiusConversation.fromJson(raw);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ChatDetailScreen(
+            conversationId: conversation.id,
+            title: selectedClub.name,
+            kind: conversation.kind,
+          ),
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.message.error')} ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
+    }
+  }
+
+  Future<void> _reportClub(ClubSummary selectedClub) async {
+    final t = AirmiusScope.of(context).t;
+    final report = await _showClubReportDialog(context);
+    if (report == null || !mounted) return;
+
+    setState(() => _busyProfileAction = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .reportContent(
+            type: 'club',
+            id: selectedClub.id,
+            reason: report.reason,
+            details: report.details,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.report.sent'))));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${t('clubs.report.error')} ${_safeClubError(context, error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
+    }
+  }
+
   bool _isRequested(ClubSummary profileClub) {
-    return _requestStatusOverride ?? (widget.requested || profileClub.hasPendingMembershipRequest);
+    return _requestStatusOverride ??
+        (widget.requested || profileClub.hasPendingMembershipRequest);
   }
 }
 
 class _ClubProfileHero extends StatelessWidget {
-  const _ClubProfileHero({required this.club, required this.requested, required this.onJoin, required this.onWithdraw});
+  const _ClubProfileHero({
+    required this.club,
+    required this.requested,
+    required this.onJoin,
+    required this.onWithdraw,
+    required this.onUpdateCover,
+    required this.uploadingCover,
+    required this.onMessage,
+    required this.onReport,
+  });
 
   final ClubSummary club;
   final bool requested;
   final VoidCallback? onJoin;
   final VoidCallback? onWithdraw;
+  final VoidCallback? onUpdateCover;
+  final bool uploadingCover;
+  final VoidCallback? onMessage;
+  final VoidCallback? onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -1926,7 +3303,11 @@ class _ClubProfileHero extends StatelessWidget {
               Positioned(
                 left: 18,
                 bottom: -34,
-                child: AirmiusAvatar(club.name, imageUrl: club.logoUrl, large: true),
+                child: AirmiusAvatar(
+                  club.name,
+                  imageUrl: club.logoUrl,
+                  large: true,
+                ),
               ),
               Positioned(
                 right: 12,
@@ -1934,8 +3315,20 @@ class _ClubProfileHero extends StatelessWidget {
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    _RoundAction(icon: Icons.camera_alt_outlined, onTap: () => openUiAction(context, title: 'Cover aktualisieren', body: 'Cover-Bild wie im Web-Cockpit vorbereiten.', icon: Icons.image_outlined)),
-                    _RoundAction(icon: Icons.more_horiz, onTap: () => _openMoreSheet(context)),
+                    if (club.canManage)
+                      _RoundAction(
+                        icon: uploadingCover
+                            ? Icons.hourglass_top_rounded
+                            : Icons.camera_alt_outlined,
+                        tooltip: scope.t('clubs.cover.update'),
+                        onTap: onUpdateCover,
+                      ),
+                    if (onMessage != null || onReport != null)
+                      _RoundAction(
+                        icon: Icons.more_horiz,
+                        tooltip: scope.t('clubs.actions'),
+                        onTap: () => _openMoreSheet(context),
+                      ),
                   ],
                 ),
               ),
@@ -1955,12 +3348,32 @@ class _ClubProfileHero extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Expanded(child: Text(club.name, style: const TextStyle(color: AirmiusColors.text, fontSize: 25, fontWeight: FontWeight.w900, height: 1.05))),
-                              if (club.verified) const Icon(Icons.verified, color: AirmiusColors.blue),
+                              Expanded(
+                                child: Text(
+                                  club.name,
+                                  style: TextStyle(
+                                    color: airmiusTextColor(context),
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.05,
+                                  ),
+                                ),
+                              ),
+                              if (club.verified)
+                                Icon(
+                                  Icons.verified,
+                                  color: airmiusAccentColor(context),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 5),
-                          Text('${club.city} - Vereinsprofil', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                          Text(
+                            '${club.city} - ${scope.t('clubs.clubProfile')}',
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1971,18 +3384,47 @@ class _ClubProfileHero extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    StatusPill(club.isMember ? 'Mitglied' : (requested ? scope.t('sent') : (club.acceptsMemberships ? 'Mitgliedschaft offen' : 'Nur Ansicht')), color: club.isMember ? AirmiusColors.green : requested ? AirmiusColors.green : AirmiusColors.blue),
-                    const StatusPill('Struktur'),
-                    const StatusPill('Mobile Cockpit'),
+                    StatusPill(
+                      club.isMember
+                          ? scope.t('clubs.role.member')
+                          : (requested
+                                ? scope.t('sent')
+                                : (club.acceptsMemberships
+                                      ? scope.t('clubs.membershipOpen')
+                                      : scope.t('clubs.viewOnly'))),
+                      color: club.isMember
+                          ? Theme.of(context).colorScheme.secondary
+                          : requested
+                          ? Theme.of(context).colorScheme.secondary
+                          : airmiusAccentColor(context),
+                    ),
+                    StatusPill(scope.t('clubs.tab.structure')),
+                    StatusPill(scope.t('clubs.mobileCockpit')),
                   ],
                 ),
                 const SizedBox(height: 16),
                 if (club.isMember)
-                  AirmiusButton(label: 'Mitglied', icon: Icons.verified_user_outlined, secondary: true, onPressed: null)
+                  AirmiusButton(
+                    label: scope.t('clubs.role.member'),
+                    icon: Icons.verified_user_outlined,
+                    secondary: true,
+                    onPressed: null,
+                  )
                 else if (requested)
-                  AirmiusButton(label: scope.t('withdraw'), icon: Icons.undo_outlined, danger: true, onPressed: onWithdraw)
+                  AirmiusButton(
+                    label: scope.t('withdraw'),
+                    icon: Icons.undo_outlined,
+                    danger: true,
+                    onPressed: onWithdraw,
+                  )
                 else
-                  AirmiusButton(label: club.acceptsMemberships ? scope.t('join') : 'Teams ansehen', icon: Icons.assignment_outlined, onPressed: onJoin),
+                  AirmiusButton(
+                    label: club.acceptsMemberships
+                        ? scope.t('join')
+                        : scope.t('clubs.viewTeams'),
+                    icon: Icons.assignment_outlined,
+                    onPressed: onJoin,
+                  ),
               ],
             ),
           ),
@@ -1994,8 +3436,10 @@ class _ClubProfileHero extends StatelessWidget {
   void _openMoreSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AirmiusColors.card,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: airmiusSurfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -2003,11 +3447,37 @@ class _ClubProfileHero extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Vereinsaktionen', style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+              Text(
+                AirmiusScope.of(context).t('clubs.actions'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 12),
-              AirmiusButton(label: 'Nachricht senden', icon: Icons.chat_bubble_outline, secondary: true, onPressed: () => Navigator.pop(context)),
-              const SizedBox(height: 10),
-              AirmiusButton(label: 'Verein melden', icon: Icons.flag_outlined, danger: true, onPressed: () => Navigator.pop(context)),
+              if (onMessage != null)
+                AirmiusButton(
+                  label: AirmiusScope.of(context).t('clubs.message.send'),
+                  icon: Icons.chat_bubble_outline,
+                  secondary: true,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onMessage?.call();
+                  },
+                ),
+              if (onMessage != null && onReport != null)
+                const SizedBox(height: 10),
+              if (onReport != null)
+                AirmiusButton(
+                  label: AirmiusScope.of(context).t('clubs.report.action'),
+                  icon: Icons.flag_outlined,
+                  danger: true,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onReport?.call();
+                  },
+                ),
             ],
           ),
         ),
@@ -2016,8 +3486,110 @@ class _ClubProfileHero extends StatelessWidget {
   }
 }
 
+class _ClubReportDraft {
+  const _ClubReportDraft({required this.reason, this.details});
+
+  final String reason;
+  final String? details;
+}
+
+Future<_ClubReportDraft?> _showClubReportDialog(BuildContext context) async {
+  final t = AirmiusScope.of(context).t;
+  final details = TextEditingController();
+  var reason = 'spam';
+  final result = await showDialog<_ClubReportDraft>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(context),
+        title: Text(t('clubs.report.title')),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('clubs.report.explanation'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: reason,
+                decoration: InputDecoration(
+                  labelText: t('clubs.report.reason'),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'spam',
+                    child: Text(t('clubs.report.reason.spam')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'hate',
+                    child: Text(t('clubs.report.reason.hate')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'bullying',
+                    child: Text(t('clubs.report.reason.bullying')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'image_rights',
+                    child: Text(t('clubs.report.reason.imageRights')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'other',
+                    child: Text(t('clubs.report.reason.other')),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => reason = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: details,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  labelText: t('clubs.report.details'),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('cancel')),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              _ClubReportDraft(
+                reason: reason,
+                details: details.text.trim().isEmpty
+                    ? null
+                    : details.text.trim(),
+              ),
+            ),
+            icon: Icon(Icons.flag_outlined),
+            label: Text(t('clubs.report.submit')),
+          ),
+        ],
+      ),
+    ),
+  );
+  details.dispose();
+  return result;
+}
+
 class _ClubCover extends StatelessWidget {
-  const _ClubCover({required this.club, required this.height}) : compact = false;
+  const _ClubCover({required this.club, required this.height})
+    : compact = false;
 
   final ClubSummary club;
   final double height;
@@ -2025,9 +3597,11 @@ class _ClubCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = club.bannerUrl;
+    final imageUrl = resolveAirmiusImageUrl(club.bannerUrl);
     return ClipRRect(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(compact ? 18 : 18)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(compact ? 18 : 18),
+      ),
       child: SizedBox(
         height: height,
         child: Stack(
@@ -2039,9 +3613,11 @@ class _ClubCover extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AirmiusColors.blue.withValues(alpha: 0.80),
-                    AirmiusColors.cardSoft,
-                    AirmiusColors.amber.withValues(alpha: 0.42),
+                    airmiusAccentColor(context).withValues(alpha: 0.80),
+                    airmiusSurfaceSoftColor(context),
+                    Theme.of(
+                      context,
+                    ).colorScheme.tertiary.withValues(alpha: 0.42),
                   ],
                 ),
               ),
@@ -2052,7 +3628,11 @@ class _ClubCover extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
-            Container(color: Colors.black.withValues(alpha: compact ? 0.16 : 0.24)),
+            Container(
+              color: Theme.of(
+                context,
+              ).shadowColor.withValues(alpha: compact ? 0.16 : 0.24),
+            ),
           ],
         ),
       ),
@@ -2070,27 +3650,41 @@ class _ClubStats extends StatelessWidget {
     final scope = AirmiusScope.of(context);
     return Row(
       children: [
-        Expanded(child: MetricCard(value: '${club.members}', label: scope.t('members'))),
+        Expanded(
+          child: MetricCard(
+            value: '${club.members}',
+            label: scope.t('members'),
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: MetricCard(value: '${club.teams}', label: scope.t('teams'))),
+        Expanded(
+          child: MetricCard(value: '${club.teams}', label: scope.t('teams')),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: MetricCard(value: '${club.posts}', label: scope.t('posts'))),
+        Expanded(
+          child: MetricCard(value: '${club.posts}', label: scope.t('posts')),
+        ),
       ],
     );
   }
 }
 
 class _ClubWorkspaceTabs extends StatelessWidget {
-  const _ClubWorkspaceTabs({required this.active, required this.onSelect});
+  const _ClubWorkspaceTabs({
+    required this.active,
+    required this.includeSurveys,
+    required this.onSelect,
+  });
 
   final String active;
+  final bool includeSurveys;
   final ValueChanged<String> onSelect;
 
   static const tabs = [
-    _ClubTab('struktur', 'Struktur', Icons.account_tree_outlined),
-    _ClubTab('beitritt', 'Beitritt', Icons.assignment_outlined),
-    _ClubTab('beiträge', 'Beiträge', Icons.forum_outlined),
-    _ClubTab('dokumente', 'Dokumente', Icons.folder_open_outlined),
+    _ClubTab('struktur', 'clubs.tab.structure', Icons.account_tree_outlined),
+    _ClubTab('beitritt', 'clubs.tab.membership', Icons.assignment_outlined),
+    _ClubTab('beiträge', 'clubs.tab.posts', Icons.forum_outlined),
+    _ClubTab('dokumente', 'clubs.tab.documents', Icons.folder_open_outlined),
   ];
 
   @override
@@ -2099,8 +3693,21 @@ class _ClubWorkspaceTabs extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final tab in tabs) ...[
-            _ClubTabChip(tab: tab, selected: active == tab.id, onTap: () => onSelect(tab.id)),
+          for (final tab in [
+            ...tabs.take(3),
+            if (includeSurveys)
+              const _ClubTab(
+                'umfragen',
+                'clubs.tab.surveys',
+                Icons.how_to_vote_outlined,
+              ),
+            tabs[3],
+          ]) ...[
+            _ClubTabChip(
+              tab: tab,
+              selected: active == tab.id,
+              onTap: () => onSelect(tab.id),
+            ),
             const SizedBox(width: 8),
           ],
         ],
@@ -2110,19 +3717,34 @@ class _ClubWorkspaceTabs extends StatelessWidget {
 }
 
 class _ClubTabBody extends StatelessWidget {
-  const _ClubTabBody({required this.tab, required this.club, required this.requested, required this.onJoin, required this.onWithdraw});
+  const _ClubTabBody({
+    required this.tab,
+    required this.club,
+    required this.requested,
+    required this.onMembershipChanged,
+    required this.onJoin,
+    required this.onWithdraw,
+  });
 
   final String tab;
   final ClubSummary club;
   final bool requested;
+  final VoidCallback onMembershipChanged;
   final VoidCallback? onJoin;
   final VoidCallback? onWithdraw;
 
   @override
   Widget build(BuildContext context) {
     return switch (tab) {
-      'beitritt' => _MembershipPanel(club: club, requested: requested, onJoin: onJoin, onWithdraw: onWithdraw),
-      'beiträge' => _ClubPostsPanel(club: club),
+      'beitritt' => _MembershipPanel(
+        club: club,
+        requested: requested,
+        onChanged: onMembershipChanged,
+        onJoin: onJoin,
+        onWithdraw: onWithdraw,
+      ),
+      'beiträge' => ClubAnnouncementScreen(club: club),
+      'umfragen' => ClubSurveyScreen(club: club),
       'dokumente' => const _DocumentsPanel(),
       _ => _StructurePanel(club: club),
     };
@@ -2136,6 +3758,7 @@ class _StructurePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2143,19 +3766,37 @@ class _StructurePanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Eyebrow('Vereinsdaten'),
+              Eyebrow(t('clubs.clubData')),
               const SizedBox(height: 12),
-              _DetailLine(icon: Icons.location_on_outlined, label: 'Standort', value: club.city.isEmpty ? 'Noch nicht hinterlegt' : club.city),
-              _DetailLine(icon: Icons.badge_outlined, label: 'Status', value: club.verified ? 'Verifiziert' : 'Profil in Prüfung'),
-              _DetailLine(icon: Icons.groups_outlined, label: 'Mitglieder', value: '${club.members} aktive Kontakte'),
+              _DetailLine(
+                icon: Icons.location_on_outlined,
+                label: t('clubs.location'),
+                value: club.city.isEmpty ? t('clubs.notProvided') : club.city,
+              ),
+              _DetailLine(
+                icon: Icons.badge_outlined,
+                label: t('clubs.status'),
+                value: club.verified
+                    ? t('clubs.verified')
+                    : t('clubs.profileUnderReview'),
+              ),
+              _DetailLine(
+                icon: Icons.groups_outlined,
+                label: t('clubs.members'),
+                value: '${club.members} ${t('clubs.activeContacts')}',
+              ),
             ],
           ),
         ),
         const SizedBox(height: 14),
         _InfoPanel(
-          title: 'Admins',
+          title: t('clubs.admins'),
           rows: [
-            _InfoRowData('VA', club.name, club.verified ? 'Verein-Admin' : 'Profilverantwortlich'),
+            _InfoRowData(
+              'VA',
+              club.name,
+              club.verified ? t('clubs.role.admin') : t('clubs.profileOwner'),
+            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -2165,66 +3806,353 @@ class _StructurePanel extends StatelessWidget {
   }
 }
 
-class _MembershipPanel extends StatelessWidget {
-  const _MembershipPanel({required this.club, required this.requested, required this.onJoin, required this.onWithdraw});
+class _MembershipPanel extends StatefulWidget {
+  const _MembershipPanel({
+    required this.club,
+    required this.requested,
+    required this.onChanged,
+    required this.onJoin,
+    required this.onWithdraw,
+  });
 
   final ClubSummary club;
   final bool requested;
+  final VoidCallback onChanged;
   final VoidCallback? onJoin;
   final VoidCallback? onWithdraw;
 
   @override
-  Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-    return AirmiusPanel(
-      borderColor: requested ? AirmiusColors.green.withValues(alpha: 0.60) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Eyebrow('Mitgliedschaft'),
-          const SizedBox(height: 8),
-          Text(
-            club.isMember ? 'Du bist Mitglied in diesem Verein.' : requested ? 'Deine Mitgliedschaftsanfrage ist beim Verein angekommen.' : 'Starte eine Anfrage mit Nachricht, Dokumenten und Zahlungswunsch wie im Web.',
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800, height: 1.35),
-          ),
-          const SizedBox(height: 12),
-          const _MembershipOption(title: 'Standard-Mitgliedschaft', meta: 'Jaehrlich - Dokumente erforderlich'),
-          const _MembershipOption(title: 'Foerdermitgliedschaft', meta: 'Optional - Verein prüft manuell'),
-          const SizedBox(height: 14),
-          if (club.isMember)
-            AirmiusButton(label: 'Mitglied', icon: Icons.verified_user_outlined, secondary: true, onPressed: null)
-          else if (requested)
-            AirmiusButton(label: scope.t('withdraw'), icon: Icons.undo_outlined, danger: true, onPressed: onWithdraw)
-          else
-            AirmiusButton(label: club.acceptsMemberships ? scope.t('join') : 'Anfragen geschlossen', icon: Icons.assignment_outlined, onPressed: onJoin),
-        ],
-      ),
-    );
-  }
+  State<_MembershipPanel> createState() => _MembershipPanelState();
 }
 
-class _ClubPostsPanel extends StatelessWidget {
-  const _ClubPostsPanel({required this.club});
+class _MembershipPanelState extends State<_MembershipPanel> {
+  bool _busy = false;
 
-  final ClubSummary club;
+  String t(String key) => AirmiusScope.of(context).t(key);
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  Future<void> _requestTermination() async {
+    final payload = await _terminationPayload();
+    if (payload == null || !mounted || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await _client.requestClubMembershipTermination(widget.club.id, payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.terminationRequested'))));
+      widget.onChanged();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+    } catch (_) {
+      if (mounted) _showError(t('clubs.terminationFailed'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<JsonMap?> _terminationPayload() async {
+    DateTime effectiveOn = DateTime.now();
+    final reasonController = TextEditingController();
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('clubs.terminationTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t('clubs.terminationBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+                const SizedBox(height: 12),
+                _DateButton(
+                  label: t('clubs.terminationDate'),
+                  value: effectiveOn,
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                      initialDate: effectiveOn.isBefore(DateTime.now())
+                          ? DateTime.now()
+                          : effectiveOn,
+                    );
+                    if (selected != null) {
+                      setDialogState(() => effectiveOn = selected);
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: t('clubs.terminationReason'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, {
+                'requested_termination_on': _dateOnly(effectiveOn),
+                if (reasonController.text.trim().isNotEmpty)
+                  'termination_reason': reasonController.text.trim(),
+              }),
+              child: Text(t('clubs.terminationSend')),
+            ),
+          ],
+        ),
+      ),
+    );
+    reasonController.dispose();
+    return payload;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _requestPause() async {
+    final payload = await _pausePayload();
+    if (payload == null || !mounted || _busy) return;
+    setState(() => _busy = true);
+    try {
+      await _client.requestClubMembershipPause(widget.club.id, payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('clubs.pauseRequested'))));
+      widget.onChanged();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _showError(error.userMessage);
+    } catch (_) {
+      if (mounted) _showError(t('clubs.pauseFailed'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<JsonMap?> _pausePayload() async {
+    DateTime from = DateTime.now();
+    DateTime? until;
+    final messageController = TextEditingController();
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(t('clubs.pauseTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DateButton(
+                  label: t('clubs.pauseFrom'),
+                  value: from,
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                      initialDate: from.isBefore(DateTime.now())
+                          ? DateTime.now()
+                          : from,
+                    );
+                    if (selected != null) {
+                      setDialogState(() {
+                        from = selected;
+                        if (until != null && until!.isBefore(from)) {
+                          until = null;
+                        }
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                _DateButton(
+                  label: t('clubs.pauseUntil'),
+                  value: until,
+                  optional: true,
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      firstDate: from,
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                      initialDate: until ?? from,
+                    );
+                    if (selected != null) {
+                      setDialogState(() => until = selected);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: messageController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: t('clubs.pauseMessage'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, {
+                'type': 'pause',
+                'requested_pause_from': _dateOnly(from),
+                if (until != null) 'requested_pause_until': _dateOnly(until!),
+                if (messageController.text.trim().isNotEmpty)
+                  'message': messageController.text.trim(),
+              }),
+              child: Text(t('clubs.pauseSend')),
+            ),
+          ],
+        ),
+      ),
+    );
+    messageController.dispose();
+    return payload;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final club = widget.club;
+    final requested = widget.requested;
+    final isOwner =
+        AirmiusServicesScope.of(context).authState.user?.id == club.ownerId;
+    final status = club.membershipStatus ?? (club.isMember ? 'active' : null);
     return AirmiusPanel(
+      borderColor: requested || club.pauseRequested
+          ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.60)
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Vereinsbeiträge'),
+          Eyebrow(scope.t('clubs.membership')),
           const SizedBox(height: 8),
-          Text('${club.posts} sichtbare Beiträge für Mitglieder und Community.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text(
+            club.isMember
+                ? _memberIntro(scope, status)
+                : requested
+                ? scope.t('clubs.requestArrived')
+                : scope.t('clubs.requestIntro'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w800,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _MembershipOption(
+            title: scope.t('clubs.standardMembership'),
+            meta: scope.t('clubs.standardMembershipMeta'),
+          ),
+          _MembershipOption(
+            title: scope.t('clubs.supportingMembership'),
+            meta: scope.t('clubs.supportingMembershipMeta'),
+          ),
           const SizedBox(height: 14),
-          _FeedPreviewLine(title: 'Willkommen im Vereinsfeed', meta: 'Ankündigungen, Bilder und Videos erscheinen hier.'),
-          _FeedPreviewLine(title: 'Training & Termine', meta: 'Team-Updates können im Feed verknuepft werden.'),
+          if (club.isMember) ...[
+            if (status == 'paused')
+              StatusPill(scope.t('clubs.membershipPaused'))
+            else if (club.pauseRequested)
+              StatusPill(scope.t('clubs.pausePending')),
+            if (club.memberPauseRequestsEnabled &&
+                status == 'active' &&
+                !club.pauseRequested)
+              AirmiusButton(
+                label: _busy
+                    ? scope.t('clubs.pauseSending')
+                    : scope.t('clubs.requestPause'),
+                icon: Icons.pause_circle_outline,
+                secondary: true,
+                onPressed: _busy ? null : _requestPause,
+              ),
+            if (!isOwner)
+              AirmiusButton(
+                label: _busy
+                    ? scope.t('clubs.terminationSending')
+                    : scope.t('clubs.requestTermination'),
+                icon: Icons.logout_outlined,
+                danger: true,
+                onPressed: _busy ? null : _requestTermination,
+              ),
+          ] else if (requested)
+            AirmiusButton(
+              label: scope.t('withdraw'),
+              icon: Icons.undo_outlined,
+              danger: true,
+              onPressed: widget.onWithdraw,
+            )
+          else
+            AirmiusButton(
+              label: club.acceptsMemberships
+                  ? scope.t('join')
+                  : scope.t('clubs.requestsClosed'),
+              icon: Icons.assignment_outlined,
+              onPressed: widget.onJoin,
+            ),
         ],
       ),
     );
   }
+
+  String _memberIntro(AirmiusScope scope, String? status) {
+    return switch (status) {
+      'paused' => scope.t('clubs.membershipPausedBody'),
+      _ => scope.t('clubs.youAreMember'),
+    };
+  }
 }
+
+class _DateButton extends StatelessWidget {
+  const _DateButton({
+    required this.label,
+    required this.value,
+    required this.onPressed,
+    this.optional = false,
+  });
+
+  final String label;
+  final DateTime? value;
+  final VoidCallback onPressed;
+  final bool optional;
+
+  @override
+  Widget build(BuildContext context) {
+    final valueText = value == null
+        ? AirmiusScope.of(context).t('clubs.notSelected')
+        : MaterialLocalizations.of(context).formatMediumDate(value!);
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.event_outlined),
+      label: Text('$label: $valueText${optional ? '' : ' *'}'),
+    );
+  }
+}
+
+String _dateOnly(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
 class _TeamsPanel extends StatelessWidget {
   const _TeamsPanel({required this.club});
@@ -2233,20 +4161,29 @@ class _TeamsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Teams'),
+          Eyebrow(t('clubs.teams')),
           const SizedBox(height: 8),
           if (club.teamList.isEmpty && club.teams == 0)
-            const Text('Noch keine Teams sichtbar.', style: TextStyle(color: AirmiusColors.muted))
+            Text(
+              t('clubs.noTeams'),
+              style: TextStyle(color: airmiusMutedColor(context)),
+            )
           else if (club.teamList.isNotEmpty)
             for (final team in club.teamList)
               _TeamLine(title: team.name, meta: team.meta)
           else
             for (var index = 1; index <= club.teams.clamp(1, 3); index++)
-              _TeamLine(title: 'Team $index', meta: index == 1 ? 'Hauptteam' : 'Training & Spielbetrieb'),
+              _TeamLine(
+                title: '${t('teamDetail.team')} $index',
+                meta: index == 1
+                    ? t('clubs.mainTeam')
+                    : t('clubs.trainingCompetition'),
+              ),
         ],
       ),
     );
@@ -2258,17 +4195,21 @@ class _DocumentsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AirmiusPanel(
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Vereinsdokumente'),
-          SizedBox(height: 8),
-          Text('Datenschutz, Beitragsordnung und Vereinsregeln werden wie im Web-Cockpit für die mobile Anmeldung sichtbar gemacht.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          _DocumentLine(title: 'Datenschutz', requiredDoc: true),
-          _DocumentLine(title: 'Beitragsordnung', requiredDoc: true),
-          _DocumentLine(title: 'Vereinsregeln', requiredDoc: false),
+          Eyebrow(t('clubs.clubDocuments')),
+          const SizedBox(height: 8),
+          Text(
+            t('clubs.clubDocumentsBody'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          _DocumentLine(title: t('clubs.privacy'), requiredDoc: true),
+          _DocumentLine(title: t('clubs.contributionRules'), requiredDoc: true),
+          _DocumentLine(title: t('clubs.clubRules'), requiredDoc: false),
         ],
       ),
     );
@@ -2283,14 +4224,23 @@ class _DocumentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Row(
         children: [
-          const Icon(Icons.description_outlined, color: AirmiusColors.blue),
+          Icon(Icons.description_outlined, color: airmiusAccentColor(context)),
           const SizedBox(width: 12),
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800))),
-          StatusPill(requiredDoc ? 'Pflicht' : 'Optional'),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          StatusPill(requiredDoc ? t('clubs.required') : t('clubs.optional')),
         ],
       ),
     );
@@ -2305,12 +4255,20 @@ class _InfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Eyebrow(title),
-          if (rows.isEmpty) const Padding(padding: EdgeInsets.only(top: 14), child: Text('Noch keine Eintraege.', style: TextStyle(color: AirmiusColors.muted))),
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Text(
+                t('clubs.noEntries'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+            ),
           for (final row in rows) ...[
             const SizedBox(height: 14),
             Row(
@@ -2321,8 +4279,20 @@ class _InfoPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                      Text(row.meta, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                      Text(
+                        row.title,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        row.meta,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2355,43 +4325,29 @@ class _MembershipOption extends StatelessWidget {
       padding: const EdgeInsets.only(top: 10),
       child: Row(
         children: [
-          const Icon(Icons.fact_check_outlined, color: AirmiusColors.green),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                Text(meta, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
-              ],
-            ),
+          Icon(
+            Icons.fact_check_outlined,
+            color: Theme.of(context).colorScheme.secondary,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeedPreviewLine extends StatelessWidget {
-  const _FeedPreviewLine({required this.title, required this.meta});
-
-  final String title;
-  final String meta;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Row(
-        children: [
-          const Icon(Icons.dynamic_feed_outlined, color: AirmiusColors.amber),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                Text(meta, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  meta,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
@@ -2419,12 +4375,24 @@ class _TeamLine extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                Text(meta, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  meta,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+          Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
         ],
       ),
     );
@@ -2432,7 +4400,11 @@ class _TeamLine extends StatelessWidget {
 }
 
 class _DetailLine extends StatelessWidget {
-  const _DetailLine({required this.icon, required this.label, required this.value});
+  const _DetailLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -2444,14 +4416,27 @@ class _DetailLine extends StatelessWidget {
       padding: const EdgeInsets.only(top: 10),
       child: Row(
         children: [
-          Icon(icon, color: AirmiusColors.blue, size: 20),
+          Icon(icon, color: airmiusAccentColor(context), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
-                Text(value, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ],
             ),
           ),
@@ -2462,27 +4447,40 @@ class _DetailLine extends StatelessWidget {
 }
 
 class _RoundAction extends StatelessWidget {
-  const _RoundAction({required this.icon, required this.onTap});
+  const _RoundAction({required this.icon, required this.onTap, this.tooltip});
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: AirmiusColors.card.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AirmiusColors.border),
+    final action = Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: airmiusSurfaceColor(context).withValues(alpha: 0.88),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: airmiusBorderColor(context)),
+          ),
+          child: Icon(
+            icon,
+            color: onTap == null
+                ? airmiusMutedColor(context)
+                : airmiusTextColor(context),
+            size: 20,
+          ),
         ),
-        child: Icon(icon, color: AirmiusColors.text, size: 20),
       ),
     );
+    return tooltip == null ? action : Tooltip(message: tooltip!, child: action);
   }
 }
 
@@ -2495,7 +4493,11 @@ class _ClubTab {
 }
 
 class _ClubTabChip extends StatelessWidget {
-  const _ClubTabChip({required this.tab, required this.selected, required this.onTap});
+  const _ClubTabChip({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
 
   final _ClubTab tab;
   final bool selected;
@@ -2503,21 +4505,37 @@ class _ClubTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return ChoiceChip(
       selected: selected,
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(tab.icon, size: 16, color: selected ? AirmiusColors.text : AirmiusColors.muted),
+          Icon(
+            tab.icon,
+            size: 16,
+            color: selected
+                ? airmiusTextColor(context)
+                : airmiusMutedColor(context),
+          ),
           const SizedBox(width: 6),
-          Text(tab.label),
+          Text(t(tab.label)),
         ],
       ),
       onSelected: (_) => onTap(),
-      selectedColor: AirmiusColors.blue.withValues(alpha: 0.24),
-      backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: selected ? AirmiusColors.blue : AirmiusColors.border),
-      labelStyle: TextStyle(color: selected ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+      selectedColor: airmiusAccentColor(context).withValues(alpha: 0.24),
+      backgroundColor: airmiusSurfaceSoftColor(context),
+      side: BorderSide(
+        color: selected
+            ? airmiusAccentColor(context)
+            : airmiusBorderColor(context),
+      ),
+      labelStyle: TextStyle(
+        color: selected
+            ? airmiusTextColor(context)
+            : airmiusMutedColor(context),
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 }

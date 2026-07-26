@@ -23,7 +23,7 @@ const props = defineProps({
     filters: { type: Object, default: () => ({}) },
 })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const page = usePage()
 
 const showCreateModal = ref(false)
@@ -38,14 +38,17 @@ const authorizationMessage = computed(() => errors.value.authorization || page.p
 const freeEventLimitMessage = computed(() => {
     if (!props.eventCreation?.is_free_limited) return ''
 
-    return `Kostenloses Konto: ${props.eventCreation.remaining_this_month ?? 0} von ${props.eventCreation.monthly_limit ?? 2} Events in diesem Monat übrig. Wiederholungen sind nicht verfügbar.`
+    return t('events.free_limit', {
+        remaining: props.eventCreation.remaining_this_month ?? 0,
+        limit: props.eventCreation.monthly_limit ?? 2,
+    })
 })
 
 const steps = [
-    { number: 1, label: 'Basis' },
-    { number: 2, label: 'Zeit' },
-    { number: 3, label: 'Details' },
-    { number: 4, label: 'Prüfen' },
+    { number: 1, label: 'events.steps.base' },
+    { number: 2, label: 'events.steps.time' },
+    { number: 3, label: 'events.steps.details' },
+    { number: 4, label: 'events.steps.review' },
 ]
 
 const recurrenceOptions = [
@@ -99,7 +102,15 @@ const dateKey = (value) => {
 const initialCalendarMonth = props.filters.calendar_month || props.calendar?.month || dateKey(new Date()).slice(0, 7)
 const selectedCalendarDate = ref(dateKey(new Date()))
 const calendarCursor = ref(new Date(`${initialCalendarMonth}-01T12:00:00`))
-const calendarWeekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const calendarWeekdays = [
+    'events.weekdays_short.monday',
+    'events.weekdays_short.tuesday',
+    'events.weekdays_short.wednesday',
+    'events.weekdays_short.thursday',
+    'events.weekdays_short.friday',
+    'events.weekdays_short.saturday',
+    'events.weekdays_short.sunday',
+]
 
 const form = useForm({
     club_id: props.clubs?.[0]?.id || '',
@@ -173,7 +184,8 @@ const upcomingEventsCount = computed(() => Number(props.eventStats.upcoming || 0
 const cancelledEventsCount = computed(() => Number(props.eventStats.cancelled || 0))
 const nextEvent = computed(() => props.nextEvent || null)
 
-const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const calendarMonthLabel = computed(() => new Intl.DateTimeFormat(localeCode.value, {
     month: 'long',
     year: 'numeric',
 }).format(calendarCursor.value))
@@ -336,35 +348,35 @@ const openCreateModal = () => {
 const stepValidationMessage = (step) => {
     if (step === 1) {
         if (!String(form.title || '').trim()) {
-            return 'Bitte gib einen Titel ein.'
+            return t('events.validation.title')
         }
 
         if (form.visibility === 'private' && !form.team_id) {
-            return 'Private Events brauchen ein Team.'
+            return t('events.validation.private_team')
         }
 
         if (form.visibility === 'organization' && !form.club_id) {
-            return 'Vereins-Events brauchen einen Verein.'
+            return t('events.validation.organization_club')
         }
     }
 
     if (step === 2) {
         if (!form.start_time) {
-            return 'Bitte lege einen Startzeitpunkt fest.'
+            return t('events.validation.start')
         }
 
         if (form.end_time && new Date(form.end_time) < new Date(form.start_time)) {
-            return 'Das Ende darf nicht vor dem Start liegen.'
+            return t('events.validation.end_before_start')
         }
 
         if (form.reminder_at && new Date(form.reminder_at) > new Date(form.start_time)) {
-            return 'Die Erinnerung muss vor dem Start liegen.'
+            return t('events.validation.reminder_after_start')
         }
     }
 
     if (step === 3) {
         if (form.recurring && !form.recurrence_ends_at) {
-            return 'Bitte setze ein Enddatum für die Wiederholung.'
+            return t('events.validation.recurrence_end')
         }
 
         if (form.recurring && form.start_time && form.recurrence_ends_at) {
@@ -372,16 +384,16 @@ const stepValidationMessage = (step) => {
             const recurrenceEnd = new Date(`${form.recurrence_ends_at}T23:59:59`)
 
             if (recurrenceEnd < startDate) {
-                return 'Das Wiederholungsende muss nach dem Start liegen.'
+                return t('events.validation.recurrence_before_start')
             }
         }
 
         if (['weekly', 'biweekly'].includes(form.recurring) && !form.recurrence_days.length) {
-            return 'Bitte wähle mindestens einen Wochentag.'
+            return t('events.validation.recurrence_days')
         }
 
         if (form.max_participants && Number(form.max_participants) < 1) {
-            return 'Die Teilnehmerzahl muss mindestens 1 sein.'
+            return t('events.validation.participants')
         }
     }
 
@@ -502,14 +514,14 @@ const recurrenceSummary = computed(() => {
 })
 
 const selectedClubName = computed(() => {
-    if (form.visibility === 'public') return 'Nicht erforderlich'
-    if (form.visibility === 'private') return 'Wird über Team gesetzt'
+    if (form.visibility === 'public') return t('events.none.not_required')
+    if (form.visibility === 'private') return t('events.none.team_assigned')
 
     return props.clubs?.find((club) => Number(club.id) === Number(form.club_id))?.name || '-'
 })
 
 const selectedTeamName = computed(() => {
-    if (form.visibility !== 'private') return 'Nicht erforderlich'
+    if (form.visibility !== 'private') return t('events.none.not_required')
 
     return props.teams?.find((team) => Number(team.id) === Number(form.team_id))?.name || '-'
 })
@@ -519,7 +531,7 @@ const eventTimeZone = (event = null) => event?.event_timezone || browserTimeZone
 const formatDate = (date, event = null) => {
     if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         timeZone: eventTimeZone(event),
         weekday: 'short',
         day: '2-digit',
@@ -531,7 +543,7 @@ const formatDate = (date, event = null) => {
 const formatTime = (date, event = null) => {
     if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         timeZone: eventTimeZone(event),
         hour: '2-digit',
         minute: '2-digit',
@@ -549,7 +561,7 @@ const timeRange = (event) => {
 const formatDay = (date, event = null) => {
     if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         timeZone: eventTimeZone(event),
         day: '2-digit',
     }).format(new Date(date))
@@ -558,7 +570,7 @@ const formatDay = (date, event = null) => {
 const formatMonthShort = (date, event = null) => {
     if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         timeZone: eventTimeZone(event),
         month: 'short',
     })
@@ -570,7 +582,7 @@ const formatMonthShort = (date, event = null) => {
 const formatWeekdayShort = (date, event = null) => {
     if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeCode.value, {
         timeZone: eventTimeZone(event),
         weekday: 'short',
     })
@@ -1005,7 +1017,7 @@ const resetFilters = () => {
                             :key="weekday"
                             class="bg-inputBg px-2 py-2 text-center text-xs font-bold uppercase text-secondary"
                         >
-                            {{ weekday }}
+                            {{ $t(weekday) }}
                         </div>
 
                         <button
@@ -1121,7 +1133,7 @@ const resetFilters = () => {
                                         : 'bg-inputBg text-secondary'"
                                 :disabled="!canEnterStep(step.number)"
                                 @click="goToStep(step.number)">
-                                {{ step.label }}
+                                {{ $t(step.label) }}
                             </button>
                         </div>
                     </div>

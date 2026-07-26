@@ -6,6 +6,7 @@ use Firebase\JWT\JWT;
 use App\Models\MobileDeviceToken;
 use App\Models\MobilePushDelivery;
 use App\Models\Notification;
+use App\Models\User;
 use App\Support\Api\V1\MobileSyncContract;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
@@ -29,6 +30,15 @@ class MobilePushDeliveryService
             ];
         }
 
+        $user = User::query()->find($notification->user_id);
+        if ($user && ! $this->userAcceptsNotification($user, $notification, $channel)) {
+            return [
+                'queued' => 0,
+                'channel' => $channel,
+                'reason' => 'user_channel_disabled',
+            ];
+        }
+
         $devices = MobileDeviceToken::query()
             ->where('user_id', $notification->user_id)
             ->whereNull('disabled_at')
@@ -39,6 +49,7 @@ class MobilePushDeliveryService
         $queued = 0;
 
         foreach ($devices as $device) {
+            $nextAttemptAt = $this->nextAllowedAttemptAt($user, $device, $channel);
             MobilePushDelivery::query()->create([
                 'notification_id' => $notification->id,
                 'mobile_device_token_id' => $device->id,
@@ -48,6 +59,7 @@ class MobilePushDeliveryService
                 'status' => 'queued',
                 'payload' => $payload,
                 'queued_at' => now(),
+                'next_attempt_at' => $nextAttemptAt,
             ]);
 
             $queued++;
@@ -139,6 +151,7 @@ class MobilePushDeliveryService
         return match (true) {
             Str::startsWith($type, 'event.') || Str::contains($type, 'participation') => 'event_reminders',
             Str::startsWith($type, 'chat.') || Str::contains($type, 'message') => 'chat_mentions',
+            Str::startsWith($type, 'friend.') || Str::startsWith($type, 'social.') => 'social_updates',
             Str::startsWith($type, 'training.') => 'training_updates',
             Str::startsWith($type, 'commerce.') || Str::startsWith($type, 'marketplace.') || Str::startsWith($type, 'outfit.') => 'commerce_orders',
             Str::startsWith($type, 'club.') || Str::startsWith($type, 'invoice.') || Str::contains($type, 'billing') => 'club_billing',
@@ -157,6 +170,67 @@ class MobilePushDeliveryService
         $channels = array_filter($device->channels ?? []);
 
         return $channels === [] || in_array($channel, $channels, true);
+    }
+
+    protected function userAcceptsNotification(User $user, Notification $notification, string $channel): bool
+    {
+        $preferences = $user->notification_channels;
+        if (! is_array($preferences)) {
+            return true;
+        }
+
+        $key = match (true) {
+            Str::startsWith($notification->type, 'chat.') || Str::contains($notification->type, 'message') => 'chat',
+            Str::startsWith($notification->type, 'invoice.') || Str::contains($notification->type, 'billing') => 'billing',
+            Str::startsWith($notification->type, 'club.') => 'club',
+            Str::startsWith($notification->type, 'commerce.') || Str::startsWith($notification->type, 'marketplace.') || Str::startsWith($notification->type, 'outfit.') => 'billing',
+            Str::startsWith($notification->type, 'friend.') || Str::startsWith($notification->type, 'social.') => 'club',
+            Str::startsWith($notification->type, 'event.') || Str::startsWith($notification->type, 'training.') => 'club',
+            default => null,
+        };
+
+        return $key === null || ! array_key_exists($key, $preferences) || (bool) $preferences[$key];
+    }
+
+    protected function nextAllowedAttemptAt(?User $user, MobileDeviceToken $device, string $channel): ?\Carbon\Carbon
+    {
+        if (! $user || in_array($channel, ['event_reminders', 'chat_mentions'], true)) {
+            return null;
+        }
+
+        $quietTime = (string) ($user->notification_quiet_time ?? '');
+        if ($quietTime === '' || $quietTime === 'none') {
+            return null;
+        }
+
+        try {
+            $timezone = new \DateTimeZone($device->timezone ?: config('app.timezone', 'UTC'));
+        } catch (\Throwable) {
+            $timezone = new \DateTimeZone(config('app.timezone', 'UTC'));
+        }
+
+        $localNow = now($timezone);
+        if ($quietTime === 'weekend') {
+            if ($localNow->dayOfWeek < 6) {
+                return null;
+            }
+
+            return $localNow->copy()->next(\Carbon\Carbon::MONDAY)->setTime(8, 0)->setTimezone(config('app.timezone', 'UTC'));
+        }
+
+        $startHour = $quietTime === 'early' ? 20 : 22;
+        $endHour = $quietTime === 'early' ? 8 : 7;
+        $isQuiet = $localNow->hour >= $startHour || $localNow->hour < $endHour;
+        if (! $isQuiet) {
+            return null;
+        }
+
+        $end = $localNow->copy()->setTime($endHour, 0);
+        if ($localNow->hour >= $startHour) {
+            $end->addDay();
+        }
+
+        return $end->setTimezone(config('app.timezone', 'UTC'));
     }
 
     protected function payloadFor(Notification $notification, string $channel): array
@@ -194,6 +268,7 @@ class MobilePushDeliveryService
         return match (true) {
             Str::startsWith($type, 'event.') => 'Airmius Event',
             Str::startsWith($type, 'chat.') => 'Airmius Chat',
+            Str::startsWith($type, 'friend.'), Str::startsWith($type, 'social.') => 'Airmius Netzwerk',
             Str::startsWith($type, 'training.') => 'Airmius Training',
             Str::startsWith($type, 'commerce.'), Str::startsWith($type, 'marketplace.') => 'Airmius Marketplace',
             Str::startsWith($type, 'club.'), Str::startsWith($type, 'invoice.') => 'Airmius Verein',

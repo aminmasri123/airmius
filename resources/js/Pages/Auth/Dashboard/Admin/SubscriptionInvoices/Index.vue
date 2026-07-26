@@ -1,8 +1,15 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+const { t, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 defineProps({
     invoices: {
@@ -15,18 +22,13 @@ defineProps({
     },
 })
 
-const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (cents) => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(cents || 0) / 100)
 
-const statusLabel = (status) => ({
-    open: 'Offen',
-    awaiting_transfer: 'Warte auf Überweisung',
-    paid: 'Bezahlt',
-    overdue: 'Überfällig',
-    cancelled: 'Storniert',
-}[status] || status)
+const statusLabel = (status) => tx(`admin_finance.status.${status}`, status || '-')
 
 const statusClasses = (status) => ({
     paid: 'bg-success/10 text-success border-success/30',
@@ -36,11 +38,7 @@ const statusClasses = (status) => ({
     cancelled: 'bg-muted text-secondary border-border',
 }[status] || 'bg-muted text-secondary border-border')
 
-const methodLabel = (method) => ({
-    stripe: 'Stripe',
-    paypal: 'PayPal',
-    bank_transfer: 'Überweisung',
-}[method] || method || '-')
+const methodLabel = (method) => tx(`admin_finance.method.${method}`, method || '-')
 
 const canMarkPaid = (invoice) => ['open', 'awaiting_transfer', 'overdue'].includes(invoice.status)
 
@@ -52,20 +50,20 @@ const markPaid = (invoice) => {
 </script>
 
 <template>
-    <Head title="Airmius Abo-Rechnungen" />
+    <Head :title="tx('admin_finance.subscription_invoice_title', 'Airmius Abo-Rechnungen')" />
 
     <div class="space-y-6">
         <section class="surface-card border-l-4 border-air-blue p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Billing</p>
-                    <h1 class="mt-1 text-3xl font-black text-primary">Airmius Abo-Rechnungen</h1>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">{{ tx('admin_finance.billing', 'Billing') }}</p>
+                    <h1 class="mt-1 text-3xl font-black text-primary">{{ tx('admin_finance.subscription_invoice_title', 'Airmius Abo-Rechnungen') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Alle Abonnements-Rechnungen zentral prüfen, Status aktualisieren und PDFs direkt herunterladen.
+                        {{ tx('admin_finance.subscription_invoice_intro', 'Alle Abonnements-Rechnungen zentral prüfen, Status aktualisieren und PDFs direkt herunterladen.') }}
                     </p>
                 </div>
                 <Link :href="route('admin.subscriptions.index')" class="rounded-lg bg-buttonPrimary px-5 py-2.5 text-sm font-semibold text-buttonTextPrimary">
-                    Abos verwalten
+                    {{ tx('admin_finance.manage_subscriptions', 'Abos verwalten') }}
                 </Link>
             </div>
         </section>
@@ -155,10 +153,9 @@ const markPaid = (invoice) => {
                 </table>
 
                 <p v-if="!invoices.data.length" class="px-5 py-8 text-sm text-secondary">
-                    Noch keine Airmius Abo-Rechnungen.
+                    {{ tx('admin_finance.empty_subscription_invoices', 'Noch keine Airmius Abo-Rechnungen.') }}
                 </p>
             </div>
         </section>
     </div>
 </template>
-

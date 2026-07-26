@@ -6,6 +6,8 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Notifications\MobileVerifyEmail;
+use App\Support\MobileTwoFactorChallenge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -37,6 +39,7 @@ class AuthController extends Controller
 
         $user = $creator->create($request->all());
         $tokenName = trim((string) $request->input('device_name', '')) ?: 'mobile';
+        $user->notify(new MobileVerifyEmail);
 
         return response()->json([
             'data' => [
@@ -47,7 +50,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
+    public function login(Request $request, MobileTwoFactorChallenge $challenges)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -63,6 +66,20 @@ class AuthController extends Controller
 
         $user = $request->user() ?? Auth::user();
         $tokenName = $credentials['device_name'] ?? 'mobile';
+
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            Auth::logout();
+            $challenge = $challenges->issue($user, $tokenName);
+
+            return response()->json([
+                'data' => [
+                    'two_factor_required' => true,
+                    'challenge_token' => $challenge['token'],
+                    'expires_in' => $challenge['expires_in'],
+                    'available_methods' => ['authenticator', 'recovery_code'],
+                ],
+            ], 202);
+        }
 
         return response()->json([
             'data' => [

@@ -14,12 +14,19 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AirmiusColors.header,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Release Candidate Gates', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Release Candidate Gates',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Release Candidate Gates',
-        subtitle: 'Harte Rest-Gates mit required evidence, Owner und aktuellem Status.',
-        trailing: const StatusPill('Evidence fehlt', color: AirmiusColors.amber),
+        subtitle:
+            'Harte Rest-Gates mit required evidence, Owner und aktuellem Status.',
+        trailing: const StatusPill(
+          'Evidence fehlt',
+          color: AirmiusColors.amber,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -32,7 +39,12 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   const Text(
                     'Vor 100% brauchen wir Beweise, nicht nur vorbereitete Dateien.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
+                    style: TextStyle(
+                      color: AirmiusColors.text,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -42,11 +54,17 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   Row(
                     children: const [
-                      Expanded(child: MetricCard(value: '8', label: 'Hard Gates')),
+                      Expanded(
+                        child: MetricCard(value: '8', label: 'Hard Gates'),
+                      ),
                       SizedBox(width: 10),
-                      Expanded(child: MetricCard(value: '0', label: 'Bewiesen')),
+                      Expanded(
+                        child: MetricCard(value: '0', label: 'Bewiesen'),
+                      ),
                       SizedBox(width: 10),
-                      Expanded(child: MetricCard(value: '8', label: 'Offen')),
+                      Expanded(
+                        child: MetricCard(value: '8', label: 'Offen'),
+                      ),
                     ],
                   ),
                 ],
@@ -66,7 +84,11 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text(
                     'Release-ready ist die App erst, wenn alle Gates mit direkter Evidence belegt sind: Build-Logs, Artefakte, Domain-Dateien, Screenshots und QA-Freigaben.',
-                    style: TextStyle(color: AirmiusColors.text, height: 1.38, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      color: AirmiusColors.text,
+                      height: 1.38,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   AirmiusButton(
@@ -75,7 +97,8 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
                     onPressed: () => openUiAction(
                       context,
                       title: 'Release Candidate Gates',
-                      body: 'Analyze, Builds, Signing, Domain Verification, Screenshots, API-QA, Legal und Localization QA müssen mit Evidence abgeschlossen werden.',
+                      body:
+                          'Analyze, Builds, Signing, Domain Verification, Screenshots, API-QA, Legal und Localization QA müssen mit Evidence abgeschlossen werden.',
                       status: 'RC Audit',
                       icon: Icons.fact_check_outlined,
                     ),
@@ -102,7 +125,10 @@ class _ReleaseBlockerCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconBadge(icon: Icons.lock_clock_outlined, color: AirmiusColors.amber),
+          IconBadge(
+            icon: Icons.lock_clock_outlined,
+            color: AirmiusColors.amber,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -111,14 +137,36 @@ class _ReleaseBlockerCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: Text(blocker.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        blocker.title,
+                        style: const TextStyle(
+                          color: AirmiusColors.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     StatusPill(blocker.status, color: AirmiusColors.amber),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text('Owner: ${blocker.owner}', style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                Text(
+                  'Owner: ${blocker.owner}',
+                  style: const TextStyle(
+                    color: AirmiusColors.blue,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(blocker.requiredEvidence, style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
+                Text(
+                  blocker.requiredEvidence,
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

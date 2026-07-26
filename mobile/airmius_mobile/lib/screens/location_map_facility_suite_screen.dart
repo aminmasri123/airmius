@@ -7,10 +7,12 @@ class LocationMapFacilitySuiteScreen extends StatefulWidget {
   const LocationMapFacilitySuiteScreen({super.key});
 
   @override
-  State<LocationMapFacilitySuiteScreen> createState() => _LocationMapFacilitySuiteScreenState();
+  State<LocationMapFacilitySuiteScreen> createState() =>
+      _LocationMapFacilitySuiteScreenState();
 }
 
-class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuiteScreen> {
+class _LocationMapFacilitySuiteScreenState
+    extends State<LocationMapFacilitySuiteScreen> {
   String contextType = 'Training';
   bool showPublicAddress = true;
   bool enableRoutePlanning = true;
@@ -23,28 +25,32 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
       const _PlaceRow(
         title: 'Sporthalle Kleinblittersdorf',
         status: 'Training',
-        body: 'Trainingsort mit Adresse, Hallenhinweis, Check-in, Treffpunkt und Routenlink.',
+        body:
+            'Trainingsort mit Adresse, Hallenhinweis, Check-in, Treffpunkt und Routenlink.',
         icon: Icons.sports_handball_outlined,
         color: AirmiusColors.blue,
       ),
       const _PlaceRow(
         title: 'ZBB Clubhaus',
         status: 'Verein',
-        body: 'Vereinsadresse, Kontakt, Abholung für Clubshop und Treffpunkt für Veranstaltungen.',
+        body:
+            'Vereinsadresse, Kontakt, Abholung für Clubshop und Treffpunkt für Veranstaltungen.',
         icon: Icons.home_work_outlined,
         color: AirmiusColors.green,
       ),
       const _PlaceRow(
         title: 'Auswaertsspiel Saarbrücken',
         status: 'Route',
-        body: 'Zielort mit Fahrgemeinschaft, freien Plaetzen, Treffpunkt und Abfahrtszeit.',
+        body:
+            'Zielort mit Fahrgemeinschaft, freien Plaetzen, Treffpunkt und Abfahrtszeit.',
         icon: Icons.route_outlined,
         color: AirmiusColors.amber,
       ),
       const _PlaceRow(
         title: 'Abholung Trainingsshirt',
         status: 'Pickup',
-        body: 'Marketplace-Abholung mit Zeitfenster, Ansprechpartner und Benachrichtigung.',
+        body:
+            'Marketplace-Abholung mit Zeitfenster, Ansprechpartner und Benachrichtigung.',
         icon: Icons.storefront_outlined,
         color: AirmiusColors.pink,
       ),
@@ -55,6 +61,8 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
       subtitle: 'Vereinsorte, Routen und Treffpunkte',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -63,9 +71,13 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
               children: [
                 const SectionLabel('LOCATION CENTER'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Die mobile App braucht Orte für Vereinsprofile, Training, Events, Fahrgemeinschaften, Abholung und sichere Standortfreigabe.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +106,8 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                     ButtonSegment(value: 'Shop', label: Text('Shop')),
                   ],
                   selected: {contextType},
-                  onSelectionChanged: (value) => setState(() => contextType = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => contextType = value.first),
                 ),
               ],
             ),
@@ -106,10 +119,33 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _LocationSwitch(title: 'Adresse öffentlich anzeigen', value: showPublicAddress, color: AirmiusColors.blue, onChanged: (value) => setState(() => showPublicAddress = value)),
-                _LocationSwitch(title: 'Routenplanung aktivieren', value: enableRoutePlanning, color: AirmiusColors.green, onChanged: (value) => setState(() => enableRoutePlanning = value)),
-                _LocationSwitch(title: 'Abholpunkte anzeigen', value: pickupPoints, color: AirmiusColors.amber, onChanged: (value) => setState(() => pickupPoints = value)),
-                _LocationSwitch(title: 'Standort datenschutzsicher', value: privacySafeLocation, color: AirmiusColors.pink, onChanged: (value) => setState(() => privacySafeLocation = value)),
+                _LocationSwitch(
+                  title: 'Adresse öffentlich anzeigen',
+                  value: showPublicAddress,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) =>
+                      setState(() => showPublicAddress = value),
+                ),
+                _LocationSwitch(
+                  title: 'Routenplanung aktivieren',
+                  value: enableRoutePlanning,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) =>
+                      setState(() => enableRoutePlanning = value),
+                ),
+                _LocationSwitch(
+                  title: 'Abholpunkte anzeigen',
+                  value: pickupPoints,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) => setState(() => pickupPoints = value),
+                ),
+                _LocationSwitch(
+                  title: 'Standort datenschutzsicher',
+                  value: privacySafeLocation,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) =>
+                      setState(() => privacySafeLocation = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +162,11 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                 const SizedBox(height: 8),
                 Text(
                   'Aktueller Kontext: $contextType. Später verbindet die API Ort, Verein, Team, Event, Abholung, Fahrgemeinschaft, Sichtbarkeit und Benachrichtigung.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +175,8 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                   onPressed: () => openUiAction(
                     context,
                     title: 'Route vorbereiten',
-                    body: 'Diese UI bereitet Karten, Routen, Treffpunkte, Abholung, Fahrgemeinschaften und Standortfreigaben für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Karten, Routen, Treffpunkte, Abholung, Fahrgemeinschaften und Standortfreigaben für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.map_outlined,
                   ),
@@ -182,7 +223,13 @@ class _LocationSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -204,7 +251,10 @@ class _PlaceCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBadge(icon: place.icon, color: place.color),
+              IconBadge(
+                icon: place.icon,
+                color: airmiusSemanticColor(context, place.color),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -212,12 +262,31 @@ class _PlaceCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(place.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                        StatusPill(place.status, color: place.color),
+                        Expanded(
+                          child: Text(
+                            place.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        StatusPill(
+                          place.status,
+                          color: airmiusSemanticColor(context, place.color),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(place.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                    Text(
+                      place.body,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.42,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -234,7 +303,8 @@ class _PlaceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Karte öffnen',
-                  body: 'Kartenansicht, Adresse, Treffpunkt und externe Navigation werden für die spätere API vorbereitet.',
+                  body:
+                      'Kartenansicht, Adresse, Treffpunkt und externe Navigation werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.map_outlined,
                 ),
@@ -246,7 +316,8 @@ class _PlaceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Route planen',
-                  body: 'Route, Fahrgemeinschaft, Abfahrtszeit und Treffpunkt werden als mobiler Standortfluss vorbereitet.',
+                  body:
+                      'Route, Fahrgemeinschaft, Abfahrtszeit und Treffpunkt werden als mobiler Standortfluss vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.route_outlined,
                 ),
@@ -258,7 +329,8 @@ class _PlaceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Ort teilen',
-                  body: 'Standorte können später rollen- und datenschutzsicher mit Teams, Events oder Mitgliedern geteilt werden.',
+                  body:
+                      'Standorte können später rollen- und datenschutzsicher mit Teams, Events oder Mitgliedern geteilt werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.share_location_outlined,
                 ),

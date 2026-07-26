@@ -6,6 +6,7 @@ import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -26,6 +27,11 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, locale } = useI18n()
+const tx = (key, fallback = key, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const selectedClubId = ref(props.clubs[0]?.id || null)
 const activeTab = ref('members')
 const memberSearch = ref('')
@@ -444,25 +450,20 @@ const membershipFieldSections = computed(() => {
     return sections
 })
 
-const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(value || 0))
 
 const formatDate = (value) => {
     if (!value) return '-'
-    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+    return new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 }
 
-const financeTypeLabel = (type) => ({
-    income: 'Einnahme',
-    expense: 'Ausgabe',
-}[type] || type)
+const financeTypeLabel = (type) => tx(`club_memberships.finance.type.${type}`, type)
 
-const financeAccountLabel = (account) => ({
-    cash: 'Bar',
-    bank: 'Bank',
-}[account] || account)
+const financeAccountLabel = (account) => tx(`club_memberships.finance.account.${account}`, account)
 
 const financeEntryClasses = (entry) => entry.type === 'income'
     ? 'border-air-green/30 bg-air-green/5 text-air-green'
@@ -1042,7 +1043,7 @@ const inviteExternalMember = (member) => {
                             </tr>
                         </tbody>
                     </table>
-                    <p v-if="!auditLogs.length" class="py-6 text-sm text-secondary">Noch keine Audit-Einträge.</p>
+                    <p v-if="!auditLogs.length" class="py-6 text-sm text-secondary">{{ tx('club_memberships.empty_audit', 'Noch keine Audit-Einträge.') }}</p>
                 </div>
             </section>
 

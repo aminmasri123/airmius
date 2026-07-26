@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'ui_action_result_screen.dart';
+import 'chat_detail_screen.dart';
 
 class NewConversationScreen extends StatefulWidget {
-  const NewConversationScreen({super.key});
+  const NewConversationScreen({super.key, this.initialUserId});
+
+  final int? initialUserId;
 
   @override
   State<NewConversationScreen> createState() => _NewConversationScreenState();
@@ -14,55 +19,105 @@ class NewConversationScreen extends StatefulWidget {
 
 class _NewConversationScreenState extends State<NewConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   String _type = 'direct';
-  int? _selectedUserId;
+  final Set<int> _selectedUserIds = {};
   int? _selectedTeamId;
+  Future<_ConversationChoices>? _choicesFuture;
+  bool _starting = false;
+
+  String _t(String key) => AirmiusScope.of(context).t(key);
 
   bool get _canStart {
     if (_type == 'team') return _selectedTeamId != null;
-    if (_type == 'direct') return _selectedUserId != null;
-    return _selectedUserId != null;
+    if (_type == 'direct') return _selectedUserIds.length == 1;
+    return _selectedUserIds.length >= 2 &&
+        _nameController.text.trim().isNotEmpty;
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _nameController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _choicesFuture ??= _loadChoices();
+  }
+
+  Future<_ConversationChoices> _loadChoices() async {
+    final services = AirmiusServicesScope.of(context);
+    final client = services.clientForSession(services.authState.session);
+    final results = await Future.wait([client.friends(), client.teams()]);
+    final friendData = results[0]['data'];
+    final teamData = results[1]['data'];
+    final friends = friendData is JsonMap && friendData['friends'] is List
+        ? (friendData['friends'] as List).whereType<JsonMap>().toList()
+        : const <JsonMap>[];
+    final teams = teamData is List
+        ? teamData.whereType<JsonMap>().toList()
+        : const <JsonMap>[];
+    final initialUserId = widget.initialUserId;
+    if (initialUserId != null &&
+        friends.any((friend) => _asInt(friend['id']) == initialUserId)) {
+      _selectedUserIds.add(initialUserId);
+    }
+    return _ConversationChoices(friends: friends, teams: teams);
   }
 
   void _setType(String type) {
     setState(() {
       _type = type;
-      _selectedUserId = null;
+      _selectedUserIds.clear();
       _selectedTeamId = null;
     });
   }
 
-  void _startConversation() {
-    if (!_canStart) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UiActionResultScreen(
-          title: 'Chat starten',
-          body: 'Konversation erstellen, Teilnehmer prüfen und erste Nachricht senden.',
-          status: 'Chat',
-          icon: Icons.chat_bubble_outline,
+  Future<void> _startConversation() async {
+    if (!_canStart || _starting) return;
+    setState(() => _starting = true);
+    try {
+      final conversation = await AirmiusServicesScope.of(context)
+          .repositories
+          .conversations
+          .createConversation(
+            type: _type,
+            participantIds: _selectedUserIds.toList(),
+            teamId: _selectedTeamId,
+            name: _type == 'group' ? _nameController.text.trim() : null,
+            message: _messageController.text.trim(),
+          );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            conversationId: conversation.id,
+            title: conversation.title,
+            kind: conversation.kind,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _starting = false);
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : _t('chat.createFailed');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authUser = AirmiusServicesScope.of(context).authState.user;
-    final userName = authUser?.name ?? 'Amin Masri';
-    final userEmail = authUser?.email ?? 'amin.masri@outlook.com';
-    final userInitials = initialsFromName(userName, fallback: 'AM');
-    final userId = authUser?.id ?? 1;
-
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -71,11 +126,15 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: Container(
                 decoration: BoxDecoration(
-                  color: AirmiusColors.card,
+                  color: airmiusSurfaceColor(context),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AirmiusColors.border),
+                  border: Border.all(color: airmiusBorderColor(context)),
                   boxShadow: const [
-                    BoxShadow(color: Color(0x66000000), blurRadius: 28, offset: Offset(0, 16)),
+                    BoxShadow(
+                      color: Color(0x66000000),
+                      blurRadius: 28,
+                      offset: Offset(0, 16),
+                    ),
                   ],
                 ),
                 child: Column(
@@ -87,73 +146,179 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Neue Konversation', style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+                                Text(
+                                  t('chat.newConversation'),
+                                  style: TextStyle(
+                                    color: airmiusTextColor(context),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
                                 SizedBox(height: 6),
-                                Text('Für Gruppen mindestens zwei Personen auswählen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.25)),
+                                Text(
+                                  t('chat.groupMinimum'),
+                                  style: TextStyle(
+                                    color: airmiusMutedColor(context),
+                                    fontSize: 14,
+                                    height: 1.25,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Schließen',
+                            tooltip: t('chat.close'),
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close, color: AirmiusColors.muted, size: 26),
+                            icon: Icon(
+                              Icons.close,
+                              color: airmiusMutedColor(context),
+                              size: 26,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Container(height: 1, color: AirmiusColors.border),
+                    Container(height: 1, color: airmiusBorderColor(context)),
                     Container(
-                      color: AirmiusColors.input,
+                      color: airmiusInputColor(context),
                       padding: const EdgeInsets.all(8),
                       child: Row(
                         children: [
-                          _ConversationTypeTab(label: 'Direkt', active: _type == 'direct', onTap: () => _setType('direct')),
-                          _ConversationTypeTab(label: 'Gruppe', active: _type == 'group', onTap: () => _setType('group')),
-                          _ConversationTypeTab(label: 'Team', active: _type == 'team', onTap: () => _setType('team')),
+                          _ConversationTypeTab(
+                            label: t('chat.direct'),
+                            active: _type == 'direct',
+                            onTap: () => _setType('direct'),
+                          ),
+                          _ConversationTypeTab(
+                            label: t('chat.group'),
+                            active: _type == 'group',
+                            onTap: () => _setType('group'),
+                          ),
+                          _ConversationTypeTab(
+                            label: t('chat.team'),
+                            active: _type == 'team',
+                            onTap: () => _setType('team'),
+                          ),
                         ],
                       ),
                     ),
                     if (_type == 'team')
                       Padding(
                         padding: const EdgeInsets.all(12),
-                        child: _TeamSelectCard(
-                          selected: _selectedTeamId == 1,
-                          onTap: () => setState(() => _selectedTeamId = _selectedTeamId == 1 ? null : 1),
+                        child: FutureBuilder<_ConversationChoices>(
+                          future: _choicesFuture,
+                          builder: (context, snapshot) => _ChoicesList(
+                            loading:
+                                snapshot.connectionState ==
+                                ConnectionState.waiting,
+                            emptyLabel: t('chat.noTeams'),
+                            children:
+                                (snapshot.data?.teams ?? const <JsonMap>[])
+                                    .map(
+                                      (team) => _TeamSelectCard(
+                                        name:
+                                            '${team['name'] ?? t('chat.team')}',
+                                        selected:
+                                            _selectedTeamId ==
+                                            _asInt(team['id']),
+                                        onTap: () => setState(() {
+                                          final id = _asInt(team['id']);
+                                          _selectedTeamId =
+                                              _selectedTeamId == id ? null : id;
+                                        }),
+                                      ),
+                                    )
+                                    .toList(),
+                          ),
                         ),
                       )
                     else
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
-                        child: _ParticipantCard(
-                          initials: userInitials,
-                          name: userName,
-                          email: userEmail,
-                          selected: _selectedUserId == userId,
-                          onTap: () => setState(() => _selectedUserId = _selectedUserId == userId ? null : userId),
+                        child: FutureBuilder<_ConversationChoices>(
+                          future: _choicesFuture,
+                          builder: (context, snapshot) => _ChoicesList(
+                            loading:
+                                snapshot.connectionState ==
+                                ConnectionState.waiting,
+                            emptyLabel: t('chat.noFriends'),
+                            children: (snapshot.data?.friends ?? const <JsonMap>[])
+                                .map((friend) {
+                                  final id = _asInt(friend['id']);
+                                  final name =
+                                      '${friend['name'] ?? t('chat.contact')}';
+                                  return _ParticipantCard(
+                                    initials: initialsFromName(
+                                      name,
+                                      fallback: '?',
+                                    ),
+                                    name: name,
+                                    email: '${friend['email'] ?? ''}',
+                                    selected: _selectedUserIds.contains(id),
+                                    onTap: () => setState(() {
+                                      if (_type == 'direct') {
+                                        _selectedUserIds
+                                          ..clear()
+                                          ..add(id);
+                                      } else if (!_selectedUserIds.add(id)) {
+                                        _selectedUserIds.remove(id);
+                                      }
+                                    }),
+                                  );
+                                })
+                                .toList(),
+                          ),
                         ),
                       ),
-                    Container(height: 1, color: AirmiusColors.border),
+                    Container(height: 1, color: airmiusBorderColor(context)),
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           TextField(
+                            controller: _nameController,
+                            enabled: _type == 'group',
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              labelText: _type == 'group'
+                                  ? t('chat.groupName')
+                                  : t('chat.groupNameOptional'),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
                             controller: _messageController,
                             minLines: 2,
                             maxLines: 3,
-                            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w700,
+                            ),
                             decoration: InputDecoration(
-                              hintText: 'Erste Nachricht optional',
+                              hintText: t('chat.firstMessageOptional'),
                               filled: true,
-                              fillColor: AirmiusColors.input,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.border)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AirmiusColors.blue)),
+                              fillColor: airmiusInputColor(context),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: airmiusBorderColor(context),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: airmiusAccentColor(context),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -163,27 +328,61 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                                 child: OutlinedButton(
                                   onPressed: () => Navigator.pop(context),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: AirmiusColors.muted,
-                                    side: const BorderSide(color: AirmiusColors.border),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(vertical: 13),
+                                    foregroundColor: airmiusMutedColor(context),
+                                    side: BorderSide(
+                                      color: airmiusBorderColor(context),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
                                   ),
-                                  child: const Text('Abbrechen', style: TextStyle(fontWeight: FontWeight.w800)),
+                                  child: Text(
+                                    t('common.cancel'),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: FilledButton(
-                                  onPressed: _canStart ? _startConversation : null,
+                                  onPressed: _canStart
+                                      ? _startConversation
+                                      : null,
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: AirmiusColors.text,
-                                    foregroundColor: AirmiusColors.header,
-                                    disabledBackgroundColor: AirmiusColors.muted,
-                                    disabledForegroundColor: AirmiusColors.header,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    padding: const EdgeInsets.symmetric(vertical: 13),
+                                    backgroundColor: airmiusTextColor(context),
+                                    foregroundColor:
+                                        Theme.of(
+                                          context,
+                                        ).appBarTheme.backgroundColor ??
+                                        airmiusSurfaceColor(context),
+                                    disabledBackgroundColor: airmiusMutedColor(
+                                      context,
+                                    ),
+                                    disabledForegroundColor:
+                                        Theme.of(
+                                          context,
+                                        ).appBarTheme.backgroundColor ??
+                                        airmiusSurfaceColor(context),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
                                   ),
-                                  child: const Text('Chat starten', style: TextStyle(fontWeight: FontWeight.w900)),
+                                  child: Text(
+                                    _starting
+                                        ? t('chat.creating')
+                                        : t('chat.start'),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -203,7 +402,11 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
 }
 
 class _ConversationTypeTab extends StatelessWidget {
-  const _ConversationTypeTab({required this.label, required this.active, required this.onTap});
+  const _ConversationTypeTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -220,11 +423,28 @@ class _ConversationTypeTab extends StatelessWidget {
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? AirmiusColors.card : Colors.transparent,
+            color: active ? airmiusSurfaceColor(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
-            boxShadow: active ? const [BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 3))] : null,
+            boxShadow: active
+                ? const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ]
+                : null,
           ),
-          child: Text(label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontSize: 14, fontWeight: FontWeight.w800)),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: active
+                  ? airmiusTextColor(context)
+                  : airmiusMutedColor(context),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ),
     );
@@ -254,9 +474,15 @@ class _ParticipantCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? AirmiusColors.input : AirmiusColors.card,
+          color: selected
+              ? airmiusInputColor(context)
+              : airmiusSurfaceColor(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+          border: Border.all(
+            color: selected
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context),
+          ),
         ),
         child: Row(
           children: [
@@ -264,21 +490,56 @@ class _ParticipantCard extends StatelessWidget {
               width: 40,
               height: 40,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: AirmiusColors.text, borderRadius: BorderRadius.circular(8)),
-              child: Text(initials, style: const TextStyle(color: AirmiusColors.header, fontWeight: FontWeight.w900)),
+              decoration: BoxDecoration(
+                color: airmiusTextColor(context),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color:
+                      Theme.of(context).appBarTheme.backgroundColor ??
+                      airmiusSurfaceColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 14, fontWeight: FontWeight.w900)),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(selected ? Icons.check_circle : Icons.circle_outlined, color: selected ? AirmiusColors.green : AirmiusColors.muted, size: 22),
+            Icon(
+              selected ? Icons.check_circle : Icons.circle_outlined,
+              color: selected
+                  ? AirmiusColors.green
+                  : airmiusMutedColor(context),
+              size: 22,
+            ),
           ],
         ),
       ),
@@ -287,8 +548,13 @@ class _ParticipantCard extends StatelessWidget {
 }
 
 class _TeamSelectCard extends StatelessWidget {
-  const _TeamSelectCard({required this.selected, required this.onTap});
+  const _TeamSelectCard({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
 
+  final String name;
   final bool selected;
   final VoidCallback onTap;
 
@@ -301,17 +567,93 @@ class _TeamSelectCard extends StatelessWidget {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AirmiusColors.input,
+          color: airmiusInputColor(context),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+          border: Border.all(
+            color: selected
+                ? airmiusAccentColor(context)
+                : airmiusBorderColor(context),
+          ),
         ),
         child: Row(
           children: [
-            Expanded(child: Text(selected ? 'Team ausgewählt' : 'Team auswählen', style: const TextStyle(color: AirmiusColors.text, fontSize: 14, fontWeight: FontWeight.w800))),
-            Icon(selected ? Icons.check_circle : Icons.keyboard_arrow_down, color: selected ? AirmiusColors.green : AirmiusColors.muted),
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Icon(
+              selected ? Icons.check_circle : Icons.keyboard_arrow_down,
+              color: selected
+                  ? AirmiusColors.green
+                  : airmiusMutedColor(context),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _ConversationChoices {
+  const _ConversationChoices({required this.friends, required this.teams});
+
+  final List<JsonMap> friends;
+  final List<JsonMap> teams;
+}
+
+class _ChoicesList extends StatelessWidget {
+  const _ChoicesList({
+    required this.loading,
+    required this.emptyLabel,
+    required this.children,
+  });
+
+  final bool loading;
+  final String emptyLabel;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.all(18),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (children.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(14),
+        child: Text(
+          emptyLabel,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        for (var index = 0; index < children.length; index++) ...[
+          children[index],
+          if (index != children.length - 1) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+int _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse('$value') ?? 0;
 }

@@ -12,6 +12,8 @@ class ClubUser extends Pivot
 
     protected $casts = [
         'roles' => 'array',
+        'permission_overrides' => 'array',
+        'membership_ended_at' => 'datetime',
     ];
 
     public $timestamps = true;

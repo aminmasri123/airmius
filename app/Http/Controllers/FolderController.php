@@ -210,6 +210,50 @@ class FolderController extends Controller
         return back()->with('success', 'Ordner freigegeben.');
     }
 
+    /**
+     * JSON variant used by the mobile client. It reuses the same friendship
+     * guard and tree-copy implementation as the web flow.
+     */
+    public function shareApi(Request $request, Folder $folder)
+    {
+        $this->authorize('view', $folder);
+
+        $data = $request->validate([
+            'target_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $targetUser = User::findOrFail((int) $data['target_id']);
+
+        abort_unless(
+            $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
+            403,
+            'Ordner können nur mit Freunden geteilt werden.'
+        );
+
+        $targetFolder = $this->copyTree(
+            $folder,
+            $this->targetScope('user', $targetUser->id),
+        );
+
+        AppNotification::send($targetUser, 'folder.shared', [
+            'title' => $request->user()->name.' hat einen Ordner mit dir geteilt',
+            'body' => $folder->name,
+            'url' => route('auth.files.index'),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'folder_id' => $targetFolder->id,
+        ]);
+
+        return response()->json([
+            'data' => [
+                'shared' => true,
+                'folder_id' => $folder->id,
+                'target_folder_id' => $targetFolder->id,
+                'target_user_id' => $targetUser->id,
+            ],
+        ], 201);
+    }
+
     private function authorizeScope(array $data): array
     {
         return match ($data['scope'] ?? 'user') {

@@ -6,6 +6,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -77,6 +78,12 @@ const audiences = [
 
 const selectedAudience = ref(audiences.find((audience) => props.planGroups[audience.key]?.length)?.key || 'verein')
 const page = usePage()
+const { t, te, locale } = useI18n()
+
+const tx = (value, params = {}) => {
+    const key = String(value ?? '')
+    return te(key) ? t(key, params) : key
+}
 const couponCode = ref('')
 const checkoutModal = ref({
     open: false,
@@ -199,13 +206,18 @@ const roadmap = [
 const currentAccessRules = computed(() => accessRules[selectedAudience.value] || [])
 
 const formatPrice = (cents, currency = 'EUR') => {
-    if (!cents) return `0 ${currency}`
+    const numberLocale = {
+        de: 'de-DE',
+        en: 'en-US',
+        fr: 'fr-FR',
+        ar: 'ar-EG',
+    }[locale.value] || 'de-DE'
 
-    return new Intl.NumberFormat('de-DE', {
+    return new Intl.NumberFormat(numberLocale, {
         style: 'currency',
         currency,
         maximumFractionDigits: 0,
-    }).format(cents / 100)
+    }).format((Number(cents) || 0) / 100)
 }
 
 const priceCaption = (plan) => {
@@ -390,8 +402,8 @@ const startCheckout = async () => {
 
 <template>
     <SeoHead
-        title="Airmius Preise für Sportler, Trainer, Vereine, Partner und Werbeagentur"
-        description="Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine."
+        :title="tx('Airmius Preise für Sportler, Trainer, Vereine, Partner und Werbeagentur')"
+        :description="tx('Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -400,12 +412,12 @@ const startCheckout = async () => {
 
         <main class="px-4 mb-8 pt-36 md:pt-44">
             <section class="mx-auto max-w-6xl text-center">
-                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Preise</p>
+                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Preise') }}</p>
                 <h1 class="mx-auto mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                    Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.
+                    {{ tx('Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.') }}
                 </h1>
                 <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-secondary">
-                    Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.
+                    {{ tx('Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.') }}
                 </p>
             </section>
 
@@ -420,7 +432,7 @@ const startCheckout = async () => {
                         @click="selectedAudience = audience.key"
                     >
                         <i :class="audience.icon"></i>
-                        <span>{{ audience.label }}</span>
+                        <span>{{ tx(audience.label) }}</span>
                     </button>
                 </div>
             </section>
@@ -428,20 +440,20 @@ const startCheckout = async () => {
             <section v-if="currentDecisionRows.length" class="mx-auto mt-6 max-w-7xl rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Abo-Entscheidung</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Was bleibt frei, was gehört in Premium?</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Abo-Entscheidung') }}</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Was bleibt frei, was gehört in Premium?') }}</h2>
                     </div>
                     <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        Die Tabelle macht die Produktlogik sichtbar: Basisnutzung bleibt niedrigschwellig, kostenintensive oder professionelle Funktionen werden begrenzt oder bezahlt.
+                        {{ tx('Die Tabelle macht die Produktlogik sichtbar: Basisnutzung bleibt niedrigschwellig, kostenintensive oder professionelle Funktionen werden begrenzt oder bezahlt.') }}
                     </p>
                 </div>
 
                 <div class="mt-5 overflow-hidden rounded-lg border border-border">
                     <div class="hidden grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] gap-0 border-b border-border bg-bg px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary md:grid">
-                        <span>Funktion</span>
-                        <span>Free/Basis</span>
-                        <span>Premium</span>
-                        <span>Warum?</span>
+                        <span>{{ tx('Funktion') }}</span>
+                        <span>{{ tx('Free/Basis') }}</span>
+                        <span>{{ tx('Premium') }}</span>
+                        <span>{{ tx('Warum?') }}</span>
                     </div>
                     <div
                         v-for="row in currentDecisionRows"
@@ -449,15 +461,15 @@ const startCheckout = async () => {
                         class="grid gap-3 border-b border-border px-4 py-4 text-sm last:border-b-0 md:grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] md:items-center"
                     >
                         <div>
-                            <p class="font-semibold text-primary">{{ row.area }}</p>
+                            <p class="font-semibold text-primary">{{ tx(row.area) }}</p>
                         </div>
                         <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.free.tone)">
-                            {{ row.free.label }}
+                            {{ tx(row.free.label) }}
                         </span>
                         <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.premium.tone)">
-                            {{ row.premium.label }}
+                            {{ tx(row.premium.label) }}
                         </span>
-                        <p class="text-sm leading-6 text-secondary">{{ row.note }}</p>
+                        <p class="text-sm leading-6 text-secondary">{{ tx(row.note) }}</p>
                     </div>
                 </div>
             </section>
@@ -465,44 +477,44 @@ const startCheckout = async () => {
             <section class="mx-auto mt-8 max-w-7xl">
                 <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
                     <aside class="rounded-lg border border-border bg-card p-6">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ currentAudience.label }}</p>
-                        <h2 class="mt-2 text-2xl font-bold text-primary">{{ currentAudience.title }}</h2>
-                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ currentAudience.description }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx(currentAudience.label) }}</p>
+                        <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx(currentAudience.title) }}</h2>
+                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ tx(currentAudience.description) }}</p>
                         <div class="mt-6 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">Produktregel</p>
+                            <p class="font-semibold text-primary">{{ tx('Produktregel') }}</p>
                             <p class="mt-2">
-                                Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.
+                                {{ tx('Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.') }}
                             </p>
                         </div>
                         <div v-if="currentAccessRules.length" class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-4 text-sm">
-                            <p class="font-semibold text-primary">Free oder Premium?</p>
+                            <p class="font-semibold text-primary">{{ tx('Free oder Premium?') }}</p>
                             <p class="mt-2 text-secondary">
-                                Basis bleibt frei. Premium beginnt dort, wo Airmius Verwaltung automatisiert, externe Kosten erzeugt oder professionellen Support braucht.
+                                {{ tx('Basis bleibt frei. Premium beginnt dort, wo Airmius Verwaltung automatisiert, externe Kosten erzeugt oder professionellen Support braucht.') }}
                             </p>
                         </div>
                         <div v-if="selectedAudience === 'werbeagentur'" class="mt-4 rounded-lg border border-air-blue/40 bg-air-blue/10 p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">Website-Service</p>
+                            <p class="font-semibold text-primary">{{ tx('Website-Service') }}</p>
                             <p class="mt-2">
-                                Der Preis hängt vom Umfang ab. Vereine stellen zuerst eine Anfrage und erhalten danach ein klares Angebot.
+                                {{ tx('Der Preis hängt vom Umfang ab. Vereine stellen zuerst eine Anfrage und erhalten danach ein klares Angebot.') }}
                             </p>
                             <Link :href="route('guest.werbeagentur')" class="mt-3 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                Werbeagentur ansehen
+                                {{ tx('Werbeagentur ansehen') }}
                             </Link>
                         </div>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-4">
-                            <label class="text-xs font-semibold uppercase text-secondary">Rabattcode</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Rabattcode') }}</label>
                             <input
                                 v-model="couponCode"
                                 type="text"
                                 class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm uppercase text-primary"
-                                placeholder="z. B. BETA50"
+                                :placeholder="tx('z. B. BETA50')"
                             >
-                            <p class="mt-2 text-xs text-secondary">Der Code wird beim Bezahlen automatisch berücksichtigt.</p>
+                            <p class="mt-2 text-xs text-secondary">{{ tx('Der Code wird beim Bezahlen automatisch berücksichtigt.') }}</p>
                         </div>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">Land & Währung</p>
+                            <p class="font-semibold text-primary">{{ tx('Land & Währung') }}</p>
                             <p class="mt-2">
-                                Preise für {{ pricingCountry }} erkannt
+                                {{ tx('Preise für {country} erkannt', { country: pricingCountry }) }}
                                 <span class="text-xs">({{ pricingCountrySource }})</span>.
                             </p>
                         </div>
@@ -515,33 +527,33 @@ const startCheckout = async () => {
                         >
                             <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
                                 <div>
-                                    <h3 class="text-xl font-bold text-primary">Individuelles Angebot</h3>
+                                    <h3 class="text-xl font-bold text-primary">{{ tx('Individuelles Angebot') }}</h3>
                                     <p class="mt-3 text-sm leading-relaxed text-secondary">
-                                        Websites und Kampagnen hängen stark von Umfang, Inhalten, Domain, Seitenanzahl und gewünschter Betreuung ab. Deshalb arbeitet Airmius hier mit Anfrage und Angebot.
+                                        {{ tx('Websites und Kampagnen hängen stark von Umfang, Inhalten, Domain, Seitenanzahl und gewünschter Betreuung ab. Deshalb arbeitet Airmius hier mit Anfrage und Angebot.') }}
                                     </p>
                                     <Link
                                         :href="route('guest.werbeagentur')"
                                         class="mt-5 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                                     >
-                                        Zur Werbeagentur-Seite
+                                        {{ tx('Zur Werbeagentur-Seite') }}
                                     </Link>
                                 </div>
                                 <ul class="grid gap-3 text-sm text-secondary sm:grid-cols-2">
                                     <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">Website</p>
-                                        <p class="mt-1">Vereinsseite, Landingpage oder Kampagnenseite.</p>
+                                        <p class="font-semibold text-primary">{{ tx('Website') }}</p>
+                                        <p class="mt-1">{{ tx('Vereinsseite, Landingpage oder Kampagnenseite.') }}</p>
                                     </li>
                                     <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">Sichtbarkeit</p>
-                                        <p class="mt-1">SEO-Grundlage, Texte, Struktur und lokale Auffindbarkeit.</p>
+                                        <p class="font-semibold text-primary">{{ tx('Sichtbarkeit') }}</p>
+                                        <p class="mt-1">{{ tx('SEO-Grundlage, Texte, Struktur und lokale Auffindbarkeit.') }}</p>
                                     </li>
                                     <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">Sponsoren</p>
-                                        <p class="mt-1">Sponsorenbereiche, Angebotsseiten und digitale Pakete.</p>
+                                        <p class="font-semibold text-primary">{{ tx('Sponsoren') }}</p>
+                                        <p class="mt-1">{{ tx('Sponsorenbereiche, Angebotsseiten und digitale Pakete.') }}</p>
                                     </li>
                                     <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">Prozess</p>
-                                        <p class="mt-1">Anfrage, klares Angebot, Annahme, Umsetzung.</p>
+                                        <p class="font-semibold text-primary">{{ tx('Prozess') }}</p>
+                                        <p class="mt-1">{{ tx('Anfrage, klares Angebot, Annahme, Umsetzung.') }}</p>
                                     </li>
                                 </ul>
                             </div>
@@ -555,48 +567,48 @@ const startCheckout = async () => {
                         >
                             <div>
                                 <div class="flex items-start justify-between gap-3">
-                                    <h3 class="text-xl font-bold text-primary">{{ plan.name }}</h3>
+                                    <h3 class="text-xl font-bold text-primary">{{ tx(plan.name) }}</h3>
                                     <span
                                         v-if="ownsPlan(plan)"
                                         class="rounded-full bg-air-green/15 px-2 py-1 text-xs font-semibold text-air-green"
                                     >
-                                        Aktiv
+                                        {{ tx('Aktiv') }}
                                     </span>
-                                    <span v-else-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ plan.badge }}</span>
+                                    <span v-else-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx(plan.badge) }}</span>
                                 </div>
-                                <p class="mt-3 min-h-16 text-sm leading-relaxed text-secondary">{{ plan.description }}</p>
+                                <p class="mt-3 min-h-16 text-sm leading-relaxed text-secondary">{{ tx(plan.description) }}</p>
                             </div>
 
                             <div class="mt-5">
                                 <p class="text-3xl font-900 text-primary">{{ formatPrice(plan.monthly_price_cents, plan.currency) }}</p>
-                                <p class="text-sm text-secondary">{{ priceCaption(plan) }}</p>
+                                <p class="text-sm text-secondary">{{ tx(priceCaption(plan)) }}</p>
                                 <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">
-                                    {{ formatPrice(plan.yearly_price_cents, plan.currency) }} pro Jahr
+                                    {{ formatPrice(plan.yearly_price_cents, plan.currency) }} {{ tx('pro Jahr') }}
                                 </p>
                                 <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">
-                                    Lokaler Preis für {{ plan.pricing_country }}
+                                    {{ tx('Lokaler Preis für {country}', { country: plan.pricing_country }) }}
                                 </p>
                             </div>
 
                             <dl class="mt-5 grid gap-2 text-sm">
                                 <div v-if="plan.member_limit" class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">Mitglieder</dt>
+                                    <dt class="text-secondary">{{ tx('Mitglieder') }}</dt>
                                     <dd class="font-semibold text-primary">{{ plan.member_limit }}</dd>
                                 </div>
                                 <div v-if="plan.team_limit" class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">Teams</dt>
+                                    <dt class="text-secondary">{{ tx('Teams') }}</dt>
                                     <dd class="font-semibold text-primary">{{ plan.team_limit }}</dd>
                                 </div>
                                 <div class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">Speicher</dt>
-                                    <dd class="font-semibold text-primary">{{ plan.storage_gb }} GB</dd>
+                                    <dt class="text-secondary">{{ tx('Speicher') }}</dt>
+                                    <dd class="font-semibold text-primary">{{ plan.storage_gb }} {{ tx('GB') }}</dd>
                                 </div>
                             </dl>
 
                             <ul class="mt-5 flex-1 space-y-2 text-sm text-secondary">
                                 <li v-for="feature in plan.features" :key="feature" class="flex gap-2">
                                     <i class="las la-check mt-0.5 text-air-green"></i>
-                                    <span>{{ feature }}</span>
+                                    <span>{{ tx(feature) }}</span>
                                 </li>
                             </ul>
 
@@ -605,7 +617,7 @@ const startCheckout = async () => {
                                     v-if="ownsPlan(plan)"
                                     class="rounded-lg border border-air-green/40 bg-air-green/10 px-4 py-3 text-center text-sm font-semibold text-air-green"
                                 >
-                                    Du besitzt diesen Plan
+                                    {{ tx('Du besitzt diesen Plan') }}
                                 </div>
 
                                 <Link
@@ -613,7 +625,7 @@ const startCheckout = async () => {
                                     :href="canRegister ? route('register') : route('login')"
                                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
                                 >
-                                    {{ ctaLabel(plan) }}
+                                    {{ tx(ctaLabel(plan)) }}
                                 </Link>
 
                                 <template v-else>
@@ -622,21 +634,21 @@ const startCheckout = async () => {
                                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
                                         @click="requestCheckout(plan, 'stripe')"
                                     >
-                                        Mit Stripe zahlen
+                                        {{ tx('Mit Stripe zahlen') }}
                                     </button>
                                     <button
                                         type="button"
                                         class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
                                         @click="requestCheckout(plan, 'paypal')"
                                     >
-                                        Mit PayPal zahlen
+                                        {{ tx('Mit PayPal zahlen') }}
                                     </button>
                                     <button
                                         type="button"
                                         class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
                                         @click="requestCheckout(plan, 'bank_transfer')"
                                     >
-                                        Per Überweisung zahlen
+                                        {{ tx('Per Überweisung zahlen') }}
                                     </button>
                                 </template>
                             </div>
@@ -648,11 +660,11 @@ const startCheckout = async () => {
             <section v-if="currentAccessRules.length" class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Funktionslogik</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Was ist kostenlos, was gehört in Premium?</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Funktionslogik') }}</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Was ist kostenlos, was gehört in Premium?') }}</h2>
                     </div>
                     <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        Diese Einordnung ist die Grundlage für die nächsten Module. So bleibt Airmius fair für kleine Nutzer, aber tragfähig für Vereine, Trainer und Anbieter.
+                        {{ tx('Diese Einordnung ist die Grundlage für die nächsten Module. So bleibt Airmius fair für kleine Nutzer, aber tragfähig für Vereine, Trainer und Anbieter.') }}
                     </p>
                 </div>
 
@@ -662,9 +674,9 @@ const startCheckout = async () => {
                         :key="`${selectedAudience}-${rule.feature}`"
                         class="rounded-lg border border-border bg-bg p-4"
                     >
-                        <span class="inline-flex rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ rule.plan }}</span>
-                        <h3 class="mt-3 text-base font-bold text-primary">{{ rule.feature }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-secondary">{{ rule.reason }}</p>
+                        <span class="inline-flex rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx(rule.plan) }}</span>
+                        <h3 class="mt-3 text-base font-bold text-primary">{{ tx(rule.feature) }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ tx(rule.reason) }}</p>
                     </article>
                 </div>
             </section>
@@ -672,11 +684,11 @@ const startCheckout = async () => {
             <section class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ausbauplan</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Reihenfolge für die fehlenden Vereins- und Trainerfunktionen</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Ausbauplan') }}</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Reihenfolge für die fehlenden Vereins- und Trainerfunktionen') }}</h2>
                     </div>
                     <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        Die Reihenfolge ist bewusst produktorientiert: erst Cockpits und Anwesenheit, danach Planung, Analyse und schwere Verwaltungsfunktionen.
+                        {{ tx('Die Reihenfolge ist bewusst produktorientiert: erst Cockpits und Anwesenheit, danach Planung, Analyse und schwere Verwaltungsfunktionen.') }}
                     </p>
                 </div>
 
@@ -688,10 +700,10 @@ const startCheckout = async () => {
                     >
                         <div class="flex items-start justify-between gap-3">
                             <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-bold text-buttonTextPrimary">{{ item.phase }}</span>
-                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ item.plan }}</span>
+                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ tx(item.plan) }}</span>
                         </div>
-                        <h3 class="mt-4 text-lg font-bold text-primary">{{ item.title }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-secondary">{{ item.text }}</p>
+                        <h3 class="mt-4 text-lg font-bold text-primary">{{ tx(item.title) }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ tx(item.text) }}</p>
                     </article>
                 </div>
             </section>
@@ -702,10 +714,10 @@ const startCheckout = async () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Abo kostenpflichtig bestellen</p>
-                            <h2 class="mt-1 text-xl font-bold text-primary">{{ checkoutModal.plan.name }}</h2>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Abo kostenpflichtig bestellen') }}</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ tx(checkoutModal.plan.name) }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
-                                Bitte prüfe dein Abo, bevor du zur Zahlung weitergeleitet wirst.
+                                {{ tx('Bitte prüfe dein Abo, bevor du zur Zahlung weitergeleitet wirst.') }}
                             </p>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCheckoutModal">
@@ -715,26 +727,26 @@ const startCheckout = async () => {
 
                     <div class="mt-5 grid gap-3 rounded-lg border border-border bg-bg p-4 text-sm">
                         <div class="flex items-center justify-between gap-4">
-                            <span class="text-secondary">Plan</span>
-                            <span class="font-semibold text-primary">{{ checkoutModal.plan.name }}</span>
+                            <span class="text-secondary">{{ tx('Plan') }}</span>
+                            <span class="font-semibold text-primary">{{ tx(checkoutModal.plan.name) }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <span class="text-secondary">Preis</span>
-                            <span class="font-semibold text-primary">{{ formatPrice(checkoutModal.plan.monthly_price_cents, checkoutModal.plan.currency) }} pro Monat</span>
+                            <span class="text-secondary">{{ tx('Preis') }}</span>
+                            <span class="font-semibold text-primary">{{ formatPrice(checkoutModal.plan.monthly_price_cents, checkoutModal.plan.currency) }} {{ tx('pro Monat') }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <span class="text-secondary">Zahlungsart</span>
-                            <span class="font-semibold text-primary">{{ providerLabel(checkoutModal.provider) }}</span>
+                            <span class="text-secondary">{{ tx('Zahlungsart') }}</span>
+                            <span class="font-semibold text-primary">{{ tx(providerLabel(checkoutModal.provider)) }}</span>
                         </div>
                     </div>
 
                     <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                         <input v-model="checkoutModal.accepted" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            Ich akzeptiere
-                            <a :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</a>,
-                            <a :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</a>
-                            und weiß, dass ich ein kostenpflichtiges Abo abschließe.
+                            {{ tx('Ich akzeptiere') }}
+                            <a :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ tx('AGB') }}</a>,
+                            <a :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ tx('Widerrufshinweise') }}</a>
+                            {{ tx('und weiß, dass ich ein kostenpflichtiges Abo abschließe.') }}
                         </span>
                     </label>
 
@@ -744,7 +756,7 @@ const startCheckout = async () => {
 
                     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCheckoutModal">
-                            Abbrechen
+                            {{ tx('Abbrechen') }}
                         </button>
                         <button
                             type="button"
@@ -752,7 +764,7 @@ const startCheckout = async () => {
                             :disabled="!checkoutModal.accepted || checkoutModal.processing"
                             @click="startCheckout"
                         >
-                            {{ checkoutModal.processing ? 'Checkout wird gestartet...' : 'Zahlungspflichtig bestellen' }}
+                            {{ tx(checkoutModal.processing ? 'Checkout wird gestartet...' : 'Zahlungspflichtig bestellen') }}
                         </button>
                     </div>
                 </div>
@@ -762,4 +774,3 @@ const startCheckout = async () => {
         <Footer />
     </div>
 </template>
-

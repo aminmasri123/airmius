@@ -14,11 +14,12 @@ use App\Services\Ai\AirmiusAiService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Services\Training\TrainingPlanQualityService;
 use App\Services\Training\TrainingResourceService;
-use App\Support\Roles;
 use App\Support\AppNotification;
+use App\Support\Roles;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -205,6 +206,13 @@ class TrainingController extends Controller
 
         $this->notifyTrainingFeedbackRecipients($log->fresh(['feedbacks']), $feedback->load('author'));
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Feedback wurde gesendet.',
+                'data' => $feedback,
+            ], 201);
+        }
+
         return back()->with('success', 'Feedback wurde gesendet.');
     }
 
@@ -297,8 +305,15 @@ class TrainingController extends Controller
                 'plan' => $plan,
             ]);
         } catch (\Throwable $exception) {
-            return response()->json([
+            Log::warning('AI training plan generation failed.', [
+                'user_id' => $request->user()->id,
+                'exception' => $exception::class,
                 'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Der Trainingsplan konnte derzeit nicht erstellt werden. Bitte versuche es später erneut.',
+                'code' => 'training_ai_unavailable',
             ], 422);
         }
     }

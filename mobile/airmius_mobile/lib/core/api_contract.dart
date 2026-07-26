@@ -236,6 +236,7 @@ class AirmiusApiContract {
       '$friendInvitations/$id/decline';
   static String file(int id) => '$files/$id';
   static String folder(int id) => '$folders/$id';
+  static String folderShare(int id) => '$files/folders/$id/share';
   static String sharedFile(String token) => '$sharedFiles/$token';
   static String conversation(int id) => '$conversations/$id';
   static String conversationMessages(int id) => '$conversations/$id/messages';

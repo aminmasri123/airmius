@@ -8,10 +8,12 @@ class AdminFinanceContractSuiteScreen extends StatefulWidget {
   const AdminFinanceContractSuiteScreen({super.key});
 
   @override
-  State<AdminFinanceContractSuiteScreen> createState() => _AdminFinanceContractSuiteScreenState();
+  State<AdminFinanceContractSuiteScreen> createState() =>
+      _AdminFinanceContractSuiteScreenState();
 }
 
-class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSuiteScreen> {
+class _AdminFinanceContractSuiteScreenState
+    extends State<AdminFinanceContractSuiteScreen> {
   String _filter = 'Alle';
   bool _showInvoices = true;
   bool _showPayments = true;
@@ -22,7 +24,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Admin Rechnungen',
       area: 'Invoices',
       status: 'Offen',
-      body: 'Plattform-Rechnungen, Vereine, Anbieter, Faelligkeit, Mahnstatus und Zahlungsabgleich.',
+      body:
+          'Plattform-Rechnungen, Vereine, Anbieter, Faelligkeit, Mahnstatus und Zahlungsabgleich.',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +33,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Subscription Invoices',
       area: 'Invoices',
       status: 'Abo',
-      body: 'Abo-Rechnungen für Plaene, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
+      body:
+          'Abo-Rechnungen für Plaene, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
       icon: Icons.request_quote_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +42,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Payments',
       area: 'Payments',
       status: 'Abgleich',
-      body: 'Zahlungseingaenge, Banktransfer, Referenzen, Rückfragen und manuelle Zahlungsfreigaben.',
+      body:
+          'Zahlungseingaenge, Banktransfer, Referenzen, Rückfragen und manuelle Zahlungsfreigaben.',
       icon: Icons.payments_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -46,7 +51,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Subscriptions',
       area: 'Payments',
       status: 'Plan',
-      body: 'Aktive Plaene, Upgrades, Downgrades, Pausen, Kündigungen und Kulanzentscheidungen.',
+      body:
+          'Aktive Plaene, Upgrades, Downgrades, Pausen, Kündigungen und Kulanzentscheidungen.',
       icon: Icons.workspace_premium_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -54,7 +60,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Provider Costs',
       area: 'Contracts',
       status: 'Kosten',
-      body: 'Kosten pro Anbieter, Auszahlung, Marge, Vertragsstatus und interne Freigaben.',
+      body:
+          'Kosten pro Anbieter, Auszahlung, Marge, Vertragsstatus und interne Freigaben.',
       icon: Icons.price_change_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -62,7 +69,8 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Operating Contracts',
       area: 'Contracts',
       status: 'Vertrag',
-      body: 'Betriebsverträge, Dokumentstatus, Gültigkeit, Ansprechpartner und Renewal-Hinweise.',
+      body:
+          'Betriebsverträge, Dokumentstatus, Gültigkeit, Ansprechpartner und Renewal-Hinweise.',
       icon: Icons.gavel_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -92,17 +100,28 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '6', label: 'Admin-Flows')),
+                        Expanded(
+                          child: _Metric(value: '6', label: 'Admin-Flows'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '2', label: 'Invoices')),
+                        Expanded(
+                          child: _Metric(value: '2', label: 'Invoices'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '2', label: 'Contracts')),
+                        Expanded(
+                          child: _Metric(value: '2', label: 'Contracts'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
                     _Tabs(
                       value: _filter,
-                      values: const ['Alle', 'Invoices', 'Payments', 'Contracts'],
+                      values: const [
+                        'Alle',
+                        'Invoices',
+                        'Payments',
+                        'Contracts',
+                      ],
                       onChanged: (value) => setState(() => _filter = value),
                     ),
                     const SizedBox(height: 14),
@@ -110,9 +129,12 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
                       showInvoices: _showInvoices,
                       showPayments: _showPayments,
                       showContracts: _showContracts,
-                      onInvoices: (value) => setState(() => _showInvoices = value),
-                      onPayments: (value) => setState(() => _showPayments = value),
-                      onContracts: (value) => setState(() => _showContracts = value),
+                      onInvoices: (value) =>
+                          setState(() => _showInvoices = value),
+                      onPayments: (value) =>
+                          setState(() => _showPayments = value),
+                      onContracts: (value) =>
+                          setState(() => _showContracts = value),
                     ),
                     const SizedBox(height: 14),
                     for (final item in _visibleItems.where(_isVisible)) ...[
@@ -123,12 +145,14 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
                       onExport: () => openUiAction(
                         context,
                         title: 'Finanzexport',
-                        message: 'Die UI für Rechnungen, Zahlungen und Verträge ist bereit; Daten kommen später per API.',
+                        message:
+                            'Die UI für Rechnungen, Zahlungen und Verträge ist bereit; Daten kommen später per API.',
                       ),
                       onApprove: () => openUiAction(
                         context,
                         title: 'Freigabe vorbereiten',
-                        message: 'Admin-Freigaben werden später mit Laravel-Rollen und Audit-Logs verbunden.',
+                        message:
+                            'Admin-Freigaben werden später mit Laravel-Rollen und Audit-Logs verbunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -149,7 +173,9 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -182,8 +208,23 @@ class _Header extends StatelessWidget {
       children: [
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        const Expanded(
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -199,18 +240,40 @@ class _Hero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF26364D)),
-        gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('ADMIN FINANCE', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'ADMIN FINANCE',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Rechnungen & Verträge', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Rechnungen & Verträge',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für Admin Invoices, Payments, Subscription Invoices, Subscriptions, Provider Costs und Operating Contracts.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -228,13 +291,30 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -242,7 +322,11 @@ class _Metric extends StatelessWidget {
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -263,10 +347,16 @@ class _Tabs extends StatelessWidget {
             label: Text(item),
             selected: active,
             onSelected: (_) => onChanged(item),
-            labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -297,9 +387,21 @@ class _VisibilityPanel extends StatelessWidget {
       title: 'Admin-Sichten',
       child: Column(
         children: [
-          _SwitchRow(label: 'Rechnungen anzeigen', value: showInvoices, onChanged: onInvoices),
-          _SwitchRow(label: 'Zahlungen anzeigen', value: showPayments, onChanged: onPayments),
-          _SwitchRow(label: 'Verträge anzeigen', value: showContracts, onChanged: onContracts),
+          _SwitchRow(
+            label: 'Rechnungen anzeigen',
+            value: showInvoices,
+            onChanged: onInvoices,
+          ),
+          _SwitchRow(
+            label: 'Zahlungen anzeigen',
+            value: showPayments,
+            onChanged: onPayments,
+          ),
+          _SwitchRow(
+            label: 'Verträge anzeigen',
+            value: showContracts,
+            onChanged: onContracts,
+          ),
         ],
       ),
     );
@@ -315,14 +417,22 @@ class _AdminFinanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
             height: 54,
-            decoration: BoxDecoration(color: item.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .45))),
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: item.color.withValues(alpha: .45)),
+            ),
             child: Icon(item.icon, color: item.color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -332,12 +442,28 @@ class _AdminFinanceCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: item.status, color: item.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(item.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  item.body,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -348,7 +474,11 @@ class _AdminFinanceCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onExport, required this.onApprove, required this.onSupport});
+  const _ActionPanel({
+    required this.onExport,
+    required this.onApprove,
+    required this.onSupport,
+  });
 
   final VoidCallback onExport;
   final VoidCallback onApprove;
@@ -360,11 +490,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.file_download_outlined, label: 'Finanzexport vorbereiten', onTap: onExport),
+          _ActionButton(
+            icon: Icons.file_download_outlined,
+            label: 'Finanzexport vorbereiten',
+            onTap: onExport,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.verified_outlined, label: 'Admin-Freigabe starten', onTap: onApprove),
+          _ActionButton(
+            icon: Icons.verified_outlined,
+            label: 'Admin-Freigabe starten',
+            onTap: onApprove,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -381,11 +523,21 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D131D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -395,7 +547,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -409,13 +565,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -428,12 +594,24 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111A27),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF26364D)),
+        ),
         child: Row(
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -452,8 +630,19 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: .55)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

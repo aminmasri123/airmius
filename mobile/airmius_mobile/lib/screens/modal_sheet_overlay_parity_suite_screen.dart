@@ -7,10 +7,12 @@ class ModalSheetOverlayParitySuiteScreen extends StatefulWidget {
   const ModalSheetOverlayParitySuiteScreen({super.key});
 
   @override
-  State<ModalSheetOverlayParitySuiteScreen> createState() => _ModalSheetOverlayParitySuiteScreenState();
+  State<ModalSheetOverlayParitySuiteScreen> createState() =>
+      _ModalSheetOverlayParitySuiteScreenState();
 }
 
-class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayParitySuiteScreen> {
+class _ModalSheetOverlayParitySuiteScreenState
+    extends State<ModalSheetOverlayParitySuiteScreen> {
   String _mode = 'Bottom Sheet';
   String _density = 'Mobile';
   bool _fullScreenOnMobile = true;
@@ -24,7 +26,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Anfrage zurückziehen',
       source: 'Club Profile / Membership Request Status',
-      body: 'Bestätigungsdialog mit Vereinsname, Konsequenz, Rückzug-CTA, Abbrechen und gut lesbarem Kontrast.',
+      body:
+          'Bestätigungsdialog mit Vereinsname, Konsequenz, Rückzug-CTA, Abbrechen und gut lesbarem Kontrast.',
       status: 'Confirm',
       icon: Icons.undo_outlined,
       primary: 'Rückzug zeigen',
@@ -34,7 +37,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Mitgliedsantrag ausfuellen',
       source: 'Membership Application Form',
-      body: 'Langes Formular wird mobil als Fullscreen-Modal mit eigenem Scrollbereich, Sticky Footer und Abschnittsnavigation gefuehrt.',
+      body:
+          'Langes Formular wird mobil als Fullscreen-Modal mit eigenem Scrollbereich, Sticky Footer und Abschnittsnavigation gefuehrt.',
       status: 'Fullscreen',
       icon: Icons.assignment_add,
       primary: 'Formularmodal',
@@ -44,7 +48,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Tabellenfilter',
       source: 'Admin, Club, Commerce, Files',
-      body: 'Filterspalten aus der Web-App werden als Bottom-Sheet mit Chips, Suche, Reset, Anwenden und aktivem Filterzaehler abgebildet.',
+      body:
+          'Filterspalten aus der Web-App werden als Bottom-Sheet mit Chips, Suche, Reset, Anwenden und aktivem Filterzaehler abgebildet.',
       status: 'Filter Sheet',
       icon: Icons.filter_alt_outlined,
       primary: 'Filter öffnen',
@@ -54,7 +59,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Datei-Vorschau',
       source: 'Files / Club Documents / Chat Attachments',
-      body: 'PDF, Bild oder Dokument wird in einem Preview-Sheet mit Download, Teilen, Verknuepfen, Version und Datenschutzstatus gezeigt.',
+      body:
+          'PDF, Bild oder Dokument wird in einem Preview-Sheet mit Download, Teilen, Verknuepfen, Version und Datenschutzstatus gezeigt.',
       status: 'Preview',
       icon: Icons.visibility_outlined,
       primary: 'Preview',
@@ -64,7 +70,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Zahlungsdialog',
       source: 'Checkout / BankTransfer / Member Payments',
-      body: 'Bankdaten, IBAN, Verwendungszweck, Betrag, Rechnung und Zahlung bestätigen als mobile Dialog-/Sheet-Kombination.',
+      body:
+          'Bankdaten, IBAN, Verwendungszweck, Betrag, Rechnung und Zahlung bestätigen als mobile Dialog-/Sheet-Kombination.',
       status: 'Payment',
       icon: Icons.payments_outlined,
       primary: 'Zahlung',
@@ -74,7 +81,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Danger Action',
       source: 'Admin Moderation / User / Club',
-      body: 'Sperren, löschen, ablehnen oder entfernen braucht Grund, Audit, Bestätigungstext und klare rote Aktion.',
+      body:
+          'Sperren, löschen, ablehnen oder entfernen braucht Grund, Audit, Bestätigungstext und klare rote Aktion.',
       status: 'Danger',
       icon: Icons.warning_amber_outlined,
       primary: 'Bestätigen',
@@ -84,7 +92,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Workspace Drawer',
       source: 'Mobile Navigation / Sidebar',
-      body: 'Desktop-Sidebar wird mobil zum Drawer mit Workspace Switcher, Rollenstatus, Suchfeld, Badges und Hauptmodulen.',
+      body:
+          'Desktop-Sidebar wird mobil zum Drawer mit Workspace Switcher, Rollenstatus, Suchfeld, Badges und Hauptmodulen.',
       status: 'Drawer',
       icon: Icons.menu_open_outlined,
       primary: 'Drawer',
@@ -94,7 +103,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Success / Error Overlay',
       source: 'Forms / API Actions',
-      body: 'Nach Speichern, Ablehnen, Upload, Checkout oder API-Fehler zeigt Flutter ein klares Ergebnis mit naechster Aktion.',
+      body:
+          'Nach Speichern, Ablehnen, Upload, Checkout oder API-Fehler zeigt Flutter ein klares Ergebnis mit naechster Aktion.',
       status: 'Feedback',
       icon: Icons.task_alt_outlined,
       primary: 'Success',
@@ -106,9 +116,11 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const AirmiusLogo(compact: true),
       ),
@@ -131,7 +143,7 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
                 items: _modes,
                 active: _mode,
                 onChanged: (value) => setState(() => _mode = value),
-                color: AirmiusColors.blue,
+                color: airmiusAccentColor(context),
               ),
               const SizedBox(height: 16),
               _ChoicePanel(
@@ -139,14 +151,15 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
                 items: _densities,
                 active: _density,
                 onChanged: (value) => setState(() => _density = value),
-                color: AirmiusColors.green,
+                color: Theme.of(context).colorScheme.secondary,
               ),
               const SizedBox(height: 16),
               _RulesPanel(
                 fullScreenOnMobile: _fullScreenOnMobile,
                 stickyActions: _stickyActions,
                 dangerConfirm: _dangerConfirm,
-                onFullScreen: (value) => setState(() => _fullScreenOnMobile = value),
+                onFullScreen: (value) =>
+                    setState(() => _fullScreenOnMobile = value),
                 onSticky: (value) => setState(() => _stickyActions = value),
                 onDanger: (value) => setState(() => _dangerConfirm = value),
               ),
@@ -167,7 +180,8 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
                 onOpen: () => openUiAction(
                   context,
                   title: 'Overlay Parity',
-                  body: 'Web-Modals, Confirmations, Filter, Preview, Drawer, Fullscreen Forms und Action Feedback sind als mobile Overlay-Muster vorbereitet.',
+                  body:
+                      'Web-Modals, Confirmations, Filter, Preview, Drawer, Fullscreen Forms und Action Feedback sind als mobile Overlay-Muster vorbereitet.',
                   status: 'Overlay',
                   icon: Icons.layers_outlined,
                 ),
@@ -202,14 +216,22 @@ class _Hero extends StatelessWidget {
         children: [
           const Eyebrow('MODALS & SHEETS'),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Mobile Overlays dürfen nicht wie gequetschte Web-Modals wirken.',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Flutter bekommt klare Regeln für Dialoge, Bottom-Sheets, Drawer, Fullscreen-Formulare, Scrollbereiche, Sticky Actions, Danger-Confirmations und Ergebnis-Overlays.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -218,8 +240,14 @@ class _Hero extends StatelessWidget {
             children: [
               _Metric(value: mode, label: 'Typ'),
               _Metric(value: density, label: 'Dichte'),
-              _Metric(value: fullScreenOnMobile ? 'Ja' : 'Nein', label: 'Fullscreen mobil'),
-              _Metric(value: stickyActions ? 'Sticky' : 'Inline', label: 'Aktionen'),
+              _Metric(
+                value: fullScreenOnMobile ? 'Ja' : 'Nein',
+                label: 'Fullscreen mobil',
+              ),
+              _Metric(
+                value: stickyActions ? 'Sticky' : 'Inline',
+                label: 'Aktionen',
+              ),
             ],
           ),
         ],
@@ -245,6 +273,10 @@ class _ChoicePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = airmiusTextColor(context);
+    final mutedColor = airmiusMutedColor(context);
+    final borderColor = airmiusBorderColor(context);
+    final surfaceColor = airmiusSurfaceSoftColor(context);
     return AirmiusPanel(
       title: title,
       children: [
@@ -258,9 +290,12 @@ class _ChoicePanel extends StatelessWidget {
                   label: Text(item),
                   onSelected: (_) => onChanged(item),
                   selectedColor: color.withValues(alpha: .24),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: active == item ? color : AirmiusColors.border),
-                  labelStyle: TextStyle(color: active == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: surfaceColor,
+                  side: BorderSide(color: active == item ? color : borderColor),
+                  labelStyle: TextStyle(
+                    color: active == item ? textColor : mutedColor,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               )
               .toList(),
@@ -291,11 +326,24 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Responsive Overlay-Regeln',
-      subtitle: 'Diese Regeln verhindern unlesbare, zu schmale oder nicht scrollbare Modals.',
+      subtitle:
+          'Diese Regeln verhindern unlesbare, zu schmale oder nicht scrollbare Modals.',
       children: [
-        _SwitchLine(title: 'Lange Formulare mobil fullscreen', value: fullScreenOnMobile, onChanged: onFullScreen),
-        _SwitchLine(title: 'Aktionen unten sticky halten', value: stickyActions, onChanged: onSticky),
-        _SwitchLine(title: 'Danger-Aktionen mit Pflichtbestätigung', value: dangerConfirm, onChanged: onDanger),
+        _SwitchLine(
+          title: 'Lange Formulare mobil fullscreen',
+          value: fullScreenOnMobile,
+          onChanged: onFullScreen,
+        ),
+        _SwitchLine(
+          title: 'Aktionen unten sticky halten',
+          value: stickyActions,
+          onChanged: onSticky,
+        ),
+        _SwitchLine(
+          title: 'Danger-Aktionen mit Pflichtbestätigung',
+          value: dangerConfirm,
+          onChanged: onDanger,
+        ),
       ],
     );
   }
@@ -316,8 +364,11 @@ class _OverlayPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final previewColor = mode == 'Dialog'
+        ? Theme.of(context).colorScheme.tertiary
+        : airmiusAccentColor(context);
     return AirmiusPanel(
-      borderColor: mode == 'Dialog' ? AirmiusColors.amber : AirmiusColors.blue,
+      borderColor: previewColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -327,30 +378,50 @@ class _OverlayPreview extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AirmiusColors.blue.withValues(alpha: .14),
+                  color: previewColor.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AirmiusColors.blue.withValues(alpha: .6)),
+                  border: Border.all(color: previewColor.withValues(alpha: .6)),
                 ),
-                child: const Icon(Icons.layers_outlined, color: AirmiusColors.blue),
+                child: Icon(Icons.layers_outlined, color: previewColor),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$mode Preview', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+                    Text(
+                      '$mode Preview',
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Layout: $density', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    Text(
+                      'Layout: $density',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(stickyActions ? 'Sticky CTA' : 'Inline CTA', color: AirmiusColors.green),
+              StatusPill(
+                stickyActions ? 'Sticky CTA' : 'Inline CTA',
+                color: Theme.of(context).colorScheme.secondary,
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Beispielinhalt mit eigenem Scrollbereich, lesbarem Kontrast, klarer Schließen-Aktion und festen Buttons am unteren Rand.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -363,7 +434,8 @@ class _OverlayPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: '$mode Overlay',
-                  body: 'Mobile $mode Vorschau mit $density-Dichte, Sticky Actions $stickyActions und Danger Confirm $dangerConfirm.',
+                  body:
+                      'Mobile $mode Vorschau mit $density-Dichte, Sticky Actions $stickyActions und Danger Confirm $dangerConfirm.',
                   status: 'Preview',
                   icon: Icons.layers_outlined,
                 ),
@@ -375,7 +447,8 @@ class _OverlayPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Overlay abbrechen',
-                  body: 'Abbrechen, Schließen, Back-Button und Dirty-State-Schutz werden als mobile Overlay-Regeln vorbereitet.',
+                  body:
+                      'Abbrechen, Schließen, Back-Button und Dirty-State-Schutz werden als mobile Overlay-Regeln vorbereitet.',
                   status: 'Cancel',
                   icon: Icons.close_outlined,
                 ),
@@ -395,8 +468,9 @@ class _PatternCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = airmiusSemanticColor(context, pattern.color);
     return AirmiusPanel(
-      borderColor: pattern.color.withValues(alpha: .55),
+      borderColor: color.withValues(alpha: .55),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -407,28 +481,48 @@ class _PatternCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: pattern.color.withValues(alpha: .14),
+                  color: color.withValues(alpha: .14),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: pattern.color.withValues(alpha: .55)),
+                  border: Border.all(color: color.withValues(alpha: .55)),
                 ),
-                child: Icon(pattern.icon, color: pattern.color),
+                child: Icon(pattern.icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(pattern.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+                    Text(
+                      pattern.title,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 5),
-                    Text(pattern.source, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w800)),
+                    Text(
+                      pattern.source,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              StatusPill(pattern.status, color: pattern.color),
+              StatusPill(pattern.status, color: color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(pattern.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+          Text(
+            pattern.body,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.42,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -441,7 +535,8 @@ class _PatternCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: pattern.primary,
-                  body: '${pattern.title}: ${pattern.body}\n\nQuelle: ${pattern.source}',
+                  body:
+                      '${pattern.title}: ${pattern.body}\n\nQuelle: ${pattern.source}',
                   status: pattern.status,
                   icon: pattern.icon,
                 ),
@@ -453,7 +548,8 @@ class _PatternCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: pattern.secondary,
-                  body: 'Overlay-Regeln, Scrollbereich, Back-Button, Sticky CTA, Accessibility und API-Fehler für ${pattern.title}.',
+                  body:
+                      'Overlay-Regeln, Scrollbereich, Back-Button, Sticky CTA, Accessibility und API-Fehler für ${pattern.title}.',
                   status: 'Overlay Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -477,12 +573,24 @@ class _Checklist extends StatelessWidget {
       title: 'Overlay-Paritaet',
       subtitle: 'Was aus Web-Modals mobil übernommen wird.',
       children: [
-        const _CheckLine('Lange Modals werden mobil fullscreen und bekommen eigenen Scrollbereich.'),
-        const _CheckLine('Buttons bleiben sichtbar und werden bei langen Formularen sticky unten gefuehrt.'),
-        const _CheckLine('Danger-Aktionen brauchen klare Warnung, Grund, Bestätigung und Audit-Hinweis.'),
-        const _CheckLine('Filter, Preview, Drawer und Ergebnisdialoge folgen einem gemeinsamen Airmius-Muster.'),
+        const _CheckLine(
+          'Lange Modals werden mobil fullscreen und bekommen eigenen Scrollbereich.',
+        ),
+        const _CheckLine(
+          'Buttons bleiben sichtbar und werden bei langen Formularen sticky unten gefuehrt.',
+        ),
+        const _CheckLine(
+          'Danger-Aktionen brauchen klare Warnung, Grund, Bestätigung und Audit-Hinweis.',
+        ),
+        const _CheckLine(
+          'Filter, Preview, Drawer und Ergebnisdialoge folgen einem gemeinsamen Airmius-Muster.',
+        ),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Overlay-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(
+          label: 'Overlay-Paritaet markieren',
+          icon: Icons.fact_check_outlined,
+          onPressed: onOpen,
+        ),
       ],
     );
   }
@@ -505,14 +613,26 @@ class _SwitchLine extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.input,
+        color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          Switch(value: value, activeThumbColor: AirmiusColors.green, onChanged: onChanged),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: Theme.of(context).colorScheme.secondary,
+            onChanged: onChanged,
+          ),
         ],
       ),
     );
@@ -531,9 +651,22 @@ class _CheckLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline, color: AirmiusColors.green, size: 19),
+          Icon(
+            Icons.check_circle_outline,
+            color: Theme.of(context).colorScheme.secondary,
+            size: 19,
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -541,10 +674,7 @@ class _CheckLine extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -554,16 +684,29 @@ class _Metric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AirmiusColors.bg.withValues(alpha: .55),
+        color: airmiusSurfaceColor(context).withValues(alpha: .55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

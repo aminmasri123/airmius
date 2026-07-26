@@ -3,6 +3,13 @@ import { Head, router } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     users: {
@@ -153,22 +160,23 @@ const handleDeleteCancel = () => {
     userToDelete.value = null
 }
 
-const formatDate = (value) => value ? new Date(value).toLocaleString('de-DE') : '-'
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatDate = (value) => value ? new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '-'
 
 const inactiveCards = computed(() => [
-    { label: '12+ Monate', value: props.inactiveSummary.inactive_12 || 0, tone: 'text-warning' },
-    { label: '18+ Monate', value: props.inactiveSummary.inactive_18 || 0, tone: 'text-warning' },
-    { label: '24+ Monate', value: props.inactiveSummary.inactive_24 || 0, tone: 'text-error' },
-    { label: '36+ Monate', value: props.inactiveSummary.inactive_36 || 0, tone: 'text-error' },
-    { label: 'Mail-Fehler', value: props.inactiveSummary.mail_failed || 0, tone: 'text-error' },
+    { label: tx('users_admin.inactivity.12', '12+ Monate'), value: props.inactiveSummary.inactive_12 || 0, tone: 'text-warning' },
+    { label: tx('users_admin.inactivity.18', '18+ Monate'), value: props.inactiveSummary.inactive_18 || 0, tone: 'text-warning' },
+    { label: tx('users_admin.inactivity.24', '24+ Monate'), value: props.inactiveSummary.inactive_24 || 0, tone: 'text-error' },
+    { label: tx('users_admin.inactivity.36', '36+ Monate'), value: props.inactiveSummary.inactive_36 || 0, tone: 'text-error' },
+    { label: tx('users_admin.inactivity.mail_failed', 'Mail-Fehler'), value: props.inactiveSummary.mail_failed || 0, tone: 'text-error' },
 ])
 
 const statusLabel = (user) => {
     if (user.account_status === 'suspended') {
-        return user.suspended_until ? `Gesperrt bis ${formatDate(user.suspended_until)}` : 'Gesperrt'
+        return user.suspended_until ? tx('users_admin.status.suspended_until', 'Gesperrt bis {date}', { date: formatDate(user.suspended_until) }) : tx('users_admin.status.suspended', 'Gesperrt')
     }
 
-    return 'Aktiv'
+    return tx('users_admin.status.active', 'Aktiv')
 }
 
 const warningCategories = computed(() => {
@@ -205,13 +213,13 @@ const initials = (name) => (name || '?')
     .toUpperCase()
 
 const stageLabel = (stage) => ({
-    first: 'Erste Mail fällig',
-    second: 'Zweite Mail fällig',
-    scheduled: 'Profil ausblenden',
-    anonymize: 'Anonymisierung prüfen',
-    waiting: 'Warten',
-    active: 'Aktiv',
-    check: 'Prüfen',
+    first: tx('users_admin.stage.first', 'Erste Mail fällig'),
+    second: tx('users_admin.stage.second', 'Zweite Mail fällig'),
+    scheduled: tx('users_admin.stage.scheduled', 'Profil ausblenden'),
+    anonymize: tx('users_admin.stage.anonymize', 'Anonymisierung prüfen'),
+    waiting: tx('users_admin.stage.waiting', 'Warten'),
+    active: tx('users_admin.stage.active', 'Aktiv'),
+    check: tx('users_admin.stage.check', 'Prüfen'),
 }[stage] || stage)
 
 const stageClass = (stage) => {
@@ -244,13 +252,13 @@ const sendInactivityNotice = (user, stage) => {
 <template>
     <AppLayout>
 
-        <Head title="Nutzerverwaltung" />
+        <Head :title="tx('users_admin.page_title', 'Nutzerverwaltung')" />
 
         <div class="space-y-6">
             <div class="mb-6">
-                <h1 class="text-2xl font-semibold text-primary">Admin Dashboard – Nutzer</h1>
+                <h1 class="text-2xl font-semibold text-primary">{{ tx('users_admin.title', 'Admin Dashboard – Nutzer') }}</h1>
                 <p class="mt-2 text-sm text-secondary">
-                    Übersicht aller registrierten Nutzer.
+                    {{ tx('users_admin.intro', 'Übersicht aller registrierten Nutzer.') }}
                 </p>
             </div>
 
@@ -262,7 +270,7 @@ const sendInactivityNotice = (user, stage) => {
                     class="rounded-md px-4 py-2 text-sm font-semibold transition"
                     :class="activeTab === 'users' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-secondary/10 hover:text-primary'"
                 >
-                    Nutzer
+                    {{ tx('users_admin.tabs.users', 'Nutzer') }}
                     <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">{{ users.total }}</span>
                 </button>
                 <button
@@ -271,7 +279,7 @@ const sendInactivityNotice = (user, stage) => {
                     class="rounded-md px-4 py-2 text-sm font-semibold transition"
                     :class="activeTab === 'warnings' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-secondary/10 hover:text-primary'"
                 >
-                    Warnungen
+                    {{ tx('users_admin.tabs.warnings', 'Warnungen') }}
                     <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">{{ warnings.length }}</span>
                 </button>
                 <button
@@ -280,7 +288,7 @@ const sendInactivityNotice = (user, stage) => {
                     class="rounded-md px-4 py-2 text-sm font-semibold transition"
                     :class="activeTab === 'inactivity' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-secondary/10 hover:text-primary'"
                 >
-                    Inaktivität & DSGVO
+                    {{ tx('users_admin.tabs.inactivity', 'Inaktivität & DSGVO') }}
                     <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">{{ inactiveSummary.inactive_12 || 0 }}</span>
                 </button>
             </div>
@@ -294,14 +302,14 @@ const sendInactivityNotice = (user, stage) => {
                 </button>
 
                 <div class="relative flex-1">
-                    <input v-model="searchQuery" type="text" placeholder="Suche nach Name oder E-Mail..."
+                    <input v-model="searchQuery" type="text" :placeholder="tx('users_admin.search', 'Suche nach Name oder E-Mail...')"
                         class="w-full px-4 py-2 border border-border bg-card text-primary placeholder-secondary focus:ring-1 focus:ring-bg " />
                     
                 </div>
                     <select v-model="statusFilter" class="border border-border bg-card px-4 py-2 text-primary focus:ring-1 focus:ring-bg">
-                        <option value="all">Alle Status</option>
-                        <option value="active">Aktiv</option>
-                        <option value="suspended">Gesperrt</option>
+                        <option value="all">{{ tx('users_admin.filters.all', 'Alle Status') }}</option>
+                        <option value="active">{{ tx('users_admin.status.active', 'Aktiv') }}</option>
+                        <option value="suspended">{{ tx('users_admin.status.suspended', 'Gesperrt') }}</option>
                     </select>
                     <button @click="clearSearch"
                     class="inline-flex items-center justify-center px-4 py-2 bg-buttonPrimary text-buttonTextPrimary rounded-r-lg hover:bg-primary/90 transition">
@@ -348,11 +356,11 @@ const sendInactivityNotice = (user, stage) => {
                                 <div class="flex space-x-2">
                                     <button @click="router.visit(route('members.edit', user.id))"
                                         class="px-3 py-1 bg-primary text-buttonTextPrimary rounded hover:bg-primary/80 transition-colors">
-                                        Bearbeiten
+                                        {{ tx('users_admin.actions.edit', 'Bearbeiten') }}
                                     </button>
                                     <button @click="openDeleteModal(user)"
                                         class="px-3 py-1 bg-error text-buttonTextSecondary rounded hover:bg-error/80 transition-colors">
-                                        Löschen
+                                        {{ tx('users_admin.actions.delete', 'Löschen') }}
                                     </button>
                                 </div>
                             </td>
@@ -360,7 +368,7 @@ const sendInactivityNotice = (user, stage) => {
 
                         <tr v-if="users.data.length === 0">
                             <td colspan="6" class="px-4 py-4 text-center text-sm text-secondary">
-                                Keine Nutzer gefunden.
+                                {{ tx('users_admin.empty', 'Keine Nutzer gefunden.') }}
                             </td>
                         </tr>
                     </tbody>

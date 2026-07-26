@@ -2,8 +2,16 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t, locale } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const props = defineProps({
     flags: { type: Array, default: () => [] },
@@ -28,6 +36,10 @@ const filteredWarnings = computed(() => {
 })
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const isVideo = (content) => content?.media_type?.startsWith('video/')
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatDateTime = (value) => value
+    ? new Intl.DateTimeFormat(localeCode.value, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
+    : tx('moderation.unknown_date', 'Unbekannt')
 
 const badgeClass = (severity) => ({
     high: 'bg-error/10 text-error border-error/30',
@@ -36,11 +48,11 @@ const badgeClass = (severity) => ({
 }[severity] || 'bg-muted text-secondary border-border')
 
 const contentLabel = (content) => {
-    if (!content) return 'Gelöschter Inhalt'
+    if (!content) return tx('moderation.deleted_content', 'Gelöschter Inhalt')
     return `${content.type} #${content.id}`
 }
 
-const updateReport = (report, status, removeContent = false) => {
+const persistReportUpdate = (report, status, removeContent) => {
     router.put(route('admin.moderation.reports.update', report.id), {
         status,
         remove_content: removeContent,
@@ -49,7 +61,21 @@ const updateReport = (report, status, removeContent = false) => {
     })
 }
 
-const updateFlag = (flag, status, removeContent = false) => {
+const updateReport = async (report, status, removeContent = false) => {
+    if (removeContent) {
+        const confirmed = await confirmDialog({
+            title: tx('moderation.remove_title', 'Inhalt entfernen'),
+            message: tx('moderation.remove_message', 'Dieser Inhalt wird dauerhaft entfernt. Fortfahren?'),
+            confirmLabel: tx('moderation.remove_confirm', 'Endgültig entfernen'),
+            danger: true,
+        })
+        if (!confirmed) return
+    }
+
+    persistReportUpdate(report, status, removeContent)
+}
+
+const persistFlagUpdate = (flag, status, removeContent) => {
     router.put(route('admin.moderation.flags.update', flag.id), {
         status,
         remove_content: removeContent,
@@ -57,38 +83,52 @@ const updateFlag = (flag, status, removeContent = false) => {
         preserveScroll: true,
     })
 }
+
+const updateFlag = async (flag, status, removeContent = false) => {
+    if (removeContent) {
+        const confirmed = await confirmDialog({
+            title: tx('moderation.remove_title', 'Inhalt entfernen'),
+            message: tx('moderation.remove_message', 'Dieser Inhalt wird dauerhaft entfernt. Fortfahren?'),
+            confirmLabel: tx('moderation.remove_confirm', 'Endgültig entfernen'),
+            danger: true,
+        })
+        if (!confirmed) return
+    }
+
+    persistFlagUpdate(flag, status, removeContent)
+}
 </script>
 
 <template>
-    <Head title="Moderation" />
+    <Head :title="tx('moderation.page_title', 'Moderation')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Admin</p>
-                    <h1 class="mt-1 text-2xl font-semibold text-primary">Moderation</h1>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('moderation.eyebrow', 'Admin') }}</p>
+                    <h1 class="mt-1 text-2xl font-semibold text-primary">{{ tx('moderation.title', 'Moderation') }}</h1>
                     <p class="mt-2 max-w-2xl text-sm text-secondary">
-                        Prüfe gemeldete und automatisch markierte Inhalte aus Feed, Kommentaren und Chat.
+                        {{ tx('moderation.intro', 'Prüfe gemeldete und automatisch markierte Inhalte aus Feed, Kommentaren und Chat.') }}
                     </p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
-                        <p class="text-xs text-secondary">Offene Meldungen</p>
+                        <p class="text-xs text-secondary">{{ tx('moderation.metrics.reports', 'Offene Meldungen') }}</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ openReports.length }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
-                        <p class="text-xs text-secondary">Automatische Treffer</p>
+                        <p class="text-xs text-secondary">{{ tx('moderation.metrics.flags', 'Automatische Treffer') }}</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ openFlags.length }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
-                        <p class="text-xs text-secondary">Warnungen 90 Tage</p>
+                        <p class="text-xs text-secondary">{{ tx('moderation.metrics.warnings', 'Warnungen 90 Tage') }}</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ warningSummary.warnings_90_days || 0 }}</p>
-                        <p class="mt-1 text-xs text-secondary">{{ warningSummary.users_with_warnings_90_days || 0 }} Nutzer</p>
+                        <p class="mt-1 text-xs text-secondary">{{ warningSummary.users_with_warnings_90_days || 0 }} {{ tx('moderation.users', 'Nutzer') }}</p>
                     </div>
                     <div class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
-                        <p class="text-xs text-secondary">Gesperrte Konten</p>
+                        <p class="text-xs text-secondary">{{ tx('moderation.metrics.suspended', 'Gesperrte Konten') }}</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ warningSummary.suspended_users || 0 }}</p>
                     </div>
                 </div>
@@ -103,7 +143,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                     :class="activeTab === 'reports' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
                     @click="activeTab = 'reports'"
                 >
-                    Meldungen
+                    {{ tx('moderation.tabs.reports', 'Meldungen') }}
                 </button>
                 <button
                     type="button"
@@ -111,7 +151,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                     :class="activeTab === 'flags' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
                     @click="activeTab = 'flags'"
                 >
-                    Automatisch markiert
+                    {{ tx('moderation.tabs.flags', 'Automatisch markiert') }}
                 </button>
                 <button
                     type="button"
@@ -119,7 +159,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                     :class="activeTab === 'warnings' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
                     @click="activeTab = 'warnings'"
                 >
-                    Warnungen
+                    {{ tx('moderation.tabs.warnings', 'Warnungen') }}
                 </button>
             </div>
 
@@ -161,24 +201,24 @@ const updateFlag = (flag, status, removeContent = false) => {
                         />
 
                         <p v-if="report.details" class="mt-2 text-sm text-secondary">
-                            Hinweis: {{ report.details }}
+                            {{ tx('moderation.note', 'Hinweis:') }} {{ report.details }}
                         </p>
                         <p class="mt-2 text-xs text-secondary">
-                            Gemeldet von {{ report.reporter?.name || 'Unbekannt' }} · {{ report.created_at }}
+                            {{ tx('moderation.reported_by', 'Gemeldet von') }} {{ report.reporter?.name || tx('moderation.unknown_user', 'Unbekannt') }} · {{ formatDateTime(report.created_at) }}
                         </p>
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <button class="btn" @click="updateReport(report, 'dismissed')">Als unkritisch schließen</button>
-                        <button class="btn-primary" @click="updateReport(report, 'actioned')">Als bearbeitet markieren</button>
+                        <button class="btn" @click="updateReport(report, 'dismissed')">{{ tx('moderation.actions.dismiss', 'Als unkritisch schließen') }}</button>
+                        <button class="btn-primary" @click="updateReport(report, 'actioned')">{{ tx('moderation.actions.actioned', 'Als bearbeitet markieren') }}</button>
                         <button class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white" @click="updateReport(report, 'actioned', true)">
-                            Inhalt entfernen
+                            {{ tx('moderation.actions.remove', 'Inhalt entfernen') }}
                         </button>
                     </div>
                 </article>
 
                 <div v-if="!reports.length" class="p-8 text-center text-sm text-secondary">
-                    Keine Meldungen vorhanden.
+                    {{ tx('moderation.empty.reports', 'Keine Meldungen vorhanden.') }}
                 </div>
             </div>
 
@@ -227,21 +267,21 @@ const updateFlag = (flag, status, removeContent = false) => {
                             </span>
                         </div>
                         <p class="mt-2 text-xs text-secondary">
-                            Quelle: {{ flag.source }} · Benutzer: {{ flag.user?.name || 'System' }} · {{ flag.created_at }}
+                            {{ tx('moderation.source', 'Quelle:') }} {{ flag.source }} · {{ tx('moderation.user', 'Benutzer:') }} {{ flag.user?.name || tx('moderation.system', 'System') }} · {{ formatDateTime(flag.created_at) }}
                         </p>
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <button class="btn" @click="updateFlag(flag, 'dismissed')">Als unkritisch schließen</button>
-                        <button class="btn-primary" @click="updateFlag(flag, 'actioned')">Als bearbeitet markieren</button>
+                        <button class="btn" @click="updateFlag(flag, 'dismissed')">{{ tx('moderation.actions.dismiss', 'Als unkritisch schließen') }}</button>
+                        <button class="btn-primary" @click="updateFlag(flag, 'actioned')">{{ tx('moderation.actions.actioned', 'Als bearbeitet markieren') }}</button>
                         <button class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white" @click="updateFlag(flag, 'actioned', true)">
-                            Inhalt entfernen
+                            {{ tx('moderation.actions.remove', 'Inhalt entfernen') }}
                         </button>
                     </div>
                 </article>
 
                 <div v-if="!flags.length" class="p-8 text-center text-sm text-secondary">
-                    Keine automatischen Treffer vorhanden.
+                    {{ tx('moderation.empty.flags', 'Keine automatischen Treffer vorhanden.') }}
                 </div>
             </div>
 
@@ -298,18 +338,16 @@ const updateFlag = (flag, status, removeContent = false) => {
                                 </td>
                                 <td class="px-4 py-3 font-semibold text-primary">{{ warning.points }}</td>
                                 <td class="max-w-sm px-4 py-3 text-secondary">{{ warning.reason }}</td>
-                                <td class="px-4 py-3 text-secondary">{{ warning.created_at }}</td>
+                                <td class="px-4 py-3 text-secondary">{{ formatDateTime(warning.created_at) }}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <div v-if="!filteredWarnings.length" class="p-8 text-center text-sm text-secondary">
-                    Keine Warnungen zu diesem Filter vorhanden.
+                    {{ tx('moderation.empty.warnings', 'Keine Warnungen zu diesem Filter vorhanden.') }}
                 </div>
             </div>
         </section>
     </div>
 </template>
-
-

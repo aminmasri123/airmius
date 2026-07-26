@@ -7,10 +7,12 @@ class TeamRosterRoleAssignmentSuiteScreen extends StatefulWidget {
   const TeamRosterRoleAssignmentSuiteScreen({super.key});
 
   @override
-  State<TeamRosterRoleAssignmentSuiteScreen> createState() => _TeamRosterRoleAssignmentSuiteScreenState();
+  State<TeamRosterRoleAssignmentSuiteScreen> createState() =>
+      _TeamRosterRoleAssignmentSuiteScreenState();
 }
 
-class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssignmentSuiteScreen> {
+class _TeamRosterRoleAssignmentSuiteScreenState
+    extends State<TeamRosterRoleAssignmentSuiteScreen> {
   String teamFilter = 'Alle';
   bool trainerCanEdit = true;
   bool captainCanInvite = true;
@@ -24,26 +26,31 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
         name: 'ZBB Herren',
         meta: '12 Mitglieder - 2 Trainer',
         status: 'Aktiv',
-        body: 'Kader, Trainer, Captain, Termine, Dateien und Chatrechte werden mobil gebuendelt.',
+        body:
+            'Kader, Trainer, Captain, Termine, Dateien und Chatrechte werden mobil gebuendelt.',
         color: AirmiusColors.blue,
       ),
       const _TeamRow(
         name: 'ZBB Jugend U18',
         meta: '8 Mitglieder - Guardian sichtbar',
         status: 'Jugend',
-        body: 'Jugendschutz, Elternkontakt, Trainingsfreigaben und Teamrollen sind vorbereitet.',
+        body:
+            'Jugendschutz, Elternkontakt, Trainingsfreigaben und Teamrollen sind vorbereitet.',
         color: AirmiusColors.green,
       ),
       const _TeamRow(
         name: 'Warteliste Training',
         meta: '5 Join-Requests',
         status: 'Prüfung',
-        body: 'Neue Anfragen können geprüft, angenommen, abgelehnt oder Rückfragen erhalten.',
+        body:
+            'Neue Anfragen können geprüft, angenommen, abgelehnt oder Rückfragen erhalten.',
         color: AirmiusColors.amber,
       ),
     ];
 
-    final filtered = teams.where((team) => teamFilter == 'Alle' || team.status == teamFilter).toList();
+    final filtered = teams
+        .where((team) => teamFilter == 'Alle' || team.status == teamFilter)
+        .toList();
 
     return PageFrame(
       title: 'Teamverwaltung',
@@ -60,7 +67,11 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
                 const SizedBox(height: 8),
                 const Text(
                   'Vereine brauchen mobile Teamstruktur: Kader, Trainer, Captain, Join-Requests, Dateien, Termine, Chatrechte und Sichtbarkeit pro Rolle.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: AirmiusColors.text,
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -89,7 +100,8 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
                     ButtonSegment(value: 'Prüfung', label: Text('Requests')),
                   ],
                   selected: {teamFilter},
-                  onSelectionChanged: (value) => setState(() => teamFilter = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => teamFilter = value.first),
                 ),
               ],
             ),
@@ -101,10 +113,33 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
               children: [
                 const SectionLabel('ROLLENRECHTE'),
                 const SizedBox(height: 8),
-                _RoleSwitch(title: 'Trainer dürfen Kader bearbeiten', value: trainerCanEdit, color: AirmiusColors.blue, onChanged: (value) => setState(() => trainerCanEdit = value)),
-                _RoleSwitch(title: 'Captains dürfen einladen', value: captainCanInvite, color: AirmiusColors.green, onChanged: (value) => setState(() => captainCanInvite = value)),
-                _RoleSwitch(title: 'Mitglieder sehen Kader', value: membersCanSeeRoster, color: AirmiusColors.amber, onChanged: (value) => setState(() => membersCanSeeRoster = value)),
-                _RoleSwitch(title: 'Join-Requests erlauben', value: joinRequestsEnabled, color: AirmiusColors.pink, onChanged: (value) => setState(() => joinRequestsEnabled = value)),
+                _RoleSwitch(
+                  title: 'Trainer dürfen Kader bearbeiten',
+                  value: trainerCanEdit,
+                  color: AirmiusColors.blue,
+                  onChanged: (value) => setState(() => trainerCanEdit = value),
+                ),
+                _RoleSwitch(
+                  title: 'Captains dürfen einladen',
+                  value: captainCanInvite,
+                  color: AirmiusColors.green,
+                  onChanged: (value) =>
+                      setState(() => captainCanInvite = value),
+                ),
+                _RoleSwitch(
+                  title: 'Mitglieder sehen Kader',
+                  value: membersCanSeeRoster,
+                  color: AirmiusColors.amber,
+                  onChanged: (value) =>
+                      setState(() => membersCanSeeRoster = value),
+                ),
+                _RoleSwitch(
+                  title: 'Join-Requests erlauben',
+                  value: joinRequestsEnabled,
+                  color: AirmiusColors.pink,
+                  onChanged: (value) =>
+                      setState(() => joinRequestsEnabled = value),
+                ),
               ],
             ),
           ),
@@ -155,7 +190,13 @@ class _RoleSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: AirmiusColors.text,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -185,14 +226,36 @@ class _TeamCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(team.name, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
+                        Expanded(
+                          child: Text(
+                            team.name,
+                            style: const TextStyle(
+                              color: AirmiusColors.text,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
                         StatusPill(team.status, color: team.color),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(team.meta, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)),
+                    Text(
+                      team.meta,
+                      style: const TextStyle(
+                        color: AirmiusColors.blue,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(team.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                    Text(
+                      team.body,
+                      style: const TextStyle(
+                        color: AirmiusColors.muted,
+                        height: 1.42,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -209,7 +272,8 @@ class _TeamCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Kader bearbeiten',
-                  body: 'Diese UI bereitet Mitgliederzuweisung, Rollen, Trainer, Captains und Teamrechte für die spätere API vor.',
+                  body:
+                      'Diese UI bereitet Mitgliederzuweisung, Rollen, Trainer, Captains und Teamrechte für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.manage_accounts_outlined,
                 ),
@@ -221,7 +285,8 @@ class _TeamCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Join-Request prüfen',
-                  body: 'Join-Requests können später angenommen, abgelehnt oder mit Rückfrage versehen werden.',
+                  body:
+                      'Join-Requests können später angenommen, abgelehnt oder mit Rückfrage versehen werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.person_add_alt_outlined,
                 ),
@@ -233,7 +298,8 @@ class _TeamCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Teamrechte',
-                  body: 'Trainer-, Captain-, Mitglieder- und Guardian-Rechte werden als mobile Rollensteuerung vorbereitet.',
+                  body:
+                      'Trainer-, Captain-, Mitglieder- und Guardian-Rechte werden als mobile Rollensteuerung vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.verified_user_outlined,
                 ),

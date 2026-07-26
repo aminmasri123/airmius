@@ -76,16 +76,16 @@ const setAiMealImageInput = (element) => {
                 </button>
             </div>
 
-            <section class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+            <section class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('KI-Fotoanalyse') }}</p>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('KI-Fotoanalyse') }}</p>
                         <h3 class="mt-1 text-base font-black text-primary">{{ tAuto('Kalorien aus Bild schützen') }}</h3>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             {{ tAuto('Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestätigt werden.') }}
                         </p>
                     </div>
-                    <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
+                    <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-air-blue">
                         {{ aiMealImageAvailable ? aiMealProviderLabel : tAuto('Pro-Funktion') }}
                     </span>
                 </div>
@@ -129,7 +129,7 @@ const setAiMealImageInput = (element) => {
                     {{ aiMealError }}
                 </p>
 
-                <div v-if="aiMealSuggestion" class="mt-3 rounded-xl border border-cyan-300/30 bg-card p-3">
+                <div v-if="aiMealSuggestion" class="mt-3 rounded-xl border border-air-blue/30 bg-card p-3">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-sm font-black text-primary">{{ aiMealSuggestion.title }}</p>
@@ -291,5 +291,4 @@ const setAiMealImageInput = (element) => {
         </aside>
     </section>
 </template>
-
 

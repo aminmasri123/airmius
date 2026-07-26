@@ -4,25 +4,27 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Events\ChatTyping;
 use App\Events\MessageDeleted;
-use App\Events\MessageReceiptsUpdated;
 use App\Events\MessageReactionUpdated;
+use App\Events\MessageReceiptsUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ConversationController as WebConversationController;
 use App\Http\Resources\Api\V1\ConversationResource;
 use App\Http\Resources\Api\V1\MessageResource;
 use App\Models\Conversation;
+use App\Models\ConversationInvitation;
 use App\Models\Message;
 use App\Models\MessageHide;
-use App\Models\MessageReceipt;
 use App\Models\MessageReaction;
+use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ChatService;
 use App\Services\ModerationService;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
@@ -33,14 +35,57 @@ class ChatController extends Controller
 
     public function index(Request $request)
     {
-        $conversations = $request->user()
+        $request->validate([
+            'team_id' => ['nullable', 'integer', 'exists:teams,id'],
+        ]);
+
+        $conversationsQuery = $request->user()
             ->conversations()
             ->with(['users', 'team', 'owner'])
             ->withCount('messages')
-            ->orderByDesc('conversations.updated_at')
-            ->paginate($this->perPage($request));
+            ->orderByDesc('conversations.updated_at');
+
+        if ($request->filled('team_id')) {
+            $conversationsQuery->where(
+                'conversations.team_id',
+                (int) $request->input('team_id'),
+            );
+        }
+
+        $conversations = $conversationsQuery->paginate($this->perPage($request));
 
         return ConversationResource::collection($conversations);
+    }
+
+    public function invitations(Request $request)
+    {
+        $invitations = ConversationInvitation::query()
+            ->where('recipient_id', $request->user()->id)
+            ->where('status', 'pending')
+            ->with([
+                'inviter:id,name',
+                'conversation' => fn ($query) => $query->with(['users:id,name', 'owner:id,name']),
+            ])
+            ->latest('id')
+            ->get()
+            ->map(fn (ConversationInvitation $invitation) => [
+                'id' => $invitation->id,
+                'status' => $invitation->status,
+                'created_at' => optional($invitation->created_at)->toIso8601String(),
+                'inviter' => $invitation->inviter ? [
+                    'id' => $invitation->inviter->id,
+                    'name' => $invitation->inviter->name,
+                ] : null,
+                'conversation' => $invitation->conversation ? [
+                    'id' => $invitation->conversation->id,
+                    'name' => $invitation->conversation->name,
+                    'description' => $invitation->conversation->description,
+                    'members_count' => $invitation->conversation->users->count(),
+                ] : null,
+            ])
+            ->values();
+
+        return response()->json(['data' => $invitations]);
     }
 
     public function show(Request $request, Conversation $conversation)
@@ -147,6 +192,31 @@ class ChatController extends Controller
                 'typing_users' => $this->typingUsers($conversation, $request),
             ],
         ]);
+    }
+
+    /**
+     * Resolve a protected message deep link without exposing messages that the
+     * current participant has hidden or could not see when joining a group.
+     */
+    public function message(Request $request, Message $message)
+    {
+        $this->authorizeMessageAccess($message, $request);
+
+        abort_if(
+            $message->hides()->where('user_id', $request->user()->id)->exists(),
+            404,
+            'Diese Nachricht ist nicht verfügbar.'
+        );
+
+        return new MessageResource(
+            $message->loadMissing([
+                'sender',
+                'conversation',
+                'receipts',
+                'attachments.file',
+                'reactions.user',
+            ])
+        );
     }
 
     public function sendMessage(Request $request, Conversation $conversation)
@@ -313,6 +383,69 @@ class ChatController extends Controller
         $this->broadcastSafely(fn () => broadcast(new MessageDeleted($message))->toOthers());
 
         return response()->json(['success' => true]);
+    }
+
+    public function updateConversation(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->update($request, $conversation);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function muteConversation(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->mute($request, $conversation);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function leaveConversation(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->leave($request, $conversation);
+
+        return response()->json(['message' => 'Du hast die Gruppe verlassen.']);
+    }
+
+    public function inviteMembers(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->addMembers($request, $conversation);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function acceptInvitation(Request $request, ConversationInvitation $invitation)
+    {
+        app(WebConversationController::class)->acceptInvitation($request, $invitation);
+
+        return new ConversationResource($this->conversationPayload($invitation->conversation));
+    }
+
+    public function declineInvitation(Request $request, ConversationInvitation $invitation)
+    {
+        app(WebConversationController::class)->declineInvitation($request, $invitation);
+
+        return response()->json(['message' => 'Einladung abgelehnt.']);
+    }
+
+    public function removeMember(Request $request, Conversation $conversation, User $user)
+    {
+        app(WebConversationController::class)->removeMember($request, $conversation, $user);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    public function transferOwner(Request $request, Conversation $conversation)
+    {
+        app(WebConversationController::class)->transferOwner($request, $conversation);
+
+        return new ConversationResource($this->conversationPayload($conversation));
+    }
+
+    private function conversationPayload(Conversation $conversation): Conversation
+    {
+        return $conversation->fresh()
+            ->loadMissing(['users', 'team', 'owner'])
+            ->loadCount('messages');
     }
 
     private function authorizeParticipant(Conversation $conversation, Request $request): void

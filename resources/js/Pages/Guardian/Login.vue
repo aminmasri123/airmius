@@ -7,8 +7,11 @@ import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import TextInput from '@/Components/TextInput.vue'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const page = usePage()
+const { t } = useI18n()
+const tx = (value, params = {}) => t(value, params)
 const form = useForm({
     email: '',
 })
@@ -25,7 +28,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Eltern-Login" />
+    <Head :title="tx('Eltern-Login')" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -33,11 +36,8 @@ const submit = () => {
         </div>
 
         <div class="rounded-lg border border-border bg-card p-6">
-            <h1 class="text-xl font-semibold text-primary">Elternbereich</h1>
-            <p class="mt-2 text-sm leading-6 text-secondary">
-                Gib die E-Mail-Adresse ein, die beim Kind als Eltern-/Erziehungsberechtigten-E-Mail gespeichert wurde.
-                Danach senden wir dir einen 6-stelligen Code, der 15 Minuten gültig ist.
-            </p>
+            <h1 class="text-xl font-semibold text-primary">{{ tx('Elternbereich') }}</h1>
+            <p class="mt-2 text-sm leading-6 text-secondary">{{ tx('Gib die E-Mail-Adresse ein, die beim Kind als Eltern-/Erziehungsberechtigten-E-Mail gespeichert wurde. Danach senden wir dir einen 6-stelligen Code, der 15 Minuten gültig ist.') }}</p>
 
             <div v-if="page.props.flash?.status || page.props.status" class="mt-4 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
                 {{ page.props.flash?.status || page.props.status }}
@@ -48,7 +48,7 @@ const submit = () => {
 
             <form class="mt-5 space-y-4" @submit.prevent="submit">
                 <div>
-                    <InputLabel for="email" value="E-Mail" />
+                    <InputLabel for="email" :value="tx('E-Mail')" />
                     <TextInput
                         id="email"
                         v-model="form.email"
@@ -68,14 +68,13 @@ const submit = () => {
                     :class="{ 'opacity-60': submitting }"
                     :aria-busy="submitting"
                 >
-                    Code anfordern
+                    {{ tx('Code anfordern') }}
                 </PrimaryButton>
             </form>
 
             <div class="mt-5 text-sm text-secondary">
-                <Link :href="route('login')" class="underline hover:text-primary">Normaler Login</Link>
+                <Link :href="route('login')" class="underline hover:text-primary">{{ tx('Normaler Login') }}</Link>
             </div>
         </div>
     </AuthenticationCard>
 </template>
-

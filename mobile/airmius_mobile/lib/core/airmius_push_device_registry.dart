@@ -97,6 +97,7 @@ class AirmiusPushDeviceRegistry {
   static const defaultChannels = [
     'event_reminders',
     'chat_mentions',
+    'social_updates',
     'training_updates',
     'commerce_orders',
     'club_billing',

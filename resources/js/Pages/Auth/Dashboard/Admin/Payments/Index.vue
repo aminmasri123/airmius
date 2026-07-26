@@ -2,8 +2,15 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { confirmDialog } from '@/services/dialogService'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 defineProps({
     payments: {
@@ -66,9 +73,9 @@ const deletePayment = async (payment) => {
     }
 
     const confirmed = await confirmDialog({
-        title: 'Zahlung löschen',
-        message: `Soll Zahlung #${payment.id} wirklich gelöscht werden?`,
-        confirmLabel: 'Löschen',
+        title: tx('admin_finance.payment_delete_title', 'Zahlung löschen'),
+        message: tx('admin_finance.payment_delete_message', `Soll Zahlung #${payment.id} wirklich gelöscht werden?`, { id: payment.id }),
+        confirmLabel: tx('admin_finance.delete', 'Löschen'),
         danger: true,
     })
 
@@ -79,57 +86,45 @@ const deletePayment = async (payment) => {
     router.delete(payment.delete_url, { preserveScroll: true })
 }
 
-const statusLabel = (status) => ({
-    paid: 'Bezahlt',
-    pending: 'Offen',
-    open: 'Offen',
-    failed: 'Fehlgeschlagen',
-    cancelled: 'Storniert',
-}[status] || status || '-')
+const statusLabel = (status) => tx(`admin_finance.status.${status}`, status || '-')
 
-const methodLabel = (method) => ({
-    paypal: 'PayPal',
-    stripe: 'Stripe',
-    bank_transfer: 'Überweisung',
-    cash: 'Bar',
-    card: 'Karte',
-}[method] || method || '-')
+const methodLabel = (method) => tx(`admin_finance.method.${method}`, method || '-')
 </script>
 
 <template>
-    <Head title="Zahlungen" />
+    <Head :title="tx('admin_finance.payments_title', 'Zahlungen')" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Finanzen</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Zahlungen</h1>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('admin_finance.eyebrow', 'Finanzen') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('admin_finance.payments_title', 'Zahlungen') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Alle erfassten Vereins- und Plattformzahlungen an einem Ort.
+                        {{ tx('admin_finance.payments_intro', 'Alle erfassten Vereins- und Plattformzahlungen an einem Ort.') }}
                     </p>
                 </div>
                 <Link :href="route('admin.subscription-invoices.index')" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                    Abo-Rechnungen
+                    {{ tx('admin_finance.subscription_invoices', 'Abo-Rechnungen') }}
                 </Link>
             </div>
         </section>
 
         <section class="grid gap-4 md:grid-cols-4">
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Zahlungen</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('admin_finance.count', 'Zahlungen') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.count || 0 }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Bezahlt</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('admin_finance.paid', 'Bezahlt') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.paid || 0 }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Offen</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('admin_finance.open', 'Offen') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.pending || 0 }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Umsatz bezahlt</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('admin_finance.revenue_paid', 'Umsatz bezahlt') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.revenue || '0,00 EUR' }}</p>
             </div>
         </section>
@@ -137,9 +132,9 @@ const methodLabel = (method) => ({
         <form class="surface-card p-5" @submit.prevent="submit">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="text-sm font-semibold text-primary">Manuelle Zahlung erfassen</p>
+                    <p class="text-sm font-semibold text-primary">{{ tx('admin_finance.manual_title', 'Manuelle Zahlung erfassen') }}</p>
                     <p class="mt-1 text-xs text-secondary">
-                        Zahlungseingang erfassen und optional einer offenen Rechnung zuordnen.
+                        {{ tx('admin_finance.manual_hint', 'Zahlungseingang erfassen und optional einer offenen Rechnung zuordnen.') }}
                     </p>
                 </div>
                 <button
@@ -147,7 +142,7 @@ const methodLabel = (method) => ({
                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="form.processing"
                 >
-                    Zahlung erstellen
+                    {{ tx('admin_finance.create_payment', 'Zahlung erstellen') }}
                 </button>
             </div>
 
@@ -270,7 +265,7 @@ const methodLabel = (method) => ({
                                     class="rounded-lg bg-error px-3 py-1 text-xs font-semibold text-white"
                                     @click="deletePayment(payment)"
                                 >
-                                    Löschen
+                    {{ tx('admin_finance.delete', 'Löschen') }}
                                 </button>
                             </td>
                         </tr>
@@ -278,7 +273,7 @@ const methodLabel = (method) => ({
                 </table>
 
                 <p v-if="!payments.data.length" class="px-5 py-8 text-sm text-secondary">
-                    Noch keine Zahlungen vorhanden.
+                    {{ tx('admin_finance.empty_payments', 'Noch keine Zahlungen vorhanden.') }}
                 </p>
 
                 <div v-if="payments.links?.length > 3" class="flex flex-wrap gap-2 border-t border-border px-5 py-4">
@@ -299,4 +294,3 @@ const methodLabel = (method) => ({
         </section>
     </div>
 </template>
-

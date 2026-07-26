@@ -70,6 +70,61 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<List<AirmiusClubSurvey>> surveys(int clubId) async {
+    final json = await client.clubSurveys(clubId);
+    final data = json['data'];
+    return data is List
+        ? data.whereType<JsonMap>().map(AirmiusClubSurvey.fromJson).toList()
+        : const [];
+  }
+
+  @override
+  Future<AirmiusClubSurvey> createSurvey(int clubId, JsonMap payload) async {
+    final json = await client.createClubSurvey(clubId, payload);
+    final data = json['data'];
+    return AirmiusClubSurvey.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<JsonMap> voteSurvey(int clubId, int surveyId, int optionId) async {
+    final json = await client.voteClubSurvey(clubId, surveyId, optionId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<void> closeSurvey(int clubId, int surveyId) async {
+    await client.closeClubSurvey(clubId, surveyId);
+  }
+
+  @override
+  Future<List<AirmiusClubAnnouncement>> announcements(int clubId) async {
+    final json = await client.clubAnnouncements(clubId);
+    final data = json['data'];
+    return data is List
+        ? data
+              .whereType<JsonMap>()
+              .map(AirmiusClubAnnouncement.fromJson)
+              .toList()
+        : const [];
+  }
+
+  @override
+  Future<AirmiusClubAnnouncement> createAnnouncement(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    final json = await client.createClubAnnouncement(clubId, payload);
+    final data = json['data'];
+    return AirmiusClubAnnouncement.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> acknowledgeAnnouncement(int clubId, int announcementId) async {
+    await client.acknowledgeClubAnnouncement(clubId, announcementId);
+  }
+
+  @override
   Future<AirmiusClub> createClub(JsonMap payload) async {
     final json = await client.createClub(payload);
     final data = json['data'];
@@ -81,6 +136,11 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
     final json = await client.updateClub(id, payload);
     final data = json['data'];
     return AirmiusClub.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> deleteClub(int id) async {
+    await client.deleteClub(id);
   }
 
   AirmiusClubManagement _managementFromJson(JsonMap json) {
@@ -212,6 +272,56 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubManagement> updateClubExternalMember(
+    int clubId,
+    int externalMemberId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.updateClubExternalMember(clubId, externalMemberId, payload),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> inviteClubExternalMember(
+    int clubId,
+    int externalMemberId,
+  ) async {
+    return _managementFromJson(
+      await client.inviteClubExternalMember(clubId, externalMemberId),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> removeClubExternalMember(
+    int clubId,
+    int externalMemberId,
+  ) async {
+    return _managementFromJson(
+      await client.removeClubExternalMember(clubId, externalMemberId),
+    );
+  }
+
+  @override
+  Future<JsonMap> clubExternalInvitationByToken(String token) async {
+    final json = await client.clubExternalInvitationByToken(token);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<JsonMap> acceptClubExternalInvitation(String token) async {
+    return await client.acceptClubExternalInvitation(token);
+  }
+
+  @override
+  Future<JsonMap> declineClubExternalInvitation(String token) async {
+    final json = await client.declineClubExternalInvitation(token);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
   Future<AirmiusClubManagement> updateClubMemberRole(
     int clubId,
     int userId,
@@ -219,6 +329,116 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   ) async {
     final json = await client.updateClubMemberRole(clubId, userId, role);
     return _managementFromJson(json);
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateClubMember(
+    int clubId,
+    int userId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.updateClubMember(clubId, userId, payload),
+    );
+  }
+
+  @override
+  Future<JsonMap> clubMemberPermissions(int clubId, int userId) async {
+    final json = await client.clubMemberPermissions(clubId, userId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<JsonMap> updateClubMemberPermissions(
+    int clubId,
+    int userId,
+    JsonMap payload,
+  ) async {
+    final json = await client.updateClubMemberPermissions(
+      clubId,
+      userId,
+      payload,
+    );
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<AirmiusClubManagement> removeClubMember(int clubId, int userId) async {
+    return _managementFromJson(await client.removeClubMember(clubId, userId));
+  }
+
+  @override
+  Future<AirmiusClubManagement> generateClubMemberNumber(
+    int clubId,
+    int userId,
+  ) async {
+    return _managementFromJson(
+      await client.generateClubMemberNumber(clubId, userId),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> createClubMemberInvoice(
+    int clubId,
+    int userId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.createClubMemberInvoice(clubId, userId, payload),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateClubInvoiceStatus(
+    int clubId,
+    int invoiceId,
+    String status,
+  ) async {
+    return _managementFromJson(
+      await client.updateClubInvoiceStatus(clubId, invoiceId, status),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> sendClubInvoiceReminder(
+    int clubId,
+    int invoiceId,
+  ) async {
+    return _managementFromJson(
+      await client.sendClubInvoiceReminder(clubId, invoiceId),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateClubSepaSettings(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.updateClubSepaSettings(clubId, payload),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateClubDatevSettings(
+    int clubId,
+    JsonMap payload,
+  ) async {
+    return _managementFromJson(
+      await client.updateClubDatevSettings(clubId, payload),
+    );
+  }
+
+  @override
+  Future<AirmiusClubManagement> confirmClubBankTransaction(
+    int clubId,
+    int transactionId,
+  ) async {
+    return _managementFromJson(
+      await client.confirmClubBankTransaction(clubId, transactionId),
+    );
   }
 
   @override
@@ -319,6 +539,13 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusTeamInvitation> teamInvitationByToken(String token) async {
+    final json = await client.teamInvitationByToken(token);
+    final data = json['data'];
+    return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusTeam> acceptTeamInvitation(int invitationId) async {
     final json = await client.acceptTeamInvitation(invitationId);
     final data = json['data'];
@@ -326,8 +553,24 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusTeam> acceptTeamInvitationByToken(String token) async {
+    final json = await client.acceptTeamInvitationByToken(token);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusTeamInvitation> declineTeamInvitation(int invitationId) async {
     final json = await client.declineTeamInvitation(invitationId);
+    final data = json['data'];
+    return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeamInvitation> declineTeamInvitationByToken(
+    String token,
+  ) async {
+    final json = await client.declineTeamInvitationByToken(token);
     final data = json['data'];
     return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
   }
@@ -468,6 +711,9 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
   Future<AirmiusFileWorkspace> workspace({
     String scope = 'user',
     int? folderId,
+    int? clubId,
+    int? teamId,
+    int? eventId,
     String? search,
     String sort = 'name-asc',
     int page = 1,
@@ -476,6 +722,9 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
       await client.fileWorkspace(
         scope: scope,
         folderId: folderId,
+        clubId: clubId,
+        teamId: teamId,
+        eventId: eventId,
         search: search,
         sort: sort,
         page: page,
@@ -488,11 +737,17 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
     required String scope,
     required String name,
     int? parentId,
+    int? clubId,
+    int? teamId,
+    int? eventId,
   }) async {
     final json = await client.createFolder(
       scope: scope,
       name: name,
       parentId: parentId,
+      clubId: clubId,
+      teamId: teamId,
+      eventId: eventId,
     );
     final data = json['data'];
     return AirmiusFolder.fromJson(data is JsonMap ? data : json);
@@ -511,6 +766,13 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
   }
 
   @override
+  Future<JsonMap> shareFolder(int folderId, int targetUserId) async {
+    final json = await client.shareFolder(folderId, targetUserId);
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
   Future<AirmiusManagedFile> renameFile(int fileId, String name) async {
     final json = await client.renameFile(fileId, name);
     final data = json['data'];
@@ -520,6 +782,16 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
   @override
   Future<void> deleteFile(int fileId) async {
     await client.deleteFile(fileId);
+  }
+
+  @override
+  Future<JsonMap> createFileShare(int fileId, {int expiresInDays = 14}) async {
+    final json = await client.createFileShare(
+      fileId,
+      expiresInDays: expiresInDays,
+    );
+    final data = json['data'];
+    return data is JsonMap ? data : json;
   }
 }
 
@@ -580,6 +852,66 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
   }
 
   @override
+  Future<AirmiusPage<AirmiusEventComment>> comments(
+    int eventId, {
+    int page = 1,
+  }) async {
+    final json = await client.eventComments(eventId, page: page);
+    return AirmiusPage<AirmiusEventComment>.fromJson(
+      _paged(json, page),
+      AirmiusEventComment.fromJson,
+    );
+  }
+
+  @override
+  Future<AirmiusEventComment> createComment(int eventId, String content) async {
+    final json = await client.createEventComment(eventId, content);
+    final data = json['data'];
+    return AirmiusEventComment.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusEvent> update(int eventId, JsonMap payload) async {
+    final json = await client.updateEvent(eventId, payload);
+    final data = json['data'];
+    return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusEvent> cancel(int eventId, {String? reason}) async {
+    final json = await client.cancelEvent(eventId, reason: reason);
+    final data = json['data'];
+    return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> delete(int eventId) async {
+    await client.deleteEvent(eventId);
+  }
+
+  @override
+  Future<List<AirmiusEventAttendanceMember>> attendance(int eventId) async {
+    final json = await client.eventAttendance(eventId);
+    final data = json['data'];
+    return data is List
+        ? data
+              .whereType<JsonMap>()
+              .map(AirmiusEventAttendanceMember.fromJson)
+              .toList()
+        : const [];
+  }
+
+  @override
+  Future<AirmiusEvent> recordAttendance(
+    int eventId,
+    List<JsonMap> attendance,
+  ) async {
+    final json = await client.recordEventAttendance(eventId, attendance);
+    final data = json['data'];
+    return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusEvent> respond(int eventId, String status) async {
     final json = await client.respondToEvent(eventId, status);
     final data = json['data'];
@@ -591,6 +923,45 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
     final json = await client.leaveEvent(eventId);
     final data = json['data'];
     return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<List<AirmiusEventDecision>> decisions(int eventId) async {
+    final json = await client.eventDecisions(eventId);
+    final data = json['data'];
+    return data is List
+        ? data.whereType<JsonMap>().map(AirmiusEventDecision.fromJson).toList()
+        : const [];
+  }
+
+  @override
+  Future<AirmiusEventDecision> createDecision(
+    int eventId,
+    JsonMap payload,
+  ) async {
+    final json = await client.createEventDecision(eventId, payload);
+    final data = json['data'];
+    return AirmiusEventDecision.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<JsonMap> castDecisionVote(
+    int eventId,
+    int decisionId,
+    int optionId,
+  ) async {
+    final json = await client.castEventDecisionVote(
+      eventId,
+      decisionId,
+      optionId,
+    );
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  @override
+  Future<void> closeDecision(int eventId, int decisionId) async {
+    await client.closeEventDecision(eventId, decisionId);
   }
 }
 
@@ -670,8 +1041,11 @@ class AirmiusApiConversationRepository
   final AirmiusApiClient client;
 
   @override
-  Future<AirmiusPage<AirmiusConversation>> conversations({int page = 1}) async {
-    final json = await client.conversations();
+  Future<AirmiusPage<AirmiusConversation>> conversations({
+    int page = 1,
+    int? teamId,
+  }) async {
+    final json = await client.conversations(page: page, teamId: teamId);
     return AirmiusPage<AirmiusConversation>.fromJson(
       _paged(json, page),
       AirmiusConversation.fromJson,
@@ -701,7 +1075,14 @@ class AirmiusApiConversationRepository
 
   @override
   Future<AirmiusConversation> conversation(int conversationId) async =>
-      AirmiusConversation.fromJson(await client.conversation(conversationId));
+      _conversationFromJson(await client.conversation(conversationId));
+
+  @override
+  Future<AirmiusMessage> message(int messageId) async {
+    final json = await client.message(messageId);
+    final data = json['data'];
+    return AirmiusMessage.fromJson(data is JsonMap ? data : json);
+  }
 
   @override
   Future<AirmiusPage<AirmiusMessage>> messages(
@@ -731,6 +1112,66 @@ class AirmiusApiConversationRepository
   Future<void> sendTyping(int conversationId, bool typing) async {
     await client.sendConversationTyping(conversationId, typing);
   }
+
+  AirmiusConversation _conversationFromJson(JsonMap json) {
+    final data = json['data'];
+    return AirmiusConversation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusConversation> updateConversation(
+    int conversationId,
+    JsonMap payload,
+  ) async {
+    return _conversationFromJson(
+      await client.updateConversation(conversationId, payload),
+    );
+  }
+
+  @override
+  Future<AirmiusConversation> muteConversation(
+    int conversationId,
+    int minutes,
+  ) async {
+    return _conversationFromJson(
+      await client.muteConversation(conversationId, minutes),
+    );
+  }
+
+  @override
+  Future<void> leaveConversation(int conversationId) async {
+    await client.leaveConversation(conversationId);
+  }
+
+  @override
+  Future<AirmiusConversation> inviteConversationMembers(
+    int conversationId,
+    List<int> participantIds,
+  ) async {
+    return _conversationFromJson(
+      await client.inviteConversationMembers(conversationId, participantIds),
+    );
+  }
+
+  @override
+  Future<AirmiusConversation> removeConversationMember(
+    int conversationId,
+    int userId,
+  ) async {
+    return _conversationFromJson(
+      await client.removeConversationMember(conversationId, userId),
+    );
+  }
+
+  @override
+  Future<AirmiusConversation> transferConversationOwner(
+    int conversationId,
+    int userId,
+  ) async {
+    return _conversationFromJson(
+      await client.transferConversationOwner(conversationId, userId),
+    );
+  }
 }
 
 class AirmiusApiFeedRepository implements AirmiusFeedRepository {
@@ -745,6 +1186,13 @@ class AirmiusApiFeedRepository implements AirmiusFeedRepository {
       _paged(json, page),
       AirmiusPost.fromJson,
     );
+  }
+
+  @override
+  Future<AirmiusPost> post(int postId) async {
+    final json = await client.feedPost(postId);
+    final data = json['data'];
+    return AirmiusPost.fromJson(data is JsonMap ? data : json);
   }
 
   @override

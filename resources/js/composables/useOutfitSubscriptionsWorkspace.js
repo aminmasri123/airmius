@@ -4,7 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useTheme } from '@/services/useTheme'
 
 export function useOutfitSubscriptionsWorkspace(props) {
-    const { t, te } = useI18n()
+    const { t, te, locale } = useI18n()
+    const tx = (key, fallback, values = {}) => {
+        const translated = t(key, values)
+        return translated === key ? fallback : translated
+    }
     const { isDark } = useTheme()
     const page = usePage()
 
@@ -103,15 +107,16 @@ export function useOutfitSubscriptionsWorkspace(props) {
         ? (sponsor?.logo_dark_url || sponsor?.logo_light_url || sponsor?.logo_url)
         : (sponsor?.logo_light_url || sponsor?.logo_dark_url || sponsor?.logo_url)
 
-    const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+    const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCode.value, {
         style: 'currency',
         currency,
     }).format(Number(cents || 0) / 100)
 
     const formatDate = (value) => {
-        if (!value) return 'Noch nicht geplant'
+        if (!value) return tx('outfit_workspace.not_planned', 'Noch nicht geplant')
 
-        return new Intl.DateTimeFormat('de-DE', {
+        return new Intl.DateTimeFormat(localeCode.value, {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
@@ -125,44 +130,13 @@ export function useOutfitSubscriptionsWorkspace(props) {
         })
     }
 
-    const statusLabel = (status) => ({
-        active: 'Aktiv',
-        paused: 'Pausiert',
-        payment_paused: 'Wegen Zahlung pausiert',
-        cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
-        pending_payment: 'Zahlung offen',
-        pending_confirmation: 'Wartet auf Freigabe',
-        cancelled: 'Gekuendigt',
-        planned: 'Geplant',
-        preparing: 'In Vorbereitung',
-        shipped: 'Versendet',
-        delivered: 'Geliefert',
-        skipped: 'Ausgesetzt',
-    }[status] || status)
+    const statusLabel = (status) => tx(`outfit_workspace.status.${status}`, status || '-')
 
-    const issueTypeLabel = (type) => ({
-        exchange: 'Umtausch',
-        return: 'Retoure',
-        damaged: 'Beschaedigt',
-        missing_item: 'Artikel fehlt',
-        wrong_item: 'Falscher Artikel',
-        other: 'Sonstiges',
-    }[type] || type || '-')
+    const issueTypeLabel = (type) => tx(`outfit_workspace.issue_types.${type}`, type || '-')
 
-    const issueStatusLabel = (status) => ({
-        open: 'Offen',
-        reviewing: 'In Prüfung',
-        approved: 'Freigegeben',
-        return_waiting: 'Rücksendung offen',
-        replacement_preparing: 'Ersatz wird vorbereitet',
-        resolved: 'Geloest',
-        rejected: 'Abgeschlossen',
-    }[status] || status || '-')
+    const issueStatusLabel = (status) => tx(`outfit_workspace.issue_status.${status}`, status || '-')
 
-    const paymentProviderLabel = (provider) => ({
-        bank_transfer: 'Überweisung',
-        paypal: 'PayPal',
-    }[provider] || provider || '-')
+    const paymentProviderLabel = (provider) => tx(`outfit_workspace.payment.${provider}`, provider || '-')
 
     const shippingAddressLine = (address) => [
         [address?.street, address?.house_number].filter(Boolean).join(' '),
@@ -171,19 +145,17 @@ export function useOutfitSubscriptionsWorkspace(props) {
     ].filter(Boolean).join(', ')
 
     const isPendingPayment = (subscription) => subscription?.status === 'pending_payment'
-    const cancelActionLabel = (subscription) => isPendingPayment(subscription) ? 'Abbrechen' : 'Kündigen'
+    const cancelActionLabel = (subscription) => isPendingPayment(subscription)
+        ? tx('outfit_workspace.actions.cancel_pending', 'Abbrechen')
+        : tx('outfit_workspace.actions.cancel', 'Kündigen')
     const planContractRules = (plan) => plan?.contract_rules || props.contractRules
     const planContractTerms = (plan) => (plan?.contract_terms?.length ? plan.contract_terms : [
-        'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.',
-        'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.',
-        'Pause und Kündigung gelten nur für zukünftige Lieferungen.',
+        tx('outfit_workspace.contract_terms.monthly', 'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.'),
+        tx('outfit_workspace.contract_terms.payment', 'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.'),
+        tx('outfit_workspace.contract_terms.future', 'Pause und Kündigung gelten nur für zukünftige Lieferungen.'),
     ])
 
-    const brandingLabel = (type) => ({
-        sponsor_logo: 'Sponsor-Branding',
-        club_logo: 'Vereins-Branding',
-        custom: 'Individuelles Branding',
-    }[type] || 'Branding')
+    const brandingLabel = (type) => tx(`outfit_workspace.branding.${type === 'sponsor_logo' ? 'sponsor' : type === 'club_logo' ? 'club' : type === 'custom' ? 'custom' : 'default'}`, 'Branding')
 
     const updateProfile = () => {
         profileFeedback.value = null
@@ -201,13 +173,13 @@ export function useOutfitSubscriptionsWorkspace(props) {
             onSuccess: () => {
                 profileFeedback.value = {
                     type: 'success',
-                    message: 'Style-Profil wurde gespeichert.',
+                    message: tx('outfit_workspace.feedback.profile_saved', 'Style-Profil wurde gespeichert.'),
                 }
             },
             onError: () => {
                 profileFeedback.value = {
                     type: 'error',
-                    message: 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.',
+                    message: tx('outfit_workspace.feedback.profile_failed', 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.'),
                 }
             },
         })
@@ -355,5 +327,4 @@ export function useOutfitSubscriptionsWorkspace(props) {
         submitIssue,
     }
 }
-
 

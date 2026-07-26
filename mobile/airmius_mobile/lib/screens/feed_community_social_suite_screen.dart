@@ -1,6 +1,3 @@
-// ignore_for_file: unused_element
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -20,10 +17,12 @@ class FeedCommunitySocialSuiteScreen extends StatefulWidget {
   const FeedCommunitySocialSuiteScreen({super.key});
 
   @override
-  State<FeedCommunitySocialSuiteScreen> createState() => _FeedCommunitySocialSuiteScreenState();
+  State<FeedCommunitySocialSuiteScreen> createState() =>
+      _FeedCommunitySocialSuiteScreenState();
 }
 
-class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuiteScreen> {
+class _FeedCommunitySocialSuiteScreenState
+    extends State<FeedCommunitySocialSuiteScreen> {
   final TextEditingController _contentController = TextEditingController();
   final Map<int, AirmiusPost> _postOverrides = {};
   final List<AirmiusPost> _localPosts = [];
@@ -86,7 +85,7 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
   }
 
   Future<AirmiusPage<AirmiusSport>> _loadSports() {
-    return Future.value(const AirmiusPage<AirmiusSport>(items: [], currentPage: 1, lastPage: 1));
+    return AirmiusServicesScope.of(context).repositories.sports.sports();
   }
 
   void _reload() {
@@ -146,7 +145,24 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowMultiple: true,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov', 'webm', 'ogg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'],
+      allowedExtensions: [
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'gif',
+        'mp4',
+        'mov',
+        'webm',
+        'ogg',
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'txt',
+        'zip',
+      ],
       withData: true,
     );
     if (picked == null) return;
@@ -182,12 +198,16 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     if ((!hasMedia && content.isEmpty) || _sending) return false;
     if (_visibility == 'organization' && _clubId == null) {
       setState(() => _advanced = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle einen Verein für einen Vereinsbeitrag.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.selectClub'))),
+      );
       return false;
     }
     if (_visibility == 'team' && _teamId == null) {
       setState(() => _advanced = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle ein Team für einen Teambeitrag.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.selectTeam'))),
+      );
       return false;
     }
 
@@ -231,19 +251,29 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AirmiusColors.card,
+        backgroundColor: airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Upload abgelehnt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        title: Text(
+          AirmiusScope.of(context).t('feed.uploadRejected'),
+          style: TextStyle(
+            color: airmiusTextColor(context),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
         content: SingleChildScrollView(
           child: SelectableText(
             message,
-            style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Schließen'),
+            child: Text(AirmiusScope.of(context).t('common.cancel')),
           ),
         ],
       ),
@@ -252,70 +282,9 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
 
   String _uploadErrorMessage(Object error) {
     if (error is AirmiusApiException) {
-      try {
-        final decoded = jsonDecode(error.body);
-        if (decoded is Map<String, dynamic>) {
-          final message = decoded['message'];
-          final errors = decoded['errors'];
-          final parts = <String>[];
-          if (message is String && message.trim().isNotEmpty) {
-            parts.add(_explainValidationMessage(message.trim()));
-          }
-          if (errors is Map<String, dynamic>) {
-            final validationMessages = <String>[];
-            errors.forEach((field, value) {
-              if (value is List && value.isNotEmpty) {
-                validationMessages.add('$field: ${_explainValidationMessage(value.first.toString())}');
-              }
-              if (value is String && value.trim().isNotEmpty) {
-                validationMessages.add('$field: ${_explainValidationMessage(value)}');
-              }
-            });
-            if (validationMessages.any((item) => item.startsWith('image:') && item.contains('validation.string'))) {
-              validationMessages.add('Erklaerung: Die Production-API erwartet beim Feld image offenbar einen Text/Pfad, bekommt von Flutter aber eine echte Datei. Das ist ein Backend/API-Stand-Problem: /api/v1/feed muss multipart image uploads akzeptieren oder ein separates Upload-then-post-Verfahren bereitstellen.');
-            }
-            if (validationMessages.isNotEmpty) {
-              parts.add(validationMessages.join(' | '));
-            }
-          }
-          final debug = decoded['flutter_upload_debug'];
-          if (debug is Map<String, dynamic>) {
-            final image = debug['image'];
-            if (image is Map<String, dynamic>) {
-              parts.add('Bild: ${image['name']} (${image['bytes_length'] ?? image['size']} Bytes, ${image['content_type']})');
-            }
-            final sentFiles = debug['sent_files'];
-            if (sentFiles is List && sentFiles.isNotEmpty) {
-              parts.add('Gesendet: ${sentFiles.map((file) {
-                if (file is Map<String, dynamic>) {
-                  return '${file['field']}=${file['filename']} ${file['content_type']} ${file['length']}B';
-                }
-                return file.toString();
-              }).join(', ')}');
-            }
-          }
-          if (parts.isNotEmpty) {
-            return 'Upload abgelehnt (${error.statusCode}): ${parts.join(' - ')}';
-          }
-        }
-      } catch (_) {
-        if (error.body.trim().isNotEmpty) return error.body;
-      }
-      if (error.body.trim().isNotEmpty) return 'Upload abgelehnt (${error.statusCode}): ${error.body}';
+      return error.userMessage;
     }
     return AirmiusScope.of(context).t('feed.error');
-  }
-
-  String _explainValidationMessage(String message) {
-    return switch (message) {
-      'validation.string' => 'validation.string (Server erwartet Text/String, bekam aber einen anderen Wert)',
-      'validation.image' => 'validation.image (Server erkennt die Datei nicht als Bild)',
-      'validation.file' => 'validation.file (Server erkennt keinen gültigen Datei-Upload)',
-      'validation.mimes' => 'validation.mimes (Dateityp ist nicht erlaubt)',
-      'validation.max.file' => 'validation.max.file (Datei ist zu groß)',
-      'validation.max' => 'validation.max (Wert oder Datei ist zu groß)',
-      _ => message,
-    };
   }
 
   @override
@@ -334,28 +303,40 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
         future: _feedFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: const _LoadingFeed());
+            return _FeedListScaffold(
+              composer: _ComposerTrigger(onTap: _openComposer),
+              child: const _LoadingFeed(),
+            );
           }
           if (snapshot.hasError) {
-            return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: _ErrorFeed(onRetry: _reload));
+            return _FeedListScaffold(
+              composer: _ComposerTrigger(onTap: _openComposer),
+              child: _ErrorFeed(onRetry: _reload),
+            );
           }
 
           final loadedPosts = snapshot.data?.items ?? const <AirmiusPost>[];
           final localPostIds = _localPosts.map((post) => post.id).toSet();
-          final posts = [
-            ..._localPosts,
-            ...loadedPosts.where((post) => !localPostIds.contains(post.id)),
-          ]
-              .where((post) => !_removedPostIds.contains(post.id))
-              .map((post) => _postOverrides[post.id] ?? post)
-              .toList();
+          final posts =
+              [
+                    ..._localPosts,
+                    ...loadedPosts.where(
+                      (post) => !localPostIds.contains(post.id),
+                    ),
+                  ]
+                  .where((post) => !_removedPostIds.contains(post.id))
+                  .map((post) => _postOverrides[post.id] ?? post)
+                  .toList();
           return _FeedListScaffold(
             composer: _ComposerTrigger(onTap: _openComposer),
             child: posts.isEmpty
                 ? EmptyPanel(scope.t('feed.empty'))
                 : Column(
                     children: [
-                      _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reloadStories),
+                      _StoriesRail(
+                        storiesFuture: _storiesFuture,
+                        onChanged: _reloadStories,
+                      ),
                       const SizedBox(height: 14),
                       for (final post in posts) ...[
                         _PostCard(
@@ -363,7 +344,9 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                           onChanged: _reload,
                           onDeleted: _removePostLocally,
                           onDeleteFailed: _restorePostLocally,
-                          onPostChanged: (nextPost) => setState(() => _postOverrides[nextPost.id] = nextPost),
+                          onPostChanged: (nextPost) => setState(
+                            () => _postOverrides[nextPost.id] = nextPost,
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -376,6 +359,7 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
   }
 
   Future<void> _openComposer() async {
+    final scope = AirmiusScope.of(context);
     await showDialog<void>(
       context: context,
       useSafeArea: false,
@@ -469,7 +453,9 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return Align(
-                      alignment: constraints.maxWidth < 700 ? Alignment.bottomCenter : Alignment.center,
+                      alignment: constraints.maxWidth < 700
+                          ? Alignment.bottomCenter
+                          : Alignment.center,
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: 672,
@@ -478,9 +464,11 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                         child: Container(
                           margin: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AirmiusColors.card,
+                            color: airmiusSurfaceColor(context),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AirmiusColors.border),
+                            border: Border.all(
+                              color: airmiusBorderColor(context),
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.34),
@@ -493,20 +481,45 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 14, 10, 8),
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  14,
+                                  10,
+                                  8,
+                                ),
                                 child: Row(
                                   children: [
-                                    Expanded(child: Text('Beitrag erstellen', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
+                                    Expanded(
+                                      child: Text(
+                                        scope.t('feed.compose'),
+                                        style: TextStyle(
+                                          color: airmiusTextColor(context),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
                                     IconButton(
-                                      onPressed: _sending ? null : () => Navigator.pop(dialogContext),
-                                      icon: const Icon(Icons.close, color: AirmiusColors.muted),
+                                      tooltip: scope.t('common.close'),
+                                      onPressed: _sending
+                                          ? null
+                                          : () => Navigator.pop(dialogContext),
+                                      icon: Icon(
+                                        Icons.close,
+                                        color: airmiusMutedColor(context),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               Expanded(
                                 child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    6,
+                                    16,
+                                    18,
+                                  ),
                                   child: composer,
                                 ),
                               ),
@@ -536,11 +549,7 @@ class _FeedListScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        composer,
-        const SizedBox(height: 14),
-        child,
-      ],
+      children: [composer, const SizedBox(height: 14), child],
     );
   }
 }
@@ -553,6 +562,7 @@ class _ComposerTrigger extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = AirmiusServicesScope.of(context).authState.user;
+    final scope = AirmiusScope.of(context);
     return AirmiusPanel(
       onTap: onTap,
       child: Row(
@@ -563,13 +573,16 @@ class _ComposerTrigger extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
               decoration: BoxDecoration(
-                color: AirmiusColors.cardSoft,
+                color: airmiusSurfaceSoftColor(context),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AirmiusColors.border),
+                border: Border.all(color: airmiusBorderColor(context)),
               ),
-              child: const Text(
-                'Was gibt es Neues?',
-                style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+              child: Text(
+                scope.t('feed.editPlaceholder'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -593,7 +606,15 @@ class _StoriesRail extends StatelessWidget {
       builder: (context, snapshot) {
         final stories = snapshot.data ?? const <AirmiusStory>[];
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return AirmiusPanel(child: Text(scope.t('feed.stories'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)));
+          return AirmiusPanel(
+            child: Text(
+              scope.t('feed.stories'),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          );
         }
         if (stories.isEmpty) {
           return AirmiusPanel(
@@ -602,8 +623,11 @@ class _StoriesRail extends StatelessWidget {
                 Expanded(child: SectionLabel(scope.t('feed.stories'))),
                 TextButton.icon(
                   onPressed: () => _createStory(context),
-                  icon: const Icon(Icons.add_circle_outline, size: 18),
-                  label: Text(scope.t('feed.storyCreate'), style: const TextStyle(fontWeight: FontWeight.w900)),
+                  icon: Icon(Icons.add_circle_outline, size: 18),
+                  label: Text(
+                    scope.t('feed.storyCreate'),
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                 ),
               ],
             ),
@@ -620,8 +644,11 @@ class _StoriesRail extends StatelessWidget {
                   Expanded(child: SectionLabel(scope.t('feed.stories'))),
                   TextButton.icon(
                     onPressed: () => _createStory(context),
-                    icon: const Icon(Icons.add_circle_outline, size: 18),
-                    label: Text(scope.t('feed.storyCreate'), style: const TextStyle(fontWeight: FontWeight.w900)),
+                    icon: Icon(Icons.add_circle_outline, size: 18),
+                    label: Text(
+                      scope.t('feed.storyCreate'),
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ],
               ),
@@ -631,8 +658,12 @@ class _StoriesRail extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: storyGroups.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) => _StoryChip(group: storyGroups[index], onChanged: onChanged),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 10),
+                  itemBuilder: (context, index) => _StoryChip(
+                    group: storyGroups[index],
+                    onChanged: onChanged,
+                  ),
                 ),
               ),
             ],
@@ -647,25 +678,38 @@ class _StoriesRail extends StatelessWidget {
     final services = AirmiusServicesScope.of(context);
     try {
       final client = services.clientForSession(services.authState.session);
-      final story = await AirmiusStoryUploadService(client).pickAndUpload(visibility: 'public');
+      final story = await AirmiusStoryUploadService(
+        client,
+      ).pickAndUpload(visibility: 'public');
       if (story == null) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.storyNoFile'))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(scope.t('feed.storyNoFile'))));
         return;
       }
       onChanged();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.storyCreated'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('feed.storyCreated'))));
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${scope.t('feed.storyUploadError')} $error')));
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : scope.t('common.errorDetails');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${scope.t('feed.storyUploadError')} $message')),
+      );
     }
   }
 
   List<_StoryGroup> _storyGroups(List<AirmiusStory> stories) {
     final grouped = <String, List<AirmiusStory>>{};
     for (final story in stories) {
-      final key = story.actorId > 0 ? '${story.actorType}:${story.actorId}' : 'name:${story.actorName}:${story.actorAvatarUrl ?? ''}';
+      final key = story.actorId > 0
+          ? '${story.actorType}:${story.actorId}'
+          : 'name:${story.actorName}:${story.actorAvatarUrl ?? ''}';
       grouped.putIfAbsent(key, () => <AirmiusStory>[]).add(story);
     }
     return grouped.values.map(_StoryGroup.new).toList();
@@ -704,23 +748,52 @@ class _StoryChip extends StatelessWidget {
               height: 68,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: group.viewedByMe ? AirmiusColors.border : AirmiusColors.blue, width: 2),
-                color: AirmiusColors.cardSoft,
+                border: Border.all(
+                  color: group.viewedByMe
+                      ? airmiusBorderColor(context)
+                      : airmiusAccentColor(context),
+                  width: 2,
+                ),
+                color: airmiusSurfaceSoftColor(context),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Center(child: UserBubble(label: group.actorName, imageUrl: group.actorAvatarUrl)),
+                    Center(
+                      child: UserBubble(
+                        label: group.actorName,
+                        imageUrl: group.actorAvatarUrl,
+                      ),
+                    ),
                     if (group.count > 1)
                       Positioned(
                         right: 4,
                         bottom: 4,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(color: AirmiusColors.blue, borderRadius: BorderRadius.circular(999), border: Border.all(color: AirmiusColors.card, width: 2)),
-                          child: Text('${group.count}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: airmiusAccentColor(context),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: airmiusSurfaceColor(context),
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            '${group.count}',
+                            style: TextStyle(
+                              color: airmiusOnColor(
+                                airmiusAccentColor(context),
+                              ),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
                       ),
                   ],
@@ -728,7 +801,16 @@ class _StoryChip extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 7),
-            Text(group.actorName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900)),
+            Text(
+              group.actorName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ],
         ),
       ),
@@ -745,163 +827,282 @@ class _StoryChip extends StatelessWidget {
     var storyMuted = true;
     try {
       var story = stories[currentIndex];
-      await AirmiusServicesScope.of(context).repositories.feed.markStoryViewed(story.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.markStoryViewed(story.id);
       if (!context.mounted) return;
       var storyChanged = false;
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        backgroundColor: AirmiusColors.card,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        backgroundColor: airmiusSurfaceColor(context),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         builder: (sheetContext) {
           final mediaHeight = MediaQuery.sizeOf(sheetContext).height * .58;
-          return StatefulBuilder(builder: (context, setSheetState) {
-            story = stories[currentIndex];
-            return SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(children: [
-                        AirmiusAvatar(story.actorName, imageUrl: story.actorAvatarUrl),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(story.actorName, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 18))),
-                        if (stories.length > 1) StatusPill('${currentIndex + 1}/${stories.length}'),
-                      ]),
-                      if (story.caption != null) ...[
-                        const SizedBox(height: 12),
-                        Text(story.caption!, style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
-                      ],
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        height: mediaHeight,
-                        child: Stack(
+          return StatefulBuilder(
+            builder: (context, setSheetState) {
+              story = stories[currentIndex];
+              return SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           children: [
-                            PageView.builder(
-                              controller: pageController,
-                              itemCount: stories.length,
-                              onPageChanged: (index) async {
-                                setSheetState(() => currentIndex = index);
-                                await AirmiusServicesScope.of(context).repositories.feed.markStoryViewed(stories[index].id);
-                                storyChanged = true;
-                              },
-                              itemBuilder: (context, index) {
-                                final pageStory = stories[index];
-                                return pageStory.mediaUrl.isNotEmpty
-                                    ? _StoryMediaPreview(
-                                        story: pageStory,
-                                        height: mediaHeight,
-                                        muted: storyMuted,
-                                        onMutedChanged: (muted) => setSheetState(() => storyMuted = muted),
-                                        onEnded: index < stories.length - 1
-                                            ? () {
-                                                if (pageController.hasClients) {
-                                                  pageController.nextPage(duration: const Duration(milliseconds: 260), curve: Curves.easeOutCubic);
-                                                }
-                                              }
-                                            : null,
-                                      )
-                                    : const SizedBox.shrink();
-                              },
+                            AirmiusAvatar(
+                              story.actorName,
+                              imageUrl: story.actorAvatarUrl,
                             ),
-                            if (stories.length > 1 && currentIndex > 0)
-                              Positioned(
-                                left: 10,
-                                top: 0,
-                                bottom: 0,
-                                child: Center(
-                                  child: IconButton.filled(
-                                    onPressed: () => pageController.previousPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic),
-                                    icon: const Icon(Icons.chevron_left),
-                                    style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.48), foregroundColor: Colors.white),
-                                  ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                story.actorName,
+                                style: TextStyle(
+                                  color: airmiusTextColor(context),
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 18,
                                 ),
                               ),
-                            if (stories.length > 1 && currentIndex < stories.length - 1)
-                              Positioned(
-                                right: 10,
-                                top: 0,
-                                bottom: 0,
-                                child: Center(
-                                  child: IconButton.filled(
-                                    onPressed: () => pageController.nextPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic),
-                                    icon: const Icon(Icons.chevron_right),
-                                    style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.48), foregroundColor: Colors.white),
-                                  ),
-                                ),
+                            ),
+                            if (stories.length > 1)
+                              StatusPill(
+                                '${currentIndex + 1}/${stories.length}',
                               ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      AirmiusButton(label: scope.t('feed.storyReact'), icon: Icons.favorite_outline, onPressed: () async {
-                        await AirmiusServicesScope.of(context).repositories.feed.reactToStory(story.id, 'heart');
-                        storyChanged = true;
-                        if (context.mounted) Navigator.pop(context);
-                      }),
-                      const SizedBox(height: 10),
-                      AirmiusButton(label: 'Story melden', icon: Icons.flag_outlined, secondary: true, onPressed: () async {
-                        final report = await showContentReportDialog(context, title: 'Story melden');
-                        if (report == null || !context.mounted) return;
-                        await AirmiusServicesScope.of(context).repositories.feed.reportContent(type: 'story', id: story.id, reason: report.reason, details: report.details);
-                        storyChanged = true;
-                        if (context.mounted) Navigator.pop(context);
-                      }),
-                      if (story.canDelete) ...[
-                        const SizedBox(height: 10),
-                        AirmiusButton(label: scope.t('feed.storyDelete'), icon: Icons.delete_outline, danger: true, onPressed: () async {
-                          final deletedStory = story;
-                          final deletedIndex = currentIndex;
-                          final closesViewer = stories.length <= 1;
-                          storyChanged = true;
-                          if (closesViewer) {
+                        if (story.caption != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            story.caption!,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          height: mediaHeight,
+                          child: Stack(
+                            children: [
+                              PageView.builder(
+                                controller: pageController,
+                                itemCount: stories.length,
+                                onPageChanged: (index) async {
+                                  setSheetState(() => currentIndex = index);
+                                  await AirmiusServicesScope.of(context)
+                                      .repositories
+                                      .feed
+                                      .markStoryViewed(stories[index].id);
+                                  storyChanged = true;
+                                },
+                                itemBuilder: (context, index) {
+                                  final pageStory = stories[index];
+                                  return pageStory.mediaUrl.isNotEmpty
+                                      ? _StoryMediaPreview(
+                                          story: pageStory,
+                                          height: mediaHeight,
+                                          muted: storyMuted,
+                                          onMutedChanged: (muted) =>
+                                              setSheetState(
+                                                () => storyMuted = muted,
+                                              ),
+                                          onEnded: index < stories.length - 1
+                                              ? () {
+                                                  if (pageController
+                                                      .hasClients) {
+                                                    pageController.nextPage(
+                                                      duration: const Duration(
+                                                        milliseconds: 260,
+                                                      ),
+                                                      curve:
+                                                          Curves.easeOutCubic,
+                                                    );
+                                                  }
+                                                }
+                                              : null,
+                                        )
+                                      : const SizedBox.shrink();
+                                },
+                              ),
+                              if (stories.length > 1 && currentIndex > 0)
+                                Positioned(
+                                  left: 10,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: IconButton.filled(
+                                      tooltip: scope.t('feed.storyPrevious'),
+                                      onPressed: () =>
+                                          pageController.previousPage(
+                                            duration: const Duration(
+                                              milliseconds: 220,
+                                            ),
+                                            curve: Curves.easeOutCubic,
+                                          ),
+                                      icon: Icon(Icons.chevron_left),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.black
+                                            .withValues(alpha: 0.48),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (stories.length > 1 &&
+                                  currentIndex < stories.length - 1)
+                                Positioned(
+                                  right: 10,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Center(
+                                    child: IconButton.filled(
+                                      tooltip: scope.t('feed.storyNext'),
+                                      onPressed: () => pageController.nextPage(
+                                        duration: const Duration(
+                                          milliseconds: 220,
+                                        ),
+                                        curve: Curves.easeOutCubic,
+                                      ),
+                                      icon: Icon(Icons.chevron_right),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.black
+                                            .withValues(alpha: 0.48),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        AirmiusButton(
+                          label: scope.t('feed.storyReact'),
+                          icon: Icons.favorite_outline,
+                          onPressed: () async {
+                            await AirmiusServicesScope.of(
+                              context,
+                            ).repositories.feed.reactToStory(story.id, 'heart');
+                            storyChanged = true;
                             if (context.mounted) Navigator.pop(context);
-                          } else {
-                            setSheetState(() {
-                              stories.removeAt(deletedIndex);
-                              currentIndex = deletedIndex >= stories.length ? stories.length - 1 : deletedIndex;
-                            });
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (pageController.hasClients) pageController.jumpToPage(currentIndex);
-                            });
-                          }
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusButton(
+                          label: scope.t('feed.storyReport'),
+                          icon: Icons.flag_outlined,
+                          secondary: true,
+                          onPressed: () async {
+                            final report = await showContentReportDialog(
+                              context,
+                              title: scope.t('feed.storyReport'),
+                            );
+                            if (report == null || !context.mounted) return;
+                            await AirmiusServicesScope.of(
+                              context,
+                            ).repositories.feed.reportContent(
+                              type: 'story',
+                              id: story.id,
+                              reason: report.reason,
+                              details: report.details,
+                            );
+                            storyChanged = true;
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        ),
+                        if (story.canDelete) ...[
+                          const SizedBox(height: 10),
+                          AirmiusButton(
+                            label: scope.t('feed.storyDelete'),
+                            icon: Icons.delete_outline,
+                            danger: true,
+                            onPressed: () async {
+                              final deletedStory = story;
+                              final deletedIndex = currentIndex;
+                              final closesViewer = stories.length <= 1;
+                              storyChanged = true;
+                              if (closesViewer) {
+                                if (context.mounted) Navigator.pop(context);
+                              } else {
+                                setSheetState(() {
+                                  stories.removeAt(deletedIndex);
+                                  currentIndex = deletedIndex >= stories.length
+                                      ? stories.length - 1
+                                      : deletedIndex;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  if (pageController.hasClients) {
+                                    pageController.jumpToPage(currentIndex);
+                                  }
+                                });
+                              }
 
-                          try {
-                            await AirmiusServicesScope.of(context).repositories.feed.deleteStory(deletedStory.id);
-                            if (!rootContext.mounted) return;
-                            ScaffoldMessenger.of(rootContext).showSnackBar(const SnackBar(content: Text('Story gelöscht.')));
-                          } catch (_) {
-                            if (!rootContext.mounted) return;
-                            if (!closesViewer && stories.isNotEmpty) {
-                              setSheetState(() {
-                                final restoreIndex = deletedIndex > stories.length ? stories.length : deletedIndex;
-                                stories.insert(restoreIndex, deletedStory);
-                                currentIndex = restoreIndex;
-                              });
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (pageController.hasClients) pageController.jumpToPage(currentIndex);
-                              });
-                            }
-                            ScaffoldMessenger.of(rootContext).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
-                          }
-                        }),
+                              try {
+                                await AirmiusServicesScope.of(context)
+                                    .repositories
+                                    .feed
+                                    .deleteStory(deletedStory.id);
+                                if (!rootContext.mounted) return;
+                                ScaffoldMessenger.of(rootContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(scope.t('feed.storyDeleted')),
+                                  ),
+                                );
+                              } catch (_) {
+                                if (!rootContext.mounted) return;
+                                if (!closesViewer && stories.isNotEmpty) {
+                                  setSheetState(() {
+                                    final restoreIndex =
+                                        deletedIndex > stories.length
+                                        ? stories.length
+                                        : deletedIndex;
+                                    stories.insert(restoreIndex, deletedStory);
+                                    currentIndex = restoreIndex;
+                                  });
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    if (pageController.hasClients) {
+                                      pageController.jumpToPage(currentIndex);
+                                    }
+                                  });
+                                }
+                                ScaffoldMessenger.of(rootContext).showSnackBar(
+                                  SnackBar(
+                                    content: Text(scope.t('feed.error')),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          });
+              );
+            },
+          );
         },
       );
       if (storyChanged) onChanged();
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
     } finally {
       pageController.dispose();
     }
@@ -957,8 +1158,8 @@ class _StoryMediaPreview extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AirmiusColors.blue.withValues(alpha: 0.34),
-                      AirmiusColors.cardSoft,
+                      airmiusAccentColor(context).withValues(alpha: 0.34),
+                      airmiusSurfaceSoftColor(context),
                       AirmiusColors.pink.withValues(alpha: 0.22),
                     ],
                   ),
@@ -967,7 +1168,11 @@ class _StoryMediaPreview extends StatelessWidget {
             if (isVideo) Container(color: Colors.black.withValues(alpha: 0.24)),
             if (isVideo)
               const Center(
-                child: Icon(Icons.play_circle_fill, color: Colors.white, size: 64),
+                child: Icon(
+                  Icons.play_circle_fill,
+                  color: Colors.white,
+                  size: 64,
+                ),
               ),
           ],
         ),
@@ -1045,124 +1250,164 @@ class _Composer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              AirmiusAvatar(userName, imageUrl: userAvatarUrl),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 14)),
-                    const SizedBox(height: 4),
-                    const Text('Neuer Beitrag', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
-                  ],
-                ),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            AirmiusAvatar(userName, imageUrl: userAvatarUrl),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    scope.t('feed.newPost'),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          AirmiusTextField(
-            label: scope.t('feed.placeholder'),
-            icon: Icons.edit_outlined,
-            maxLines: 5,
-            controller: contentController,
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: sending ? null : () => onAdvancedChanged(!advanced),
-            icon: const Icon(Icons.tune_outlined, size: 18),
-            label: Text('Zielgruppe, Sport & Typ', style: const TextStyle(fontWeight: FontWeight.w900)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AirmiusColors.text,
-              side: const BorderSide(color: AirmiusColors.border),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-          ),
-          if (advanced) ...[
-            const SizedBox(height: 12),
-            _ComposerAdvanced(
-              visibility: visibility,
-              postType: postType,
-              contentOrigin: contentOrigin,
-              clubId: clubId,
-              teamId: teamId,
-              sportId: sportId,
-              sportSkillIds: sportSkillIds,
-              clubsFuture: clubsFuture,
-              teamsFuture: teamsFuture,
-              sportsFuture: sportsFuture,
-              sending: sending,
-              onVisibilityChanged: onVisibilityChanged,
-              onPostTypeChanged: onPostTypeChanged,
-              onContentOriginChanged: onContentOriginChanged,
-              onClubChanged: onClubChanged,
-              onTeamChanged: onTeamChanged,
-              onSportChanged: onSportChanged,
-              onSportSkillToggled: onSportSkillToggled,
             ),
           ],
-          if (imageFile != null) ...[
-            const SizedBox(height: 12),
-            _SelectedFileCard(
-              icon: Icons.image_outlined,
-              title: imageFile!.name,
-              subtitle: 'Bild ausgewählt',
-              onClear: sending ? null : onClearImage,
-            ),
-          ],
-          if (attachmentCount > 0) ...[
-            const SizedBox(height: 12),
-            _SelectedFileCard(
-              icon: Icons.video_file_outlined,
-              title: '$attachmentCount Datei(en)',
-              subtitle: 'Video, Bild oder Datei ausgewählt',
-              onClear: sending ? null : onClearAttachments,
-            ),
-          ],
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              AirmiusButton(label: 'Bild', icon: Icons.image_outlined, onPressed: sending ? null : onPickImage, secondary: true),
-              AirmiusButton(label: 'Video / Dateien', icon: Icons.video_library_outlined, onPressed: sending ? null : onPickAttachments, secondary: true),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                decoration: BoxDecoration(
-                  color: AirmiusColors.cardSoft,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AirmiusColors.border),
-                ),
-                child: const Text('Bilder optimiert, Videos bis 50 MB', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
-              ),
-            ],
+        ),
+        const SizedBox(height: 14),
+        AirmiusTextField(
+          label: scope.t('feed.placeholder'),
+          icon: Icons.edit_outlined,
+          maxLines: 5,
+          controller: contentController,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: sending ? null : () => onAdvancedChanged(!advanced),
+          icon: Icon(Icons.tune_outlined, size: 18),
+          label: Text(
+            scope.t('feed.audienceAndType'),
+            style: TextStyle(fontWeight: FontWeight.w900),
           ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: airmiusTextColor(context),
+            side: BorderSide(color: airmiusBorderColor(context)),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        if (advanced) ...[
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AirmiusButton(
-                  label: 'Abbrechen',
-                  icon: Icons.close_outlined,
-                  onPressed: sending ? null : () => Navigator.pop(context),
-                  secondary: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: AirmiusButton(
-                  label: sending ? scope.t('status.loading') : 'Posten',
-                  icon: Icons.send_outlined,
-                  onPressed: sending ? null : onPublish,
-                ),
-              ),
-            ],
+          _ComposerAdvanced(
+            visibility: visibility,
+            postType: postType,
+            contentOrigin: contentOrigin,
+            clubId: clubId,
+            teamId: teamId,
+            sportId: sportId,
+            sportSkillIds: sportSkillIds,
+            clubsFuture: clubsFuture,
+            teamsFuture: teamsFuture,
+            sportsFuture: sportsFuture,
+            sending: sending,
+            onVisibilityChanged: onVisibilityChanged,
+            onPostTypeChanged: onPostTypeChanged,
+            onContentOriginChanged: onContentOriginChanged,
+            onClubChanged: onClubChanged,
+            onTeamChanged: onTeamChanged,
+            onSportChanged: onSportChanged,
+            onSportSkillToggled: onSportSkillToggled,
           ),
         ],
+        if (imageFile != null) ...[
+          const SizedBox(height: 12),
+          _SelectedFileCard(
+            icon: Icons.image_outlined,
+            title: imageFile!.name,
+            subtitle: scope.t('feed.imageSelected'),
+            onClear: sending ? null : onClearImage,
+          ),
+        ],
+        if (attachmentCount > 0) ...[
+          const SizedBox(height: 12),
+          _SelectedFileCard(
+            icon: Icons.video_file_outlined,
+            title: '${scope.t('feed.media')} ($attachmentCount)',
+            subtitle: scope.t('feed.attachmentsSelected'),
+            onClear: sending ? null : onClearAttachments,
+          ),
+        ],
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            AirmiusButton(
+              label: scope.t('feed.image'),
+              icon: Icons.image_outlined,
+              onPressed: sending ? null : onPickImage,
+              secondary: true,
+            ),
+            AirmiusButton(
+              label: scope.t('feed.media'),
+              icon: Icons.video_library_outlined,
+              onPressed: sending ? null : onPickAttachments,
+              secondary: true,
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: airmiusSurfaceSoftColor(context),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: airmiusBorderColor(context)),
+              ),
+              child: Text(
+                scope.t('feed.mediaHint'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: AirmiusButton(
+                label: scope.t('common.cancel'),
+                icon: Icons.close_outlined,
+                onPressed: sending ? null : () => Navigator.pop(context),
+                secondary: true,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: AirmiusButton(
+                label: sending
+                    ? scope.t('status.loading')
+                    : scope.t('feed.publish'),
+                icon: Icons.send_outlined,
+                onPressed: sending ? null : onPublish,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1210,54 +1455,100 @@ class _ComposerAdvanced extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft.withValues(alpha: 0.78),
+        color: airmiusSurfaceSoftColor(context).withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: visibility,
-            decoration: const InputDecoration(labelText: 'Zielgruppe'),
-            dropdownColor: AirmiusColors.card,
-            items: const [
-              DropdownMenuItem(value: 'public', child: Text('Öffentlich')),
-              DropdownMenuItem(value: 'organization', child: Text('Verein')),
-              DropdownMenuItem(value: 'team', child: Text('Team')),
+            decoration: InputDecoration(labelText: scope.t('feed.audience')),
+            dropdownColor: airmiusSurfaceColor(context),
+            items: [
+              DropdownMenuItem(
+                value: 'public',
+                child: Text(scope.t('feed.public')),
+              ),
+              DropdownMenuItem(
+                value: 'organization',
+                child: Text(scope.t('workspace.club')),
+              ),
+              DropdownMenuItem(
+                value: 'team',
+                child: Text(scope.t('teamsCenter.teams')),
+              ),
             ],
-            onChanged: sending ? null : (value) => onVisibilityChanged(value ?? 'public'),
+            onChanged: sending
+                ? null
+                : (value) => onVisibilityChanged(value ?? 'public'),
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: postType,
-            decoration: const InputDecoration(labelText: 'Beitragstyp'),
-            dropdownColor: AirmiusColors.card,
-            items: const [
-              DropdownMenuItem(value: 'normal', child: Text('Normal')),
-              DropdownMenuItem(value: 'question', child: Text('Frage')),
-              DropdownMenuItem(value: 'knowledge', child: Text('Wissen')),
-              DropdownMenuItem(value: 'training_drill', child: Text('Trainingsuebung')),
-              DropdownMenuItem(value: 'tactic', child: Text('Taktik')),
-              DropdownMenuItem(value: 'analysis', child: Text('Analyse')),
-              DropdownMenuItem(value: 'experience', child: Text('Erfahrung')),
-              DropdownMenuItem(value: 'club_update', child: Text('Vereinsinfo')),
+            decoration: InputDecoration(labelText: scope.t('feed.postType')),
+            dropdownColor: airmiusSurfaceColor(context),
+            items: [
+              DropdownMenuItem(
+                value: 'normal',
+                child: Text(scope.t('feed.normal')),
+              ),
+              DropdownMenuItem(
+                value: 'question',
+                child: Text(scope.t('feed.question')),
+              ),
+              DropdownMenuItem(
+                value: 'knowledge',
+                child: Text(scope.t('feed.knowledge')),
+              ),
+              DropdownMenuItem(
+                value: 'training_drill',
+                child: Text(scope.t('feed.trainingDrill')),
+              ),
+              DropdownMenuItem(
+                value: 'tactic',
+                child: Text(scope.t('feed.tactic')),
+              ),
+              DropdownMenuItem(
+                value: 'analysis',
+                child: Text(scope.t('feed.analysis')),
+              ),
+              DropdownMenuItem(
+                value: 'experience',
+                child: Text(scope.t('feed.experience')),
+              ),
+              DropdownMenuItem(
+                value: 'club_update',
+                child: Text(scope.t('feed.clubUpdate')),
+              ),
             ],
-            onChanged: sending ? null : (value) => onPostTypeChanged(value ?? 'normal'),
+            onChanged: sending
+                ? null
+                : (value) => onPostTypeChanged(value ?? 'normal'),
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: contentOrigin,
-            decoration: const InputDecoration(labelText: 'Quelle'),
-            dropdownColor: AirmiusColors.card,
-            items: const [
-              DropdownMenuItem(value: 'self', child: Text('Von mir selbst erstellt')),
-              DropdownMenuItem(value: 'ai', child: Text('Mit KI erstellt')),
+            decoration: InputDecoration(labelText: scope.t('feed.source')),
+            dropdownColor: airmiusSurfaceColor(context),
+            items: [
+              DropdownMenuItem(
+                value: 'self',
+                child: Text(scope.t('feed.self')),
+              ),
+              DropdownMenuItem(value: 'ai', child: Text(scope.t('feed.ai'))),
             ],
-            onChanged: sending ? null : (value) => onContentOriginChanged(value ?? 'self'),
+            onChanged: sending
+                ? null
+                : (value) => onContentOriginChanged(value ?? 'self'),
           ),
           const SizedBox(height: 10),
           FutureBuilder<AirmiusPage<AirmiusClub>>(
@@ -1265,18 +1556,30 @@ class _ComposerAdvanced extends StatelessWidget {
             builder: (context, snapshot) {
               final clubs = snapshot.data?.items ?? const <AirmiusClub>[];
               return DropdownButtonFormField<int?>(
+                isExpanded: true,
                 initialValue: clubId,
                 decoration: InputDecoration(
-                  labelText: 'Verein',
+                  labelText: scope.t('workspace.club'),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: visibility == 'organization' && clubId == null ? AirmiusColors.red : AirmiusColors.border),
+                    borderSide: BorderSide(
+                      color: visibility == 'organization' && clubId == null
+                          ? Theme.of(context).colorScheme.error
+                          : airmiusBorderColor(context),
+                    ),
                   ),
                 ),
-                dropdownColor: AirmiusColors.card,
+                dropdownColor: airmiusSurfaceColor(context),
                 items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('Kein Verein')),
-                  for (final club in clubs) DropdownMenuItem<int?>(value: club.id, child: Text(club.name)),
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(scope.t('feed.noClub')),
+                  ),
+                  for (final club in clubs)
+                    DropdownMenuItem<int?>(
+                      value: club.id,
+                      child: Text(club.name),
+                    ),
                 ],
                 onChanged: sending ? null : onClubChanged,
               );
@@ -1288,18 +1591,34 @@ class _ComposerAdvanced extends StatelessWidget {
             builder: (context, snapshot) {
               final teams = snapshot.data?.items ?? const <AirmiusTeam>[];
               return DropdownButtonFormField<int?>(
+                isExpanded: true,
                 initialValue: teamId,
                 decoration: InputDecoration(
-                  labelText: 'Team',
+                  labelText: scope.t('teamsCenter.teams'),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: visibility == 'team' && teamId == null ? AirmiusColors.red : AirmiusColors.border),
+                    borderSide: BorderSide(
+                      color: visibility == 'team' && teamId == null
+                          ? Theme.of(context).colorScheme.error
+                          : airmiusBorderColor(context),
+                    ),
                   ),
                 ),
-                dropdownColor: AirmiusColors.card,
+                dropdownColor: airmiusSurfaceColor(context),
                 items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('Kein Team')),
-                  for (final team in teams) DropdownMenuItem<int?>(value: team.id, child: Text(team.clubName == null ? team.name : '${team.name} - ${team.clubName}')),
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(scope.t('feed.noTeam')),
+                  ),
+                  for (final team in teams)
+                    DropdownMenuItem<int?>(
+                      value: team.id,
+                      child: Text(
+                        team.clubName == null
+                            ? team.name
+                            : '${team.name} - ${team.clubName}',
+                      ),
+                    ),
                 ],
                 onChanged: sending ? null : onTeamChanged,
               );
@@ -1321,12 +1640,22 @@ class _ComposerAdvanced extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   DropdownButtonFormField<int?>(
+                    isExpanded: true,
                     initialValue: sportId,
-                    decoration: const InputDecoration(labelText: 'Sportart zum Beitrag'),
-                    dropdownColor: AirmiusColors.card,
+                    decoration: InputDecoration(
+                      labelText: scope.t('feed.sportForPost'),
+                    ),
+                    dropdownColor: airmiusSurfaceColor(context),
                     items: [
-                      const DropdownMenuItem<int?>(value: null, child: Text('Keine Sportart')),
-                      for (final sport in sports) DropdownMenuItem<int?>(value: sport.id, child: Text(sport.name)),
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(scope.t('feed.noSport')),
+                      ),
+                      for (final sport in sports)
+                        DropdownMenuItem<int?>(
+                          value: sport.id,
+                          child: Text(sport.name),
+                        ),
                     ],
                     onChanged: sending ? null : onSportChanged,
                   ),
@@ -1343,25 +1672,36 @@ class _ComposerAdvanced extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            _visibilityHint(visibility),
-            style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700, height: 1.35),
+            _visibilityHint(context, visibility),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
           ),
         ],
       ),
     );
   }
 
-  String _visibilityHint(String visibility) {
+  String _visibilityHint(BuildContext context, String visibility) {
+    final t = AirmiusScope.of(context).t;
     return switch (visibility) {
-      'organization' => 'Sichtbar für Mitglieder des ausgewählten Vereins.',
-      'team' => 'Sichtbar für Mitglieder des ausgewählten Teams.',
-      _ => 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte.',
+      'organization' => t('feed.visibilityClubHint'),
+      'team' => t('feed.visibilityTeamHint'),
+      _ => t('feed.visibilityPublicHint'),
     };
   }
 }
 
 class _SportSkillPicker extends StatelessWidget {
-  const _SportSkillPicker({required this.sport, required this.selectedIds, required this.sending, required this.onToggle});
+  const _SportSkillPicker({
+    required this.sport,
+    required this.selectedIds,
+    required this.sending,
+    required this.onToggle,
+  });
 
   final AirmiusSport? sport;
   final List<int> selectedIds;
@@ -1370,11 +1710,26 @@ class _SportSkillPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     if (sport == null) {
-      return const Text('Optional: Sportart wählen, um passende Skills zu markieren.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
+      return Text(
+        t('feed.optionalSkillHint'),
+        style: TextStyle(
+          color: airmiusMutedColor(context),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      );
     }
     if (sport!.skills.isEmpty) {
-      return Text('Keine Skills für ${sport!.name}.', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
+      return Text(
+        t('feed.noSkills'),
+        style: TextStyle(
+          color: airmiusMutedColor(context),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      );
     }
     return Wrap(
       spacing: 8,
@@ -1385,52 +1740,33 @@ class _SportSkillPicker extends StatelessWidget {
             selected: selectedIds.contains(skill.id),
             label: Text(skill.name),
             onSelected: sending ? null : (_) => onToggle(skill.id),
-            selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-            backgroundColor: AirmiusColors.card,
-            side: BorderSide(color: selectedIds.contains(skill.id) ? AirmiusColors.blue : AirmiusColors.border),
-            labelStyle: TextStyle(color: selectedIds.contains(skill.id) ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12),
+            selectedColor: airmiusAccentColor(context).withValues(alpha: 0.22),
+            backgroundColor: airmiusSurfaceColor(context),
+            side: BorderSide(
+              color: selectedIds.contains(skill.id)
+                  ? airmiusAccentColor(context)
+                  : airmiusBorderColor(context),
+            ),
+            labelStyle: TextStyle(
+              color: selectedIds.contains(skill.id)
+                  ? airmiusTextColor(context)
+                  : airmiusMutedColor(context),
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
           ),
       ],
     );
   }
 }
 
-class _ChoiceChipButton extends StatelessWidget {
-  const _ChoiceChipButton({required this.label, required this.icon, required this.active, required this.onTap});
-
-  final String label;
-  final IconData icon;
-  final bool active;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active ? AirmiusColors.blue : AirmiusColors.border;
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: active ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.cardSoft,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: color.withValues(alpha: active ? 0.75 : 1)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: active ? AirmiusColors.blue : AirmiusColors.muted),
-            const SizedBox(width: 7),
-            Text(label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SelectedFileCard extends StatelessWidget {
-  const _SelectedFileCard({required this.icon, required this.title, required this.subtitle, required this.onClear});
+  const _SelectedFileCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onClear,
+  });
 
   final IconData icon;
   final String title;
@@ -1442,25 +1778,46 @@ class _SelectedFileCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.blue.withValues(alpha: 0.09),
+        color: airmiusAccentColor(context).withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.28)),
+        border: Border.all(
+          color: airmiusAccentColor(context).withValues(alpha: 0.28),
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AirmiusColors.blue),
+          Icon(icon, color: airmiusAccentColor(context)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
-          IconButton(onPressed: onClear, icon: const Icon(Icons.close, color: AirmiusColors.muted)),
+          IconButton(
+            tooltip: AirmiusScope.of(context).t('common.close'),
+            onPressed: onClear,
+            icon: Icon(Icons.close, color: airmiusMutedColor(context)),
+          ),
         ],
       ),
     );
@@ -1468,7 +1825,13 @@ class _SelectedFileCard extends StatelessWidget {
 }
 
 class _PostCard extends StatefulWidget {
-  const _PostCard({required this.post, required this.onChanged, required this.onDeleted, required this.onDeleteFailed, required this.onPostChanged});
+  const _PostCard({
+    required this.post,
+    required this.onChanged,
+    required this.onDeleted,
+    required this.onDeleteFailed,
+    required this.onPostChanged,
+  });
 
   final AirmiusPost post;
   final VoidCallback onChanged;
@@ -1503,7 +1866,9 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<AirmiusPage<AirmiusComment>> _loadComments() {
-    return AirmiusServicesScope.of(context).repositories.feed.comments(widget.post.id, perPage: _commentsPerPage);
+    return AirmiusServicesScope.of(
+      context,
+    ).repositories.feed.comments(widget.post.id, perPage: _commentsPerPage);
   }
 
   void _showAllCommentsInline() {
@@ -1519,7 +1884,9 @@ class _PostCardState extends State<_PostCard> {
 
     final user = AirmiusServicesScope.of(context).authState.user;
     final previousPost = widget.post;
-    final optimisticPost = previousPost.copyWith(commentsCount: previousPost.commentsCount + 1);
+    final optimisticPost = previousPost.copyWith(
+      commentsCount: previousPost.commentsCount + 1,
+    );
     final optimisticComment = AirmiusComment(
       id: -DateTime.now().microsecondsSinceEpoch,
       postId: widget.post.id,
@@ -1540,11 +1907,15 @@ class _PostCardState extends State<_PostCard> {
     });
 
     try {
-      final savedComment = await AirmiusServicesScope.of(context).repositories.feed.createComment(widget.post.id, content);
+      final savedComment = await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.createComment(widget.post.id, content);
       if (!mounted) return;
       setState(() {
         _sendingComment = false;
-        final index = _localComments.indexWhere((comment) => comment.id == optimisticComment.id);
+        final index = _localComments.indexWhere(
+          (comment) => comment.id == optimisticComment.id,
+        );
         if (index >= 0) {
           _localComments[index] = savedComment;
         } else {
@@ -1556,27 +1927,42 @@ class _PostCardState extends State<_PostCard> {
       widget.onPostChanged(previousPost);
       setState(() {
         _sendingComment = false;
-        _localComments.removeWhere((comment) => comment.id == optimisticComment.id);
+        _localComments.removeWhere(
+          (comment) => comment.id == optimisticComment.id,
+        );
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.commentsError'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('feed.commentsError')),
+        ),
+      );
     }
   }
 
   Future<void> _deletePost() async {
-    final ok = await confirmDanger(context, 'Beitrag löschen', 'Moechtest du diesen Beitrag wirklich löschen?');
+    final ok = await confirmDanger(
+      context,
+      'Beitrag löschen',
+      'Moechtest du diesen Beitrag wirklich löschen?',
+    );
     if (!ok || !mounted) return;
     final deletedPost = widget.post;
     widget.onDeleted(deletedPost.id);
     try {
-      await AirmiusServicesScope.of(context).repositories.feed.deletePost(deletedPost.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.deletePost(deletedPost.id);
     } catch (_) {
       if (!mounted) return;
       widget.onDeleteFailed(deletedPost);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))),
+      );
     }
   }
 
   Future<void> _editPost() async {
+    final scope = AirmiusScope.of(context);
     final contentController = TextEditingController(text: widget.post.content);
     var visibility = widget.post.visibility;
     var postType = widget.post.postType;
@@ -1613,7 +1999,24 @@ class _PostCardState extends State<_PostCard> {
               final picked = await FilePicker.platform.pickFiles(
                 type: FileType.custom,
                 allowMultiple: true,
-                allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov', 'webm', 'ogg', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'],
+                allowedExtensions: [
+                  'jpg',
+                  'jpeg',
+                  'png',
+                  'webp',
+                  'gif',
+                  'mp4',
+                  'mov',
+                  'webm',
+                  'ogg',
+                  'pdf',
+                  'doc',
+                  'docx',
+                  'xls',
+                  'xlsx',
+                  'txt',
+                  'zip',
+                ],
                 withData: true,
               );
               if (picked == null) return;
@@ -1625,11 +2028,23 @@ class _PostCardState extends State<_PostCard> {
               final hasNewMedia = imageFile != null || attachments.isNotEmpty;
               if (_savingEdit || (content.isEmpty && !hasNewMedia)) return;
               if (visibility == 'organization' && clubId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle einen Verein für einen Vereinsbeitrag.')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AirmiusScope.of(context).t('feed.selectClub'),
+                    ),
+                  ),
+                );
                 return;
               }
               if (visibility == 'team' && teamId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle ein Team für einen Teambeitrag.')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      AirmiusScope.of(context).t('feed.selectTeam'),
+                    ),
+                  ),
+                );
                 return;
               }
 
@@ -1637,7 +2052,9 @@ class _PostCardState extends State<_PostCard> {
               setDialogState(() {});
               try {
                 final services = AirmiusServicesScope.of(context);
-                final client = services.clientForSession(services.authState.session);
+                final client = services.clientForSession(
+                  services.authState.session,
+                );
                 final nextPost = await AirmiusPostUploadService(client).update(
                   postId: widget.post.id,
                   content: content,
@@ -1653,12 +2070,18 @@ class _PostCardState extends State<_PostCard> {
                 );
                 if (!mounted) return;
                 setState(() => _savingEdit = false);
-                if (dialogContext.mounted) Navigator.pop(dialogContext, nextPost);
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext, nextPost);
+                }
               } catch (_) {
                 if (!mounted) return;
                 setState(() => _savingEdit = false);
                 setDialogState(() {});
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(AirmiusScope.of(context).t('feed.error')),
+                  ),
+                );
               }
             }
 
@@ -1668,36 +2091,89 @@ class _PostCardState extends State<_PostCard> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     return Align(
-                      alignment: constraints.maxWidth < 700 ? Alignment.bottomCenter : Alignment.center,
+                      alignment: constraints.maxWidth < 700
+                          ? Alignment.bottomCenter
+                          : Alignment.center,
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: 672, maxHeight: constraints.maxHeight - 24),
+                        constraints: BoxConstraints(
+                          maxWidth: 672,
+                          maxHeight: constraints.maxHeight - 24,
+                        ),
                         child: Container(
                           margin: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AirmiusColors.card,
+                            color: airmiusSurfaceColor(context),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AirmiusColors.border),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.34), blurRadius: 30, offset: const Offset(0, 18))],
+                            border: Border.all(
+                              color: airmiusBorderColor(context),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.34),
+                                blurRadius: 30,
+                                offset: const Offset(0, 18),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 14, 10, 8),
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  14,
+                                  10,
+                                  8,
+                                ),
                                 child: Row(
                                   children: [
-                                    Expanded(child: Text('Beitrag bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
-                                    IconButton(onPressed: _savingEdit ? null : () => Navigator.pop(dialogContext), icon: const Icon(Icons.close, color: AirmiusColors.muted)),
+                                    Expanded(
+                                      child: Text(
+                                        AirmiusScope.of(
+                                          context,
+                                        ).t('feed.editPost'),
+                                        style: TextStyle(
+                                          color: airmiusTextColor(context),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      tooltip: AirmiusScope.of(
+                                        context,
+                                      ).t('common.close'),
+                                      onPressed: _savingEdit
+                                          ? null
+                                          : () => Navigator.pop(dialogContext),
+                                      icon: Icon(
+                                        Icons.close,
+                                        color: airmiusMutedColor(context),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               Expanded(
                                 child: SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    6,
+                                    16,
+                                    18,
+                                  ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
                                     children: [
-                                      AirmiusTextField(label: 'Was gibt es Neues?', icon: Icons.edit_outlined, maxLines: 4, controller: contentController),
+                                      AirmiusTextField(
+                                        label: AirmiusScope.of(
+                                          context,
+                                        ).t('feed.editPlaceholder'),
+                                        icon: Icons.edit_outlined,
+                                        maxLines: 4,
+                                        controller: contentController,
+                                      ),
                                       const SizedBox(height: 12),
                                       _ComposerAdvanced(
                                         visibility: visibility,
@@ -1711,39 +2187,80 @@ class _PostCardState extends State<_PostCard> {
                                         teamsFuture: teamsFuture,
                                         sportsFuture: sportsFuture,
                                         sending: _savingEdit,
-                                        onVisibilityChanged: (value) => setDialogState(() {
-                                          visibility = value;
-                                          if (value != 'organization') clubId = null;
-                                          if (value != 'team') teamId = null;
-                                        }),
-                                        onPostTypeChanged: (value) => setDialogState(() => postType = value),
-                                        onContentOriginChanged: (value) => setDialogState(() => contentOrigin = value),
-                                        onClubChanged: (value) => setDialogState(() => clubId = value),
-                                        onTeamChanged: (value) => setDialogState(() => teamId = value),
-                                        onSportChanged: (value) => setDialogState(() {
-                                          sportId = value;
-                                          sportSkillIds = [];
-                                        }),
-                                        onSportSkillToggled: (skillId) => setDialogState(() {
-                                          sportSkillIds = sportSkillIds.contains(skillId) ? sportSkillIds.where((id) => id != skillId).toList() : [...sportSkillIds, skillId];
-                                        }),
+                                        onVisibilityChanged: (value) =>
+                                            setDialogState(() {
+                                              visibility = value;
+                                              if (value != 'organization') {
+                                                clubId = null;
+                                              }
+                                              if (value != 'team') {
+                                                teamId = null;
+                                              }
+                                            }),
+                                        onPostTypeChanged: (value) =>
+                                            setDialogState(
+                                              () => postType = value,
+                                            ),
+                                        onContentOriginChanged: (value) =>
+                                            setDialogState(
+                                              () => contentOrigin = value,
+                                            ),
+                                        onClubChanged: (value) =>
+                                            setDialogState(
+                                              () => clubId = value,
+                                            ),
+                                        onTeamChanged: (value) =>
+                                            setDialogState(
+                                              () => teamId = value,
+                                            ),
+                                        onSportChanged: (value) =>
+                                            setDialogState(() {
+                                              sportId = value;
+                                              sportSkillIds = [];
+                                            }),
+                                        onSportSkillToggled: (skillId) =>
+                                            setDialogState(() {
+                                              sportSkillIds =
+                                                  sportSkillIds.contains(
+                                                    skillId,
+                                                  )
+                                                  ? sportSkillIds
+                                                        .where(
+                                                          (id) => id != skillId,
+                                                        )
+                                                        .toList()
+                                                  : [...sportSkillIds, skillId];
+                                            }),
                                       ),
                                       const SizedBox(height: 12),
                                       if (imageFile != null) ...[
                                         _SelectedFileCard(
                                           icon: Icons.image_outlined,
                                           title: imageFile!.name,
-                                          subtitle: 'Neues Bild ausgewählt',
-                                          onClear: _savingEdit ? null : () => setDialogState(() => imageFile = null),
+                                          subtitle: scope.t(
+                                            'feed.imageSelected',
+                                          ),
+                                          onClear: _savingEdit
+                                              ? null
+                                              : () => setDialogState(
+                                                  () => imageFile = null,
+                                                ),
                                         ),
                                         const SizedBox(height: 10),
                                       ],
                                       if (attachments.isNotEmpty) ...[
                                         _SelectedFileCard(
                                           icon: Icons.video_file_outlined,
-                                          title: '${attachments.length} Datei(en)',
-                                          subtitle: 'Neue Video-, Bild- oder Datei-Anhaenge',
-                                          onClear: _savingEdit ? null : () => setDialogState(() => attachments = const []),
+                                          title:
+                                              '${attachments.length} ${scope.t('feed.media')}',
+                                          subtitle: scope.t(
+                                            'feed.attachmentsSelected',
+                                          ),
+                                          onClear: _savingEdit
+                                              ? null
+                                              : () => setDialogState(
+                                                  () => attachments = const [],
+                                                ),
                                         ),
                                         const SizedBox(height: 10),
                                       ],
@@ -1751,21 +2268,79 @@ class _PostCardState extends State<_PostCard> {
                                         spacing: 8,
                                         runSpacing: 8,
                                         children: [
-                                          AirmiusButton(label: 'Bild', icon: Icons.image_outlined, onPressed: _savingEdit ? null : pickEditImage, secondary: true),
-                                          AirmiusButton(label: 'Video / Dateien', icon: Icons.video_library_outlined, onPressed: _savingEdit ? null : pickEditAttachments, secondary: true),
+                                          AirmiusButton(
+                                            label: scope.t('feed.image'),
+                                            icon: Icons.image_outlined,
+                                            onPressed: _savingEdit
+                                                ? null
+                                                : pickEditImage,
+                                            secondary: true,
+                                          ),
+                                          AirmiusButton(
+                                            label: scope.t('feed.media'),
+                                            icon: Icons.video_library_outlined,
+                                            onPressed: _savingEdit
+                                                ? null
+                                                : pickEditAttachments,
+                                            secondary: true,
+                                          ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                            decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-                                            child: const Text('Neue Medien werden wie im Web an den Beitrag angehaengt.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 11,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: airmiusSurfaceSoftColor(
+                                                context,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                              border: Border.all(
+                                                color: airmiusBorderColor(
+                                                  context,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              scope.t('feed.attachmentHint'),
+                                              style: TextStyle(
+                                                color: airmiusMutedColor(
+                                                  context,
+                                                ),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 12),
                                       Row(
                                         children: [
-                                          Expanded(child: AirmiusButton(label: 'Abbrechen', icon: Icons.close_outlined, onPressed: _savingEdit ? null : () => Navigator.pop(dialogContext), secondary: true)),
+                                          Expanded(
+                                            child: AirmiusButton(
+                                              label: scope.t('common.cancel'),
+                                              icon: Icons.close_outlined,
+                                              onPressed: _savingEdit
+                                                  ? null
+                                                  : () => Navigator.pop(
+                                                      dialogContext,
+                                                    ),
+                                              secondary: true,
+                                            ),
+                                          ),
                                           const SizedBox(width: 10),
-                                          Expanded(child: AirmiusButton(label: _savingEdit ? 'Speichere...' : 'Speichern', icon: Icons.save_outlined, onPressed: _savingEdit ? null : save)),
+                                          Expanded(
+                                            child: AirmiusButton(
+                                              label: _savingEdit
+                                                  ? scope.t('status.loading')
+                                                  : scope.t('common.save'),
+                                              icon: Icons.save_outlined,
+                                              onPressed: _savingEdit
+                                                  ? null
+                                                  : save,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -1796,21 +2371,30 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _reportPost() async {
-    final report = await showContentReportDialog(context, title: 'Beitrag melden');
+    final report = await showContentReportDialog(
+      context,
+      title: AirmiusScope.of(context).t('feed.postReport'),
+    );
     if (report == null || !mounted) return;
     try {
       await AirmiusServicesScope.of(context).repositories.feed.reportContent(
-            type: 'post',
-            id: widget.post.id,
-            reason: report.reason,
-            details: report.details,
-          );
+        type: 'post',
+        id: widget.post.id,
+        reason: report.reason,
+        details: report.details,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Danke. Die Meldung wurde an die Moderation gesendet.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('feed.moderationThanks')),
+        ),
+      );
       widget.onChanged();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))),
+      );
     }
   }
 
@@ -1840,20 +2424,42 @@ class _PostCardState extends State<_PostCard> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(post.authorName, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                        StatusPill(_visibilityLabel(scope, post.visibility), color: post.visibility == 'team' ? AirmiusColors.green : post.visibility == 'organization' ? AirmiusColors.amber : AirmiusColors.blue),
+                        Expanded(
+                          child: Text(
+                            post.authorName,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        StatusPill(
+                          _visibilityLabel(scope, post.visibility),
+                          color: post.visibility == 'team'
+                              ? Theme.of(context).colorScheme.secondary
+                              : post.visibility == 'organization'
+                              ? Theme.of(context).colorScheme.tertiary
+                              : airmiusAccentColor(context),
+                        ),
                       ],
                     ),
                     if (meta.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(meta, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                      Text(
+                        meta,
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ],
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, color: AirmiusColors.muted),
-                color: AirmiusColors.card,
+                icon: Icon(Icons.more_horiz, color: airmiusMutedColor(context)),
+                color: airmiusSurfaceColor(context),
                 onSelected: (value) {
                   if (value == 'edit') {
                     _editPost();
@@ -1866,12 +2472,35 @@ class _PostCardState extends State<_PostCard> {
                   }
                 },
                 itemBuilder: (context) {
-                  final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
-                  final isOwnPost = currentUserId != null && currentUserId > 0 && post.userId == currentUserId;
+                  final currentUserId = AirmiusServicesScope.of(
+                    context,
+                  ).authState.user?.id;
+                  final isOwnPost =
+                      currentUserId != null &&
+                      currentUserId > 0 &&
+                      post.userId == currentUserId;
                   return [
-                    if (post.canUpdate || isOwnPost) const PopupMenuItem(value: 'edit', child: Text('Beitrag bearbeiten')),
-                    if (!isOwnPost) const PopupMenuItem(value: 'report', child: Text('Beitrag melden')),
-                    if (post.canDelete || isOwnPost) const PopupMenuItem(value: 'delete', child: Text('Beitrag löschen')),
+                    if (post.canUpdate || isOwnPost)
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text(
+                          AirmiusScope.of(context).t('feed.editPost'),
+                        ),
+                      ),
+                    if (!isOwnPost)
+                      PopupMenuItem(
+                        value: 'report',
+                        child: Text(
+                          AirmiusScope.of(context).t('feed.postReport'),
+                        ),
+                      ),
+                    if (post.canDelete || isOwnPost)
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          AirmiusScope.of(context).t('feed.postDelete'),
+                        ),
+                      ),
                   ];
                 },
               ),
@@ -1881,14 +2510,26 @@ class _PostCardState extends State<_PostCard> {
           _PostMetaBadges(post: post),
           if (post.content.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
-            Text(post.content, style: const TextStyle(color: AirmiusColors.text, height: 1.45, fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(
+              post.content,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                height: 1.45,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
           if (post.imageUrl != null || post.attachments.isNotEmpty) ...[
             const SizedBox(height: 12),
             _PostMediaGallery(post: post),
           ],
           const SizedBox(height: 14),
-          _PostEngagementBar(post: post, onPostChanged: widget.onPostChanged, onOpenComments: _toggleComments),
+          _PostEngagementBar(
+            post: post,
+            onPostChanged: widget.onPostChanged,
+            onOpenComments: _toggleComments,
+          ),
           if (_commentsOpen) ...[
             const SizedBox(height: 10),
             _InlineComments(
@@ -1914,7 +2555,12 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _openPostDetail(BuildContext context) async {
-    final changed = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => FeedPostDetailScreen(post: widget.post)));
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FeedPostDetailScreen(post: widget.post),
+      ),
+    );
     if (changed == true) widget.onChanged();
   }
 
@@ -1944,12 +2590,30 @@ class _PostMetaBadges extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
     final badges = <_PostBadgeData>[
-      _PostBadgeData(_postTypeLabel(post.postType), AirmiusColors.mutedSoft),
-      _PostBadgeData(_contentOriginLabel(post.contentOrigin), post.contentOrigin == 'ai' ? AirmiusColors.blue : AirmiusColors.mutedSoft),
-      if (post.moderationStatus != 'approved') const _PostBadgeData('In Prüfung', AirmiusColors.amber),
-      if (post.sportName != null) _PostBadgeData(post.sportName!, AirmiusColors.green),
-      for (final skill in post.sportSkills) _PostBadgeData(skill, AirmiusColors.mutedSoft),
+      _PostBadgeData(
+        _postTypeLabel(post.postType, scope.t),
+        airmiusMutedSoftColor(context),
+      ),
+      _PostBadgeData(
+        _contentOriginLabel(post.contentOrigin, scope.t),
+        post.contentOrigin == 'ai'
+            ? airmiusAccentColor(context)
+            : airmiusMutedSoftColor(context),
+      ),
+      if (post.moderationStatus != 'approved')
+        _PostBadgeData(
+          scope.t('feed.moderationPending'),
+          Theme.of(context).colorScheme.tertiary,
+        ),
+      if (post.sportName != null)
+        _PostBadgeData(
+          post.sportName!,
+          Theme.of(context).colorScheme.secondary,
+        ),
+      for (final skill in post.sportSkills)
+        _PostBadgeData(skill, airmiusMutedSoftColor(context)),
     ];
     return Wrap(
       spacing: 7,
@@ -1963,29 +2627,36 @@ class _PostMetaBadges extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: badge.color.withValues(alpha: 0.36)),
             ),
-            child: Text(badge.label, style: TextStyle(color: badge.color, fontSize: 11, fontWeight: FontWeight.w900)),
+            child: Text(
+              badge.label,
+              style: TextStyle(
+                color: badge.color,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
       ],
     );
   }
 
-  static String _postTypeLabel(String type) {
+  static String _postTypeLabel(String type, String Function(String) t) {
     return switch (type) {
-      'question' => 'Frage',
-      'knowledge' => 'Wissen',
-      'training_drill' => 'Trainingsuebung',
-      'tactic' => 'Taktik',
-      'analysis' => 'Analyse',
-      'experience' => 'Erfahrung',
-      'club_update' => 'Vereinsinfo',
-      _ => 'Normal',
+      'question' => t('feed.question'),
+      'knowledge' => t('feed.knowledge'),
+      'training_drill' => t('feed.trainingDrill'),
+      'tactic' => t('feed.tactic'),
+      'analysis' => t('feed.analysis'),
+      'experience' => t('feed.experience'),
+      'club_update' => t('feed.clubUpdate'),
+      _ => t('feed.normal'),
     };
   }
 
-  static String _contentOriginLabel(String origin) {
+  static String _contentOriginLabel(String origin, String Function(String) t) {
     return switch (origin) {
-      'ai' => 'Mit KI erstellt',
-      _ => 'Von mir selbst erstellt',
+      'ai' => t('feed.ai'),
+      _ => t('feed.self'),
     };
   }
 }
@@ -2026,9 +2697,9 @@ class _InlineComments extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2036,29 +2707,60 @@ class _InlineComments extends StatelessWidget {
           FutureBuilder<AirmiusPage<AirmiusComment>>(
             future: commentsFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && localComments.isEmpty) {
-                return Text(scope.t('status.loading'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800));
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  localComments.isEmpty) {
+                return Text(
+                  scope.t('status.loading'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                );
               }
               if (snapshot.hasError && localComments.isEmpty) {
                 return Row(
                   children: [
-                    Expanded(child: Text(scope.t('feed.commentsError'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
-                    TextButton(onPressed: onReload, child: Text(scope.t('feed.retry'))),
+                    Expanded(
+                      child: Text(
+                        scope.t('feed.commentsError'),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: onReload,
+                      child: Text(scope.t('feed.retry')),
+                    ),
                   ],
                 );
               }
 
-              final loadedComments = snapshot.data?.items ?? const <AirmiusComment>[];
-              final localCommentIds = localComments.map((comment) => comment.id).toSet();
+              final loadedComments =
+                  snapshot.data?.items ?? const <AirmiusComment>[];
+              final localCommentIds = localComments
+                  .map((comment) => comment.id)
+                  .toSet();
               final comments = [
                 ...localComments,
-                ...loadedComments.where((comment) => !localCommentIds.contains(comment.id)),
+                ...loadedComments.where(
+                  (comment) => !localCommentIds.contains(comment.id),
+                ),
               ];
               if (comments.isEmpty) {
-                return Text(scope.t('feed.noComments'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700));
+                return Text(
+                  scope.t('feed.noComments'),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                );
               }
 
-              final visibleComments = showAll ? comments : comments.take(4).toList();
+              final visibleComments = showAll
+                  ? comments
+                  : comments.take(4).toList();
               return Column(
                 children: [
                   for (final comment in visibleComments) ...[
@@ -2068,19 +2770,31 @@ class _InlineComments extends StatelessWidget {
                   if (post.commentsCount > visibleComments.length)
                     Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 9,
+                      ),
                       decoration: BoxDecoration(
-                        color: AirmiusColors.input,
+                        color: airmiusInputColor(context),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AirmiusColors.border),
+                        border: Border.all(color: airmiusBorderColor(context)),
                       ),
                       child: Row(
                         children: [
-                          Expanded(child: Text('Es werden ${visibleComments.length} von ${post.commentsCount} Kommentaren angezeigt.', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700))),
+                          Expanded(
+                            child: Text(
+                              '${visibleComments.length} / ${post.commentsCount} ${scope.t('feed.commentsShown')}',
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                           TextButton.icon(
                             onPressed: onShowAll,
-                            icon: const Icon(Icons.forum_outlined, size: 16),
-                            label: const Text('Alle anzeigen'),
+                            icon: Icon(Icons.forum_outlined, size: 16),
+                            label: Text(scope.t('feed.allComments')),
                           ),
                         ],
                       ),
@@ -2097,15 +2811,36 @@ class _InlineComments extends StatelessWidget {
                   controller: controller,
                   minLines: 1,
                   maxLines: 3,
-                  style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w700,
+                  ),
                   decoration: InputDecoration(
                     hintText: scope.t('feed.commentPlaceholder'),
                     filled: true,
-                    fillColor: AirmiusColors.input,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.border)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.border)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AirmiusColors.blue)),
+                    fillColor: airmiusInputColor(context),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: airmiusBorderColor(context),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: airmiusBorderColor(context),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: airmiusAccentColor(context),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -2113,9 +2848,19 @@ class _InlineComments extends StatelessWidget {
               IconButton.filled(
                 onPressed: sending ? null : onSend,
                 icon: sending
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.send_outlined),
-                style: IconButton.styleFrom(backgroundColor: AirmiusColors.blue, foregroundColor: Colors.white),
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: airmiusOnColor(airmiusAccentColor(context)),
+                        ),
+                      )
+                    : Icon(Icons.send_outlined),
+                style: IconButton.styleFrom(
+                  backgroundColor: airmiusAccentColor(context),
+                  foregroundColor: airmiusOnColor(airmiusAccentColor(context)),
+                ),
               ),
             ],
           ),
@@ -2136,26 +2881,43 @@ class _InlineCommentBubble extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        UserBubble(label: comment.authorName, imageUrl: comment.authorAvatarUrl, small: true),
+        UserBubble(
+          label: comment.authorName,
+          imageUrl: comment.authorAvatarUrl,
+          small: true,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
             decoration: BoxDecoration(
-              color: AirmiusColors.input,
+              color: airmiusInputColor(context),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AirmiusColors.border),
+              border: Border.all(color: airmiusBorderColor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(comment.authorName, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        comment.authorName,
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     PopupMenuButton<String>(
                       padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.more_horiz, color: AirmiusColors.muted, size: 18),
-                      color: AirmiusColors.card,
+                      icon: Icon(
+                        Icons.more_horiz,
+                        color: airmiusMutedColor(context),
+                        size: 18,
+                      ),
+                      color: airmiusSurfaceColor(context),
                       onSelected: (value) {
                         if (value == 'edit') _edit(context);
                         if (value == 'delete') _delete(context);
@@ -2164,16 +2926,36 @@ class _InlineCommentBubble extends StatelessWidget {
                       itemBuilder: (context) {
                         final scope = AirmiusScope.of(context);
                         return [
-                          if (comment.mine) PopupMenuItem(value: 'edit', child: Text(scope.t('feed.commentEdit'))),
-                          if (comment.canDelete) PopupMenuItem(value: 'delete', child: Text(scope.t('feed.commentDelete'))),
-                          if (!comment.mine) const PopupMenuItem(value: 'report', child: Text('Kommentar melden')),
+                          if (comment.mine)
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Text(scope.t('feed.commentEdit')),
+                            ),
+                          if (comment.canDelete)
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text(scope.t('feed.commentDelete')),
+                            ),
+                          if (!comment.mine)
+                            PopupMenuItem(
+                              value: 'report',
+                              child: Text(scope.t('feed.commentReport')),
+                            ),
                         ];
                       },
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(comment.content, style: const TextStyle(color: AirmiusColors.text, fontSize: 13, height: 1.35, fontWeight: FontWeight.w700)),
+                Text(
+                  comment.content,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
@@ -2201,10 +2983,16 @@ class _InlineCommentBubble extends StatelessWidget {
                   margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AirmiusColors.card,
+                    color: airmiusSurfaceColor(context),
                     borderRadius: BorderRadius.circular(26),
-                    border: Border.all(color: AirmiusColors.border),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 28, offset: Offset(0, 18))],
+                    border: Border.all(color: airmiusBorderColor(context)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black45,
+                        blurRadius: 28,
+                        offset: Offset(0, 18),
+                      ),
+                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -2212,8 +3000,24 @@ class _InlineCommentBubble extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(scope.t('feed.commentEdit'), style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
-                          IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close, color: AirmiusColors.muted)),
+                          Expanded(
+                            child: Text(
+                              scope.t('feed.commentEdit'),
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: scope.t('common.close'),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            icon: Icon(
+                              Icons.close,
+                              color: airmiusMutedColor(context),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -2221,23 +3025,59 @@ class _InlineCommentBubble extends StatelessWidget {
                         controller: controller,
                         maxLines: 5,
                         autofocus: true,
-                        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          color: airmiusTextColor(context),
+                          fontWeight: FontWeight.w700,
+                        ),
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: AirmiusColors.input,
+                          fillColor: airmiusInputColor(context),
                           hintText: scope.t('feed.commentPlaceholder'),
-                          hintStyle: const TextStyle(color: AirmiusColors.muted),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AirmiusColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AirmiusColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AirmiusColors.blue)),
+                          hintStyle: TextStyle(
+                            color: airmiusMutedColor(context),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: airmiusBorderColor(context),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: airmiusBorderColor(context),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: airmiusAccentColor(context),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: AirmiusButton(label: 'Abbrechen', icon: Icons.close_outlined, secondary: true, onPressed: () => Navigator.pop(dialogContext))),
+                          Expanded(
+                            child: AirmiusButton(
+                              label: scope.t('common.cancel'),
+                              icon: Icons.close_outlined,
+                              secondary: true,
+                              onPressed: () => Navigator.pop(dialogContext),
+                            ),
+                          ),
                           const SizedBox(width: 10),
-                          Expanded(child: AirmiusButton(label: scope.t('status.ready'), icon: Icons.check_outlined, onPressed: () => Navigator.pop(dialogContext, controller.text.trim()))),
+                          Expanded(
+                            child: AirmiusButton(
+                              label: scope.t('status.ready'),
+                              icon: Icons.check_outlined,
+                              onPressed: () => Navigator.pop(
+                                dialogContext,
+                                controller.text.trim(),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -2252,42 +3092,63 @@ class _InlineCommentBubble extends StatelessWidget {
     controller.dispose();
     if (next == null || next.isEmpty || !context.mounted) return;
     try {
-      await AirmiusServicesScope.of(context).repositories.feed.updateComment(comment.id, next);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.updateComment(comment.id, next);
       onChanged();
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
     }
   }
 
   Future<void> _delete(BuildContext context) async {
     final scope = AirmiusScope.of(context);
-    final ok = await confirmDanger(context, scope.t('feed.commentDelete'), scope.t('feed.commentDelete'));
+    final ok = await confirmDanger(
+      context,
+      scope.t('feed.commentDelete'),
+      scope.t('feed.commentDelete'),
+    );
     if (!ok || !context.mounted) return;
     try {
-      await AirmiusServicesScope.of(context).repositories.feed.deleteComment(comment.id);
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.deleteComment(comment.id);
       onChanged();
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
     }
   }
 
   Future<void> _report(BuildContext context) async {
-    final report = await showContentReportDialog(context, title: 'Kommentar melden');
+    final report = await showContentReportDialog(
+      context,
+      title: AirmiusScope.of(context).t('feed.commentReport'),
+    );
     if (report == null || !context.mounted) return;
     try {
       await AirmiusServicesScope.of(context).repositories.feed.reportContent(
-            type: 'comment',
-            id: comment.id,
-            reason: report.reason,
-            details: report.details,
-          );
+        type: 'comment',
+        id: comment.id,
+        reason: report.reason,
+        details: report.details,
+      );
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Danke. Die Meldung wurde an die Moderation gesendet.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('feed.moderationThanks')),
+        ),
+      );
     } catch (_) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))),
+      );
     }
   }
 }
@@ -2300,11 +3161,32 @@ class _PostMediaGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final media = <_PostMediaItem>[
-      for (final attachment in post.attachments.where((attachment) => attachment.url != post.imageUrl && (attachment.isImage || attachment.isVideo)))
-        attachment.isImage ? _PostMediaItem.image(attachment.url, attachment.name) : _PostMediaItem.video(attachment.url, attachment.name, attachment.thumbnailUrl),
-      if (post.imageUrl != null && !post.attachments.any((attachment) => attachment.isImage && attachment.url == post.imageUrl)) _PostMediaItem.image(post.imageUrl!, 'Beitragsbild', urls: post.imageUrls),
+      for (final attachment in post.attachments.where(
+        (attachment) =>
+            attachment.url != post.imageUrl &&
+            (attachment.isImage || attachment.isVideo),
+      ))
+        attachment.isImage
+            ? _PostMediaItem.image(attachment.url, attachment.name)
+            : _PostMediaItem.video(
+                attachment.url,
+                attachment.name,
+                attachment.thumbnailUrl,
+              ),
+      if (post.imageUrl != null &&
+          !post.attachments.any(
+            (attachment) =>
+                attachment.isImage && attachment.url == post.imageUrl,
+          ))
+        _PostMediaItem.image(
+          post.imageUrl!,
+          'Beitragsbild',
+          urls: post.imageUrls,
+        ),
     ];
-    final files = post.attachments.where((attachment) => !attachment.isImage && !attachment.isVideo).toList();
+    final files = post.attachments
+        .where((attachment) => !attachment.isImage && !attachment.isVideo)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2323,7 +3205,13 @@ class _PostMediaGallery extends StatelessWidget {
                   for (final item in media.take(4))
                     SizedBox(
                       width: width,
-                      child: _MediaTile(item: item, hiddenCount: item == media.take(4).last && media.length > 4 ? media.length - 4 : 0),
+                      child: _MediaTile(
+                        item: item,
+                        hiddenCount:
+                            item == media.take(4).last && media.length > 4
+                            ? media.length - 4
+                            : 0,
+                      ),
                     ),
                 ],
               );
@@ -2345,10 +3233,26 @@ class _PostMediaGallery extends StatelessWidget {
 }
 
 class _PostMediaItem {
-  const _PostMediaItem._({required this.url, required this.name, required this.isVideo, this.thumbnailUrl, this.urls = const []});
+  const _PostMediaItem._({
+    required this.url,
+    required this.name,
+    required this.isVideo,
+    this.thumbnailUrl,
+    this.urls = const [],
+  });
 
-  factory _PostMediaItem.image(String url, String name, {List<String> urls = const []}) => _PostMediaItem._(url: url, name: name, isVideo: false, urls: urls);
-  factory _PostMediaItem.video(String url, String name, String? thumbnailUrl) => _PostMediaItem._(url: url, name: name, isVideo: true, thumbnailUrl: thumbnailUrl);
+  factory _PostMediaItem.image(
+    String url,
+    String name, {
+    List<String> urls = const [],
+  }) => _PostMediaItem._(url: url, name: name, isVideo: false, urls: urls);
+  factory _PostMediaItem.video(String url, String name, String? thumbnailUrl) =>
+      _PostMediaItem._(
+        url: url,
+        name: name,
+        isVideo: true,
+        thumbnailUrl: thumbnailUrl,
+      );
 
   final String url;
   final List<String> urls;
@@ -2358,7 +3262,11 @@ class _PostMediaItem {
 }
 
 class _MediaTile extends StatelessWidget {
-  const _MediaTile({required this.item, this.large = false, this.hiddenCount = 0});
+  const _MediaTile({
+    required this.item,
+    this.large = false,
+    this.hiddenCount = 0,
+  });
 
   final _PostMediaItem item;
   final bool large;
@@ -2378,22 +3286,49 @@ class _MediaTile extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (!item.isVideo)
-                AirmiusMediaImage(url: item.url, fallbackUrls: item.urls, borderRadius: 0, height: height)
+                AirmiusMediaImage(
+                  url: item.url,
+                  fallbackUrls: item.urls,
+                  borderRadius: 0,
+                  height: height,
+                )
               else
-                AirmiusInlineVideo(url: item.url, thumbnailUrl: item.thumbnailUrl, height: height, borderRadius: 0, title: item.name),
+                AirmiusInlineVideo(
+                  url: item.url,
+                  thumbnailUrl: item.thumbnailUrl,
+                  height: height,
+                  borderRadius: 0,
+                  title: item.name,
+                ),
               if (hiddenCount > 0)
                 Container(color: Colors.black.withValues(alpha: 0.54)),
-              if (item.isVideo)
-                const SizedBox.shrink(),
+              if (item.isVideo) const SizedBox.shrink(),
               if (hiddenCount > 0)
                 Center(
-                  child: Text('+$hiddenCount', style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+                  child: Text(
+                    '+$hiddenCount',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               Positioned(
                 left: 10,
                 right: 10,
                 bottom: 10,
-                child: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
+                child: Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                  ),
+                ),
               ),
             ],
           ),
@@ -2414,7 +3349,12 @@ class _MediaTile extends StatelessWidget {
                 child: item.isVideo
                     ? Padding(
                         padding: const EdgeInsets.all(16),
-                        child: AirmiusInlineVideo(url: item.url, thumbnailUrl: item.thumbnailUrl, title: item.name, borderRadius: 18),
+                        child: AirmiusInlineVideo(
+                          url: item.url,
+                          thumbnailUrl: item.thumbnailUrl,
+                          title: item.name,
+                          borderRadius: 18,
+                        ),
                       )
                     : AirmiusMediaImage(url: item.url, borderRadius: 0),
               ),
@@ -2423,7 +3363,7 @@ class _MediaTile extends StatelessWidget {
                 right: 12,
                 child: IconButton.filled(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close),
                 ),
               ),
             ],
@@ -2445,16 +3385,27 @@ class _FileChip extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: AirmiusColors.cardSoft,
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.attach_file, color: AirmiusColors.blue, size: 18),
+          Icon(Icons.attach_file, color: airmiusAccentColor(context), size: 18),
           const SizedBox(width: 7),
-          Flexible(child: Text(attachment.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900))),
+          Flexible(
+            child: Text(
+              attachment.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2462,7 +3413,11 @@ class _FileChip extends StatelessWidget {
 }
 
 class _PostEngagementBar extends StatefulWidget {
-  const _PostEngagementBar({required this.post, required this.onPostChanged, required this.onOpenComments});
+  const _PostEngagementBar({
+    required this.post,
+    required this.onPostChanged,
+    required this.onOpenComments,
+  });
 
   final AirmiusPost post;
   final ValueChanged<AirmiusPost> onPostChanged;
@@ -2483,42 +3438,78 @@ class _PostEngagementBarState extends State<_PostEngagementBar> {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: AirmiusColors.border),
-              bottom: BorderSide(color: AirmiusColors.border),
+              top: BorderSide(color: airmiusBorderColor(context)),
+              bottom: BorderSide(color: airmiusBorderColor(context)),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(child: Text('${widget.post.likesCount} ${scope.t('feed.likes')}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800))),
-              Text('${widget.post.helpfulsCount} ${scope.t('feed.helpful')} - ${widget.post.commentsCount} ${scope.t('feed.comments')}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final likes = Text(
+                '${widget.post.likesCount} ${scope.t('feed.likes')}',
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              );
+              final engagement = Text(
+                '${widget.post.helpfulsCount} ${scope.t('feed.helpful')} - ${widget.post.commentsCount} ${scope.t('feed.comments')}',
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              );
+              if (constraints.maxWidth < 380) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [likes, const SizedBox(height: 4), engagement],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: likes),
+                  const SizedBox(width: 8),
+                  Flexible(child: engagement),
+                ],
+              );
+            },
           ),
         ),
         Row(
           children: [
             Expanded(
               child: _EngagementButton(
-                label: 'Like',
-                icon: widget.post.likedByMe ? Icons.favorite : Icons.favorite_border_outlined,
-                color: widget.post.likedByMe ? AirmiusColors.red : AirmiusColors.text,
+                label: scope.t('feed.like'),
+                icon: widget.post.likedByMe
+                    ? Icons.favorite
+                    : Icons.favorite_border_outlined,
+                color: widget.post.likedByMe
+                    ? Theme.of(context).colorScheme.error
+                    : airmiusTextColor(context),
                 onTap: _reacting ? null : () => _toggle(like: true),
               ),
             ),
             Expanded(
               child: _EngagementButton(
-                label: 'Hilfreich',
-                icon: widget.post.helpfulByMe ? Icons.check_circle : Icons.check_circle_outline,
-                color: widget.post.helpfulByMe ? AirmiusColors.green : AirmiusColors.text,
+                label: scope.t('feed.helpfulAction'),
+                icon: widget.post.helpfulByMe
+                    ? Icons.check_circle
+                    : Icons.check_circle_outline,
+                color: widget.post.helpfulByMe
+                    ? Theme.of(context).colorScheme.secondary
+                    : airmiusTextColor(context),
                 onTap: _reacting ? null : () => _toggle(like: false),
               ),
             ),
             Expanded(
               child: _EngagementButton(
-                label: 'Kommentar',
+                label: scope.t('feed.commentAction'),
                 icon: Icons.mode_comment_outlined,
-                color: AirmiusColors.text,
+                color: airmiusTextColor(context),
                 onTap: widget.onOpenComments,
               ),
             ),
@@ -2534,18 +3525,24 @@ class _PostEngagementBarState extends State<_PostEngagementBar> {
     final optimisticPost = like
         ? widget.post.copyWith(
             likedByMe: !widget.post.likedByMe,
-            likesCount: widget.post.likesCount + (widget.post.likedByMe ? -1 : 1),
+            likesCount:
+                widget.post.likesCount + (widget.post.likedByMe ? -1 : 1),
           )
         : widget.post.copyWith(
             helpfulByMe: !widget.post.helpfulByMe,
-            helpfulsCount: widget.post.helpfulsCount + (widget.post.helpfulByMe ? -1 : 1),
+            helpfulsCount:
+                widget.post.helpfulsCount + (widget.post.helpfulByMe ? -1 : 1),
           );
     setState(() => _reacting = true);
     widget.onPostChanged(optimisticPost);
     try {
       final nextPost = like
-          ? await AirmiusServicesScope.of(context).repositories.feed.toggleLike(widget.post.id)
-          : await AirmiusServicesScope.of(context).repositories.feed.toggleHelpful(widget.post.id);
+          ? await AirmiusServicesScope.of(
+              context,
+            ).repositories.feed.toggleLike(widget.post.id)
+          : await AirmiusServicesScope.of(
+              context,
+            ).repositories.feed.toggleHelpful(widget.post.id);
       if (!mounted) return;
       widget.onPostChanged(nextPost);
       setState(() => _reacting = false);
@@ -2553,13 +3550,20 @@ class _PostEngagementBarState extends State<_PostEngagementBar> {
       if (!mounted) return;
       widget.onPostChanged(previousPost);
       setState(() => _reacting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))),
+      );
     }
   }
 }
 
 class _EngagementButton extends StatelessWidget {
-  const _EngagementButton({required this.label, required this.icon, required this.color, required this.onTap});
+  const _EngagementButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   final String label;
   final IconData icon;
@@ -2578,7 +3582,14 @@ class _EngagementButton extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 20),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ],
         ),
       ),
@@ -2595,12 +3606,31 @@ class _LoadingFeed extends StatelessWidget {
     return AirmiusPanel(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AirmiusColors.blue)),
-            const SizedBox(width: 12),
-            Text(scope.t('status.loading'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: airmiusAccentColor(context),
+              ),
+            ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 260),
+              child: Text(
+                scope.t('status.loading'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2620,11 +3650,27 @@ class _ErrorFeed extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
+          Icon(
+            Icons.error_outline,
+            color: Theme.of(context).colorScheme.error,
+            size: 34,
+          ),
           const SizedBox(height: 10),
-          Text(scope.t('feed.error'), textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text(
+            scope.t('feed.error'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
-          AirmiusButton(label: scope.t('feed.retry'), icon: Icons.refresh_outlined, onPressed: onRetry, secondary: true),
+          AirmiusButton(
+            label: scope.t('feed.retry'),
+            icon: Icons.refresh_outlined,
+            onPressed: onRetry,
+            secondary: true,
+          ),
         ],
       ),
     );

@@ -5,6 +5,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -16,6 +17,7 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, locale } = useI18n()
 const allLessons = computed(() => props.course.sections?.flatMap((section) => section.lessons || []) || [])
 const firstLesson = computed(() => allLessons.value[0] || null)
 const selectedLesson = ref(firstLesson.value)
@@ -33,10 +35,10 @@ const completionRequirements = computed(() => {
         .filter((item) => item && Number(item.total || 0) > 0)
 })
 const ctaLabel = computed(() => {
-    if (canUseLearningRoom.value) return 'Zum Lernraum'
-    if (isPaidCourse.value && props.course.purchase_url) return 'Kurs kaufen'
-    if (isPaidCourse.value) return 'Kostenpflichtiger Kurs'
-    return 'Kostenlos einschreiben'
+    if (canUseLearningRoom.value) return t('guest.learning.cta.room')
+    if (isPaidCourse.value && props.course.purchase_url) return t('guest.learning.cta.buy')
+    if (isPaidCourse.value) return t('guest.learning.cta.paid')
+    return t('guest.learning.cta.free')
 })
 
 watch(firstLesson, (lesson) => {
@@ -82,7 +84,7 @@ const formatMinutes = (minutes) => {
 }
 
 const formatDateTime = (value) => value
-    ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+    ? new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
     : ''
 
 const enroll = () => {
@@ -208,7 +210,7 @@ const submitAssignment = (assignment) => {
     })
 }
 
-const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.value === 'ar' ? 'ar-EG' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), {
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
@@ -224,13 +226,13 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
         <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
                 <div>
-                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">Zurück zur Sportschule</Link>
+                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
                     <div class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                         <div class="flex aspect-[16/8] items-center justify-center bg-inputBg">
                             <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" class="h-full w-full object-cover">
                             <div v-else class="text-center">
                                 <i class="las la-graduation-cap text-6xl text-air-orange"></i>
-                                <p class="mt-2 text-sm font-semibold uppercase tracking-wide text-secondary">Airmius Sportschule</p>
+                                <p class="mt-2 text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('Sportschule') }}</p>
                             </div>
                         </div>
                         <div class="p-6">
@@ -243,21 +245,21 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             <p class="mt-4 max-w-3xl text-lg leading-relaxed text-secondary">{{ course.subtitle || course.description }}</p>
                             <div class="mt-6 grid gap-3 sm:grid-cols-3">
                                 <div class="rounded-lg border border-border bg-bg p-3">
-                                    <p class="text-xs uppercase text-secondary">Lektionen</p>
+                                    <p class="text-xs uppercase text-secondary">{{ t('Lektionen') }}</p>
                                     <p class="mt-1 text-xl font-black text-primary">{{ course.lessons_count }}</p>
                                 </div>
                                 <div class="rounded-lg border border-border bg-bg p-3">
-                                    <p class="text-xs uppercase text-secondary">Kapitel</p>
+                                    <p class="text-xs uppercase text-secondary">{{ t('Kapitel') }}</p>
                                     <p class="mt-1 text-xl font-black text-primary">{{ course.sections_count }}</p>
                                 </div>
                                 <div class="rounded-lg border border-border bg-bg p-3">
-                                    <p class="text-xs uppercase text-secondary">Dauer</p>
+                                    <p class="text-xs uppercase text-secondary">{{ t('Dauer') }}</p>
                                     <p class="mt-1 text-xl font-black text-primary">{{ formatMinutes(course.estimated_minutes) }}</p>
                                 </div>
                             </div>
                             <div v-if="course.reviews_count" class="mt-4 flex flex-wrap items-center gap-2 text-sm text-secondary">
                                 <span class="font-bold text-primary">{{ course.average_rating }} / 5</span>
-                                <span class="text-air-orange">5 Sterne Skala</span>
+                                <span class="text-air-orange">{{ t('5 Sterne Skala') }}</span>
                                 <span>{{ course.reviews_count }} Bewertungen</span>
                             </div>
                         </div>
@@ -265,17 +267,17 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                     <section class="mt-6 grid gap-6 lg:grid-cols-2">
                         <article class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">Das lernst du</h2>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Das lernst du') }}</h2>
                             <ul class="mt-4 space-y-3">
                                 <li v-for="goal in course.learning_goals" :key="goal" class="flex gap-2 text-sm text-secondary">
                                     <i class="las la-check mt-0.5 text-air-orange"></i>
                                     <span>{{ goal }}</span>
                                 </li>
-                                <li v-if="!course.learning_goals?.length" class="text-sm text-secondary">Der Tutor hat noch keine Lernziele hinterlegt.</li>
+                                <li v-if="!course.learning_goals?.length" class="text-sm text-secondary">{{ t('Der Tutor hat noch keine Lernziele hinterlegt.') }}</li>
                             </ul>
                         </article>
                         <article v-if="course.sales_points?.length" class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">Warum dieser Kurs</h2>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Warum dieser Kurs') }}</h2>
                             <ul class="mt-4 space-y-3">
                                 <li v-for="point in course.sales_points" :key="point" class="flex gap-2 text-sm text-secondary">
                                     <i class="las la-star mt-0.5 text-air-blue"></i>
@@ -284,24 +286,24 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             </ul>
                         </article>
                         <article class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">Für wen ist der Kurs?</h2>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Für wen ist der Kurs?') }}</h2>
                             <ul class="mt-4 space-y-3">
                                 <li v-for="group in course.target_groups" :key="group" class="flex gap-2 text-sm text-secondary">
                                     <i class="las la-user-check mt-0.5 text-air-orange"></i>
                                     <span>{{ group }}</span>
                                 </li>
-                                <li v-if="!course.target_groups?.length" class="text-sm text-secondary">Geeignet für Sportler, Trainer und Teams mit Interesse am Thema.</li>
+                                <li v-if="!course.target_groups?.length" class="text-sm text-secondary">{{ t('Geeignet für Sportler, Trainer und Teams mit Interesse am Thema.') }}</li>
                             </ul>
                         </article>
                     </section>
 
                     <section v-if="course.guarantee_text || course.faq_items?.length" class="mt-6 grid gap-6 lg:grid-cols-2">
                         <article v-if="course.guarantee_text" class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">Betreuung und Garantie</h2>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Betreuung und Garantie') }}</h2>
                             <p class="mt-3 text-sm leading-relaxed text-secondary whitespace-pre-line">{{ course.guarantee_text }}</p>
                         </article>
                         <article v-if="course.faq_items?.length" class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">FAQ</h2>
+                            <h2 class="text-lg font-bold text-primary">{{ t('FAQ') }}</h2>
                             <div class="mt-4 grid gap-3">
                                 <div v-for="item in course.faq_items" :key="item.question" class="rounded-lg border border-border bg-bg p-3">
                                     <p class="text-sm font-semibold text-primary">{{ item.question }}</p>
@@ -313,8 +315,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                     <section class="mt-6 surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
-                            <h2 class="text-lg font-bold text-primary">Kursplan</h2>
-                            <p class="mt-1 text-sm text-secondary">Kapitel, Themen und Lektionen in Reihenfolge.</p>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Kursplan') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ t('Kapitel, Themen und Lektionen in Reihenfolge.') }}</p>
                         </div>
                         <div class="divide-y divide-border">
                             <div v-for="section in course.sections" :key="section.id" class="p-5">
@@ -332,9 +334,9 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                             <p class="truncate font-semibold text-primary">{{ lesson.title }}</p>
                                             <p class="text-xs text-secondary">{{ lesson.type }} - {{ formatMinutes(lesson.duration_minutes) }}</p>
                                         </div>
-                                        <span v-if="lesson.completed" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">Erledigt</span>
-                                        <span v-else-if="lesson.drip_locked" class="rounded-full bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">Ab {{ formatDateTime(lesson.available_at) }}</span>
-                                        <span v-else-if="lesson.is_preview || canUseLearningRoom" class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">Öffnen</span>
+                                        <span v-if="lesson.completed" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">{{ t('Erledigt') }}</span>
+                                        <span v-else-if="lesson.drip_locked" class="rounded-full bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">{{ t('Ab') }} {{ formatDateTime(lesson.available_at) }}</span>
+                                        <span v-else-if="lesson.is_preview || canUseLearningRoom" class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">{{ t('Öffnen') }}</span>
                                         <i v-else class="las la-lock text-secondary"></i>
                                     </button>
                                 </div>
@@ -344,8 +346,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                     <section v-if="course.reviews?.length" class="mt-6 surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
-                            <h2 class="text-lg font-bold text-primary">Bewertungen</h2>
-                            <p class="mt-1 text-sm text-secondary">Echte Rückmeldungen von eingeschriebenen Teilnehmern.</p>
+                            <h2 class="text-lg font-bold text-primary">{{ t('Bewertungen') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ t('Echte Rückmeldungen von eingeschriebenen Teilnehmern.') }}</p>
                         </div>
                         <div class="grid gap-3 p-5 md:grid-cols-2">
                             <article v-for="review in course.reviews" :key="review.id" class="rounded-lg border border-border bg-bg p-4">
@@ -361,7 +363,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                 <aside class="space-y-5 lg:sticky lg:top-28 lg:self-start">
                     <article class="surface-card p-5">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-orange">Tutor</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-orange">{{ t('Tutor') }}</p>
                         <div class="mt-3 flex items-center gap-3">
                             <img v-if="course.tutor?.profile_photo_path" :src="course.tutor.profile_photo_path" :alt="course.tutor.name" class="h-12 w-12 rounded-full object-cover">
                             <div v-else class="flex h-12 w-12 items-center justify-center rounded-full bg-inputBg font-bold text-primary">
@@ -369,7 +371,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             </div>
                             <div>
                                 <p class="font-bold text-primary">{{ course.tutor?.name || 'Airmius Tutor' }}</p>
-                                <p class="text-sm text-secondary">Trainer / Kursleitung</p>
+                                <p class="text-sm text-secondary">{{ t('Trainer / Kursleitung') }}</p>
                             </div>
                         </div>
                         <button
@@ -382,17 +384,17 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                         </button>
                         <p class="mt-3 text-xs text-secondary">
                             <span v-if="isPaidCourse && !canUseLearningRoom">
-                                Preis: {{ formatMoney(course.price_cents, course.currency) }}.
-                                <template v-if="course.purchase_url">Nach dem Kauf wird der Kurs deinem Konto freigeschaltet.</template>
-                                <template v-else>Der Kaufzugang ist noch nicht verknüpft.</template>
+                                {{ t('guest.learning.cta.price') }} {{ formatMoney(course.price_cents, course.currency) }}.
+                                <template v-if="course.purchase_url">{{ t('Nach dem Kauf wird der Kurs deinem Konto freigeschaltet.') }}</template>
+                                <template v-else>{{ t('Der Kaufzugang ist noch nicht verknüpft.') }}</template>
                             </span>
                             <span v-else>
-                                Nach der Einschreibung kannst du Notizen schreiben und Fragen im Kurs posten.
+                                {{ t('Nach der Einschreibung kannst du Notizen schreiben und Fragen im Kurs posten.') }}
                             </span>
                         </p>
                         <div v-if="enrollment" class="mt-4 rounded-lg border border-border bg-bg p-3">
                             <div class="flex items-center justify-between text-xs font-semibold text-secondary">
-                                <span>Fortschritt</span>
+                                <span>{{ t('Fortschritt') }}</span>
                                 <span>{{ enrollment.progress_percent || 0 }}%</span>
                             </div>
                             <div class="mt-2 h-2 overflow-hidden rounded-full bg-inputBg">
@@ -400,7 +402,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             </div>
                         </div>
                         <div v-if="completionRequirements.length" class="mt-4 rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Abschlussanforderungen</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ t('Abschlussanforderungen') }}</p>
                             <div class="mt-3 grid gap-2">
                                 <div v-for="item in completionRequirements" :key="item.label" class="flex items-center justify-between gap-3 text-sm">
                                     <span class="text-secondary">{{ item.label }}</span>
@@ -409,14 +411,14 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             </div>
                         </div>
                         <div v-if="enrollment?.certificate" class="mt-4 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
-                            <p class="font-bold">Kurs abgeschlossen</p>
-                            <p class="mt-1 text-xs">Zertifikat: {{ enrollment.certificate.code }}</p>
+                            <p class="font-bold">{{ t('Kurs abgeschlossen') }}</p>
+                            <p class="mt-1 text-xs">{{ t('guest.learning.cta.certificate') }} {{ enrollment.certificate.code }}</p>
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <a v-if="enrollment.certificate.download_url" :href="enrollment.certificate.download_url" class="inline-flex rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success">
-                                    Zertifikat PDF
+                                    {{ t('Zertifikat PDF') }}
                                 </a>
                                 <a v-if="enrollment.certificate.verify_url" :href="enrollment.certificate.verify_url" class="inline-flex rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success">
-                                    Öffentlich prüfen
+                                    {{ t('Öffentlich prüfen') }}
                                 </a>
                             </div>
                         </div>
@@ -424,7 +426,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                     <article v-if="selectedLesson" class="surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
-                            <p class="text-xs font-semibold uppercase text-secondary">Lernraum</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ t('Lernraum') }}</p>
                             <h2 class="mt-1 text-lg font-bold text-primary">{{ selectedLesson.title }}</h2>
                         </div>
                         <div class="p-5">
@@ -441,20 +443,20 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                         @ended="finishVideoProgress"
                                     ></video>
                                 </div>
-                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Video öffnen</a>
+                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Video öffnen') }}</a>
                                 <div v-if="canTrackSelectedLesson && selectedLesson.video_url" class="rounded-lg border border-border bg-bg p-3">
                                     <div class="flex items-center justify-between text-xs font-semibold text-secondary">
-                                        <span>Video-Fortschritt</span>
+                                        <span>{{ t('Video-Fortschritt') }}</span>
                                         <span>{{ selectedLesson.watch_percent || 0 }}% - {{ formatSeconds(selectedLesson.watch_seconds) }}</span>
                                     </div>
                                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-inputBg">
                                         <div class="h-full rounded-full bg-air-blue" :style="{ width: `${selectedLesson.watch_percent || 0}%` }"></div>
                                     </div>
-                                    <p class="mt-2 text-xs text-secondary">Ab 80% Watch-Time wird die Lektion automatisch abgeschlossen.</p>
+                                    <p class="mt-2 text-xs text-secondary">{{ t('Ab 80% Watch-Time wird die Lektion automatisch abgeschlossen.') }}</p>
                                 </div>
                                 <div v-if="selectedLesson.attachments?.length" class="grid gap-2">
                                     <a v-for="attachment in selectedLesson.attachments" :key="attachment.url || attachment.name" :href="attachment.url" target="_blank" class="rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                        {{ attachment.name || 'Material öffnen' }}
+                                        {{ attachment.name || t('Material öffnen') }}
                                     </a>
                                 </div>
                                 <div v-if="selectedLesson.assignments?.length" class="grid gap-3">
@@ -462,20 +464,20 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                         <div class="flex flex-wrap items-center justify-between gap-3">
                                             <h3 class="font-semibold text-primary">{{ assignment.title }}</h3>
                                             <div class="flex flex-wrap gap-2">
-                                                <span v-if="assignment.is_required" class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">Pflicht</span>
+                                                <span v-if="assignment.is_required" class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">{{ t('Pflicht') }}</span>
                                                 <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} Punkte</span>
                                             </div>
                                         </div>
                                         <p class="mt-2 text-sm text-secondary whitespace-pre-line">{{ assignment.instructions }}</p>
-                                        <p v-if="assignment.due_at" class="mt-2 text-xs font-semibold text-secondary">Fällig bis {{ formatDateTime(assignment.due_at) }}</p>
+                                        <p v-if="assignment.due_at" class="mt-2 text-xs font-semibold text-secondary">{{ t('Fällig bis') }} {{ formatDateTime(assignment.due_at) }}</p>
                                         <p v-if="assignment.submission" class="mt-3 text-xs font-semibold" :class="assignment.submission.status === 'passed' ? 'text-success' : 'text-warning'">
-                                            Status: {{ assignment.submission.status }}<span v-if="assignment.submission.score !== null"> - {{ assignment.submission.score }} Punkte</span>
+                                            {{ t('Status:') }} {{ assignment.submission.status }}<span v-if="assignment.submission.score !== null"> - {{ assignment.submission.score }} {{ t('Punkte') }}</span>
                                         </p>
                                         <p v-if="assignment.submission?.feedback" class="mt-2 rounded-lg bg-card p-3 text-sm text-secondary">{{ assignment.submission.feedback }}</p>
                                         <form v-if="canUseLearningRoom" class="mt-3 grid gap-2" @submit.prevent="submitAssignment(assignment)">
-                                            <textarea v-model="assignmentForms[String(assignment.id)].body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Deine Antwort"></textarea>
-                                            <input v-model="assignmentForms[String(assignment.id)].attachment_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Optionaler Link zum Anhang">
-                                            <button class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Aufgabe einreichen</button>
+                                            <textarea v-model="assignmentForms[String(assignment.id)].body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Deine Antwort')"></textarea>
+                                            <input v-model="assignmentForms[String(assignment.id)].attachment_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Optionaler Link zum Anhang')">
+                                            <button class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Aufgabe einreichen') }}</button>
                                         </form>
                                     </article>
                                 </div>
@@ -487,18 +489,18 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     :disabled="selectedLesson.completed || lessonCompleteForm.processing"
                                     @click="completeLesson"
                                 >
-                                    {{ selectedLesson.completed ? 'Lektion abgeschlossen' : 'Lektion abschließen' }}
+                                    {{ selectedLesson.completed ? t('Lektion abgeschlossen') : t('Lektion abschließen') }}
                                 </button>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitNote">
-                                    <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Private Notiz zu dieser Lektion"></textarea>
-                                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Notiz speichern</button>
+                                    <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Private Notiz zu dieser Lektion')"></textarea>
+                                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Notiz speichern') }}</button>
                                 </form>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitComment">
-                                    <textarea v-model="commentForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Frage an den Tutor oder Kurschat"></textarea>
-                                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Frage senden</button>
+                                    <textarea v-model="commentForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Frage an den Tutor oder Kurschat')"></textarea>
+                                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Frage senden') }}</button>
                                 </form>
                                 <div v-if="canUseLearningRoom && selectedLesson.comments?.length" class="grid gap-3">
-                                    <p class="text-xs font-semibold uppercase text-secondary">Fragen und Antworten</p>
+                                    <p class="text-xs font-semibold uppercase text-secondary">{{ t('Fragen und Antworten') }}</p>
                                     <article v-for="comment in selectedLesson.comments" :key="comment.id" class="rounded-lg border border-border bg-bg p-3">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <p class="text-sm font-semibold text-primary">{{ comment.user?.name || 'Teilnehmer' }}</p>
@@ -516,22 +518,22 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     </article>
                                 </div>
                                 <div v-if="!canUseLearningRoom" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                                    Das ist eine freigegebene Vorschau. Für Notizen und Kursfragen brauchst du Zugriff auf den Kurs.
+                                    {{ t('Das ist eine freigegebene Vorschau. Für Notizen und Kursfragen brauchst du Zugriff auf den Kurs.') }}
                                 </div>
                             </div>
                             <div v-else-if="selectedLesson.drip_locked" class="mt-5 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
-                                Diese Lektion wird am {{ formatDateTime(selectedLesson.available_at) }} freigeschaltet.
+                                {{ t('guest.learning.cta.lesson_unlock', { date: formatDateTime(selectedLesson.available_at) }) }}
                             </div>
                             <div v-else class="mt-5 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                                Schreibe dich ein, um Inhalte, Notizen und Kursfragen zu nutzen.
+                                {{ t('Schreibe dich ein, um Inhalte, Notizen und Kursfragen zu nutzen.') }}
                             </div>
                         </div>
                     </article>
 
                     <article v-if="canUseLearningRoom && course.quizzes?.length" class="surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
-                            <p class="text-xs font-semibold uppercase text-secondary">Wissenscheck</p>
-                            <h2 class="mt-1 text-lg font-bold text-primary">Quiz</h2>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ t('Wissenscheck') }}</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ t('Quiz') }}</h2>
                         </div>
                         <div class="grid gap-4 p-5">
                             <form v-for="quiz in course.quizzes" :key="quiz.id" class="rounded-lg border border-border bg-bg p-4" @submit.prevent="submitQuiz(quiz)">
@@ -544,11 +546,11 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                         {{ quiz.attempt.score_percent }}%
                                     </span>
                                     <span v-else-if="quiz.locked" class="rounded-full bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
-                                        Ab {{ formatDateTime(quiz.available_at) }}
+                                        {{ t('Ab') }} {{ formatDateTime(quiz.available_at) }}
                                     </span>
                                 </div>
                                 <div v-if="quiz.locked" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                                    Dieser Wissenscheck wird zusammen mit der Lektion freigeschaltet.
+                                    {{ t('Dieser Wissenscheck wird zusammen mit der Lektion freigeschaltet.') }}
                                 </div>
                                 <div v-else class="mt-4 grid gap-4">
                                     <fieldset v-for="question in quiz.questions" :key="question.id" class="grid gap-2">
@@ -560,14 +562,14 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     </fieldset>
                                 </div>
                                 <button :disabled="quiz.locked" class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60">
-                                    Quiz abgeben
+                                    {{ t('Quiz abgeben') }}
                                 </button>
                             </form>
                         </div>
                     </article>
 
                     <article v-if="enrollment" class="surface-card p-5">
-                        <h2 class="text-lg font-bold text-primary">Kurs bewerten</h2>
+                        <h2 class="text-lg font-bold text-primary">{{ t('Kurs bewerten') }}</h2>
                         <form class="mt-4 grid gap-3" @submit.prevent="submitReview">
                             <div class="flex gap-2">
                                 <button
@@ -581,9 +583,9 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     {{ rating }}
                                 </button>
                             </div>
-                            <textarea v-model="reviewForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was hat dir geholfen?"></textarea>
+                            <textarea v-model="reviewForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('Was hat dir geholfen?')"></textarea>
                             <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                Bewertung speichern
+                                {{ t('Bewertung speichern') }}
                             </button>
                         </form>
                     </article>
@@ -594,4 +596,3 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
         <Footer />
     </div>
 </template>
-

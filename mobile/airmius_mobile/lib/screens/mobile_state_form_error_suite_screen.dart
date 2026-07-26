@@ -8,10 +8,12 @@ class MobileStateFormErrorSuiteScreen extends StatefulWidget {
   const MobileStateFormErrorSuiteScreen({super.key});
 
   @override
-  State<MobileStateFormErrorSuiteScreen> createState() => _MobileStateFormErrorSuiteScreenState();
+  State<MobileStateFormErrorSuiteScreen> createState() =>
+      _MobileStateFormErrorSuiteScreenState();
 }
 
-class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSuiteScreen> {
+class _MobileStateFormErrorSuiteScreenState
+    extends State<MobileStateFormErrorSuiteScreen> {
   String _filter = 'Alle';
   bool _showStates = true;
   bool _showForms = true;
@@ -22,7 +24,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Loading States',
       area: 'States',
       status: 'UI',
-      body: 'Skeletons, Spinner, Pull-to-refresh, erste Datenladung und sanfte App-Übergaenge für API-Views.',
+      body:
+          'Skeletons, Spinner, Pull-to-refresh, erste Datenladung und sanfte App-Übergaenge für API-Views.',
       icon: Icons.hourglass_top_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +33,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Empty States',
       area: 'States',
       status: 'Leer',
-      body: 'Leere Vereinslisten, keine Teams, keine Dateien, keine Beiträge, keine Rechnungen und hilfreiche CTA-Hinweise.',
+      body:
+          'Leere Vereinslisten, keine Teams, keine Dateien, keine Beiträge, keine Rechnungen und hilfreiche CTA-Hinweise.',
       icon: Icons.inbox_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +42,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Success States',
       area: 'States',
       status: 'Erfolg',
-      body: 'Gesendet, gespeichert, beantragt, hochgeladen, bezahlt, beigetreten und widerrufen als klare Mobile-Rückmeldung.',
+      body:
+          'Gesendet, gespeichert, beantragt, hochgeladen, bezahlt, beigetreten und widerrufen als klare Mobile-Rückmeldung.',
       icon: Icons.check_circle_outline,
       color: Color(0xFFF8B84E),
     ),
@@ -46,7 +51,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Dynamic Forms',
       area: 'Forms',
       status: 'Form',
-      body: 'Pflichtfelder, optionale Felder, Vereins-spezifische Felder, Feldgruppen, Validierung und Fortschritt.',
+      body:
+          'Pflichtfelder, optionale Felder, Vereins-spezifische Felder, Feldgruppen, Validierung und Fortschritt.',
       icon: Icons.format_list_bulleted_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -54,7 +60,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Upload UI',
       area: 'Forms',
       status: 'Upload',
-      body: 'Datei auswählen, Dateiname, Groesse, Fortschritt, Uploadfehler und Dateimanager-Verknuepfung.',
+      body:
+          'Datei auswählen, Dateiname, Groesse, Fortschritt, Uploadfehler und Dateimanager-Verknuepfung.',
       icon: Icons.upload_file_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -62,7 +69,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Confirm Modals',
       area: 'Forms',
       status: 'Modal',
-      body: 'Anfrage zurückziehen, Konto löschen, Zahlung bestätigen, Datei entfernen und kritische Aktionen.',
+      body:
+          'Anfrage zurückziehen, Konto löschen, Zahlung bestätigen, Datei entfernen und kritische Aktionen.',
       icon: Icons.warning_amber_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -70,7 +78,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Validation Errors',
       area: 'Errors',
       status: 'Validierung',
-      body: 'Feldfehler, fehlende Pflichtfelder, falsches Format, doppelte Werte und API-Validierungsantworten.',
+      body:
+          'Feldfehler, fehlende Pflichtfelder, falsches Format, doppelte Werte und API-Validierungsantworten.',
       icon: Icons.error_outline,
       color: Color(0xFFFF6B6B),
     ),
@@ -78,7 +87,8 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Permission Errors',
       area: 'Errors',
       status: '403',
-      body: 'Kein Zugriff, Rolle fehlt, Verein gesperrt, Team privat und sichere Rücknavigation.',
+      body:
+          'Kein Zugriff, Rolle fehlt, Verein gesperrt, Team privat und sichere Rücknavigation.',
       icon: Icons.lock_outline,
       color: Color(0xFFF8B84E),
     ),
@@ -86,13 +96,16 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Offline & Retry',
       area: 'Errors',
       status: 'Retry',
-      body: 'Netzwerkfehler, API nicht erreichbar, Wiederholen, Cache-Hinweis und lokaler Entwurf.',
+      body:
+          'Netzwerkfehler, API nicht erreichbar, Wiederholen, Cache-Hinweis und lokaler Entwurf.',
       icon: Icons.wifi_off_outlined,
       color: Color(0xFF5BA7FF),
     ),
   ];
 
-  List<_StateItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
+  List<_StateItem> get _visible => _filter == 'Alle'
+      ? _items
+      : _items.where((item) => item.area == _filter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -112,27 +125,50 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
                     const _Hero(
                       eyebrow: 'MOBILE STATES',
                       title: 'Zustaende, Formulare & Fehler',
-                      subtitle: 'Native UI-Kontrollsuite für Loading, Empty, Success, Dynamic Forms, Uploads, Modals, Validierung, Rechte und Offline-Retry.',
+                      subtitle:
+                          'Native UI-Kontrollsuite für Loading, Empty, Success, Dynamic Forms, Uploads, Modals, Validierung, Rechte und Offline-Retry.',
                     ),
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '9', label: 'Patterns')),
+                        Expanded(
+                          child: _Metric(value: '9', label: 'Patterns'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'States')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'States'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Errors')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Errors'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
-                    _Tabs(value: _filter, values: const ['Alle', 'States', 'Forms', 'Errors'], onChanged: (value) => setState(() => _filter = value)),
+                    _Tabs(
+                      value: _filter,
+                      values: const ['Alle', 'States', 'Forms', 'Errors'],
+                      onChanged: (value) => setState(() => _filter = value),
+                    ),
                     const SizedBox(height: 14),
                     _SwitchPanel(
                       title: 'UI-State-Bereiche',
                       rows: [
-                        _SwitchRowData('States anzeigen', _showStates, (value) => setState(() => _showStates = value)),
-                        _SwitchRowData('Forms anzeigen', _showForms, (value) => setState(() => _showForms = value)),
-                        _SwitchRowData('Errors anzeigen', _showErrors, (value) => setState(() => _showErrors = value)),
+                        _SwitchRowData(
+                          'States anzeigen',
+                          _showStates,
+                          (value) => setState(() => _showStates = value),
+                        ),
+                        _SwitchRowData(
+                          'Forms anzeigen',
+                          _showForms,
+                          (value) => setState(() => _showForms = value),
+                        ),
+                        _SwitchRowData(
+                          'Errors anzeigen',
+                          _showErrors,
+                          (value) => setState(() => _showErrors = value),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -145,8 +181,22 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
                       firstLabel: 'Form-State prüfen',
                       secondIcon: Icons.wifi_off_outlined,
                       secondLabel: 'Retry-State prüfen',
-                      onFirst: () => openUiAction(context, title: 'Form-State', body: 'Dynamische Formular- und Validierungszustaende sind als UI-Pattern vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Offline Retry', body: 'Offline-, Fehler- und Retry-Zustaende sind für API-Anbindung vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(
+                        context,
+                        title: 'Form-State',
+                        body:
+                            'Dynamische Formular- und Validierungszustaende sind als UI-Pattern vorbereitet.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
+                      onSecond: () => openUiAction(
+                        context,
+                        title: 'Offline Retry',
+                        body:
+                            'Offline-, Fehler- und Retry-Zustaende sind für API-Anbindung vorbereitet.',
+                        status: 'UI bereit',
+                        icon: Icons.info_outline,
+                      ),
                       onSupport: () => _openSupport(context),
                     ),
                   ],
@@ -166,7 +216,9 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -199,35 +251,82 @@ class _TopBar extends StatelessWidget {
   const _TopBar({required this.onSupport});
   final VoidCallback onSupport;
   @override
-  Widget build(BuildContext context) => Row(children: [
-        const AirmiusLogo(markOnly: true, size: 34),
-        const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
-      ]);
+  Widget build(BuildContext context) => Row(
+    children: [
+      const AirmiusLogo(markOnly: true, size: 34),
+      const SizedBox(width: 10),
+      const Expanded(
+        child: Text(
+          'Airmius',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      IconButton(
+        onPressed: onSupport,
+        icon: const Icon(
+          Icons.support_agent_outlined,
+          color: Color(0xFFAFC0D8),
+        ),
+      ),
+    ],
+  );
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.eyebrow, required this.title, required this.subtitle});
+  const _Hero({
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+  });
   final String eyebrow;
   final String title;
   final String subtitle;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF26364D)),
-          gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)]),
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+      ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: const TextStyle(
+            color: Color(0xFF5BA7FF),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(eyebrow, style: const TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600)),
-        ]),
-      );
+        const SizedBox(height: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 28,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            height: 1.45,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Metric extends StatelessWidget {
@@ -236,43 +335,73 @@ class _Metric extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
-        ]),
-      );
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
   final String value;
   final List<String> values;
   final ValueChanged<String> onChanged;
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 42,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: values.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final item = values[index];
-            final active = item == value;
-            return ChoiceChip(
-              label: Text(item),
-              selected: active,
-              onSelected: (_) => onChanged(item),
-              labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
-              selectedColor: const Color(0xFF173D68),
-              backgroundColor: const Color(0xFF101722),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
-            );
-          },
-        ),
-      );
+    height: 42,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: values.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final item = values[index];
+        final active = item == value;
+        return ChoiceChip(
+          label: Text(item),
+          selected: active,
+          onSelected: (_) => onChanged(item),
+          labelStyle: TextStyle(
+            color: active ? Colors.white : const Color(0xFFAFC0D8),
+            fontWeight: FontWeight.w900,
+          ),
+          selectedColor: const Color(0xFF173D68),
+          backgroundColor: const Color(0xFF101722),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: const BorderSide(color: Color(0xFF26364D)),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _SwitchPanel extends StatelessWidget {
@@ -281,20 +410,28 @@ class _SwitchPanel extends StatelessWidget {
   final List<_SwitchRowData> rows;
   @override
   Widget build(BuildContext context) => _Panel(
-        title: title,
-        child: Column(
-          children: rows
-              .map((row) => SwitchListTile.adaptive(
-                    value: row.value,
-                    onChanged: row.onChanged,
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    activeThumbColor: const Color(0xFF5BA7FF),
-                    title: Text(row.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                  ))
-              .toList(),
-        ),
-      );
+    title: title,
+    child: Column(
+      children: rows
+          .map(
+            (row) => SwitchListTile.adaptive(
+              value: row.value,
+              onChanged: row.onChanged,
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              activeThumbColor: const Color(0xFF5BA7FF),
+              title: Text(
+                row.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    ),
+  );
 }
 
 class _StateCard extends StatelessWidget {
@@ -302,22 +439,72 @@ class _StateCard extends StatelessWidget {
   final _StateItem item;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 54, height: 54, decoration: BoxDecoration(color: item.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .45))), child: Icon(item.icon, color: item.color, size: 28)),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [Expanded(child: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))), _Pill(label: item.status, color: item.color)]),
-            const SizedBox(height: 8),
-            Text(item.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
-          ])),
-        ]),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101722),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: item.color.withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: item.color.withValues(alpha: .45)),
+          ),
+          child: Icon(item.icon, color: item.color, size: 28),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  _Pill(label: item.status, color: item.color),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.body,
+                style: const TextStyle(
+                  color: Color(0xFFDDE7F5),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.firstIcon, required this.firstLabel, required this.secondIcon, required this.secondLabel, required this.onFirst, required this.onSecond, required this.onSupport});
+  const _ActionPanel({
+    required this.firstIcon,
+    required this.firstLabel,
+    required this.secondIcon,
+    required this.secondLabel,
+    required this.onFirst,
+    required this.onSecond,
+    required this.onSupport,
+  });
   final IconData firstIcon;
   final String firstLabel;
   final IconData secondIcon;
@@ -326,13 +513,22 @@ class _ActionPanel extends StatelessWidget {
   final VoidCallback onSecond;
   final VoidCallback onSupport;
   @override
-  Widget build(BuildContext context) => _Panel(title: 'Schnellaktionen', child: Column(children: [
+  Widget build(BuildContext context) => _Panel(
+    title: 'Schnellaktionen',
+    child: Column(
+      children: [
         _ActionButton(icon: firstIcon, label: firstLabel, onTap: onFirst),
         const SizedBox(height: 10),
         _ActionButton(icon: secondIcon, label: secondLabel, onTap: onSecond),
         const SizedBox(height: 10),
-        _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
-      ]));
+        _ActionButton(
+          icon: Icons.support_agent_outlined,
+          label: 'Support kontaktieren',
+          onTap: onSupport,
+        ),
+      ],
+    ),
+  );
 }
 
 class _Panel extends StatelessWidget {
@@ -341,27 +537,67 @@ class _Panel extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)), const SizedBox(height: 12), child]),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF0D131D),
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: const Color(0xFF26364D)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 12),
+        child,
+      ],
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111A27),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
-          child: Row(children: [Icon(icon, color: AirmiusColors.blue), const SizedBox(width: 12), Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))), const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8))]),
-        ),
-      );
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AirmiusColors.blue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _Pill extends StatelessWidget {
@@ -370,8 +606,15 @@ class _Pill extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-        child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: color.withValues(alpha: .55)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
+    ),
+  );
 }

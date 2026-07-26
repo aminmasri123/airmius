@@ -6,6 +6,9 @@ import SectionBorder from '@/Components/SectionBorder.vue';
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -14,10 +17,10 @@ defineProps({
 </script>
 
 <template>
-    <AppLayout title="Profile">
+    <AppLayout :title="t('Profile')">
         <template #header>
             <h2 class="font-semibold text-xl text-primary leading-tight">
-                Profile
+                {{ t('Profile') }}
             </h2>
         </template>
 

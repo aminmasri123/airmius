@@ -81,6 +81,8 @@ class AiProviderTokenStatusService
             'has_api_key' => $hasKey,
             'has_model' => $hasModel,
             'status' => $status,
+            'status_key' => $status,
+            'message_key' => "ai_tokens.messages.{$status}",
             'status_label' => $label,
             'severity' => $severity,
             'message' => $message,

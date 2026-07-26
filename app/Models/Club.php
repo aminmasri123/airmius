@@ -106,8 +106,15 @@ class Club extends Model
             return $query;
         }
 
-        return $query->whereHas('users', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
+        return $query->where(function ($visible) use ($user) {
+            $visible
+                ->where(function ($public) {
+                    $public->where('verification_status', 'verified')
+                        ->where('is_listed', true);
+                })
+                ->orWhereHas('users', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
         });
     }
 
@@ -136,8 +143,10 @@ class Club extends Model
             ->withPivot([
                 'role',
                 'roles',
+                'permission_overrides',
                 'membership_status',
                 'club_membership_type_id',
+                'family_group_key',
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
@@ -155,6 +164,7 @@ class Club extends Model
                 'paused_from',
                 'paused_until',
                 'membership_end_notified_at',
+                'membership_ended_at',
                 'membership_notes',
             ])
             ->withTimestamps();

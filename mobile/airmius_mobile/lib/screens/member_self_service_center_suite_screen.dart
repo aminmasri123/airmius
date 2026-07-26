@@ -7,10 +7,12 @@ class MemberSelfServiceCenterSuiteScreen extends StatefulWidget {
   const MemberSelfServiceCenterSuiteScreen({super.key});
 
   @override
-  State<MemberSelfServiceCenterSuiteScreen> createState() => _MemberSelfServiceCenterSuiteScreenState();
+  State<MemberSelfServiceCenterSuiteScreen> createState() =>
+      _MemberSelfServiceCenterSuiteScreenState();
 }
 
-class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCenterSuiteScreen> {
+class _MemberSelfServiceCenterSuiteScreenState
+    extends State<MemberSelfServiceCenterSuiteScreen> {
   bool showDigitalCard = true;
   bool showPaymentStatus = true;
   bool showDocumentTasks = true;
@@ -22,21 +24,24 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
       const _MembershipRow(
         club: 'ZBB',
         status: 'Aktiv',
-        body: 'Mitglied seit 01.07.2026 mit digitaler Karte, Beitragsstatus und Vereinsdokumenten.',
+        body:
+            'Mitglied seit 01.07.2026 mit digitaler Karte, Beitragsstatus und Vereinsdokumenten.',
         meta: 'Allgemeine Mitgliedschaft',
         color: AirmiusColors.green,
       ),
       const _MembershipRow(
         club: 'Airmius Running Club',
         status: 'Anfrage offen',
-        body: 'Antrag wurde gesendet. User kann Status sehen, Dokumente ergaenzen oder Anfrage zurückziehen.',
+        body:
+            'Antrag wurde gesendet. User kann Status sehen, Dokumente ergaenzen oder Anfrage zurückziehen.',
         meta: 'Laufgruppe',
         color: AirmiusColors.blue,
       ),
       const _MembershipRow(
         club: 'Tennis Zentrum West',
         status: 'Rückfrage',
-        body: 'Verein benoetigt eine Dokumentfreigabe. Aufgabe wird in der mobilen Mitgliedszentrale angezeigt.',
+        body:
+            'Verein benoetigt eine Dokumentfreigabe. Aufgabe wird in der mobilen Mitgliedszentrale angezeigt.',
         meta: 'Sportdaten prüfen',
         color: AirmiusColors.amber,
       ),
@@ -47,6 +52,8 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
       subtitle: 'Karte, Beiträge, Dokumente und Aufgaben',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -55,9 +62,13 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
               children: [
                 const SectionLabel('SELF SERVICE'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Mitglieder brauchen eine eigene mobile Zentrale: aktive Vereine, offene Anfragen, digitale Karte, Beitragsstatus, Dokumentpflichten, Aufgaben und Support.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -78,10 +89,33 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
               children: [
                 const SectionLabel('SICHTBARE BEREICHE'),
                 const SizedBox(height: 8),
-                _SelfServiceSwitch(title: 'Digitale Mitgliedskarte', value: showDigitalCard, color: AirmiusColors.green, onChanged: (value) => setState(() => showDigitalCard = value)),
-                _SelfServiceSwitch(title: 'Beitragsstatus', value: showPaymentStatus, color: AirmiusColors.blue, onChanged: (value) => setState(() => showPaymentStatus = value)),
-                _SelfServiceSwitch(title: 'Dokumentaufgaben', value: showDocumentTasks, color: AirmiusColors.amber, onChanged: (value) => setState(() => showDocumentTasks = value)),
-                _SelfServiceSwitch(title: 'Supportzugang', value: showSupportAccess, color: AirmiusColors.pink, onChanged: (value) => setState(() => showSupportAccess = value)),
+                _SelfServiceSwitch(
+                  title: 'Digitale Mitgliedskarte',
+                  value: showDigitalCard,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) => setState(() => showDigitalCard = value),
+                ),
+                _SelfServiceSwitch(
+                  title: 'Beitragsstatus',
+                  value: showPaymentStatus,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) =>
+                      setState(() => showPaymentStatus = value),
+                ),
+                _SelfServiceSwitch(
+                  title: 'Dokumentaufgaben',
+                  value: showDocumentTasks,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) =>
+                      setState(() => showDocumentTasks = value),
+                ),
+                _SelfServiceSwitch(
+                  title: 'Supportzugang',
+                  value: showSupportAccess,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) =>
+                      setState(() => showSupportAccess = value),
+                ),
               ],
             ),
           ),
@@ -96,19 +130,35 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
               children: [
                 const SectionLabel('NAECHSTE AUFGABEN'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Die spätere API kann hier offene Dokumente, Rückfragen, Zahlungsinformationen, Vereinsnachrichten, Event-Einladungen und Support-Tickets pro Mitgliedschaft anzeigen.',
-                  style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    StatusPill('Dokument fehlt', color: AirmiusColors.amber),
-                    StatusPill('Beitrag offen', color: AirmiusColors.blue),
-                    StatusPill('Event Einladung', color: AirmiusColors.green),
-                    StatusPill('Rückfrage', color: AirmiusColors.pink),
+                    StatusPill(
+                      'Dokument fehlt',
+                      color: airmiusSemanticColor(context, AirmiusColors.amber),
+                    ),
+                    StatusPill(
+                      'Beitrag offen',
+                      color: airmiusSemanticColor(context, AirmiusColors.blue),
+                    ),
+                    StatusPill(
+                      'Event Einladung',
+                      color: airmiusSemanticColor(context, AirmiusColors.green),
+                    ),
+                    StatusPill(
+                      'Rückfrage',
+                      color: airmiusSemanticColor(context, AirmiusColors.pink),
+                    ),
                   ],
                 ),
               ],
@@ -153,7 +203,13 @@ class _SelfServiceSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -175,22 +231,58 @@ class _MembershipCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBadge(icon: Icons.badge_outlined, color: membership.color),
+              IconBadge(
+                icon: Icons.badge_outlined,
+                color: airmiusSemanticColor(context, membership.color),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Expanded(child: Text(membership.club, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                        StatusPill(membership.status, color: membership.color),
+                        Text(
+                          membership.club,
+                          softWrap: true,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        StatusPill(
+                          membership.status,
+                          color: airmiusSemanticColor(
+                            context,
+                            membership.color,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(membership.meta, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)),
+                    Text(
+                      membership.meta,
+                      style: TextStyle(
+                        color: airmiusSemanticColor(
+                          context,
+                          AirmiusColors.blue,
+                        ),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(membership.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                    Text(
+                      membership.body,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.42,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -207,7 +299,8 @@ class _MembershipCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Digitale Mitgliedskarte',
-                  body: 'Diese UI bereitet Mitgliedskarte, QR-Code, Status, Rolle und Sichtbarkeit für die spätere API vor.',
+                  body:
+                      'Diese UI bereitet Mitgliedskarte, QR-Code, Status, Rolle und Sichtbarkeit für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.qr_code_2_outlined,
                 ),
@@ -219,7 +312,8 @@ class _MembershipCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Beiträge anzeigen',
-                  body: 'Mitglieder sehen später Beitrag, Zahlungsrhythmus, offene Zahlungen, SEPA-Status und Rechnungen.',
+                  body:
+                      'Mitglieder sehen später Beitrag, Zahlungsrhythmus, offene Zahlungen, SEPA-Status und Rechnungen.',
                   status: 'UI vorbereitet',
                   icon: Icons.receipt_long_outlined,
                 ),
@@ -231,7 +325,8 @@ class _MembershipCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Dokumente anzeigen',
-                  body: 'Dokumentpflichten, Consent, Nachweise und Rückfragen werden später pro Mitgliedschaft sichtbar.',
+                  body:
+                      'Dokumentpflichten, Consent, Nachweise und Rückfragen werden später pro Mitgliedschaft sichtbar.',
                   status: 'UI vorbereitet',
                   icon: Icons.folder_copy_outlined,
                 ),

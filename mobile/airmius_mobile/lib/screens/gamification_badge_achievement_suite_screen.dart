@@ -7,10 +7,12 @@ class GamificationBadgeAchievementSuiteScreen extends StatefulWidget {
   const GamificationBadgeAchievementSuiteScreen({super.key});
 
   @override
-  State<GamificationBadgeAchievementSuiteScreen> createState() => _GamificationBadgeAchievementSuiteScreenState();
+  State<GamificationBadgeAchievementSuiteScreen> createState() =>
+      _GamificationBadgeAchievementSuiteScreenState();
 }
 
-class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBadgeAchievementSuiteScreen> {
+class _GamificationBadgeAchievementSuiteScreenState
+    extends State<GamificationBadgeAchievementSuiteScreen> {
   String scope = 'Verein';
   bool showPublicBadges = true;
   bool showLearningBadges = true;
@@ -23,28 +25,32 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
       const _BadgeRow(
         title: 'Neues Mitglied',
         status: 'Aktiv',
-        body: 'Badge für erfolgreich angenommene Mitgliedschaft und abgeschlossenes Onboarding.',
+        body:
+            'Badge für erfolgreich angenommene Mitgliedschaft und abgeschlossenes Onboarding.',
         icon: Icons.badge_outlined,
         color: AirmiusColors.green,
       ),
       const _BadgeRow(
         title: 'Training Streak',
         status: 'Level 3',
-        body: 'Auszeichnung für regelmaessige Teilnahme an Training und Events.',
+        body:
+            'Auszeichnung für regelmaessige Teilnahme an Training und Events.',
         icon: Icons.local_fire_department_outlined,
         color: AirmiusColors.amber,
       ),
       const _BadgeRow(
         title: 'Datenschutz Kurs',
         status: 'Zertifikat',
-        body: 'Badge für abgeschlossenen Kurs mit Quiz, Zertifikat und Profilnachweis.',
+        body:
+            'Badge für abgeschlossenen Kurs mit Quiz, Zertifikat und Profilnachweis.',
         icon: Icons.workspace_premium_outlined,
         color: AirmiusColors.blue,
       ),
       const _BadgeRow(
         title: 'Team Captain',
         status: 'Rolle',
-        body: 'Rollenbadge für Captain-Rechte, Teamverantwortung und sichtbare Teamfunktion.',
+        body:
+            'Rollenbadge für Captain-Rechte, Teamverantwortung und sichtbare Teamfunktion.',
         icon: Icons.military_tech_outlined,
         color: AirmiusColors.pink,
       ),
@@ -65,7 +71,11 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
                 const SizedBox(height: 8),
                 const Text(
                   'Badges, Rollen, Level und Erfolge machen Mitgliedschaft, Training, Kurse, Teamarbeit und Vereinsengagement mobil sichtbar.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: AirmiusColors.text,
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +104,8 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
                     ButtonSegment(value: 'Public', label: Text('Public')),
                   ],
                   selected: {scope},
-                  onSelectionChanged: (value) => setState(() => scope = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => scope = value.first),
                 ),
               ],
             ),
@@ -106,10 +117,34 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _BadgeSwitch(title: 'Badges im Profil anzeigen', value: showPublicBadges, color: AirmiusColors.green, onChanged: (value) => setState(() => showPublicBadges = value)),
-                _BadgeSwitch(title: 'Lernbadges aktivieren', value: showLearningBadges, color: AirmiusColors.blue, onChanged: (value) => setState(() => showLearningBadges = value)),
-                _BadgeSwitch(title: 'Team-Erfolge anzeigen', value: showTeamAchievements, color: AirmiusColors.amber, onChanged: (value) => setState(() => showTeamAchievements = value)),
-                _BadgeSwitch(title: 'Erfolge benachrichtigen', value: notifyAchievements, color: AirmiusColors.pink, onChanged: (value) => setState(() => notifyAchievements = value)),
+                _BadgeSwitch(
+                  title: 'Badges im Profil anzeigen',
+                  value: showPublicBadges,
+                  color: AirmiusColors.green,
+                  onChanged: (value) =>
+                      setState(() => showPublicBadges = value),
+                ),
+                _BadgeSwitch(
+                  title: 'Lernbadges aktivieren',
+                  value: showLearningBadges,
+                  color: AirmiusColors.blue,
+                  onChanged: (value) =>
+                      setState(() => showLearningBadges = value),
+                ),
+                _BadgeSwitch(
+                  title: 'Team-Erfolge anzeigen',
+                  value: showTeamAchievements,
+                  color: AirmiusColors.amber,
+                  onChanged: (value) =>
+                      setState(() => showTeamAchievements = value),
+                ),
+                _BadgeSwitch(
+                  title: 'Erfolge benachrichtigen',
+                  value: notifyAchievements,
+                  color: AirmiusColors.pink,
+                  onChanged: (value) =>
+                      setState(() => notifyAchievements = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +161,11 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
                 const SizedBox(height: 8),
                 Text(
                   'Aktuelle Sichtbarkeit: $scope. Später verbindet die API Badges, Rollen, Trainingsdaten, Lernzertifikate, Teamleistungen und Benachrichtigungen.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +174,8 @@ class _GamificationBadgeAchievementSuiteScreenState extends State<GamificationBa
                   onPressed: () => openUiAction(
                     context,
                     title: 'Erfolg anzeigen',
-                    body: 'Diese UI bereitet Badge-Vergabe, Rollen-Erfolge, Fortschritt, Sichtbarkeit und Benachrichtigung für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Badge-Vergabe, Rollen-Erfolge, Fortschritt, Sichtbarkeit und Benachrichtigung für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.emoji_events_outlined,
                   ),
@@ -182,7 +222,13 @@ class _BadgeSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: AirmiusColors.text,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -209,12 +255,28 @@ class _BadgeCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(badge.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        badge.title,
+                        style: const TextStyle(
+                          color: AirmiusColors.text,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     StatusPill(badge.status, color: badge.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(badge.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                Text(
+                  badge.body,
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.42,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),

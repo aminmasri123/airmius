@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TrainingController as WebTrainingController;
 use App\Http\Resources\Api\V1\TrainingLogResource;
 use App\Http\Resources\Api\V1\TrainingPlanResource;
 use App\Models\TrainingLog;
@@ -30,12 +31,26 @@ class TrainingController extends Controller
         return TrainingPlanResource::collection($plans);
     }
 
+    public function templates(Request $request)
+    {
+        $templates = $this->visiblePlans($request)
+            ->where('settings->is_template', true)
+            ->with(['creator', 'team', 'items'])
+            ->withCount('assignments')
+            ->latest('updated_at')
+            ->paginate($this->perPage($request));
+
+        return TrainingPlanResource::collection($templates);
+    }
+
     public function showPlan(Request $request, TrainingPlan $trainingPlan)
     {
         abort_unless($this->visiblePlans($request)->whereKey($trainingPlan->id)->exists(), 404);
 
         return new TrainingPlanResource(
-            $trainingPlan->loadMissing(['creator', 'team', 'items'])->loadCount('assignments')
+            $trainingPlan
+                ->loadMissing(['creator', 'team', 'items', 'assignments.user', 'assignments.team'])
+                ->loadCount('assignments')
         );
     }
 
@@ -87,14 +102,97 @@ class TrainingController extends Controller
         return response()->json(['message' => 'Trainingsplan wurde gelöscht.']);
     }
 
+    public function publishPlan(Request $request, TrainingPlan $trainingPlan)
+    {
+        app(WebTrainingController::class)->publishPlan($request, $trainingPlan);
+
+        return new TrainingPlanResource(
+            $this->loadPlanForResource($trainingPlan->refresh())
+        );
+    }
+
+    public function duplicatePlan(Request $request, TrainingPlan $trainingPlan)
+    {
+        app(WebTrainingController::class)->duplicatePlan($request, $trainingPlan);
+
+        $copy = TrainingPlan::query()
+            ->where('created_by', $request->user()->id)
+            ->where('settings->created_from_template_id', $trainingPlan->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        return (new TrainingPlanResource($this->loadPlanForResource($copy)))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function createTemplate(Request $request, TrainingPlan $trainingPlan)
+    {
+        abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:160'],
+        ]);
+
+        $template = $this->clonePlan(
+            $request,
+            $trainingPlan,
+            title: $data['title'] ?? $trainingPlan->title.' Vorlage',
+            startsOn: null,
+            endsOn: null,
+            settings: [
+                'is_template' => true,
+                'template_source_id' => $trainingPlan->id,
+            ],
+        );
+
+        return (new TrainingPlanResource($this->loadPlanForResource($template)))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function instantiateTemplate(Request $request, TrainingPlan $trainingPlan)
+    {
+        abort_unless(
+            $this->visiblePlans($request)
+                ->whereKey($trainingPlan->id)
+                ->where('settings->is_template', true)
+                ->exists(),
+            404
+        );
+
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:160'],
+            'starts_on' => ['nullable', 'date'],
+            'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
+        ]);
+
+        $copy = $this->clonePlan(
+            $request,
+            $trainingPlan,
+            title: $data['title'] ?? $trainingPlan->title.' '.now()->format('Y-m-d'),
+            startsOn: $data['starts_on'] ?? null,
+            endsOn: $data['ends_on'] ?? null,
+            settings: [
+                'is_template' => false,
+                'is_template_copy' => true,
+                'created_from_template_id' => $trainingPlan->id,
+            ],
+        );
+
+        return (new TrainingPlanResource($this->loadPlanForResource($copy)))
+            ->response()
+            ->setStatusCode(201);
+    }
+
     public function storePlanItem(Request $request, TrainingPlan $trainingPlan)
     {
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $data = $this->validatePlanItemData($request);
+        $imagePath = $request->file('image')?->store('training-plans', 'public');
 
         $trainingPlan->items()->create([
-            ...$this->planItemPayload($data),
+            ...$this->planItemPayload($data, $imagePath),
             'sort_order' => $trainingPlan->items()->count() + 1,
         ]);
 
@@ -109,8 +207,13 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $data = $this->validatePlanItemData($request);
+        $imagePath = $trainingPlanItem->image_path;
+        if ($request->hasFile('image')) {
+            $this->deletePlanItemImageIfUnused($trainingPlanItem);
+            $imagePath = $request->file('image')->store('training-plans', 'public');
+        }
 
-        $trainingPlanItem->update($this->planItemPayload($data, $trainingPlanItem->image_path));
+        $trainingPlanItem->update($this->planItemPayload($data, $imagePath));
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
     }
@@ -124,6 +227,46 @@ class TrainingController extends Controller
         $trainingPlanItem->delete();
 
         return new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh()));
+    }
+
+    public function duplicatePlanItem(
+        Request $request,
+        TrainingPlan $trainingPlan,
+        TrainingPlanItem $trainingPlanItem,
+    ) {
+        app(WebTrainingController::class)->duplicatePlanItem(
+            $request,
+            $trainingPlan,
+            $trainingPlanItem,
+        );
+
+        return (new TrainingPlanResource($this->loadPlanForResource($trainingPlan->refresh())))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function markPlanItemMissed(
+        Request $request,
+        TrainingPlan $trainingPlan,
+        TrainingPlanItem $trainingPlanItem,
+    ) {
+        app(WebTrainingController::class)->markPlanItemMissed(
+            $request,
+            $trainingPlan,
+            $trainingPlanItem,
+        );
+
+        $athleteId = (int) ($request->input('user_id') ?: $request->user()->id);
+        $log = TrainingLog::query()
+            ->where('user_id', $athleteId)
+            ->where('training_plan_item_id', $trainingPlanItem->id)
+            ->where('status', 'missed')
+            ->latest('id')
+            ->firstOrFail();
+
+        return (new TrainingLogResource($this->loadLogForResource($log)))
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function logs(Request $request)
@@ -143,6 +286,63 @@ class TrainingController extends Controller
         return new TrainingLogResource(
             $trainingLog->loadMissing(['athlete', 'trainer', 'team', 'plan', 'entries'])
         );
+    }
+
+    public function storeLog(Request $request)
+    {
+        $data = $this->validateLogData($request);
+        $planItem = $this->resolveVisiblePlanItem($request, $data);
+
+        $log = DB::transaction(function () use ($request, $data, $planItem) {
+            $log = TrainingLog::query()->create(
+                $this->logPayload($request, $data, $planItem)
+            );
+            $this->syncLogEntries($log, $data['entries'] ?? []);
+
+            return $log;
+        });
+
+        return (new TrainingLogResource($this->loadLogForResource($log)))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function updateLog(Request $request, TrainingLog $trainingLog)
+    {
+        abort_unless(
+            (int) $trainingLog->created_by === (int) $request->user()->id,
+            403
+        );
+
+        $data = $this->validateLogData($request);
+        $planItem = $this->resolveVisiblePlanItem($request, $data);
+
+        DB::transaction(function () use ($request, $trainingLog, $data, $planItem) {
+            $trainingLog->update($this->logPayload($request, $data, $planItem));
+            $trainingLog->entries()->delete();
+            $this->syncLogEntries($trainingLog, $data['entries'] ?? []);
+        });
+
+        return new TrainingLogResource(
+            $this->loadLogForResource($trainingLog->refresh())
+        );
+    }
+
+    public function destroyLog(Request $request, TrainingLog $trainingLog)
+    {
+        abort_unless(
+            (int) $trainingLog->created_by === (int) $request->user()->id,
+            403
+        );
+
+        $trainingLog->delete();
+
+        return response()->json([
+            'data' => [
+                'deleted' => true,
+                'message' => 'Der Trainingslog wurde gelöscht.',
+            ],
+        ]);
     }
 
     private function validatePlanData(Request $request): array
@@ -169,6 +369,131 @@ class TrainingController extends Controller
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+    }
+
+    private function validateLogData(Request $request): array
+    {
+        $teamIds = $request->user()->teams()->pluck('teams.id')->all();
+
+        return $request->validate([
+            'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
+            'training_plan_item_id' => ['nullable', 'integer', 'exists:training_plan_items,id'],
+            'title' => ['required', 'string', 'max:160'],
+            'sport_type' => ['nullable', 'string', 'max:80'],
+            'status' => ['required', Rule::in(['planned', 'in_progress', 'completed', 'missed'])],
+            'performed_at' => ['nullable', 'date'],
+            'duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
+            'distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            'calories' => ['nullable', 'integer', 'min:0', 'max:200000'],
+            'intensity' => ['nullable', Rule::in(['locker', 'mittel', 'hart', 'recovery'])],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'privacy_scope' => ['nullable', Rule::in(['private', 'trainer', 'team'])],
+            'wellness' => ['nullable', 'array'],
+            'wellness.rpe' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'wellness.energy' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'wellness.pain' => ['nullable', 'integer', 'min:0', 'max:10'],
+            'wellness.sleep_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
+            'entries' => ['nullable', 'array', 'max:40'],
+            'entries.*.title' => ['required', 'string', 'max:160'],
+            'entries.*.sets' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'entries.*.reps' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'entries.*.weight_kg' => ['nullable', 'numeric', 'min:0', 'max:2000'],
+            'entries.*.duration_minutes' => ['nullable', 'numeric', 'min:0', 'max:14400'],
+            'entries.*.distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            'entries.*.intensity' => ['nullable', 'string', 'max:30'],
+            'entries.*.notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+    }
+
+    private function resolveVisiblePlanItem(Request $request, array $data): ?TrainingPlanItem
+    {
+        if (empty($data['training_plan_item_id'])) {
+            return null;
+        }
+
+        $item = TrainingPlanItem::query()
+            ->with('plan')
+            ->findOrFail($data['training_plan_item_id']);
+
+        abort_unless(
+            $item->plan
+                && $this->visiblePlans($request)->whereKey($item->training_plan_id)->exists(),
+            403
+        );
+
+        return $item;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function logPayload(
+        Request $request,
+        array $data,
+        ?TrainingPlanItem $planItem
+    ): array {
+        return [
+            'user_id' => $request->user()->id,
+            'created_by' => $request->user()->id,
+            'trainer_id' => null,
+            'team_id' => $data['team_id'] ?? $planItem?->plan?->team_id,
+            'training_plan_id' => $planItem?->training_plan_id,
+            'training_plan_item_id' => $planItem?->id,
+            'sport_type' => $data['sport_type'] ?? $planItem?->sport_type,
+            'title' => trim($data['title']),
+            'status' => $data['status'],
+            'performed_at' => $data['performed_at'] ?? now(),
+            'duration_minutes' => $data['duration_minutes'] ?? null,
+            'distance_meters' => isset($data['distance_km'])
+                ? (int) round((float) $data['distance_km'] * 1000)
+                : null,
+            'calories' => $data['calories'] ?? null,
+            'intensity' => $data['intensity'] ?? null,
+            'notes' => $data['notes'] ?? null,
+            'trainer_feedback' => null,
+            'metrics' => [
+                'source_kind' => $planItem ? 'planned_training' : 'spontaneous_training',
+                'created_from' => 'api_v1_mobile',
+                'privacy_scope' => $data['privacy_scope'] ?? 'trainer',
+                'wellness' => array_filter(
+                    $data['wellness'] ?? [],
+                    fn ($value) => $value !== null && $value !== ''
+                ),
+            ],
+        ];
+    }
+
+    private function syncLogEntries(TrainingLog $log, array $entries): void
+    {
+        collect($entries)->values()->each(function (array $entry, int $index) use ($log) {
+            $log->entries()->create([
+                'title' => trim($entry['title']),
+                'sets' => $entry['sets'] ?? null,
+                'reps' => $entry['reps'] ?? null,
+                'weight_kg' => $entry['weight_kg'] ?? null,
+                'duration_seconds' => isset($entry['duration_minutes'])
+                    ? (int) round((float) $entry['duration_minutes'] * 60)
+                    : null,
+                'distance_meters' => isset($entry['distance_km'])
+                    ? (int) round((float) $entry['distance_km'] * 1000)
+                    : null,
+                'intensity' => $entry['intensity'] ?? null,
+                'notes' => $entry['notes'] ?? null,
+                'metrics' => [],
+                'sort_order' => $index + 1,
+            ]);
+        });
+    }
+
+    private function loadLogForResource(TrainingLog $log): TrainingLog
+    {
+        return $log->load([
+            'athlete',
+            'trainer',
+            'team',
+            'plan',
+            'entries',
         ]);
     }
 
@@ -238,6 +563,7 @@ class TrainingController extends Controller
             'todos.*' => ['nullable', 'string', 'max:300'],
             'todos_text' => ['nullable', 'string', 'max:3000'],
             'video_url' => ['nullable', 'url', 'max:2048'],
+            'image' => ['nullable', 'image', 'max:5120'],
             'metrics' => ['nullable', 'array'],
             'metrics.*' => ['nullable', 'string', 'max:120'],
         ]);
@@ -295,7 +621,56 @@ class TrainingController extends Controller
 
     private function loadPlanForResource(TrainingPlan $plan): TrainingPlan
     {
-        return $plan->load(['creator', 'team', 'items'])->loadCount('assignments');
+        return $plan
+            ->load(['creator', 'team', 'items', 'assignments.user', 'assignments.team'])
+            ->loadCount('assignments');
+    }
+
+    private function clonePlan(
+        Request $request,
+        TrainingPlan $source,
+        string $title,
+        ?string $startsOn,
+        ?string $endsOn,
+        array $settings,
+    ): TrainingPlan {
+        return DB::transaction(function () use (
+            $request,
+            $source,
+            $title,
+            $startsOn,
+            $endsOn,
+            $settings,
+        ) {
+            $source->load(['items', 'assignments']);
+
+            $copy = $source->replicate();
+            $copy->created_by = $request->user()->id;
+            $copy->title = trim($title);
+            $copy->status = 'draft';
+            $copy->starts_on = $startsOn;
+            $copy->ends_on = $endsOn;
+            $copy->settings = [
+                ...($source->settings ?? []),
+                ...$settings,
+            ];
+            $copy->save();
+
+            $source->items->each(function (TrainingPlanItem $item) use ($copy) {
+                $itemCopy = $item->replicate();
+                $itemCopy->training_plan_id = $copy->id;
+                $itemCopy->scheduled_at = null;
+                $itemCopy->save();
+            });
+
+            $source->assignments->each(fn ($assignment) => $copy->assignments()->create([
+                'user_id' => $assignment->user_id,
+                'team_id' => $assignment->team_id,
+                'permission' => $assignment->permission,
+            ]));
+
+            return $copy;
+        });
     }
 
     private function deletePlanItemImageIfUnused(TrainingPlanItem $item): void

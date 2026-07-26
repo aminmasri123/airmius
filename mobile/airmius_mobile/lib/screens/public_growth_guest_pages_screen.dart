@@ -8,10 +8,12 @@ class PublicGrowthGuestPagesScreen extends StatefulWidget {
   const PublicGrowthGuestPagesScreen({super.key});
 
   @override
-  State<PublicGrowthGuestPagesScreen> createState() => _PublicGrowthGuestPagesScreenState();
+  State<PublicGrowthGuestPagesScreen> createState() =>
+      _PublicGrowthGuestPagesScreenState();
 }
 
-class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScreen> {
+class _PublicGrowthGuestPagesScreenState
+    extends State<PublicGrowthGuestPagesScreen> {
   String _filter = 'Alle';
   bool _showDiscovery = true;
   bool _showBusiness = true;
@@ -22,7 +24,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Vereine entdecken',
       area: 'Discovery',
       status: 'Public',
-      body: 'Öffentliche Vereinsliste mit Suche, Ort, Mitgliederzahl, Profilzugang und Beitrittsmöglichkeit.',
+      body:
+          'Öffentliche Vereinsliste mit Suche, Ort, Mitgliederzahl, Profilzugang und Beitrittsmöglichkeit.',
       icon: Icons.groups_3_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +33,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Pricing',
       area: 'Business',
       status: 'Plaene',
-      body: 'Mobile Preisübersicht für Vereine, Anbieter und Nutzer mit Leistungsumfang und CTA.',
+      body:
+          'Mobile Preisübersicht für Vereine, Anbieter und Nutzer mit Leistungsumfang und CTA.',
       icon: Icons.sell_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +42,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Jobs',
       area: 'Business',
       status: 'Karriere',
-      body: 'Job- und Karrierebereich mit Rollen, Mission, Bewerbungs-CTA und Airmius-Kultur.',
+      body:
+          'Job- und Karrierebereich mit Rollen, Mission, Bewerbungs-CTA und Airmius-Kultur.',
       icon: Icons.work_outline,
       color: Color(0xFFF8B84E),
     ),
@@ -46,7 +51,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Werbeagentur',
       area: 'Business',
       status: 'Ads',
-      body: 'Öffentliche Landingpage für Werbekunden, Sponsoring, Kampagnen und Kontaktanfrage.',
+      body:
+          'Öffentliche Landingpage für Werbekunden, Sponsoring, Kampagnen und Kontaktanfrage.',
       icon: Icons.campaign_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -54,7 +60,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Sponsoren',
       area: 'Business',
       status: 'Partner',
-      body: 'Sponsorenseite mit Partnerkarten, Benefits, Kampagnenbeispielen und Vereinsbezug.',
+      body:
+          'Sponsorenseite mit Partnerkarten, Benefits, Kampagnenbeispielen und Vereinsbezug.',
       icon: Icons.handshake_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -62,7 +69,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Top-Inhalte',
       area: 'Content',
       status: 'Feed',
-      body: 'Öffentliche Highlights aus Blog, Vereinen, Events, Gamification und Community.',
+      body:
+          'Öffentliche Highlights aus Blog, Vereinen, Events, Gamification und Community.',
       icon: Icons.auto_awesome_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -70,7 +78,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'E-Learning & Zertifikate',
       area: 'Content',
       status: 'Lernen',
-      body: 'Gastseiten für Kurse, Kursdetails und Zertifikatsprüfung als mobile Lernstrecke.',
+      body:
+          'Gastseiten für Kurse, Kursdetails und Zertifikatsprüfung als mobile Lernstrecke.',
       icon: Icons.school_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -78,7 +87,8 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Gamification',
       area: 'Content',
       status: 'Badges',
-      body: 'Öffentliche Gamification-Erklaerung mit Badges, Punkten, Challenges und Vereinsmotivation.',
+      body:
+          'Öffentliche Gamification-Erklaerung mit Badges, Punkten, Challenges und Vereinsmotivation.',
       icon: Icons.emoji_events_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -108,17 +118,28 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
                     const SizedBox(height: 18),
                     Row(
                       children: const [
-                        Expanded(child: _Metric(value: '8', label: 'Guest-Seiten')),
+                        Expanded(
+                          child: _Metric(value: '8', label: 'Guest-Seiten'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '4', label: 'Business')),
+                        Expanded(
+                          child: _Metric(value: '4', label: 'Business'),
+                        ),
                         SizedBox(width: 10),
-                        Expanded(child: _Metric(value: '3', label: 'Content')),
+                        Expanded(
+                          child: _Metric(value: '3', label: 'Content'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),
                     _Tabs(
                       value: _filter,
-                      values: const ['Alle', 'Discovery', 'Business', 'Content'],
+                      values: const [
+                        'Alle',
+                        'Discovery',
+                        'Business',
+                        'Content',
+                      ],
                       onChanged: (value) => setState(() => _filter = value),
                     ),
                     const SizedBox(height: 14),
@@ -126,9 +147,12 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
                       showDiscovery: _showDiscovery,
                       showBusiness: _showBusiness,
                       showContent: _showContent,
-                      onDiscovery: (value) => setState(() => _showDiscovery = value),
-                      onBusiness: (value) => setState(() => _showBusiness = value),
-                      onContent: (value) => setState(() => _showContent = value),
+                      onDiscovery: (value) =>
+                          setState(() => _showDiscovery = value),
+                      onBusiness: (value) =>
+                          setState(() => _showBusiness = value),
+                      onContent: (value) =>
+                          setState(() => _showContent = value),
                     ),
                     const SizedBox(height: 14),
                     for (final page in _visiblePages.where(_isVisible)) ...[
@@ -139,12 +163,14 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
                       onExplore: () => openUiAction(
                         context,
                         title: 'Guest-Seite öffnen',
-                        message: 'Die mobile Guest-UI ist vorbereitet; Inhalte werden später per API/CMS geladen.',
+                        message:
+                            'Die mobile Guest-UI ist vorbereitet; Inhalte werden später per API/CMS geladen.',
                       ),
                       onContact: () => openUiAction(
                         context,
                         title: 'Kontaktanfrage',
-                        message: 'Hier wird später das Kontaktformular für Jobs, Ads, Sponsoren und Vereine angebunden.',
+                        message:
+                            'Hier wird später das Kontaktformular für Jobs, Ads, Sponsoren und Vereine angebunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -165,7 +191,9 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
   }
 
   void _openSupport(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()));
   }
 }
 
@@ -198,8 +226,23 @@ class _Header extends StatelessWidget {
       children: [
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
-        const Expanded(child: Text('Airmius', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900))),
-        IconButton(onPressed: onSupport, icon: const Icon(Icons.support_agent_outlined, color: Color(0xFFAFC0D8))),
+        const Expanded(
+          child: Text(
+            'Airmius',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onSupport,
+          icon: const Icon(
+            Icons.support_agent_outlined,
+            color: Color(0xFFAFC0D8),
+          ),
+        ),
       ],
     );
   }
@@ -215,18 +258,40 @@ class _Hero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFF26364D)),
-        gradient: const LinearGradient(colors: [Color(0xFF121A27), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Text('PUBLIC GROWTH', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
+          Text(
+            'PUBLIC GROWTH',
+            style: TextStyle(
+              color: Color(0xFF5BA7FF),
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
-          Text('Guest-Seiten', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(
+            'Guest-Seiten',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           SizedBox(height: 8),
           Text(
             'Native Mobile-UI für Vereine, Pricing, Jobs, Werbeagentur, Sponsoren, Top-Inhalte, E-Learning und Gamification.',
-            style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Color(0xFFAFC0D8),
+              height: 1.45,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -244,13 +309,30 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Color(0xFFAFC0D8), fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -258,7 +340,11 @@ class _Metric extends StatelessWidget {
 }
 
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.value, required this.values, required this.onChanged});
+  const _Tabs({
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
 
   final String value;
   final List<String> values;
@@ -279,10 +365,16 @@ class _Tabs extends StatelessWidget {
             label: Text(item),
             selected: active,
             onSelected: (_) => onChanged(item),
-            labelStyle: TextStyle(color: active ? Colors.white : const Color(0xFFAFC0D8), fontWeight: FontWeight.w900),
+            labelStyle: TextStyle(
+              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              fontWeight: FontWeight.w900,
+            ),
             selectedColor: const Color(0xFF173D68),
             backgroundColor: const Color(0xFF101722),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999), side: const BorderSide(color: Color(0xFF26364D))),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+              side: const BorderSide(color: Color(0xFF26364D)),
+            ),
           );
         },
       ),
@@ -313,9 +405,21 @@ class _VisibilityPanel extends StatelessWidget {
       title: 'Guest-Bereiche',
       child: Column(
         children: [
-          _SwitchRow(label: 'Discovery anzeigen', value: showDiscovery, onChanged: onDiscovery),
-          _SwitchRow(label: 'Business anzeigen', value: showBusiness, onChanged: onBusiness),
-          _SwitchRow(label: 'Content anzeigen', value: showContent, onChanged: onContent),
+          _SwitchRow(
+            label: 'Discovery anzeigen',
+            value: showDiscovery,
+            onChanged: onDiscovery,
+          ),
+          _SwitchRow(
+            label: 'Business anzeigen',
+            value: showBusiness,
+            onChanged: onBusiness,
+          ),
+          _SwitchRow(
+            label: 'Content anzeigen',
+            value: showContent,
+            onChanged: onContent,
+          ),
         ],
       ),
     );
@@ -331,14 +435,22 @@ class _GuestPageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF101722), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101722),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 54,
             height: 54,
-            decoration: BoxDecoration(color: page.color.withValues(alpha: .14), borderRadius: BorderRadius.circular(16), border: Border.all(color: page.color.withValues(alpha: .45))),
+            decoration: BoxDecoration(
+              color: page.color.withValues(alpha: .14),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: page.color.withValues(alpha: .45)),
+            ),
             child: Icon(page.icon, color: page.color, size: 28),
           ),
           const SizedBox(width: 14),
@@ -348,12 +460,28 @@ class _GuestPageCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(page.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900))),
+                    Expanded(
+                      child: Text(
+                        page.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
                     _Pill(label: page.status, color: page.color),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(page.body, style: const TextStyle(color: Color(0xFFDDE7F5), height: 1.45, fontWeight: FontWeight.w600)),
+                Text(
+                  page.body,
+                  style: const TextStyle(
+                    color: Color(0xFFDDE7F5),
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -364,7 +492,11 @@ class _GuestPageCard extends StatelessWidget {
 }
 
 class _ActionPanel extends StatelessWidget {
-  const _ActionPanel({required this.onExplore, required this.onContact, required this.onSupport});
+  const _ActionPanel({
+    required this.onExplore,
+    required this.onContact,
+    required this.onSupport,
+  });
 
   final VoidCallback onExplore;
   final VoidCallback onContact;
@@ -376,11 +508,23 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.travel_explore_outlined, label: 'Guest-Bereich öffnen', onTap: onExplore),
+          _ActionButton(
+            icon: Icons.travel_explore_outlined,
+            label: 'Guest-Bereich öffnen',
+            onTap: onExplore,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.mail_outline, label: 'Kontaktanfrage starten', onTap: onContact),
+          _ActionButton(
+            icon: Icons.mail_outline,
+            label: 'Kontaktanfrage starten',
+            onTap: onContact,
+          ),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
+          _ActionButton(
+            icon: Icons.support_agent_outlined,
+            label: 'Support kontaktieren',
+            onTap: onSupport,
+          ),
         ],
       ),
     );
@@ -397,11 +541,21 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF0D131D), borderRadius: BorderRadius.circular(22), border: Border.all(color: const Color(0xFF26364D))),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D131D),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF26364D)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 12),
           child,
         ],
@@ -411,7 +565,11 @@ class _Panel extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.label, required this.value, required this.onChanged});
+  const _SwitchRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
   final String label;
   final bool value;
@@ -425,13 +583,23 @@ class _SwitchRow extends StatelessWidget {
       dense: true,
       contentPadding: EdgeInsets.zero,
       activeThumbColor: const Color(0xFF5BA7FF),
-      title: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
@@ -444,12 +612,24 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF111A27), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF26364D))),
+        decoration: BoxDecoration(
+          color: const Color(0xFF111A27),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF26364D)),
+        ),
         child: Row(
           children: [
             Icon(icon, color: AirmiusColors.blue),
             const SizedBox(width: 12),
-            Expanded(child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
             const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
           ],
         ),
@@ -468,8 +648,19 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: .12), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: .55))),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: .55)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

@@ -101,7 +101,7 @@ watch(
         <section class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.sport_apps_title', 'Sportprogramme synchronisieren') }}</h2>
             <p class="mt-1 text-sm text-secondary">
-                {{ settingsText('integrations.sport_apps_description', 'Verknüpfe Sport-Apps, damit Trainingsdaten später automatisch in dein Airmius Profil fließen können.') }}
+                {{ settingsText('integrations.sport_apps_description', 'Verknüpfe Sport-Apps, damit Trainingsdaten sicher in dein Airmius Profil synchronisiert werden.') }}
             </p>
 
             <div class="mt-4 grid gap-3 lg:grid-cols-3">
@@ -367,4 +367,3 @@ watch(
         </section>
     </div>
 </template>
-

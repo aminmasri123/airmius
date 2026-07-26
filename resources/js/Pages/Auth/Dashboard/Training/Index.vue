@@ -2,8 +2,12 @@
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import { useTrainingWorkspace } from "@/composables/useTrainingWorkspace"
 import { Head, Link } from "@inertiajs/vue3"
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     plans: { type: Array, default: () => [] },
@@ -165,7 +169,7 @@ const {
 </script>
 
 <template>
-    <Head title="Training" />
+    <Head :title="tx('training_workspace.page_title')" />
 
     <div class="space-y-3 pb-24 sm:space-y-4 sm:pb-0">
         <section class="rounded-2xl border border-border bg-card p-3 sm:p-5">
@@ -173,14 +177,14 @@ const {
                 <div class="space-y-2.5 sm:space-y-3">
                     <div class="flex items-center justify-between gap-2">
                         <span class="rounded-full border border-air-blue/40 bg-air-blue/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-air-blue">
-                            Training Hub
+                            {{ tx('training_workspace.eyebrow') }}
                         </span>
                         <span class="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary sm:inline-flex">
-                            Planen · Ausführen · Teilen
+                            {{ tx('training_workspace.tagline') }}
                         </span>
                     </div>
                     <h1 class="max-w-3xl text-lg font-semibold leading-tight text-primary sm:text-3xl">
-                        Trainingspläne
+                        {{ tx('training_workspace.title') }}
                     </h1>
                     <div
                         class="rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:p-3"
@@ -191,12 +195,12 @@ const {
                                 <i :class="sportIcon(nextTrainingItem.sport_type)" class="text-lg sm:text-xl"></i>
                             </span>
                             <div class="min-w-0 flex-1">
-                                <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Nächstes Training</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.next_training') }}</p>
                                 <p class="truncate text-sm font-semibold text-primary">{{ nextTrainingItem.title }}</p>
                                 <p class="truncate text-xs text-secondary">{{ nextTrainingItem.plan.title }} · {{ formatDate(nextTrainingItem.scheduled_at) }} {{ formatTime(nextTrainingItem.scheduled_at) }}</p>
                             </div>
                             <button type="button" class="hidden rounded-xl border border-success/40 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10 sm:inline-flex" @click="documentPlanItem(nextTrainingItem)">
-                                Starten
+                                {{ tx('training_workspace.actions.start') }}
                             </button>
                         </div>
                         <div v-else class="flex items-center gap-3">
@@ -204,24 +208,24 @@ const {
                                 <i class="las la-calendar-plus text-lg sm:text-xl"></i>
                             </span>
                             <div class="min-w-0">
-                                <p class="text-sm font-semibold text-primary">Noch nichts geplant</p>
-                                <p class="text-xs text-secondary sm:hidden">Starte direkt unten.</p>
-                                <p class="hidden text-xs text-secondary sm:block">Erstelle einen Plan oder dokumentiere spontan.</p>
+                                <p class="text-sm font-semibold text-primary">{{ tx('training_workspace.empty_next') }}</p>
+                                <p class="text-xs text-secondary sm:hidden">{{ tx('training_workspace.empty_next_mobile') }}</p>
+                                <p class="hidden text-xs text-secondary sm:block">{{ tx('training_workspace.empty_next_desktop') }}</p>
                             </div>
                         </div>
                     </div>
                     <div class="hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                         <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
                             <i class="las la-plus-circle text-lg"></i>
-                            Plan erstellen
+                            {{ tx('training_workspace.actions.create_plan') }}
                         </button>
                         <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-4" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                             <i class="las la-magic text-lg"></i>
-                            KI-Plan
+                            {{ tx('training_workspace.actions.ai_plan') }}
                         </button>
                         <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted sm:min-h-11 sm:px-4" @click="openLogPage">
                             <i class="las la-pen-alt text-lg"></i>
-                            Dokumentieren
+                            {{ tx('training_workspace.actions.document') }}
                         </button>
                     </div>
                 </div>
@@ -229,23 +233,23 @@ const {
                     <div class="grid grid-cols-4 gap-1.5 lg:grid-cols-2 lg:gap-2">
                         <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
                             <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ plans.length }}</p>
-                            <p class="text-[11px] text-secondary">Pläne</p>
+                            <p class="text-[11px] text-secondary">{{ tx('training_workspace.stats.plans') }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
                             <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ visibleLogs.length }}</p>
-                            <p class="text-[11px] text-secondary">Logs</p>
+                            <p class="text-[11px] text-secondary">{{ tx('training_workspace.stats.logs') }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
                             <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ completedThisWeekCount }}</p>
-                            <p class="text-[11px] text-secondary">Erledigt</p>
+                            <p class="text-[11px] text-secondary">{{ tx('training_workspace.stats.completed') }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
                             <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ teams.length }}</p>
-                            <p class="text-[11px] text-secondary">Teams</p>
+                            <p class="text-[11px] text-secondary">{{ tx('training_workspace.stats.teams') }}</p>
                         </div>
                     </div>
                     <div class="mt-3 hidden rounded-xl border border-border bg-card p-3 lg:block">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Nächstes Training</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.next_training') }}</p>
                         <div v-if="upcomingItems.length" class="mt-2 space-y-2">
                             <div v-for="item in upcomingItems.slice(0, 2)" :key="`${item.plan.id}-${item.id}`" class="flex items-center gap-3">
                                 <span class="flex h-10 w-10 items-center justify-center rounded-xl text-white" :class="sportAccent(item.sport_type)">
@@ -257,7 +261,7 @@ const {
                                 </div>
                             </div>
                         </div>
-                        <p v-else class="mt-2 text-sm text-secondary">Noch kein Termin geplant.</p>
+                        <p v-else class="mt-2 text-sm text-secondary">{{ tx('training_workspace.no_appointment') }}</p>
                     </div>
                 </div>
             </div>
@@ -1074,7 +1078,7 @@ const {
                                     </button>
                                 </div>
                                 <div class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
-                                    Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.
+                                    Ausgewogene Planung aktiv: Die KI ordnet jede Einheit automatisch einem passenden Typ zu, z. B. Long Run, Intervalle, Technik oder Regeneration.
                                 </div>
                             </div>
                         </div>

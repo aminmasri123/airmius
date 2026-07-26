@@ -81,6 +81,41 @@ class MobileFeedApiTest extends TestCase
         $this->assertDatabaseMissing('posts', ['id' => $postId]);
     }
 
+    public function test_mobile_post_detail_returns_visible_post_and_denies_private_post(): void
+    {
+        $author = User::factory()->create(['name' => 'Post Autor']);
+        $viewer = User::factory()->create();
+        $outsider = User::factory()->create();
+        $public = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'public',
+            'moderation_status' => 'approved',
+            'content' => 'Öffentlicher Deep-Link-Beitrag',
+        ]);
+        $private = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'team',
+            'moderation_status' => 'approved',
+            'content' => 'Privater Deep-Link-Beitrag',
+        ]);
+
+        Sanctum::actingAs($viewer);
+        $this->getJson("/api/v1/posts/{$public->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $public->id)
+            ->assertJsonPath('data.content', 'Öffentlicher Deep-Link-Beitrag')
+            ->assertJsonPath('data.user.name', 'Post Autor');
+
+        Sanctum::actingAs($outsider);
+        $this->getJson("/api/v1/posts/{$private->id}")
+            ->assertForbidden();
+
+        Sanctum::actingAs($author);
+        $this->getJson("/api/v1/posts/{$private->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $private->id);
+    }
+
     public function test_mobile_story_api_supports_list_view_react_and_delete(): void
     {
         config([
@@ -164,6 +199,52 @@ class MobileFeedApiTest extends TestCase
         $this->getJson('/api/v1/feed')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_mobile_post_image_proxy_requires_post_visibility_permission(): void
+    {
+        config([
+            'filesystems.uploads_disk' => 'public',
+            'filesystems.uploads_url' => '/storage',
+        ]);
+        Storage::fake('public');
+
+        $author = User::factory()->create();
+        $outsider = User::factory()->create();
+        Storage::disk('public')->put('posts/private.jpg', 'private image');
+        $post = Post::factory()->create([
+            'user_id' => $author->id,
+            'visibility' => 'organization',
+            'moderation_status' => 'approved',
+            'image' => 'posts/private.jpg',
+        ]);
+
+        $this->getJson("/api/v1/posts/{$post->id}/image")
+            ->assertUnauthorized();
+
+        Sanctum::actingAs($outsider);
+        $this->getJson("/api/v1/posts/{$post->id}/image")
+            ->assertForbidden();
+
+        Sanctum::actingAs($author);
+        $this->get("/api/v1/posts/{$post->id}/image")
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
+
+        $post->update(['image' => 'posts/missing.jpg']);
+        $this->get("/api/v1/posts/{$post->id}/image")
+            ->assertNotFound();
+
+        $post->update(['image' => 'posts/private.jpg']);
+
+        $feedPost = $this->getJson('/api/v1/feed')
+            ->assertOk()
+            ->json('data.0');
+        $proxyUrl = route('api.v1.posts.image', $post);
+        $this->assertSame($proxyUrl, $feedPost['image']);
+        $this->assertSame($proxyUrl, $feedPost['image_url']);
+        $this->assertSame($proxyUrl, $feedPost['image_proxy_url']);
+        $this->assertArrayNotHasKey('uploads_base_url', $feedPost);
     }
 
     public function test_mobile_feed_reports_posts_and_comments_for_moderation(): void

@@ -22,7 +22,11 @@ const props = defineProps({
 })
 
 const { can } = usePermissions()
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
+const tx = (key, fallback = key, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const page = usePage()
 const user = page.props.auth?.user
 const commentSections = reactive({})
@@ -63,7 +67,8 @@ const reportReasons = [
 ]
 
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
-const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const formatDate = (value) => new Intl.DateTimeFormat(localeCode.value, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const fileName = (fileOrPath) => {
     if (typeof fileOrPath === 'object' && fileOrPath !== null) {
@@ -79,21 +84,8 @@ const sportLabel = (sport) => {
     const key = `sports.${sport.slug}`
     return te(key) ? t(key) : sport.name
 }
-const postTypeLabel = (type) => ({
-    normal: 'Normal',
-    question: 'Frage',
-    knowledge: 'Wissen',
-    training_drill: 'Trainingsübung',
-    tactic: 'Taktik',
-    analysis: 'Analyse',
-    experience: 'Erfahrung',
-    club_update: 'Vereinsinfo',
-}[type] || type)
-const visibilityLabel = (visibility) => ({
-    public: 'Öffentlich',
-    organization: 'Verein',
-    team: 'Team',
-}[visibility] || visibility)
+const postTypeLabel = (type) => tx(`feed.types.${type}`, type)
+const visibilityLabel = (visibility) => tx(`feed.visibility.${visibility}`, visibility)
 const contentOriginLabel = (origin) => ({
     self: 'Selbst erstellt',
     ai: 'Mit KI erstellt',
@@ -667,8 +659,8 @@ const visitPage = (url) => url && router.visit(url, {
                 v-if="posts.data.length === 0"
                 class="surface-card p-8 text-center text-secondary"
             >
-                <p class="font-semibold text-primary">Noch keine Beiträge in „{{ activeFeedFilterLabel }}”.</p>
-                <p class="mt-1 text-sm">Wechsle den Filter oder erstelle den ersten passenden Beitrag.</p>
+                <p class="font-semibold text-primary">{{ tx('Noch keine Beiträge in „{filter}”.', 'Noch keine Beiträge in „{filter}”.', { filter: activeFeedFilterLabel }) }}</p>
+                <p class="mt-1 text-sm">{{ tx('Wechsle den Filter oder erstelle den ersten passenden Beitrag.') }}</p>
             </div>
 
             <div

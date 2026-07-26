@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\FileResource;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
+use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Team;
 use App\Services\FileService;
@@ -258,6 +259,39 @@ class UploadController extends Controller
                 'deleted' => true,
             ],
         ]);
+    }
+
+    /**
+     * Create an expiring public download link for the mobile app.
+     * The raw token is returned only in this response; only its hash is persisted.
+     */
+    public function share(Request $request, File $file)
+    {
+        Gate::authorize('view', $file);
+
+        $data = $request->validate([
+            'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        $token = Str::random(64);
+        $expiresAt = now()->addDays((int) ($data['expires_in_days'] ?? 14));
+
+        FileShare::create([
+            'file_id' => $file->id,
+            'shared_by_user_id' => $request->user()->id,
+            'email' => strtolower((string) $request->user()->email),
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => $expiresAt,
+        ]);
+
+        return response()->json([
+            'data' => [
+                'file_id' => $file->id,
+                'token' => $token,
+                'url' => route('files.shared-download', ['token' => $token]),
+                'expires_at' => $expiresAt->toJSON(),
+            ],
+        ], 201);
     }
 
     public function storeFolder(Request $request)

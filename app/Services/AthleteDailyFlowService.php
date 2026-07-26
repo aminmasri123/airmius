@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Event;
+use App\Models\File;
 use App\Models\Notification as AppNotification;
 use App\Models\NutritionMeal;
 use App\Models\SportPlace;
@@ -68,6 +69,8 @@ class AthleteDailyFlowService
         $lastRoute = SportRoute::visibleTo($user)
             ->latest('updated_at')
             ->first(['id', 'title', 'sport_type', 'distance_meters', 'updated_at']);
+        $fileCount = File::query()->where('user_id', $user->id)->count();
+        $fileBytes = (int) File::query()->where('user_id', $user->id)->sum('size');
         $unreadCount = $notifications->where('read', false)->count();
         $waterGoal = 2500;
         $calorieGoal = 2200;
@@ -81,6 +84,10 @@ class AthleteDailyFlowService
             'score' => (int) round(($progress['training'] + $progress['nutrition'] + $progress['hydration']) / 3),
             'summary' => $this->dailyFlowSummary($todayTrainingMinutes, (int) $nutrition['today_calories'], (int) $nutrition['today_water_ml'], $unreadCount),
             'coach_note' => $this->dailyCoachNote($todayTrainingMinutes, (int) $nutrition['today_calories'], (int) $nutrition['today_water_ml'], $nextItem, $nextEvent),
+            'files' => [
+                'count' => $fileCount,
+                'bytes' => $fileBytes,
+            ],
             'mobile_context' => $this->mobileContext($nextItem, $nextEvent),
             'steps' => [
                 [

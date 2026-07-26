@@ -1,34 +1,46 @@
 import 'package:flutter/material.dart';
 
-import '../core/airmius_theme.dart';
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_l10n.dart';
+import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
-import 'learning_screen.dart';
+import 'certificate_verification_screen.dart';
+import 'public_interest_screen.dart';
 import 'support_helpdesk_screen.dart';
 
+/// Public learning catalogue and certificate entry point.
+///
+/// Course cards are loaded from the published API. A guest can request course
+/// information or verify a certificate, but cannot access protected lessons
+/// or enrollment data from this screen.
 class GuestLearningCertificateScreen extends StatefulWidget {
   const GuestLearningCertificateScreen({super.key});
 
   @override
-  State<GuestLearningCertificateScreen> createState() => _GuestLearningCertificateScreenState();
+  State<GuestLearningCertificateScreen> createState() =>
+      _GuestLearningCertificateScreenState();
 }
 
-class _GuestLearningCertificateScreenState extends State<GuestLearningCertificateScreen> {
-  String _category = 'Alle';
-  bool _showCourses = true;
-  bool _showCertificates = true;
-  bool _showPreview = true;
-  bool _showPublicVerify = true;
+class _GuestLearningCertificateScreenState
+    extends State<GuestLearningCertificateScreen> {
+  Future<_PublicLearningBundle>? _future;
+  final _certificateCode = TextEditingController();
+  String _query = '';
+  String _category = '';
 
-  final _certificateCode = TextEditingController(text: 'AIR-2026-ZBB');
+  String t(String key) => AirmiusScope.of(context).t(key);
 
-  final List<_LearningItem> _items = const [
-    _LearningItem(title: 'Vereinsadmin Grundlagen', category: 'Vereine', body: 'Mitgliedsanträge, Rollen, Dokumente, Beitragsregeln und Verifizierung verstehen.', status: 'Kurs', meta: '8 Lektionen', icon: Icons.school_outlined, color: AirmiusColors.blue),
-    _LearningItem(title: 'Trainer Safety Basics', category: 'Trainer', body: 'Anwesenheit, Minderjaehrige, Notfallkontakt, Medienfreigabe und Teamkommunikation.', status: 'Kurs', meta: 'Zertifikat', icon: Icons.sports_outlined, color: AirmiusColors.green),
-    _LearningItem(title: 'Airmius Zertifikat prüfen', category: 'Zertifikate', body: 'LearningCertificateVerify mit Code, Gültigkeit, Kurs und Inhaberstatus.', status: 'Verify', meta: 'AIR-2026', icon: Icons.verified_outlined, color: AirmiusColors.amber),
-    _LearningItem(title: 'Public Course Show', category: 'Kurse', body: 'Öffentliche Kursdetailseite mit Beschreibung, Nutzen, Lektionen und Start-CTA.', status: 'Public', meta: 'Preview', icon: Icons.menu_book_outlined, color: AirmiusColors.red),
-  ];
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
 
-  List<_LearningItem> get _visibleItems => _items.where((item) => _category == 'Alle' || item.category == _category).toList();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
 
   @override
   void dispose() {
@@ -36,208 +48,388 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final items = _visibleItems;
+  Future<_PublicLearningBundle> _load() async {
+    final response = await _client.publicLearningCourses();
+    final data = response['data'];
+    final facets = response['facets'];
+    final items = data is List
+        ? data
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
+        : <JsonMap>[];
+    final categories = facets is Map && facets['categories'] is List
+        ? (facets['categories'] as List)
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList()
+        : items
+              .map((item) => _text(item['category']))
+              .where((item) => item.isNotEmpty)
+              .toSet()
+              .toList();
+    return _PublicLearningBundle(items: items, categories: categories);
+  }
 
-    return Scaffold(
-      backgroundColor: AirmiusColors.bg,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const PageTitle(title: 'E-Learning & Zertifikate', subtitle: 'Guest E-Learning, Kursdetail, Zertifikatsprüfung, Vorschau und Kursstart als mobile Public-UI.'),
-                        const SizedBox(height: 16),
-                        _LearningHero(onStart: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LearningScreen()))),
-                        const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Kategorie', value: _category, values: const ['Alle', 'Vereine', 'Trainer', 'Zertifikate', 'Kurse'], onChanged: (value) => setState(() => _category = value)),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: 'Public Learning Optionen',
-                          child: Column(
-                            children: [
-                              _SwitchRow(title: 'Kurse anzeigen', subtitle: 'Guest E-Learning und Kursübersicht mobil vorbereiten.', value: _showCourses, onChanged: (value) => setState(() => _showCourses = value)),
-                              _SwitchRow(title: 'Zertifikate anzeigen', subtitle: 'Zertifikate, Gültigkeit und Inhaberstatus sichtbar machen.', value: _showCertificates, onChanged: (value) => setState(() => _showCertificates = value)),
-                              _SwitchRow(title: 'Vorschau erlauben', subtitle: 'Public Course Show mit Preview und Start-CTA.', value: _showPreview, onChanged: (value) => setState(() => _showPreview = value)),
-                              _SwitchRow(title: 'Öffentliche Prüfung erlauben', subtitle: 'LearningCertificateVerify mit Code und Ergebnis vorbereiten.', value: _showPublicVerify, onChanged: (value) => setState(() => _showPublicVerify = value)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: 'Zertifikat prüfen',
-                          child: Column(
-                            children: [
-                              AirmiusTextField(label: 'Zertifikatscode', controller: _certificateCode),
-                              const SizedBox(height: 10),
-                              Align(alignment: Alignment.centerRight, child: AirmiusButton(label: 'Prüfen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat prüfen vorbereitet'))),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        for (final item in items) ...[
-                          _LearningCard(item: item, onOpen: () => _toast('${item.title}: Detail vorbereitet')),
-                          const SizedBox(height: 12),
-                        ],
-                        if (items.isEmpty) const EmptyPanel('Keine Kurse für diese Kategorie gefunden.'),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: 'Aktionen',
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              AirmiusButton(label: 'Lernen starten', icon: Icons.school_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LearningScreen()))),
-                              AirmiusButton(label: 'Zertifikat prüfen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat prüfen vorbereitet')),
-                              AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+  void _reload() => setState(() => _future = _load());
+
+  void _verifyCertificate() {
+    final code = _certificateCode.text.trim();
+    if (code.isEmpty) {
+      _toast(t('guestLearning.codeRequired'));
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CertificateVerificationScreen(code: code),
       ),
     );
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
-}
-
-class _LearningHero extends StatelessWidget {
-  const _LearningHero({required this.onStart});
-
-  final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF10243B), Color(0xFF0B111B)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AirmiusColors.borderStrong),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          t('guestLearning.title'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        actions: [
+          IconButton(
+            tooltip: t('guestLearning.reload'),
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh_outlined),
+          ),
+        ],
       ),
+      body: FutureBuilder<_PublicLearningBundle>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return PageFrame(
+              title: t('guestLearning.title'),
+              subtitle: t('guestLearning.subtitle'),
+              child: AirmiusPanel(
+                child: Column(
+                  children: [
+                    Text(
+                      t('guestLearning.loadError'),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    AirmiusButton(
+                      label: t('guestLearning.retry'),
+                      icon: Icons.refresh_outlined,
+                      onPressed: _reload,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final bundle = snapshot.data ?? const _PublicLearningBundle();
+          final visible = bundle.items.where((item) {
+            final text = [
+              item['title'],
+              item['subtitle'],
+              item['description'],
+              item['category'],
+              item['sport_type'],
+              item['level'],
+            ].map(_text).join(' ').toLowerCase();
+            return (_query.trim().isEmpty ||
+                    text.contains(_query.trim().toLowerCase())) &&
+                (_category.isEmpty || item['category'] == _category);
+          }).toList();
+
+          return PageFrame(
+            title: t('guestLearning.title'),
+            subtitle: t('guestLearning.subtitle'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AirmiusPanel(
+                  gradient: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Eyebrow(t('guestLearning.eyebrow')),
+                      const SizedBox(height: 8),
+                      Text(
+                        t('guestLearning.intro'),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: MetricCard(
+                              value: '${bundle.items.length}',
+                              label: t('guestLearning.courses'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: MetricCard(
+                              value:
+                                  '${bundle.items.where((item) => item['is_free'] == true).length}',
+                              label: t('guestLearning.free'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SearchBox(
+                  hint: t('guestLearning.search'),
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+                if (bundle.categories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _CategoryChip(
+                        label: t('guestLearning.all'),
+                        selected: _category.isEmpty,
+                        onTap: () => setState(() => _category = ''),
+                      ),
+                      ...bundle.categories.map(
+                        (category) => _CategoryChip(
+                          label: category,
+                          selected: _category == category,
+                          onTap: () => setState(() => _category = category),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 14),
+                if (visible.isEmpty)
+                  AirmiusPanel(
+                    child: Text(
+                      bundle.items.isEmpty
+                          ? t('guestLearning.empty')
+                          : t('guestLearning.noMatch'),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  ...visible.map(
+                    (course) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _CourseCard(
+                        course: course,
+                        onInterest: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => PublicInterestScreen(
+                              topic: _text(course['title']),
+                              kind: 'learning_interest',
+                              icon: Icons.school_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 2),
+                AirmiusPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        t('guestLearning.verifyTitle'),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(t('guestLearning.verifyBody')),
+                      const SizedBox(height: 12),
+                      AirmiusTextField(
+                        label: t('guestLearning.code'),
+                        hint: t('guestLearning.codeHint'),
+                        controller: _certificateCode,
+                        icon: Icons.verified_outlined,
+                        autocorrect: false,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _verifyCertificate(),
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusButton(
+                        label: t('guestLearning.verify'),
+                        icon: Icons.fact_check_outlined,
+                        secondary: true,
+                        onPressed: _verifyCertificate,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AirmiusButton(
+                  label: t('guestLearning.support'),
+                  icon: Icons.support_agent_outlined,
+                  secondary: true,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SupportHelpdeskScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _text(Object? value) => value?.toString().trim() ?? '';
+}
+
+class _PublicLearningBundle {
+  const _PublicLearningBundle({
+    this.items = const [],
+    this.categories = const [],
+  });
+
+  final List<JsonMap> items;
+  final List<String> categories;
+}
+
+class _CourseCard extends StatelessWidget {
+  const _CourseCard({required this.course, required this.onInterest});
+
+  final JsonMap course;
+  final VoidCallback onInterest;
+
+  String _text(Object? value, [String fallback = '']) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final title = _text(course['title'], t('guestLearning.untitled'));
+    final tutor = course['tutor'] is Map ? _text(course['tutor']['name']) : '';
+    final price = course['is_free'] == true
+        ? t('guestLearning.free')
+        : course['price_cents'] is num
+        ? '${((course['price_cents'] as num) / 100).toStringAsFixed(2)} ${_text(course['currency'], 'EUR')}'
+        : t('guestLearning.priceOnRequest');
+    return AirmiusPanel(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const AirmiusLogo(size: 42),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.school_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('PUBLIC LEARNING'), SizedBox(height: 4), Text('Kurse und Zertifikate entdecken', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
-              AirmiusButton(label: 'Starten', icon: Icons.school_outlined, onPressed: onStart),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    if (tutor.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        tutor,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              StatusPill(price, color: Theme.of(context).colorScheme.secondary),
             ],
           ),
-          const SizedBox(height: 14),
-          const Text('Die Guest-Learning-Webseiten werden als mobile UI abgebildet: E-Learning, Course Show, Zertifikatsprüfung und Kursstart.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Inhalte')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Verify')), SizedBox(width: 10), Expanded(child: MetricCard(value: '8', label: 'Lektionen'))]),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChoicePanel extends StatelessWidget {
-  const _ChoicePanel({required this.title, required this.value, required this.values, required this.onChanged});
-
-  final String title;
-  final String value;
-  final List<String> values;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: title,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final item in values)
-            ChoiceChip(
-              label: Text(item),
-              selected: value == item,
-              onSelected: (_) => onChanged(item),
-              selectedColor: AirmiusColors.blue.withValues(alpha: .24),
-              backgroundColor: AirmiusColors.card,
-              labelStyle: TextStyle(color: value == item ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-              side: BorderSide(color: value == item ? AirmiusColors.blue : AirmiusColors.border),
+          if (_text(course['subtitle']).isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              _text(course['subtitle']),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
+          ],
+          if (_text(course['description']).isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(_text(course['description'])),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (_text(course['level']).isNotEmpty)
+                StatusPill(_text(course['level'])),
+              StatusPill(
+                '${course['lessons_count'] ?? 0} ${t('guestLearning.lessons')}',
+              ),
+              AirmiusButton(
+                label: t('guestLearning.interest'),
+                icon: Icons.send_outlined,
+                secondary: true,
+                onPressed: onInterest,
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700))])),
-        Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AirmiusColors.blue),
-      ]),
-    );
-  }
-}
-
-class _LearningCard extends StatelessWidget {
-  const _LearningCard({required this.item, required this.onOpen});
-
-  final _LearningItem item;
-  final VoidCallback onOpen;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(
-      title: item.title,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: item.color.withValues(alpha: .18), borderRadius: BorderRadius.circular(16), border: Border.all(color: item.color.withValues(alpha: .5))), child: Icon(item.icon, color: item.color)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [StatusPill(item.status, color: item.color), const SizedBox(height: 8), Text(item.meta, style: const TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900)), const SizedBox(height: 6), Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700))])),
-          IconButton(onPressed: onOpen, icon: const Icon(Icons.chevron_right, color: AirmiusColors.muted)),
-        ],
-      ),
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      showCheckmark: false,
     );
   }
-}
-
-class _LearningItem {
-  const _LearningItem({required this.title, required this.category, required this.body, required this.status, required this.meta, required this.icon, required this.color});
-
-  final String title;
-  final String category;
-  final String body;
-  final String status;
-  final String meta;
-  final IconData icon;
-  final Color color;
 }

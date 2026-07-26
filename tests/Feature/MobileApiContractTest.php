@@ -61,6 +61,8 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.minimum_app_version', \App\Support\Api\V1\ApiContract::MIN_CLIENT_VERSION)
             ->assertJsonPath('data.feature_flags.mvp_surface', true)
             ->assertJsonPath('data.feature_flags.secure_token_storage', true)
+            ->assertJsonPath('data.feature_flags.sport_integrations', true)
+            ->assertJsonPath('data.feature_flags.global_search_typed', true)
             ->assertJsonPath('data.supported_locales.0', 'de')
             ->assertJsonPath('data.supported_locales.3', 'ar')
             ->assertJsonPath('data.role_matrix.0.key', 'sportler')
@@ -71,11 +73,15 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.role_matrix.2.club_roles.0', 'owner')
             ->assertJsonPath('data.role_matrix.3.team_roles.0', 'ParentContact')
             ->assertJsonPath('data.capabilities.profile.0', 'user_card')
+            ->assertJsonPath('data.capabilities.search.3', 'events')
+            ->assertJsonPath('data.capabilities.search.6', 'files')
             ->assertJsonPath('data.capabilities.chat.0', 'conversations')
             ->assertJsonPath('data.capabilities.commerce.0', 'products')
             ->assertJsonPath('data.capabilities.subscriptions.2', 'bank_transfer_checkout')
             ->assertJsonPath('data.capabilities.training.2', 'log_create_stepper')
             ->assertJsonPath('data.capabilities.training.4', 'gym_exercise_set_stepper')
+            ->assertJsonPath('data.capabilities.sport_integrations.0', 'provider_status')
+            ->assertJsonPath('data.capabilities.sport_integrations.5', 'normalized_activity_import')
             ->assertJsonPath('data.capabilities.nutrition.0', 'meal_logging')
             ->assertJsonPath('data.capabilities.nutrition.3', 'recipe_suggestions')
             ->assertJsonPath('data.capabilities.nutrition.4', 'food_search_open_food_facts')
@@ -114,6 +120,7 @@ class MobileApiContractTest extends TestCase
             'validation_failed',
         );
 
+        Sanctum::actingAs(User::factory()->create());
         $this->assertApiErrorContract(
             $this->getJson('/api/v1/posts/999999999/image')->assertNotFound(),
             'not_found',
@@ -236,6 +243,37 @@ class MobileApiContractTest extends TestCase
 
         $this->assertSame('FR', $fresh->country);
         $this->assertSame(25, $fresh->event_radius_km);
+    }
+
+    public function test_notification_preferences_are_saved_server_side_and_returned_with_settings(): void
+    {
+        $user = User::factory()->create(['country' => 'DE']);
+
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/v1/settings', [
+            'notification_channels' => [
+                'chat' => false,
+                'club' => true,
+                'billing' => false,
+            ],
+            'notification_quiet_time' => 'early',
+        ])
+            ->assertOk();
+
+        $this->getJson('/api/v1/settings')
+            ->assertOk()
+            ->assertJsonPath('data.notification_preferences.channels.chat', false)
+            ->assertJsonPath('data.notification_preferences.channels.club', true)
+            ->assertJsonPath('data.notification_preferences.channels.billing', false)
+            ->assertJsonPath('data.notification_preferences.quiet_time', 'early');
+
+        $this->assertFalse($user->fresh()->notification_channels['chat']);
+        $this->assertSame('early', $user->fresh()->notification_quiet_time);
+
+        $this->patchJson('/api/v1/settings', [
+            'notification_channels' => ['unknown' => true],
+        ])->assertStatus(422)->assertJsonValidationErrors(['notification_channels']);
     }
 
     public function test_mobile_notifications_can_be_listed_read_and_deleted(): void

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\NutritionMeal;
+use App\Models\File;
 use App\Models\SportRoute;
 use App\Models\TrainingLog;
 use App\Models\User;
@@ -30,6 +31,14 @@ class DashboardDailyFlowTest extends TestCase
             'performed_at' => now()->copy()->subHour(),
             'duration_minutes' => 35,
             'distance_meters' => 7200,
+        ]);
+
+        File::query()->create([
+            'user_id' => $user->id,
+            'display_name' => 'Trainingsplan.pdf',
+            'path' => 'uploads/trainingsplan.pdf',
+            'type' => 'application/pdf',
+            'size' => 4096,
         ]);
 
         NutritionMeal::query()->create([
@@ -107,6 +116,14 @@ class DashboardDailyFlowTest extends TestCase
             'distance_meters' => 7200,
         ]);
 
+        File::query()->create([
+            'user_id' => $user->id,
+            'display_name' => 'Trainingsplan.pdf',
+            'path' => 'uploads/trainingsplan.pdf',
+            'type' => 'application/pdf',
+            'size' => 4096,
+        ]);
+
         Sanctum::actingAs($user);
 
         $this->getJson('/api/v1/dashboard/daily-flow')
@@ -117,6 +134,8 @@ class DashboardDailyFlowTest extends TestCase
             ->assertJsonPath('data.steps.3.key', 'hydration')
             ->assertJsonPath('data.steps.4.key', 'reminders')
             ->assertJsonPath('data.steps.0.progress', 78)
+            ->assertJsonPath('data.files.count', 1)
+            ->assertJsonPath('data.files.bytes', 4096)
             ->assertJsonPath('data.mobile_context.shell.navigation', 'bottom_tabs')
             ->assertJsonPath('data.mobile_context.shell.primary_action', 'start_training')
             ->assertJsonPath('data.mobile_context.quick_actions.0.key', 'start_training')
@@ -128,6 +147,7 @@ class DashboardDailyFlowTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'score',
+                    'files' => ['count', 'bytes'],
                     'summary',
                     'coach_note',
                     'mobile_context' => [

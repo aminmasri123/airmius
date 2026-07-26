@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\GuardianConsentController;
-use App\Http\Controllers\GuardianAccessController;
 use App\Http\Controllers\AccountDeletionController;
+use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\GuardianAccessController;
+use App\Http\Controllers\GuardianConsentController;
+use App\Http\Controllers\OutfitSubscriptionController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
-use App\Http\Controllers\CommerceCheckoutController;
-use App\Http\Controllers\OutfitSubscriptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -81,6 +81,10 @@ Route::post('/ads/{campaign}/conversion', [CommerceCheckoutController::class, 'c
 Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
     ->middleware('throttle:file-shared-download')
     ->name('files.shared-download');
+Route::get('/commerce/documents/{order}/{type}', [CommerceCheckoutController::class, 'downloadSignedDocument'])
+    ->middleware(['signed', 'throttle:60,1'])
+    ->whereIn('type', ['invoice', 'credit-note'])
+    ->name('commerce.documents.signed');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
     ->name('commerce-checkout.guest.success');
 Route::get('/checkout/guest-commerce/{order}/{token}/cancel', [CommerceCheckoutController::class, 'guestCancel'])

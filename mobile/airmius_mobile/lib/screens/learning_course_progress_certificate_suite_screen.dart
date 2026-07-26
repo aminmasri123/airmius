@@ -7,10 +7,12 @@ class LearningCourseProgressCertificateSuiteScreen extends StatefulWidget {
   const LearningCourseProgressCertificateSuiteScreen({super.key});
 
   @override
-  State<LearningCourseProgressCertificateSuiteScreen> createState() => _LearningCourseProgressCertificateSuiteScreenState();
+  State<LearningCourseProgressCertificateSuiteScreen> createState() =>
+      _LearningCourseProgressCertificateSuiteScreenState();
 }
 
-class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningCourseProgressCertificateSuiteScreen> {
+class _LearningCourseProgressCertificateSuiteScreenState
+    extends State<LearningCourseProgressCertificateSuiteScreen> {
   String track = 'Verein';
   bool showProgress = true;
   bool requireQuiz = true;
@@ -23,28 +25,32 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
       const _CourseRow(
         title: 'Datenschutz im Verein',
         status: '80%',
-        body: 'Pflichtkurs für Vereinsadmins mit Lektionen, Quiz, Nachweis und Consent-Bezug.',
+        body:
+            'Pflichtkurs für Vereinsadmins mit Lektionen, Quiz, Nachweis und Consent-Bezug.',
         icon: Icons.privacy_tip_outlined,
         color: AirmiusColors.blue,
       ),
       const _CourseRow(
         title: 'Trainer Grundlagen',
         status: 'Zertifikat',
-        body: 'Lernpfad für Trainerrollen, Teamrechte, Anwesenheit, Sicherheit und Jugendschutz.',
+        body:
+            'Lernpfad für Trainerrollen, Teamrechte, Anwesenheit, Sicherheit und Jugendschutz.',
         icon: Icons.school_outlined,
         color: AirmiusColors.green,
       ),
       const _CourseRow(
         title: 'Mitgliedschaft verstehen',
         status: 'Neu',
-        body: 'User lernen Beitritt, Dokumente, Zahlungsregeln, Mitgliedskarte und Support kennen.',
+        body:
+            'User lernen Beitritt, Dokumente, Zahlungsregeln, Mitgliedskarte und Support kennen.',
         icon: Icons.menu_book_outlined,
         color: AirmiusColors.amber,
       ),
       const _CourseRow(
         title: 'Sponsoren & Kampagnen',
         status: 'Review',
-        body: 'Kurs für Ads, Creative Review, Budget, Reporting und Vereinsfreigaben.',
+        body:
+            'Kurs für Ads, Creative Review, Budget, Reporting und Vereinsfreigaben.',
         icon: Icons.campaign_outlined,
         color: AirmiusColors.pink,
       ),
@@ -55,6 +61,8 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
       subtitle: 'Lernen, Fortschritt und Nachweise',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
           AirmiusPanel(
@@ -63,9 +71,13 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
               children: [
                 const SectionLabel('LEARNING CENTER'),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Die mobile App braucht eine Lernstrecke für Kurse, Lektionen, Quiz, Fortschritt, Zertifikate und herunterladbare Nachweise.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -94,7 +106,8 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                     ButtonSegment(value: 'Admin', label: Text('Admin')),
                   ],
                   selected: {track},
-                  onSelectionChanged: (value) => setState(() => track = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => track = value.first),
                 ),
               ],
             ),
@@ -106,10 +119,31 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
               children: [
                 const SectionLabel('OPTIONEN'),
                 const SizedBox(height: 8),
-                _LearningSwitch(title: 'Fortschritt anzeigen', value: showProgress, color: AirmiusColors.blue, onChanged: (value) => setState(() => showProgress = value)),
-                _LearningSwitch(title: 'Quiz erforderlich', value: requireQuiz, color: AirmiusColors.green, onChanged: (value) => setState(() => requireQuiz = value)),
-                _LearningSwitch(title: 'Zertifikat ausstellen', value: issueCertificate, color: AirmiusColors.amber, onChanged: (value) => setState(() => issueCertificate = value)),
-                _LearningSwitch(title: 'Download erlauben', value: allowDownload, color: AirmiusColors.pink, onChanged: (value) => setState(() => allowDownload = value)),
+                _LearningSwitch(
+                  title: 'Fortschritt anzeigen',
+                  value: showProgress,
+                  color: airmiusSemanticColor(context, AirmiusColors.blue),
+                  onChanged: (value) => setState(() => showProgress = value),
+                ),
+                _LearningSwitch(
+                  title: 'Quiz erforderlich',
+                  value: requireQuiz,
+                  color: airmiusSemanticColor(context, AirmiusColors.green),
+                  onChanged: (value) => setState(() => requireQuiz = value),
+                ),
+                _LearningSwitch(
+                  title: 'Zertifikat ausstellen',
+                  value: issueCertificate,
+                  color: airmiusSemanticColor(context, AirmiusColors.amber),
+                  onChanged: (value) =>
+                      setState(() => issueCertificate = value),
+                ),
+                _LearningSwitch(
+                  title: 'Download erlauben',
+                  value: allowDownload,
+                  color: airmiusSemanticColor(context, AirmiusColors.pink),
+                  onChanged: (value) => setState(() => allowDownload = value),
+                ),
               ],
             ),
           ),
@@ -126,7 +160,11 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                 const SizedBox(height: 8),
                 Text(
                   'Aktueller Lernpfad: $track. Später verbindet die API Einschreibung, Lektionen, Quiz, Fortschritt, Zertifikate, Rollenrechte und Downloads.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: airmiusMutedColor(context),
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
@@ -135,7 +173,8 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                   onPressed: () => openUiAction(
                     context,
                     title: 'Zertifikat vorbereiten',
-                    body: 'Diese UI bereitet Kursabschluss, Zertifikate, Downloads, Rollenrechte und Nachweise für die spätere Laravel-API vor.',
+                    body:
+                        'Diese UI bereitet Kursabschluss, Zertifikate, Downloads, Rollenrechte und Nachweise für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.workspace_premium_outlined,
                   ),
@@ -182,7 +221,13 @@ class _LearningSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: airmiusTextColor(context),
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       value: value,
       activeThumbColor: color,
       onChanged: onChanged,
@@ -204,7 +249,10 @@ class _CourseCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconBadge(icon: course.icon, color: course.color),
+              IconBadge(
+                icon: course.icon,
+                color: airmiusSemanticColor(context, course.color),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -212,12 +260,31 @@ class _CourseCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(course.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900))),
-                        StatusPill(course.status, color: course.color),
+                        Expanded(
+                          child: Text(
+                            course.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        StatusPill(
+                          course.status,
+                          color: airmiusSemanticColor(context, course.color),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(course.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700)),
+                    Text(
+                      course.body,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.42,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -234,7 +301,8 @@ class _CourseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Kurs starten',
-                  body: 'Kursstart, Lektionen, Fortschritt, Quiz und Abschluss werden für die spätere API vorbereitet.',
+                  body:
+                      'Kursstart, Lektionen, Fortschritt, Quiz und Abschluss werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.play_circle_outline,
                 ),
@@ -246,7 +314,8 @@ class _CourseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Quiz öffnen',
-                  body: 'Quizfragen, Bestehensgrenze, Wiederholung und Zertifikatslogik werden später per API gesteuert.',
+                  body:
+                      'Quizfragen, Bestehensgrenze, Wiederholung und Zertifikatslogik werden später per API gesteuert.',
                   status: 'UI vorbereitet',
                   icon: Icons.quiz_outlined,
                 ),
@@ -258,7 +327,8 @@ class _CourseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Nachweis herunterladen',
-                  body: 'Zertifikate und Kursnachweise können später als PDF exportiert und im Profil angezeigt werden.',
+                  body:
+                      'Zertifikate und Kursnachweise können später als PDF exportiert und im Profil angezeigt werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.download_outlined,
                 ),

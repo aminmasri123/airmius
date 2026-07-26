@@ -9,30 +9,75 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final policies = [
-      _PolicyItem('Datenschutz 2026.06', '78% bestätigt', 'Neue Verarbeitungshinweise für Vereinsprofile, Dateien und Push.', AirmiusColors.blue, Icons.privacy_tip_outlined),
-      _PolicyItem('Beitragsordnung', 'Entwurf', 'Neue Zahlungszyklen, Barzahlung, Überweisung und SEPA-Regeln.', AirmiusColors.amber, Icons.receipt_long_outlined),
-      _PolicyItem('Satzung & Regeln', 'Aktiv', 'Vereinsregeln, Rollen, Stimmrecht, Ausschluss und Beschwerdeweg.', AirmiusColors.green, Icons.gavel_outlined),
-      _PolicyItem('Medienfreigabe', 'Guardian', 'Foto, Video, Social Feed, Teamseiten und Altersfreigabe.', AirmiusColors.pink, Icons.photo_library_outlined),
+      _PolicyItem(
+        'Datenschutz 2026.06',
+        '78% bestätigt',
+        'Neue Verarbeitungshinweise für Vereinsprofile, Dateien und Push.',
+        AirmiusColors.blue,
+        Icons.privacy_tip_outlined,
+      ),
+      _PolicyItem(
+        'Beitragsordnung',
+        'Entwurf',
+        'Neue Zahlungszyklen, Barzahlung, Überweisung und SEPA-Regeln.',
+        AirmiusColors.amber,
+        Icons.receipt_long_outlined,
+      ),
+      _PolicyItem(
+        'Satzung & Regeln',
+        'Aktiv',
+        'Vereinsregeln, Rollen, Stimmrecht, Ausschluss und Beschwerdeweg.',
+        AirmiusColors.green,
+        Icons.gavel_outlined,
+      ),
+      _PolicyItem(
+        'Medienfreigabe',
+        'Guardian',
+        'Foto, Video, Social Feed, Teamseiten und Altersfreigabe.',
+        AirmiusColors.pink,
+        Icons.photo_library_outlined,
+      ),
     ];
 
     final rollout = [
-      _RolloutStep('Version erstellen', 'Dokument, Pflichttext, Kurzfassung, Sprache und Gültigkeitsdatum vorbereiten.'),
-      _RolloutStep('Zielgruppe wählen', 'Alle Mitglieder, neues Formular, Team, Guardian, Trainer, Verein oder Rolle.'),
-      _RolloutStep('Bestätigung einholen', 'App-Banner, Push, E-Mail, Formularblocker, Erinnerung und Rückfrage.'),
-      _RolloutStep('Audit sichern', 'Zeitpunkt, IP/Device, Version, Guardian, Widerruf, Export und Aufbewahrung.'),
+      _RolloutStep(
+        'Version erstellen',
+        'Dokument, Pflichttext, Kurzfassung, Sprache und Gültigkeitsdatum vorbereiten.',
+      ),
+      _RolloutStep(
+        'Zielgruppe wählen',
+        'Alle Mitglieder, neues Formular, Team, Guardian, Trainer, Verein oder Rolle.',
+      ),
+      _RolloutStep(
+        'Bestätigung einholen',
+        'App-Banner, Push, E-Mail, Formularblocker, Erinnerung und Rückfrage.',
+      ),
+      _RolloutStep(
+        'Audit sichern',
+        'Zeitpunkt, IP/Device, Version, Guardian, Widerruf, Export und Aufbewahrung.',
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
-        title: const Text('Policy Rollout', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text(
+          'Policy Rollout',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
       ),
       body: PageFrame(
         title: 'Policy Rollout',
-        subtitle: 'Datenschutz, Satzung, Beitragsordnung, SEPA, Medienfreigabe, Consent und Audit als mobile Rechts-UI.',
-        trailing: const StatusPill('Legal', color: AirmiusColors.amber),
+        subtitle:
+            'Datenschutz, Satzung, Beitragsordnung, SEPA, Medienfreigabe, Consent und Audit als mobile Rechts-UI.',
+        trailing: StatusPill(
+          'Legal',
+          color: Theme.of(context).colorScheme.tertiary,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,29 +85,52 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
               gradient: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  Eyebrow('LEGAL ROLLOUT'),
-                  SizedBox(height: 10),
-                  Text('Neue Regeln müssen aktiv bei Mitgliedern ankommen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
-                  SizedBox(height: 8),
-                  Text('Diese mobile Suite macht Dokumentversionen, Pflichtbestätigungen, Guardian-Freigaben, Erinnerungen, Widerruf und Audit für Vereine und Plattform sauber steuerbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                children: [
+                  const Eyebrow('LEGAL ROLLOUT'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Neue Regeln müssen aktiv bei Mitgliedern ankommen.',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      height: 1.08,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Diese mobile Suite macht Dokumentversionen, Pflichtbestätigungen, Guardian-Freigaben, Erinnerungen, Widerruf und Audit für Vereine und Plattform sauber steuerbar.',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.42,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
             Row(
               children: const [
-                Expanded(child: MetricCard(value: '4', label: 'Policies')),
+                Expanded(
+                  child: MetricCard(value: '4', label: 'Policies'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '78%', label: 'Consent')),
+                Expanded(
+                  child: MetricCard(value: '78%', label: 'Consent'),
+                ),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: 'Audit', label: 'Safe')),
+                Expanded(
+                  child: MetricCard(value: 'Audit', label: 'Safe'),
+                ),
               ],
             ),
             const SizedBox(height: 14),
             for (final policy in policies) ...[
               AirmiusPanel(
-                borderColor: policy.color.withValues(alpha: .44),
+                borderColor: airmiusSemanticColor(
+                  context,
+                  policy.color,
+                ).withValues(alpha: .44),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -70,22 +138,59 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: policy.color.withValues(alpha: .14),
+                        color: airmiusSemanticColor(
+                          context,
+                          policy.color,
+                        ).withValues(alpha: .14),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: policy.color.withValues(alpha: .45)),
+                        border: Border.all(
+                          color: airmiusSemanticColor(
+                            context,
+                            policy.color,
+                          ).withValues(alpha: .45),
+                        ),
                       ),
-                      child: Icon(policy.icon, color: policy.color),
+                      child: Icon(
+                        policy.icon,
+                        color: airmiusSemanticColor(context, policy.color),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(policy.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                          Text(
+                            policy.title,
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
                           const SizedBox(height: 5),
-                          Text(policy.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                          Text(
+                            policy.body,
+                            style: TextStyle(
+                              color: airmiusMutedColor(context),
+                              height: 1.35,
+                            ),
+                          ),
                           const SizedBox(height: 10),
-                          Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(policy.status, color: policy.color), const StatusPill('Versioniert')]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                policy.status,
+                                color: airmiusSemanticColor(
+                                  context,
+                                  policy.color,
+                                ),
+                              ),
+                              const StatusPill('Versioniert'),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -114,10 +219,26 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('API & COMPLIANCE'),
                   SizedBox(height: 10),
-                  _ApiLine(label: 'policy_version', value: 'Typ, Version, Sprache, Datei, Kurztext, Pflichtstatus, Gültigkeit'),
-                  _ApiLine(label: 'targeting', value: 'Mitglied, Team, Rolle, Guardian, neuer Antrag, Bestandsmitglied'),
-                  _ApiLine(label: 'consent_event', value: 'Bestätigt, abgelehnt, widerrufen, erinnert, blockiert, exportiert'),
-                  _ApiLine(label: 'audit_retention', value: 'Aufbewahrung, Datenschutzexport, Löschfrist, Adminnachweis'),
+                  _ApiLine(
+                    label: 'policy_version',
+                    value:
+                        'Typ, Version, Sprache, Datei, Kurztext, Pflichtstatus, Gültigkeit',
+                  ),
+                  _ApiLine(
+                    label: 'targeting',
+                    value:
+                        'Mitglied, Team, Rolle, Guardian, neuer Antrag, Bestandsmitglied',
+                  ),
+                  _ApiLine(
+                    label: 'consent_event',
+                    value:
+                        'Bestätigt, abgelehnt, widerrufen, erinnert, blockiert, exportiert',
+                  ),
+                  _ApiLine(
+                    label: 'audit_retention',
+                    value:
+                        'Aufbewahrung, Datenschutzexport, Löschfrist, Adminnachweis',
+                  ),
                 ],
               ),
             ),
@@ -152,28 +273,49 @@ class _RolloutRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: AirmiusColors.amber.withValues(alpha: .16), borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.amber.withValues(alpha: .42))),
-            child: const Icon(Icons.verified_user_outlined, color: AirmiusColors.amber, size: 19),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: .16),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(
+              context,
+            ).colorScheme.tertiary.withValues(alpha: .42),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(step.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(step.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-              ],
+        ),
+        child: Icon(
+          Icons.verified_user_outlined,
+          color: Theme.of(context).colorScheme.tertiary,
+          size: 19,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              step.title,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
-        ],
-      );
+            const SizedBox(height: 4),
+            Text(
+              step.body,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _ApiLine extends StatelessWidget {
@@ -184,13 +326,27 @@ class _ApiLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(width: 122, child: Text(label, style: const TextStyle(color: AirmiusColors.amber, fontWeight: FontWeight.w900))),
-            Expanded(child: Text(value, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))),
-          ],
+    padding: const EdgeInsets.only(bottom: 9),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 122,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.tertiary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
-      );
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+        ),
+      ],
+    ),
+  );
 }

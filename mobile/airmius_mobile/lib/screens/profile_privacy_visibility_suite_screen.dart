@@ -7,10 +7,12 @@ class ProfilePrivacyVisibilitySuiteScreen extends StatefulWidget {
   const ProfilePrivacyVisibilitySuiteScreen({super.key});
 
   @override
-  State<ProfilePrivacyVisibilitySuiteScreen> createState() => _ProfilePrivacyVisibilitySuiteScreenState();
+  State<ProfilePrivacyVisibilitySuiteScreen> createState() =>
+      _ProfilePrivacyVisibilitySuiteScreenState();
 }
 
-class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisibilitySuiteScreen> {
+class _ProfilePrivacyVisibilitySuiteScreenState
+    extends State<ProfilePrivacyVisibilitySuiteScreen> {
   String visibility = 'Verein';
   bool showClubMemberships = true;
   bool showTeams = true;
@@ -24,7 +26,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
     final privacyRows = [
       _PrivacyRow(
         title: 'Vereinsmitgliedschaften anzeigen',
-        body: 'User entscheidet, ob aktive Vereine im Profil sichtbar sind oder nur intern bleiben.',
+        body:
+            'User entscheidet, ob aktive Vereine im Profil sichtbar sind oder nur intern bleiben.',
         value: showClubMemberships,
         onChanged: (value) => setState(() => showClubMemberships = value),
         icon: Icons.badge_outlined,
@@ -32,7 +35,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Teams anzeigen',
-        body: 'Teamzugehoerigkeit kann für Kontakte, Verein oder nur für Admins sichtbar sein.',
+        body:
+            'Teamzugehoerigkeit kann für Kontakte, Verein oder nur für Admins sichtbar sein.',
         value: showTeams,
         onChanged: (value) => setState(() => showTeams = value),
         icon: Icons.groups_2_outlined,
@@ -40,7 +44,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Nachrichten erlauben',
-        body: 'Kontaktrechte für private Nachrichten, Vereinsadmins, Teamchats und Support-Konversationen.',
+        body:
+            'Kontaktrechte für private Nachrichten, Vereinsadmins, Teamchats und Support-Konversationen.',
         value: allowMessages,
         onChanged: (value) => setState(() => allowMessages = value),
         icon: Icons.chat_bubble_outline,
@@ -48,7 +53,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'In Suche auffindbar',
-        body: 'Profil kann in globaler Suche, Vereinslisten und Teamlisten sichtbar oder verborgen sein.',
+        body:
+            'Profil kann in globaler Suche, Vereinslisten und Teamlisten sichtbar oder verborgen sein.',
         value: allowSearch,
         onChanged: (value) => setState(() => allowSearch = value),
         icon: Icons.manage_search_outlined,
@@ -56,7 +62,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Datenexport vorbereiten',
-        body: 'Personendaten, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf exportierbar machen.',
+        body:
+            'Personendaten, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf exportierbar machen.',
         value: dataExportReady,
         onChanged: (value) => setState(() => dataExportReady = value),
         icon: Icons.download_outlined,
@@ -64,7 +71,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Blockierte Nutzer',
-        body: 'Blockieren, Melden und Kontaktbeschraenkungen werden für private Nachrichten und Feed vorbereitet.',
+        body:
+            'Blockieren, Melden und Kontaktbeschraenkungen werden für private Nachrichten und Feed vorbereitet.',
         value: blockedUsers,
         onChanged: (value) => setState(() => blockedUsers = value),
         icon: Icons.block_outlined,
@@ -87,7 +95,11 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                 const SizedBox(height: 8),
                 const Text(
                   'User brauchen Kontrolle über Profil, Suche, Vereinszugehoerigkeit, Teams, Nachrichten, blockierte Nutzer und Datenrechte.',
-                  style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    color: AirmiusColors.text,
+                    height: 1.45,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 GridWrap(
@@ -116,7 +128,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                     ButtonSegment(value: 'Öffentlich', label: Text('Public')),
                   ],
                   selected: {visibility},
-                  onSelectionChanged: (value) => setState(() => visibility = value.first),
+                  onSelectionChanged: (value) =>
+                      setState(() => visibility = value.first),
                 ),
               ],
             ),
@@ -134,7 +147,11 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                 const SizedBox(height: 8),
                 Text(
                   'Aktuelle Sichtbarkeit: $visibility. Später können Datenexport, Datenkorrektur, Löschanfrage, Consent-Historie und Sichtbarkeits-Audit per API angebunden werden.',
-                  style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -147,7 +164,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                       onPressed: () => openUiAction(
                         context,
                         title: 'Datenexport',
-                        body: 'Diese UI bereitet Datenexport für Profil, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf vor.',
+                        body:
+                            'Diese UI bereitet Datenexport für Profil, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf vor.',
                         status: 'UI vorbereitet',
                         icon: Icons.download_outlined,
                       ),
@@ -159,7 +177,8 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                       onPressed: () => openUiAction(
                         context,
                         title: 'Löschanfrage',
-                        body: 'Lösch- und Korrekturanfragen werden später mit Datenschutz, Audit und Adminfreigabe verbunden.',
+                        body:
+                            'Lösch- und Korrekturanfragen werden später mit Datenschutz, Audit und Adminfreigabe verbunden.',
                         status: 'UI vorbereitet',
                         icon: Icons.delete_outline,
                       ),
@@ -212,12 +231,32 @@ class _PrivacyCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Expanded(child: Text(row.title, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900))),
-                    Switch.adaptive(value: row.value, activeThumbColor: row.color, onChanged: row.onChanged),
+                    Expanded(
+                      child: Text(
+                        row.title,
+                        style: const TextStyle(
+                          color: AirmiusColors.text,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    Switch.adaptive(
+                      value: row.value,
+                      activeThumbColor: row.color,
+                      onChanged: row.onChanged,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(row.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700)),
+                Text(
+                  row.body,
+                  style: const TextStyle(
+                    color: AirmiusColors.muted,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
