@@ -195,10 +195,13 @@ class BlogPostController extends Controller
     {
         abort_unless($blogPost->status === 'published' && $blogPost->published_at?->lte(now()), 404);
 
+        $post = $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']);
+        $post->content = $this->sanitizeContent((string) $post->content);
+
         return Inertia::render('Guest/Blog/Show', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'post' => $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']),
+            'post' => $post,
             'relatedPosts' => BlogPost::query()
                 ->published()
                 ->with(['author:id,name', 'blogCategory:id,name,slug'])
@@ -218,10 +221,13 @@ class BlogPostController extends Controller
     {
         $this->authorizeBlog($request, 'blog.view');
 
+        $post = $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']);
+        $post->content = $this->sanitizeContent((string) $post->content);
+
         return Inertia::render('Guest/Blog/Show', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'post' => $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']),
+            'post' => $post,
             'relatedPosts' => BlogPost::query()
                 ->published()
                 ->with(['author:id,name', 'blogCategory:id,name,slug'])

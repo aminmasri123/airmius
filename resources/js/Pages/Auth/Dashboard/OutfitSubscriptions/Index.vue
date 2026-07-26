@@ -339,20 +339,20 @@ const submitIssue = () => {
                     <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10"></div>
 
                     <div class="relative z-10 max-w-3xl p-5 sm:p-7 lg:p-8">
-                        <p class="text-sm font-semibold uppercase tracking-wide text-white/80">Sportkleidung monatlich</p>
+                        <p class="text-sm font-semibold uppercase tracking-wide text-white/80">{{ tx('auto.Sportkleidung monatlich', 'Sportkleidung monatlich') }}</p>
                         <h1 class="mt-3 max-w-2xl text-3xl font-black leading-tight text-white sm:text-5xl">
-                            Outfit-Abo für deinen Style
+                            {{ tx('auto.Outfit-Abo für deinen Style', 'Outfit-Abo für deinen Style') }}
                         </h1>
                         <p class="mt-4 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
-                            Wähle einen Plan, pflege dein Style-Profil und erhalte regelmäßig Sport-Outfits passend zu Sportart, Größe, Farben und Markenstil.
+                            {{ tx('auto.Wähle einen Plan, pflege dein Style-Profil und erhalte regelmäßig Sport-Outfits passend zu Sportart, Größe, Farben und Markenstil.', 'Wähle einen Plan, pflege dein Style-Profil und erhalte regelmäßig Sport-Outfits passend zu Sportart, Größe, Farben und Markenstil.') }}
                         </p>
 
                         <div class="mt-6 flex flex-wrap gap-3">
                             <button type="button" class="rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-white/90" @click="scrollToPlans">
-                                Plan wählen
+                                {{ tx('auto.Plan wählen', 'Plan wählen') }}
                             </button>
                             <a href="#style-profile" class="rounded-lg border border-white/35 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/20">
-                                Style-Profil pflegen
+                                {{ tx('auto.Style-Profil pflegen', 'Style-Profil pflegen') }}
                             </a>
                         </div>
                     </div>
@@ -363,7 +363,7 @@ const submitIssue = () => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('outfit_workspace.eyebrow', 'Abo-Zentrale') }}</p>
                         <h2 class="mt-2 text-xl font-bold text-primary">{{ tx('outfit_workspace.overview', 'Alles auf einen Blick') }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Aktive Abos, nächste Lieferung und Style-Daten bleiben hier schnell erreichbar.
+                            {{ tx('auto.Aktive Abos, nächste Lieferung und Style-Daten bleiben hier schnell erreichbar.', 'Aktive Abos, nächste Lieferung und Style-Daten bleiben hier schnell erreichbar.') }}
                         </p>
                     </div>
 
@@ -379,15 +379,15 @@ const submitIssue = () => {
                         <div class="rounded-lg border border-border bg-inputBg p-4">
                             <p class="text-xs uppercase text-secondary">{{ tx('outfit_workspace.style_profile', 'Style-Profil') }}</p>
                             <p class="mt-2 text-lg font-bold" :class="hasStyleProfile ? 'text-success' : 'text-warning'">
-                                {{ hasStyleProfile ? 'Bereit' : 'Noch offen' }}
+                                {{ hasStyleProfile ? tx('outfit_ui.ready', 'Bereit') : tx('outfit_ui.open', 'Noch offen') }}
                             </p>
                         </div>
                     </div>
 
                     <div class="rounded-lg border border-accent/30 bg-accent/10 p-4">
-                        <p class="text-sm font-semibold text-primary">Tipp</p>
+                        <p class="text-sm font-semibold text-primary">{{ tx('auto.Tipp', 'Tipp') }}</p>
                         <p class="mt-1 text-sm text-secondary">
-                            Je genauer Grössen, Farben und No-Gos sind, desto besser passt die monatliche Box.
+                            {{ tx('auto.Je genauer Grössen, Farben und No-Gos sind, desto besser passt die monatliche Box.', 'Je genauer Grössen, Farben und No-Gos sind, desto besser passt die monatliche Box.') }}
                         </p>
                     </div>
                 </div>
@@ -399,10 +399,10 @@ const submitIssue = () => {
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.style_profile', 'Style-Profil') }}</h2>
-                        <p class="mt-1 text-sm text-secondary">Diese Angaben steuern die Zusammenstellung deiner Boxen.</p>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('auto.Diese Angaben steuern die Zusammenstellung deiner Boxen.', 'Diese Angaben steuern die Zusammenstellung deiner Boxen.') }}</p>
                     </div>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="profileForm.processing">
-                        Speichern
+                        {{ tx('auto.Speichern', 'Speichern') }}
                     </button>
                 </div>
 
@@ -419,7 +419,7 @@ const submitIssue = () => {
 
                 <div class="mt-5 grid gap-4 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Sportfokus</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Sportfokus', 'Sportfokus') }}</span>
                         <SearchableSelect
                             v-model="profileForm.sport_focus"
                             :options="sports"
@@ -427,41 +427,41 @@ const submitIssue = () => {
                             translation-prefix="sports"
                             category-translation-prefix="sport_categories"
                             class="mt-1"
-                            placeholder="Sportart suchen"
+                            :placeholder="tx('auto.Sportart suchen', 'Sportart suchen')"
                         />
                     </label>
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Passform</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Passform', 'Passform') }}</span>
                         <select v-model="profileForm.fit_preference" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option value="slim">Slim</option>
-                            <option value="regular">Regular</option>
-                            <option value="relaxed">Locker</option>
+                            <option value="slim">{{ tx('auto.Slim', 'Slim') }}</option>
+                            <option value="regular">{{ tx('auto.Regular', 'Regular') }}</option>
+                            <option value="relaxed">{{ tx('auto.Locker', 'Locker') }}</option>
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Grössen</span>
-                        <input v-model="profileForm.sizes_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="M, L, 42" />
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Grössen', 'Grössen') }}</span>
+                        <input v-model="profileForm.sizes_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.M, L, 42', 'M, L, 42')" />
                     </label>
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Lieblingsfarben</span>
-                        <input v-model="profileForm.colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Schwarz, Blau, Weiß" />
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Lieblingsfarben', 'Lieblingsfarben') }}</span>
+                        <input v-model="profileForm.colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.Schwarz, Blau, Weiß', 'Schwarz, Blau, Weiß')" />
                     </label>
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Ausschlussfarben</span>
-                        <input v-model="profileForm.excluded_colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Gelb, Pink" />
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Ausschlussfarben', 'Ausschlussfarben') }}</span>
+                        <input v-model="profileForm.excluded_colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.Gelb, Pink', 'Gelb, Pink')" />
                     </label>
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Stil</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Stil', 'Stil') }}</span>
                         <select v-model="profileForm.brand_style" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option value="minimal">Minimal</option>
-                            <option value="bold">Auffällig</option>
-                            <option value="classic">Klassisch</option>
-                            <option value="team">Team-orientiert</option>
+                            <option value="minimal">{{ tx('auto.Minimal', 'Minimal') }}</option>
+                            <option value="bold">{{ tx('auto.Auffällig', 'Auffällig') }}</option>
+                            <option value="classic">{{ tx('auto.Klassisch', 'Klassisch') }}</option>
+                            <option value="team">{{ tx('auto.Team-orientiert', 'Team-orientiert') }}</option>
                         </select>
                     </label>
                     <label class="block sm:col-span-2">
-                        <span class="text-sm font-semibold text-primary">Notizen</span>
-                        <textarea v-model="profileForm.notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Materialwünsche, Marken, No-Gos, besondere Hinweise"></textarea>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Notizen', 'Notizen') }}</span>
+                        <textarea v-model="profileForm.notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.Materialwünsche, Marken, No-Gos, besondere Hinweise', 'Materialwünsche, Marken, No-Gos, besondere Hinweise')"></textarea>
                     </label>
                 </div>
             </form>
@@ -472,38 +472,38 @@ const submitIssue = () => {
                         <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.subscriptions_title', 'Deine Abos und Lieferungen') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('outfit_workspace.subscriptions_hint', 'Status, Liefermonat und Tracking an einem Ort.') }}</p>
                     </div>
-                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} Einträge</span>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} {{ tx('auto.Einträge', 'Einträge') }}</span>
                 </div>
 
                 <div v-if="subscriptions.length" class="mt-5 space-y-4">
                     <article v-for="subscription in subscriptions" :key="subscription.id" class="rounded-lg border border-border bg-inputBg p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
-                                <p class="text-base font-bold text-primary">{{ subscription.plan?.name || 'Outfit-Abo' }}</p>
+                                <p class="text-base font-bold text-primary">{{ subscription.plan?.name || tx('outfit_ui.subscription', 'Outfit-Abo') }}</p>
                                 <p class="mt-1 text-sm text-secondary">
-                                    {{ statusLabel(subscription.status) }} - Nächste Lieferung: {{ formatDate(subscription.next_delivery_at) }}
+                                    {{ statusLabel(subscription.status) }} - {{ tx('auto.Nächste Lieferung', 'Nächste Lieferung') }}: {{ formatDate(subscription.next_delivery_at) }}
                                 </p>
                                 <p class="mt-1 text-sm text-secondary">
-                                    Zahlungsart: {{ paymentProviderLabel(subscription.payment_provider) }}
+                                    {{ tx('auto.Zahlungsart', 'Zahlungsart') }}: {{ paymentProviderLabel(subscription.payment_provider) }}
                                 </p>
                                 <p v-if="subscription.dunning_level" class="mt-1 text-sm text-amber-200">
-                                    Mahnstufe {{ subscription.dunning_level }}/3
-                                    <span v-if="subscription.last_dunning_sent_at"> - letzte Mahnung: {{ formatDate(subscription.last_dunning_sent_at) }}</span>
+                                    {{ tx('outfit_ui.warning_level', 'Mahnstufe') }} {{ subscription.dunning_level }}/3
+                                    <span v-if="subscription.last_dunning_sent_at"> - {{ tx('outfit_ui.last_warning', 'letzte Mahnung') }}: {{ formatDate(subscription.last_dunning_sent_at) }}</span>
                                 </p>
                                 <p v-if="subscription.status === 'payment_paused'" class="mt-1 text-sm text-amber-200">
-                                    Dieses Abo ist bis zum Zahlungseingang pausiert. Es werden keine weiteren Lieferungen vorbereitet.
+                                    {{ tx('auto.Dieses Abo ist bis zum Zahlungseingang pausiert. Es werden keine weiteren Lieferungen vorbereitet.', 'Dieses Abo ist bis zum Zahlungseingang pausiert. Es werden keine weiteren Lieferungen vorbereitet.') }}
                                 </p>
-                                <p class="mt-1 text-sm font-semibold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }} / Monat</p>
+                                <p class="mt-1 text-sm font-semibold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }} / {{ tx('auto.Monat', 'Monat') }}</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <button v-if="subscription.status === 'active'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="pause(subscription)">Pausieren</button>
-                                <button v-if="subscription.status === 'paused'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="resume(subscription)">Fortsetzen</button>
-                                <button v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)" type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="requestCancel(subscription)">
+                                <button v-if="subscription.status === 'active'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="pause(subscription)">{{ tx('auto.Pausieren', 'Pausieren') }}</button>
+                                <button v-if="subscription.status === 'paused'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="resume(subscription)">{{ tx('auto.Fortsetzen', 'Fortsetzen') }}</button>
+                                <button v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)" type="button" class="rounded-lg border border-error/50 px-3 py-2 text-sm text-error hover:bg-error/10" @click="requestCancel(subscription)">
                                     {{ cancelActionLabel(subscription) }}
                                 </button>
                             </div>
                             <p v-if="subscription.status === 'cancels_at_period_end'" class="mt-2 text-sm text-amber-200">
-                                Gekuendigt zum {{ formatDate(subscription.current_period_ends_at) }}. Bis dahin bleibt das Abo aktiv.
+                                {{ tx('outfit_ui.cancelled_at', 'Gekündigt zum') }} {{ formatDate(subscription.current_period_ends_at) }}. {{ tx('outfit_ui.active_until', 'Bis dahin bleibt das Abo aktiv.') }}
                             </p>
                         </div>
 
@@ -513,48 +513,48 @@ const submitIssue = () => {
                         >
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="text-sm font-bold text-primary">Überweisungsdaten</p>
+                                    <p class="text-sm font-bold text-primary">{{ tx('auto.Überweisungsdaten', 'Überweisungsdaten') }}</p>
                                     <p class="mt-1 text-xs leading-5 text-secondary">
-                                        Bitte nutze exakt diesen Verwendungszweck, damit deine Zahlung zugeordnet werden kann.
+                                        {{ tx('auto.Bitte nutze exakt diesen Verwendungszweck, damit deine Zahlung zugeordnet werden kann.', 'Bitte nutze exakt diesen Verwendungszweck, damit deine Zahlung zugeordnet werden kann.') }}
                                     </p>
                                 </div>
-                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-warning">Zahlung offen</span>
+                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-warning">{{ tx('outfit_workspace.status.pending_payment', 'Zahlung offen') }}</span>
                             </div>
 
                             <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">Betrag</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('auto.Betrag', 'Betrag') }}</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">Fällig bis</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('outfit_ui.due', 'Fällig bis') }}</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ formatDate(subscription.payment_due_at) }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3 sm:col-span-2">
-                                    <dt class="text-xs uppercase text-secondary">Verwendungszweck / Zahlungsreferenz</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('auto.Verwendungszweck / Zahlungsreferenz', 'Verwendungszweck / Zahlungsreferenz') }}</dt>
                                     <dd class="mt-1 break-all font-bold text-primary">{{ subscription.payment_reference }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">Kontoinhaber</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('outfit_ui.bank_holder', 'Kontoinhaber') }}</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bank_account_holder || '-' }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">Bank</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('outfit_ui.bank', 'Bank') }}</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bank_name || '-' }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">IBAN</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('outfit_ui.iban', 'IBAN') }}</dt>
                                     <dd class="mt-1 break-all font-bold text-primary">{{ subscription.bank_transfer?.iban || '-' }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">BIC</dt>
+                                    <dt class="text-xs uppercase text-secondary">{{ tx('outfit_ui.bic', 'BIC') }}</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bic || '-' }}</dd>
                                 </div>
                             </dl>
                         </div>
 
                         <div v-if="subscription.shipping_address" class="mt-4 rounded-lg bg-card p-3">
-                            <p class="text-xs uppercase text-secondary">Lieferadresse</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('auto.Lieferadresse', 'Lieferadresse') }}</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ subscription.shipping_address.name || '-' }}</p>
                             <p class="text-sm text-secondary">{{ shippingAddressLine(subscription.shipping_address) || '-' }}</p>
                             <p v-if="subscription.shipping_address.note" class="mt-1 text-xs text-secondary">{{ subscription.shipping_address.note }}</p>
@@ -566,7 +566,7 @@ const submitIssue = () => {
                                 <p class="text-xs text-secondary">{{ formatDate(delivery.delivery_month) }}</p>
                                 <p v-if="delivery.tracking_number" class="mt-1 text-xs text-secondary">{{ delivery.carrier }} - {{ delivery.tracking_number }}</p>
                                 <a v-if="delivery.tracking_url" :href="delivery.tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex text-xs font-semibold text-accent underline underline-offset-2">
-                                    Tracking öffnen
+                                    {{ tx('auto.Tracking öffnen', 'Tracking öffnen') }}
                                 </a>
                                 <p v-if="delivery.notes" class="mt-1 text-xs text-secondary">{{ delivery.notes }}</p>
                                 <div v-if="delivery.issue_status" class="mt-3 rounded-lg border border-border bg-inputBg p-3">
@@ -574,17 +574,17 @@ const submitIssue = () => {
                                     <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(delivery.issue_status) }}</p>
                                     <p v-if="delivery.issue_admin_note" class="mt-1 text-xs text-secondary">{{ delivery.issue_admin_note }}</p>
                                     <a v-if="delivery.return_tracking_url" :href="delivery.return_tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex text-xs font-semibold text-accent underline underline-offset-2">
-                                        Retouren-Tracking öffnen
+                                        {{ tx('auto.Retouren-Tracking öffnen', 'Retouren-Tracking öffnen') }}
                                     </a>
                                 </div>
                                 <button v-if="canRequestIssue(delivery)" type="button" class="mt-3 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="openIssueModal(delivery)">
-                                    Problem melden
+                                    {{ tx('auto.Problem melden', 'Problem melden') }}
                                 </button>
                             </div>
                         </div>
                     </article>
                 </div>
-                <p v-else class="mt-5 rounded-lg bg-inputBg p-4 text-sm text-secondary">Noch kein Outfit-Abo aktiv.</p>
+                <p v-else class="mt-5 rounded-lg bg-inputBg p-4 text-sm text-secondary">{{ tx('auto.Noch kein Outfit-Abo aktiv.', 'Noch kein Outfit-Abo aktiv.') }}</p>
             </div>
         </section>
 
@@ -592,7 +592,7 @@ const submitIssue = () => {
             <div class="mb-4 flex items-end justify-between gap-4">
                 <div>
                         <h2 class="text-lg font-bold text-primary">{{ tx('outfit_workspace.choose_plan', 'Pläne wählen') }}</h2>
-                    <p class="mt-1 text-sm text-secondary">Sponsor-Subventionen werden direkt vom Monatsbetrag abgezogen.</p>
+                    <p class="mt-1 text-sm text-secondary">{{ tx('auto.Sponsor-Subventionen werden direkt vom Monatsbetrag abgezogen.', 'Sponsor-Subventionen werden direkt vom Monatsbetrag abgezogen.') }}</p>
                 </div>
             </div>
 
@@ -607,27 +607,27 @@ const submitIssue = () => {
                                     <span v-else>{{ initials(plan.sponsor.name) }}</span>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-xs text-secondary">Subventioniert von</p>
+                                    <p class="text-xs text-secondary">{{ tx('auto.Subventioniert von', 'Subventioniert von') }}</p>
                                     <p class="truncate text-sm font-semibold text-accent">{{ plan.sponsor.name }}</p>
                                 </div>
                             </div>
                         </div>
-                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">{{ plan.items_per_box }} Teile</span>
+                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">{{ plan.items_per_box }} {{ tx('auto.Teile', 'Teile') }}</span>
                     </div>
                     <p class="mt-4 min-h-16 text-sm leading-6 text-secondary">{{ plan.description }}</p>
                     <div class="mt-4 rounded-lg bg-inputBg p-4">
                         <p v-if="plan.sponsor_discount_cents" class="text-xs text-secondary">
-                            Statt {{ formatMoney(plan.monthly_price_cents, plan.currency) }} - Rabatt {{ formatMoney(plan.sponsor_discount_cents, plan.currency) }}
+                            {{ tx('outfit_ui.instead', 'Statt') }} {{ formatMoney(plan.monthly_price_cents, plan.currency) }} - {{ tx('auto.Rabatt', 'Rabatt') }} {{ formatMoney(plan.sponsor_discount_cents, plan.currency) }}
                         </p>
                         <p class="text-2xl font-bold text-primary">{{ formatMoney(plan.effective_monthly_price_cents, plan.currency) }}</p>
-                        <p class="text-xs text-secondary">pro Monat</p>
+                        <p class="text-xs text-secondary">{{ tx('auto.pro Monat', 'pro Monat') }}</p>
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <span v-for="sport in plan.sports" :key="sport" class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">{{ sportLabel(sport) }}</span>
                         <span v-if="plan.branding_type !== 'none'" class="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">{{ brandingLabel(plan.branding_type) }}</span>
                     </div>
                     <button type="button" class="mt-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="subscribe(plan)">
-                        Plan auswählen
+                        {{ tx('auto.Plan auswählen', 'Plan auswählen') }}
                     </button>
                 </article>
             </div>
@@ -637,10 +637,10 @@ const submitIssue = () => {
             <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo bestätigen</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('auto.Outfit-Abo bestätigen', 'Outfit-Abo bestätigen') }}</p>
                         <h2 class="mt-1 text-lg font-bold text-primary">{{ pendingSubscribePlan.name }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.
+                            {{ tx('auto.Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.', 'Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.') }}
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeSubscribeModal">
@@ -650,64 +650,64 @@ const submitIssue = () => {
 
                 <div class="mt-5 grid gap-3 rounded-lg border border-border bg-inputBg p-4">
                     <div class="flex items-center justify-between gap-4">
-                        <span class="text-sm text-secondary">Monatsbetrag</span>
+                        <span class="text-sm text-secondary">{{ tx('auto.Monatsbetrag', 'Monatsbetrag') }}</span>
                         <span class="text-lg font-bold text-primary">{{ formatMoney(pendingSubscribePlan.effective_monthly_price_cents, pendingSubscribePlan.currency) }}</span>
                     </div>
                     <div v-if="pendingSubscribePlan.sponsor_discount_cents" class="flex items-center justify-between gap-4">
-                        <span class="text-sm text-secondary">Sponsor-Rabatt</span>
+                        <span class="text-sm text-secondary">{{ tx('auto.Sponsor-Rabatt', 'Sponsor-Rabatt') }}</span>
                         <span class="text-sm font-semibold text-success">- {{ formatMoney(pendingSubscribePlan.sponsor_discount_cents, pendingSubscribePlan.currency) }}</span>
                     </div>
                     <div class="flex items-center justify-between gap-4">
-                        <span class="text-sm text-secondary">Status nach Klick</span>
-                        <span class="text-sm font-semibold text-warning">Zahlung offen</span>
+                        <span class="text-sm text-secondary">{{ tx('auto.Status nach Klick', 'Status nach Klick') }}</span>
+                        <span class="text-sm font-semibold text-warning">{{ tx('outfit_workspace.status.pending_payment', 'Zahlung offen') }}</span>
                     </div>
                 </div>
 
                 <label class="mt-4 block">
-                    <span class="text-sm font-semibold text-primary">Zahlungsart</span>
+                    <span class="text-sm font-semibold text-primary">{{ tx('auto.Zahlungsart', 'Zahlungsart') }}</span>
                     <select v-model="subscribePaymentProvider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                        <option value="bank_transfer">Überweisung</option>
-                        <option value="paypal">PayPal</option>
+                        <option value="bank_transfer">{{ tx('outfit_workspace.payment.bank_transfer', 'Überweisung') }}</option>
+                        <option value="paypal">{{ tx('outfit_workspace.payment.paypal', 'PayPal') }}</option>
                     </select>
                     <span class="mt-1 block text-xs text-secondary">
-                        Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestätigung offen.
+                        {{ tx('auto.Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestätigung offen.', 'Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestätigung offen.') }}
                     </span>
                 </label>
 
                 <div class="mt-4 rounded-lg border border-border bg-inputBg p-4">
-                    <p class="text-sm font-bold text-primary">Lieferadresse</p>
+                    <p class="text-sm font-bold text-primary">{{ tx('auto.Lieferadresse', 'Lieferadresse') }}</p>
                     <div class="mt-3 grid gap-3 sm:grid-cols-2">
                         <label class="block sm:col-span-2">
-                            <span class="text-xs font-semibold uppercase text-secondary">Name</span>
-                            <input v-model="shippingName" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Vor- und Nachname">
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('outfit_ui.name', 'Name') }}</span>
+                            <input v-model="shippingName" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="tx('auto.Vor- und Nachname', 'Vor- und Nachname')">
                         </label>
                         <label class="block sm:col-span-2">
-                            <span class="text-xs font-semibold uppercase text-secondary">Straße</span>
-                            <input v-model="shippingStreet" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Straße">
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Straße', 'Straße') }}</span>
+                            <input v-model="shippingStreet" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="tx('auto.Straße', 'Straße')">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Hausnummer', 'Hausnummer') }}</span>
                             <input v-model="shippingHouseNumber" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="12a">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Land</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Land', 'Land') }}</span>
                             <input v-model="shippingCountry" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-card text-sm uppercase text-primary" placeholder="DE">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.PLZ', 'PLZ') }}</span>
                             <input v-model="shippingPostalCode" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="12345">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Stadt', 'Stadt') }}</span>
                             <input v-model="shippingCity" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Berlin">
                         </label>
                         <label class="block sm:col-span-2">
-                            <span class="text-xs font-semibold uppercase text-secondary">Bundesland / Region</span>
-                            <input v-model="shippingState" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Optional">
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Bundesland / Region', 'Bundesland / Region') }}</span>
+                            <input v-model="shippingState" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="tx('auto.Optional', 'Optional')">
                         </label>
                         <label class="block sm:col-span-2">
-                            <span class="text-xs font-semibold uppercase text-secondary">Lieferhinweis</span>
-                            <textarea v-model="shippingNote" rows="2" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Optional, z.B. bei Nachbarn abgeben"></textarea>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Lieferhinweis', 'Lieferhinweis') }}</span>
+                            <textarea v-model="shippingNote" rows="2" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" :placeholder="tx('auto.Optional, z.B. bei Nachbarn abgeben', 'Optional, z.B. bei Nachbarn abgeben')"></textarea>
                         </label>
                     </div>
                 </div>
@@ -715,27 +715,27 @@ const submitIssue = () => {
                 <div class="mt-4 rounded-lg border border-border bg-inputBg p-4">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-sm font-bold text-primary">Outfit-Abo-Vertrag</p>
+                            <p class="text-sm font-bold text-primary">{{ tx('auto.Outfit-Abo-Vertrag', 'Outfit-Abo-Vertrag') }}</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">
-                                Diese Bedingungen gelten für diesen Abschluss und werden mit deiner Anfrage gespeichert.
+                                {{ tx('auto.Diese Bedingungen gelten für diesen Abschluss und werden mit deiner Anfrage gespeichert.', 'Diese Bedingungen gelten für diesen Abschluss und werden mit deiner Anfrage gespeichert.') }}
                             </p>
                         </div>
                         <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">
-                            Version {{ planContractRules(pendingSubscribePlan).version || 'aktuell' }}
+                            Version {{ planContractRules(pendingSubscribePlan).version || tx('outfit_ui.current', 'aktuell') }}
                         </span>
                     </div>
                     <dl class="mt-4 grid gap-3 text-sm">
                         <div class="flex items-center justify-between gap-4">
-                            <dt class="text-secondary">Mindestlaufzeit</dt>
-                            <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).minimum_term_months }} Monate</dd>
+                            <dt class="text-secondary">{{ tx('auto.Mindestlaufzeit', 'Mindestlaufzeit') }}</dt>
+                            <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).minimum_term_months }} {{ tx('auto.Monate', 'Monate') }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <dt class="text-secondary">Pause möglich ab</dt>
-                            <dd class="font-semibold text-primary">Monat {{ planContractRules(pendingSubscribePlan).pause_allowed_after_months }}</dd>
+                            <dt class="text-secondary">{{ tx('auto.Pause möglich ab', 'Pause möglich ab') }}</dt>
+                            <dd class="font-semibold text-primary">{{ tx('auto.Monat', 'Monat') }} {{ planContractRules(pendingSubscribePlan).pause_allowed_after_months }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <dt class="text-secondary">Kündigungsfrist</dt>
-                            <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).cancellation_notice_days }} Tage</dd>
+                            <dt class="text-secondary">{{ tx('auto.Kündigungsfrist', 'Kündigungsfrist') }}</dt>
+                            <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).cancellation_notice_days }} {{ tx('auto.Tage', 'Tage') }}</dd>
                         </div>
                     </dl>
                     <ul class="mt-4 space-y-2 text-xs leading-5 text-secondary">
@@ -746,7 +746,7 @@ const submitIssue = () => {
                 <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-secondary">
                     <input v-model="subscribeAcceptedContract" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                     <span>
-                        Ich akzeptiere den Outfit-Abo-Vertrag inkl. Mindestlaufzeit, Pausen-, Liefer- und Kündigungsregeln.
+                        {{ tx('auto.Ich akzeptiere den Outfit-Abo-Vertrag inkl. Mindestlaufzeit, Pausen-, Liefer- und Kündigungsregeln.', 'Ich akzeptiere den Outfit-Abo-Vertrag inkl. Mindestlaufzeit, Pausen-, Liefer- und Kündigungsregeln.') }}
                     </span>
                 </label>
 
@@ -761,7 +761,7 @@ const submitIssue = () => {
                             class="font-semibold text-accent underline underline-offset-2"
                             @click.stop
                         >
-                            AGB
+                            {{ tx('outfit_ui.terms', 'AGB') }}
                         </a>
                         und
                         <a
@@ -771,15 +771,15 @@ const submitIssue = () => {
                             class="font-semibold text-accent underline underline-offset-2"
                             @click.stop
                         >
-                            Widerrufshinweise
+                            {{ tx('outfit_ui.withdrawal', 'Widerrufshinweise') }}
                         </a>
-                        und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.
+                        {{ tx('auto.und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.', 'und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.') }}
                     </span>
                 </label>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeSubscribeModal">
-                        Abbrechen
+                        {{ tx('auto.Abbrechen', 'Abbrechen') }}
                     </button>
                     <button
                         type="button"
@@ -787,7 +787,7 @@ const submitIssue = () => {
                         :disabled="!subscribeAcceptedTerms || !subscribeAcceptedContract || !hasShippingAddress || subscribingPlanId === pendingSubscribePlan.id"
                         @click="confirmSubscribe"
                     >
-                        {{ subscribingPlanId === pendingSubscribePlan.id ? 'Wird gesendet...' : 'Kostenpflichtig anfragen' }}
+                        {{ subscribingPlanId === pendingSubscribePlan.id ? tx('outfit_ui.sending', 'Wird gesendet...') : tx('outfit_ui.request_paid', 'Kostenpflichtig anfragen') }}
                     </button>
                 </div>
             </div>
@@ -798,12 +798,12 @@ const submitIssue = () => {
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-primary">
-                            {{ isPendingPayment(pendingCancelSubscription) ? 'Outfit-Abo-Anfrage abbrechen?' : 'Outfit-Abo kündigen?' }}
+                            {{ isPendingPayment(pendingCancelSubscription) ? tx('outfit_ui.cancel_request_title', 'Outfit-Abo-Anfrage abbrechen?') : tx('outfit_ui.cancel_title', 'Outfit-Abo kündigen?') }}
                         </h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             {{ isPendingPayment(pendingCancelSubscription)
-                                ? 'Der Kaufvertrag ist noch nicht abgeschlossen. Die offene Anfrage wird abgebrochen und es wird keine Zahlung mehr erwartet.'
-                                : 'Das Abo wird beendet. Bereits geplante interne Bearbeitungsschritte werden danach nicht weitergeführt.' }}
+                                ? tx('outfit_ui.cancel_request_text', 'Der Kaufvertrag ist noch nicht abgeschlossen. Die offene Anfrage wird abgebrochen und es wird keine Zahlung mehr erwartet.')
+                                : tx('outfit_ui.cancel_text', 'Das Abo wird beendet. Bereits geplante interne Bearbeitungsschritte werden danach nicht weitergeführt.') }}
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCancelModal">
@@ -812,18 +812,18 @@ const submitIssue = () => {
                 </div>
 
                 <div class="mt-5 rounded-lg bg-inputBg p-4">
-                    <p class="text-sm font-semibold text-primary">{{ pendingCancelSubscription.plan?.name || 'Outfit-Abo' }}</p>
+                    <p class="text-sm font-semibold text-primary">{{ pendingCancelSubscription.plan?.name || tx('outfit_ui.subscription', 'Outfit-Abo') }}</p>
                     <p class="mt-1 text-sm text-secondary">
-                        {{ formatMoney(pendingCancelSubscription.monthly_price_cents, pendingCancelSubscription.currency) }} / Monat
+                        {{ formatMoney(pendingCancelSubscription.monthly_price_cents, pendingCancelSubscription.currency) }} / {{ tx('auto.Monat', 'Monat') }}
                     </p>
                 </div>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCancelModal">
-                        Abbrechen
+                        {{ tx('auto.Abbrechen', 'Abbrechen') }}
                     </button>
-                    <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500" @click="confirmCancel">
-                        {{ isPendingPayment(pendingCancelSubscription) ? 'Anfrage abbrechen' : 'Kündigen' }}
+                    <button type="button" class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="confirmCancel">
+                        {{ isPendingPayment(pendingCancelSubscription) ? tx('auto.Anfrage abbrechen', 'Anfrage abbrechen') : tx('auto.Kündigen', 'Kündigen') }}
                     </button>
                 </div>
             </div>
@@ -833,10 +833,10 @@ const submitIssue = () => {
             <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferproblem melden</p>
-                        <h2 class="mt-1 text-lg font-bold text-primary">{{ statusLabel(pendingIssueDelivery.status) }} vom {{ formatDate(pendingIssueDelivery.delivery_month) }}</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ tx('auto.Lieferproblem melden', 'Lieferproblem melden') }}</p>
+                        <h2 class="mt-1 text-lg font-bold text-primary">{{ statusLabel(pendingIssueDelivery.status) }} {{ tx('auto.vom', 'vom') }} {{ formatDate(pendingIssueDelivery.delivery_month) }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Beschreibe kurz, was nicht passt. Das Support-Team sieht Lieferung, Tracking und dein Style-Profil direkt dazu.
+                            {{ tx('auto.Beschreibe kurz, was nicht passt. Das Support-Team sieht Lieferung, Tracking und dein Style-Profil direkt dazu.', 'Beschreibe kurz, was nicht passt. Das Support-Team sieht Lieferung, Tracking und dein Style-Profil direkt dazu.') }}
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeIssueModal">
@@ -846,40 +846,40 @@ const submitIssue = () => {
 
                 <div class="mt-5 grid gap-4">
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Art des Problems</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Art des Problems', 'Art des Problems') }}</span>
                         <select v-model="issueForm.issue_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option value="exchange">Umtausch / andere Grüße</option>
-                            <option value="return">Retoure</option>
-                            <option value="damaged">Beschaedigt</option>
-                            <option value="missing_item">Artikel fehlt</option>
-                            <option value="wrong_item">Falscher Artikel</option>
-                            <option value="other">Sonstiges</option>
+                            <option value="exchange">{{ tx('auto.Umtausch / andere Grüße', 'Umtausch / andere Grüße') }}</option>
+                            <option value="return">{{ tx('auto.Retoure', 'Retoure') }}</option>
+                            <option value="damaged">{{ tx('auto.Beschaedigt', 'Beschädigt') }}</option>
+                            <option value="missing_item">{{ tx('auto.Artikel fehlt', 'Artikel fehlt') }}</option>
+                            <option value="wrong_item">{{ tx('auto.Falscher Artikel', 'Falscher Artikel') }}</option>
+                            <option value="other">{{ tx('auto.Sonstiges', 'Sonstiges') }}</option>
                         </select>
                     </label>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Beschreibung</span>
-                        <textarea v-model="issueForm.issue_description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Was ist passiert? Welche Artikel sind betroffen?"></textarea>
-                        <span v-if="issueForm.errors.issue_description" class="mt-1 block text-xs text-red-300">{{ issueForm.errors.issue_description }}</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('outfit_ui.description', 'Beschreibung') }}</span>
+                        <textarea v-model="issueForm.issue_description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.Was ist passiert? Welche Artikel sind betroffen?', 'Was ist passiert? Welche Artikel sind betroffen?')"></textarea>
+                        <span v-if="issueForm.errors.issue_description" class="mt-1 block text-xs text-error">{{ issueForm.errors.issue_description }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Wunschloesung</span>
-                        <input v-model="issueForm.issue_requested_resolution" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z.B. Ersatz, Retoure, Gutschrift">
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Wunschloesung', 'Wunschlösung') }}</span>
+                        <input v-model="issueForm.issue_requested_resolution" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.z.B. Ersatz, Retoure, Gutschrift', 'z.B. Ersatz, Retoure, Gutschrift')">
                     </label>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Gewünschte Grüße</span>
-                        <input v-model="issueForm.issue_exchange_size" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional, z.B. M statt L">
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Gewünschte Größe', 'Gewünschte Größe') }}</span>
+                        <input v-model="issueForm.issue_exchange_size" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.Optional, z.B. M statt L', 'Optional, z.B. M statt L')">
                     </label>
                 </div>
 
                 <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeIssueModal">
-                        Abbrechen
+                        {{ tx('auto.Abbrechen', 'Abbrechen') }}
                     </button>
                     <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="issueForm.processing || !issueForm.issue_description" @click="submitIssue">
-                        Meldung senden
+                        {{ tx('auto.Meldung senden', 'Meldung senden') }}
                     </button>
                 </div>
             </div>

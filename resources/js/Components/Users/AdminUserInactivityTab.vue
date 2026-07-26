@@ -1,6 +1,12 @@
 ﻿<script setup>
 import { computed } from 'vue'
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 const props = defineProps({
     inactiveRules: { type: Array, default: () => [] },
     inactiveSearch: { type: String, default: '' },
@@ -283,12 +289,11 @@ const mailBadgeClass = (status) => {
                             ? 'bg-primary text-buttonTextPrimary'
                             : 'bg-card text-primary hover:bg-secondary/20'"
                         @click="emit('page', link.url)"
-                        v-html="link.label"
-                    />
+                    >
+                        {{ paginationLabel(link.label) }}
+                        </button>
                 </div>
             </div>
         </section>
     </section>
 </template>
-
-

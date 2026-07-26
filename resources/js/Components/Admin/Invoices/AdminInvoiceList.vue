@@ -1,6 +1,12 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 defineProps({
     invoices: { type: Object, required: true },
     statusLabel: { type: Function, required: true },
@@ -134,9 +140,9 @@ defineProps({
                 preserve-scroll
                 class="rounded-lg border border-border px-3 py-2 text-sm"
                 :class="[link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted', !link.url ? 'pointer-events-none opacity-40' : '']"
-                v-html="link.label"
-            />
+            >
+                {{ paginationLabel(link.label) }}
+            </Link>
         </div>
     </section>
 </template>
-

@@ -12,6 +12,11 @@ const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
 }
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 const props = defineProps({
     invoices: { type: Object, required: true },
@@ -353,8 +358,9 @@ const deleteInvoice = async (invoice) => {
                     preserve-scroll
                     class="rounded-lg border border-border px-3 py-2 text-sm"
                     :class="[link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted', !link.url ? 'pointer-events-none opacity-40' : '']"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </Link>
             </div>
         </section>
 

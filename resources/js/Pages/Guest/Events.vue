@@ -22,6 +22,11 @@ const form = ref({
 })
 
 const { t, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 const typeLabels = {
     training: 'events.types.training',
@@ -140,8 +145,9 @@ const applyFilters = () => {
                     :href="link.url || '#'"
                     class="rounded-lg border px-3 py-2 text-sm font-semibold"
                     :class="link.active ? 'border-air-blue bg-air-blue/15 text-air-blue' : 'border-border text-secondary hover:text-primary'"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </Link>
             </section>
         </main>
 

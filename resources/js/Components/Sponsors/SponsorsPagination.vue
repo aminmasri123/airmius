@@ -1,4 +1,10 @@
 <script setup>
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 defineProps({
     sponsors: {
         type: Object,
@@ -23,8 +29,9 @@ defineEmits(['visit'])
                 class="min-w-10 rounded border border-border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
                 :class="link.active ? 'bg-primary text-buttonTextPrimary' : 'bg-card text-primary hover:bg-secondary/20'"
                 @click="$emit('visit', link.url)"
-                v-html="link.label"
-            />
+            >
+                {{ paginationLabel(link.label) }}
+            </button>
         </div>
     </div>
 </template>

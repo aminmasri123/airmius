@@ -72,6 +72,12 @@ const stripHtml = (value = '') => String(value)
 
 const teaserText = (post) => stripHtml(post.excerpt || post.content || '')
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 const formatDate = (value) => {
     if (!value) return ''
 
@@ -200,8 +206,9 @@ const applyFilters = () => {
                     :href="link.url || '#'"
                     class="rounded-lg border border-border px-3 py-2 text-sm"
                     :class="link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted'"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </Link>
             </nav>
         </main>
 

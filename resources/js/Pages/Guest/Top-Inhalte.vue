@@ -4,11 +4,14 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
 })
+
+const { t } = useI18n({ useScope: 'global' })
 
 const highlights = [
     {
@@ -40,8 +43,8 @@ const articles = [
 
 <template>
     <SeoHead
-        title="Top Inhalte für Sport, Training und Vereinsarbeit"
-        description="Entdecke Inhalte rund um Trainingsplanung, Teamkommunikation, Vereinsorganisation und digitale Sportentwicklung mit Airmius."
+        :title="t('Top Inhalte für Sport, Training und Vereinsarbeit')"
+        :description="t('Entdecke Inhalte rund um Trainingsplanung, Teamkommunikation, Vereinsorganisation und digitale Sportentwicklung mit Airmius.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -110,7 +113,7 @@ const articles = [
                         <div class="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-inputBg">
                             <i :class="[icon, 'text-2xl text-air-blue']"></i>
                         </div>
-                        <span class="text-xs font-semibold uppercase tracking-wider text-secondary">{{ tag }}</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-secondary">{{ t(tag) }}</span>
                         <h3 class="mt-2 text-lg font-bold text-primary">{{ $t(title) }}</h3>
                         <p class="mt-3 text-sm leading-relaxed text-secondary">{{ $t(text) }}</p>
                     </article>
@@ -121,4 +124,3 @@ const articles = [
         <Footer />
     </div>
 </template>
-

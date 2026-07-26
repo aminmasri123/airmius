@@ -19,6 +19,11 @@ const props = defineProps({
 
 const page = usePage()
 const { t, te, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 const user = computed(() => page.props.auth?.user)
 const errors = computed(() => page.props.errors || {})
 const selectedJob = ref(null)
@@ -467,8 +472,9 @@ const submitInterest = () => {
                         preserve-scroll
                         class="rounded border px-3 py-2 text-sm font-bold"
                         :class="link.active ? 'border-borderHover bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"
-                        v-html="link.label"
-                    />
+                    >
+                        {{ paginationLabel(link.label) }}
+                    </Link>
                 </nav>
             </section>
         </main>
@@ -647,4 +653,3 @@ const submitInterest = () => {
         </Modal>
     </div>
 </template>
-

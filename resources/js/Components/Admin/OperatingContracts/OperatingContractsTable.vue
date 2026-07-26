@@ -2,6 +2,12 @@
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 const props = defineProps({
     contracts: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
@@ -223,13 +229,13 @@ const filterSearchModel = computed({
                     preserve-scroll
                     class="rounded-lg border border-border px-3 py-2 text-sm"
                     :class="[link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted', !link.url ? 'pointer-events-none opacity-40' : '']"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </Link>
             </div>
         </section>
     </div>
 </template>
-
 
 
 

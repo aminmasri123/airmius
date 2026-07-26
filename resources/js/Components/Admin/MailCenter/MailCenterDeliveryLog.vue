@@ -1,6 +1,12 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 defineProps({
     categories: {
         type: Array,
@@ -142,10 +148,10 @@ const statusClass = (status) => ({
                 :href="link.url || ''"
                 class="rounded-lg border px-3 py-2 text-sm"
                 :class="link.active ? 'border-buttonPrimary bg-buttonPrimary text-white' : 'border-border text-primary hover:bg-muted'"
-                v-html="link.label"
-            />
+            >
+                {{ paginationLabel(link.label) }}
+            </Link>
         </div>
     </section>
 </template>
-
 

@@ -6,6 +6,11 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -394,8 +399,9 @@ const sendInactivityNotice = (user, stage) => {
                         :class="link.active
                             ? 'bg-primary text-buttonTextPrimary'
                             : 'bg-card text-primary hover:bg-secondary/20'"
-                        v-html="link.label"
-                    />
+                    >
+                        {{ paginationLabel(link.label) }}
+                    </button>
                 </div>
             </div>
 
@@ -693,8 +699,9 @@ const sendInactivityNotice = (user, stage) => {
                                 :class="link.active
                                     ? 'bg-primary text-buttonTextPrimary'
                                     : 'bg-card text-primary hover:bg-secondary/20'"
-                                v-html="link.label"
-                            />
+                            >
+                                {{ paginationLabel(link.label) }}
+                            </button>
                         </div>
                     </div>
                 </section>

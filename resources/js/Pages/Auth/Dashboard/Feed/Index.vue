@@ -23,6 +23,11 @@ const props = defineProps({
 
 const { can } = usePermissions()
 const { t, te, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 const tx = (key, fallback = key, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -675,8 +680,9 @@ const visitPage = (url) => url && router.visit(url, {
                     class="min-w-10 rounded border border-border px-3 py-2 text-sm disabled:opacity-50"
                     :class="link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-card text-primary hover:bg-muted'"
                     @click="visitPage(link.url)"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </button>
             </div>
         </section>
 

@@ -22,6 +22,11 @@ const props = defineProps({
 const page = usePage()
 const { isDark } = useTheme()
 const { t, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
@@ -257,8 +262,9 @@ const shortDescription = (text, length = 110) => {
                             preserve-scroll
                             class="rounded border px-3 py-2 text-sm font-bold"
                             :class="link.active ? 'border-borderHover bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"
-                            v-html="link.label"
-                        />
+                        >
+                            {{ paginationLabel(link.label) }}
+                        </Link>
                     </div>
                 </div>
             </section>

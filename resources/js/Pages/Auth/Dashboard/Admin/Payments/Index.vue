@@ -11,6 +11,11 @@ const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
 }
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 defineProps({
     payments: {
@@ -287,8 +292,9 @@ const methodLabel = (method) => tx(`admin_finance.method.${method}`, method || '
                             link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary hover:bg-muted',
                             !link.url ? 'pointer-events-none opacity-40' : '',
                         ]"
-                        v-html="link.label"
-                    />
+                    >
+                        {{ paginationLabel(link.label) }}
+                    </Link>
                 </div>
             </div>
         </section>

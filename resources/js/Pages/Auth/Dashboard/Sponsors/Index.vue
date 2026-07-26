@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useTheme } from '@/services/useTheme'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -26,12 +27,14 @@ const props = defineProps({
     },
 })
 
-const scopes = [
-    { key: 'all', label: 'Alle', hint: 'Alle Sponsoren' },
-    { key: 'platform', label: 'Airmius', hint: 'Plattform-Sponsoren' },
-    { key: 'outfit_subscription', label: 'Outfit-Abo', hint: 'Abo-Sponsoren' },
-    { key: 'club', label: 'Vereine', hint: 'Vereinssponsoren' },
-]
+const { t, locale } = useI18n({ useScope: 'global' })
+const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
+const scopes = computed(() => [
+    { key: 'all', label: t('sponsors_admin.scope_all'), hint: t('sponsors_admin.scope_all_hint') },
+    { key: 'platform', label: t('sponsors_admin.scope_platform'), hint: t('sponsors_admin.scope_platform_hint') },
+    { key: 'outfit_subscription', label: t('sponsors_admin.scope_outfit'), hint: t('sponsors_admin.scope_outfit_hint') },
+    { key: 'club', label: t('sponsors_admin.scope_club'), hint: t('sponsors_admin.scope_club_hint') },
+])
 
 const activeScope = ref(props.filters.scope || 'all')
 const showFormModal = ref(false)
@@ -78,10 +81,10 @@ function sponsorScope(sponsor) {
 }
 
 const scopeLabel = (sponsor) => ({
-    platform: 'Airmius Plattform',
-    outfit_subscription: 'Outfit-Abo',
-    club: sponsor.club?.name || 'Verein',
-}[sponsorScope(sponsor)] || 'Airmius Plattform')
+    platform: t('sponsors_admin.scope_platform'),
+    outfit_subscription: t('sponsors_admin.scope_outfit'),
+    club: sponsor.club?.name || t('sponsors_admin.scope_club'),
+}[sponsorScope(sponsor)] || t('sponsors_admin.scope_platform'))
 
 const scopeBadgeClass = (sponsor) => ({
     platform: 'bg-air-blue/10 text-air-blue',
@@ -197,21 +200,44 @@ const previewUrl = (source) => {
 const formatAmount = (amount) => {
     if (amount === null || amount === undefined || amount === '') return '-'
 
-    return `${Number(amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`
+    return new Intl.NumberFormat(localeCode.value, {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(Number(amount))
 }
+
+const formatDate = (value) => {
+    if (!value) return '-'
+
+    return new Intl.DateTimeFormat(localeCode.value, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(new Date(value))
+}
+
+const formatNumber = (value) => new Intl.NumberFormat(localeCode.value).format(Number(value || 0))
+
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 </script>
 
 <template>
-    <Head title="Sponsoren" />
+    <Head :title="t('sponsors_admin.page_title')" />
 
     <div class="space-y-5">
         <section class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Sponsoring</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Sponsoren verwalten</h1>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ t('sponsors_admin.eyebrow') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ t('sponsors_admin.title') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Lege Sponsoren für Airmius, Outfit-Abos oder einzelne Vereine an und verwalte Logos, Laufzeiten und Ansprechpartner.
+                        {{ t('sponsors_admin.intro') }}
                     </p>
                 </div>
 
@@ -221,26 +247,26 @@ const formatAmount = (amount) => {
                     @click="openCreateModal()"
                 >
                     <i class="las la-plus text-lg"></i>
-                    Sponsor anlegen
+                    {{ t('sponsors_admin.create') }}
                 </button>
             </div>
 
             <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-lg border border-border bg-inputBg p-4">
-                    <p class="text-xs font-semibold uppercase text-secondary">Gesamt</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.total }}</p>
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ t('sponsors_admin.stats_total') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(sponsorStats.total) }}</p>
                 </div>
                 <div class="rounded-lg border border-border bg-inputBg p-4">
-                    <p class="text-xs font-semibold uppercase text-secondary">Airmius</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.platform }}</p>
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ t('sponsors_admin.stats_platform') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(sponsorStats.platform) }}</p>
                 </div>
                 <div class="rounded-lg border border-border bg-inputBg p-4">
-                    <p class="text-xs font-semibold uppercase text-secondary">Outfit-Abo</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.outfit_subscription }}</p>
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ t('sponsors_admin.stats_outfit') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(sponsorStats.outfit_subscription) }}</p>
                 </div>
                 <div class="rounded-lg border border-border bg-inputBg p-4">
-                    <p class="text-xs font-semibold uppercase text-secondary">Vereine</p>
-                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.club }}</p>
+                    <p class="text-xs font-semibold uppercase text-secondary">{{ t('sponsors_admin.stats_clubs') }}</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ formatNumber(sponsorStats.club) }}</p>
                 </div>
             </div>
         </section>
@@ -257,7 +283,7 @@ const formatAmount = (amount) => {
                 >
                     {{ scope.label }}
                     <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">
-                        {{ scope.key === 'all' ? sponsorStats.total : sponsorStats[scope.key] }}
+                        {{ formatNumber(scope.key === 'all' ? sponsorStats.total : sponsorStats[scope.key]) }}
                     </span>
                 </button>
             </div>
@@ -282,7 +308,7 @@ const formatAmount = (amount) => {
                         </div>
                         <div class="min-w-0">
                             <h2 class="truncate text-lg font-semibold text-primary">{{ sponsor.name }}</h2>
-                            <p class="truncate text-sm text-secondary">{{ sponsor.contact_name || sponsor.email || 'Kein Kontakt hinterlegt' }}</p>
+                            <p class="truncate text-sm text-secondary">{{ sponsor.contact_name || sponsor.email || t('sponsors_admin.contact_fallback') }}</p>
                         </div>
                     </div>
 
@@ -293,12 +319,12 @@ const formatAmount = (amount) => {
 
                 <div class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Budget</p>
+                        <p class="text-xs uppercase text-secondary">{{ t('sponsors_admin.budget') }}</p>
                         <p class="mt-1 font-semibold text-primary">{{ formatAmount(sponsor.amount) }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Laufzeit</p>
-                        <p class="mt-1 font-semibold text-primary">{{ sponsor.starts_at || '-' }} bis {{ sponsor.ends_at || '-' }}</p>
+                        <p class="text-xs uppercase text-secondary">{{ t('sponsors_admin.duration') }}</p>
+                        <p class="mt-1 font-semibold text-primary">{{ formatDate(sponsor.starts_at) }} – {{ formatDate(sponsor.ends_at) }}</p>
                     </div>
                 </div>
 
@@ -311,33 +337,33 @@ const formatAmount = (amount) => {
                         class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10"
                     >
                         <i class="las la-external-link-alt"></i>
-                        Website
+                        {{ t('sponsors_admin.website') }}
                     </a>
                     <button class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10" @click="edit(sponsor)">
-                        Bearbeiten
+                        {{ t('Bearbeiten') }}
                     </button>
                     <button class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10" @click="openDeleteModal(sponsor)">
-                        Löschen
+                        {{ t('Löschen') }}
                     </button>
                 </div>
             </article>
 
             <div v-if="filteredSponsors.length === 0" class="rounded-lg border border-dashed border-border bg-card p-8 text-center xl:col-span-3">
-                <p class="text-lg font-semibold text-primary">Keine Sponsoren in diesem Bereich</p>
-                <p class="mt-2 text-sm text-secondary">Lege den ersten Sponsor direkt im passenden Tab an.</p>
+                <p class="text-lg font-semibold text-primary">{{ t('sponsors_admin.empty_title') }}</p>
+                <p class="mt-2 text-sm text-secondary">{{ t('sponsors_admin.empty_body') }}</p>
                 <button
                     type="button"
                     class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary"
                     @click="openCreateModal(activeScope)"
                 >
-                    Sponsor anlegen
+                    {{ t('sponsors_admin.create') }}
                 </button>
             </div>
         </section>
 
         <div v-if="sponsors?.links?.length > 3" class="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
             <p class="text-sm text-secondary">
-                Zeige {{ sponsors.from }} bis {{ sponsors.to }} von {{ sponsors.total }} Sponsoren.
+                {{ t('sponsors_admin.pagination', { from: sponsors.from, to: sponsors.to, total: sponsors.total }) }}
             </p>
             <div class="flex flex-wrap gap-1">
                 <button
@@ -348,8 +374,9 @@ const formatAmount = (amount) => {
                     class="min-w-10 rounded border border-border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
                     :class="link.active ? 'bg-primary text-buttonTextPrimary' : 'bg-card text-primary hover:bg-secondary/20'"
                     @click="visitPage(link.url)"
-                    v-html="link.label"
-                />
+                >
+                    {{ paginationLabel(link.label) }}
+                </button>
             </div>
         </div>
 
@@ -362,11 +389,11 @@ const formatAmount = (amount) => {
                 <form class="w-full max-w-5xl rounded-lg border border-border bg-card shadow-2xl" @submit.prevent="submit">
                     <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Sponsor</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ t('sponsors_admin.modal_eyebrow') }}</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">
-                                {{ editingSponsor ? 'Sponsor bearbeiten' : 'Sponsor anlegen' }}
+                                {{ editingSponsor ? t('sponsors_admin.modal_edit_title') : t('sponsors_admin.modal_create_title') }}
                             </h2>
-                            <p class="mt-1 text-sm text-secondary">Zuordnung, Kontakt, Logo und Laufzeit an einem Ort.</p>
+                            <p class="mt-1 text-sm text-secondary">{{ t('sponsors_admin.modal_intro') }}</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-secondary hover:text-primary" @click="closeFormModal">
                             <i class="las la-times text-xl"></i>
@@ -375,82 +402,82 @@ const formatAmount = (amount) => {
 
                     <div class="max-h-[75vh] overflow-y-auto p-5">
                         <div v-if="!canManageSponsors" class="mb-4 rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
-                            Sponsorenverwaltung für diesen Verein ist ab dem Club-Plan verfügbar. Wähle einen Verein mit passendem Plan oder eine Plattform-/Outfit-Abo-Zuordnung.
+                            {{ t('sponsors_admin.plan_notice') }}
                         </div>
 
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Sponsor-Art</span>
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_scope') }}</span>
                                 <select v-model="form.scope" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option value="platform">Airmius Plattform</option>
-                                    <option value="outfit_subscription">Outfit-Abo</option>
-                                    <option value="club">Verein</option>
+                                    <option value="platform">{{ t('sponsors_admin.scope_platform') }}</option>
+                                    <option value="outfit_subscription">{{ t('sponsors_admin.scope_outfit') }}</option>
+                                    <option value="club">{{ t('sponsors_admin.scope_club') }}</option>
                                 </select>
                                 <div v-if="form.errors.scope" class="mt-1 text-sm text-error">{{ form.errors.scope }}</div>
                             </label>
 
                             <label v-if="form.scope === 'club'" class="block">
-                                <span class="text-sm font-semibold text-primary">Verein</span>
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_club') }}</span>
                                 <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                                    <option value="">Verein auswählen</option>
+                                    <option value="">{{ t('sponsors_admin.club_placeholder') }}</option>
                                     <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                                 </select>
                                 <div v-if="form.errors.club_id" class="mt-1 text-sm text-error">{{ form.errors.club_id }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Sponsorname</span>
-                                <input v-model="form.name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Nike, Stadtwerke, ..." required>
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_name') }}</span>
+                                <input v-model="form.name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.name_placeholder')" required>
                                 <div v-if="form.errors.name" class="mt-1 text-sm text-error">{{ form.errors.name }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Kontaktperson</span>
-                                <input v-model="form.contact_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ansprechpartner">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_contact') }}</span>
+                                <input v-model="form.contact_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.contact_placeholder')">
                                 <div v-if="form.errors.contact_name" class="mt-1 text-sm text-error">{{ form.errors.contact_name }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">E-Mail</span>
-                                <input v-model="form.email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsor@example.com" type="email">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_email') }}</span>
+                                <input v-model="form.email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.email_placeholder')" type="email">
                                 <div v-if="form.errors.email" class="mt-1 text-sm text-error">{{ form.errors.email }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Website</span>
-                                <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." type="url">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_website') }}</span>
+                                <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.website_placeholder')" type="url">
                                 <div v-if="form.errors.website" class="mt-1 text-sm text-error">{{ form.errors.website }}</div>
                             </label>
 
                             <div class="rounded-lg border border-border bg-inputBg p-4 xl:col-span-3">
                                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
-                                        <p class="text-sm font-semibold text-primary">Sponsorlogos nach Farbflaeche</p>
+                                        <p class="text-sm font-semibold text-primary">{{ t('sponsors_admin.logo_title') }}</p>
                                         <p class="mt-1 text-xs text-secondary">
-                                            Hinterlege idealerweise zwei Varianten: dunkles Logo für helle Flächen und helles Logo für dunkle Flächen.
+                                            {{ t('sponsors_admin.logo_help') }}
                                         </p>
                                     </div>
                                     <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">
-                                        {{ isDark ? 'Aktuell: dunkle Palette' : 'Aktuell: helle Palette' }}
+                                        {{ isDark ? t('sponsors_admin.palette_dark') : t('sponsors_admin.palette_light') }}
                                     </span>
                                 </div>
 
                                 <div class="mt-4 grid gap-4 md:grid-cols-2">
                                     <label class="block rounded-lg border border-border bg-card p-3">
-                                        <span class="text-sm font-semibold text-primary">Logo für helle Flächen</span>
-                                        <input v-model="form.logo_light" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-light.webp">
+                                        <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.logo_light') }}</span>
+                                        <input v-model="form.logo_light" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.logo_light_placeholder')">
                                         <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-white p-3">
-                                            <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" alt="Logo für helle Flächen" class="max-h-full max-w-full object-contain">
-                                            <span v-else class="text-xs text-slate-500">Vorschau helle Flaeche</span>
+                                            <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" :alt="t('sponsors_admin.logo_light')" class="max-h-full max-w-full object-contain">
+                                            <span v-else class="text-xs text-slate-500">{{ t('sponsors_admin.preview_light') }}</span>
                                         </div>
                                     </label>
 
                                     <label class="block rounded-lg border border-border bg-card p-3">
-                                        <span class="text-sm font-semibold text-primary">Logo für dunkle Flächen</span>
-                                        <input v-model="form.logo_dark" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-dark.webp">
+                                        <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.logo_dark') }}</span>
+                                        <input v-model="form.logo_dark" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.logo_dark_placeholder')">
                                         <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-slate-950 p-3">
-                                            <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" alt="Logo für dunkle Flächen" class="max-h-full max-w-full object-contain">
-                                            <span v-else class="text-xs text-slate-400">Vorschau dunkle Flaeche</span>
+                                            <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" :alt="t('sponsors_admin.logo_dark')" class="max-h-full max-w-full object-contain">
+                                            <span v-else class="text-xs text-slate-400">{{ t('sponsors_admin.preview_dark') }}</span>
                                         </div>
                                     </label>
                                 </div>
@@ -459,19 +486,19 @@ const formatAmount = (amount) => {
                             </div>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Budget / Betrag</span>
-                                <input v-model="form.amount" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="0,00" type="number" min="0" step="0.01">
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_amount') }}</span>
+                                <input v-model="form.amount" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.amount_placeholder')" type="number" min="0" step="0.01">
                                 <div v-if="form.errors.amount" class="mt-1 text-sm text-error">{{ form.errors.amount }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Start</span>
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_start') }}</span>
                                 <input v-model="form.starts_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
                                 <div v-if="form.errors.starts_at" class="mt-1 text-sm text-error">{{ form.errors.starts_at }}</div>
                             </label>
 
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Ende</span>
+                                <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_end') }}</span>
                                 <input v-model="form.ends_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
                                 <div v-if="form.errors.ends_at" class="mt-1 text-sm text-error">{{ form.errors.ends_at }}</div>
                             </label>
@@ -480,10 +507,10 @@ const formatAmount = (amount) => {
 
                     <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 font-semibold text-primary" @click="closeFormModal">
-                            Abbrechen
+                            {{ t('Abbrechen') }}
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50" :disabled="form.processing || !canManageSponsors">
-                            {{ editingSponsor ? 'Sponsor speichern' : 'Sponsor erstellen' }}
+                            {{ editingSponsor ? t('sponsors_admin.save') : t('sponsors_admin.create') }}
                         </button>
                     </div>
                 </form>
@@ -499,10 +526,10 @@ const formatAmount = (amount) => {
                 <div class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-error">Sponsor löschen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-error">{{ t('sponsors_admin.delete_title') }}</p>
                             <h2 class="mt-1 text-lg font-semibold text-primary">{{ deleteTarget.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
-                                Dieser Sponsor wird dauerhaft gelöscht. Gib zur Bestätigung <span class="font-semibold text-primary">delete</span> ein.
+                                {{ t('sponsors_admin.delete_body') }} <span class="font-semibold text-primary">delete</span>.
                             </p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="closeDeleteModal">
@@ -513,13 +540,13 @@ const formatAmount = (amount) => {
                     <input
                         v-model="deleteConfirmation"
                         class="mt-4 w-full rounded-lg border-border bg-inputBg text-primary"
-                        placeholder="delete"
+                        :placeholder="t('sponsors_admin.delete_placeholder')"
                         autocomplete="off"
                     >
 
                     <div class="mt-5 flex justify-end gap-2">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeDeleteModal">
-                            Abbrechen
+                            {{ t('Abbrechen') }}
                         </button>
                         <button
                             type="button"
@@ -527,7 +554,7 @@ const formatAmount = (amount) => {
                             :disabled="deleteConfirmation !== 'delete'"
                             @click="confirmDelete"
                         >
-                            Endgültig löschen
+                            {{ t('sponsors_admin.delete_confirm') }}
                         </button>
                     </div>
                 </div>

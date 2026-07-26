@@ -42,6 +42,9 @@ Technische Basis: **gruen**. Produkt-, Lokalisierungs-, Provider-, Realgeraete-,
 - Die Systemsettings lokalisieren KI-Tokenstatus und Warnmeldungen, formatieren Token-Abläufe regional und behalten die 2FA-/Berechtigungsgrenzen für sensible Einstellungen bei.
 - Die Sportartenverwaltung lokalisiert Filter, Nutzungskennzahlen und Erstell-/Löschzustände, formatiert Zahlen regional und macht die nicht rückgängig machbare Löschung explizit.
 - Die Blog-Kategorienverwaltung lokalisiert Formulare, Tabellen- und Leerzustände, formatiert Kennzahlen regional und rendert Pagination-Labels ohne `v-html`.
+- Das Blog-Studio lokalisiert Editor-Werkzeuge, SEO-Prüfungen, Bild-/Tag-Felder, Status- und Löschaktionen in DE/EN/FR/AR; die öffentliche Blogausgabe saniert zusätzlich legacy HTML vor `v-html`.
+- Öffentliche Blog-, Marketplace-, Job-, Event- und Admin-Paginationen sowie wiederverwendbare Panels rendern Pagination-Labels als Text statt unkontrolliertem HTML.
+- Die Sponsorverwaltung nutzt aktive Sprach-/Währungs-/Datumsformate, lokalisierte Scope-, Formular- und Löschzustände sowie eine sichere Pagination; Logo-Vorschauen berücksichtigen weiterhin helle und dunkle Paletten.
 - Fahrgemeinschaften zeigen Fahrer-/Anfrage-/Sitzplatz- und Datenschutzstatus lokalisiert, formatieren Abfahrtsdaten regional und machen private Treffpunkt-/Kontaktdaten erst nach Freigabe sichtbar; der Outfit-Checkout verwendet dieselben regionalen Geld-/Datumsformate und verständliche Liefer-/Problemstatus.
 - Die Admin-Moderation bestätigt das dauerhafte Entfernen gemeldeter Inhalte, übermittelt die Entfernung explizit an den Server und zeigt Meldungs-, Flag- und Warnzustände regional formatiert in DE/EN/FR/AR.
 - Events verwenden für Freikontingent, Wizard-Schritte, Validierungsfehler, Kalenderwochentage und Datumsformate nun aktive Übersetzungen statt fest verdrahteter deutscher Texte.
@@ -49,8 +52,8 @@ Technische Basis: **gruen**. Produkt-, Lokalisierungs-, Provider-, Realgeraete-,
 - Dashboard, Ernährung, Gast-Marketplace, Abo-Rechnungen, Vereinsfinanzen und Admin-Commerce formatieren Geld, Zahlen und Datumswerte jetzt nach der aktiven Sprache; zentrale Fehler-/Leerzustände und Statusbezeichnungen bleiben in DE/EN/FR/AR verständlich.
 - Die Subscription-Administration übersetzt Zielgruppen, Abo-Status, unbegrenzte Limits und Banküberweisungszustände; Plan-Deaktivierungen und offene Zahlungen verwenden lokalisierte Bestätigungsdialoge.
 - `npm run build`: erfolgreich, 976 Module transformiert.
-- Web-Sprachdateien: 964 deutsche Referenzschluessel; EN, FR und AR nach Reparatur mit exakt gleicher Schluesselmenge. Zusaetzlich besitzen alle vier Kataloge 3.540 identische `auto`-UI-Ausgangsschluessel.
-- Arabisch vor der Reparatur: 935 von 962 Top-Level-Eintraegen waren betroffen. Nach lokaler Wiederherstellung: 964 Referenzschluessel, 61.070 arabische Zeichen, keine Fragezeichenfolgen/Ersatzzeichen und keine Platzhalterabweichungen.
+- Web-Sprachdateien: DE/EN/FR/AR besitzen nach der aktuellen Katalogprüfung exakt gleiche Schlüsselmengen; gemeinsame `auto`-UI-Ausgangsschlüssel bleiben in allen vier Katalogen vorhanden.
+- Arabisch wurde nach der lokalen Wiederherstellung erneut auf Schlüssel-, Platzhalter- und Ersatzzeichen-Konsistenz geprüft; die Katalogprüfung ist grün.
 - Statisches Vue-UI-Inventar: 3.003 unterschiedliche sichtbare Texte aus Seiten, Layouts, Komponenten und statischen Textattributen; nach der Umsetzung fehlen davon in EN, FR und AR jeweils 0.
 - Flutter-Realgeraet-Evidence fuer Android/iOS ist laut Release-Dokumentation offen.
 - Juristischer Sign-off ist laut `docs/LEGAL_REVIEW_PACK.md` offen.

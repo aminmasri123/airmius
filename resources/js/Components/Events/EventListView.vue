@@ -1,6 +1,12 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
+
 defineProps({
     viewMode: { type: String, default: 'calendar' },
     eventItems: { type: Array, default: () => [] },
@@ -137,7 +143,8 @@ defineProps({
                 link.active ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-secondary hover:border-borderHover hover:text-primary',
                 !link.url ? 'pointer-events-none opacity-45' : '',
             ]"
-            v-html="link.label"
-        />
+        >
+            {{ paginationLabel(link.label) }}
+        </Link>
     </nav>
 </template>

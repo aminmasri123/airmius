@@ -24,6 +24,11 @@ const props = defineProps({
 })
 
 const { t, locale } = useI18n()
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 const page = usePage()
 
 const showCreateModal = ref(false)
@@ -1767,8 +1772,9 @@ const resetFilters = () => {
                     link.active ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-secondary hover:border-borderHover hover:text-primary',
                     !link.url ? 'pointer-events-none opacity-45' : '',
                 ]"
-                v-html="link.label"
-            />
+            >
+                {{ paginationLabel(link.label) }}
+            </Link>
         </nav>
 
         <AppEmptyState

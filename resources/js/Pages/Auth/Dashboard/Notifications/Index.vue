@@ -15,6 +15,11 @@ const props = defineProps({
 
 const { t, locale } = useI18n()
 const tx = (value, params = {}) => t(value, params)
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 let notificationsInterval = null
 
@@ -230,8 +235,9 @@ onUnmounted(() => {
                 class="min-w-10 rounded border border-border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
                 :class="link.active ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-card text-primary hover:bg-muted'"
                 @click="visitPage(link.url)"
-                v-html="link.label"
-            />
+            >
+                {{ paginationLabel(link.label) }}
+            </button>
         </div>
     </div>
 </template>

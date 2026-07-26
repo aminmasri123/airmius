@@ -4,6 +4,11 @@ import { useI18n } from 'vue-i18n'
 
 const { locale } = useI18n()
 const localeCode = computed(() => ({ ar: 'ar-EG', fr: 'fr-FR', en: 'en-US', de: 'de-DE' })[locale.value] || 'de-DE')
+const paginationLabel = (label) => String(label || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&laquo;/g, '«')
+    .replace(/&raquo;/g, '»')
+    .replace(/&amp;/g, '&')
 
 const props = defineProps({
     searchQuery: { type: String, default: '' },
@@ -170,8 +175,9 @@ const statusLabel = (user) => {
                         ? 'bg-primary text-buttonTextPrimary'
                         : 'bg-card text-primary hover:bg-secondary/20'"
                     @click="emit('page', link.url)"
-                    v-html="link.label"
-                />
+            >
+                {{ paginationLabel(link.label) }}
+                </button>
             </div>
         </div>
     </section>

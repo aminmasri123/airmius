@@ -311,4 +311,18 @@ class BlogPublicTest extends TestCase
         $this->assertStringContainsString('class="blog-mark"', $content);
         $this->assertStringNotContainsString('unknown', $content);
     }
+
+    public function test_public_blog_show_sanitizes_legacy_content_before_rendering(): void
+    {
+        $post = BlogPost::factory()->published()->create([
+            'slug' => 'legacy-unsicherer-inhalt',
+            'content' => '<p onclick="alert(1)">Sicherer Text</p><script>alert(1)</script>',
+        ]);
+
+        $this->get(route('guest.blog.show', $post))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('post.content', '<p>Sicherer Text</p>')
+                ->where('post.slug', 'legacy-unsicherer-inhalt'));
+    }
 }
