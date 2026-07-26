@@ -385,7 +385,7 @@ const sendInactivityNotice = (user, stage) => {
                     <span v-if="users.total > 0">
                         Zeige {{ users.from }} bis {{ users.to }} von {{ users.total }} Nutzern.
                     </span>
-                    <span v-else>Keine Nutzer vorhanden.</span>
+                    <span v-else>{{ tx('users_admin_ui.no_users', 'Keine Nutzer vorhanden.') }}</span>
                 </p>
 
                 <div v-if="users.links.length > 3" class="flex flex-wrap gap-1">
@@ -408,7 +408,7 @@ const sendInactivityNotice = (user, stage) => {
             <section v-if="activeTab === 'warnings'" class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                 <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">User-Warnungen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('users_admin_ui.warning_title', 'User-Warnungen') }}</h2>
                         <p class="text-sm text-secondary">
                             Hier siehst du, welche Nutzer bereits Moderationswarnungen bekommen haben.
                         </p>
@@ -418,7 +418,7 @@ const sendInactivityNotice = (user, stage) => {
                         v-model="warningCategoryFilter"
                         class="rounded-md border border-border bg-card px-3 py-2 text-sm text-primary focus:ring-1 focus:ring-bg"
                     >
-                        <option value="all">Alle Kategorien</option>
+                        <option value="all">{{ tx('users_admin_ui.all_categories', 'Alle Kategorien') }}</option>
                         <option v-for="category in warningCategories" :key="category" :value="category">
                             {{ category }}
                         </option>
@@ -429,13 +429,13 @@ const sendInactivityNotice = (user, stage) => {
                     <table class="min-w-full divide-y divide-border">
                         <thead class="bg-card">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Nutzer</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Kategorie</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Severity</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Punkte</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Grund</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Datum</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Aktion</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.user', 'Nutzer') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.category', 'Kategorie') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.severity', 'Severity') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.points', 'Punkte') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.reason', 'Grund') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.date', 'Datum') }}</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.action', 'Aktion') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border bg-table">
@@ -510,7 +510,7 @@ const sendInactivityNotice = (user, stage) => {
                 <section class="rounded-lg border border-border bg-card p-5">
                     <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <h2 class="text-lg font-semibold text-primary">Regeln</h2>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('users_admin_ui.rules', 'Regeln') }}</h2>
                             <p class="text-sm text-secondary">
                                 Diese Regeln gelten für die automatische Prüfung und deine manuelle Kontrolle.
                             </p>
@@ -545,7 +545,7 @@ const sendInactivityNotice = (user, stage) => {
                                 v-model="inactiveSearch"
                                 type="search"
                                 class="w-full rounded-md border border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary placeholder-secondary focus:border-buttonPrimary focus:ring-1 focus:ring-buttonPrimary"
-                                placeholder="Name oder E-Mail suchen"
+                                :placeholder="tx('users_admin_ui.inactive_search', 'Name oder E-Mail suchen')"
                             />
                         </div>
 
@@ -553,12 +553,12 @@ const sendInactivityNotice = (user, stage) => {
                             v-model="inactiveStage"
                             class="rounded-md border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-buttonPrimary focus:ring-1 focus:ring-buttonPrimary"
                         >
-                            <option value="all">Alle Nutzer</option>
-                            <option value="12">12+ Monate inaktiv</option>
-                            <option value="18">18+ Monate inaktiv</option>
-                            <option value="24">24+ Monate inaktiv</option>
-                            <option value="36">36+ Monate inaktiv</option>
-                            <option value="mail_failed">Mail fehlgeschlagen</option>
+                            <option value="all">{{ tx('users_admin_ui.all_users', 'Alle Nutzer') }}</option>
+                            <option value="12">{{ tx('users_admin_ui.inactive_12', '12+ Monate inaktiv') }}</option>
+                            <option value="18">{{ tx('users_admin_ui.inactive_18', '18+ Monate inaktiv') }}</option>
+                            <option value="24">{{ tx('users_admin_ui.inactive_24', '24+ Monate inaktiv') }}</option>
+                            <option value="36">{{ tx('users_admin_ui.inactive_36', '36+ Monate inaktiv') }}</option>
+                            <option value="mail_failed">{{ tx('users_admin_ui.mail_failed', 'Mail fehlgeschlagen') }}</option>
                         </select>
 
                         <button
@@ -574,11 +574,11 @@ const sendInactivityNotice = (user, stage) => {
                         <table class="min-w-full divide-y divide-border">
                             <thead class="bg-card">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Nutzer</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Letzter Login</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">DSGVO-Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Mailstatus</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Aktionen</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.user', 'Nutzer') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.last_login', 'Letzter Login') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.privacy_status', 'DSGVO-Status') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.mail_status', 'Mailstatus') }}</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ tx('users_admin_ui.action', 'Aktionen') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border bg-table">
@@ -685,7 +685,7 @@ const sendInactivityNotice = (user, stage) => {
                             <span v-if="inactiveUsers.total > 0">
                                 Zeige {{ inactiveUsers.from }} bis {{ inactiveUsers.to }} von {{ inactiveUsers.total }} Nutzern.
                             </span>
-                            <span v-else>Keine Nutzer vorhanden.</span>
+                            <span v-else>{{ tx('users_admin_ui.no_users', 'Keine Nutzer vorhanden.') }}</span>
                         </p>
 
                         <div v-if="inactiveUsers.links.length > 3" class="flex flex-wrap gap-1">

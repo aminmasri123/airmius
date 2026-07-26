@@ -257,6 +257,11 @@ const {
     sportMapPlaybackSpeedOptions,
     sportMapTabs,
 } = useSportMapWorkspace(props)
+
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 </script>
 
 <template>
@@ -2021,6 +2026,5 @@ const {
         </div>
     </AppLayout>
 </template>
-
 
 

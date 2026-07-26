@@ -45,6 +45,8 @@ Technische Basis: **gruen**. Produkt-, Lokalisierungs-, Provider-, Realgeraete-,
 - Das Blog-Studio lokalisiert Editor-Werkzeuge, SEO-Prüfungen, Bild-/Tag-Felder, Status- und Löschaktionen in DE/EN/FR/AR; die öffentliche Blogausgabe saniert zusätzlich legacy HTML vor `v-html`.
 - Öffentliche Blog-, Marketplace-, Job-, Event- und Admin-Paginationen sowie wiederverwendbare Panels rendern Pagination-Labels als Text statt unkontrolliertem HTML.
 - Die Sponsorverwaltung nutzt aktive Sprach-/Währungs-/Datumsformate, lokalisierte Scope-, Formular- und Löschzustände sowie eine sichere Pagination; Logo-Vorschauen berücksichtigen weiterhin helle und dunkle Paletten.
+- Das Outfit-Abo-Dashboard lokalisiert Style-Profil, Liefer-/Zahlungsdaten, Vertrags- und Kündigungsdialoge sowie Lieferprobleme in DE/EN/FR/AR; Geld-/Datumswerte und Warnfarben folgen Sprache und Theme.
+- Die Nutzerverwaltung übernimmt für Warnungen, Inaktivitäts-/DSGVO-Filter, Tabellenköpfe und Leerzustände einen gemeinsamen DE/EN/FR/AR-Katalog; Pagination und Suchfelder bleiben sicher und mobil bedienbar.
 - Fahrgemeinschaften zeigen Fahrer-/Anfrage-/Sitzplatz- und Datenschutzstatus lokalisiert, formatieren Abfahrtsdaten regional und machen private Treffpunkt-/Kontaktdaten erst nach Freigabe sichtbar; der Outfit-Checkout verwendet dieselben regionalen Geld-/Datumsformate und verständliche Liefer-/Problemstatus.
 - Die Admin-Moderation bestätigt das dauerhafte Entfernen gemeldeter Inhalte, übermittelt die Entfernung explizit an den Server und zeigt Meldungs-, Flag- und Warnzustände regional formatiert in DE/EN/FR/AR.
 - Events verwenden für Freikontingent, Wizard-Schritte, Validierungsfehler, Kalenderwochentage und Datumsformate nun aktive Übersetzungen statt fest verdrahteter deutscher Texte.
