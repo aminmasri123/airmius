@@ -1,4 +1,9 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
+
 defineProps({
     canCreateConversation: { type: Boolean, default: false },
     conversationForm: { type: Object, required: true },
@@ -17,10 +22,10 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
             <div class="border-b border-border p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
-                        <p class="mt-1 text-sm text-secondary">Für Gruppen mindestens zwei Personen auswählen.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.new_conversation') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('chat.ui.group_selection_hint') }}</p>
                     </div>
-                    <button type="button" class="text-secondary hover:text-primary" @click="$emit('close')">
+                    <button type="button" class="text-secondary hover:text-primary" :aria-label="tx('chat.ui.close')" @click="$emit('close')">
                         <i class="las la-times text-2xl"></i>
                     </button>
                 </div>
@@ -34,7 +39,7 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
                         :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                         @click="$emit('set-type', 'direct')"
                     >
-                        Direkt
+                        {{ tx('chat.ui.direct') }}
                     </button>
                     <button
                         type="button"
@@ -42,7 +47,7 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
                         :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                         @click="$emit('set-type', 'group')"
                     >
-                        Gruppe
+                        {{ tx('chat.ui.group') }}
                     </button>
                     <button
                         type="button"
@@ -50,7 +55,7 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
                         :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                         @click="$emit('set-type', 'team')"
                     >
-                        Team
+                        {{ tx('chat.ui.team') }}
                     </button>
                 </div>
             </div>
@@ -61,7 +66,7 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
                         v-model="conversationForm.team_id"
                         class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary"
                     >
-                        <option :value="null">Team auswählen</option>
+                        <option :value="null">{{ tx('chat.ui.choose_team') }}</option>
                         <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                     </select>
                 </div>
@@ -95,27 +100,27 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
                     <textarea
                         v-model="conversationForm.message"
                         rows="2"
-                        placeholder="Erste Nachricht optional"
+                        :placeholder="tx('chat.ui.first_message_optional')"
                         class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
                     />
 
                     <div class="flex gap-2">
                         <div v-if="conversationForm.type === 'group'" class="flex flex-1 items-center text-xs text-secondary">
-                            {{ conversationForm.participant_ids.length }} von 2 Personen ausgewählt
+                            {{ tx('chat.ui.people_selected', { count: conversationForm.participant_ids.length }) }}
                         </div>
                         <button
                             type="button"
                             class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                             @click="$emit('close')"
                         >
-                            Abbrechen
+                            {{ tx('chat.ui.cancel') }}
                         </button>
                         <button
                             type="submit"
                             :disabled="conversationForm.processing || !canCreateConversation"
                             class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            Chat starten
+                            {{ tx('chat.ui.start_chat') }}
                         </button>
                     </div>
                 </div>
@@ -123,4 +128,3 @@ defineEmits(['close', 'set-type', 'submit', 'toggle-participant'])
         </div>
     </div>
 </template>
-

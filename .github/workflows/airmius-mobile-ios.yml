@@ -38,7 +38,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release_evidence | Out-Null
-          ./scripts/assert_release_configuration.ps1 -ApiBaseUrl "https://app.airmius.com" -UseHttp 2>&1 | Tee-Object -FilePath release_evidence/release-configuration-check-ios.log
+          ./scripts/assert_release_configuration.ps1 -ApiBaseUrl "https://airmius.com" -UseHttp 2>&1 | Tee-Object -FilePath release_evidence/release-configuration-check-ios.log
 
       - name: Release secrets hygiene check
         shell: pwsh
@@ -69,7 +69,7 @@ jobs:
         run: flutter analyze 2>&1 | tee release_evidence/flutter-analyze-ios.log
 
       - name: iOS release build without codesign
-        run: flutter build ios --release --no-codesign --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com 2>&1 | tee release_evidence/ios-release-build-no-codesign.log
+        run: flutter build ios --release --no-codesign --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com 2>&1 | tee release_evidence/ios-release-build-no-codesign.log
 
       - name: Collect iOS evidence
         if: always()

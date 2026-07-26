@@ -5,7 +5,7 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 ## Release mode inputs
 
 - Production API base URL:
-  - `AIRMIUS_API_BASE_URL=https://app.airmius.com`
+  - `AIRMIUS_API_BASE_URL=https://airmius.com`
 - HTTP transport enabled:
   - `AIRMIUS_USE_HTTP=true`
 - Android application ID:
@@ -13,7 +13,7 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 - iOS bundle ID:
   - `com.airmius.app`
 - App version:
-  - `1.0.10+11` for the current release candidate; update only with the product/version owner.
+  - `1.0.11+12` for the current release candidate.
 
 ## Android prerequisites
 
@@ -30,8 +30,8 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 ```powershell
 flutter pub get
 flutter analyze
-flutter build appbundle --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true
-flutter build apk --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true
+flutter build appbundle --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true
+flutter build apk --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true
 ```
 
 Expected outputs:
@@ -65,13 +65,13 @@ Expected outputs:
 ```bash
 flutter pub get
 flutter analyze
-flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true
+flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true
 ```
 
 CI release-equivalent build without Apple signing:
 
 ```bash
-flutter build ios --release --no-codesign --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true
+flutter build ios --release --no-codesign --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true
 ```
 
 Expected output:

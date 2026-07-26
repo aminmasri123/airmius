@@ -620,7 +620,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'update'])->name('training.exercises.update');
         Route::delete('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'destroy'])->name('training.exercises.destroy');
         Route::post('/training/exercises/{trainingExercise}/add-to-plan', [TrainingExerciseController::class, 'addToPlan'])->name('training.exercises.add-to-plan');
-        Route::get('/trainer-cockpit', [MobileTrainerCockpitController::class, 'index'])->name('trainer-cockpit.index');
+        Route::get('/trainer-cockpit{slash}', [MobileTrainerCockpitController::class, 'index'])
+            ->where('slash', '/?')
+            ->name('trainer-cockpit.index');
         Route::post('/trainer-cockpit/logs/{log}/feedback', [MobileTrainerFeedbackController::class, 'storeLogFeedback'])
             ->middleware('throttle:content-comments')
             ->name('trainer-cockpit.logs.feedback.store');

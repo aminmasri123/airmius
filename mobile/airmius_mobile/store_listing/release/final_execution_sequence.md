@@ -19,13 +19,13 @@ Run the evidence pipeline:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com"
 ```
 
 If Flutter is not in `PATH`, pass the absolute Windows Flutter path:
 
 ```powershell
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
 ```
 
 This generates local Android/analyze evidence, syncs eligible manifest gates, exports a report and packages the first evidence bundle.
@@ -80,13 +80,13 @@ The integrity and status commands must be clean before final Go/No-Go. The statu
 ## 4. Run final Go/No-Go
 
 ```powershell
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -RunGoNoGo
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -RunGoNoGo
 ```
 
 With an absolute Flutter path:
 
 ```powershell
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat" -RunGoNoGo
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat" -RunGoNoGo
 ```
 
 This validates the manual evidence pack, verifies manual gates, validates the manifest, runs Go/No-Go, marks the Go/No-Go gate passed after success, refreshes the final report and packages the final evidence bundle.

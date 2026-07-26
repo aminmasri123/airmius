@@ -99,25 +99,25 @@ const copy = {
         },
     },
     ar: {
-        open: 'ر�^ت�S�? ا�"فر�S�,',
-        loading: 'جار ا�"تح�.�S�"...',
-        nextEvent: 'ا�"�.�^عد ا�"�,اد�.',
-        noEvent: '�"ا �S�^جد �.�^عد �.خطط',
-        response: 'ا�"رد�^د',
-        attendance: 'ا�"حض�^ر',
-        missing: '�?ا�,ص',
-        actions: 'ا�"إجراءات ا�"تا�"�Sة',
-        reliability: 'ا�"ا�"تزا�.',
-        noMissing: 'ا�"ج�.�Sع أجاب.',
-        error: 'تعذر تح�.�S�" ر�^ت�S�? ا�"فر�S�,.',
+        open: 'روتين الفريق',
+        loading: 'جارٍ التحميل...',
+        nextEvent: 'الحدث التالي',
+        noEvent: 'لا يوجد حدث مخطط',
+        response: 'الردود',
+        attendance: 'نسبة الحضور',
+        missing: 'لم يردوا',
+        actions: 'الإجراءات التالية',
+        reliability: 'الموثوقية',
+        noMissing: 'أجاب الجميع.',
+        error: 'تعذر تحميل روتين الفريق.',
         actionLabels: {
-            invite_members: 'دع�^ة أعضاء',
-            assign_coach: 'تع�S�S�? د�^ر ا�"�.درب',
-            schedule_event: 'تخط�Sط �.�^عد',
-            remind_missing_responses: 'تذ�f�Sر ا�"رد�^د ا�"�?ا�,صة',
-            check_availability: 'فحص ا�"ت�^فر',
-            review_open_fees: '�.راجعة ا�"رس�^�. ا�"�.فت�^حة',
-            team_routine_stable: 'ر�^ت�S�? ا�"فر�S�, �.ست�,ر',
+            invite_members: 'دعوة الأعضاء',
+            assign_coach: 'تعيين دور المدرب',
+            schedule_event: 'تخطيط حدث',
+            remind_missing_responses: 'تذكير بالردود الناقصة',
+            check_availability: 'فحص التوفر',
+            review_open_fees: 'مراجعة الرسوم المفتوحة',
+            team_routine_stable: 'روتين الفريق مستقر',
         },
     },
 }
@@ -151,14 +151,14 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                         </Link>
 
                         <p class="text-xs text-secondary">
-                            {{ team.users?.length || 0 }} Mitglieder
+                            {{ $t('teams_workspace.ui.member_count', { count: team.users?.length || 0 }) }}
                         </p>
                     </div>
                 </div>
 
                 <div class="flex shrink-0 items-center gap-2">
                     <span class="rounded-full bg-muted px-2 py-1 text-xs text-secondary">
-                        Aktiv
+                        {{ $t('teams_workspace.ui.active') }}
                     </span>
 
                     <button
@@ -167,7 +167,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                         class="rounded bg-error px-2 py-1 text-xs font-semibold text-white hover:opacity-90"
                         @click="deleteTeam(team)"
                     >
-                        Löschen
+                        {{ $t('teams_workspace.ui.delete') }}
                     </button>
                 </div>
             </div>
@@ -220,7 +220,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                         class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:border-error/40 hover:bg-error/10 hover:text-error"
                         @click="removeTeamMember(team, member)"
                     >
-                        {{ member.id === user?.id ? 'Team verlassen' : 'Entfernen' }}
+                        {{ member.id === user?.id ? $t('teams_workspace.ui.leave_team') : $t('teams_workspace.ui.remove_member') }}
                     </button>
                 </div>
             </div>
@@ -234,7 +234,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     v-model="teamMemberFormFor(team).user_id"
                     class="min-w-0 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                 >
-                    <option value="">Vereinsmitglied wählen</option>
+                    <option value="">{{ $t('teams_workspace.ui.choose_member') }}</option>
                     <option
                         v-for="member in availableTeamMemberOptions(team)"
                         :key="member.id"
@@ -262,7 +262,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     class="rounded bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                     :disabled="!teamMemberFormFor(team).user_id"
                 >
-                    Hinzufügen
+                    {{ $t('teams_workspace.ui.add_member') }}
                 </button>
             </form>
 
@@ -275,7 +275,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                 >
                     <span>{{ labels.open }}</span>
                     <span class="text-xs text-secondary">
-                        {{ isLoadingInsights(team) ? labels.loading : 'API' }}
+                        {{ isLoadingInsights(team) ? labels.loading : $t('teams_workspace.ui.api') }}
                     </span>
                 </button>
 
@@ -350,7 +350,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     :class="{ 'opacity-60': processingJoinTeamIds.has(team.id) }"
                     @click="requestJoinTeam(team)"
                 >
-                    {{ processingJoinTeamIds.has(team.id) ? 'Wird gesendet...' : 'Beitritt anfragen' }}
+                    {{ processingJoinTeamIds.has(team.id) ? $t('teams_workspace.ui.sending') : $t('teams_workspace.ui.request_join') }}
                 </button>
 
                 <p
@@ -367,12 +367,12 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     v-else-if="team.viewer_pending_join_request_id"
                     class="rounded border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-air-blue"
                 >
-                    Deine Beitrittsanfrage wartet auf Freigabe.
+                    {{ $t('teams_workspace.ui.pending_join') }}
                 </p>
 
                 <div v-if="team.pending_join_requests?.length" class="space-y-2">
                     <p class="text-xs font-semibold uppercase text-secondary">
-                        Offene Team-Anfragen
+                        {{ $t('teams_workspace.ui.open_requests') }}
                     </p>
 
                     <div
@@ -382,7 +382,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     >
                         <div class="min-w-0">
                             <p class="truncate text-sm font-semibold text-primary">
-                                {{ request.user?.name || 'Mitglied' }}
+                                {{ request.user?.name || $t('teams_workspace.ui.member_fallback') }}
                             </p>
                             <p class="truncate text-xs text-secondary">
                                 {{ request.user?.email }}
@@ -397,7 +397,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                                 :class="{ 'opacity-60': processingJoinRequestIds.has(request.id) }"
                                 @click="approveJoinRequest(request)"
                             >
-                                Annehmen
+                                {{ $t('teams_workspace.ui.accept') }}
                             </button>
                             <button
                                 type="button"
@@ -406,7 +406,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                                 :class="{ 'opacity-60': processingJoinRequestIds.has(request.id) }"
                                 @click="declineJoinRequest(request)"
                             >
-                                Ablehnen
+                                {{ $t('teams_workspace.ui.decline') }}
                             </button>
                         </div>
                     </div>
@@ -421,7 +421,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                 <input
                     v-model="inviteFormFor(team).email"
                     type="email"
-                    placeholder="E-Mail"
+                    :placeholder="$t('teams_workspace.ui.email')"
                     class="min-w-0 flex-1 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                 >
 
@@ -429,7 +429,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     class="rounded bg-buttonPrimary px-3 py-2 text-sm text-buttonTextPrimary disabled:opacity-50"
                     :disabled="club.subscription_capabilities?.member_invitation_remaining_today === 0"
                 >
-                    Einladen
+                    {{ $t('teams_workspace.ui.invite') }}
                 </button>
             </form>
 
@@ -437,7 +437,10 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                 v-if="club.subscription_capabilities?.member_invitation_daily_limit"
                 class="text-xs text-secondary"
             >
-                Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute übrig.
+                {{ $t('teams_workspace.ui.free_limit', {
+                    remaining: club.subscription_capabilities.member_invitation_remaining_today,
+                    limit: club.subscription_capabilities.member_invitation_daily_limit,
+                }) }}
             </p>
 
             <p

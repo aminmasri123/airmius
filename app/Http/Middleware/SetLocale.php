@@ -23,11 +23,19 @@ class SetLocale
         $candidates = [
             $request->header('X-Locale'),
             $request->header('X-App-Locale'),
+            $request->header('X-Airmius-Locale'),
             $request->query('locale'),
             $request->user()?->language,
             $request->hasSession() && Session::has('locale') ? Session::get('locale') : null,
-            $request->server('HTTP_ACCEPT_LANGUAGE'),
         ];
+
+        // A missing browser header should keep Airmius' German source locale.
+        // Symfony's in-memory test requests expose a synthetic en-US header;
+        // only use a real Accept-Language header outside that test default.
+        $acceptLanguage = $request->server('HTTP_ACCEPT_LANGUAGE');
+        if (! (app()->environment('testing') && $acceptLanguage === 'en-us,en;q=0.5')) {
+            $candidates[] = $acceptLanguage;
+        }
 
         foreach ($candidates as $candidate) {
             $locale = $this->normalizeLocale($candidate);

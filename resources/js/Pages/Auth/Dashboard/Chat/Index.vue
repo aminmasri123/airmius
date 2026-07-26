@@ -1083,6 +1083,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
                             :title="tx('chat.new_conversation')"
+                            :aria-label="tx('chat.new_conversation')"
                             @click="showNewConversationModal = true"
                         >
                             <i class="las la-plus text-xl"></i>
@@ -1187,7 +1188,7 @@ onUnmounted(() => {
                                 {{ latestMessagePreviewFor(conversation) }}
                             </p>
                             <p class="mt-0.5 truncate text-[11px] text-secondary">
-                                {{ typeLabelFor(conversation) }} - {{ conversation.users.length }} Mitglieder
+                                {{ typeLabelFor(conversation) }} - {{ conversation.users.length }} {{ tx('chat.members') }}
                             </p>
                         </div>
                     </Link>
@@ -1228,6 +1229,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-inputBg lg:hidden"
                             :title="tx('chat.back')"
+                            :aria-label="tx('chat.back')"
                             @click="goBackToConversations"
                         >
                             <i class="las la-arrow-left text-xl"></i>
@@ -1254,6 +1256,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
                             :title="isSelectedConversationMuted ? tx('chat.unmute') : tx('chat.mute')"
+                            :aria-label="isSelectedConversationMuted ? tx('chat.unmute') : tx('chat.mute')"
                             :disabled="muteForm.processing"
                             @click="muteSelectedConversation(isSelectedConversationMuted ? 0 : 480)"
                         >
@@ -1264,6 +1267,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
                             :title="tx('chat.group_profile')"
+                            :aria-label="tx('chat.group_profile')"
                             @click="openConversationSettingsModal"
                         >
                             <i class="las la-cog text-xl"></i>
@@ -1273,6 +1277,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
                             :title="tx('chat.add_people')"
+                            :aria-label="tx('chat.add_people')"
                             @click="openAddMembersModal"
                         >
                             <i class="las la-user-plus text-xl"></i>
@@ -1282,6 +1287,7 @@ onUnmounted(() => {
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
                             :title="tx('chat.leave_group')"
+                            :aria-label="tx('chat.leave_group')"
                             @click="openLeaveConversationModal"
                         >
                             <i class="las la-sign-out-alt text-xl"></i>
@@ -1302,6 +1308,7 @@ onUnmounted(() => {
                         type="button"
                         class="text-secondary hover:text-primary"
                         :title="tx('chat.clear_search')"
+                        :aria-label="tx('chat.clear_search')"
                         @click="chatMessageSearch = ''"
                     >
                         <i class="las la-times"></i>
@@ -1361,7 +1368,8 @@ onUnmounted(() => {
                                         v-if="attachment.file?.id && isImageMime(attachment.file.type)"
                                         type="button"
                                         class="block w-full"
-                                        :title="`${attachmentLabel(attachment)} ansehen`"
+                                        :title="tx('chat.ui.view_attachment', { name: attachmentLabel(attachment) })"
+                                        :aria-label="tx('chat.ui.view_attachment', { name: attachmentLabel(attachment) })"
                                         @click="openMediaPreview(attachment)"
                                     >
                                         <img
@@ -1389,14 +1397,14 @@ onUnmounted(() => {
                                         :href="attachment.file.id ? fileDownloadUrl(attachment.file) : undefined"
                                         class="flex items-center gap-3 px-3 py-2 text-xs"
                                         :class="attachment.file.id ? 'hover:bg-inputBg/70' : 'cursor-default'"
-                                        :title="`${attachmentLabel(attachment)} herunterladen`"
+                                        :title="tx('chat.ui.download_attachment', { name: attachmentLabel(attachment) })"
                                         @click="trackDownload(attachment.file)"
                                     >
                                         <i :class="[fileIconFor(attachment.file), 'text-2xl']"></i>
                                         <span class="min-w-0 flex-1">
                                             <span class="block truncate font-semibold">{{ attachmentLabel(attachment) }}</span>
                                             <span class="block text-[11px] opacity-75">
-                                                {{ fileExtension(attachment.file).toUpperCase() || 'DATEI' }}
+                                                {{ fileExtension(attachment.file).toUpperCase() || tx('chat.file').toUpperCase() }}
                                                 <span v-if="fileSizeLabel(attachment.file.size)"> · {{ fileSizeLabel(attachment.file.size) }}</span>
                                             </span>
                                         </span>
@@ -1417,7 +1425,7 @@ onUnmounted(() => {
                                     class="mt-2 text-xs font-semibold opacity-80 hover:opacity-100"
                                     @click="cancelUpload(message)"
                                 >
-                                    Upload abbrechen
+                                    {{ tx('chat.ui.cancel_upload') }}
                                 </button>
                             </div>
 
@@ -1430,7 +1438,7 @@ onUnmounted(() => {
                                             type="button"
                                             class="inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition"
                                             :class="userReaction(message) === reaction ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 bg-input text-secondary hover:text-primary'"
-                                            :title="reaction"
+                                            :title="tx(`chat.ui.reactions.${reaction}`)"
                                             @click.stop="reactToMessage(message, reaction); openMessageActionsId = null"
                                         >
                                             <i :class="['las text-lg', reaction === 'heart' ? 'la-heart' : reaction === 'ok' ? 'la-check' : 'la-thumbs-up']"></i>
@@ -1444,7 +1452,7 @@ onUnmounted(() => {
                                         @click.stop="deleteMessage(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-trash text-lg"></i>
-                                        Für alle löschen
+                                        {{ tx('chat.ui.delete_for_all') }}
                                     </button>
                                     <button
                                         v-if="!String(message.id).startsWith('local-')"
@@ -1453,25 +1461,25 @@ onUnmounted(() => {
                                         @click.stop="hideMessageForMe(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-eye-slash text-lg"></i>
-                                        Nur für mich ausblenden
+                                        {{ tx('chat.ui.hide_for_me') }}
                                     </button>
                                     <button
                                         v-if="message.local_status === 'failed'"
                                         type="button"
                                         class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-error transition hover:bg-input"
-                                        :title="message.error_message || 'Erneut senden'"
+                                        :title="message.error_message || tx('chat.ui.retry')"
                                         @click.stop="retryMessage(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-redo-alt text-lg"></i>
-                                        Erneut senden
+                                        {{ tx('chat.ui.retry') }}
                                     </button>
                                     <div
                                         v-if="isOwnMessage(message) && !String(message.id).startsWith('local-') && !canDeleteMessage(message) && message.local_status !== 'failed'"
                                         class="flex items-center gap-2 px-3 py-2.5 font-semibold text-secondary/70"
-                                        title="Bereits gelesen - nicht mehr löschbar"
+                                        :title="tx('chat.ui.not_deletable')"
                                     >
                                         <i class="las la-lock text-lg"></i>
-                                        Nicht mehr löschbar
+                                        {{ tx('chat.ui.not_deletable') }}
                                     </div>
                                     <button
                                         v-if="!isOwnMessage(message) && !String(message.id).startsWith('local-')"
@@ -1480,7 +1488,7 @@ onUnmounted(() => {
                                         @click.stop="openReport(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-flag text-lg"></i>
-                                        Nachricht melden
+                                        {{ tx('chat.ui.report_message') }}
                                     </button>
                                 </div>
                             </div>
@@ -1516,8 +1524,8 @@ onUnmounted(() => {
 
                     <AppEmptyState
                         v-if="selectedMessages.length === 0"
-                        title="Keine Nachrichten"
-                        description="Schreibe die erste Nachricht oder fuege einen Anhang hinzu."
+                        :title="tx('chat.no_messages')"
+                        :description="tx('chat.empty_description')"
                         compact
                     >
                         <template #icon>
@@ -1526,7 +1534,7 @@ onUnmounted(() => {
                     </AppEmptyState>
 
                     <div v-if="activeTypingUsers.length" class="text-xs text-secondary">
-                        {{ activeTypingUsers.map((user) => user.name).join(', ') }} schreibt...
+                        {{ tx('chat.ui.typing', { names: activeTypingUsers.map((user) => user.name).join(', ') }) }}
                     </div>
                 </div>
 
@@ -1534,13 +1542,13 @@ onUnmounted(() => {
                     <AppLoadingState
                         v-if="messageForm.processing"
                         class="mb-2"
-                        label="Nachricht wird gesendet..."
+                        :label="tx('chat.ui.sending')"
                         inline
                     />
                     <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
                         <span v-for="(file, index) in messageForm.attachments" :key="`${file.name}-${index}`" class="inline-flex max-w-full items-center gap-2 rounded border border-border px-2 py-1">
                             {{ file.name }}
-                            <button type="button" class="text-secondary hover:text-primary" title="Anhang entfernen" @click="removePendingAttachment(index)">
+                            <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.remove_attachment')" :aria-label="tx('chat.ui.remove_attachment')" @click="removePendingAttachment(index)">
                                 <i class="las la-times"></i>
                             </button>
                         </span>
@@ -1549,12 +1557,13 @@ onUnmounted(() => {
                         <textarea
                             v-model="messageForm.message"
                             rows="2"
-                            placeholder="Nachricht schreiben..."
+                            :placeholder="tx('chat.ui.message_placeholder')"
                             class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
                             @keydown.enter.exact.prevent="sendMessage"
                             @input="announceTyping"
                         />
-                        <label class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                <label class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                            <span class="sr-only">{{ tx('chat.file') }}</span>
                             <i class="las la-paperclip text-xl"></i>
                             <input ref="attachmentInput" type="file" multiple class="hidden" @change="onAttachmentChange">
                         </label>
@@ -1563,8 +1572,8 @@ onUnmounted(() => {
                             :disabled="messageForm.processing || !canSendMessage"
                             :loading="messageForm.processing"
                             icon-only
-                            aria-label="Nachricht senden"
-                            title="Nachricht senden"
+                            :aria-label="tx('chat.ui.send_message')"
+                            :title="tx('chat.ui.send_message')"
                         >
                             <i v-if="!messageForm.processing" class="las la-paper-plane text-xl" aria-hidden="true"></i>
                         </AppButton>
@@ -1576,17 +1585,16 @@ onUnmounted(() => {
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-inputBg text-primary">
                             <i class="las la-user-lock text-3xl"></i>
                         </div>
-                        <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geöffnet</h2>
+                        <h2 class="mt-4 text-lg font-semibold text-primary">{{ tx('chat.ui.no_chat_open') }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Aus Datenschutzgründen wird keine Konversation automatisch angezeigt.
-                            Wählelinks bewusst eine Person, ein Team oder eine Gruppe aus.
+                            {{ tx('chat.ui.no_chat_hint') }}
                         </p>
                         <button
                             type="button"
                             class="mt-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover lg:hidden"
                             @click="goBackToConversations"
                         >
-                            Chat auswählen
+                            {{ tx('chat.ui.choose_chat') }}
                         </button>
                     </div>
                 </div>
@@ -1601,7 +1609,8 @@ onUnmounted(() => {
             <button
                 type="button"
                 class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-                title="Schließen"
+                :title="tx('chat.ui.close')"
+                :aria-label="tx('chat.ui.close')"
                 @click="closeMediaPreview"
             >
                 <i class="las la-times text-2xl"></i>
@@ -1610,7 +1619,8 @@ onUnmounted(() => {
                 v-if="galleryAttachments.length > 1"
                 type="button"
                 class="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-                title="Vorheriges Bild"
+                :title="tx('chat.ui.previous_image')"
+                :aria-label="tx('chat.ui.previous_image')"
                 @click="showPreviousMedia"
             >
                 <i class="las la-angle-left text-2xl"></i>
@@ -1628,7 +1638,8 @@ onUnmounted(() => {
                 v-if="galleryAttachments.length > 1"
                 type="button"
                 class="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-                title="Nächstes Bild"
+                :title="tx('chat.ui.next_image')"
+                :aria-label="tx('chat.ui.next_image')"
                 @click="showNextMedia"
             >
                 <i class="las la-angle-right text-2xl"></i>
@@ -1638,7 +1649,7 @@ onUnmounted(() => {
                 class="absolute bottom-4 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black"
                 @click="trackDownload(activeMediaAttachment.file)"
             >
-                Herunterladen
+                {{ tx('chat.ui.download') }}
             </a>
         </div>
 
@@ -1647,12 +1658,12 @@ onUnmounted(() => {
                 <div class="border-b border-border p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <h2 class="text-lg font-semibold text-primary">Gruppenprofil</h2>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.group_settings') }}</h2>
                             <p class="mt-1 truncate text-sm text-secondary">
-                                {{ selectedConversation?.owner?.name ? `Owner: ${selectedConversation.owner.name}` : 'Gruppeneinstellungen' }}
+                                {{ selectedConversation?.owner?.name ? tx('chat.ui.owner_named', { name: selectedConversation.owner.name }) : tx('chat.ui.group_settings') }}
                             </p>
                         </div>
-                        <button type="button" class="text-secondary hover:text-primary" @click="showConversationSettingsModal = false">
+                        <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.close')" :aria-label="tx('chat.ui.close')" @click="showConversationSettingsModal = false">
                             <i class="las la-times text-2xl"></i>
                         </button>
                     </div>
@@ -1661,54 +1672,54 @@ onUnmounted(() => {
                 <form class="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar" @submit.prevent="saveGroupProfile">
                     <div class="space-y-4">
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Name</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.name') }}</span>
                             <input
                                 v-model="groupProfileForm.name"
                                 type="text"
                                 maxlength="120"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary"
-                                placeholder="Gruppenname"
+                                :placeholder="tx('chat.ui.group_name_placeholder')"
                                 :disabled="!canManageSelectedGroup"
                             >
                             <p v-if="groupProfileForm.errors.name" class="mt-1 text-sm text-error">{{ groupProfileForm.errors.name }}</p>
                         </label>
 
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Beschreibung</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.description') }}</span>
                             <textarea
                                 v-model="groupProfileForm.description"
                                 rows="4"
                                 maxlength="500"
                                 class="mt-1 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary"
-                                placeholder="Worum geht es in dieser Gruppe?"
+                                :placeholder="tx('chat.ui.group_description_placeholder')"
                                 :disabled="!canManageSelectedGroup"
                             />
                             <p v-if="groupProfileForm.errors.description" class="mt-1 text-sm text-error">{{ groupProfileForm.errors.description }}</p>
                         </label>
 
                         <div class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Benachrichtigungen</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.notifications') }}</p>
                             <p class="mt-1 text-sm text-primary">
-                                {{ isSelectedConversationMuted ? 'Dieser Chat ist aktuell stummgeschaltet.' : 'Benachrichtigungen sind aktiv.' }}
+                                {{ isSelectedConversationMuted ? tx('chat.ui.muted_notice') : tx('chat.ui.notifications_active') }}
                             </p>
                             <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-card" @click="muteSelectedConversation(60)">
-                                    1 Std.
+                                    {{ tx('chat.ui.mute_hour') }}
                                 </button>
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-card" @click="muteSelectedConversation(480)">
-                                    8 Std.
+                                    {{ tx('chat.ui.mute_eight_hours') }}
                                 </button>
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-card" @click="muteSelectedConversation(10080)">
-                                    1 Woche
+                                    {{ tx('chat.ui.mute_week') }}
                                 </button>
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-card" @click="muteSelectedConversation(0)">
-                                    Aktiv
+                                    {{ tx('chat.ui.active') }}
                                 </button>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Mitglieder</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.members') }}</p>
                             <div class="mt-3 space-y-2">
                                 <div
                                     v-for="member in selectedUsers"
@@ -1720,7 +1731,7 @@ onUnmounted(() => {
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
-                                        <p v-if="member.id === selectedConversation?.owner_id" class="text-xs text-secondary">Owner</p>
+                                        <p v-if="member.id === selectedConversation?.owner_id" class="text-xs text-secondary">{{ tx('chat.ui.owner') }}</p>
                                     </div>
                                     <button
                                         v-if="canManageSelectedGroup && member.id !== authUser?.id && member.id !== selectedConversation?.owner_id"
@@ -1728,14 +1739,14 @@ onUnmounted(() => {
                                         class="rounded-lg border border-danger/40 px-2 py-1 text-xs font-semibold text-danger"
                                         @click="removeGroupMember(member)"
                                     >
-                                        Entfernen
+                                        {{ tx('chat.ui.remove') }}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
                         <div v-if="pendingGroupInvitations.length" class="rounded-lg border border-border p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Offene Einladungen</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.pending_invitations') }}</p>
                             <div class="mt-3 space-y-2">
                                 <div
                                     v-for="invitation in pendingGroupInvitations"
@@ -1744,25 +1755,25 @@ onUnmounted(() => {
                                 >
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-medium text-primary">
-                                            {{ invitation.recipient?.name || invitation.recipient?.email || 'Eingeladenes Mitglied' }}
+                                            {{ invitation.recipient?.name || invitation.recipient?.email || tx('chat.ui.invited_member') }}
                                         </p>
                                         <p class="truncate text-xs text-secondary">
-                                            Eingeladen von {{ invitation.inviter?.name || 'Mitglied' }}
+                                            {{ tx('chat.invited_by') }} {{ invitation.inviter?.name || tx('chat.member') }}
                                         </p>
                                     </div>
-                                    <span class="shrink-0 rounded-full border border-border px-2 py-1 text-[11px] font-semibold text-secondary">pending</span>
+                                    <span class="shrink-0 rounded-full border border-border px-2 py-1 text-[11px] font-semibold text-secondary">{{ tx('chat.ui.pending') }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div v-if="canManageSelectedGroup && ownerTransferCandidates.length" class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Owner übertragen</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('chat.ui.transfer_owner') }}</p>
                             <div class="mt-3 flex gap-2">
                                 <select
                                     v-model="ownerTransferForm.user_id"
                                     class="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
                                 >
-                                    <option :value="null">Mitglied wählen</option>
+                                    <option :value="null">{{ tx('chat.ui.choose_member') }}</option>
                                     <option v-for="member in ownerTransferCandidates" :key="member.id" :value="member.id">
                                         {{ member.name }}
                                     </option>
@@ -1773,13 +1784,13 @@ onUnmounted(() => {
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                                     @click="transferGroupOwner"
                                 >
-                                    Übertragen
+                                    {{ tx('chat.ui.transfer') }}
                                 </button>
                             </div>
                         </div>
 
                         <p v-if="!canManageSelectedGroup" class="text-sm text-secondary">
-                            Nur der Owner kann Name und Beschreibung bearbeiten.
+                            {{ tx('chat.ui.owner_only') }}
                         </p>
                     </div>
                 </form>
@@ -1790,7 +1801,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                         @click="showConversationSettingsModal = false"
                     >
-                        Schließen
+                        {{ tx('chat.ui.close') }}
                     </button>
                     <button
                         v-if="canManageSelectedGroup"
@@ -1799,7 +1810,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
                         @click="saveGroupProfile"
                     >
-                        Speichern
+                        {{ tx('chat.ui.save') }}
                     </button>
                 </div>
             </div>
@@ -1810,10 +1821,10 @@ onUnmounted(() => {
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-lg font-semibold text-primary">Personen einladen</h2>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.invite_people') }}</h2>
                             <p class="mt-1 text-sm text-secondary">{{ titleFor(selectedConversation) }}</p>
                         </div>
-                        <button type="button" class="text-secondary hover:text-primary" @click="showAddMembersModal = false">
+                        <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.close')" :aria-label="tx('chat.ui.close')" @click="showAddMembersModal = false">
                             <i class="las la-times text-2xl"></i>
                         </button>
                     </div>
@@ -1845,7 +1856,7 @@ onUnmounted(() => {
                         </button>
 
                         <p v-if="availableUsersToAdd.length === 0" class="p-6 text-center text-sm text-secondary">
-                            Keine weiteren Personen verfügbar.
+                            {{ tx('chat.ui.no_more_people') }}
                         </p>
                     </div>
 
@@ -1856,14 +1867,14 @@ onUnmounted(() => {
                                 class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                                 @click="showAddMembersModal = false"
                             >
-                                Abbrechen
+                                {{ tx('chat.ui.cancel') }}
                             </button>
                             <button
                                 type="submit"
                                 :disabled="addMembersForm.processing || addMembersForm.participant_ids.length === 0"
                                 class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                            Einladung senden
+                                {{ tx('chat.ui.send_invitation') }}
                             </button>
                         </div>
                     </div>
@@ -1876,10 +1887,10 @@ onUnmounted(() => {
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
-                            <p class="mt-1 text-sm text-secondary">Für Gruppen mindestens zwei Personen auswählen.</p>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.new_conversation') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ tx('chat.ui.group_selection_hint') }}</p>
                         </div>
-                        <button type="button" class="text-secondary hover:text-primary" @click="showNewConversationModal = false">
+                        <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.close')" :aria-label="tx('chat.ui.close')" @click="showNewConversationModal = false">
                             <i class="las la-times text-2xl"></i>
                         </button>
                     </div>
@@ -1893,7 +1904,7 @@ onUnmounted(() => {
                             :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                             @click="setType('direct')"
                         >
-                            Direkt
+                            {{ tx('chat.ui.direct') }}
                         </button>
                         <button
                             type="button"
@@ -1901,7 +1912,7 @@ onUnmounted(() => {
                             :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                             @click="setType('group')"
                         >
-                            Gruppe
+                            {{ tx('chat.ui.group') }}
                         </button>
                         <button
                             type="button"
@@ -1909,7 +1920,7 @@ onUnmounted(() => {
                             :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
                             @click="setType('team')"
                         >
-                            Team
+                            {{ tx('chat.ui.team') }}
                         </button>
                     </div>
                 </div>
@@ -1920,7 +1931,7 @@ onUnmounted(() => {
                             v-model="conversationForm.team_id"
                             class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary"
                         >
-                            <option :value="null">Team auswählen</option>
+                            <option :value="null">{{ tx('chat.ui.choose_team') }}</option>
                             <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                         </select>
                     </div>
@@ -1954,27 +1965,27 @@ onUnmounted(() => {
                         <textarea
                             v-model="conversationForm.message"
                             rows="2"
-                            placeholder="Erste Nachricht optional"
+                            :placeholder="tx('chat.ui.first_message_optional')"
                             class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
                         />
 
                         <div class="flex gap-2">
                             <div v-if="conversationForm.type === 'group'" class="flex flex-1 items-center text-xs text-secondary">
-                                {{ conversationForm.participant_ids.length }} von 2 Personen ausgewählt
+                                {{ tx('chat.ui.people_selected', { count: conversationForm.participant_ids.length }) }}
                             </div>
                             <button
                                 type="button"
                                 class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                                 @click="showNewConversationModal = false"
                             >
-                                Abbrechen
+                                {{ tx('chat.ui.cancel') }}
                             </button>
                             <button
                                 type="submit"
                                 :disabled="conversationForm.processing || !canCreateConversation"
                                 class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Chat starten
+                                {{ tx('chat.ui.start_chat') }}
                             </button>
                         </div>
                     </div>
@@ -1987,9 +1998,9 @@ onUnmounted(() => {
                 <div class="border-b border-border p-4">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <h2 class="text-lg font-semibold text-primary">Gruppe verlassen?</h2>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.leave_title') }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                Du wirst aus "{{ titleFor(selectedConversation) }}" entfernt und siehst danach keine neuen Nachrichten mehr.
+                                {{ tx('chat.ui.leave_description', { title: titleFor(selectedConversation) }) }}
                             </p>
                         </div>
                         <button
@@ -2004,9 +2015,7 @@ onUnmounted(() => {
 
                 <div class="space-y-4 p-4">
                     <div class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
-                        Nach deinem Austritt bleiben
-                        <span class="font-semibold text-primary">{{ remainingMembersAfterLeave }}</span>
-                        Mitglied(er) in dieser Gruppe.
+                        {{ tx('chat.ui.remaining_members', { count: remainingMembersAfterLeave }) }}
                     </div>
 
                     <label
@@ -2019,8 +2028,7 @@ onUnmounted(() => {
                             class="mt-1 rounded border-border text-buttonPrimary focus:ring-buttonPrimary"
                         >
                         <span>
-                            Gruppe direkt löschen, weil danach höchstens eine Person übrig bleibt.
-                            Die Conversation wird dadurch Für alle verbleibenden Mitglieder entfernt.
+                            {{ tx('chat.ui.delete_group_hint') }}
                         </span>
                     </label>
                 </div>
@@ -2031,7 +2039,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                         @click="closeLeaveConversationModal"
                     >
-                        Abbrechen
+                        {{ tx('chat.ui.cancel') }}
                     </button>
                     <button
                         type="button"
@@ -2039,7 +2047,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         @click="leaveSelectedConversation"
                     >
-                        {{ leaveConversationForm.delete_conversation ? 'Verlassen und löschen' : 'Gruppe verlassen' }}
+                        {{ leaveConversationForm.delete_conversation ? tx('chat.ui.leave_and_delete') : tx('chat.leave_group') }}
                     </button>
                 </div>
             </div>
@@ -2053,25 +2061,25 @@ onUnmounted(() => {
             <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="submitReport">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Nachricht melden</p>
-                        <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll diese Nachricht geprüft werden?</h2>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('chat.ui.report_message') }}</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">{{ tx('chat.ui.report_question') }}</h2>
                     </div>
-                    <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeReport">
+                    <button type="button" class="rounded p-2 text-secondary hover:bg-muted" :title="tx('chat.ui.close')" :aria-label="tx('chat.ui.close')" @click="closeReport">
                         <i class="las la-times"></i>
                     </button>
                 </div>
 
                 <div class="mt-4 space-y-4">
                     <select v-model="reportForm.reason" class="w-full rounded-lg border-border bg-inputBg text-primary">
-                        <option value="insult">Beleidigung</option>
-                        <option value="bullying">Mobbing</option>
-                        <option value="hate">Hassrede</option>
-                        <option value="sexual">Sexueller Inhalt</option>
-                        <option value="violence">Gewalt</option>
-                        <option value="threat">Drohung</option>
-                        <option value="image_rights">Bild ohne Zustimmung</option>
-                        <option value="spam">Spam</option>
-                        <option value="other">Sonstiges</option>
+                        <option value="insult">{{ tx('chat.ui.report_reasons.insult') }}</option>
+                        <option value="bullying">{{ tx('chat.ui.report_reasons.bullying') }}</option>
+                        <option value="hate">{{ tx('chat.ui.report_reasons.hate') }}</option>
+                        <option value="sexual">{{ tx('chat.ui.report_reasons.sexual') }}</option>
+                        <option value="violence">{{ tx('chat.ui.report_reasons.violence') }}</option>
+                        <option value="threat">{{ tx('chat.ui.report_reasons.threat') }}</option>
+                        <option value="image_rights">{{ tx('chat.ui.report_reasons.image_rights') }}</option>
+                        <option value="spam">{{ tx('chat.ui.report_reasons.spam') }}</option>
+                        <option value="other">{{ tx('chat.ui.report_reasons.other') }}</option>
                     </select>
                     <p v-if="reportForm.errors.reason" class="text-sm text-error">{{ reportForm.errors.reason }}</p>
 
@@ -2079,15 +2087,15 @@ onUnmounted(() => {
                         v-model="reportForm.details"
                         rows="4"
                         class="w-full rounded-lg border-border bg-inputBg text-primary"
-                        placeholder="Details optional"
+                        :placeholder="tx('chat.ui.report_details_placeholder')"
                     />
                     <p v-if="reportForm.errors.details" class="text-sm text-error">{{ reportForm.errors.details }}</p>
                 </div>
 
                 <div class="mt-5 flex justify-end gap-2">
-                    <button type="button" class="btn" @click="closeReport">Abbrechen</button>
+                    <button type="button" class="btn" @click="closeReport">{{ tx('chat.ui.cancel') }}</button>
                     <button type="submit" class="btn-primary" :disabled="reportForm.processing">
-                        Meldung senden
+                        {{ tx('chat.ui.submit_report') }}
                     </button>
                 </div>
             </form>

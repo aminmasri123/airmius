@@ -36,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release_evidence | Out-Null
-          ./scripts/assert_release_configuration.ps1 -ApiBaseUrl "https://app.airmius.com" -UseHttp 2>&1 | Tee-Object -FilePath release_evidence/release-configuration-check.log
+          ./scripts/assert_release_configuration.ps1 -ApiBaseUrl "https://airmius.com" -UseHttp 2>&1 | Tee-Object -FilePath release_evidence/release-configuration-check.log
 
       - name: Release secrets hygiene check
         shell: pwsh
@@ -69,10 +69,10 @@ jobs:
         run: flutter analyze 2>&1 | tee release_evidence/flutter-analyze.log
 
       - name: Android App Bundle release build
-        run: flutter build appbundle --release --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com 2>&1 | tee release_evidence/android-appbundle-build.log
+        run: flutter build appbundle --release --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com 2>&1 | tee release_evidence/android-appbundle-build.log
 
       - name: Android APK release build
-        run: flutter build apk --release --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com 2>&1 | tee release_evidence/android-apk-build.log
+        run: flutter build apk --release --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com 2>&1 | tee release_evidence/android-apk-build.log
 
       - name: Collect Android artifacts
         if: always()

@@ -3580,7 +3580,7 @@ String? _mediaUrl(Object? value) {
 
   const origin = String.fromEnvironment(
     'AIRMIUS_API_BASE_URL',
-    defaultValue: 'https://app.airmius.com',
+    defaultValue: 'https://airmius.com',
   );
   final base = Uri.tryParse(origin);
   if (base == null || !base.hasScheme || base.host.isEmpty) return string;

@@ -157,13 +157,13 @@ scripts/run_ios_real_device_smoke.sh --build-ipa
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://app.airmius.com"
+.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://airmius.com"
 ```
 
 If Flutter is not in `PATH`:
 
 ```powershell
-.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
+.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
 ```
 
 This runs:
@@ -195,7 +195,7 @@ Laravel API smoke helper:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26
+.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26
 ```
 
 Membership API smoke helper:
@@ -203,7 +203,7 @@ Membership API smoke helper:
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
 .\scripts\new_membership_smoke_payload.ps1
-.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json"
+.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json"
 ```
 
 Evidence gate update helper:
@@ -245,14 +245,14 @@ Full release evidence pipeline:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com"
 ```
 
 Final Go/No-Go pipeline:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -RunGoNoGo
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -RunGoNoGo
 ```
 
 Evidence bundle helper:
@@ -273,7 +273,7 @@ Release configuration helper:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\assert_release_configuration.ps1 -ApiBaseUrl "https://app.airmius.com" -UseHttp
+.\scripts\assert_release_configuration.ps1 -ApiBaseUrl "https://airmius.com" -UseHttp
 ```
 
 Release secrets hygiene helper:

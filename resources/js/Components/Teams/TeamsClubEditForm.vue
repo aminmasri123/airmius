@@ -27,9 +27,9 @@ defineProps({
     >
         <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h2 class="font-semibold text-primary">Vereinsdaten bearbeiten</h2>
+                <h2 class="font-semibold text-primary">{{ $t('Vereinsdaten bearbeiten') }}</h2>
                 <p class="text-xs text-secondary">
-                    Basisdaten, Adresse und Sportart pflegen. Offizielle Prüfung läuft separat über Admin.
+                    {{ $t('Basisdaten, Adresse und Sportart pflegen. Offizielle Prüfung läuft separat über Admin.') }}
                 </p>
             </div>
             <span
@@ -40,7 +40,7 @@ defineProps({
                         ? 'bg-error/10 text-error'
                         : 'bg-warning/10 text-warning'"
             >
-                {{ club.verification_status === 'verified' ? 'Freigegeben' : club.verification_status === 'rejected' ? 'Abgelehnt' : 'Wartet auf Prüfung' }}
+                {{ club.verification_status === 'verified' ? $t('Freigegeben') : club.verification_status === 'rejected' ? $t('Abgelehnt') : $t('Wartet auf Prüfung') }}
             </span>
         </div>
 
@@ -59,12 +59,12 @@ defineProps({
 
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
-                <span class="text-xs font-semibold uppercase text-secondary">Vereinsname</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Vereinsname') }}</span>
                 <input v-model="clubEditFormFor(club).name" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <label v-if="activeClubEditTab(club) === 'basis'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Sportart</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Sportart') }}</span>
                 <SearchableSelect
                     v-model="clubEditFormFor(club).sport_type"
                     class="mt-1 w-full"
@@ -72,7 +72,7 @@ defineProps({
                     value-key="slug"
                     translation-prefix="sports"
                     category-translation-prefix="sport_categories"
-                    placeholder="Sportart suchen"
+                    :placeholder="$t('Sportart suchen')"
                 />
             </label>
 
@@ -83,8 +83,8 @@ defineProps({
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Verein auflisten</span>
-                    <span class="block text-xs text-secondary">Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.</span>
+                    <span class="block font-semibold">{{ $t('Verein auflisten') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.') }}</span>
                 </span>
             </label>
 
@@ -95,8 +95,8 @@ defineProps({
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Teams auflisten</span>
-                    <span class="block text-xs text-secondary">Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.</span>
+                    <span class="block font-semibold">{{ $t('Teams auflisten') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.') }}</span>
                 </span>
             </label>
 
@@ -107,8 +107,8 @@ defineProps({
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Vereinsbeiträge erlauben</span>
-                    <span class="block text-xs text-secondary">Normale Mitglieder dürfen Beiträge für den Verein erstellen.</span>
+                    <span class="block font-semibold">{{ $t('Vereinsbeiträge erlauben') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('Normale Mitglieder dürfen Beiträge für den Verein erstellen.') }}</span>
                 </span>
             </label>
 
@@ -119,90 +119,90 @@ defineProps({
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Teambeiträge erlauben</span>
-                    <span class="block text-xs text-secondary">Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.</span>
+                    <span class="block font-semibold">{{ $t('Teambeiträge erlauben') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.') }}</span>
                 </span>
             </label>
 
             <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
-                <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Prüfung</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Vereinsnummer zur Prüfung') }}</span>
                 <input
                     v-model="clubEditFormFor(club).official_club_number"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                    placeholder="z. B. Vereinsregister- oder Verbandsnummer"
+                    :placeholder="$t('z. B. Vereinsregister- oder Verbandsnummer')"
                 >
                 <span class="mt-1 block text-xs text-secondary">
-                    Neue oder geänderte Nummern werden zur Admin-Prüfung vorgemerkt.
+                    {{ $t('Neue oder geänderte Nummern werden zur Admin-Prüfung vorgemerkt.') }}
                 </span>
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Land</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Land') }}</span>
                 <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                    <option value="DE">Deutschland</option>
-                    <option value="AT">Österreich</option>
-                    <option value="CH">Schweiz</option>
-                    <option value="FR">Frankreich</option>
-                    <option value="NL">Niederlande</option>
-                    <option value="BE">Belgien</option>
-                    <option value="TR">Türkei</option>
+                    <option value="DE">{{ $t('Deutschland') }}</option>
+                    <option value="AT">{{ $t('Österreich') }}</option>
+                    <option value="CH">{{ $t('Schweiz') }}</option>
+                    <option value="FR">{{ $t('Frankreich') }}</option>
+                    <option value="NL">{{ $t('Niederlande') }}</option>
+                    <option value="BE">{{ $t('Belgien') }}</option>
+                    <option value="TR">{{ $t('Türkei') }}</option>
                     <option value="US">USA</option>
                 </select>
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Stadt') }}</span>
                 <input v-model="clubEditFormFor(club).city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('PLZ') }}</span>
                 <input v-model="clubEditFormFor(club).postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Region</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Region') }}</span>
                 <input v-model="clubEditFormFor(club).state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Straße</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Straße') }}</span>
                 <input v-model="clubEditFormFor(club).street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
+                <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Hausnummer') }}</span>
                 <input v-model="clubEditFormFor(club).house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
             </label>
 
             <div v-if="activeClubEditTab(club) === 'bank'" class="rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
-                <p class="text-xs font-semibold uppercase text-secondary">Bankkonto für Mitglieder-Überweisungen</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ $t('Bankkonto für Mitglieder-Überweisungen') }}</p>
                 <p class="mt-1 text-xs text-secondary">
-                    Diese Daten werden Mitgliedern bei offenen Vereinsrechnungen angezeigt.
+                    {{ $t('Diese Daten werden Mitgliedern bei offenen Vereinsrechnungen angezeigt.') }}
                 </p>
                 <div class="mt-3 grid gap-3 md:grid-cols-3">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Kontoinhaber</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kontoinhaber') }}</span>
                         <input
                             v-model="clubEditFormFor(club).sepa_account_holder"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            placeholder="Name laut Bankkonto"
+                            :placeholder="$t('Name laut Bankkonto')"
                         >
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">IBAN</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('IBAN') }}</span>
                         <input
                             v-model="clubEditFormFor(club).sepa_iban"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            placeholder="DE..."
+                            :placeholder="$t('DE...')"
                         >
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">BIC</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('BIC') }}</span>
                         <input
                             v-model="clubEditFormFor(club).sepa_bic"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            placeholder="GENODE..."
+                            :placeholder="$t('GENODE...')"
                         >
                     </label>
                 </div>
@@ -211,57 +211,57 @@ defineProps({
             <div v-if="activeClubEditTab(club) === 'sponsoren'" class="space-y-4 rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase text-secondary">Vereins-Sponsoren</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ $t('Vereins-Sponsoren') }}</p>
                         <p class="mt-1 text-xs text-secondary">
-                            Pflege Sponsoren, die öffentlich dem Verein zugeordnet werden.
+                            {{ $t('Pflege Sponsoren, die öffentlich dem Verein zugeordnet werden.') }}
                         </p>
                     </div>
                     <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                        {{ club.sponsors?.length || 0 }} Sponsoren
+                        {{ club.sponsors?.length || 0 }} {{ $t('Sponsoren') }}
                     </span>
                 </div>
 
                 <div v-if="club.subscription_capabilities?.sponsors === false" class="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                    Sponsorenverwaltung ist ab dem Club-Plan verfügbar.
+                    {{ $t('Sponsorenverwaltung ist ab dem Club-Plan verfügbar.') }}
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Sponsorname</span>
-                        <input v-model="sponsorFormFor(club).name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Sponsorname">
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Sponsorname') }}</span>
+                        <input v-model="sponsorFormFor(club).name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="$t('Sponsorname')">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Kontaktperson</span>
-                        <input v-model="sponsorFormFor(club).contact_name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Ansprechpartner">
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kontaktperson') }}</span>
+                        <input v-model="sponsorFormFor(club).contact_name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="$t('Ansprechpartner')">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">E-Mail</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('E-Mail') }}</span>
                         <input v-model="sponsorFormFor(club).email" type="email" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsor@example.com">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Website</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Website') }}</span>
                         <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="https://...">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Budget / Betrag</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Budget / Betrag') }}</span>
                         <input v-model="sponsorFormFor(club).amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="0,00">
                     </label>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Start</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Start') }}</span>
                             <input v-model="sponsorFormFor(club).starts_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         </label>
                         <label class="block">
-                            <span class="text-xs font-semibold uppercase text-secondary">Ende</span>
+                            <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Ende') }}</span>
                             <input v-model="sponsorFormFor(club).ends_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         </label>
                     </div>
                     <label class="block md:col-span-1 xl:col-span-3">
-                        <span class="text-xs font-semibold uppercase text-secondary">Logo für helle Flächen</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Logo für helle Flächen') }}</span>
                         <input v-model="sponsorFormFor(club).logo_light" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-light.webp oder https://...">
                     </label>
                     <label class="block md:col-span-1 xl:col-span-3">
-                        <span class="text-xs font-semibold uppercase text-secondary">Logo für dunkle Flächen</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Logo für dunkle Flächen') }}</span>
                         <input v-model="sponsorFormFor(club).logo_dark" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-dark.webp oder https://...">
                     </label>
                 </div>
@@ -273,7 +273,7 @@ defineProps({
                         :disabled="club.subscription_capabilities?.sponsors === false"
                         @click="submitSponsor(club)"
                     >
-                        {{ editingSponsorIds[club.id] ? 'Sponsor speichern' : 'Sponsor erstellen' }}
+                        {{ editingSponsorIds[club.id] ? $t('Sponsor speichern') : $t('Sponsor erstellen') }}
                     </button>
                     <button
                         v-if="editingSponsorIds[club.id]"
@@ -281,7 +281,7 @@ defineProps({
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary"
                         @click="resetSponsorForm(club)"
                     >
-                        Abbrechen
+                        {{ $t('Abbrechen') }}
                     </button>
                 </div>
 
@@ -305,15 +305,15 @@ defineProps({
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary" @click="editSponsor(club, sponsor)">
-                                Bearbeiten
+                                {{ $t('Bearbeiten') }}
                             </button>
                             <button type="button" class="rounded-lg border border-error px-3 py-1 text-sm font-semibold text-error" @click="deleteSponsor(club, sponsor)">
-                                Löschen
+                                {{ $t('Löschen') }}
                             </button>
                         </div>
                     </div>
                     <div v-if="!(club.sponsors || []).length" class="bg-bg p-4 text-sm text-secondary">
-                        Noch keine Sponsoren für diesen Verein vorhanden.
+                        {{ $t('Noch keine Sponsoren für diesen Verein vorhanden.') }}
                     </div>
                 </div>
             </div>
@@ -321,13 +321,11 @@ defineProps({
 
         <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="cancelClubEdit">
-                Abbrechen
+                {{ $t('Abbrechen') }}
             </button>
             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                Speichern
+                {{ $t('Speichern') }}
             </button>
         </div>
     </form>
 </template>
-
-

@@ -1,5 +1,5 @@
 param(
-    [string]$ApiBaseUrl = "https://app.airmius.com",
+    [string]$ApiBaseUrl = "https://airmius.com",
     [Parameter(Mandatory = $true)]
     [string]$Email,
     [string]$Password = "",

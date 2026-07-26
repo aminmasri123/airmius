@@ -25,7 +25,7 @@ Android debug smoke:
 ```bash
 flutter devices
 flutter run -d <android-device-id> \
-  --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com \
+  --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com \
   --dart-define=AIRMIUS_USE_HTTP=true
 ```
 
@@ -33,7 +33,7 @@ Android release-equivalent smoke:
 
 ```bash
 flutter build apk --release \
-  --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com \
+  --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com \
   --dart-define=AIRMIUS_USE_HTTP=true
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
@@ -51,7 +51,7 @@ iOS smoke on macOS:
 ```bash
 flutter devices
 flutter run -d <ios-device-id> \
-  --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com \
+  --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com \
   --dart-define=AIRMIUS_USE_HTTP=true
 ```
 

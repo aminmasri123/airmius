@@ -32,13 +32,13 @@ defineEmits(['close', 'create'])
     <Modal :show="show" @close="$emit('close')">
         <form v-if="selectedClub" class="space-y-4" @submit.prevent="$emit('create')">
             <h2 class="font-bold text-primary">
-                Team erstellen
+                {{ $t('teams_workspace.team_create.title') }}
             </h2>
 
             <input
                 v-model="teamFormFor(selectedClub).name"
                 class="w-full rounded border border-border bg-inputBg p-3 text-primary"
-                placeholder="Teamname"
+                :placeholder="$t('teams_workspace.team_create.name')"
             >
 
             <p v-if="errors.name" class="text-sm text-error">
@@ -51,7 +51,7 @@ defineEmits(['close', 'create'])
                 value-key="slug"
                 translation-prefix="sports"
                 category-translation-prefix="sport_categories"
-                placeholder="Sportart suchen"
+                :placeholder="$t('teams_workspace.team_create.sport')"
             />
 
             <p v-if="errors.club_id" class="text-sm text-error">
@@ -66,7 +66,7 @@ defineEmits(['close', 'create'])
                 type="submit"
                 class="w-full rounded bg-buttonPrimary py-3 text-buttonTextPrimary"
             >
-                Erstellen
+                {{ $t('teams_workspace.team_create.submit') }}
             </button>
         </form>
     </Modal>

@@ -291,20 +291,20 @@ const {
             <div class="border-b border-border bg-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Warenkorb</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Deine ausgewählten Produkte</h2>
-                        <p class="mt-1 text-sm text-secondary">Hier erscheinen nur Artikel, die du bewusst in den Einkaufswagen gelegt hast.</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('commerce.ui.cart_title', 'Warenkorb') }}</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('commerce.ui.cart_heading', 'Deine ausgewählten Produkte') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('commerce.ui.cart_hint', 'Hier erscheinen nur Artikel, die du bewusst in den Einkaufswagen gelegt hast.') }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <span class="rounded-full border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary">
-                            {{ cartItemCount }} Artikel
+                            {{ cartItemCount }} {{ tx('commerce.ui.items', 'Artikel') }}
                         </span>
                         <button
                             class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                             :disabled="!cartItems.length"
                             @click="showCartCheckout = true"
                         >
-                            Zur Kasse
+                            {{ tx('commerce.ui.checkout', 'Zur Kasse') }}
                         </button>
                     </div>
                 </div>
@@ -319,14 +319,14 @@ const {
                     </Link>
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold uppercase text-secondary">{{ item.product?.category || 'Produkt' }}</span>
-                            <span v-if="item.product?.sku" class="text-xs text-secondary">Art.-Nr. {{ item.product.sku }}</span>
+                            <span class="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold uppercase text-secondary">{{ item.product?.category || tx('commerce.ui.product', 'Produkt') }}</span>
+                            <span v-if="item.product?.sku" class="text-xs text-secondary">{{ tx('commerce.ui.sku', 'Art.-Nr. {sku}', { sku: item.product.sku }) }}</span>
                         </div>
                         <Link :href="item.product?.show_url || route('auth.commerce.products.show', item.product?.id)" class="mt-2 block break-words font-semibold text-primary hover:text-air-blue">
                             {{ item.product?.title }}
                         </Link>
                         <p class="mt-1 line-clamp-2 text-sm text-secondary">{{ item.product?.description }}</p>
-                        <p class="mt-2 text-xs font-semibold text-success">Verfügbar: {{ item.product?.stock_quantity }} Stück</p>
+                        <p class="mt-2 text-xs font-semibold text-success">{{ tx('commerce.ui.available', 'Verfügbar: {count} Stück', { count: item.product?.stock_quantity }) }}</p>
                     </div>
                     <input
                         :value="item.quantity"
@@ -339,26 +339,26 @@ const {
                     <div class="flex items-center justify-between gap-3 md:block md:text-right">
                         <p class="text-lg font-bold text-primary">{{ formatMoney(item.line_total_cents, item.product?.currency || cart.summary?.currency || 'EUR') }}</p>
                         <button class="mt-0 rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error hover:bg-error/10 md:mt-3" @click="removeCartItem(item)">
-                            Entfernen
+                            {{ tx('commerce.ui.remove', 'Entfernen') }}
                         </button>
                     </div>
                 </div>
                 <div v-if="cartItems.length" class="grid gap-3 bg-bg p-5 text-sm text-secondary sm:grid-cols-4">
-                    <p class="rounded-lg border border-border bg-card p-3">Warenwert<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.item_gross_cents, cart.summary?.currency) }}</span></p>
-                    <p class="rounded-lg border border-border bg-card p-3">Versand<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.shipping_cents, cart.summary?.currency) }}</span></p>
-                    <p class="rounded-lg border border-border bg-card p-3">Steuer<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.tax_cents, cart.summary?.currency) }}</span></p>
-                    <p class="rounded-lg border border-border bg-card p-3">Gesamt<br><span class="text-lg font-bold text-primary">{{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}</span></p>
+                    <p class="rounded-lg border border-border bg-card p-3">{{ tx('commerce.ui.subtotal', 'Warenwert') }}<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.item_gross_cents, cart.summary?.currency) }}</span></p>
+                    <p class="rounded-lg border border-border bg-card p-3">{{ tx('commerce.ui.shipping', 'Versand') }}<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.shipping_cents, cart.summary?.currency) }}</span></p>
+                    <p class="rounded-lg border border-border bg-card p-3">{{ tx('commerce.ui.tax', 'Steuer') }}<br><span class="font-semibold text-primary">{{ formatMoney(cart.summary?.tax_cents, cart.summary?.currency) }}</span></p>
+                    <p class="rounded-lg border border-border bg-card p-3">{{ tx('commerce.ui.total', 'Gesamt') }}<br><span class="text-lg font-bold text-primary">{{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}</span></p>
                 </div>
                 <div v-else class="grid gap-4 p-8 text-center">
                     <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-border bg-bg">
                         <i class="las la-shopping-bag text-3xl text-air-blue"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-primary">Dein Warenkorb ist leer</h3>
-                        <p class="mt-1 text-sm text-secondary">Füge ein Marketplace-Produkt hinzu, dann erscheint es hier.</p>
+                        <h3 class="text-lg font-bold text-primary">{{ tx('commerce.ui.empty_cart', 'Dein Warenkorb ist leer') }}</h3>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('commerce.ui.empty_cart_hint', 'Füge ein Marketplace-Produkt hinzu, dann erscheint es hier.') }}</p>
                     </div>
                     <Link :href="route('guest.marketplace')" class="mx-auto rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Marketplace ansehen
+                        {{ tx('commerce.ui.browse_marketplace', 'Marketplace ansehen') }}
                     </Link>
                 </div>
             </div>
@@ -380,14 +380,14 @@ const {
             </div>
             <div class="grid gap-4 md:grid-cols-3">
                 <div>
-                    <label class="text-xs font-semibold uppercase text-secondary">Verein für Add-ons</label>
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('commerce.ui.club_for_addons', 'Verein für Add-ons') }}</label>
                     <select v-model="selectedClubId" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="">Privat / kein Verein</option>
+                        <option value="">{{ tx('commerce.ui.private_no_club', 'Privat / kein Verein') }}</option>
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('commerce.ui.payment_method', 'Zahlungsart') }}</label>
                     <select v-model="provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="bank_transfer">Überweisung</option>
                         <option value="stripe">Stripe</option>
@@ -395,10 +395,10 @@ const {
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs font-semibold uppercase text-secondary">Add-on Laufzeit</label>
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ tx('commerce.ui.addon_interval', 'Add-on Laufzeit') }}</label>
                     <select v-model="interval" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="monthly">Monatlich</option>
-                        <option value="yearly">Jährlich</option>
+                        <option value="monthly">{{ tx('commerce.ui.monthly', 'Monatlich') }}</option>
+                        <option value="yearly">{{ tx('commerce.ui.yearly', 'Jährlich') }}</option>
                     </select>
                 </div>
             </div>
@@ -406,20 +406,20 @@ const {
 
         <section v-if="activeTab === 'shop' && showAccountShop" class="grid gap-5 lg:grid-cols-3">
             <article v-for="plan in accountPlans" :key="plan.id" class="surface-card flex flex-col p-5">
-                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Konto-Abo</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('commerce.ui.account_plan', 'Konto-Abo') }}</p>
                 <div class="mt-1 flex items-start justify-between gap-3">
                     <h2 class="text-lg font-semibold text-primary">{{ plan.name }}</h2>
-                    <span v-if="plan.is_owned" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">Aktiv</span>
+                    <span v-if="plan.is_owned" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">{{ tx('commerce.ui.active', 'Aktiv') }}</span>
                     <span v-else-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ plan.badge }}</span>
                 </div>
                 <p class="mt-2 flex-1 text-sm text-secondary">{{ plan.description }}</p>
                 <p class="mt-4 text-2xl font-bold text-primary">{{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
-                <p class="text-sm text-secondary">{{ plan.monthly_price_cents ? 'pro Monat' : 'kostenlos' }}</p>
-                <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">{{ formatMoney(plan.yearly_price_cents, plan.currency) }} pro Jahr</p>
-                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">Lokaler Preis für {{ plan.pricing_country }}</p>
+                <p class="text-sm text-secondary">{{ plan.monthly_price_cents ? tx('commerce.ui.per_month', 'pro Monat') : tx('commerce.ui.free', 'kostenlos') }}</p>
+                <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">{{ formatMoney(plan.yearly_price_cents, plan.currency) }} {{ tx('commerce.ui.yearly', 'pro Jahr') }}</p>
+                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">{{ tx('commerce.ui.local_price', 'Lokaler Preis für {country}', { country: plan.pricing_country }) }}</p>
                 <dl class="mt-4 border-t border-border pt-3 text-sm text-secondary">
                     <div class="flex justify-between gap-3">
-                        <dt>Speicher</dt>
+                        <dt>{{ tx('commerce.ui.storage', 'Speicher') }}</dt>
                         <dd class="font-semibold text-primary">{{ plan.storage_gb }} GB</dd>
                     </div>
                 </dl>
@@ -430,10 +430,10 @@ const {
                     </li>
                 </ul>
                 <div v-if="plan.is_owned" class="mt-5 rounded-lg border border-success/30 bg-success/10 px-4 py-2 text-center text-sm font-semibold text-success">
-                    Du besitzt diesen Plan
+                    {{ tx('commerce.ui.plan_owned', 'Du besitzt diesen Plan') }}
                 </div>
                 <div v-else-if="!plan.monthly_price_cents" class="mt-5 rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary">
-                    Kostenloser Basisplan
+                    {{ tx('commerce.ui.free_basic_plan', 'Kostenloser Basisplan') }}
                 </div>
                 <div v-else class="mt-5 grid gap-2">
                     <button
@@ -441,21 +441,21 @@ const {
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                         @click="checkoutAccountPlan(plan, 'stripe')"
                     >
-                        Mit Stripe zahlen
+                        {{ tx('commerce.ui.pay_with', 'Mit {provider} zahlen', { provider: tx('commerce.payment.stripe', 'Stripe') }) }}
                     </button>
                     <button
                         type="button"
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                         @click="checkoutAccountPlan(plan, 'paypal')"
                     >
-                        Mit PayPal zahlen
+                        {{ tx('commerce.ui.pay_with', 'Mit {provider} zahlen', { provider: tx('commerce.payment.paypal', 'PayPal') }) }}
                     </button>
                     <button
                         type="button"
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                         @click="checkoutAccountPlan(plan, 'bank_transfer')"
                     >
-                        Per Überweisung zahlen
+                        {{ tx('commerce.ui.pay_with', 'Mit {provider} zahlen', { provider: tx('commerce.payment.bank_transfer', 'Überweisung') }) }}
                     </button>
                 </div>
             </article>
@@ -464,7 +464,7 @@ const {
                 <p class="mt-2 flex-1 text-sm text-secondary">{{ addon.description }}</p>
                 <p class="mt-4 text-2xl font-bold text-primary">{{ formatMoney(addonPrice(addon)) }}</p>
                 <button class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="checkoutAddon(addon)">
-                    Add-on buchen
+                    {{ tx('commerce.ui.book_addon', 'Add-on buchen') }}
                 </button>
             </article>
         </section>
@@ -489,40 +489,40 @@ const {
                     <div class="mt-4 flex items-center justify-between gap-3">
                         <span class="text-lg font-bold text-primary">{{ formatMoney(product.price_cents, product.currency) }}</span>
                         <div class="flex gap-2">
-                            <Link :href="route('auth.commerce.products.show', product.id)" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary">Details</Link>
+                            <Link :href="route('auth.commerce.products.show', product.id)" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary">{{ tx('commerce.ui.details', 'Details') }}</Link>
                             <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="addToCart(product)">
-                                In den Warenkorb
+                                {{ tx('commerce.ui.add_to_cart', 'In den Warenkorb') }}
                             </button>
                         </div>
                     </div>
                     </div>
                 </article>
-                <p v-if="!visibleShopProducts.length" class="text-sm text-secondary">Noch keine passenden Angebote veröffentlicht.</p>
+                <p v-if="!visibleShopProducts.length" class="text-sm text-secondary">{{ tx('commerce.ui.no_offers', 'Noch keine passenden Angebote veröffentlicht.') }}</p>
             </div>
         </section>
 
         <section v-if="activeTab === 'shop' && showOutfitShop" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
-                <h2 class="text-lg font-semibold text-primary">Sportkleidung-Abos</h2>
-                <p class="mt-1 text-sm text-secondary">Monatliche Outfit-Boxen mit Style-Profil, Lieferübersicht und optionalem Sponsor-Rabatt.</p>
+                <h2 class="text-lg font-semibold text-primary">{{ tx('commerce.ui.outfit_title', 'Sportkleidung-Abos') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ tx('commerce.ui.outfit_description', 'Monatliche Outfit-Boxen mit Style-Profil, Lieferübersicht und optionalem Sponsor-Rabatt.') }}</p>
             </div>
             <div class="grid gap-4 p-5 lg:grid-cols-3">
                 <article v-for="plan in outfitPlans" :key="plan.id" class="rounded-lg border border-border bg-bg p-4">
-                    <p class="text-xs uppercase text-secondary">{{ plan.items_per_box }} Teile pro Box</p>
+                    <p class="text-xs uppercase text-secondary">{{ tx('commerce.ui.pieces_per_box', '{count} Teile pro Box', { count: plan.items_per_box }) }}</p>
                     <h3 class="mt-1 font-semibold text-primary">{{ plan.name }}</h3>
                     <p class="mt-2 min-h-12 text-sm text-secondary">{{ plan.description }}</p>
-                    <p v-if="plan.sponsor" class="mt-2 text-xs font-semibold text-air-blue">Subventioniert von {{ plan.sponsor.name }}</p>
+                    <p v-if="plan.sponsor" class="mt-2 text-xs font-semibold text-air-blue">{{ tx('commerce.ui.sponsored_by', 'Subventioniert von {name}', { name: plan.sponsor.name }) }}</p>
                     <div class="mt-4 flex items-center justify-between gap-3">
                         <div>
                             <span class="text-lg font-bold text-primary">{{ formatMoney(plan.effective_monthly_price_cents, plan.currency) }}</span>
-                            <p v-if="plan.sponsor_discount_cents" class="text-xs text-secondary">statt {{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
+                            <p v-if="plan.sponsor_discount_cents" class="text-xs text-secondary">{{ tx('commerce.ui.instead_of', 'statt {price}', { price: formatMoney(plan.monthly_price_cents, plan.currency) }) }}</p>
                         </div>
                         <Link :href="route('auth.outfit-subscriptions.index')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
-                            Zum Outfit-Abo
+                            {{ tx('commerce.ui.outfit_cta', 'Zum Outfit-Abo') }}
                         </Link>
                     </div>
                 </article>
-                <p v-if="!outfitPlans.length" class="text-sm text-secondary">Noch keine Outfit-Abos freigegeben.</p>
+                <p v-if="!outfitPlans.length" class="text-sm text-secondary">{{ tx('commerce.ui.no_outfits', 'Noch keine Outfit-Abos freigegeben.') }}</p>
             </div>
         </section>
 

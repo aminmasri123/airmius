@@ -3,7 +3,7 @@ class AirmiusApiContract {
 
   static const baseUrl = String.fromEnvironment(
     'AIRMIUS_API_URL',
-    defaultValue: 'http://localhost/api/v1',
+    defaultValue: 'https://airmius.com',
   );
 
   static const meta = '/api/v1/meta';
@@ -74,6 +74,7 @@ class AirmiusApiContract {
   static const nutritionMeals = '/friends/nutrition/meals';
   static const nutritionWater = '/friends/nutrition/water';
   static const sportRoutes = '/friends/sport-routes';
+  static const sportRouteProposals = '/friends/sport-route-proposals';
   static const sportTracks = '/friends/sport-tracks';
   static const sportPlaces = '/friends/sport-places';
   static const maturityOverview = '/friends/maturity/overview';

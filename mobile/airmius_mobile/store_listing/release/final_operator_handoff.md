@@ -166,14 +166,14 @@ After the operator is ready to execute real checks:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com"
 ```
 
 After all manual gates are updated with direct evidence:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -RunGoNoGo
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -RunGoNoGo
 ```
 
 The pipeline packages the evidence bundle, syncs the manifest again so `release_evidence_bundle` can become passed, and only then runs Go/No-Go when `-RunGoNoGo` is present.
@@ -217,7 +217,7 @@ Every evaluated gate must be explicitly `passed`. Unknown, mistyped, pending, pa
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://app.airmius.com"
+.\scripts\release_candidate_checks.ps1 -ApiBaseUrl "https://airmius.com"
 ```
 
 This command should only be run when the operator is ready to collect real release evidence.

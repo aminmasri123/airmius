@@ -38,11 +38,34 @@ class _AirmiusAppState extends State<AirmiusApp> {
   );
   static String get _apiBaseUrl {
     final configured = _configuredApiBaseUrl.trim();
-    if (configured.isNotEmpty) return configured;
+    if (configured.isNotEmpty) return _normalizeApiBaseUrl(configured);
     if (kIsWeb && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https')) {
-      return Uri.base.origin;
+      return _normalizeApiBaseUrl(Uri.base.origin);
     }
-    return kReleaseMode ? 'https://app.airmius.com' : 'http://localhost';
+    return kReleaseMode ? 'https://airmius.com' : 'http://localhost';
+  }
+
+  /// The mobile API client uses versioned request paths (for example
+  /// `/api/v1/auth/login`) and therefore needs the server origin here. Older
+  /// release scripts passed either `app.airmius.com` or an already versioned
+  /// `/api/v1` URL; normalize both forms so they cannot create an unreachable
+  /// host or a duplicated `/api/v1/api/v1` path.
+  static String _normalizeApiBaseUrl(String value) {
+    final parsed = Uri.tryParse(value);
+    if (parsed == null || !parsed.hasScheme || parsed.host.isEmpty) {
+      return value;
+    }
+
+    final host = parsed.host.toLowerCase() == 'app.airmius.com'
+        ? 'airmius.com'
+        : parsed.host;
+    var path = parsed.path.replaceFirst(RegExp(r'/+$'), '');
+    if (path == '/api' || path == '/api/v1') path = '';
+
+    return parsed
+        .replace(host: host, path: path)
+        .toString()
+        .replaceFirst(RegExp(r'/$'), '');
   }
 
   AirmiusLanguage _language = AirmiusLanguage.de;
@@ -305,7 +328,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
     }
 
     return (uri.scheme == 'https' || uri.scheme == 'http') &&
-        uri.host == 'app.airmius.com' &&
+        (uri.host == 'airmius.com' || uri.host == 'app.airmius.com') &&
         uri.path == '/auth/callback';
   }
 

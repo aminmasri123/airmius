@@ -1,5 +1,9 @@
 ﻿<script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     currentFolder: { type: Object, default: null },
@@ -82,10 +86,10 @@ const showMobileFiltersModel = computed({
         <div class="flex flex-col gap-3 border-b border-border p-3">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
-                    <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
+                    <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || tx('files.manager') }}</h1>
                     <div class="mt-1 flex flex-wrap gap-2 text-xs text-secondary">
-                        <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} Ordner</span>
-                        <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} Dateien</span>
+                        <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} {{ tx('files.folders') }}</span>
+                        <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} {{ tx('files.files') }}</span>
                         <span v-if="currentFolder" class="max-w-full truncate rounded-full border border-border px-2 py-1">{{ currentFolder.name }}</span>
                     </div>
                 </div>
@@ -98,7 +102,7 @@ const showMobileFiltersModel = computed({
                         @click="showMobileFiltersModel = !showMobileFiltersModel"
                     >
                         <i class="las la-sliders-h text-lg"></i>
-                        {{ showMobileFiltersModel ? 'Filter schließen' : 'Suchen & sortieren' }}
+                        {{ tx('files.search_sort') }}
                     </button>
                 </div>
             </div>
@@ -113,55 +117,55 @@ const showMobileFiltersModel = computed({
                     <input
                         v-model="fileSearchModel"
                         class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                        placeholder="Suchen..."
+                        :placeholder="tx('files.search_placeholder')"
                         :disabled="isFiltering"
-                        aria-label="Dateien und Ordner durchsuchen"
+                        :aria-label="tx('files.search_aria')"
                         @keyup.enter="scheduleFilterRefresh(true)"
                     />
-                    <button v-if="fileSearchModel" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" aria-label="Suche löschen">x</button>
+                    <button v-if="fileSearchModel" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" :aria-label="tx('files.search_clear')">×</button>
                 </div>
                 <select
                     v-model="filesPerPageModel"
                     class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
-                    aria-label="Dateien pro Seite"
+                    :aria-label="tx('files.per_page')"
                     :disabled="isFiltering"
                     @change="applyFilters"
                 >
                     <option v-for="pageSize in pageSizeOptions" :key="`page-size-${pageSize}`" :value="pageSize">
-                        Dateien: {{ pageSize }} / Seite
+                        {{ tx('files.per_page_option', { count: `${tx('files.files')}: ${pageSize}` }) }}
                     </option>
                 </select>
                 <select
                     v-model="foldersPerPageModel"
                     class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
-                    aria-label="Ordner pro Seite"
+                    :aria-label="tx('files.per_page')"
                     :disabled="isFiltering"
                     @change="applyFilters"
                 >
                     <option v-for="pageSize in pageSizeOptions" :key="`folder-page-size-${pageSize}`" :value="pageSize">
-                        Ordner: {{ pageSize }} / Seite
+                        {{ tx('files.per_page_option', { count: `${tx('files.folders')}: ${pageSize}` }) }}
                     </option>
                 </select>
                 <select
                     v-model="folderSortModel"
                     class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                    aria-label="Ordner sortieren"
+                    :aria-label="tx('files.sort_aria')"
                     :disabled="isFiltering"
                     @change="applyFilters"
                 >
                     <option v-for="option in folderSortOptions" :key="`folder-${option.value}`" :value="option.value">
-                        Ordner: {{ option.label }}
+                        {{ tx('files.sort_option', { value: `${tx('files.folders')}: ${option.label}` }) }}
                     </option>
                 </select>
                 <select
                     v-model="fileSortModel"
                     class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                    aria-label="Dateien sortieren"
+                    :aria-label="tx('files.sort_aria')"
                     :disabled="isFiltering"
                     @change="applyFilters"
                 >
                     <option v-for="option in fileSortOptions" :key="`file-${option.value}`" :value="option.value">
-                        Dateien: {{ option.label }}
+                        {{ tx('files.sort_option', { value: `${tx('files.files')}: ${option.label}` }) }}
                     </option>
                 </select>
             </div>
@@ -172,10 +176,10 @@ const showMobileFiltersModel = computed({
                     type="button"
                     :disabled="isFiltering"
                     @click="openFolder(currentFolder.parent)"
-                    aria-label="In das übergeordnete Verzeichnis gehen"
+                    :aria-label="tx('files.parent_folder')"
                 >
                     <i class="las la-arrow-left"></i>
-                    Zurück
+                    {{ tx('files.back') }}
                 </button>
                 <p class="text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
             </div>
@@ -191,12 +195,12 @@ const showMobileFiltersModel = computed({
                     type="button"
                     class="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left"
                     @click="openFolder(folder)"
-                    aria-label="Ordner öffnen"
+                    :aria-label="tx('files.open_folder')"
                 >
-                    <i class="las la-folder text-3xl text-yellow-500"></i>
+                    <i class="las la-folder text-3xl text-warning"></i>
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
-                        <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
+                        <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} {{ tx('files.files') }}</p>
                     </div>
                 </button>
                 <button
@@ -204,8 +208,8 @@ const showMobileFiltersModel = computed({
                     class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="openShare(folder, 'folder')"
-                    title="Freigeben"
-                    aria-label="Ordner freigeben"
+                    :title="tx('files.share_folder')"
+                    :aria-label="tx('files.share_folder')"
                 >
                     <i class="las la-share-alt"></i>
                 </button>
@@ -214,8 +218,8 @@ const showMobileFiltersModel = computed({
                     class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="openRename(folder, 'folder')"
-                    title="Umbenennen"
-                    aria-label="Ordner umbenennen"
+                    :title="tx('files.rename_folder')"
+                    :aria-label="tx('files.rename_folder')"
                 >
                     <i class="las la-pen"></i>
                 </button>
@@ -224,8 +228,8 @@ const showMobileFiltersModel = computed({
                     class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="confirmDeleteFolder(folder)"
-                    title="Löschen"
-                    aria-label="Ordner löschen"
+                    :title="tx('files.delete_folder')"
+                    :aria-label="tx('files.delete_folder')"
                 >
                     <i class="las la-trash"></i>
                 </button>
@@ -245,8 +249,8 @@ const showMobileFiltersModel = computed({
                         class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                         :disabled="isFiltering"
                         @click="openShare(file)"
-                        title="Freigeben"
-                        aria-label="Datei freigeben"
+                        :title="tx('files.share_file')"
+                        :aria-label="tx('files.share_file')"
                     >
                         <i class="las la-share-alt"></i>
                     </button>
@@ -255,12 +259,12 @@ const showMobileFiltersModel = computed({
                         class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                         :disabled="isFiltering"
                         @click="openRename(file)"
-                        title="Umbenennen"
-                        aria-label="Datei umbenennen"
+                        :title="tx('files.rename_file')"
+                        :aria-label="tx('files.rename_file')"
                     >
                         <i class="las la-pen"></i>
                     </button>
-                    <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" title="Herunterladen" aria-label="Datei herunterladen">
+                    <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" :title="tx('files.download_file')" :aria-label="tx('files.download_file')">
                         <i class="las la-download"></i>
                     </a>
                     <button
@@ -268,8 +272,8 @@ const showMobileFiltersModel = computed({
                         class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                         :disabled="isFiltering"
                         @click="deleteFile(file)"
-                        title="Löschen"
-                        aria-label="Datei löschen"
+                        :title="tx('files.delete_file')"
+                        :aria-label="tx('files.delete_file')"
                     >
                         <i class="las la-trash"></i>
                     </button>
@@ -280,13 +284,13 @@ const showMobileFiltersModel = computed({
                 {{ emptyStateText }}
             </div>
             <p v-if="activeFiles.length" class="col-span-full text-xs text-secondary">
-                Dateien {{ fileRangeStart }} - {{ fileRangeEnd }} von {{ totalFiles }}
+                {{ tx('files.range_files', { start: fileRangeStart, end: fileRangeEnd, total: totalFiles }) }}
             </p>
             <p v-if="activeFolders.length" class="col-span-full text-xs text-secondary">
-                Ordner {{ folderRangeStart }} - {{ folderRangeEnd }} von {{ totalFolders }}
+                {{ tx('files.range_folders', { start: folderRangeStart, end: folderRangeEnd, total: totalFolders }) }}
             </p>
             <div v-if="lastFoldersPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
-                <span class="text-xs text-secondary">Ordnerseite {{ currentFoldersPage }} / {{ lastFoldersPage }}</span>
+                <span class="text-xs text-secondary">{{ tx('files.folder_page', { current: currentFoldersPage, last: lastFoldersPage }) }}</span>
                 <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -294,7 +298,7 @@ const showMobileFiltersModel = computed({
                         type="button"
                         @click="goToFoldersPage(currentFoldersPage - 1)"
                     >
-                        Zurück
+                        {{ tx('files.back') }}
                     </button>
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -302,13 +306,13 @@ const showMobileFiltersModel = computed({
                         type="button"
                         @click="goToFoldersPage(currentFoldersPage + 1)"
                     >
-                        Weiter
+                        {{ tx('files.next') }}
                     </button>
                 </div>
             </div>
 
             <div v-if="lastFilesPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
-                <span class="text-xs text-secondary">Dateiseite {{ currentFilesPage }} / {{ lastFilesPage }}</span>
+                <span class="text-xs text-secondary">{{ tx('files.file_page', { current: currentFilesPage, last: lastFilesPage }) }}</span>
                 <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -316,7 +320,7 @@ const showMobileFiltersModel = computed({
                         type="button"
                         @click="goToFilesPage(currentFilesPage - 1)"
                     >
-                        Zurück
+                        {{ tx('files.back') }}
                     </button>
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -324,12 +328,10 @@ const showMobileFiltersModel = computed({
                         type="button"
                         @click="goToFilesPage(currentFilesPage + 1)"
                     >
-                        Weiter
+                        {{ tx('files.next') }}
                     </button>
                 </div>
             </div>
         </div>
     </section>
 </template>
-
-

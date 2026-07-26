@@ -34,94 +34,94 @@ const fallbackSports = [
 const trainingTypes = [
     {
         key: 'gym',
-        label: 'Gym / Krafttraining',
-        shortLabel: 'Gym',
+        label: tx('training_workspace.log_create.types.gym.label'),
+        shortLabel: tx('training_workspace.log_create.types.gym.short'),
         icon: 'las la-dumbbell',
         sport_type: 'gym',
-        title: 'Krafttraining',
+        title: tx('training_workspace.log_create.types.gym.label'),
         fields: ['sets', 'reps', 'weight_kg', 'duration_minutes', 'intensity', 'notes'],
         mode: 'sets',
-        detailTitle: 'Übungen und Sätze',
-        entryLabel: 'Übung',
-        entryPlaceholder: 'z. B. Kniebeugen, Bankdrücken, Core',
+        detailTitle: tx('training_workspace.log_create.types.gym.detail'),
+        entryLabel: tx('training_workspace.log_create.types.gym.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.gym.entry_placeholder'),
     },
     {
         key: 'run_interval',
-        label: 'Laufintervall',
-        shortLabel: 'Intervalle',
+        label: tx('training_workspace.log_create.types.run_interval.label'),
+        shortLabel: tx('training_workspace.log_create.types.run_interval.short'),
         icon: 'las la-stopwatch',
         sport_type: 'laufen',
-        title: 'Laufintervall',
+        title: tx('training_workspace.log_create.types.run_interval.label'),
         fields: ['reps', 'distance_km', 'duration_minutes', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Intervalle',
-        entryLabel: 'Intervall / Abschnitt',
-        entryPlaceholder: 'z. B. 6 x 400 m, Trabpause, Sprint',
+        detailTitle: tx('training_workspace.log_create.types.run_interval.detail'),
+        entryLabel: tx('training_workspace.log_create.types.run_interval.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.run_interval.entry_placeholder'),
     },
     {
         key: 'long_run',
-        label: 'Long Run',
-        shortLabel: 'Long Run',
+        label: tx('training_workspace.log_create.types.long_run.label'),
+        shortLabel: tx('training_workspace.log_create.types.long_run.short'),
         icon: 'las la-route',
         sport_type: 'laufen',
-        title: 'Long Run',
+        title: tx('training_workspace.log_create.types.long_run.label'),
         fields: ['distance_km', 'duration_minutes', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Streckenabschnitte',
-        entryLabel: 'Abschnitt / Kilometerblock',
-        entryPlaceholder: 'Optional: z. B. km 1-5 locker, km 12-15 Endbeschleunigung',
+        detailTitle: tx('training_workspace.log_create.types.long_run.detail'),
+        entryLabel: tx('training_workspace.log_create.types.long_run.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.long_run.entry_placeholder'),
     },
     {
         key: 'swim',
-        label: 'Schwimmen',
-        shortLabel: 'Swim',
+        label: tx('training_workspace.log_create.types.swim.label'),
+        shortLabel: tx('training_workspace.log_create.types.swim.short'),
         icon: 'las la-swimmer',
         sport_type: 'schwimmen',
-        title: 'Schwimmtraining',
+        title: tx('training_workspace.log_create.types.swim.label'),
         fields: ['sets', 'reps', 'distance_km', 'duration_minutes', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Serien und Technik',
-        entryLabel: 'Serie / Technik',
-        entryPlaceholder: 'z. B. 8 x 50 m Kraul, Technik Beine',
+        detailTitle: tx('training_workspace.log_create.types.swim.detail'),
+        entryLabel: tx('training_workspace.log_create.types.swim.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.swim.entry_placeholder'),
     },
     {
         key: 'football',
-        label: 'Fußball',
-        shortLabel: 'Fußball',
+        label: tx('training_workspace.log_create.types.football.label'),
+        shortLabel: tx('training_workspace.log_create.types.football.short'),
         icon: 'las la-futbol',
         sport_type: 'fussball',
-        title: 'Fußballtraining',
+        title: tx('training_workspace.log_create.types.football.label'),
         fields: ['duration_minutes', 'distance_km', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Drills und Spielformen',
-        entryLabel: 'Drill / Spielform',
-        entryPlaceholder: 'z. B. Passform, 4 gegen 4, Torschuss',
+        detailTitle: tx('training_workspace.log_create.types.football.detail'),
+        entryLabel: tx('training_workspace.log_create.types.football.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.football.entry_placeholder'),
     },
     {
         key: 'cycling',
-        label: 'Radtraining',
-        shortLabel: 'Bike',
+        label: tx('training_workspace.log_create.types.cycling.label'),
+        shortLabel: tx('training_workspace.log_create.types.cycling.short'),
         icon: 'las la-biking',
         sport_type: 'cycling',
-        title: 'Radtraining',
+        title: tx('training_workspace.log_create.types.cycling.label'),
         fields: ['distance_km', 'duration_minutes', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Streckenabschnitte',
-        entryLabel: 'Abschnitt',
-        entryPlaceholder: 'z. B. Zone 2, Bergintervall, Kadenz',
+        detailTitle: tx('training_workspace.log_create.types.cycling.detail'),
+        entryLabel: tx('training_workspace.log_create.types.cycling.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.cycling.entry_placeholder'),
     },
     {
         key: 'generic',
-        label: 'Freies Training',
-        shortLabel: 'Frei',
+        label: tx('training_workspace.log_create.types.generic.label'),
+        shortLabel: tx('training_workspace.log_create.types.generic.short'),
         icon: 'las la-clipboard-list',
         sport_type: 'laufen',
-        title: 'Training',
+        title: tx('training_workspace.log_create.types.generic.label'),
         fields: ['sets', 'reps', 'weight_kg', 'duration_minutes', 'distance_km', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Übungen / Werte',
-        entryLabel: 'Übung / Abschnitt',
-        entryPlaceholder: 'z. B. Technik, Drill, Runde',
+        detailTitle: tx('training_workspace.log_create.types.generic.detail'),
+        entryLabel: tx('training_workspace.log_create.types.generic.entry_label'),
+        entryPlaceholder: tx('training_workspace.log_create.types.generic.entry_placeholder'),
     },
 ]
 
@@ -511,48 +511,14 @@ const setDurationFromLive = () => {
     form.duration_minutes = String(roundedLiveMinutes())
 }
 
-const fieldLabel = (field) => ({
-    run_interval: {
-        reps: 'Wiederholungen',
-        distance_km: 'Distanz je Wiederholung/km',
-        duration_minutes: 'Zeit min',
-        intensity: 'Tempo / RPE',
-        notes: 'Hinweis',
-    },
-    long_run: {
-        distance_km: 'Distanz km',
-        duration_minutes: 'Zeit min',
-        intensity: 'Zone / Gefühl',
-        notes: 'Notiz',
-    },
-    swim: {
-        sets: 'Serien',
-        reps: 'Wiederholungen',
-        distance_km: 'Meter als km',
-        duration_minutes: 'Zeit min',
-        intensity: 'Stil / Intensität',
-        notes: 'Technik-Hinweis',
-    },
-    football: {
-        duration_minutes: 'Dauer min',
-        distance_km: 'Laufdistanz km',
-        intensity: 'Belastung',
-        notes: 'Coachingpunkt',
-    },
-    cycling: {
-        distance_km: 'Distanz km',
-        duration_minutes: 'Zeit min',
-        intensity: 'Zone / Watt',
-        notes: 'Route / Kadenz',
-    },
-}[selectedType.value.key]?.[field] || {
-    sets: 'Sätze',
-    reps: 'Wdh./Intervalle',
-    weight_kg: 'Gewicht kg',
-    duration_minutes: 'Zeit min',
-    distance_km: 'Distanz km',
-    intensity: 'Intensität',
-    notes: 'Kommentar',
+const fieldLabel = (field) => tx({
+    sets: 'training_workspace.metrics.Sätze',
+    reps: 'training_workspace.metrics.Wiederholungen',
+    weight_kg: 'training_workspace.metrics.Gewicht kg',
+    duration_minutes: 'training_workspace.log_create.fields.duration',
+    distance_km: 'training_workspace.log_create.fields.distance',
+    intensity: 'training_workspace.log_create.fields.intensity',
+    notes: 'training_workspace.log_create.fields.notes',
 }[field] || field)
 
 const normalizeEntry = (entry = {}) => ({
@@ -1397,7 +1363,7 @@ onUnmounted(() => {
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.live_mode') }}</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">
-                                    <span v-if="isLiveTraining">Training läuft seit {{ liveElapsedLabel }}</span>
+                                    <span v-if="isLiveTraining">{{ tx('training_workspace.log_create.ui.running_since') }} {{ liveElapsedLabel }}</span>
                                     <span v-else>{{ tx('training_workspace.log_create.live_hint') }}</span>
                                 </p>
                             </div>
@@ -1439,7 +1405,7 @@ onUnmounted(() => {
                         <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.notes_placeholder')" />
                     </label>
                     <label v-if="form.user_id" class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.trainer_note') }}
-                        <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
+                        <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.trainer_feedback_placeholder')" />
                     </label>
                     <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">{{ tx('training_workspace.log_create.fields.visibility') }}
                         <select v-model="form.privacy_scope" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
@@ -1589,15 +1555,15 @@ onUnmounted(() => {
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-2">
                         <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Dauer</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.ui.duration') }}</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ sessionMinutes ? `${formatNumber(sessionMinutes)} min` : '-' }}</p>
                         </div>
                         <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Distanz</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.ui.distance') }}</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ sessionDistanceKm ? `${formatNumber(sessionDistanceKm, 2)} km` : '-' }}</p>
                         </div>
                         <div v-if="sessionPace" class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-3">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Pace</p>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.ui.pace') }}</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ sessionPace }}</p>
                         </div>
                         <div v-if="sessionSpeedKmh" class="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3">
@@ -1610,11 +1576,11 @@ onUnmounted(() => {
                         </div>
                     </div>
                     <div v-if="restSeconds > 0" class="mt-3 rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Pause läuft</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.ui.rest_running') }}</p>
                         <div class="mt-1 flex items-center justify-between gap-3">
                             <p class="text-2xl font-semibold text-primary">{{ restTimerLabel }}</p>
                             <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="stopRestTimer">
-                                Stop
+                                {{ tx('training_workspace.log_create.ui.stop') }}
                             </button>
                         </div>
                     </div>
@@ -1627,7 +1593,7 @@ onUnmounted(() => {
             <section v-show="currentTrainingStep === 2" class="min-w-0 space-y-3 rounded-2xl border border-border bg-card p-3 sm:space-y-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Details</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.ui.details') }}</p>
                         <h2 class="text-xl font-semibold text-primary">{{ selectedTypeDetailTitle }}</h2>
                     </div>
                     <button v-if="!usesGymSets" type="button" class="rounded-xl border border-border bg-inputBg/40 px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addEntry">
@@ -1639,11 +1605,11 @@ onUnmounted(() => {
                     <div class="rounded-2xl border border-border bg-inputBg/40 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungen</p>
-                                <p class="mt-1 text-sm font-semibold text-primary">{{ form.gym_exercises.length }} Übungen angelegt</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.ui.exercises') }}</p>
+                                <p class="mt-1 text-sm font-semibold text-primary">{{ form.gym_exercises.length }} {{ tx('training_workspace.log_create.ui.exercises') }}</p>
                             </div>
                             <button type="button" class="rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymExercise">
-                                Übung hinzufügen
+                                {{ tx('training_workspace.log_create.ui.add_exercise') }}
                             </button>
                         </div>
                         <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1655,8 +1621,8 @@ onUnmounted(() => {
                                 :class="activeGymExerciseIndex === exerciseIndex ? 'border-air-blue bg-air-blue/10 text-primary ring-1 ring-air-blue/30' : 'border-border bg-card text-secondary hover:bg-muted hover:text-primary'"
                                 @click="setActiveGymExercise(exerciseIndex)"
                             >
-                                <span class="block text-[11px] font-semibold uppercase tracking-wide">Übung {{ exerciseIndex + 1 }}</span>
-                                <span class="mt-1 block truncate font-semibold">{{ exercise.title || 'Ohne Namen' }}</span>
+                                <span class="block text-[11px] font-semibold uppercase tracking-wide">{{ tx('training_workspace.log_create.ui.exercise_number', { number: exerciseIndex + 1 }) }}</span>
+                                <span class="mt-1 block truncate font-semibold">{{ exercise.title || tx('training_workspace.log_create.ui.exercise_without_name') }}</span>
                             </button>
                         </div>
                     </div>
@@ -1668,23 +1634,23 @@ onUnmounted(() => {
                         class="rounded-2xl border border-border bg-inputBg/40 p-3 sm:p-4"
                     >
                         <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                            <label class="block text-sm font-semibold text-primary">Übung {{ exerciseIndex + 1 }}
-                                <input v-model="exercise.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Kniebeugen" />
+                            <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.exercise_number', { number: exerciseIndex + 1 }) }}
+                                <input v-model="exercise.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.exercise_name_placeholder')" />
                             </label>
                             <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="removeGymExercise(exerciseIndex)">
-                                Übung entfernen
+                                {{ tx('training_workspace.log_create.ui.remove_exercise') }}
                             </button>
                         </div>
-                        <label class="mt-3 hidden text-sm font-semibold text-primary md:block">Notiz zur Übung
-                            <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
+                        <label class="mt-3 hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.ui.exercise_note') }}
+                            <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.exercise_note_placeholder')" />
                         </label>
                         <details class="mt-3 rounded-xl border border-border bg-card p-3 md:hidden">
                             <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
-                                Übungsdetails
+                                {{ tx('training_workspace.log_create.ui.details') }}
                                 <span class="ml-2 text-xs font-normal text-secondary">{{ tx('training_workspace.log_create.optional') }}</span>
                             </summary>
-                            <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Übung
-                                <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
+                            <label class="mt-3 block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.exercise_note') }}
+                                <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.exercise_note_placeholder')" />
                             </label>
                         </details>
                         <div
@@ -1693,11 +1659,11 @@ onUnmounted(() => {
                         >
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <p class="font-semibold text-primary">Letzte Werte gefunden</p>
+                                    <p class="font-semibold text-primary">{{ tx('training_workspace.log_create.ui.recent_values') }}</p>
                                     <p class="mt-1 text-xs text-secondary">{{ recentExerciseLabel(matchingRecentExercise(exercise)) }}</p>
                                 </div>
                                 <button type="button" class="rounded-xl border border-air-blue/40 px-3 py-2 text-xs font-semibold text-primary hover:bg-air-blue/10" @click="applyRecentExercise(exerciseIndex, matchingRecentExercise(exercise))">
-                                    Letzte Werte übernehmen
+                                    {{ tx('training_workspace.log_create.ui.use_recent_values') }}
                                 </button>
                             </div>
                             <div v-if="matchingRecentExercise(exercise).history?.length" class="mt-3 grid gap-2 sm:grid-cols-3">
@@ -1715,11 +1681,11 @@ onUnmounted(() => {
                         <div class="mt-4 rounded-2xl border border-border bg-card p-3">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Sätze</p>
-                                    <p class="mt-1 text-sm font-semibold text-primary">{{ exercise.sets.length }} Sätze in Übung {{ exerciseIndex + 1 }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('training_workspace.log_create.ui.sets') }}</p>
+                                    <p class="mt-1 text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.set_count', { count: exercise.sets.length, number: exerciseIndex + 1 }) }}</p>
                                 </div>
                                 <button type="button" class="rounded-xl border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymSet(exerciseIndex)">
-                                    Satz hinzufügen
+                                    {{ tx('training_workspace.log_create.ui.add_set') }}
                                 </button>
                             </div>
                             <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1731,8 +1697,8 @@ onUnmounted(() => {
                                     :class="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex ? 'border-air-blue bg-air-blue/10 text-primary ring-1 ring-air-blue/30' : set.completed ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-inputBg/40 text-secondary hover:bg-muted hover:text-primary'"
                                     @click="setActiveGymSet(exerciseIndex, setIndex)"
                                 >
-                                    <span class="block text-[11px] font-semibold uppercase tracking-wide">Satz {{ setIndex + 1 }}</span>
-                                    <span class="mt-1 block truncate font-semibold">{{ set.completed ? 'Erledigt' : 'Offen' }}</span>
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wide">{{ tx('training_workspace.log_create.ui.set', { number: setIndex + 1 }) }}</span>
+                                    <span class="mt-1 block truncate font-semibold">{{ set.completed ? tx('training_workspace.log_create.ui.set_done') : tx('training_workspace.log_create.ui.set_open') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -1747,19 +1713,19 @@ onUnmounted(() => {
                                 @click="setActiveGymSet(exerciseIndex, setIndex)"
                             >
                                 <div class="flex items-center justify-between gap-2 lg:block lg:pt-8">
-                                    <p class="text-sm font-semibold text-primary">Satz {{ setIndex + 1 }}</p>
+                                    <p class="text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.set', { number: setIndex + 1 }) }}</p>
                                     <div class="flex flex-wrap gap-1">
-                                        <span v-if="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex" class="rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">aktiv</span>
-                                        <span v-if="set.completed" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">erledigt</span>
+                                        <span v-if="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex" class="rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx('training_workspace.log_create.ui.active') }}</span>
+                                        <span v-if="set.completed" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">{{ tx('training_workspace.log_create.ui.completed') }}</span>
                                     </div>
                                 </div>
-                                <label class="block text-sm font-semibold text-primary">Wdh.
+                                <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.repetitions_short') }}
                                     <input v-model="set.reps" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="15" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary">Gewicht kg
+                                <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.weight_kg') }}
                                     <input v-model="set.weight_kg" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="30" />
                                 </label>
-                                <label class="hidden text-sm font-semibold text-primary md:block">Zeit min
+                                <label class="hidden text-sm font-semibold text-primary md:block">{{ tx('training_workspace.log_create.ui.time_minutes') }}
                                     <input v-model="set.duration_minutes" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
                                 <div class="grid gap-2 self-end">
@@ -1769,52 +1735,52 @@ onUnmounted(() => {
                                         :class="set.completed ? 'border-success/40 text-success hover:bg-success/10' : 'border-border text-primary hover:bg-muted'"
                                         @click="toggleGymSetDone(exerciseIndex, setIndex)"
                                     >
-                                        {{ set.completed ? 'Erledigt' : 'Satz erledigt' }}
+                                        {{ set.completed ? tx('training_workspace.log_create.ui.set_done') : tx('training_workspace.log_create.ui.set_finished') }}
                                     </button>
                                     <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click.stop="removeGymSet(exerciseIndex, setIndex)">
-                                        Entfernen
+                                        {{ tx('training_workspace.log_create.ui.remove') }}
                                     </button>
                                 </div>
                                 <details class="rounded-xl border border-border bg-card/70 p-3 sm:col-span-2 md:hidden">
                                     <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
-                                        Satzdetails
+                                        {{ tx('training_workspace.log_create.ui.set_details') }}
                                         <span class="ml-2 text-xs font-normal text-secondary">{{ tx('training_workspace.log_create.optional') }}</span>
                                     </summary>
                                     <div class="mt-3 grid gap-3">
-                                        <label class="block text-sm font-semibold text-primary">Zeit min
+                                        <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.time_minutes') }}
                                             <input v-model="set.duration_minutes" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                         </label>
-                                        <label class="block text-sm font-semibold text-primary">Kommentar zum Satz
+                                        <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.set_comment') }}
                                             <input v-model="set.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                         </label>
-                                        <label class="block text-sm font-semibold text-primary">Medien-Link
-                                            <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link" />
+                                        <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.media_link') }}
+                                            <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.media_placeholder')" />
                                         </label>
-                                        <label class="block text-sm font-semibold text-primary">Datei hochladen
+                                        <label class="block text-sm font-semibold text-primary">{{ tx('training_workspace.log_create.ui.upload_file') }}
                                             <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="set.media_file = $event.target.files?.[0] || null" />
                                         </label>
                                     </div>
                                 </details>
-                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Kommentar zum Satz
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">{{ tx('training_workspace.log_create.ui.set_comment') }}
                                     <input v-model="set.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
-                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Medien-Link
-                                    <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link für Technikfeedback" />
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">{{ tx('training_workspace.log_create.ui.media_link') }}
+                                    <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.media_technique_placeholder')" />
                                 </label>
-                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Datei hochladen
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">{{ tx('training_workspace.log_create.ui.upload_file') }}
                                     <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="set.media_file = $event.target.files?.[0] || null" />
                                 </label>
                             </div>
                         </div>
                         <div class="mt-3 grid gap-2 sm:grid-cols-3">
                             <button type="button" class="rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-primary hover:bg-muted sm:py-2" @click="activeGymSetIndex = Math.max(0, activeGymSetIndex - 1)">
-                                Vorheriger Satz
+                                {{ tx('training_workspace.log_create.ui.previous_set') }}
                             </button>
                             <button type="button" class="rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-primary hover:bg-muted sm:py-2" @click="nextActiveGymSet">
-                                Nächster Satz
+                                {{ tx('training_workspace.log_create.ui.next_set') }}
                             </button>
                             <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary sm:py-2" @click="finishActiveGymSet">
-                                Satz erledigt
+                                {{ tx('training_workspace.log_create.ui.set_finished') }}
                             </button>
                         </div>
                     </div>
@@ -1834,7 +1800,7 @@ onUnmounted(() => {
                         </button>
                     </div>
                     <p v-if="selectedType.key === 'long_run' && !visibleEntries.length" class="rounded-xl border border-border bg-inputBg/40 p-3 text-sm text-secondary">
-                        Bei einem Long Run musst du hier nichts eintragen, wenn du nur Gesamtdauer und Distanz dokumentieren willst. Nutze Abschnitte nur für Kilometerblöcke, Tempoanteile oder besondere Phasen.
+                        {{ tx('training_workspace.log_create.ui.long_run_hint') }}
                     </p>
                     <div
                         v-for="(entry, index) in form.entries"
@@ -1862,19 +1828,19 @@ onUnmounted(() => {
                             <input v-model="entry.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
                         <label v-if="hasField('intensity')" class="block text-sm font-semibold text-primary">{{ fieldLabel('intensity') }}
-                            <input v-model="entry.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. RPE 7, locker, Zone 2" />
+                            <input v-model="entry.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.intensity_placeholder')" />
                         </label>
                         <label v-if="hasField('notes')" class="block text-sm font-semibold text-primary lg:col-span-4">{{ fieldLabel('notes') }}
                             <input v-model="entry.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
-                        <label class="block text-sm font-semibold text-primary lg:col-span-4">Medien-Link
-                            <input v-model="entry.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link" />
+                        <label class="block text-sm font-semibold text-primary lg:col-span-4">{{ tx('training_workspace.log_create.ui.media_link') }}
+                            <input v-model="entry.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('training_workspace.log_create.ui.media_placeholder')" />
                         </label>
-                        <label class="block text-sm font-semibold text-primary lg:col-span-4">Datei hochladen
+                        <label class="block text-sm font-semibold text-primary lg:col-span-4">{{ tx('training_workspace.log_create.ui.upload_file') }}
                             <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="entry.media_file = $event.target.files?.[0] || null" />
                         </label>
                         <button type="button" class="self-end rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="removeEntry(index)">
-                            Entfernen
+                            {{ tx('training_workspace.log_create.ui.remove') }}
                         </button>
                     </div>
                 </div>
@@ -1896,14 +1862,14 @@ onUnmounted(() => {
                 <div class="mt-auto max-h-[78vh] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
                     <div class="flex items-center justify-between gap-3 border-b border-border p-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Trainingsart</p>
-                            <h3 class="text-lg font-semibold text-primary">Was machst du heute?</h3>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('training_workspace.log_create.ui.training_type') }}</p>
+                            <h3 class="text-lg font-semibold text-primary">{{ tx('training_workspace.log_create.ui.today_question') }}</h3>
                         </div>
                         <button
                             type="button"
                             class="flex h-10 w-10 items-center justify-center rounded-full border border-border text-secondary"
                             @click="mobileTrainingTypeSheetOpen = false"
-                            aria-label="Schließen"
+                            :aria-label="tx('training_workspace.log_create.ui.close')"
                         >
                             <i class="las la-times text-xl"></i>
                         </button>
@@ -1942,34 +1908,34 @@ onUnmounted(() => {
                             <i class="las la-dumbbell text-xl"></i>
                         </span>
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Übung' }}</span>
+                            <span class="block truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || tx('training_workspace.log_create.ui.active_exercise') }}</span>
                             <span class="block truncate text-xs text-secondary">
                                 Satz {{ activeGymSetIndex + 1 }} · {{ activeGymSet.reps || 0 }} Wdh. · {{ activeGymSet.weight_kg || 0 }} kg
                             </span>
                         </span>
                         <span class="rounded-xl bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary">
-                            Öffnen
+                            {{ tx('training_workspace.log_create.ui.open') }}
                         </span>
                     </button>
 
                     <div v-else class="space-y-2">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Übung' }}</p>
+                            <p class="truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || tx('training_workspace.log_create.ui.active_exercise') }}</p>
                             <p class="text-xs text-secondary">
-                                Satz {{ activeGymSetIndex + 1 }}{{ restSeconds > 0 ? ` - Pause ${restTimerLabel}` : '' }}
+                                {{ tx('training_workspace.log_create.ui.set', { number: activeGymSetIndex + 1 }) }}{{ restSeconds > 0 ? ` - ${tx('training_workspace.log_create.ui.pause')} ${restTimerLabel}` : '' }}
                             </p>
                         </div>
                         <button v-if="restSeconds > 0" type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="stopRestTimer">
-                            Pause stop
+                            {{ tx('training_workspace.log_create.ui.pause_stop') }}
                         </button>
                         <button type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="mobileLivePanelOpen = false">
-                            Minimieren
+                            {{ tx('training_workspace.log_create.ui.minimize') }}
                         </button>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <div class="rounded-xl border border-border bg-card p-2">
-                            <p class="text-[11px] font-semibold uppercase text-secondary">Wdh.</p>
+                            <p class="text-[11px] font-semibold uppercase text-secondary">{{ tx('training_workspace.log_create.ui.repetitions_short') }}</p>
                             <div class="mt-1 flex items-center justify-between gap-1">
                                 <button type="button" class="h-8 w-8 rounded-lg border border-border text-primary" @click="adjustActiveGymSet('reps', -1)">-</button>
                                 <span class="text-sm font-semibold text-primary">{{ activeGymSet.reps || 0 }}</span>
@@ -1977,7 +1943,7 @@ onUnmounted(() => {
                             </div>
                         </div>
                         <div class="rounded-xl border border-border bg-card p-2">
-                            <p class="text-[11px] font-semibold uppercase text-secondary">kg</p>
+                            <p class="text-[11px] font-semibold uppercase text-secondary">{{ tx('training_workspace.log_create.ui.kilograms') }}</p>
                             <div class="mt-1 flex items-center justify-between gap-1">
                                 <button type="button" class="h-8 w-8 rounded-lg border border-border text-primary" @click="adjustActiveGymSet('weight_kg', -2.5, 0.5)">-</button>
                                 <span class="text-sm font-semibold text-primary">{{ activeGymSet.weight_kg || 0 }}</span>
@@ -1985,15 +1951,15 @@ onUnmounted(() => {
                             </div>
                         </div>
                         <button type="button" class="rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="finishActiveGymSet">
-                            Satz fertig
+                            {{ tx('training_workspace.log_create.ui.finish_set') }}
                         </button>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="nextActiveGymSet">
-                            Nächster Satz
+                            {{ tx('training_workspace.log_create.ui.next_set') }}
                         </button>
                         <button type="submit" class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary disabled:opacity-60" :disabled="form.processing">
-                            Speichern
+                            {{ tx('training_workspace.log_create.ui.save') }}
                         </button>
                     </div>
                     </div>
@@ -2003,17 +1969,17 @@ onUnmounted(() => {
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-primary">{{ form.title || selectedTypeLabel }}</p>
                             <p class="truncate text-xs text-secondary">
-                                {{ isLiveTraining ? `Läuft ${liveElapsedLabel}` : detailSummary }}
+                                {{ isLiveTraining ? `${tx('training_workspace.log_create.ui.start')} ${liveElapsedLabel}` : detailSummary }}
                             </p>
                         </div>
                         <button v-if="!isLiveTraining" type="button" class="rounded-xl border border-border px-3 py-3 text-xs font-semibold text-primary" @click="startLiveTraining">
-                            Start
+                            {{ tx('training_workspace.log_create.ui.start') }}
                         </button>
                         <button v-else type="button" class="rounded-xl border border-border px-3 py-3 text-xs font-semibold text-primary" @click="finishLiveTraining">
                             {{ tx('training_workspace.log_create.finish') }}
                         </button>
                         <button type="submit" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
-                            Speichern
+                            {{ tx('training_workspace.log_create.ui.save') }}
                         </button>
                     </div>
                     <div class="grid grid-cols-4 gap-2">

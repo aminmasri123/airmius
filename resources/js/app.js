@@ -19,7 +19,15 @@ const localeMessageLoaders = import.meta.glob('./lang/*.json');
 const loadedLocales = new Set();
 const autoTranslatedTextNodes = new WeakMap();
 const autoTranslatedAttributes = new WeakMap();
-const autoTranslateAttributes = ['placeholder', 'title', 'aria-label', 'alt'];
+const autoTranslateAttributeNames = [
+    'placeholder',
+    'title',
+    'aria-label',
+    'alt',
+    'value',
+    'aria-placeholder',
+    'aria-expanded',
+];
 let autoTranslationTouched = false;
 
 const normalizeLocale = (locale) => {
@@ -198,7 +206,14 @@ const autoTranslateVisibleText = (root, i18n) => {
         }
     });
 
-    root.querySelectorAll?.('[placeholder], [title], [aria-label], img[alt]').forEach((element) => {
+    root.querySelectorAll?.('*').forEach((element) => {
+        const hasTranslatableAttr = Array
+            .from(element.attributes || [])
+            .some((attribute) => autoTranslateAttributeNames.includes(attribute.name));
+
+        if (!hasTranslatableAttr) {
+            return;
+        }
         if (element.closest('[data-no-auto-translate]')) {
             return;
         }
@@ -210,7 +225,7 @@ const autoTranslateVisibleText = (root, i18n) => {
             autoTranslatedAttributes.set(element, originals);
         }
 
-        autoTranslateAttributes.forEach((attribute) => {
+        autoTranslateAttributeNames.forEach((attribute) => {
             if (!element.hasAttribute(attribute)) {
                 return;
             }
@@ -263,7 +278,7 @@ const installAutoTranslation = (root, i18n) => {
         subtree: true,
         characterData: true,
         attributes: true,
-        attributeFilter: autoTranslateAttributes,
+        attributeFilter: autoTranslateAttributeNames,
     });
     run();
     window.setTimeout(run, 0);
@@ -307,7 +322,7 @@ createInertiaApp({
             legacy: false,
             // PRIORITÄT: 1. Server-Prop (DB), 2. LocalStorage, 3. Fallback 'de'
             locale: initialLocale,
-            fallbackLocale: 'en',
+            fallbackLocale: 'de',
             messages: {},
         });
 
@@ -345,4 +360,3 @@ createInertiaApp({
         color: 'var(--progress)',
     },
 });
-

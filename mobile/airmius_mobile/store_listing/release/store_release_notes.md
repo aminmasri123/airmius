@@ -5,7 +5,7 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.10+11` (working-tree release candidate)
+- Version: `1.0.12+13` (working-tree release candidate)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment:
@@ -13,15 +13,24 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 - Release date:
 - Previous local release AAB (before the final UI-polish patch; do not upload as the final build): `build/app/outputs/bundle/release/app-release.aab` (25.07.2026 16:56, 70.2 MiB / 73,650,123 bytes)
 - Previous AAB SHA-256: `2ff66fff6496fe46d2cee30f5c771a2ee8312beccf6a714898d2887715f92af5`
-- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (26.07.2026 10:58, 80.6 MiB / 84,582,708 bytes; sauber verifizierter Flutter-Sammelstand inklusive globaler Suche, geschützter Deep-Links, mehrsprachigem App-Onboarding, adaptiven MVP-Seiten, direkter Sport-App-Navigation, lokalisierter UI-Coverage, lokalisierten Sport-Integrationsstatusmeldungen und 64 zugänglichen Parity-/Funktions-Suites plus Coverage-/Action-Feedback-Auditflächen).
-- Fresh AAB SHA-256: `2c6afa728565f6c7fc13f7f05dd2dca186fba28097280b9a7893c1c0e7874a18`.
-- Source verification: `flutter test` (210 passed), `flutter analyze` (no issues), `php artisan test` (548 passed, 4 skipped, 5,367 assertions).
+- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (26.07.2026 18:58, 84,644,613 bytes; Version 1.0.12+13).
+- Fresh AAB SHA-256: `bc6c4dddd406642a3247d73145158851ef5fc47b41943c2e7c52f5cbf2622e9d`.
+- Fresh direct-install APK: `build/app/outputs/flutter-apk/app-release.apk` (26.07.2026 18:58, 95,639,248 bytes).
+- Fresh APK SHA-256: `46dbc2145ec6d1b95a6c285c4d2a4d061164c63a71598ef1adeff5b20ec949b0`.
+- Source verification: `flutter test test/widget_test.dart test/localization_l10n_test.dart` (204 passed), `flutter analyze` (no issues), `php artisan test` (548 passed, 4 skipped, 5,367 assertions).
 - Fresh artifact verification: `jarsigner -verify` exited successfully; the standard JarInputStream warning for bundled entries is informational.
 - Backend verification: `php artisan test` (548 passed, 4 skipped, 5,367 assertions); `composer validate --strict` passed. Composer's online vulnerability audit remains an external-network gate.
 
 ## Gebündelter Änderungsentwurf (Arbeitsstand)
 
 Dieser Abschnitt beschreibt den aktuellen Sammel-Release. Das frische AAB ist gebaut und signiert; vor dem Play-Console-Upload bleiben die üblichen Store-, Review-, Datenschutz- und Realgeräte-Gates.
+
+- Die produktive API-Adresse der Android-App verwendet jetzt `https://airmius.com`. Dadurch schlägt der Login nicht mehr wegen des nicht auflösbaren alten Hosts `app.airmius.com` fehl; bestehende Social-Login-Rückruflinks über den alten Host bleiben kompatibel.
+- Die API-Konfiguration normalisiert zusätzlich alte Alias- und bereits versionierte Eingaben automatisch, damit weder `app.airmius.com` noch ein doppelter `/api/v1/api/v1`-Pfad die Anmeldung unterbrechen kann.
+- Die Web-Chat-Ansicht ist durchgehend in Deutsch, Englisch, Französisch und Arabisch nutzbar: Suche, Gruppenverwaltung, Einladungen, Meldungen, Reaktionen, Anhänge, Leerzustände und Screenreader-Beschriftungen folgen jetzt dem aktiven Sprachkatalog.
+- Der Web-Dateimanager übernimmt Übersetzungen, semantische Theme-Farben und klare Tast-/Touch-Beschriftungen für Suche, Sortierung, Speicherstatus, Upload, Freigabe, Umbenennen, Löschen und Download.
+- Shop-, Warenkorb- und Outfit-Übersichten verwenden lokalisierte Artikel-, Preis-, Zahlungs-, Leer- und Checkout-Texte sowie interpolierte Mengen, Länder und Anbieter in allen vier Sprachen.
+- Das Learning-Studio nutzt für Kursanlage, Kursübersicht, Analytics, Publish-Check, Tabs, Kapitel und Lektionen lokalisierte Eingaben, Statuswerte, Aktionen und Leerzustände in allen vier Sprachen.
 
 - Einheitliches, responsives Designsystem mit mehreren Farbpaletten, Hell/Dunkel/System-Modus und besser lesbaren Textstufen.
 - Hauptbereiche übernehmen AppBar- und Oberflächenfarben jetzt aus der aktiven Palette, sodass Hell-, Dunkel- und Kontrastmodus auch beim Wechsel zwischen Seiten konsistent bleiben.

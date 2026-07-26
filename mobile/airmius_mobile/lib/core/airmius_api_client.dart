@@ -1605,6 +1605,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> duplicateSportRoute(int routeId) =>
       _json('POST', '/api/v1/sport-routes/$routeId/duplicate');
 
+  Future<AirmiusJson> generateSportRouteProposal(AirmiusJson body) =>
+      _json('POST', '/api/v1/sport-route-proposals', body: body);
+
   Future<AirmiusJson> deleteSportRoute(int routeId) =>
       _json('DELETE', '/api/v1/sport-routes/$routeId');
 

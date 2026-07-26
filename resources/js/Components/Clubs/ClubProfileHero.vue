@@ -34,7 +34,7 @@ const logoInput = ref(null)
                 class="absolute bottom-3 right-3 rounded-lg bg-card/90 px-3 py-2 text-sm font-semibold text-primary shadow hover:bg-card"
                 @click="coverInput?.click()"
             >
-                <i class="las la-camera"></i> Titelbild
+                <i class="las la-camera"></i> {{ $t('Titelbild') }}
             </button>
             <input
                 ref="coverInput"
@@ -77,12 +77,12 @@ const logoInput = ref(null)
                     </div>
                     <div class="pb-1">
                         <h1 class="text-2xl font-bold text-primary">{{ clubProfile.name }}</h1>
-                        <p class="text-sm text-secondary">Verein · {{ viewer.is_member ? 'Mitglied' : 'Profil' }}</p>
+                        <p class="text-sm text-secondary">{{ $t('Verein') }} · {{ viewer.is_member ? $t('Mitglied') : $t('Profil') }}</p>
                     </div>
                 </div>
 
                 <Link :href="route('auth.teams.index')" class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
-                    Teams ansehen
+                    {{ $t('Teams ansehen') }}
                 </Link>
                 <button
                     v-if="viewer.is_member && !viewer.can_manage"
@@ -90,7 +90,7 @@ const logoInput = ref(null)
                     class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                     @click="$emit('leave-club')"
                 >
-                    Verein verlassen
+                    {{ $t('Verein verlassen') }}
                 </button>
             </div>
         </div>

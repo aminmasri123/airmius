@@ -162,7 +162,7 @@ Use this file for the final release-candidate evidence package.
 ## Gate 2: Android Release Build
 
 - Command:
-  - `flutter build appbundle --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
+  - `flutter build appbundle --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
 - CI artifact:
   - `airmius-mobile-release-evidence/android-appbundle-build.log`
   - `airmius-mobile-release-evidence/artifacts/app-release.aab`
@@ -177,7 +177,7 @@ Use this file for the final release-candidate evidence package.
 ## Gate 3: iOS Release Build
 
 - Command:
-  - `flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
+  - `flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
 - CI artifact:
   - `airmius-mobile-ios-release-evidence/flutter-analyze-ios.log`
   - `airmius-mobile-ios-release-evidence/ios-release-build-no-codesign.log`
@@ -382,7 +382,7 @@ Use this file for the final release-candidate evidence package.
 ## Gate 14: Release Configuration Check
 
 - Command:
-  - `.\scripts\assert_release_configuration.ps1 -ApiBaseUrl "https://app.airmius.com" -UseHttp`
+  - `.\scripts\assert_release_configuration.ps1 -ApiBaseUrl "https://airmius.com" -UseHttp`
 - Result:
   - Pending
 - Evidence:

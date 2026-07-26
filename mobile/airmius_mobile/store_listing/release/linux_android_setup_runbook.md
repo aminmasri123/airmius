@@ -129,7 +129,7 @@ Linux Android release prerequisites passed.
 
 ```bash
 flutter run -d <android-device-id> \
-  --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com \
+  --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com \
   --dart-define=AIRMIUS_USE_HTTP=true
 ```
 

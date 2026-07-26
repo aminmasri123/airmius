@@ -1,5 +1,9 @@
 ﻿<script setup>
 import Modal from '@/Components/Modal.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 defineProps({
     showDeleteModal: { type: Boolean, default: false },
@@ -37,14 +41,12 @@ defineProps({
     <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
         <div class="space-y-5 text-primary">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-error">Endgültig löschen</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-error">{{ tx('files.delete_final') }}</p>
                 <h2 class="mt-1 text-lg font-bold">
-                    {{ deleteType === 'folder' ? 'Ordner löschen' : 'Datei löschen' }}
+                    {{ deleteType === 'folder' ? tx('files.delete_folder') : tx('files.delete_file') }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    {{ deleteType === 'folder'
-                        ? 'Der Ordner und seine Dateien werden entfernt.'
-                        : 'Diese Datei wird entfernt.' }}
+                    {{ deleteType === 'folder' ? tx('files.delete_folder_message') : tx('files.delete_file_message') }}
                 </p>
             </div>
 
@@ -53,27 +55,27 @@ defineProps({
             </div>
 
             <label class="block text-sm">
-                <span class="mb-1 block text-secondary">Schreibe <span class="font-semibold text-primary">löschen</span>, um fortzufahren.</span>
+                <span class="mb-1 block text-secondary">{{ tx('files.delete_confirmation_hint') }}</span>
                 <input
                     :ref="setDeleteConfirmationInputElement"
                     :value="deleteConfirmation"
                     class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                     autocomplete="off"
-                    placeholder="löschen"
+                    :placeholder="tx('files.delete_word')"
                     @input="setDeleteConfirmation($event.target.value)"
                     @keyup.enter="deleteConfirmed"
                 >
             </label>
 
             <div class="flex gap-3">
-                <button type="button" class="flex-1 rounded-lg border border-border px-4 py-2 text-primary hover:bg-inputBg" @click="closeDeleteModal">Abbrechen</button>
+                <button type="button" class="flex-1 rounded-lg border border-border px-4 py-2 text-primary hover:bg-inputBg" @click="closeDeleteModal">{{ tx('files.cancel') }}</button>
                 <button
                     type="button"
-                    class="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="flex-1 rounded-lg bg-error px-4 py-2 font-semibold text-buttonTextPrimary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!canConfirmDelete || deleteProcessing"
                     @click="deleteConfirmed"
                 >
-                    {{ deleteProcessing ? 'Lösche...' : 'Endgültig löschen' }}
+                    {{ deleteProcessing ? tx('files.deleting') : tx('files.delete_final') }}
                 </button>
             </div>
         </div>
@@ -81,29 +83,29 @@ defineProps({
 
     <Modal :show="showRenameModal" max-width="md" @close="setShowRenameModal(false)">
         <form class="space-y-4 text-primary" @submit.prevent="submitRename">
-            <h2 class="text-lg font-bold">{{ renameType === 'folder' ? 'Ordner' : 'Datei' }} umbenennen</h2>
+            <h2 class="text-lg font-bold">{{ renameType === 'folder' ? tx('files.rename_folder') : tx('files.rename_file') }}</h2>
             <input
                 v-if="renameType === 'folder'"
                 :ref="setRenameFolderInputElement"
                 v-model="renameForm.name"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="Ordnername"
+                :placeholder="tx('files.folder_name')"
             >
             <input
                 v-else
                 :ref="setRenameFileInputElement"
                 v-model="renameForm.display_name"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="Dateiname"
+                :placeholder="tx('files.file')"
             >
             <div class="flex gap-3">
-                <button type="button" class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="setShowRenameModal(false)">Abbrechen</button>
+                <button type="button" class="flex-1 rounded-lg border border-border py-2 text-primary hover:bg-inputBg" @click="setShowRenameModal(false)">{{ tx('files.cancel') }}</button>
                 <button
                     type="submit"
                     :disabled="renameForm.processing || (renameType === 'folder' ? !renameForm.name.trim() : !renameForm.display_name.trim())"
                     class="flex-1 rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 >
-                    Speichern
+                    {{ tx('files.save') }}
                 </button>
             </div>
         </form>
@@ -111,16 +113,16 @@ defineProps({
 
     <Modal :show="showShareModal" max-width="md" @close="setShowShareModal(false)">
         <div class="space-y-4 text-primary">
-            <h2 class="text-lg font-bold">{{ shareType === 'folder' ? 'Ordner' : 'Datei' }} freigeben</h2>
+            <h2 class="text-lg font-bold">{{ shareType === 'folder' ? tx('files.share_folder') : tx('files.share_file') }}</h2>
             <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="resetShareTarget">
-                <option value="user">Freund</option>
-                <option v-if="shareType === 'file'" value="email">Externe E-Mail</option>
+                <option value="user">{{ tx('files.friend') }}</option>
+                <option v-if="shareType === 'file'" value="email">{{ tx('files.external_email') }}</option>
             </select>
             <input
                 v-if="shareForm.target_type === 'user'"
                 :value="friendSearch"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="Freund suchen"
+                :placeholder="tx('files.friend_search')"
                 @input="setFriendSearch($event.target.value)"
             >
             <select
@@ -129,7 +131,7 @@ defineProps({
                 v-model="shareForm.target_id"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
             >
-                <option value="">Auswählen</option>
+                <option value="">{{ tx('files.select') }}</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
                     {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
                 </option>
@@ -148,10 +150,9 @@ defineProps({
                 class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 @click="shareItem"
             >
-                Freigeben
+                {{ tx('files.share') }}
             </button>
         </div>
     </Modal>
 </template>
-
 

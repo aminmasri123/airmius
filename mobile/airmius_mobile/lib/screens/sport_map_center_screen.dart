@@ -179,10 +179,25 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusButton(
-          label: t('sportMap.createRoute'),
-          icon: Icons.add_road_outlined,
-          onPressed: _busy ? null : () => _editRoute(),
+        Row(
+          children: [
+            Expanded(
+              child: AirmiusButton(
+                label: t('sportMap.createRoute'),
+                icon: Icons.add_road_outlined,
+                onPressed: _busy ? null : () => _editRoute(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: AirmiusButton(
+                label: t('sportMap.generateRoute'),
+                icon: Icons.auto_awesome_rounded,
+                onPressed: _busy ? null : () => _generateRoute(),
+                secondary: true,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         if (routes.isEmpty)
@@ -324,6 +339,53 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
           ? 'sportMap.routeCreated'
           : 'sportMap.routeUpdated',
     );
+  }
+
+  Future<void> _generateRoute() async {
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (_) => const _RouteGeneratorDialog(),
+    );
+    if (payload == null || !mounted) return;
+    await _run(() async {
+      final generated = await _client.generateSportRouteProposal(payload);
+      await _client.createSportRoute(
+        _routePayloadFromProposal(_smMap(generated['data'])),
+      );
+    }, successKey: 'sportMap.routeGenerated');
+  }
+
+  JsonMap _routePayloadFromProposal(JsonMap proposal) {
+    final waypoints = _smMaps(proposal['waypoints']);
+    final routeGeometry = _smMap(proposal['route_geometry']);
+    final metrics = _smMap(proposal['metrics']);
+    final distanceMeters = _smInt(proposal['distance_meters']);
+    final durationSeconds = _smInt(proposal['estimated_duration_seconds']);
+    final elevationGain = _smInt(proposal['elevation_gain_meters']);
+    final elevationLoss = _smInt(proposal['elevation_loss_meters']);
+    final payload = <String, dynamic>{
+      'title': _smText(
+        proposal['title'],
+        fallback: AirmiusScope.of(context).t('sportMap.generatedRoute'),
+      ),
+      'sport_type': _smText(proposal['sport_type'], fallback: 'running'),
+      'difficulty': _smText(
+        proposal['difficulty'],
+        fallback: 'easy',
+      ),
+      'surface': _smNullable(
+        _smText(proposal['surface'], fallback: ''),
+      ),
+      'waypoints': waypoints,
+      if (metrics.isNotEmpty) 'metrics': metrics,
+      if (distanceMeters > 0) 'distance_meters': distanceMeters,
+      if (durationSeconds > 0) 'estimated_duration_seconds': durationSeconds,
+      if (elevationGain > 0) 'elevation_gain_meters': elevationGain,
+      if (elevationLoss > 0) 'elevation_loss_meters': elevationLoss,
+      if (routeGeometry.isNotEmpty) 'route_geometry': routeGeometry,
+      'status': 'planned',
+    };
+    return payload;
   }
 
   Future<void> _duplicateRoute(JsonMap route) async {
@@ -1055,6 +1117,240 @@ class _RouteEditorDialogState extends State<_RouteEditorDialog> {
   }
 }
 
+class _RouteGeneratorDialog extends StatefulWidget {
+  const _RouteGeneratorDialog();
+
+  @override
+  State<_RouteGeneratorDialog> createState() => _RouteGeneratorDialogState();
+}
+
+class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
+  late final TextEditingController _title;
+  late final TextEditingController _startName;
+  late final TextEditingController _startLat;
+  late final TextEditingController _startLng;
+  late final TextEditingController _destinationName;
+  late final TextEditingController _destinationLat;
+  late final TextEditingController _destinationLng;
+  late final TextEditingController _distance;
+  late final TextEditingController _duration;
+  late String _sportType;
+  late String _routeType;
+  late String _targetMode;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = TextEditingController();
+    _startName = TextEditingController();
+    _startLat = TextEditingController();
+    _startLng = TextEditingController();
+    _destinationName = TextEditingController();
+    _destinationLat = TextEditingController();
+    _destinationLng = TextEditingController();
+    _distance = TextEditingController(text: '5');
+    _duration = TextEditingController(text: '45');
+    _sportType = 'running';
+    _routeType = 'roundtrip';
+    _targetMode = 'distance';
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _startName.dispose();
+    _startLat.dispose();
+    _startLng.dispose();
+    _destinationName.dispose();
+    _destinationLat.dispose();
+    _destinationLng.dispose();
+    _distance.dispose();
+    _duration.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final isPointToPoint = _routeType == 'point_to_point';
+    return AlertDialog(
+      backgroundColor: airmiusSurfaceColor(context),
+      title: Text(t('sportMap.generatorTitle')),
+      content: SizedBox(
+        width: 580,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _title,
+                maxLength: 160,
+                decoration: InputDecoration(
+                  labelText: t('sportMap.name'),
+                  hintText: t('sportMap.routeAutoTitleHint'),
+                  errorText: _error,
+                ),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SmDropdown(
+                      value: _sportType,
+                      label: t('sportMap.sportType'),
+                      values: _sportTypes,
+                      prefix: 'sportMap.sport',
+                      onChanged: (value) => setState(() => _sportType = value),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _SmDropdown(
+                      value: _routeType,
+                      label: t('sportMap.routeType'),
+                      values: _routeTypes,
+                      prefix: 'sportMap.routeType',
+                      onChanged: (value) => setState(() => _routeType = value),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SmDropdown(
+                      value: _targetMode,
+                      label: t('sportMap.targetMode'),
+                      values: _routeTargetModes,
+                      prefix: 'sportMap.targetMode',
+                      onChanged: (value) =>
+                          setState(() => _targetMode = value),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _targetMode == 'distance'
+                          ? _distance
+                          : _duration,
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: _targetMode == 'distance',
+                      ),
+                      decoration: InputDecoration(
+                        labelText: _targetMode == 'distance'
+                            ? t('sportMap.distance')
+                            : '${t('sportMap.targetMode.duration')} (${t('sportMap.minutes')})',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _CoordinateEditor(
+                title: t('sportMap.start'),
+                name: _startName,
+                latitude: _startLat,
+                longitude: _startLng,
+              ),
+              const SizedBox(height: 10),
+              if (isPointToPoint)
+                _CoordinateEditor(
+                  title: t('sportMap.destination'),
+                  name: _destinationName,
+                  latitude: _destinationLat,
+                  longitude: _destinationLng,
+                ),
+              if (isPointToPoint) const SizedBox(height: 10),
+              Text(
+                isPointToPoint
+                    ? t('sportMap.generatorPointHint')
+                    : t('sportMap.generatorHint'),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(t('cancel')),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: Icon(Icons.auto_awesome_rounded),
+          label: Text(t('sportMap.generateRoute')),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    final t = AirmiusScope.of(context).t;
+    final startLat = _smDoubleOrNull(_startLat.text);
+    final startLng = _smDoubleOrNull(_startLng.text);
+    final destinationLat = _smDoubleOrNull(_destinationLat.text);
+    final destinationLng = _smDoubleOrNull(_destinationLng.text);
+    final distance = _smDoubleOrNull(_distance.text);
+    final duration = _smDoubleOrNull(_duration.text);
+    if (!_validCoordinates(startLat, startLng)) {
+      setState(() => _error = t('sportMap.coordinatesInvalid'));
+      return;
+    }
+    if (_routeType == 'point_to_point' &&
+        !_validCoordinates(destinationLat, destinationLng)) {
+      setState(() => _error = t('sportMap.destinationRequired'));
+      return;
+    }
+    if (_targetMode == 'distance' && (distance == null || distance <= 0)) {
+      setState(() => _error = t('sportMap.distanceInvalid'));
+      return;
+    }
+    if (_targetMode == 'duration' && (duration == null || duration <= 0)) {
+      setState(() => _error = t('sportMap.durationInvalid'));
+      return;
+    }
+    final payload = <String, dynamic>{
+      'title': _smNullable(_title.text),
+      'sport_type': _sportType,
+      'route_type': _routeType,
+      'target_mode': _targetMode,
+      'start': {
+        'name': _smNullable(_startName.text),
+        'latitude': startLat,
+        'longitude': startLng,
+      },
+      if (_routeType == 'point_to_point')
+        'waypoints': [
+          {
+            'name': _smNullable(_startName.text),
+            'latitude': startLat,
+            'longitude': startLng,
+          },
+          {
+            'name': _smNullable(_destinationName.text),
+            'latitude': destinationLat,
+            'longitude': destinationLng,
+          },
+        ],
+    };
+    if (_targetMode == 'distance') {
+      payload['distance_km'] = distance!;
+    } else {
+      payload['duration_minutes'] = duration!.round();
+    }
+    Navigator.pop(context, payload);
+  }
+}
+
 class _PlaceEditorDialog extends StatefulWidget {
   const _PlaceEditorDialog({this.place});
 
@@ -1596,6 +1892,8 @@ const _sportTypes = [
   'fitness',
   'other',
 ];
+const _routeTypes = ['roundtrip', 'point_to_point'];
+const _routeTargetModes = ['distance', 'duration'];
 
 const _placeTypes = [
   'football_pitch',

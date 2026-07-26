@@ -63,7 +63,7 @@ Write-Output ""
 if ($OpenGates.Count -eq 0) {
     Write-Output "No open evaluated gates remain."
     Write-Output "Run final Go/No-Go:"
-    Write-Output " - scripts/run_full_release_evidence_pipeline.ps1 -ApiBaseUrl `"https://app.airmius.com`" -RunGoNoGo"
+    Write-Output " - scripts/run_full_release_evidence_pipeline.ps1 -ApiBaseUrl `"https://airmius.com`" -RunGoNoGo"
     exit 0
 }
 

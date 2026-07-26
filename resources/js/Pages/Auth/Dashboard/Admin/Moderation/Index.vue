@@ -288,11 +288,11 @@ const updateFlag = async (flag, status, removeContent = false) => {
             <div v-else>
                 <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">User-Warnungen</h2>
-                        <p class="mt-1 text-sm text-secondary">Hier siehst du, wer bereits Warnpunkte hat und aus welcher Kategorie sie stammen.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('users_admin_ui.warning_title', 'User-Warnungen') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('users_admin.intro', 'Übersicht der Warnpunkte und Kategorien.') }}</p>
                     </div>
                     <select v-model="warningCategoryFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="all">Alle Kategorien</option>
+                        <option value="all">{{ tx('users_admin_ui.all_categories', 'Alle Kategorien') }}</option>
                         <option v-for="category in warningCategories" :key="category" :value="category">{{ category }}</option>
                     </select>
                 </div>
@@ -301,21 +301,21 @@ const updateFlag = async (flag, status, removeContent = false) => {
                     <table class="min-w-full text-left text-sm">
                         <thead class="border-b border-border bg-bg">
                             <tr>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">User</th>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Kategorie</th>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Severity</th>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Punkte</th>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Grund</th>
-                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Datum</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.user', 'User') }}</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.category', 'Kategorie') }}</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.severity', 'Severity') }}</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.points', 'Punkte') }}</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.reason', 'Grund') }}</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('users_admin_ui.date', 'Datum') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
                             <tr v-for="warning in filteredWarnings" :key="warning.id">
                                 <td class="px-4 py-3">
-                                    <p class="font-semibold text-primary">{{ warning.user?.name || 'Unbekannt' }}</p>
+                                    <p class="font-semibold text-primary">{{ warning.user?.name || tx('moderation.unknown_user', 'Unbekannt') }}</p>
                                     <p class="text-xs text-secondary">{{ warning.user?.email || '-' }}</p>
                                     <p v-if="warning.user?.account_status === 'suspended'" class="mt-1 text-xs font-semibold text-error">
-                                        Gesperrt bis {{ warning.user?.suspended_until || '-' }}
+                                        {{ t('users_admin.status.suspended_until', { date: warning.user?.suspended_until || '-' }) }}
                                     </p>
                                 </td>
                                 <td class="px-4 py-3">

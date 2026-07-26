@@ -16,7 +16,7 @@ defineEmits(['toggle-member-role', 'update-member-role'])
 <template>
     <aside class="space-y-4">
         <section class="rounded-lg border border-border bg-card p-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Teams</h2>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ $t('Teams') }}</h2>
             <div class="mt-4 space-y-2">
                 <Link
                     v-for="team in clubProfile.teams"
@@ -29,14 +29,14 @@ defineEmits(['toggle-member-role', 'update-member-role'])
                     </div>
                     <div class="min-w-0">
                         <p class="truncate text-sm font-medium text-primary">{{ team.name }}</p>
-                        <p class="text-xs text-secondary">{{ team.users_count }} Mitglieder</p>
+                        <p class="text-xs text-secondary">{{ team.users_count }} {{ $t('Mitglieder') }}</p>
                     </div>
                 </Link>
             </div>
         </section>
 
         <section class="rounded-lg border border-border bg-card p-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Admins</h2>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ $t('Admins') }}</h2>
             <div class="mt-4 space-y-2">
                 <Link
                     v-for="admin in clubProfile.admins"
@@ -54,7 +54,7 @@ defineEmits(['toggle-member-role', 'update-member-role'])
         </section>
 
         <section class="rounded-lg border border-border bg-card p-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ $t('Mitglieder') }}</h2>
             <div class="mt-4 space-y-2">
                 <div
                     v-for="member in clubProfile.members"
@@ -90,7 +90,7 @@ defineEmits(['toggle-member-role', 'update-member-role'])
                         </button>
 
                         <button type="button" class="ml-auto rounded bg-buttonPrimary px-3 py-1.5 text-xs font-semibold text-buttonTextPrimary" @click="$emit('update-member-role', member)">
-                            Speichern
+                            {{ $t('Speichern') }}
                         </button>
                     </div>
                 </div>

@@ -427,7 +427,7 @@ Route::post('/user/language', function (Request $request) {
     // ✅ Direkt anwenden
     app()->setLocale($lang);
 
-    return back()->with('message', 'Sprache erfolgreich aktualisiert!');
+    return back();
 
 })->name('user.language.update');
 

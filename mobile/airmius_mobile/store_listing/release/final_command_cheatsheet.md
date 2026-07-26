@@ -48,7 +48,7 @@ scripts/run_ios_real_device_smoke.sh --build-ipa
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
 ```
 
 ## 3. Prepare manual evidence folders
@@ -93,7 +93,7 @@ Only after every manual gate has direct evidence:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat" -RunGoNoGo
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat" -RunGoNoGo
 ```
 
 ## 8. Final outputs

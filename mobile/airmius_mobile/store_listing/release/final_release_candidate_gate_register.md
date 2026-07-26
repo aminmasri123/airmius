@@ -34,7 +34,7 @@ This register defines the remaining proof required before Airmius Mobile can be 
    - Required evidence: archive or `.ipa` exists and is accepted by TestFlight tooling.
 - Current status: Runbook prepared, build not executed.
 - Evidence command:
-  - `flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
+  - `flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true`
 - CI artifact:
   - `airmius-mobile-ios-release-evidence/ios-release-build-no-codesign.log`
   - `airmius-mobile-ios-release-evidence/artifacts/Runner.app.zip`

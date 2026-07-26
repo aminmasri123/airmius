@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-api_base_url="https://app.airmius.com"
+api_base_url="https://airmius.com"
 bundle_id="com.airmius.app"
 build_ipa=false
 preflight_only=false

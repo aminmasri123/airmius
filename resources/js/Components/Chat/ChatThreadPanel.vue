@@ -2,6 +2,10 @@
 import AppButton from '@/Components/UI/AppButton.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     selectedConversation: { type: Object, default: null },
@@ -81,7 +85,8 @@ const chatSearch = computed({
                 <button
                     type="button"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-inputBg lg:hidden"
-                    title="Zurück"
+                    :title="tx('chat.back')"
+                    :aria-label="tx('chat.back')"
                     @click="goBackToConversations"
                 >
                     <i class="las la-arrow-left text-xl"></i>
@@ -89,8 +94,8 @@ const chatSearch = computed({
                 <div class="min-w-0">
                     <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        {{ typeLabelFor(selectedConversation) }}chat - {{ selectedUsers.length }} Mitglieder
-                        <span v-if="isSelectedConversationMuted"> - stumm</span>
+                        {{ tx('chat.ui.header_summary', { type: typeLabelFor(selectedConversation), count: selectedUsers.length }) }}
+                        <span v-if="isSelectedConversationMuted"> - {{ tx('chat.muted') }}</span>
                     </p>
                 </div>
             </div>
@@ -107,7 +112,8 @@ const chatSearch = computed({
                 <button
                     type="button"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                    :title="isSelectedConversationMuted ? 'Benachrichtigungen aktivieren' : 'Chat stummschalten'"
+                    :title="isSelectedConversationMuted ? tx('chat.unmute') : tx('chat.mute')"
+                    :aria-label="isSelectedConversationMuted ? tx('chat.unmute') : tx('chat.mute')"
                     :disabled="muteForm.processing"
                     @click="muteSelectedConversation(isSelectedConversationMuted ? 0 : 480)"
                 >
@@ -117,7 +123,8 @@ const chatSearch = computed({
                     v-if="selectedConversation.type === 'group'"
                     type="button"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                    title="Gruppenprofil"
+                    :title="tx('chat.group_profile')"
+                    :aria-label="tx('chat.group_profile')"
                     @click="openConversationSettingsModal"
                 >
                     <i class="las la-cog text-xl"></i>
@@ -126,7 +133,8 @@ const chatSearch = computed({
                     v-if="selectedConversation.type === 'group'"
                     type="button"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                    title="Personen hinzufügen"
+                    :title="tx('chat.add_people')"
+                    :aria-label="tx('chat.add_people')"
                     @click="openAddMembersModal"
                 >
                     <i class="las la-user-plus text-xl"></i>
@@ -135,7 +143,8 @@ const chatSearch = computed({
                     v-if="canLeaveConversation"
                     type="button"
                     class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
-                    title="Gruppe verlassen"
+                    :title="tx('chat.leave_group')"
+                    :aria-label="tx('chat.leave_group')"
                     @click="openLeaveConversationModal"
                 >
                     <i class="las la-sign-out-alt text-xl"></i>
@@ -148,14 +157,15 @@ const chatSearch = computed({
             <input
                 v-model="chatSearch"
                 type="search"
-                placeholder="Nachrichten in diesem Chat suchen"
+                :placeholder="tx('chat.message_search')"
                 class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
             >
             <button
                 v-if="chatSearch"
                 type="button"
                 class="text-secondary hover:text-primary"
-                title="Suche leeren"
+                :title="tx('chat.clear_search')"
+                :aria-label="tx('chat.clear_search')"
                 @click="chatSearch = ''"
             >
                 <i class="las la-times"></i>
@@ -172,7 +182,7 @@ const chatSearch = computed({
                     :disabled="loadingOlderMessages"
                     @click="loadOlderMessages"
                 >
-                    {{ loadingOlderMessages ? 'Lade ältere Nachrichten...' : 'Ältere Nachrichten laden' }}
+                    {{ loadingOlderMessages ? tx('chat.loading_older') : tx('chat.load_older') }}
                 </AppButton>
             </div>
 
@@ -189,7 +199,7 @@ const chatSearch = computed({
                         : isOwnMessage(message)
                         ? 'cursor-pointer bg-buttonPrimary text-buttonTextPrimary'
                         : 'cursor-pointer bg-inputBg text-primary'"
-                    :title="isSystemMessage(message) ? undefined : 'Nachricht anklicken fuer Reaktionen'"
+                    :title="isSystemMessage(message) ? undefined : tx('chat.reactions_hint')"
                     @click="!isSystemMessage(message) && (openMessageActionsId = openMessageActionsId === message.id ? null : message.id)"
                 >
                     <div v-if="isSystemMessage(message)" class="flex items-center justify-center gap-2 text-center text-xs">
@@ -215,7 +225,7 @@ const chatSearch = computed({
                                     v-if="attachment.file?.id && isImageMime(attachment.file.type)"
                                     type="button"
                                     class="block w-full"
-                                    :title="`${attachmentLabel(attachment)} ansehen`"
+                                    :title="tx('chat.ui.view_attachment', { name: attachmentLabel(attachment) })"
                                     @click="openMediaPreview(attachment)"
                                 >
                                     <img
@@ -243,14 +253,14 @@ const chatSearch = computed({
                                     :href="attachment.file.id ? fileDownloadUrl(attachment.file) : undefined"
                                     class="flex items-center gap-3 px-3 py-2 text-xs"
                                     :class="attachment.file.id ? 'hover:bg-inputBg/70' : 'cursor-default'"
-                                    :title="`${attachmentLabel(attachment)} herunterladen`"
+                                    :title="tx('chat.ui.download_attachment', { name: attachmentLabel(attachment) })"
                                     @click="trackDownload(attachment.file)"
                                 >
                                     <i :class="[fileIconFor(attachment.file), 'text-2xl']"></i>
                                     <span class="min-w-0 flex-1">
                                         <span class="block truncate font-semibold">{{ attachmentLabel(attachment) }}</span>
                                         <span class="block text-[11px] opacity-75">
-                                            {{ fileExtension(attachment.file).toUpperCase() || 'DATEI' }}
+                                            {{ fileExtension(attachment.file).toUpperCase() || tx('chat.file').toUpperCase() }}
                                             <span v-if="fileSizeLabel(attachment.file.size)"> - {{ fileSizeLabel(attachment.file.size) }}</span>
                                         </span>
                                     </span>
@@ -271,7 +281,7 @@ const chatSearch = computed({
                                 class="mt-2 text-xs font-semibold opacity-80 hover:opacity-100"
                                 @click="cancelUpload(message)"
                             >
-                                Upload abbrechen
+                                {{ tx('chat.ui.cancel_upload') }}
                             </button>
                         </div>
 
@@ -284,7 +294,7 @@ const chatSearch = computed({
                                         type="button"
                                         class="inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition"
                                         :class="userReaction(message) === reaction ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 bg-input text-secondary hover:text-primary'"
-                                        :title="reaction"
+                                        :title="tx(`chat.ui.reactions.${reaction}`)"
                                         @click.stop="reactToMessage(message, reaction); openMessageActionsId = null"
                                     >
                                         <i :class="['las text-lg', reaction === 'heart' ? 'la-heart' : reaction === 'ok' ? 'la-check' : 'la-thumbs-up']"></i>
@@ -298,7 +308,7 @@ const chatSearch = computed({
                                     @click.stop="deleteMessage(message); openMessageActionsId = null"
                                 >
                                     <i class="las la-trash text-lg"></i>
-                                    Für alle löschen
+                                    {{ tx('chat.ui.delete_for_all') }}
                                 </button>
                                 <button
                                     v-if="!String(message.id).startsWith('local-')"
@@ -307,25 +317,25 @@ const chatSearch = computed({
                                     @click.stop="hideMessageForMe(message); openMessageActionsId = null"
                                 >
                                     <i class="las la-eye-slash text-lg"></i>
-                                    Nur für mich ausblenden
+                                    {{ tx('chat.ui.hide_for_me') }}
                                 </button>
                                 <button
                                     v-if="message.local_status === 'failed'"
                                     type="button"
                                     class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-error transition hover:bg-input"
-                                    :title="message.error_message || 'Erneut senden'"
+                                    :title="message.error_message || tx('chat.ui.retry')"
                                     @click.stop="retryMessage(message); openMessageActionsId = null"
                                 >
                                     <i class="las la-redo-alt text-lg"></i>
-                                    Erneut senden
+                                    {{ tx('chat.ui.retry') }}
                                 </button>
                                 <div
                                     v-if="isOwnMessage(message) && !String(message.id).startsWith('local-') && !canDeleteMessage(message) && message.local_status !== 'failed'"
                                     class="flex items-center gap-2 px-3 py-2.5 font-semibold text-secondary/70"
-                                    title="Bereits gelesen - nicht mehr löschbar"
+                                    :title="tx('chat.ui.not_deletable')"
                                 >
                                     <i class="las la-lock text-lg"></i>
-                                    Nicht mehr löschbar
+                                    {{ tx('chat.ui.not_deletable') }}
                                 </div>
                                 <button
                                     v-if="!isOwnMessage(message) && !String(message.id).startsWith('local-')"
@@ -334,7 +344,7 @@ const chatSearch = computed({
                                     @click.stop="openReport(message); openMessageActionsId = null"
                                 >
                                     <i class="las la-flag text-lg"></i>
-                                    Nachricht melden
+                                    {{ tx('chat.ui.report_message') }}
                                 </button>
                             </div>
                         </div>
@@ -369,11 +379,11 @@ const chatSearch = computed({
             </div>
 
             <div v-if="selectedMessages.length === 0" class="flex h-full items-center justify-center text-sm text-secondary">
-                Keine Nachrichten in diesem Chat.
+                {{ tx('chat.no_messages') }}
             </div>
 
             <div v-if="activeTypingUsers.length" class="text-xs text-secondary">
-                {{ activeTypingUsers.map((user) => user.name).join(', ') }} schreibt...
+                {{ tx('chat.ui.typing', { names: activeTypingUsers.map((user) => user.name).join(', ') }) }}
             </div>
         </div>
 
@@ -381,13 +391,13 @@ const chatSearch = computed({
             <AppLoadingState
                 v-if="messageForm.processing"
                 class="mb-2"
-                label="Nachricht wird gesendet..."
+                :label="tx('chat.ui.sending')"
                 inline
             />
             <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
                 <span v-for="(file, index) in messageForm.attachments" :key="`${file.name}-${index}`" class="inline-flex max-w-full items-center gap-2 rounded border border-border px-2 py-1">
                     {{ file.name }}
-                    <button type="button" class="text-secondary hover:text-primary" title="Anhang entfernen" @click="removePendingAttachment(index)">
+                    <button type="button" class="text-secondary hover:text-primary" :title="tx('chat.ui.remove_attachment')" @click="removePendingAttachment(index)">
                         <i class="las la-times"></i>
                     </button>
                 </span>
@@ -396,12 +406,12 @@ const chatSearch = computed({
                 <textarea
                     v-model="messageForm.message"
                     rows="2"
-                    placeholder="Nachricht schreiben..."
+                    :placeholder="tx('chat.ui.message_placeholder')"
                     class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
                     @keydown.enter.exact.prevent="sendMessage"
                     @input="announceTyping"
                 />
-                <label class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                <label class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg" :aria-label="tx('chat.file')">
                     <i class="las la-paperclip text-xl"></i>
                     <input :ref="setAttachmentInput" type="file" multiple class="hidden" @change="onAttachmentChange">
                 </label>
@@ -410,8 +420,8 @@ const chatSearch = computed({
                     :disabled="messageForm.processing || !canSendMessage"
                     :loading="messageForm.processing"
                     icon-only
-                    aria-label="Nachricht senden"
-                    title="Nachricht senden"
+                    :aria-label="tx('chat.ui.send_message')"
+                    :title="tx('chat.ui.send_message')"
                 >
                     <i v-if="!messageForm.processing" class="las la-paper-plane text-xl" aria-hidden="true"></i>
                 </AppButton>
@@ -423,21 +433,18 @@ const chatSearch = computed({
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-inputBg text-primary">
                     <i class="las la-user-lock text-3xl"></i>
                 </div>
-                <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geöffnet</h2>
+                <h2 class="mt-4 text-lg font-semibold text-primary">{{ tx('chat.ui.no_chat_open') }}</h2>
                 <p class="mt-2 text-sm leading-6 text-secondary">
-                    Aus DatenschutzGründen wird keine Konversation automatisch angezeigt.
-                    Wähle bewusst eine Person, ein Team oder eine Gruppe aus.
+                    {{ tx('chat.ui.no_chat_hint') }}
                 </p>
                 <button
                     type="button"
                     class="mt-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover lg:hidden"
                     @click="goBackToConversations"
                 >
-                    Chat auswählen
+                    {{ tx('chat.ui.choose_chat') }}
                 </button>
             </div>
         </div>
     </section>
 </template>
-
-

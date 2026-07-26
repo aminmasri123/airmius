@@ -2,6 +2,7 @@
 import { usePermissions } from '@/composables/usePermissions'
 import { Link, useForm } from '@inertiajs/vue3'
 import { nextTick, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     post: { type: Object, required: true },
@@ -11,6 +12,11 @@ const props = defineProps({
 const emit = defineEmits(['delete-comment', 'report-comment'])
 
 const { can } = usePermissions()
+const { t } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const commentInputs = reactive({})
 const commentForms = reactive({})
 const commentEditForms = reactive({})
@@ -54,7 +60,7 @@ const loadAllComments = async () => {
         const response = await window.axios.get(route('auth.comments.index', props.post.id))
         props.post.comments = response.data.comments || []
     } catch (error) {
-        commentsErrors[props.post.id] = 'Kommentare konnten nicht geladen werden.'
+        commentsErrors[props.post.id] = tx('Kommentare konnten nicht geladen werden.', 'Kommentare konnten nicht geladen werden.')
     } finally {
         commentsLoading[props.post.id] = false
     }
@@ -141,7 +147,7 @@ defineExpose({ focusComment })
                             v-if="canEditComment(comment)"
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
-                            title="Kommentar bearbeiten"
+                            :title="tx('Kommentar bearbeiten', 'Kommentar bearbeiten')"
                             @click="startEditComment(comment)"
                         >
                             <i class="las la-edit"></i>
@@ -150,7 +156,7 @@ defineExpose({ focusComment })
                             v-if="canDeleteComment(comment)"
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-error/10 hover:text-error"
-                            title="Kommentar löschen"
+                            :title="tx('Kommentar löschen', 'Kommentar löschen')"
                             @click="emit('delete-comment', comment)"
                         >
                             <i class="las la-trash"></i>
@@ -159,7 +165,7 @@ defineExpose({ focusComment })
                             v-if="comment.user_id !== user?.id"
                             type="button"
                             class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
-                            title="Kommentar melden"
+                            :title="tx('Kommentar melden', 'Kommentar melden')"
                             @click="emit('report-comment', comment)"
                         >
                             <i class="las la-flag"></i>
@@ -186,14 +192,14 @@ defineExpose({ focusComment })
                             class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
                             :disabled="commentEditFormFor(comment).processing || !commentEditFormFor(comment).content.trim()"
                         >
-                            Speichern
+                            {{ tx('Speichern', 'Speichern') }}
                         </button>
                         <button
                             type="button"
                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                             @click="cancelEditComment(comment)"
                         >
-                            Abbrechen
+                            {{ tx('Abbrechen', 'Abbrechen') }}
                         </button>
                     </div>
                 </form>
@@ -209,7 +215,7 @@ defineExpose({ focusComment })
             class="flex flex-col gap-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-xs text-secondary sm:flex-row sm:items-center sm:justify-between"
         >
             <span>
-                Es werden die neuesten {{ post.comments?.length || 0 }} von {{ post.comments_count }} Kommentaren angezeigt.
+                {{ tx('Es werden die neuesten {shown} von {total} Kommentaren angezeigt.', 'Es werden die neuesten {shown} von {total} Kommentaren angezeigt.', { shown: post.comments?.length || 0, total: post.comments_count }) }}
             </span>
             <button
                 type="button"
@@ -218,7 +224,7 @@ defineExpose({ focusComment })
                 @click="loadAllComments"
             >
                 <i class="las la-comments"></i>
-                {{ commentsLoading[post.id] ? 'Lade...' : 'Alle anzeigen' }}
+                {{ commentsLoading[post.id] ? tx('Lade...', 'Lade...') : tx('Alle anzeigen', 'Alle anzeigen') }}
             </button>
         </div>
 
@@ -234,7 +240,7 @@ defineExpose({ focusComment })
                 v-model="commentFormFor().content"
                 :ref="setCommentInput"
                 type="text"
-                placeholder="Kommentar schreiben..."
+                :placeholder="tx('Kommentar schreiben...', 'Kommentar schreiben...')"
                 class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
             />
 
@@ -248,4 +254,3 @@ defineExpose({ focusComment })
         </form>
     </div>
 </template>
-

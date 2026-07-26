@@ -76,6 +76,18 @@ class MobileTrainerCockpitApiTest extends TestCase
         $this->getJson('/api/v1/trainer-cockpit')->assertForbidden();
     }
 
+    public function test_trainer_cockpit_route_works_with_trailing_slash(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/trainer-cockpit/')
+            ->assertOk()
+            ->assertJsonPath('data.summary.teams', 1)
+            ->assertJsonPath('data.teams.0.name', $team->name);
+    }
+
     public function test_coach_can_send_feedback_only_for_visible_training_log(): void
     {
         [$coach, $athlete, $team] = $this->coachTeam();

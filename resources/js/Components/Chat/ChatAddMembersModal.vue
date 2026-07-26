@@ -1,4 +1,9 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
+
 defineProps({
     addMembersForm: { type: Object, required: true },
     availableUsersToAdd: { type: Array, default: () => [] },
@@ -17,10 +22,10 @@ defineEmits(['close', 'submit', 'toggle-member'])
             <div class="border-b border-border p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Personen einladen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.invite_people') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ titleFor(selectedConversation) }}</p>
                     </div>
-                    <button type="button" class="text-secondary hover:text-primary" @click="$emit('close')">
+                    <button type="button" class="text-secondary hover:text-primary" :aria-label="tx('chat.ui.close')" @click="$emit('close')">
                         <i class="las la-times text-2xl"></i>
                     </button>
                 </div>
@@ -52,7 +57,7 @@ defineEmits(['close', 'submit', 'toggle-member'])
                     </button>
 
                     <p v-if="availableUsersToAdd.length === 0" class="p-6 text-center text-sm text-secondary">
-                        Keine weiteren Personen verfügbar.
+                        {{ tx('chat.ui.no_more_people') }}
                     </p>
                 </div>
 
@@ -63,14 +68,14 @@ defineEmits(['close', 'submit', 'toggle-member'])
                             class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                             @click="$emit('close')"
                         >
-                            Abbrechen
+                            {{ tx('chat.ui.cancel') }}
                         </button>
                         <button
                             type="submit"
                             :disabled="addMembersForm.processing || addMembersForm.participant_ids.length === 0"
                             class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            Einladung senden
+                            {{ tx('chat.ui.send_invitation') }}
                         </button>
                     </div>
                 </div>
@@ -78,4 +83,3 @@ defineEmits(['close', 'submit', 'toggle-member'])
         </div>
     </div>
 </template>
-

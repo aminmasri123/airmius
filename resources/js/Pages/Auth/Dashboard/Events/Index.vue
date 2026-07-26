@@ -724,7 +724,7 @@ const resetFilters = () => {
                         <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-calendar-check text-xl"></i>
                         </span>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Events & Training</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Events & Training') }}</p>
                     </div>
 
                     <h1 class="mt-3 text-2xl font-bold text-primary sm:text-3xl">
@@ -737,7 +737,7 @@ const resetFilters = () => {
 
                     <div v-if="nextEvent" class="mt-4 flex flex-wrap items-center gap-2 text-sm">
                         <span class="rounded-full bg-air-green/10 px-3 py-1 font-semibold text-air-green">
-                            Nächstes Event
+                            {{ $t('events.next_occurrence') }}
                         </span>
                         <span class="text-secondary">
                             {{ nextEvent.title }} · {{ eventDateTimeLabel(nextEvent) }}
@@ -757,15 +757,15 @@ const resetFilters = () => {
 
             <div class="grid grid-cols-3 gap-2 border-t border-border p-3 sm:gap-0 sm:p-0">
                 <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:border-r sm:bg-transparent sm:p-4 sm:text-left">
-                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Kommend</p>
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">{{ $t('events.next_occurrence') }}</p>
                     <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ upcomingEventsCount }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:border-r sm:bg-transparent sm:p-4 sm:text-left">
-                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Heute</p>
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">{{ $t('Heute') }}</p>
                     <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ todayEventsCount }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:bg-transparent sm:p-4 sm:text-left">
-                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Abgesagt</p>
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">{{ $t('Abgesagt') }}</p>
                     <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ cancelledEventsCount }}</p>
                 </div>
             </div>
@@ -777,7 +777,7 @@ const resetFilters = () => {
                     {{ authorizationMessage }}
                 </p>
                 <Link :href="route('guest.pricing')" class="shrink-0 rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                    Upgrade ansehen
+                    {{ $t('Upgrade ansehen') }}
                 </Link>
             </div>
         </div>
@@ -786,13 +786,13 @@ const resetFilters = () => {
             <form class="space-y-4" @submit.prevent="applyFilters">
                 <div class="flex flex-col gap-3 lg:flex-row">
                     <label class="relative min-w-0 flex-1" for="event-search">
-                        <span class="sr-only">Suche</span>
+                        <span class="sr-only">{{ $t('Suchen') }}</span>
                         <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-xl text-secondary"></i>
                         <input
                             id="event-search"
                             v-model="filterForm.search"
                             class="h-12 w-full rounded-lg border border-border bg-inputBg pl-10 pr-3 text-sm text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                            placeholder="Suche nach Titel, Ort, Team oder Verein"
+                            :placeholder="$t('Suche nach Titel, Ort, Team oder Verein')"
                         >
                     </label>
 
@@ -803,7 +803,7 @@ const resetFilters = () => {
                             :class="filterForm.period === 'upcoming' ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-secondary hover:border-borderHover hover:text-primary'"
                             @click="filterForm.period = 'upcoming'; applyFilters()"
                         >
-                            Kommend
+                            {{ $t('Kommend') }}
                         </button>
                         <button
                             type="button"
@@ -811,7 +811,7 @@ const resetFilters = () => {
                             :class="filterForm.period === 'past' ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-secondary hover:border-borderHover hover:text-primary'"
                             @click="filterForm.period = 'past'; applyFilters()"
                         >
-                            Vergangen
+                            {{ $t('Vergangen') }}
                         </button>
                         <button
                             type="button"
@@ -819,7 +819,7 @@ const resetFilters = () => {
                             :class="filterForm.period === 'all' ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-secondary hover:border-borderHover hover:text-primary'"
                             @click="filterForm.period = 'all'; applyFilters()"
                         >
-                            Alle
+                            {{ $t('Alle') }}
                         </button>
                     </div>
 
@@ -829,14 +829,14 @@ const resetFilters = () => {
                         @click="filterPanelOpen = !filterPanelOpen"
                     >
                         <i class="las la-sliders-h text-lg"></i>
-                        Filter
+                        {{ $t('Filter') }}
                         <span v-if="activeFilterCount" class="rounded-full bg-buttonPrimary px-2 py-0.5 text-xs text-buttonTextPrimary">
                             {{ activeFilterCount }}
                         </span>
                     </button>
 
                     <button class="h-12 rounded-lg bg-buttonPrimary px-5 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
-                        Suchen
+                        {{ $t('Suchen') }}
                     </button>
                 </div>
 
@@ -844,10 +844,10 @@ const resetFilters = () => {
                     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-type">
-                                Typ
+                                {{ $t('events.fields.type') }}
                             </label>
                             <select id="event-filter-type" v-model="filterForm.type" class="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
-                                <option value="">Alle Typen</option>
+                                <option value="">{{ $t('guest.events.all_types') }}</option>
                                 <option v-for="type in eventTypes" :key="type" :value="type">
                                     {{ $t(typeLabels[type] || type) }}
                                 </option>
@@ -856,10 +856,10 @@ const resetFilters = () => {
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-visibility">
-                                Sichtbarkeit
+                                {{ $t('events.fields.visibility') }}
                             </label>
                             <select id="event-filter-visibility" v-model="filterForm.visibility" class="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
-                                <option value="">Alle</option>
+                                <option value="">{{ $t('Alle') }}</option>
                                 <option v-for="visibility in visibilities" :key="visibility" :value="visibility">
                                     {{ $t(visibilityLabels[visibility] || visibility) }}
                                 </option>
@@ -868,10 +868,10 @@ const resetFilters = () => {
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-club">
-                                Verein
+                                {{ $t('events.fields.club') }}
                             </label>
                             <select id="event-filter-club" v-model="filterForm.club_id" class="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
-                                <option value="">Alle Vereine</option>
+                                <option value="">{{ $t('Alle Vereine') }}</option>
                                 <option v-for="club in clubs" :key="club.id" :value="club.id">
                                     {{ club.name }}
                                 </option>
@@ -880,10 +880,10 @@ const resetFilters = () => {
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-team">
-                                Team
+                                {{ $t('events.fields.team') }}
                             </label>
                             <select id="event-filter-team" v-model="filterForm.team_id" class="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
-                                <option value="">Alle Teams</option>
+                                <option value="">{{ $t('Alle Teams') }}</option>
                                 <option v-for="team in filteredFilterTeams" :key="team.id" :value="team.id">
                                     {{ team.name }}
                                 </option>
@@ -892,7 +892,7 @@ const resetFilters = () => {
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-radius">
-                                PLZ-/Stadt-Nähe
+                                {{ $t('PLZ-/Stadt-Nähe') }}
                             </label>
                             <div class="flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-3">
                                 <input
@@ -907,17 +907,17 @@ const resetFilters = () => {
                                 <span class="text-sm font-semibold text-secondary">km</span>
                             </div>
                             <p class="mt-1 text-xs text-secondary">
-                                Näherung über dein Profil, PLZ und Stadt.
+                                {{ $t('Näherung über dein Profil, PLZ und Stadt.') }}
                             </p>
                         </div>
 
                         <div class="md:col-span-2 xl:col-span-4">
                             <div class="mb-2 flex items-center justify-between gap-3">
                                 <label class="block text-xs font-semibold uppercase tracking-wide text-secondary">
-                                    Sportarten
+                                    {{ $t('Sportarten') }}
                                 </label>
                                 <span class="text-xs font-semibold text-secondary">
-                                    {{ selectedSportsCount }} ausgewählt
+                                    {{ selectedSportsCount }} {{ $t('ausgewählt') }}
                                 </span>
                             </div>
                             <div class="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-card p-2">
@@ -939,13 +939,13 @@ const resetFilters = () => {
 
                     <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="h-11 rounded-lg border border-border px-4 text-sm font-semibold text-secondary transition hover:border-borderHover hover:text-primary" @click="resetFilters">
-                            Zurücksetzen
+                            {{ $t('Zurücksetzen') }}
                         </button>
                         <button type="button" class="h-11 rounded-lg border border-buttonPrimary px-4 text-sm font-semibold text-buttonPrimary transition hover:bg-buttonPrimary/10" @click="saveDefaultFilters">
-                            Als Standard speichern
+                            {{ $t('Als Standard speichern') }}
                         </button>
                         <button class="h-11 rounded-lg bg-buttonPrimary px-5 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
-                            Filter anwenden
+                            {{ $t('Filter anwenden') }}
                         </button>
                     </div>
                 </div>
@@ -955,8 +955,8 @@ const resetFilters = () => {
         <section v-if="eventItems.length || calendarEventItems.length" class="rounded-lg border border-border bg-card">
             <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Ansicht</p>
-                    <h2 class="mt-1 text-lg font-bold text-primary">Kalender & Liste</h2>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Ansicht') }}</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">{{ $t('Kalender & Liste') }}</h2>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 rounded-lg border border-border bg-inputBg p-1">
@@ -967,7 +967,7 @@ const resetFilters = () => {
                         @click="viewMode = 'calendar'"
                     >
                         <i class="las la-calendar mr-1"></i>
-                        Kalender
+                        {{ $t('Kalender') }}
                     </button>
                     <button
                         type="button"
@@ -976,7 +976,7 @@ const resetFilters = () => {
                         @click="viewMode = 'list'"
                     >
                         <i class="las la-list mr-1"></i>
-                        Liste
+                        {{ $t('Liste') }}
                     </button>
                 </div>
             </div>
@@ -987,7 +987,7 @@ const resetFilters = () => {
                         <button
                             type="button"
                             class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary hover:border-borderHover hover:text-primary"
-                            aria-label="Vorheriger Monat"
+                            :aria-label="$t('Vorheriger Monat')"
                             @click="moveCalendarMonth(-1)"
                         >
                             <i class="las la-angle-left text-xl"></i>
@@ -1002,14 +1002,14 @@ const resetFilters = () => {
                                 class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-secondary hover:border-borderHover hover:text-primary"
                                 @click="jumpToToday"
                             >
-                                Heute
+                                {{ $t('Heute') }}
                             </button>
                         </div>
 
                         <button
                             type="button"
                             class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary hover:border-borderHover hover:text-primary"
-                            aria-label="Nächster Monat"
+                            :aria-label="$t('Nächster Monat')"
                             @click="moveCalendarMonth(1)"
                         >
                             <i class="las la-angle-right text-xl"></i>
@@ -1350,8 +1350,8 @@ const resetFilters = () => {
                             </div>
 
                             <div v-else class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
-                                <p class="font-semibold text-primary">Keine Intervalle im kostenlosen Konto</p>
-                                <p class="mt-1">Du kannst einfache Einzel-Events erstellen. Wiederholungen sind ab einem passenden Paket verfügbar.</p>
+                <p class="font-semibold text-primary">{{ $t('Keine Intervalle im kostenlosen Konto') }}</p>
+                <p class="mt-1">{{ $t('Du kannst einfache Einzel-Events erstellen. Wiederholungen sind ab einem passenden Paket verfügbar.') }}</p>
                             </div>
 
                             <div v-if="form.recurring">
@@ -1394,45 +1394,45 @@ const resetFilters = () => {
 
                             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div class="sm:col-span-2">
-                                    <label for="event-location-name" class="block text-sm font-semibold text-primary">Ort / Treffpunkt</label>
+                    <label for="event-location-name" class="block text-sm font-semibold text-primary">{{ $t('Ort / Treffpunkt') }}</label>
                                     <input id="event-location-name" v-model="form.location_name"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="z. B. Waldhaus, Sporthalle, Vereinsheim">
+                                        :placeholder="$t('z. B. Waldhaus, Sporthalle, Vereinsheim')">
                                 </div>
 
                                 <div>
-                                    <label for="event-location-street" class="block text-sm font-semibold text-primary">Straße</label>
+                    <label for="event-location-street" class="block text-sm font-semibold text-primary">{{ $t('Straße') }}</label>
                                     <input id="event-location-street" v-model="form.location_street"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="Straße">
+                                        :placeholder="$t('Straße')">
                                 </div>
 
                                 <div>
-                                    <label for="event-location-house-number" class="block text-sm font-semibold text-primary">Nr.</label>
+                    <label for="event-location-house-number" class="block text-sm font-semibold text-primary">{{ $t('Nr.') }}</label>
                                     <input id="event-location-house-number" v-model="form.location_house_number"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="10">
+                                        :placeholder="$t('10')">
                                 </div>
 
                                 <div>
-                                    <label for="event-location-postal-code" class="block text-sm font-semibold text-primary">PLZ</label>
+                    <label for="event-location-postal-code" class="block text-sm font-semibold text-primary">{{ $t('PLZ') }}</label>
                                     <input id="event-location-postal-code" v-model="form.location_postal_code"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="66119">
+                                        :placeholder="$t('66119')">
                                 </div>
 
                                 <div>
-                                    <label for="event-location-city" class="block text-sm font-semibold text-primary">Stadt</label>
+                    <label for="event-location-city" class="block text-sm font-semibold text-primary">{{ $t('Stadt') }}</label>
                                     <input id="event-location-city" v-model="form.location_city"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="Saarbrücken">
+                                        :placeholder="$t('Saarbrücken')">
                                 </div>
 
                                 <div>
-                                    <label for="event-location-country" class="block text-sm font-semibold text-primary">Land</label>
+                    <label for="event-location-country" class="block text-sm font-semibold text-primary">{{ $t('Land') }}</label>
                                     <input id="event-location-country" v-model="form.location_country" maxlength="2"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 uppercase text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                        placeholder="DE">
+                                        :placeholder="$t('DE')">
                                 </div>
                             </div>
 
@@ -1443,7 +1443,7 @@ const resetFilters = () => {
 
                                 <input id="event-max-participants" v-model="form.max_participants"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                    type="number" min="1" max="100000" inputmode="numeric" placeholder="Leer lassen = unbegrenzt">
+                                    type="number" min="1" max="100000" inputmode="numeric" :placeholder="$t('Leer lassen = unbegrenzt')">
 
                                 <p class="mt-1 text-xs text-secondary">
                                     Nur Zusagen zählen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.
@@ -1465,7 +1465,7 @@ const resetFilters = () => {
                                     :disabled="form.visibility !== 'private' || !form.team_id"
                                 >
                                 <span>
-                                    <span class="block font-semibold">Mit Strafkatalog arbeiten</span>
+                                    <span class="block font-semibold">{{ $t('Mit Strafkatalog arbeiten') }}</span>
                                     <span class="mt-1 block text-secondary">
                                         Berechtigte Teamrollen können während des Events anwesenden Spielern Strafen aus der Mannschaftskasse zuweisen.
                                     </span>

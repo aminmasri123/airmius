@@ -48,11 +48,11 @@ const reasonModel = computed({
             </div>
 
             <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
-                Bitte gib <strong>{{ deleteTarget.confirmText || 'delete' }}</strong> ein, um die Aktion zu bestätigen.
+                {{ $t('teams_workspace.delete.instruction', { confirmation: deleteTarget.confirmText || 'delete' }) }}
             </div>
 
             <label class="block">
-                <span class="text-sm font-semibold text-primary">Bestätigung</span>
+                <span class="text-sm font-semibold text-primary">{{ $t('teams_workspace.delete.confirmation') }}</span>
                 <input
                     v-model="confirmationModel"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -62,14 +62,14 @@ const reasonModel = computed({
             </label>
 
             <label v-if="deleteTarget.requiresReason" class="block">
-                <span class="text-sm font-semibold text-primary">Begründung</span>
+                <span class="text-sm font-semibold text-primary">{{ $t('teams_workspace.delete.reason') }}</span>
                 <textarea
                     v-model="reasonModel"
                     rows="4"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                    placeholder="Warum möchtest du dieses Team verlassen?"
+                    :placeholder="$t('teams_workspace.delete.reason_placeholder')"
                 ></textarea>
-                <p class="mt-1 text-xs text-secondary">Die Begründung wird an die Vereinsverantwortlichen gesendet.</p>
+                <p class="mt-1 text-xs text-secondary">{{ $t('teams_workspace.delete.reason_hint') }}</p>
             </label>
 
             <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -78,7 +78,7 @@ const reasonModel = computed({
                     class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                     @click="$emit('close')"
                 >
-                    Abbrechen
+                    {{ $t('teams_workspace.delete.cancel') }}
                 </button>
                 <button
                     type="button"
@@ -86,10 +86,9 @@ const reasonModel = computed({
                     :disabled="deleteConfirmation !== (deleteTarget.confirmText || 'delete')"
                     @click="$emit('confirm')"
                 >
-                    {{ deleteTarget.buttonLabel || 'Endgültig löschen' }}
+                    {{ deleteTarget.buttonLabel || $t('teams_workspace.delete.permanent') }}
                 </button>
             </div>
         </div>
     </Modal>
 </template>
-

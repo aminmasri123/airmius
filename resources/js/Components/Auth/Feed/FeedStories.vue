@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { router, useForm } from '@inertiajs/vue3'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canCreate: { type: Boolean, default: false },
@@ -12,6 +13,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['report-story'])
+const { t } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 
 const storyDuration = 6500
 const progressIntervalMs = 80
@@ -61,14 +67,14 @@ const availableTeams = computed(() => {
     return props.teams.filter((team) => String(team.club_id) === String(storyForm.club_id))
 })
 const publisherOptions = computed(() => {
-    const options = [{ value: 'user', label: 'Als ich' }]
+    const options = [{ value: 'user', label: tx('Als ich', 'Als ich') }]
 
     if (selectedClub.value?.can_publish_as) {
-        options.push({ value: 'club', label: 'Als Verein' })
+        options.push({ value: 'club', label: tx('Als Verein', 'Als Verein') })
     }
 
     if (selectedTeam.value?.can_publish_as) {
-        options.push({ value: 'team', label: 'Als Team' })
+        options.push({ value: 'team', label: tx('Als Team', 'Als Team') })
     }
 
     return options
@@ -116,19 +122,15 @@ const isVideoStory = computed(() => activeStory.value?.media_kind === 'video')
 
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const storyName = (storyOrGroup) => storyOrGroup?.actor?.type === 'user' && storyOrGroup?.user_id === props.user?.id
-    ? 'Deine Story'
+    ? tx('Deine Story', 'Deine Story')
     : storyOrGroup?.actor?.name || storyOrGroup?.user?.name
-const visibilityLabel = (visibility) => ({
-    public: 'öffentlich',
-    organization: 'Verein',
-    team: 'Team',
-}[visibility] || visibility)
+const visibilityLabel = (visibility) => tx(`feed.visibility.${visibility}`, visibility)
 const reactionOptions = [
-    { key: 'clap', label: 'Applaus', icon: 'las la-sign-language' },
-    { key: 'fire', label: 'Stark', icon: 'las la-fire' },
-    { key: 'heart', label: 'Liebe', icon: 'las la-heart' },
-    { key: 'strong', label: 'Power', icon: 'las la-dumbbell' },
-    { key: 'wow', label: 'Wow', icon: 'las la-star' },
+    { key: 'clap', label: tx('Applaus', 'Applaus'), icon: 'las la-sign-language' },
+    { key: 'fire', label: tx('Stark', 'Stark'), icon: 'las la-fire' },
+    { key: 'heart', label: tx('Liebe', 'Liebe'), icon: 'las la-heart' },
+    { key: 'strong', label: tx('Power', 'Power'), icon: 'las la-dumbbell' },
+    { key: 'wow', label: tx('Wow', 'Wow'), icon: 'las la-star' },
 ]
 
 watch(() => storyForm.visibility, (visibility) => {
@@ -568,8 +570,8 @@ const reactToStory = (reaction) => {
                 >
                     <div class="mb-4 flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Story</p>
-                            <h2 class="text-lg font-semibold text-primary">Neue Story erstellen</h2>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('Story', 'Story') }}</p>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('Neue Story erstellen', 'Neue Story erstellen') }}</h2>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCreate">
                             <i class="las la-times text-2xl"></i>
@@ -596,7 +598,7 @@ const reactToStory = (reaction) => {
                             ></video>
                             <span v-else class="flex flex-col items-center gap-2 text-sm">
                                 <i class="las la-camera text-3xl"></i>
-                                Bild oder Video wählen
+                                {{ tx('Bild oder Video wählen', 'Bild oder Video wählen') }}
                             </span>
                         </button>
 
@@ -611,7 +613,7 @@ const reactToStory = (reaction) => {
                         <textarea
                             v-model="storyForm.caption"
                             rows="3"
-                            placeholder="Kurzer Text zur Story..."
+                            :placeholder="tx('Kurzer Text zur Story...', 'Kurzer Text zur Story...')"
                             class="w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         />
                         <p v-if="storyForm.errors.caption" class="text-xs text-error">{{ storyForm.errors.caption }}</p>
@@ -632,7 +634,7 @@ const reactToStory = (reaction) => {
                                 v-model="storyForm.club_id"
                                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             >
-                                <option value="">Verein wählen</option>
+                                <option value="">{{ tx('Verein wählen', 'Verein wählen') }}</option>
                                 <option v-for="club in clubs" :key="club.id" :value="club.id">
                                     {{ club.name }}
                                 </option>
@@ -643,7 +645,7 @@ const reactToStory = (reaction) => {
                                 v-model="storyForm.team_id"
                                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary sm:col-span-2"
                             >
-                                <option value="">Team wählen</option>
+                                <option value="">{{ tx('Team wählen', 'Team wählen') }}</option>
                                 <option v-for="team in availableTeams" :key="team.id" :value="team.id">
                                     {{ team.name }}
                                 </option>
@@ -667,14 +669,14 @@ const reactToStory = (reaction) => {
                             class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary"
                             @click="closeCreate"
                         >
-                            Abbrechen
+                            {{ tx('Abbrechen', 'Abbrechen') }}
                         </button>
                         <button
                             type="submit"
                             class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
                             :disabled="storyUploading || storyForm.processing || !hasMedia || (storyForm.visibility === 'organization' && !storyForm.club_id) || (storyForm.visibility === 'team' && !storyForm.team_id)"
                         >
-                            Story posten
+                            {{ tx('Story posten', 'Story posten') }}
                         </button>
                     </div>
                 </form>
@@ -722,15 +724,15 @@ const reactToStory = (reaction) => {
                                 <p class="truncate text-sm font-semibold">{{ storyName(activeStory) }}</p>
                                 <p class="text-xs text-white/70">
                                     {{ visibilityLabel(activeStory.visibility) }}
-                                    <span v-if="activeStory.views_count !== undefined"> &middot; {{ activeStory.views_count }} gesehen</span>
-                                    <span v-if="activeStory.reactions_count"> &middot; {{ activeStory.reactions_count }} Reaktionen</span>
+                                    <span v-if="activeStory.views_count !== undefined"> &middot; {{ activeStory.views_count }} {{ tx('gesehen', 'gesehen') }}</span>
+                                    <span v-if="activeStory.reactions_count"> &middot; {{ activeStory.reactions_count }} {{ tx('Reaktionen', 'Reaktionen') }}</span>
                                 </p>
                             </div>
                             <button
                                 v-if="activeStory.can_delete"
                                 type="button"
                                 class="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
-                                title="Story löschen"
+                                :title="tx('Story löschen', 'Story löschen')"
                                 @click="deleteStory"
                             >
                                 <i class="las la-trash"></i>
@@ -739,7 +741,7 @@ const reactToStory = (reaction) => {
                                 v-if="activeStory.user_id !== user?.id"
                                 type="button"
                                 class="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
-                                title="Story melden"
+                                :title="tx('Story melden', 'Story melden')"
                                 @click="reportStory"
                             >
                                 <i class="las la-flag"></i>
@@ -754,8 +756,8 @@ const reactToStory = (reaction) => {
                         </div>
                     </div>
 
-                    <button type="button" class="absolute bottom-0 left-0 top-0 z-10 w-1/3" aria-label="Vorherige Story" @click="previousStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
-                    <button type="button" class="absolute bottom-0 right-0 top-0 z-10 w-1/3" aria-label="Nächste Story" @click="nextStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
+                    <button type="button" class="absolute bottom-0 left-0 top-0 z-10 w-1/3" :aria-label="tx('Vorherige Story', 'Vorherige Story')" @click="previousStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
+                    <button type="button" class="absolute bottom-0 right-0 top-0 z-10 w-1/3" :aria-label="tx('Nächste Story', 'Nächste Story')" @click="nextStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
 
                     <div class="flex min-h-0 flex-1 items-center justify-center">
                         <video

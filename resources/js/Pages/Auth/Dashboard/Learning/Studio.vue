@@ -9,9 +9,21 @@ import { confirmDialog } from '@/services/dialogService'
 defineOptions({ layout: AppLayout })
 
 const { t, locale } = useI18n()
+const learningStudioTranslationAliases = {
+    learning_studio_ui: 'guest.welcome.benefits.cards.athletes.learning_studio_ui',
+    learning_studio_form: 'guest.welcome.benefits.cards.athletes.learning_studio_form',
+}
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
-    return translated === key ? fallback : translated
+    if (translated !== key) return translated
+
+    const [scope, ...segments] = key.split('.')
+    const alias = learningStudioTranslationAliases[scope]
+    if (!alias) return fallback
+
+    const aliasedKey = `${alias}.${segments.join('.')}`
+    const aliasedTranslation = t(aliasedKey, values)
+    return aliasedTranslation === aliasedKey ? fallback : aliasedTranslation
 }
 
 const props = defineProps({
@@ -534,9 +546,9 @@ const submitQuestionReply = (question) => {
                 <article class="surface-card p-4">
                     <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio.new_course', 'Neuen Kurs planen') }}</h2>
                     <form class="mt-4 grid gap-3" @submit.prevent="createCourse">
-                        <input v-model="newCourseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurstitel">
+                        <input v-model="newCourseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
                         <p v-if="newCourseForm.errors.title" class="text-sm text-error">{{ newCourseForm.errors.title }}</p>
-                        <input v-model="newCourseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurzversprechen">
+                        <input v-model="newCourseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_subtitle', 'Kurzversprechen')">
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                             <select v-model="newCourseForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
@@ -545,9 +557,9 @@ const submitQuestionReply = (question) => {
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
                         </div>
-                        <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sportart, z. B. Fußball">
-                        <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Worum geht es in diesem Kurs?"></textarea>
-                        <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
+                        <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart, z. B. Fußball')">
+                        <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_description', 'Worum geht es in diesem Kurs?')"></textarea>
+                        <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.learning_goals', 'Lernziele, je Zeile eins')"></textarea>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="newCourseForm.processing">
                             {{ tx('learning_studio.create_course', 'Kurs anlegen') }}
                         </button>
@@ -574,7 +586,7 @@ const submitQuestionReply = (question) => {
                                 <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold text-secondary">{{ course.level }}</span>
                             </div>
                         </Link>
-                        <p v-if="!courses.length" class="p-4 text-sm text-secondary">Noch kein Kurs angelegt.</p>
+                        <p v-if="!courses.length" class="p-4 text-sm text-secondary">{{ tx('learning_studio_ui.no_courses', 'Noch kein Kurs angelegt.') }}</p>
                     </div>
                 </article>
             </aside>
@@ -583,72 +595,71 @@ const submitQuestionReply = (question) => {
                 <article class="surface-card overflow-hidden">
                     <div class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_16rem]">
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aktueller Kurs</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('learning_studio_ui.current_course', 'Aktueller Kurs') }}</p>
                             <h2 class="mt-1 break-words text-2xl font-bold text-primary">{{ selectedCourse.title }}</h2>
-                            <p class="mt-2 text-sm text-secondary">{{ selectedCourse.subtitle || selectedCourse.description || 'Beschreibe den Kurs, damit Sportler sofort wissen, was sie lernen.' }}</p>
+                            <p class="mt-2 text-sm text-secondary">{{ selectedCourse.subtitle || selectedCourse.description || tx('learning_studio_ui.course_fallback', 'Beschreibe den Kurs, damit Sportler sofort wissen, was sie lernen.') }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Status</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.status', 'Status') }}</p>
                             <p class="mt-1 text-lg font-bold text-primary">{{ statusLabel(selectedCourse.status) }}</p>
-                            <p class="mt-2 text-xs text-secondary">{{ selectedCourse.is_free ? 'Kostenlos' : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ formatMinutes(selectedCourse.estimated_minutes) }}</p>
+                            <p class="mt-2 text-xs text-secondary">{{ selectedCourse.is_free ? tx('learning_studio_ui.free', 'Kostenlos') : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ formatMinutes(selectedCourse.estimated_minutes) }}</p>
                             <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
-                                Als Teilnehmer ansehen
+                                {{ tx('learning_studio_ui.view_as_student', 'Als Teilnehmer ansehen') }}
                             </a>
                         </div>
                     </div>
                     <div class="grid gap-3 border-t border-border p-5 md:grid-cols-4 xl:grid-cols-10">
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Durchschnitt</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.average', 'Durchschnitt') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.average_progress || 0 }}%</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Abschluesse</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.completions', 'Abschlüsse') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.completed_enrollments || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Offene Fragen</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.open_questions', 'Offene Fragen') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.open_questions || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Bewertung</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.rating', 'Bewertung') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.average_rating || '-' }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Verkäufe</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.sales', 'Verkäufe') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.sales_count || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Umsatz netto</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.net_revenue', 'Umsatz netto') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(selectedCourse.analytics?.net_revenue_cents || 0, selectedCourse.currency) }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Offene Zahlungen</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.pending_payments', 'Offene Zahlungen') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.pending_sales_count || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Refund/Storno</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.refunds', 'Refund/Storno') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.cancelled_sales_count || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Security 24h</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.security_24h', 'Security 24h') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.security_events_24h || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Video-Block 24h</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.video_block_24h', 'Video-Block 24h') }}</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.blocked_video_attempts_24h || 0 }}</p>
                         </div>
                     </div>
                     <div class="border-t border-border p-5">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">Publish-Check</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('learning_studio_ui.publish_check', 'Publish-Check') }}</p>
                                 <p class="mt-1 text-sm text-secondary">
-                                    {{ selectedCourse.publish_checklist?.done_count || 0 }} von {{ selectedCourse.publish_checklist?.total_count || 0 }} Punkten erledigt
-                                    ({{ selectedCourse.publish_checklist?.score ?? formatPercent(selectedCourse.publish_checklist?.done_count, selectedCourse.publish_checklist?.total_count) }}%)
+                                    {{ tx('learning_studio_ui.checklist_progress', '{done} of {total} points complete ({score}%)', { done: selectedCourse.publish_checklist?.done_count || 0, total: selectedCourse.publish_checklist?.total_count || 0, score: selectedCourse.publish_checklist?.score ?? formatPercent(selectedCourse.publish_checklist?.done_count, selectedCourse.publish_checklist?.total_count) }) }}
                                 </p>
                             </div>
                             <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="selectedCourse.publish_checklist?.ready ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
-                                {{ selectedCourse.publish_checklist?.ready ? 'Bereit' : 'Noch offen' }}
+                                {{ selectedCourse.publish_checklist?.ready ? tx('learning_studio_ui.ready', 'Bereit') : tx('learning_studio_ui.still_open', 'Noch offen') }}
                             </span>
                         </div>
                         <div class="mt-4 grid gap-2 md:grid-cols-3">
@@ -659,9 +670,9 @@ const submitQuestionReply = (question) => {
                         </div>
                         <div v-if="selectedCourse.security_events?.length" class="mt-5 rounded-lg border border-border bg-bg p-4">
                             <div class="flex items-center justify-between gap-3">
-                                <p class="text-xs font-semibold uppercase text-secondary">Monitoring</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('learning_studio_ui.monitoring', 'Monitoring') }}</p>
                                 <span v-if="selectedCourse.analytics?.critical_security_events_24h" class="rounded-full bg-error/10 px-2 py-1 text-xs font-semibold text-error">
-                                    {{ selectedCourse.analytics.critical_security_events_24h }} kritisch
+                                    {{ selectedCourse.analytics.critical_security_events_24h }} {{ tx('learning_studio_ui.critical', 'kritisch') }}
                                 </span>
                             </div>
                             <div class="mt-3 grid gap-2">
@@ -677,13 +688,13 @@ const submitQuestionReply = (question) => {
                     <div class="flex gap-2 overflow-x-auto border-t border-border p-2">
                         <button
                             v-for="panel in [
-                                ['structure', 'Struktur', 'las la-list'],
-                                ['details', 'Kursdaten', 'las la-sliders-h'],
-                                ['sales', 'Landingpage', 'las la-bullhorn'],
-                                ['quiz', 'Quiz', 'las la-question-circle'],
-                                ['assignments', 'Aufgaben', 'las la-clipboard-check'],
-                                ['students', 'Teilnehmer', 'las la-users'],
-                                ['questions', 'Fragen', 'las la-comments'],
+                                ['structure', tx('learning_studio_ui.panel_structure', 'Struktur'), 'las la-list'],
+                                ['details', tx('learning_studio_ui.panel_details', 'Kursdaten'), 'las la-sliders-h'],
+                                ['sales', tx('learning_studio_ui.panel_sales', 'Landingpage'), 'las la-bullhorn'],
+                                ['quiz', tx('learning_studio_ui.panel_quiz', 'Quiz'), 'las la-question-circle'],
+                                ['assignments', tx('learning_studio_ui.panel_assignments', 'Aufgaben'), 'las la-clipboard-check'],
+                                ['students', tx('learning_studio_ui.panel_students', 'Teilnehmer'), 'las la-users'],
+                                ['questions', tx('learning_studio_ui.panel_questions', 'Fragen'), 'las la-comments'],
                             ]"
                             :key="panel[0]"
                             type="button"
@@ -700,18 +711,18 @@ const submitQuestionReply = (question) => {
                 <div v-show="activePanel === 'structure'" class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_24rem]">
                     <article class="surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
-                            <h2 class="text-lg font-semibold text-primary">Kursstruktur</h2>
-                            <p class="mt-1 text-sm text-secondary">Kapitel, Themen und Lektionen in didaktischer Reihenfolge.</p>
+                            <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.structure_title', 'Kursstruktur') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.structure_hint', 'Kapitel, Themen und Lektionen in didaktischer Reihenfolge.') }}</p>
                         </div>
                         <div class="divide-y divide-border">
                             <div v-for="section in selectedCourse.sections" :key="section.id" class="p-5">
                                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
-                                        <p class="text-xs font-semibold uppercase text-secondary">Kapitel {{ section.position }}</p>
+                                        <p class="text-xs font-semibold uppercase text-secondary">{{ tx('learning_studio_ui.chapter', 'Kapitel') }} {{ section.position }}</p>
                                         <h3 class="mt-1 text-lg font-semibold text-primary">{{ section.title }}</h3>
                                         <p v-if="section.description" class="mt-1 text-sm text-secondary">{{ section.description }}</p>
                                     </div>
-                                    <span class="rounded-full bg-bg px-3 py-1 text-xs font-semibold text-secondary">{{ section.lessons?.length || 0 }} Lektionen</span>
+                                    <span class="rounded-full bg-bg px-3 py-1 text-xs font-semibold text-secondary">{{ section.lessons?.length || 0 }} {{ tx('learning_studio_ui.lessons', 'Lektionen') }}</span>
                                 </div>
                                 <div class="mt-4 grid gap-3">
                                     <div
@@ -722,20 +733,20 @@ const submitQuestionReply = (question) => {
                                         <button type="button" class="min-w-0 text-left" @click="editLesson(lesson)">
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <span class="rounded-full bg-card px-2 py-0.5 text-xs font-semibold text-secondary">{{ lesson.type }}</span>
-                                                <span v-if="lesson.is_preview" class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Preview</span>
-                                                <span v-if="lesson.unlock_after_days" class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">Tag {{ lesson.unlock_after_days }}</span>
+                                                <span v-if="lesson.is_preview" class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">{{ tx('learning_studio_ui.preview', 'Preview') }}</span>
+                                                <span v-if="lesson.unlock_after_days" class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">{{ tx('learning_studio_ui.unlock_day', 'Tag') }} {{ lesson.unlock_after_days }}</span>
                                             </div>
                                             <p class="mt-2 font-semibold text-primary">{{ lesson.title }}</p>
                                             <p v-if="lesson.summary" class="mt-1 line-clamp-2 text-sm text-secondary">{{ lesson.summary }}</p>
                                         </button>
                                         <p class="text-sm font-semibold text-secondary">{{ formatMinutes(lesson.duration_minutes) }}</p>
                                         <div class="flex items-center justify-end gap-1">
-                                            <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, -1)">Hoch</button>
-                                            <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, 1)">Runter</button>
-                                            <button type="button" class="rounded border border-error/40 px-2 py-1 text-xs text-error" @click="deleteLesson(lesson)">Löschen</button>
+                                            <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, -1)">{{ tx('learning_studio_ui.move_up', 'Hoch') }}</button>
+                                            <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, 1)">{{ tx('learning_studio_ui.move_down', 'Runter') }}</button>
+                                            <button type="button" class="rounded border border-error/40 px-2 py-1 text-xs text-error" @click="deleteLesson(lesson)">{{ tx('learning_studio_ui.delete', 'Löschen') }}</button>
                                         </div>
                                     </div>
-                                    <p v-if="!section.lessons?.length" class="rounded-lg border border-dashed border-border bg-bg p-4 text-sm text-secondary">Noch keine Lektionen in diesem Kapitel.</p>
+                                    <p v-if="!section.lessons?.length" class="rounded-lg border border-dashed border-border bg-bg p-4 text-sm text-secondary">{{ tx('learning_studio_ui.no_lessons', 'Noch keine Lektionen in diesem Kapitel.') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -743,63 +754,63 @@ const submitQuestionReply = (question) => {
 
                     <aside class="space-y-4">
                         <article class="surface-card p-5">
-                            <h2 class="text-base font-semibold text-primary">Kapitel hinzufügen</h2>
+                            <h2 class="text-base font-semibold text-primary">{{ tx('learning_studio_ui.add_chapter', 'Kapitel hinzufügen') }}</h2>
                             <form class="mt-4 grid gap-3" @submit.prevent="createSection">
-                                <input v-model="sectionForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kapitelname">
-                                <textarea v-model="sectionForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurzbeschreibung"></textarea>
-                                <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Kapitel erstellen</button>
+                                <input v-model="sectionForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.chapter_name', 'Kapitelname')">
+                                <textarea v-model="sectionForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.short_description', 'Kurzbeschreibung')"></textarea>
+                                <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ tx('learning_studio_ui.create_chapter', 'Kapitel erstellen') }}</button>
                             </form>
                         </article>
 
                         <article class="surface-card p-5">
-                            <h2 class="text-base font-semibold text-primary">{{ editingLesson ? 'Lektion bearbeiten' : 'Lektion hinzufügen' }}</h2>
+                            <h2 class="text-base font-semibold text-primary">{{ editingLesson ? tx('learning_studio_form.edit_lesson', 'Lektion bearbeiten') : tx('learning_studio_form.add_lesson', 'Lektion hinzufügen') }}</h2>
                             <form class="mt-4 grid gap-3" @submit.prevent="submitLesson">
                                 <select v-model="lessonForm.learning_course_section_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                     <option v-for="section in selectedCourse.sections" :key="section.id" :value="section.id">{{ section.title }}</option>
                                 </select>
                                 <div class="grid gap-3 sm:grid-cols-2">
-                                    <input v-model="lessonForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lektionstitel">
+                                    <input v-model="lessonForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.lesson_title', 'Lektionstitel')">
                                     <select v-model="lessonForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                         <option v-for="[value, label] in lessonTypes" :key="value" :value="value">{{ label }}</option>
                                     </select>
                                 </div>
-                                <textarea v-model="lessonForm.summary" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was passiert in dieser Lektion?"></textarea>
-                                <textarea v-model="lessonForm.content" rows="7" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Skript, Aufgaben, Hinweise, Coaching-Text"></textarea>
+                                <textarea v-model="lessonForm.summary" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.lesson_summary', 'Was passiert in dieser Lektion?')"></textarea>
+                                <textarea v-model="lessonForm.content" rows="7" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.lesson_content', 'Skript, Aufgaben, Hinweise, Coaching-Text')"></textarea>
                                 <div class="grid gap-2">
-                                    <input v-model="lessonForm.video_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Video-URL optional">
+                                    <input v-model="lessonForm.video_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.video_url', 'Video-URL optional')">
                                     <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                         <i class="las la-video"></i>
-                                        Video hochladen
+                                        {{ tx('learning_studio_form.upload_video', 'Video hochladen') }}
                                         <input type="file" accept="video/*" class="sr-only" @change="uploadLessonVideo">
                                     </label>
-                                    <p v-if="uploadState.key === 'lesson_video'" class="text-xs text-secondary">Video wird hochgeladen...</p>
+                                    <p v-if="uploadState.key === 'lesson_video'" class="text-xs text-secondary">{{ tx('learning_studio_form.video_uploading', 'Video wird hochgeladen...') }}</p>
                                     <p v-if="uploadState.error && uploadState.key === 'lesson_video'" class="text-xs text-error">{{ uploadState.error }}</p>
                                 </div>
                                 <div class="grid gap-2">
-                                    <textarea v-model="lessonForm.attachments_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anhang-URLs, je Zeile eine"></textarea>
+                                    <textarea v-model="lessonForm.attachments_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.attachment_urls', 'Anhang-URLs, je Zeile eine')"></textarea>
                                     <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                         <i class="las la-paperclip"></i>
-                                        Material hochladen
+                                        {{ tx('learning_studio_form.upload_material', 'Material hochladen') }}
                                         <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,image/*,video/*" class="sr-only" @change="uploadLessonAttachment">
                                     </label>
-                                    <p v-if="uploadState.key === 'lesson_attachment'" class="text-xs text-secondary">Material wird hochgeladen...</p>
+                                    <p v-if="uploadState.key === 'lesson_attachment'" class="text-xs text-secondary">{{ tx('learning_studio_form.material_uploading', 'Material wird hochgeladen...') }}</p>
                                     <p v-if="uploadState.error && uploadState.key === 'lesson_attachment'" class="text-xs text-error">{{ uploadState.error }}</p>
                                 </div>
                                 <div class="grid gap-3 sm:grid-cols-2">
-                                    <input v-model="lessonForm.duration_minutes" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Dauer in Minuten">
-                                    <input v-model="lessonForm.position" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Position">
+                                    <input v-model="lessonForm.duration_minutes" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.duration', 'Dauer in Minuten')">
+                                    <input v-model="lessonForm.position" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.position', 'Position')">
                                 </div>
-                                <input v-model="lessonForm.unlock_after_days" type="number" min="0" max="3650" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Freischalten nach Tagen ab Einschreibung">
+                                <input v-model="lessonForm.unlock_after_days" type="number" min="0" max="3650" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.unlock_after', 'Freischalten nach Tagen ab Einschreibung')">
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                         <input v-model="lessonForm.is_preview" type="checkbox" class="rounded border-border bg-inputBg">
-                                        Als Preview freigeben
+                                        {{ tx('learning_studio_form.preview_access', 'Als Preview freigeben') }}
                                     </label>
                                 </div>
                                 <div class="flex flex-col-reverse gap-2 sm:flex-row">
-                                    <button v-if="editingLesson" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="resetLessonForm">Neu anlegen</button>
+                                    <button v-if="editingLesson" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="resetLessonForm">{{ tx('learning_studio_form.new_lesson', 'Neu anlegen') }}</button>
                                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="lessonForm.processing">
-                                        {{ editingLesson ? 'Lektion speichern' : 'Lektion erstellen' }}
+                                        {{ editingLesson ? tx('learning_studio_form.save_lesson', 'Lektion speichern') : tx('learning_studio_form.create_lesson', 'Lektion erstellen') }}
                                     </button>
                                 </div>
                             </form>
@@ -808,66 +819,66 @@ const submitQuestionReply = (question) => {
                 </div>
 
                 <article v-show="activePanel === 'details'" class="surface-card p-5">
-                    <h2 class="text-lg font-semibold text-primary">Kursdaten und Veröffentlichung</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_form.course_data_title', 'Kursdaten und Veröffentlichung') }}</h2>
                     <form class="mt-5 grid gap-4" @submit.prevent="updateCourse">
                         <div class="grid gap-3 lg:grid-cols-2">
-                            <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurstitel">
-                            <input v-model="courseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurzversprechen">
+                            <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
+                            <input v-model="courseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_subtitle', 'Kurzversprechen')">
                             <select v-model="courseForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in courseCategories" :key="value" :value="value">{{ label }}</option>
                             </select>
-                            <input v-model="courseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sportart">
+                            <input v-model="courseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart')">
                             <select v-model="courseForm.level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
-                            <input v-model="courseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sprache, z. B. de">
+                            <input v-model="courseForm.language" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.language', 'Sprache, z. B. de')">
                         </div>
                         <div class="grid gap-2">
-                            <input v-model="courseForm.cover_image" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Cover-Bild URL">
+                            <input v-model="courseForm.cover_image" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.cover_url', 'Cover-Bild URL')">
                             <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                 <i class="las la-image"></i>
-                                Cover hochladen
+                                {{ tx('learning_studio_form.upload_cover', 'Cover hochladen') }}
                                 <input type="file" accept="image/*" class="sr-only" @change="uploadCourseCover">
                             </label>
-                            <p v-if="uploadState.key === 'cover'" class="text-xs text-secondary">Cover wird hochgeladen...</p>
+                            <p v-if="uploadState.key === 'cover'" class="text-xs text-secondary">{{ tx('learning_studio_form.cover_uploading', 'Cover wird hochgeladen...') }}</p>
                             <p v-if="uploadState.error && uploadState.key === 'cover'" class="text-xs text-error">{{ uploadState.error }}</p>
                         </div>
-                        <textarea v-model="courseForm.description" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                        <textarea v-model="courseForm.description" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.description', 'Beschreibung')"></textarea>
                         <div class="grid gap-3 lg:grid-cols-3">
                             <textarea v-model="courseForm.learning_goals_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
-                            <textarea v-model="courseForm.requirements_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Voraussetzungen, je Zeile eine"></textarea>
-                            <textarea v-model="courseForm.target_groups_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zielgruppen, je Zeile eine"></textarea>
+                            <textarea v-model="courseForm.requirements_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.requirements', 'Voraussetzungen, je Zeile eine')"></textarea>
+                            <textarea v-model="courseForm.target_groups_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.target_groups', 'Zielgruppen, je Zeile eine')"></textarea>
                         </div>
                         <div class="grid gap-3 lg:grid-cols-3">
-                            <textarea v-model="courseForm.sales_points_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Verkaufsargumente, je Zeile eins"></textarea>
-                            <textarea v-model="courseForm.faq_items_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="FAQ: Frage | Antwort"></textarea>
-                            <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Garantie / Betreuung / Rückfragen"></textarea>
+                            <textarea v-model="courseForm.sales_points_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.sales_points', 'Verkaufsargumente, je Zeile eins')"></textarea>
+                            <textarea v-model="courseForm.faq_items_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.faq', 'FAQ: Frage | Antwort')"></textarea>
+                            <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.guarantee', 'Garantie / Betreuung / Rückfragen')"></textarea>
                         </div>
                         <div class="grid gap-3 lg:grid-cols-3">
-                            <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Logo URL">
-                            <input v-model="courseForm.certificate_signature_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Signatur auf Zertifikat">
-                            <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Fußzeile">
+                            <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_logo', 'Zertifikat Logo URL')">
+                            <input v-model="courseForm.certificate_signature_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_signature', 'Signatur auf Zertifikat')">
+                            <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_footer', 'Zertifikat Fußzeile')">
                         </div>
-                        <input v-model="courseForm.tags_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tags durch Komma trennen">
+                        <input v-model="courseForm.tags_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.tags', 'Tags durch Komma trennen')">
                         <div class="grid gap-3 lg:grid-cols-4">
                             <select v-model="courseForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option value="draft">Entwurf</option>
-                                <option value="review">Zur Prüfung</option>
-                                <option value="published">Veröffentlicht</option>
-                                <option value="archived">Archiviert</option>
+                                <option value="draft">{{ tx('learning_studio_form.draft', 'Entwurf') }}</option>
+                                <option value="review">{{ tx('learning_studio_form.review', 'Zur Prüfung') }}</option>
+                                <option value="published">{{ tx('learning_studio_form.published', 'Veröffentlicht') }}</option>
+                                <option value="archived">{{ tx('learning_studio_form.archived', 'Archiviert') }}</option>
                             </select>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                 <input v-model="courseForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">
-                                Öffentlich sichtbar
+                                {{ tx('learning_studio_form.public', 'Öffentlich sichtbar') }}
                             </label>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                 <input v-model="courseForm.is_free" type="checkbox" class="rounded border-border bg-inputBg">
-                                Kostenlos
+                                {{ tx('learning_studio_ui.free', 'Kostenlos') }}
                             </label>
-                            <input v-if="!courseForm.is_free" v-model="courseForm.price" inputmode="decimal" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in Euro">
+                            <input v-if="!courseForm.is_free" v-model="courseForm.price" inputmode="decimal" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.price_euro', 'Preis in Euro')">
                         </div>
                         <button class="justify-self-start rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="courseForm.processing">
-                            Kursdaten speichern
+                            {{ tx('learning_studio_form.save_course', 'Kursdaten speichern') }}
                         </button>
                     </form>
                 </article>

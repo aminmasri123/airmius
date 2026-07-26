@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-api_base_url="https://app.airmius.com"
+api_base_url="https://airmius.com"
 app_id="com.airmius.app"
 club_id="26"
 event_id="1"

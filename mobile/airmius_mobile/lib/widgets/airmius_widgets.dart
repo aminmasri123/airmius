@@ -409,10 +409,7 @@ class PageFrame extends StatelessWidget {
                                 titleBlock,
                                 if (trailing != null) ...[
                                   const SizedBox(height: 10),
-                                  Align(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: trailing,
-                                  ),
+                                  trailing,
                                 ],
                               ],
                             );
@@ -1012,7 +1009,7 @@ String? resolveAirmiusImageUrl(String? imageUrl) {
 
   const origin = String.fromEnvironment(
     'AIRMIUS_API_BASE_URL',
-    defaultValue: 'https://app.airmius.com',
+    defaultValue: 'https://airmius.com',
   );
   final base = Uri.tryParse(origin);
   if (base == null || !base.hasScheme || base.host.isEmpty) return null;
@@ -1603,7 +1600,7 @@ bool _isProtectedFeedImageUrl(String value) {
 
   const origin = String.fromEnvironment(
     'AIRMIUS_API_BASE_URL',
-    defaultValue: 'https://app.airmius.com',
+    defaultValue: 'https://airmius.com',
   );
   final base = Uri.tryParse(origin);
   if (base == null || base.host.isEmpty || uri.host != base.host) return false;

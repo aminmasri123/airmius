@@ -72,7 +72,7 @@
                       "owner":  "Store",
                       "status":  "pending_execution",
                       "required_evidence":  "Release AAB/APK artifacts and build logs",
-                      "local_command":  "scripts/release_candidate_checks.ps1 -ApiBaseUrl https://app.airmius.com",
+                      "local_command":  "scripts/release_candidate_checks.ps1 -ApiBaseUrl https://airmius.com",
                       "ci_artifacts":  [
                                            "airmius-mobile-release-evidence/android-appbundle-build.log",
                                            "airmius-mobile-release-evidence/android-apk-build.log",
@@ -86,7 +86,7 @@
                       "owner":  "Store",
                       "status":  "pending_execution",
                       "required_evidence":  "No-codesign CI build plus signed IPA/TestFlight evidence",
-                      "local_command":  "flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true",
+                      "local_command":  "flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com --dart-define=AIRMIUS_USE_HTTP=true",
                       "macos_local_command":  "scripts/run_ios_real_device_smoke.sh --build-ipa",
                       "ci_artifacts":  [
                                            "airmius-mobile-ios-release-evidence/ios-release-build-no-codesign.log",
@@ -157,7 +157,7 @@
                       "owner":  "Mobile",
                       "status":  "pending_execution",
                       "required_evidence":  "Session restore/sign-out QA on Android and iOS with flutter_secure_storage enabled",
-                      "local_command":  "flutter analyze \u0026\u0026 flutter run --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com",
+                      "local_command":  "flutter analyze \u0026\u0026 flutter run --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com",
                       "runbook":  "store_listing/release/secure_token_storage_qa.md",
                       "source_files":  [
                                            "lib/core/airmius_secure_token_store.dart",
@@ -205,7 +205,7 @@
                       "owner":  "Mobile",
                       "status":  "pending_execution",
                       "required_evidence":  "Production API configuration uses HTTPS, HTTP transport is enabled, localhost is not used and secure-storage prerequisites are present",
-                      "local_command":  "scripts/assert_release_configuration.ps1 -ApiBaseUrl https://app.airmius.com -UseHttp",
+                      "local_command":  "scripts/assert_release_configuration.ps1 -ApiBaseUrl https://airmius.com -UseHttp",
                       "ci_artifacts":  [
                                            "airmius-mobile-release-evidence/release-configuration-check.log",
                                            "airmius-mobile-ios-release-evidence/release-configuration-check-ios.log"

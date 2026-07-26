@@ -59,11 +59,11 @@ const stepModel = computed({
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0">
                             <h2 class="truncate text-lg font-semibold text-primary">
-                                Verein registrieren
+                                {{ $t('Verein registrieren') }}
                             </h2>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Schritt {{ clubCreateStep }} von {{ clubCreateSteps.length }}
+                                {{ $t('Schritt') }} {{ clubCreateStep }} {{ $t('von') }} {{ clubCreateSteps.length }}
                             </p>
                         </div>
 
@@ -106,24 +106,24 @@ const stepModel = computed({
                     <section v-if="clubCreateStep === 1" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
-                                Basisdaten
+                                {{ $t('Basisdaten') }}
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Name, Sportart und Land des Vereins. Nach dem Absenden prüft Airmius den Antrag.
+                                {{ $t('Name, Sportart und Land des Vereins. Nach dem Absenden prüft Airmius den Antrag.') }}
                             </p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-semibold text-primary">
-                                Vereinsname
+                                {{ $t('Vereinsname') }}
                             </label>
 
                             <input
                                 v-model="clubForm.name"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                                 :class="clubForm.errors.name ? 'border-error' : ''"
-                                placeholder="Vereinsname"
+                                :placeholder="$t('Vereinsname')"
                                 required
                             >
                             <p v-if="clubForm.errors.name" class="mt-1 text-xs text-error">{{ clubForm.errors.name }}</p>
@@ -131,7 +131,7 @@ const stepModel = computed({
 
                         <div>
                             <label class="block text-sm font-semibold text-primary">
-                                Sportart
+                                {{ $t('Sportart') }}
                             </label>
 
                             <SearchableSelect
@@ -141,7 +141,7 @@ const stepModel = computed({
                                 value-key="slug"
                                 translation-prefix="sports"
                                 category-translation-prefix="sport_categories"
-                                placeholder="Sportart suchen"
+                                :placeholder="$t('Sportart suchen')"
                             />
                             <p v-if="clubForm.errors.sport_type" class="mt-1 text-xs text-error">{{ clubForm.errors.sport_type }}</p>
                         </div>
@@ -168,28 +168,28 @@ const stepModel = computed({
                                 <i class="las la-check"></i>
                             </span>
                             <span>
-                                <span class="block font-semibold">Offizielle Prüfung beantragen</span>
-                                <span class="block text-secondary">Der Verein wird erst nach Admin-Freigabe öffentlich sichtbar und als offiziell markiert.</span>
+                                <span class="block font-semibold">{{ $t('Offizielle Prüfung beantragen') }}</span>
+                                <span class="block text-secondary">{{ $t('Der Verein wird erst nach Admin-Freigabe öffentlich sichtbar und als offiziell markiert.') }}</span>
                             </span>
                         </label>
 
                         <div v-if="clubForm.is_official">
                             <label class="block text-sm font-semibold text-primary">
-                                Vereinsnummer zur Prüfung
+                                {{ $t('Vereinsnummer zur Prüfung') }}
                             </label>
 
                             <input
                                 v-model="clubForm.official_club_number"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                                 :class="clubForm.errors.official_club_number ? 'border-error' : ''"
-                                placeholder="z. B. Vereinsregister- oder Verbandsnummer"
+                                :placeholder="$t('z. B. Vereinsregister- oder Verbandsnummer')"
                             >
                             <p v-if="clubForm.errors.official_club_number" class="mt-1 text-xs text-error">{{ clubForm.errors.official_club_number }}</p>
                         </div>
 
                         <div>
                             <label class="block text-sm font-semibold text-primary">
-                                Land
+                                {{ $t('Land') }}
                             </label>
 
                             <select
@@ -197,13 +197,13 @@ const stepModel = computed({
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                                 required
                             >
-                                <option value="DE">Deutschland</option>
-                                <option value="AT">Österreich</option>
-                                <option value="CH">Schweiz</option>
-                                <option value="FR">Frankreich</option>
-                                <option value="NL">Niederlande</option>
-                                <option value="BE">Belgien</option>
-                                <option value="TR">Türkei</option>
+                                <option value="DE">{{ $t('Deutschland') }}</option>
+                                <option value="AT">{{ $t('Österreich') }}</option>
+                                <option value="CH">{{ $t('Schweiz') }}</option>
+                                <option value="FR">{{ $t('Frankreich') }}</option>
+                                <option value="NL">{{ $t('Niederlande') }}</option>
+                                <option value="BE">{{ $t('Belgien') }}</option>
+                                <option value="TR">{{ $t('Türkei') }}</option>
                                 <option value="US">USA</option>
                             </select>
                             <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
@@ -213,52 +213,52 @@ const stepModel = computed({
                     <section v-if="clubCreateStep === 2" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
-                                Adresse & Bankkonto
+                                {{ $t('Adresse & Bankkonto') }}
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Optional: Standort und Bankkonto für Mitglieder-Überweisungen eintragen.
+                                {{ $t('Optional: Standort und Bankkonto für Mitglieder-Überweisungen eintragen.') }}
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                                <input v-model="clubForm.city" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.city ? 'border-error' : ''" placeholder="Stadt">
+                                <input v-model="clubForm.city" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.city ? 'border-error' : ''" :placeholder="$t('Stadt')">
                                 <p v-if="clubForm.errors.city" class="mt-1 text-xs text-error">{{ clubForm.errors.city }}</p>
                             </div>
                             <div>
-                                <input v-model="clubForm.postal_code" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.postal_code ? 'border-error' : ''" placeholder="PLZ">
+                                <input v-model="clubForm.postal_code" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.postal_code ? 'border-error' : ''" :placeholder="$t('PLZ')">
                                 <p v-if="clubForm.errors.postal_code" class="mt-1 text-xs text-error">{{ clubForm.errors.postal_code }}</p>
                             </div>
                             <div>
-                                <input v-model="clubForm.state" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.state ? 'border-error' : ''" placeholder="Region">
+                                <input v-model="clubForm.state" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.state ? 'border-error' : ''" :placeholder="$t('Region')">
                                 <p v-if="clubForm.errors.state" class="mt-1 text-xs text-error">{{ clubForm.errors.state }}</p>
                             </div>
                             <div>
-                                <input v-model="clubForm.street" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.street ? 'border-error' : ''" placeholder="Straße">
+                                <input v-model="clubForm.street" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.street ? 'border-error' : ''" :placeholder="$t('Straße')">
                                 <p v-if="clubForm.errors.street" class="mt-1 text-xs text-error">{{ clubForm.errors.street }}</p>
                             </div>
                             <div>
-                                <input v-model="clubForm.house_number" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.house_number ? 'border-error' : ''" placeholder="Hausnummer">
+                                <input v-model="clubForm.house_number" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.house_number ? 'border-error' : ''" :placeholder="$t('Hausnummer')">
                                 <p v-if="clubForm.errors.house_number" class="mt-1 text-xs text-error">{{ clubForm.errors.house_number }}</p>
                             </div>
                             <div class="rounded-lg border border-border bg-card p-3 sm:col-span-2">
-                                <p class="text-xs font-semibold uppercase text-secondary">Bankkonto für Vereinsrechnungen</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ $t('Bankkonto für Vereinsrechnungen') }}</p>
                                 <p class="mt-1 text-xs text-secondary">
-                                    Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Überweisung zahlen.
+                                    {{ $t('Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Überweisung zahlen.') }}
                                 </p>
 
                                 <div class="mt-3 grid gap-3 sm:grid-cols-3">
                                     <div>
-                                        <input v-model="clubForm.sepa_account_holder" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_account_holder ? 'border-error' : ''" placeholder="Kontoinhaber">
+                                        <input v-model="clubForm.sepa_account_holder" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_account_holder ? 'border-error' : ''" :placeholder="$t('Kontoinhaber')">
                                         <p v-if="clubForm.errors.sepa_account_holder" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_account_holder }}</p>
                                     </div>
                                     <div>
-                                        <input v-model="clubForm.sepa_iban" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_iban ? 'border-error' : ''" placeholder="IBAN">
+                                        <input v-model="clubForm.sepa_iban" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_iban ? 'border-error' : ''" :placeholder="$t('IBAN')">
                                         <p v-if="clubForm.errors.sepa_iban" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_iban }}</p>
                                     </div>
                                     <div>
-                                        <input v-model="clubForm.sepa_bic" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_bic ? 'border-error' : ''" placeholder="BIC">
+                                        <input v-model="clubForm.sepa_bic" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_bic ? 'border-error' : ''" :placeholder="$t('BIC')">
                                         <p v-if="clubForm.errors.sepa_bic" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_bic }}</p>
                                     </div>
                                 </div>
@@ -269,33 +269,33 @@ const stepModel = computed({
                     <section v-if="clubCreateStep === 3" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
-                                Prüfen
+                                {{ $t('Prüfen') }}
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Kontrolliere die Angaben vor dem Absenden. Der Verein wird als Antrag gespeichert.
+                                {{ $t('Kontrolliere die Angaben vor dem Absenden. Der Verein wird als Antrag gespeichert.') }}
                             </p>
                         </div>
 
                         <div class="rounded-xl border border-border bg-inputBg p-4">
                             <div class="space-y-3 text-sm">
-                                <p><strong>Verein:</strong> {{ clubForm.name || '-' }}</p>
-                                <p><strong>Sportart:</strong> {{ sportLabel(clubForm.sport_type) }}</p>
-                                <p><strong>Offizielle Prüfung:</strong> {{ clubForm.is_official ? 'Beantragt' : 'Nicht beantragt' }}</p>
-                                <p v-if="clubForm.is_official"><strong>Vereinsnummer zur Prüfung:</strong> {{ clubForm.official_club_number || '-' }}</p>
-                                <p><strong>Status nach Absenden:</strong> Wartet auf Prüfung</p>
-                                <p><strong>Land:</strong> {{ clubForm.country || '-' }}</p>
+                                <p><strong>{{ $t('Verein:') }}</strong> {{ clubForm.name || '-' }}</p>
+                                <p><strong>{{ $t('Sportart:') }}</strong> {{ sportLabel(clubForm.sport_type) }}</p>
+                                <p><strong>{{ $t('Offizielle Prüfung:') }}</strong> {{ clubForm.is_official ? $t('Beantragt') : $t('Nicht beantragt') }}</p>
+                                <p v-if="clubForm.is_official"><strong>{{ $t('Vereinsnummer zur Prüfung:') }}</strong> {{ clubForm.official_club_number || '-' }}</p>
+                                <p><strong>{{ $t('Status nach Absenden:') }}</strong> {{ $t('Wartet auf Prüfung') }}</p>
+                                <p><strong>{{ $t('Land:') }}</strong> {{ clubForm.country || '-' }}</p>
                                 <p>
-                                    <strong>Adresse:</strong>
+                                    <strong>{{ $t('Adresse:') }}</strong>
                                     {{ clubForm.street || '-' }}
                                     {{ clubForm.house_number || '' }},
                                     {{ clubForm.postal_code || '' }}
                                     {{ clubForm.city || '' }}
                                 </p>
-                                <p><strong>Region:</strong> {{ clubForm.state || '-' }}</p>
-                                <p><strong>Kontoinhaber:</strong> {{ clubForm.sepa_account_holder || '-' }}</p>
-                                <p><strong>IBAN:</strong> {{ clubForm.sepa_iban || '-' }}</p>
-                                <p><strong>BIC:</strong> {{ clubForm.sepa_bic || '-' }}</p>
+                                <p><strong>{{ $t('Region:') }}</strong> {{ clubForm.state || '-' }}</p>
+                                <p><strong>{{ $t('Kontoinhaber:') }}</strong> {{ clubForm.sepa_account_holder || '-' }}</p>
+                                <p><strong>{{ $t('IBAN') }}:</strong> {{ clubForm.sepa_iban || '-' }}</p>
+                                <p><strong>{{ $t('BIC') }}:</strong> {{ clubForm.sepa_bic || '-' }}</p>
                             </div>
                         </div>
                     </section>
@@ -309,7 +309,7 @@ const stepModel = computed({
                             :disabled="clubCreateStep === 1"
                             @click="$emit('previous-step')"
                         >
-                            Zurück
+                            {{ $t('Zurück') }}
                         </button>
 
                         <button
@@ -318,7 +318,7 @@ const stepModel = computed({
                             class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                             @click="$emit('next-step')"
                         >
-                            Weiter
+                            {{ $t('Weiter') }}
                         </button>
 
                         <button
@@ -328,7 +328,7 @@ const stepModel = computed({
                             :disabled="clubForm.processing"
                             @click="$emit('create')"
                         >
-                            {{ clubForm.processing ? 'Speichert...' : 'Speichern' }}
+                            {{ clubForm.processing ? $t('Speichert...') : $t('Speichern') }}
                         </button>
                     </div>
                 </div>
@@ -336,4 +336,3 @@ const stepModel = computed({
         </div>
     </Teleport>
 </template>
-

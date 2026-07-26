@@ -58,13 +58,13 @@ Required evidence:
 Suggested helper:
 
 ```powershell
-.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26
+.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26
 ```
 
 Membership request helper:
 
 ```powershell
-.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json"
+.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json"
 ```
 
 Create the local payload from the safe template first:
@@ -76,13 +76,13 @@ Create the local payload from the safe template first:
 Withdraw check only on safe staging/review data:
 
 ```powershell
-.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json" -WithdrawAfterCreate
+.\scripts\run_membership_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26 -ApplicationPayloadPath "release_evidence\membership-payload.example.local.json" -WithdrawAfterCreate
 ```
 
 Use write checks only on safe staging/review data:
 
 ```powershell
-.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://app.airmius.com" -Email "review@example.com" -ClubId 26 -IncludeWriteChecks
+.\scripts\run_laravel_api_smoke.ps1 -ApiBaseUrl "https://airmius.com" -Email "review@example.com" -ClubId 26 -IncludeWriteChecks
 ```
 
 Manifest sync behavior:

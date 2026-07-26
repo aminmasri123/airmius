@@ -74,7 +74,7 @@ if ($OpenGates.Count -eq 0) {
     $Lines += "Run final Go/No-Go:"
     $Lines += ""
     $Lines += "```powershell"
-    $Lines += 'scripts/run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -RunGoNoGo'
+    $Lines += 'scripts/run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -RunGoNoGo'
     $Lines += "```"
 } else {
     $Index = 1

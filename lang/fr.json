@@ -20,5 +20,6 @@
   "E-Learning": "E-Learning",
   "Alle": "Tous",
   "Willkommen bei Airmius": "Bienvenue chez Airmius",
-  "Entdecke die Welt der Luftfahrt": "Découvrez le monde de l’aviation"
+  "Entdecke die Welt der Luftfahrt": "Découvrez le monde de l’aviation",
+  "csrf_session_expired": "Votre session a expiré. Veuillez recharger la page et réessayer."
 }

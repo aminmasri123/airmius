@@ -1,6 +1,10 @@
 ﻿<script setup>
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
 
 const props = defineProps({
     showChatOnMobile: { type: Boolean, default: false },
@@ -47,15 +51,16 @@ const activeFilterModel = computed({
         <div class="border-b border-border p-4">
             <div class="flex items-center justify-between gap-3">
                 <div class="min-w-0">
-                    <h1 class="text-xl font-semibold text-primary">Chat</h1>
+                    <h1 class="text-xl font-semibold text-primary">{{ tx('chat.title') }}</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        Erst Person oder Gruppe wählen, dann öffnen.
+                        {{ tx('chat.choose_hint') }}
                     </p>
                 </div>
                 <button
                     type="button"
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
-                    title="Neue Konversation"
+                    :title="tx('chat.new_conversation')"
+                    :aria-label="tx('chat.new_conversation')"
                     @click="emit('new-conversation')"
                 >
                     <i class="las la-plus text-xl"></i>
@@ -67,7 +72,8 @@ const activeFilterModel = computed({
                 <input
                     v-model="searchModel"
                     type="search"
-                    placeholder="Person, Team oder Training suchen"
+                    :aria-label="tx('chat.search_placeholder')"
+                    :placeholder="tx('chat.search_placeholder')"
                     class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
                 >
             </label>
@@ -95,7 +101,7 @@ const activeFilterModel = computed({
 
         <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
             <div v-if="groupInvitations.length" class="mb-3 space-y-2 rounded-lg border border-border bg-inputBg p-2">
-                <p class="px-1 text-xs font-semibold uppercase text-secondary">Gruppeneinladungen</p>
+                <p class="px-1 text-xs font-semibold uppercase text-secondary">{{ tx('chat.group_invitations') }}</p>
                 <div
                     v-for="invitation in groupInvitations"
                     :key="invitation.id"
@@ -105,7 +111,7 @@ const activeFilterModel = computed({
                         {{ titleFor(invitation.conversation) }}
                     </p>
                     <p class="mt-1 truncate text-xs text-secondary">
-                        Von {{ invitation.inviter?.name || 'Mitglied' }}
+                        {{ tx('chat.invited_by') }} {{ invitation.inviter?.name || tx('chat.member') }}
                     </p>
                     <div class="mt-3 flex gap-2">
                         <button
@@ -113,14 +119,14 @@ const activeFilterModel = computed({
                             class="flex-1 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
                             @click="emit('accept-invitation', invitation)"
                         >
-                            Annehmen
+                            {{ tx('chat.accept') }}
                         </button>
                         <button
                             type="button"
                             class="flex-1 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary"
                             @click="emit('decline-invitation', invitation)"
                         >
-                            Ablehnen
+                            {{ tx('chat.decline') }}
                         </button>
                     </div>
                 </div>
@@ -166,13 +172,12 @@ const activeFilterModel = computed({
             </Link>
 
             <div v-if="conversations.length === 0" class="p-8 text-center text-sm text-secondary">
-                Noch keine Chats. Starte oben eine neue Konversation.
+                {{ tx('chat.empty_description') }}
             </div>
 
             <div v-else-if="filteredConversations.length === 0" class="p-8 text-center text-sm text-secondary">
-                Keine passenden Chats für diesen Filter.
+                {{ tx('chat.no_matches_description') }}
             </div>
         </div>
     </aside>
 </template>
-

@@ -48,10 +48,10 @@ defineEmits(['close', 'submit'])
                     {{ selectedClub.name }}
                 </p>
                 <h2 id="job-modal-title" class="mt-1 text-lg font-bold text-primary">
-                    {{ editingJobId ? 'Eintrag bearbeiten' : 'Jobs- oder Ehrenamtsangebot erstellen' }}
+                    {{ editingJobId ? $t('Eintrag bearbeiten') : $t('Jobs- oder Ehrenamtsangebot erstellen') }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Beschreibe die Aufgabe klar genug, damit Interessierte sofort verstehen, ob sie passt und wie sie Kontakt aufnehmen können.
+                    {{ $t('Beschreibe die Aufgabe klar genug, damit Interessierte sofort verstehen, ob sie passt und wie sie Kontakt aufnehmen können.') }}
                 </p>
             </div>
 
@@ -67,40 +67,40 @@ defineEmits(['close', 'submit'])
             </div>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">Was wird gesucht?</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('Was wird gesucht?') }}</h3>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block sm:col-span-2">
-                        <span class="text-xs font-semibold uppercase text-secondary">Titel *</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Titel') }} *</span>
                         <input
                             v-model="jobFormFor(selectedClub).title"
                             required
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="z.B. Jugendtrainer U15"
+                            :placeholder="$t('z.B. Jugendtrainer U15')"
                         >
                         <span v-if="errors.title" class="mt-1 block text-xs text-error">{{ errors.title }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Kategorie</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kategorie') }}</span>
                         <select
                             v-model="jobFormFor(selectedClub).type"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
-                            <option value="volunteer">Ehrenamt</option>
-                            <option value="professional">Beruf / bezahlte Stelle</option>
+                            <option value="volunteer">{{ $t('Ehrenamt') }}</option>
+                            <option value="professional">{{ $t('Beruf / bezahlte Stelle') }}</option>
                         </select>
                         <span v-if="errors.type" class="mt-1 block text-xs text-error">{{ errors.type }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Art</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Art') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).employment_type"
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="Teilzeit, Minijob, Ehrenamt"
+                            :placeholder="$t('Teilzeit, Minijob, Ehrenamt')"
                         >
                         <span v-if="errors.employment_type" class="mt-1 block text-xs text-error">{{ errors.employment_type }}</span>
                     </label>
@@ -108,27 +108,27 @@ defineEmits(['close', 'submit'])
             </section>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">Rahmen</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('Rahmen') }}</h3>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Adresse / Ort</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Adresse / Ort') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).location"
                             autocomplete="address-line1"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="Sportanlage, Adresse, Stadt oder Remote"
+                            :placeholder="$t('Sportanlage, Adresse, Stadt oder Remote')"
                         >
                         <span v-if="errors.location" class="mt-1 block text-xs text-error">{{ errors.location }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Umfang</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Umfang') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).workload"
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="z.B. 6 Std./Woche"
+                            :placeholder="$t('z.B. 6 Std./Woche')"
                         >
                         <span v-if="errors.workload" class="mt-1 block text-xs text-error">{{ errors.workload }}</span>
                     </label>
@@ -136,23 +136,23 @@ defineEmits(['close', 'submit'])
             </section>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">Beschreibung & Kontakt</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('Beschreibung & Kontakt') }}</h3>
 
                 <label class="block">
-                    <span class="text-xs font-semibold uppercase text-secondary">Beschreibung *</span>
+                    <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Beschreibung') }} *</span>
                     <textarea
                         v-model="jobFormFor(selectedClub).description"
                         required
                         rows="5"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        placeholder="Aufgaben, Voraussetzungen, Zeitraum und was die Person wissen sollte."
+                        :placeholder="$t('Aufgaben, Voraussetzungen, Zeitraum und was die Person wissen sollte.')"
                     ></textarea>
                     <span v-if="errors.description" class="mt-1 block text-xs text-error">{{ errors.description }}</span>
                 </label>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Kontakt E-Mail</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kontakt E-Mail') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).contact_email"
                             type="email"
@@ -164,18 +164,18 @@ defineEmits(['close', 'submit'])
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Externer Bewerbungslink optional</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Externer Bewerbungslink optional') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).application_url"
                             type="url"
                             inputmode="url"
                             autocomplete="url"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="https://formular.verein.de"
+                            :placeholder="$t('https://formular.verein.de')"
                         >
                         <span v-if="errors.application_url" class="mt-1 block text-xs text-error">{{ errors.application_url }}</span>
                         <span class="mt-1 block text-xs text-secondary">
-                            Nur ausfüllen, wenn Interessierte zusätzlich auf ein externes Formular weitergeleitet werden sollen.
+                            {{ $t('Nur ausfüllen, wenn Interessierte zusätzlich auf ein externes Formular weitergeleitet werden sollen.') }}
                         </span>
                     </label>
                 </div>
@@ -188,8 +188,8 @@ defineEmits(['close', 'submit'])
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Auf Webseite veröffentlichen</span>
-                    <span class="block text-xs text-secondary">Wenn deaktiviert, bleibt der Eintrag als Entwurf im Dashboard.</span>
+                    <span class="block font-semibold">{{ $t('Auf Webseite veröffentlichen') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('Wenn deaktiviert, bleibt der Eintrag als Entwurf im Dashboard.') }}</span>
                 </span>
             </label>
 
@@ -199,17 +199,16 @@ defineEmits(['close', 'submit'])
                     class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                     @click="$emit('close')"
                 >
-                    Abbrechen
+                    {{ $t('Abbrechen') }}
                 </button>
                 <button
                     class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="isSubmittingJob"
                     :aria-busy="isSubmittingJob"
                 >
-                    {{ isSubmittingJob ? 'Wird gespeichert...' : (editingJobId ? 'Aktualisieren' : 'Eintrag erstellen') }}
+                    {{ isSubmittingJob ? $t('Wird gespeichert...') : (editingJobId ? $t('Aktualisieren') : $t('Eintrag erstellen')) }}
                 </button>
             </div>
         </form>
     </Modal>
 </template>
-

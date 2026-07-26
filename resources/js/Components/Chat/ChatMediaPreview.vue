@@ -1,4 +1,9 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
+
 defineProps({
     activeMediaAttachment: { type: Object, default: null },
     galleryAttachments: { type: Array, default: () => [] },
@@ -21,7 +26,8 @@ defineProps({
         <button
             type="button"
             class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-            title="Schließen"
+            :title="tx('chat.ui.close')"
+            :aria-label="tx('chat.ui.close')"
             @click="closeMediaPreview"
         >
             <i class="las la-times text-2xl"></i>
@@ -30,7 +36,8 @@ defineProps({
             v-if="galleryAttachments.length > 1"
             type="button"
             class="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-            title="Vorheriges Bild"
+            :title="tx('chat.ui.previous_image')"
+            :aria-label="tx('chat.ui.previous_image')"
             @click="showPreviousMedia"
         >
             <i class="las la-angle-left text-2xl"></i>
@@ -48,7 +55,8 @@ defineProps({
             v-if="galleryAttachments.length > 1"
             type="button"
             class="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-            title="Nächstes Bild"
+            :title="tx('chat.ui.next_image')"
+            :aria-label="tx('chat.ui.next_image')"
             @click="showNextMedia"
         >
             <i class="las la-angle-right text-2xl"></i>
@@ -58,7 +66,7 @@ defineProps({
             class="absolute bottom-4 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black"
             @click="trackDownload(activeMediaAttachment.file)"
         >
-            Herunterladen
+            {{ tx('chat.ui.download') }}
         </a>
     </div>
 </template>

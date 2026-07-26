@@ -62,20 +62,44 @@ class _ClubsScreenState extends State<ClubsScreen> {
       title: t('clubs.workspace.title'),
       subtitle: t('clubs.workspace.subtitle'),
       showHeader: true,
-      trailing: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          OutlinedButton.icon(
+      trailing: LayoutBuilder(
+        builder: (context, constraints) {
+          final stacked = constraints.maxWidth < 380;
+          final findButton = OutlinedButton.icon(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
             ),
-            icon: Icon(Icons.search_outlined, size: 18),
+            icon: const Icon(Icons.search_outlined, size: 18),
             label: Text(t('clubs.find')),
-          ),
-          _CreateClubButton(onPressed: _openCreateClub),
-        ],
+            style: OutlinedButton.styleFrom(
+              foregroundColor: airmiusAccentColor(context),
+              side: BorderSide(color: airmiusBorderColor(context)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+          final createButton = _CreateClubButton(onPressed: _openCreateClub);
+          if (stacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(width: double.infinity, child: findButton),
+                const SizedBox(height: 8),
+                SizedBox(width: double.infinity, child: createButton),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(child: findButton),
+              const SizedBox(width: 8),
+              Expanded(child: createButton),
+            ],
+          );
+        },
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1234,7 +1258,7 @@ class _CreateClubButton extends StatelessWidget {
         backgroundColor: airmiusTextColor(context),
         foregroundColor: airmiusSurfaceColor(context),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -1249,42 +1273,30 @@ class _ClubWorkspaceNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
-      padding: const EdgeInsets.fromLTRB(14, 14, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      t('clubs.workspace.area').toUpperCase(),
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        fontSize: 12,
-                        letterSpacing: .4,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      t('clubs.workspace.description'),
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        fontSize: 14,
-                        height: 1.45,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            t('clubs.workspace.area').toUpperCase(),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 11,
+              letterSpacing: .4,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 7),
+          Text(
+            t('clubs.workspace.description'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               if (canManageClubs) ...[
@@ -1359,13 +1371,13 @@ class _WorkspaceTab extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(4),
         child: Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
           decoration: BoxDecoration(
             color: selected
                 ? airmiusTextColor(context)
                 : airmiusSurfaceColor(context),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected
                   ? airmiusTextColor(context)
@@ -1494,13 +1506,13 @@ class _ClubCardState extends State<_ClubCard> {
     final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
       onTap: _toggleExpanded,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              _InitialsCircle(club.name),
+              _InitialsCircle(club.name, size: 44),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1512,7 +1524,7 @@ class _ClubCardState extends State<_ClubCard> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: airmiusTextColor(context),
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -1537,29 +1549,50 @@ class _ClubCardState extends State<_ClubCard> {
               club.canDelete ||
               widget.requested) ...[
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (widget.showManageActions)
-                  _InlineAction(
-                    label: t('clubs.editData'),
-                    onPressed: () => _openPanel('edit'),
-                  ),
-                if (widget.showManageActions)
-                  _InlineAction(
-                    label: t('clubs.addTeamShort'),
-                    onPressed: () => _openPanel('team'),
-                  ),
-                if (club.canDelete || widget.showManageActions)
-                  _InlineAction(
-                    label: t('common.delete'),
-                    danger: true,
-                    onPressed: _deleteClub,
-                  ),
-                if (widget.requested && !club.canManage)
-                  _InlineAction(label: t('clubs.requestOpen'), onPressed: null),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final actions = <Widget>[
+                  if (widget.showManageActions)
+                    _InlineAction(
+                      icon: Icons.edit_outlined,
+                      label: t('clubs.editData'),
+                      onPressed: () => _openPanel('edit'),
+                    ),
+                  if (widget.showManageActions)
+                    _InlineAction(
+                      icon: Icons.add,
+                      label: t('clubs.addTeamShort'),
+                      onPressed: () => _openPanel('team'),
+                    ),
+                  if (club.canDelete || widget.showManageActions)
+                    _InlineAction(
+                      icon: Icons.delete_outline,
+                      label: t('common.delete'),
+                      danger: true,
+                      onPressed: _deleteClub,
+                    ),
+                  if (widget.requested && !club.canManage)
+                    _InlineAction(
+                      icon: Icons.pending_actions_outlined,
+                      label: t('clubs.requestOpen'),
+                      onPressed: null,
+                    ),
+                ];
+                final columns = constraints.maxWidth >= 420
+                    ? actions.length
+                    : 2;
+                final gap = 8.0;
+                final width =
+                    (constraints.maxWidth - gap * (columns - 1)) / columns;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    for (final action in actions)
+                      SizedBox(width: width, child: action),
+                  ],
+                );
+              },
             ),
           ],
           if (_expanded) ...[
@@ -2845,11 +2878,13 @@ class _InitialsCircle extends StatelessWidget {
 
 class _InlineAction extends StatelessWidget {
   const _InlineAction({
+    required this.icon,
     required this.label,
     required this.onPressed,
     this.danger = false,
   });
 
+  final IconData icon;
   final String label;
   final VoidCallback? onPressed;
   final bool danger;
@@ -2857,31 +2892,37 @@ class _InlineAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (danger) {
-      return FilledButton(
+      return FilledButton.icon(
         onPressed: onPressed,
+        icon: Icon(icon, size: 17),
         style: FilledButton.styleFrom(
           backgroundColor: Theme.of(context).colorScheme.error,
           foregroundColor: Theme.of(context).colorScheme.onError,
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: Text(
+        label: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
         ),
       );
     }
 
-    return OutlinedButton(
+    return OutlinedButton.icon(
       onPressed: onPressed,
+      icon: Icon(icon, size: 17),
       style: OutlinedButton.styleFrom(
         foregroundColor: airmiusTextColor(context),
         side: BorderSide(color: airmiusBorderColor(context)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      child: Text(
+      label: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
       ),
     );

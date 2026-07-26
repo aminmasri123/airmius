@@ -1,4 +1,9 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+const tx = (key, params = {}) => t(key, params)
+
 defineProps({
     leaveConversationForm: { type: Object, required: true },
     remainingMembersAfterLeave: { type: Number, default: 0 },
@@ -16,12 +21,12 @@ defineEmits(['close', 'confirm'])
             <div class="border-b border-border p-4">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Gruppe verlassen?</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('chat.ui.leave_title') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Du wirst aus "{{ titleFor(selectedConversation) }}" entfernt und siehst danach keine neuen Nachrichten mehr.
+                            {{ tx('chat.ui.leave_description', { title: titleFor(selectedConversation) }) }}
                         </p>
                     </div>
-                    <button type="button" class="text-secondary hover:text-primary" @click="$emit('close')">
+                    <button type="button" class="text-secondary hover:text-primary" :aria-label="tx('chat.ui.close')" @click="$emit('close')">
                         <i class="las la-times text-2xl"></i>
                     </button>
                 </div>
@@ -29,9 +34,7 @@ defineEmits(['close', 'confirm'])
 
             <div class="space-y-4 p-4">
                 <div class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
-                    Nach deinem Austritt bleiben
-                    <span class="font-semibold text-primary">{{ remainingMembersAfterLeave }}</span>
-                    Mitglied(er) in dieser Gruppe.
+                    {{ tx('chat.ui.remaining_members', { count: remainingMembersAfterLeave }) }}
                 </div>
 
                 <label
@@ -44,8 +47,7 @@ defineEmits(['close', 'confirm'])
                         class="mt-1 rounded border-border text-buttonPrimary focus:ring-buttonPrimary"
                     >
                     <span>
-                        Gruppe direkt löschen, weil danach höchstens eine Person übrig bleibt.
-                        Die Conversation wird dadurch für alle verbleibenden Mitglieder entfernt.
+                        {{ tx('chat.ui.delete_group_hint') }}
                     </span>
                 </label>
             </div>
@@ -56,7 +58,7 @@ defineEmits(['close', 'confirm'])
                     class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                     @click="$emit('close')"
                 >
-                    Abbrechen
+                    {{ tx('chat.ui.cancel') }}
                 </button>
                 <button
                     type="button"
@@ -64,10 +66,9 @@ defineEmits(['close', 'confirm'])
                     class="flex-1 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     @click="$emit('confirm')"
                 >
-                    {{ leaveConversationForm.delete_conversation ? 'Verlassen und löschen' : 'Gruppe verlassen' }}
+                    {{ leaveConversationForm.delete_conversation ? tx('chat.ui.leave_and_delete') : tx('chat.leave_group') }}
                 </button>
             </div>
         </div>
     </div>
 </template>
-

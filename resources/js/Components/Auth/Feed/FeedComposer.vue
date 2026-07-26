@@ -17,6 +17,10 @@ const props = defineProps({
 
 const page = usePage()
 const { t, te } = useI18n()
+const tx = (key, fallback, values = {}) => {
+    const translated = t(key, values)
+    return translated === key ? fallback : translated
+}
 const user = computed(() => page.props.auth?.user)
 const imageInput = ref(null)
 const attachmentInput = ref(null)
@@ -40,32 +44,19 @@ const postForm = useForm({
 
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image || postForm.attachments.length))
-const postTypeLabel = (type) => ({
-    normal: 'Normal',
-    question: 'Frage',
-    knowledge: 'Wissen',
-    training_drill: 'Trainingsübung',
-    tactic: 'Taktik',
-    analysis: 'Analyse',
-    experience: 'Erfahrung',
-    club_update: 'Vereinsinfo',
-}[type] || type)
-const visibilityLabel = (visibility) => ({
-    public: 'Öffentlich',
-    organization: 'Verein',
-    team: 'Team',
-}[visibility] || visibility)
+const postTypeLabel = (type) => tx(`feed.types.${type}`, type)
+const visibilityLabel = (visibility) => tx(`feed.visibility.${visibility}`, visibility)
 const visibilityHint = (visibility) => ({
-    public: 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte',
-    organization: 'Sichtbar für Mitglieder des ausgewählten Vereins',
-    team: 'Sichtbar für Mitglieder des ausgewählten Teams',
+    public: tx('Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte', 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte'),
+    organization: tx('Sichtbar für Mitglieder des ausgewählten Vereins', 'Sichtbar für Mitglieder des ausgewählten Vereins'),
+    team: tx('Sichtbar für Mitglieder des ausgewählten Teams', 'Sichtbar für Mitglieder des ausgewählten Teams'),
 }[visibility] || '')
 const selectedCreateSport = computed(() => props.sports.find((sport) => String(sport.id) === String(postForm.sport_id)))
 const createSportSkills = computed(() => selectedCreateSport.value?.skills || [])
 const postBlockReason = computed(() => {
-    if (!canPost.value) return 'Schreibe einen Text oder füge ein Bild, Video oder eine Datei hinzu.'
-    if (postForm.visibility === 'organization' && !postForm.club_id) return 'Wähle einen Verein für einen Vereinsbeitrag.'
-    if (postForm.visibility === 'team' && !postForm.team_id) return 'Wähle ein Team für einen Teambeitrag.'
+    if (!canPost.value) return tx('Schreibe einen Text oder füge ein Bild, Video oder eine Datei hinzu.', 'Schreibe einen Text oder füge ein Bild, Video oder eine Datei hinzu.')
+    if (postForm.visibility === 'organization' && !postForm.club_id) return tx('Wähle einen Verein für einen Vereinsbeitrag.', 'Wähle einen Verein für einen Vereinsbeitrag.')
+    if (postForm.visibility === 'team' && !postForm.team_id) return tx('Wähle ein Team für einen Teambeitrag.', 'Wähle ein Team für einen Teambeitrag.')
 
     return ''
 })
@@ -153,7 +144,7 @@ const submitPost = () => {
         </div>
 
         <span class="min-w-0 flex-1 truncate rounded-full border border-border bg-inputBg px-4 py-3 text-sm text-secondary">
-            Was gibt es Neues?
+            {{ tx('Was gibt es Neues?', 'Was gibt es Neues?') }}
         </span>
     </button>
 
@@ -167,7 +158,7 @@ const submitPost = () => {
                 class="mx-auto max-h-[calc(100dvh-2rem)] w-full max-w-[min(42rem,100%)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-5"
             >
                 <div class="mb-4 flex items-center justify-between gap-3">
-                    <h2 class="min-w-0 truncate text-lg font-semibold text-primary">Beitrag erstellen</h2>
+                    <h2 class="min-w-0 truncate text-lg font-semibold text-primary">{{ tx('Beitrag erstellen', 'Beitrag erstellen') }}</h2>
 
                     <button
                         type="button"
@@ -196,14 +187,14 @@ const submitPost = () => {
 
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-primary">{{ user?.name }}</p>
-                            <p class="text-xs text-secondary">Neuer Beitrag</p>
+                            <p class="text-xs text-secondary">{{ tx('Neuer Beitrag', 'Neuer Beitrag') }}</p>
                         </div>
                     </div>
 
                     <textarea
                         v-model="postForm.content"
                         rows="5"
-                        placeholder="Was gibt es Neues?"
+                        :placeholder="tx('Was gibt es Neues?', 'Was gibt es Neues?')"
                         class="w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary placeholder-secondary"
                     />
 
@@ -214,7 +205,7 @@ const submitPost = () => {
                     >
                         <span class="flex min-w-0 items-center gap-2">
                             <i class="las la-sliders-h shrink-0"></i>
-                            <span class="truncate">Zielgruppe, Sport & Typ</span>
+                            <span class="truncate">{{ tx('Zielgruppe, Sport & Typ', 'Zielgruppe, Sport & Typ') }}</span>
                         </span>
                         <i :class="showComposerAdvanced ? 'las la-angle-up' : 'las la-angle-down'"></i>
                     </button>
@@ -251,8 +242,8 @@ const submitPost = () => {
                                 v-model="postForm.content_origin"
                                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             >
-                                <option value="self">Von mir selbst erstellt</option>
-                                <option value="ai">Mit KI erstellt</option>
+                                <option value="self">{{ tx('Von mir selbst erstellt', 'Von mir selbst erstellt') }}</option>
+                                <option value="ai">{{ tx('Mit KI erstellt', 'Mit KI erstellt') }}</option>
                             </select>
 
                             <select
@@ -264,7 +255,7 @@ const submitPost = () => {
                                         : 'border-border'
                                 ]"
                             >
-                                <option value="">Kein Verein</option>
+                                <option value="">{{ tx('events.none.club', 'Kein Verein') }}</option>
                                 <option
                                     v-for="club in clubs"
                                     :key="club.id"
@@ -283,7 +274,7 @@ const submitPost = () => {
                                         : 'border-border'
                                 ]"
                             >
-                                <option value="">Kein Team</option>
+                                <option value="">{{ tx('events.none.team', 'Kein Team') }}</option>
                                 <option
                                     v-for="team in teams"
                                     :key="team.id"
@@ -307,7 +298,7 @@ const submitPost = () => {
                             value-key="id"
                             translation-prefix="sports"
                             category-translation-prefix="sport_categories"
-                            placeholder="Sportart zum Beitrag"
+                            :placeholder="tx('Sportart zum Beitrag', 'Sportart zum Beitrag')"
                         />
 
                         <div class="flex min-h-11 max-w-full flex-wrap gap-2 overflow-hidden rounded-lg border border-border bg-inputBg px-3 py-2">
@@ -332,14 +323,14 @@ const submitPost = () => {
                                 v-if="postForm.sport_id && !createSportSkills.length"
                                 class="min-w-0 break-words text-sm text-secondary"
                             >
-                                Keine Skills für {{ sportLabel(selectedCreateSport) || 'diese Sportart' }}.
+                                {{ tx('Keine Skills für {sport}.', 'Keine Skills für {sport}.', { sport: sportLabel(selectedCreateSport) || tx('diese Sportart', 'diese Sportart') }) }}
                             </span>
 
                             <span
                                 v-if="!postForm.sport_id"
                                 class="min-w-0 break-words text-sm text-secondary"
                             >
-                                Optional: Sportart wählen, um passende Skills zu markieren.
+                                {{ tx('Optional: Sportart wählen, um passende Skills zu markieren.', 'Optional: Sportart wählen, um passende Skills zu markieren.') }}
                             </span>
                         </div>
                     </div>
@@ -375,7 +366,7 @@ const submitPost = () => {
                             @click="imageInput?.click()"
                         >
                             <i class="las la-image"></i>
-                            Bild
+                            {{ tx('Bild', 'Bild') }}
                         </button>
 
                         <button
@@ -384,8 +375,8 @@ const submitPost = () => {
                             @click="attachmentInput?.click()"
                         >
                             <i class="las la-video"></i>
-                            <span class="hidden sm:inline">Video / Dateien</span>
-                            <span class="sm:hidden">Dateien</span>
+                            <span class="hidden sm:inline">{{ tx('Video / Dateien', 'Video / Dateien') }}</span>
+                            <span class="sm:hidden">{{ tx('Dateien', 'Dateien') }}</span>
                         </button>
 
                         <span
@@ -396,7 +387,7 @@ const submitPost = () => {
                         </span>
 
                         <span class="col-span-2 rounded-lg bg-inputBg px-3 py-2 text-xs text-secondary sm:col-span-1">
-                            Bilder optimiert, Videos bis 50 MB
+                            {{ tx('Bilder optimiert, Videos bis 50 MB', 'Bilder optimiert, Videos bis 50 MB') }}
                         </span>
                     </div>
 
@@ -404,7 +395,7 @@ const submitPost = () => {
                         <AppLoadingState
                             v-if="postForm.processing"
                             class="sm:mr-auto"
-                            label="Post wird veroeffentlicht..."
+                            :label="tx('Post wird veroeffentlicht...', 'Post wird veröffentlicht...')"
                             inline
                         />
 
@@ -416,7 +407,7 @@ const submitPost = () => {
                             :disabled="postForm.processing"
                             @click="closeComposer"
                         >
-                            Abbrechen
+                            {{ tx('Abbrechen', 'Abbrechen') }}
                         </AppButton>
 
                         <AppButton
@@ -426,7 +417,7 @@ const submitPost = () => {
                             size="lg"
                             class="w-full sm:w-auto"
                         >
-                            {{ postForm.processing ? 'Postet...' : 'Posten' }}
+                            {{ postForm.processing ? tx('Postet...', 'Postet...') : tx('Posten', 'Posten') }}
                         </AppButton>
                     </div>
                 </form>

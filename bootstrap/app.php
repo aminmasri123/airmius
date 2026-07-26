@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
+use App\Http\Middleware\TranslateUserFacingResponseText;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -48,11 +49,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // Mobile/API clients can send X-Locale, X-App-Locale, or Accept-Language.
         $middleware->api(prepend: [
             SetLocale::class,
+            TranslateUserFacingResponseText::class,
         ]);
 
         // Locale must run after the default web session middleware and before Inertia.
         $middleware->web(append: [
             SetLocale::class,
+            TranslateUserFacingResponseText::class,
             HandleInertiaRequests::class,
             EnsureApplicationIsNotInMaintenance::class,
             EnsureAccountIsNotSuspended::class,
@@ -141,7 +144,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
-                    'message' => 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.',
+                    'message' => __('csrf_session_expired'),
                 ], 419);
             }
 

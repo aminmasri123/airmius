@@ -80,7 +80,7 @@ The check should confirm:
 
 ```powershell
 cd C:\xampp\htdocs\airmius\mobile\airmius_mobile
-.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://app.airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
+.\scripts\run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -FlutterCommand "C:\flutter\bin\flutter.bat"
 ```
 
 ## Troubleshooting
