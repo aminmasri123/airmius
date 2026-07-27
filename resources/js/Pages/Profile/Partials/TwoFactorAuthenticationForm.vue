@@ -42,18 +42,23 @@ watch(twoFactorEnabled, () => {
 const enableTwoFactorAuthentication = () => {
     enabling.value = true;
 
-    router.post(route('two-factor.enable'), {}, {
-        preserveScroll: true,
-        onSuccess: () => Promise.all([
+    axios.post(route('two-factor.enable'))
+        .then(() => Promise.all([
+            router.reload({
+                only: ['auth'],
+                preserveScroll: true,
+                preserveState: true,
+            }),
             showQrCode(),
             showSetupKey(),
             showRecoveryCodes(),
-        ]),
-        onFinish: () => {
-            enabling.value = false;
+        ]))
+        .then(() => {
             confirming.value = props.requiresConfirmation;
-        },
-    });
+        })
+        .finally(() => {
+            enabling.value = false;
+        });
 };
 
 const showQrCode = () => {
