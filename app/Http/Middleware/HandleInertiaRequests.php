@@ -128,6 +128,7 @@ class HandleInertiaRequests extends Middleware
                     'profile_photo_path' => $user->profile_photo_path,
                     'profile_photo_url' => $user->profile_photo_url,
                     'profile_photo_thumb' => $user->profile_photo_thumb,
+                    'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
                     'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
                     'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
                     'has_social_login' => $user->socialAccounts()->exists(),
