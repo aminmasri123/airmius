@@ -9,7 +9,10 @@ const logoSrc = computed(() => logoVertical(isDark.value))
 </script>
 
 <template>
-    <Link :href="route('welcome')" class="inline-flex h-28 w-28 justify-center sm:h-32 sm:w-32">
+    <Link
+        :href="route('welcome')"
+        class="inline-flex h-28 w-40 items-center justify-center sm:h-32 sm:w-48"
+    >
         <img
             :src="logoSrc"
             alt="AIRMIUS Logo"

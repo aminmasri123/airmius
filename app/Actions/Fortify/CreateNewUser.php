@@ -13,6 +13,8 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -89,7 +91,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => Hash::make($input['password']),
         ]);
 
-        $user->assignRole($requiresGuardianConsent ? 'minor_pending_consent' : 'player');
+        $user->assignRole($this->registrationRole($requiresGuardianConsent));
 
         try {
             $user->notify(new AccountWelcomeNotification());
@@ -118,5 +120,16 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         return $user;
+    }
+
+    private function registrationRole(bool $requiresGuardianConsent): Role
+    {
+        $roleName = $requiresGuardianConsent ? 'minor_pending_consent' : 'player';
+
+        $role = Role::findOrCreate($roleName, 'web');
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $role;
     }
 }

@@ -22,9 +22,9 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
     <Head :title="$t('E-Mail-Verifizierung')" />
 
     <AuthenticationCard>
-        <template #logo>
+        <div class="mb-5 flex justify-center">
             <AuthenticationCardLogo />
-        </template>
+        </div>
 
         <div class="mb-4 text-sm text-gray-600">
             {{ $t('Bevor du fortfährst, bestätige bitte deine E-Mail-Adresse über den Link, den wir dir gerade gesendet haben. Wenn du keine E-Mail erhalten hast, senden wir dir gerne eine neue.') }}
@@ -35,19 +35,19 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
         </div>
 
         <form @submit.prevent="submit">
-            <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="mt-5 grid gap-3">
                 <PrimaryButton
-                    class="justify-center sm:flex-none"
+                    class="w-full justify-center"
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
                     {{ $t('Bestätigungs-E-Mail erneut senden') }}
                 </PrimaryButton>
 
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="grid gap-2 sm:grid-cols-2">
                     <Link
                         :href="route('profile.show')"
-                        class="inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-borderHover focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-center text-sm font-semibold text-primary hover:border-borderHover focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                         {{ $t('Profil bearbeiten') }}</Link>
 
@@ -55,7 +55,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                         :href="route('logout')"
                         method="post"
                         as="button"
-                        class="inline-flex items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:border-borderHover focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-center text-sm font-semibold text-primary hover:border-borderHover focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
                         {{ $t('Abmelden') }}
                     </Link>

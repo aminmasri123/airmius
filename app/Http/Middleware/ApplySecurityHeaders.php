@@ -75,10 +75,6 @@ class ApplySecurityHeaders
 
     private function viteDevServerOrigin(): ?string
     {
-        if (! app()->environment('local')) {
-            return null;
-        }
-
         $hotFile = public_path('hot');
 
         if (! is_file($hotFile) || ! is_readable($hotFile)) {
