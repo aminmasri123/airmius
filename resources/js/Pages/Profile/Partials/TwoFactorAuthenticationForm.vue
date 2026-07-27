@@ -23,13 +23,14 @@ const disabling = ref(false);
 const qrCode = ref(null);
 const setupKey = ref(null);
 const recoveryCodes = ref([]);
+const setupAvailable = computed(() => Boolean(qrCode.value || setupKey.value || recoveryCodes.value.length));
 
 const confirmationForm = useForm({
     code: '',
 });
 
 const twoFactorEnabled = computed(
-    () => ! enabling.value && page.props.auth.user?.two_factor_enabled,
+    () => ! enabling.value && (page.props.auth.user?.two_factor_enabled || setupAvailable.value),
 );
 
 watch(twoFactorEnabled, () => {
