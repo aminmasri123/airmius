@@ -17284,6 +17284,51 @@ final _strings = {
     'accessibility.textLarge': 'Groß',
     'accessibility.textExtraLarge': 'Sehr groß',
     'accessibility.textVeryLarge': 'Sehr groß +',
+    'authRecovery.quickActions': 'Schnellaktionen',
+    'authRecovery.eyebrow': 'KONTO-SICHERHEIT',
+    'authRecovery.title': 'Sicherheitsübersicht',
+    'authRecovery.description':
+        'Alle Wege für Anmeldung, Wiederherstellung, Verifizierung und geschützte Kontostatus.',
+    'authRecovery.metricFlows': 'Abläufe',
+    'authRecovery.metricSecurity': 'Sicherheit',
+    'authRecovery.metricRecovery': 'Wiederherstellung',
+    'authRecovery.filter.all': 'Alle',
+    'authRecovery.filter.profile': 'Profil',
+    'authRecovery.filter.recovery': 'Wiederherstellung',
+    'authRecovery.filter.security': 'Sicherheit',
+    'authRecovery.filter.status': 'Status',
+    'authRecovery.groups': 'Bereiche anzeigen',
+    'authRecovery.showRecovery': 'Wiederherstellung anzeigen',
+    'authRecovery.showSecurity': 'Sicherheit anzeigen',
+    'authRecovery.showAccountState': 'Kontostatus anzeigen',
+    'authRecovery.flow.profile.title': 'Profil vervollständigen',
+    'authRecovery.flow.profile.status': 'Pflicht',
+    'authRecovery.flow.profile.body':
+        'Fehlende Profildaten, Rolle, Verein, Standort und erste Sicherheitsprüfung ergänzen.',
+    'authRecovery.flow.forgot.title': 'Passwort vergessen',
+    'authRecovery.flow.forgot.status': 'E-Mail',
+    'authRecovery.flow.forgot.body':
+        'Passwort-Reset mit E-Mail, Sicherheitsmeldung und sicherer Rückkehr zur Anmeldung anfordern.',
+    'authRecovery.flow.reset.title': 'Passwort zurücksetzen',
+    'authRecovery.flow.reset.status': 'Token',
+    'authRecovery.flow.reset.body':
+        'Reset-Formular mit Token, neuem Passwort, Bestätigung und Erfolgsmeldung.',
+    'authRecovery.flow.confirm.title': 'Passwort bestätigen',
+    'authRecovery.flow.confirm.status': 'Prüfung',
+    'authRecovery.flow.confirm.body':
+        'Sicherheitsabfrage vor sensiblen Aktionen wie Konto löschen, 2FA oder Zahlungsdaten.',
+    'authRecovery.flow.twoFactor.title': 'Zwei-Faktor-Anmeldung',
+    'authRecovery.flow.twoFactor.status': '2FA',
+    'authRecovery.flow.twoFactor.body':
+        'Code-Eingabe, Wiederherstellungscode und klare Fehlermeldungen schützen die Anmeldung.',
+    'authRecovery.flow.email.title': 'E-Mail verifizieren',
+    'authRecovery.flow.email.status': 'Prüfung',
+    'authRecovery.flow.email.body':
+        'Verifizierung erneut senden und prüfen, ob der Account freigeschaltet ist.',
+    'authRecovery.flow.suspended.title': 'Account suspendiert',
+    'authRecovery.flow.suspended.status': 'Gesperrt',
+    'authRecovery.flow.suspended.body':
+        'Sperrgrund, Support-Kontakt, Einspruch und sichere Abmeldung verständlich anzeigen.',
     'passwordRecovery.title': 'Passwort-Hilfe',
     'passwordRecovery.heading': 'Passwort sicher zurücksetzen',
     'passwordRecovery.description':
@@ -17559,6 +17604,7 @@ final _strings = {
     'authFlow.subtitle':
         'Registrierung, Passwort, 2FA, E-Mail und Profilabschluss',
     'authFlow.accountOps': 'Konto-Aktionen',
+    'authFlow.securityOverview': 'Sicherheitsübersicht öffnen',
     'authFlow.eyebrow': 'Anmeldung',
     'authFlow.intro':
         'Alle wichtigen Kontofunktionen an einem sicheren, übersichtlichen Ort.',
@@ -18997,6 +19043,9 @@ final _strings = {
     'onboarding.wellbeing': 'Wohlbefinden',
     'onboarding.nextStep': 'Nächster Schritt',
     'onboarding.finish': 'Onboarding abschließen',
+    'onboarding.saved': 'Onboarding gespeichert. Deine Auswahl ist jetzt lokal aktiv.',
+    'onboarding.saveFailed': 'Onboarding konnte nicht gespeichert werden. Bitte erneut versuchen.',
+    'onboarding.privacyRequired': 'Bitte Datenschutz & AGB akzeptieren, bevor du fortfährst.',
     'onboarding.languageBody':
         'Airmius unterstützt vier Sprachen und richtet arabische Inhalte automatisch von rechts nach links aus.',
     'onboarding.languageCenter': 'Sprachzentrale',
@@ -19371,6 +19420,51 @@ final _strings = {
     'accessibility.textLarge': 'Large',
     'accessibility.textExtraLarge': 'Extra large',
     'accessibility.textVeryLarge': 'Very large +',
+    'authRecovery.quickActions': 'Quick actions',
+    'authRecovery.eyebrow': 'ACCOUNT SECURITY',
+    'authRecovery.title': 'Security overview',
+    'authRecovery.description':
+        'All paths for sign-in, recovery, verification and protected account status.',
+    'authRecovery.metricFlows': 'Flows',
+    'authRecovery.metricSecurity': 'Security',
+    'authRecovery.metricRecovery': 'Recovery',
+    'authRecovery.filter.all': 'All',
+    'authRecovery.filter.profile': 'Profile',
+    'authRecovery.filter.recovery': 'Recovery',
+    'authRecovery.filter.security': 'Security',
+    'authRecovery.filter.status': 'Status',
+    'authRecovery.groups': 'Visible sections',
+    'authRecovery.showRecovery': 'Show recovery',
+    'authRecovery.showSecurity': 'Show security',
+    'authRecovery.showAccountState': 'Show account status',
+    'authRecovery.flow.profile.title': 'Complete profile',
+    'authRecovery.flow.profile.status': 'Required',
+    'authRecovery.flow.profile.body':
+        'Complete missing profile data, role, club, location and the first security check.',
+    'authRecovery.flow.forgot.title': 'Forgot password',
+    'authRecovery.flow.forgot.status': 'Email',
+    'authRecovery.flow.forgot.body':
+        'Request a password reset by email with a security notice and a safe return to sign-in.',
+    'authRecovery.flow.reset.title': 'Reset password',
+    'authRecovery.flow.reset.status': 'Token',
+    'authRecovery.flow.reset.body':
+        'Reset form with token, new password, confirmation and success feedback.',
+    'authRecovery.flow.confirm.title': 'Confirm password',
+    'authRecovery.flow.confirm.status': 'Check',
+    'authRecovery.flow.confirm.body':
+        'Confirm identity before sensitive actions such as account deletion, 2FA or payment data.',
+    'authRecovery.flow.twoFactor.title': 'Two-factor sign-in',
+    'authRecovery.flow.twoFactor.status': '2FA',
+    'authRecovery.flow.twoFactor.body':
+        'Code entry, recovery-code switching and clear errors protect sign-in.',
+    'authRecovery.flow.email.title': 'Verify email',
+    'authRecovery.flow.email.status': 'Check',
+    'authRecovery.flow.email.body':
+        'Resend verification and check whether the account is fully enabled.',
+    'authRecovery.flow.suspended.title': 'Account suspended',
+    'authRecovery.flow.suspended.status': 'Blocked',
+    'authRecovery.flow.suspended.body':
+        'Explain the suspension reason, support contact, appeal and secure sign-out.',
     'passwordRecovery.title': 'Password help',
     'passwordRecovery.heading': 'Reset your password securely',
     'passwordRecovery.description':
@@ -19638,6 +19732,7 @@ final _strings = {
     'authFlow.subtitle':
         'Registration, password, 2FA, email and profile completion',
     'authFlow.accountOps': 'Account actions',
+    'authFlow.securityOverview': 'Open security overview',
     'authFlow.eyebrow': 'Sign-in',
     'authFlow.intro':
         'All important account features in one secure, clear place.',
@@ -21029,6 +21124,9 @@ final _strings = {
     'onboarding.wellbeing': 'Wellbeing',
     'onboarding.nextStep': 'Next step',
     'onboarding.finish': 'Finish onboarding',
+    'onboarding.saved': 'Onboarding saved. Your choices are now active locally.',
+    'onboarding.saveFailed': 'Onboarding could not be saved. Please try again.',
+    'onboarding.privacyRequired': 'Please accept Privacy & Terms before continuing.',
     'onboarding.languageBody':
         'Airmius supports four languages and automatically uses right-to-left layout for Arabic content.',
     'onboarding.languageCenter': 'Language center',
@@ -21393,6 +21491,51 @@ final _strings = {
     'accessibility.textLarge': 'Grand',
     'accessibility.textExtraLarge': 'Très grand',
     'accessibility.textVeryLarge': 'Très grand +',
+    'authRecovery.quickActions': 'Actions rapides',
+    'authRecovery.eyebrow': 'SÉCURITÉ DU COMPTE',
+    'authRecovery.title': 'Vue d’ensemble de la sécurité',
+    'authRecovery.description':
+        'Tous les parcours de connexion, récupération, vérification et protection du compte.',
+    'authRecovery.metricFlows': 'Parcours',
+    'authRecovery.metricSecurity': 'Sécurité',
+    'authRecovery.metricRecovery': 'Récupération',
+    'authRecovery.filter.all': 'Tous',
+    'authRecovery.filter.profile': 'Profil',
+    'authRecovery.filter.recovery': 'Récupération',
+    'authRecovery.filter.security': 'Sécurité',
+    'authRecovery.filter.status': 'Statut',
+    'authRecovery.groups': 'Sections visibles',
+    'authRecovery.showRecovery': 'Afficher la récupération',
+    'authRecovery.showSecurity': 'Afficher la sécurité',
+    'authRecovery.showAccountState': 'Afficher le statut du compte',
+    'authRecovery.flow.profile.title': 'Compléter le profil',
+    'authRecovery.flow.profile.status': 'Requis',
+    'authRecovery.flow.profile.body':
+        'Complète les données manquantes, le rôle, le club, le lieu et le premier contrôle de sécurité.',
+    'authRecovery.flow.forgot.title': 'Mot de passe oublié',
+    'authRecovery.flow.forgot.status': 'E-mail',
+    'authRecovery.flow.forgot.body':
+        'Demande une réinitialisation par e-mail avec un message de sécurité et un retour sûr à la connexion.',
+    'authRecovery.flow.reset.title': 'Réinitialiser le mot de passe',
+    'authRecovery.flow.reset.status': 'Jeton',
+    'authRecovery.flow.reset.body':
+        'Formulaire avec jeton, nouveau mot de passe, confirmation et message de réussite.',
+    'authRecovery.flow.confirm.title': 'Confirmer le mot de passe',
+    'authRecovery.flow.confirm.status': 'Contrôle',
+    'authRecovery.flow.confirm.body':
+        'Confirme ton identité avant les actions sensibles comme supprimer le compte, la 2FA ou les paiements.',
+    'authRecovery.flow.twoFactor.title': 'Connexion à deux facteurs',
+    'authRecovery.flow.twoFactor.status': '2FA',
+    'authRecovery.flow.twoFactor.body':
+        'La saisie du code, le code de récupération et les erreurs claires protègent la connexion.',
+    'authRecovery.flow.email.title': 'Vérifier l’e-mail',
+    'authRecovery.flow.email.status': 'Contrôle',
+    'authRecovery.flow.email.body':
+        'Renvoye la vérification et vérifie si le compte est entièrement activé.',
+    'authRecovery.flow.suspended.title': 'Compte suspendu',
+    'authRecovery.flow.suspended.status': 'Bloqué',
+    'authRecovery.flow.suspended.body':
+        'Explique la raison du blocage, le support, le recours et la déconnexion sécurisée.',
     'passwordRecovery.title': 'Aide mot de passe',
     'passwordRecovery.heading': 'Réinitialiser le mot de passe en sécurité',
     'passwordRecovery.description':
@@ -21667,6 +21810,7 @@ final _strings = {
     'authFlow.title': 'Compte et sécurité',
     'authFlow.subtitle': 'Inscription, mot de passe, 2FA, e-mail et profil',
     'authFlow.accountOps': 'Actions du compte',
+    'authFlow.securityOverview': 'Ouvrir la vue sécurité',
     'authFlow.eyebrow': 'Connexion',
     'authFlow.intro':
         'Toutes les fonctions importantes du compte, dans un espace sûr et clair.',
@@ -23085,6 +23229,9 @@ final _strings = {
     'onboarding.wellbeing': 'Bien-être',
     'onboarding.nextStep': 'Prochaine étape',
     'onboarding.finish': 'Terminer l’onboarding',
+    'onboarding.saved': 'Onboarding enregistré. Tes choix sont maintenant actifs localement.',
+    'onboarding.saveFailed': 'Impossible d’enregistrer l’onboarding. Réessaie.',
+    'onboarding.privacyRequired': 'Accepte la confidentialité et les conditions avant de continuer.',
     'onboarding.languageBody':
         'Airmius prend en charge quatre langues et active automatiquement le sens droite-gauche pour l’arabe.',
     'onboarding.languageCenter': 'Centre des langues',
@@ -23452,6 +23599,51 @@ final _strings = {
     'accessibility.textLarge': 'كبير',
     'accessibility.textExtraLarge': 'كبير جدًا',
     'accessibility.textVeryLarge': 'كبير جدًا +',
+    'authRecovery.quickActions': 'إجراءات سريعة',
+    'authRecovery.eyebrow': 'أمان الحساب',
+    'authRecovery.title': 'نظرة عامة على الأمان',
+    'authRecovery.description':
+        'جميع مسارات تسجيل الدخول والاسترداد والتحقق وحالة الحساب المحمية.',
+    'authRecovery.metricFlows': 'المسارات',
+    'authRecovery.metricSecurity': 'الأمان',
+    'authRecovery.metricRecovery': 'الاسترداد',
+    'authRecovery.filter.all': 'الكل',
+    'authRecovery.filter.profile': 'الملف الشخصي',
+    'authRecovery.filter.recovery': 'الاسترداد',
+    'authRecovery.filter.security': 'الأمان',
+    'authRecovery.filter.status': 'الحالة',
+    'authRecovery.groups': 'الأقسام الظاهرة',
+    'authRecovery.showRecovery': 'إظهار الاسترداد',
+    'authRecovery.showSecurity': 'إظهار الأمان',
+    'authRecovery.showAccountState': 'إظهار حالة الحساب',
+    'authRecovery.flow.profile.title': 'إكمال الملف الشخصي',
+    'authRecovery.flow.profile.status': 'مطلوب',
+    'authRecovery.flow.profile.body':
+        'أكمل بيانات الملف والدور والنادي والموقع وأول فحص أمني.',
+    'authRecovery.flow.forgot.title': 'نسيت كلمة المرور',
+    'authRecovery.flow.forgot.status': 'البريد',
+    'authRecovery.flow.forgot.body':
+        'اطلب إعادة تعيين كلمة المرور عبر البريد مع تنبيه أمني وعودة آمنة لتسجيل الدخول.',
+    'authRecovery.flow.reset.title': 'إعادة تعيين كلمة المرور',
+    'authRecovery.flow.reset.status': 'رمز',
+    'authRecovery.flow.reset.body':
+        'نموذج إعادة التعيين بالرمز وكلمة المرور الجديدة والتأكيد ورسالة النجاح.',
+    'authRecovery.flow.confirm.title': 'تأكيد كلمة المرور',
+    'authRecovery.flow.confirm.status': 'فحص',
+    'authRecovery.flow.confirm.body':
+        'أكد هويتك قبل الإجراءات الحساسة مثل حذف الحساب أو المصادقة الثنائية أو بيانات الدفع.',
+    'authRecovery.flow.twoFactor.title': 'تسجيل الدخول بعاملين',
+    'authRecovery.flow.twoFactor.status': '2FA',
+    'authRecovery.flow.twoFactor.body':
+        'إدخال الرمز ورمز الاسترداد ورسائل الخطأ الواضحة تحمي تسجيل الدخول.',
+    'authRecovery.flow.email.title': 'تأكيد البريد الإلكتروني',
+    'authRecovery.flow.email.status': 'فحص',
+    'authRecovery.flow.email.body':
+        'أعد إرسال التحقق وتحقق من تفعيل الحساب بالكامل.',
+    'authRecovery.flow.suspended.title': 'الحساب موقوف',
+    'authRecovery.flow.suspended.status': 'محظور',
+    'authRecovery.flow.suspended.body':
+        'اعرض سبب الإيقاف والدعم والاستئناف وتسجيل الخروج الآمن بوضوح.',
     'passwordRecovery.title': 'مساعدة كلمة المرور',
     'passwordRecovery.heading': 'إعادة تعيين كلمة المرور بأمان',
     'passwordRecovery.description':
@@ -23714,6 +23906,7 @@ final _strings = {
     'authFlow.subtitle':
         'التسجيل وكلمة المرور والمصادقة الثنائية والبريد والملف الشخصي',
     'authFlow.accountOps': 'إجراءات الحساب',
+    'authFlow.securityOverview': 'فتح نظرة الأمان',
     'authFlow.eyebrow': 'تسجيل الدخول',
     'authFlow.intro': 'كل وظائف الحساب المهمة في مكان آمن وواضح.',
     'authFlow.register': 'إنشاء حساب',
@@ -25067,6 +25260,9 @@ final _strings = {
     'onboarding.wellbeing': 'العافية',
     'onboarding.nextStep': 'الخطوة التالية',
     'onboarding.finish': 'إنهاء الإعداد',
+    'onboarding.saved': 'تم حفظ الإعداد. اختياراتك مفعّلة محليًا الآن.',
+    'onboarding.saveFailed': 'تعذر حفظ الإعداد. حاول مرة أخرى.',
+    'onboarding.privacyRequired': 'يرجى قبول الخصوصية والشروط قبل المتابعة.',
     'onboarding.languageBody':
         'يدعم Airmius أربع لغات ويضبط اتجاه المحتوى العربي من اليمين إلى اليسار تلقائيًا.',
     'onboarding.languageCenter': 'مركز اللغات',

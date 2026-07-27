@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'airmius_l10n.dart';
@@ -75,10 +77,39 @@ class AirmiusPreferences {
     );
   }
 
+  Future<void> writeOnboardingProfile({
+    required String role,
+    required String workspace,
+    required Map<String, bool> permissions,
+  }) {
+    return _store.writeString(
+      _onboardingProfileKey,
+      jsonEncode({
+        'role': role,
+        'workspace': workspace,
+        'permissions': permissions,
+        'completedAt': DateTime.now().toUtc().toIso8601String(),
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>?> readOnboardingProfile() async {
+    final raw = await _store.readString(_onboardingProfileKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      return decoded.map((key, value) => MapEntry('$key', value));
+    } catch (_) {
+      return null;
+    }
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
   static const _themePaletteKey = 'airmius.themePalette';
   static const _textSizeKey = 'airmius.textSize';
   static const _permissionOnboardingCompleteKey =
       'airmius.permissionOnboardingComplete';
+  static const _onboardingProfileKey = 'airmius.onboardingProfile';
 }

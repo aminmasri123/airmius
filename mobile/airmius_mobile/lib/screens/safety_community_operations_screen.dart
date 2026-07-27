@@ -107,7 +107,7 @@ class _SafetyCommunityOperationsScreenState
     if (_filter.isEmpty) return items;
     return items.where((item) {
       final haystack =
-          '${item.title} ${item.subtitle} ${item.endpoint} ${item.method}'
+          '${item.title} ${item.subtitle} ${AirmiusApiContract.mobileApiPath(item.endpoint)} ${item.method}'
               .toLowerCase();
       return haystack.contains(_filter);
     }).toList();
@@ -639,7 +639,7 @@ class _OperationCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 9),
                   Text(
-                    '${operation.method} ${operation.endpoint}',
+                    '${operation.method} ${AirmiusApiContract.mobileApiPath(operation.endpoint)}',
                     style: TextStyle(
                       color: operation.danger
                           ? _SafetyCommunityOperationsScreenState._red
@@ -725,7 +725,10 @@ class _OperationSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _SheetRow(label: 'Methode', value: operation.method),
-          _SheetRow(label: 'Endpoint', value: operation.endpoint),
+          _SheetRow(
+            label: 'Endpoint',
+            value: AirmiusApiContract.mobileApiPath(operation.endpoint),
+          ),
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
@@ -738,7 +741,7 @@ class _OperationSheet extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Backend-Anbindung folgt über den Laravel API-Client. Diese Flutter-UI bildet den kompletten Prozess bereits nativ ab.',
+              'Der native API-Client verwendet die oben angezeigte Route. Diese Übersicht erklärt die verfügbaren Abläufe; die tatsächliche Aktion wird in der jeweiligen Fachansicht ausgeführt.',
               style: TextStyle(
                 color: _SafetyCommunityOperationsScreenState._muted,
                 fontWeight: FontWeight.w700,

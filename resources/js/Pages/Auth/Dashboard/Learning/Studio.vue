@@ -127,10 +127,28 @@ const uploadLessonAttachment = (event) => {
 }
 
 const statusLabel = (status) => ({
-    draft: 'Entwurf',
-    review: 'Prüfung',
-    published: 'Live',
-    archived: 'Archiviert',
+    draft: tx('learning_studio_form.draft', 'Entwurf'),
+    review: tx('learning_studio_form.review', 'Zur Prüfung'),
+    published: tx('learning_studio_form.published', 'Veröffentlicht'),
+    archived: tx('learning_studio_form.archived', 'Archiviert'),
+}[status] || status)
+
+const qualityStatusLabel = (status) => ({
+    pending: tx('learning_studio_ui.quality_pending', 'Ausstehend'),
+    approved: tx('learning_studio_ui.quality_approved', 'Freigegeben'),
+    rejected: tx('learning_studio_ui.quality_rejected', 'Überarbeitung nötig'),
+}[status] || status)
+
+const enrollmentStatusLabel = (status) => ({
+    active: tx('learning_studio_ui.enrollment_active', 'Aktiv'),
+    completed: tx('learning_studio_ui.enrollment_completed', 'Abgeschlossen'),
+    revoked: tx('learning_studio_ui.enrollment_revoked', 'Deaktiviert'),
+}[status] || status)
+
+const questionStatusLabel = (status) => ({
+    open: tx('learning_studio_ui.question_open', 'Offen'),
+    answered: tx('learning_studio_ui.answered', 'Beantwortet'),
+    resolved: tx('learning_studio_ui.resolved', 'Erledigt'),
 }[status] || status)
 
 const newCourseForm = useForm({
@@ -603,7 +621,7 @@ const submitQuestionReply = (question) => {
                             <p class="text-xs uppercase text-secondary">{{ tx('learning_studio_ui.status', 'Status') }}</p>
                             <p class="mt-1 text-lg font-bold text-primary">{{ statusLabel(selectedCourse.status) }}</p>
                             <p class="mt-2 text-xs text-secondary">{{ selectedCourse.is_free ? tx('learning_studio_ui.free', 'Kostenlos') : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ formatMinutes(selectedCourse.estimated_minutes) }}</p>
-                            <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
+                            <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
                                 {{ tx('learning_studio_ui.view_as_student', 'Als Teilnehmer ansehen') }}
                             </a>
                         </div>
@@ -885,91 +903,91 @@ const submitQuestionReply = (question) => {
 
                 <article v-show="activePanel === 'sales'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
-                        <h2 class="text-lg font-semibold text-primary">Landingpage, Gutscheine und Review</h2>
-                        <p class="mt-1 text-sm text-secondary">Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitätsstatus.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.sales_heading', 'Landingpage, Gutscheine und Review') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.sales_intro', 'Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitätsstatus.') }}</p>
                     </div>
                     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-4">
                             <div class="rounded-lg border border-border bg-bg p-4">
-                                <p class="text-xs font-semibold uppercase text-secondary">Qualitätsreview</p>
-                                <p class="mt-2 text-lg font-bold text-primary">{{ selectedCourse.quality_status || 'pending' }}</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('learning_studio_ui.quality_review', 'Qualitätsreview') }}</p>
+                                <p class="mt-2 text-lg font-bold text-primary">{{ qualityStatusLabel(selectedCourse.quality_status || 'pending') }}</p>
                                 <p v-if="selectedCourse.quality_note" class="mt-1 text-sm text-secondary">{{ selectedCourse.quality_note }}</p>
                             </div>
                             <div class="grid gap-3">
                                 <div v-for="coupon in selectedCourse.coupons" :key="coupon.id" class="rounded-lg border border-border bg-bg p-4">
                                     <div class="flex flex-wrap items-center justify-between gap-3">
                                         <p class="font-bold text-primary">{{ coupon.code }}</p>
-                                        <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ coupon.redeemed_count || 0 }} genutzt</span>
+                                        <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ coupon.redeemed_count || 0 }} {{ tx('learning_studio_ui.used', 'genutzt') }}</span>
                                     </div>
-                                    <p class="mt-1 text-sm text-secondary">{{ coupon.discount_type === 'fixed' ? formatMoney(coupon.discount_value) : `${coupon.discount_value}%` }} Rabatt</p>
+                                    <p class="mt-1 text-sm text-secondary">{{ coupon.discount_type === 'fixed' ? formatMoney(coupon.discount_value) : `${coupon.discount_value}%` }} {{ tx('learning_studio_ui.discount', 'Rabatt') }}</p>
                                 </div>
-                                <p v-if="!selectedCourse.coupons?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">Noch keine Gutscheine angelegt.</p>
+                                <p v-if="!selectedCourse.coupons?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">{{ tx('learning_studio_ui.no_coupons', 'Noch keine Gutscheine angelegt.') }}</p>
                             </div>
                         </div>
                         <form class="grid gap-3 rounded-lg border border-border bg-bg p-4" @submit.prevent="createCoupon">
-                            <h3 class="font-semibold text-primary">Gutschein anlegen</h3>
-                            <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code, z. B. TEAM20">
+                            <h3 class="font-semibold text-primary">{{ tx('learning_studio_ui.create_coupon', 'Gutschein anlegen') }}</h3>
+                            <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.coupon_code', 'Code, z. B. TEAM20')" :aria-label="tx('learning_studio_ui.coupon_code', 'Code, z. B. TEAM20')">
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <select v-model="couponForm.discount_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                    <option value="percent">Prozent</option>
-                                    <option value="fixed">Fixbetrag in Cent</option>
+                                <select v-model="couponForm.discount_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.discount_type', 'Rabattart')">
+                                    <option value="percent">{{ tx('learning_studio_ui.percent', 'Prozent') }}</option>
+                                    <option value="fixed">{{ tx('learning_studio_ui.fixed_amount_cents', 'Fixbetrag in Cent') }}</option>
                                 </select>
-                                <input v-model="couponForm.discount_value" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Wert">
+                                <input v-model="couponForm.discount_value" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.value', 'Wert')" :aria-label="tx('learning_studio_ui.value', 'Wert')">
                             </div>
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <input v-model="couponForm.max_redemptions" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Max. Nutzungen">
-                                <input v-model="couponForm.expires_at" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <input v-model="couponForm.max_redemptions" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.max_redemptions', 'Max. Nutzungen')" :aria-label="tx('learning_studio_ui.max_redemptions', 'Max. Nutzungen')">
+                                <input v-model="couponForm.expires_at" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.expires_at', 'Gültig bis')">
                             </div>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary">
-                                <input v-model="couponForm.is_active" type="checkbox" class="rounded border-border bg-inputBg">
-                                Aktiv
+                                <input v-model="couponForm.is_active" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="tx('learning_studio_ui.active', 'Aktiv')">
+                                {{ tx('learning_studio_ui.active', 'Aktiv') }}
                             </label>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Gutschein speichern</button>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.save_coupon', 'Gutschein speichern') }}</button>
                         </form>
                     </div>
                 </article>
 
                 <article v-show="activePanel === 'quiz'" class="surface-card p-5">
-                    <h2 class="text-lg font-semibold text-primary">Quiz und Wissenschecks</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.quiz_heading', 'Quiz und Wissenschecks') }}</h2>
                     <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-3">
                             <div v-for="quiz in selectedCourse.quizzes" :key="quiz.id" class="rounded-lg border border-border bg-bg p-4">
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="font-semibold text-primary">{{ quiz.title }}</p>
-                                        <p class="mt-1 text-sm text-secondary">{{ quiz.description || 'Kein Beschreibungstext' }}</p>
+                                        <p class="mt-1 text-sm text-secondary">{{ quiz.description || tx('learning_studio_ui.no_description_text', 'Kein Beschreibungstext') }}</p>
                                     </div>
-                                    <span class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">{{ quiz.pass_percent }}% Bestehen</span>
+                                    <span class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">{{ quiz.pass_percent }}% {{ tx('learning_studio_ui.passing', 'Bestehen') }}</span>
                                 </div>
-                                <p class="mt-3 text-xs text-secondary">{{ quiz.questions?.length || 0 }} Fragen</p>
+                                <p class="mt-3 text-xs text-secondary">{{ quiz.questions?.length || 0 }} {{ tx('learning_studio_ui.questions', 'Fragen') }}</p>
                                 <button type="button" class="mt-3 rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="deleteQuiz(quiz)">
-                                    Quiz löschen
+                                    {{ tx('learning_studio_ui.delete_quiz', 'Quiz löschen') }}
                                 </button>
                             </div>
-                            <p v-if="!selectedCourse.quizzes?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">Noch kein Quiz angelegt.</p>
+                            <p v-if="!selectedCourse.quizzes?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">{{ tx('learning_studio_ui.no_quizzes', 'Noch kein Quiz angelegt.') }}</p>
                         </div>
                         <form class="grid gap-3 rounded-lg border border-border bg-bg p-4" @submit.prevent="createQuiz">
-                            <h3 class="font-semibold text-primary">Quiz erstellen</h3>
-                            <select v-model="quizForm.learning_lesson_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option value="">Allgemeines Kursquiz</option>
+                            <h3 class="font-semibold text-primary">{{ tx('learning_studio_ui.create_quiz', 'Quiz erstellen') }}</h3>
+                            <select v-model="quizForm.learning_lesson_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.lesson_scope', 'Lektion zuordnen')">
+                                <option value="">{{ tx('learning_studio_ui.general_course_quiz', 'Allgemeines Kursquiz') }}</option>
                                 <option v-for="lesson in allLessons" :key="lesson.id" :value="lesson.id">{{ lesson.title }}</option>
                             </select>
-                            <input v-model="quizForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Quiztitel">
-                            <textarea v-model="quizForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
-                            <input v-model="quizForm.pass_percent" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestehensgrenze in %">
-                            <textarea v-model="quizForm.question" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Erste Frage optional"></textarea>
-                            <textarea v-model="quizForm.options_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwortoptionen, je Zeile eine"></textarea>
-                            <textarea v-model="quizForm.correct_options_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Korrekte Antwort(en), je Zeile eine"></textarea>
-                            <textarea v-model="quizForm.explanation" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Erklaerung nach Antwort"></textarea>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Quiz speichern</button>
+                            <input v-model="quizForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.quiz_title', 'Quiztitel')" :aria-label="tx('learning_studio_ui.quiz_title', 'Quiztitel')">
+                            <textarea v-model="quizForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.description', 'Beschreibung')" :aria-label="tx('learning_studio_ui.description', 'Beschreibung')"></textarea>
+                            <input v-model="quizForm.pass_percent" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.pass_percent', 'Bestehensgrenze in %')" :aria-label="tx('learning_studio_ui.pass_percent', 'Bestehensgrenze in %')">
+                            <textarea v-model="quizForm.question" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.first_question_optional', 'Erste Frage optional')" :aria-label="tx('learning_studio_ui.first_question_optional', 'Erste Frage optional')"></textarea>
+                            <textarea v-model="quizForm.options_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.answer_options', 'Antwortoptionen, je Zeile eine')" :aria-label="tx('learning_studio_ui.answer_options', 'Antwortoptionen, je Zeile eine')"></textarea>
+                            <textarea v-model="quizForm.correct_options_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.correct_answers', 'Korrekte Antwort(en), je Zeile eine')" :aria-label="tx('learning_studio_ui.correct_answers', 'Korrekte Antwort(en), je Zeile eine')"></textarea>
+                            <textarea v-model="quizForm.explanation" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.answer_explanation', 'Erklärung nach Antwort')" :aria-label="tx('learning_studio_ui.answer_explanation', 'Erklärung nach Antwort')"></textarea>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.save_quiz', 'Quiz speichern') }}</button>
                         </form>
                     </div>
                 </article>
 
                 <article v-show="activePanel === 'assignments'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
-                        <h2 class="text-lg font-semibold text-primary">Aufgaben und manuelle Bewertung</h2>
-                        <p class="mt-1 text-sm text-secondary">Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurück.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.assignment_heading', 'Aufgaben und manuelle Bewertung') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.assignment_intro', 'Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurück.') }}</p>
                     </div>
                     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-4">
@@ -977,92 +995,92 @@ const submitQuestionReply = (question) => {
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <p class="font-semibold text-primary">{{ assignment.title }}</p>
-                                        <p class="mt-1 text-sm text-secondary">{{ assignment.instructions || 'Keine Beschreibung' }}</p>
+                                        <p class="mt-1 text-sm text-secondary">{{ assignment.instructions || tx('learning_studio_ui.no_description', 'Keine Beschreibung') }}</p>
                                     </div>
-                                    <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} Punkte</span>
+                                    <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} {{ tx('learning_studio_ui.points', 'Punkte') }}</span>
                                 </div>
                                 <div v-if="assignment.submissions?.length" class="mt-4 grid gap-3">
                                     <div v-for="submission in assignment.submissions" :key="submission.id" class="rounded-lg border border-border bg-card p-3">
-                                        <p class="text-sm font-semibold text-primary">{{ submission.user?.name || 'Teilnehmer' }}</p>
+                                        <p class="text-sm font-semibold text-primary">{{ submission.user?.name || tx('learning_studio_ui.participant', 'Teilnehmer') }}</p>
                                         <p class="mt-1 text-sm text-secondary whitespace-pre-line">{{ submission.body }}</p>
-                                        <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" class="mt-2 inline-flex text-xs font-semibold text-air-blue">Anhang öffnen</a>
+                                        <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-xs font-semibold text-air-blue">{{ tx('learning_studio_ui.open_attachment', 'Anhang öffnen') }}</a>
                                         <div class="mt-3 grid gap-2 md:grid-cols-[8rem_7rem_minmax(0,1fr)_auto]">
-                                            <select v-model="gradingForms[String(submission.id)].status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                                <option value="passed">Bestanden</option>
-                                                <option value="needs_revision">Revision</option>
-                                                <option value="rejected">Abgelehnt</option>
+                                            <select v-model="gradingForms[String(submission.id)].status" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.status', 'Status')">
+                                                <option value="passed">{{ tx('learning_studio_ui.passed', 'Bestanden') }}</option>
+                                                <option value="needs_revision">{{ tx('learning_studio_ui.needs_revision', 'Revision') }}</option>
+                                                <option value="rejected">{{ tx('learning_studio_ui.rejected', 'Abgelehnt') }}</option>
                                             </select>
-                                            <input v-model="gradingForms[String(submission.id)].score" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Score">
-                                            <input v-model="gradingForms[String(submission.id)].feedback" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Feedback">
-                                            <button class="rounded-lg border border-air-blue/40 px-3 py-2 text-xs font-semibold text-air-blue" @click="gradeSubmission(submission)">Bewerten</button>
+                                            <input v-model="gradingForms[String(submission.id)].score" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.score', 'Score')" :aria-label="tx('learning_studio_ui.score', 'Score')">
+                                            <input v-model="gradingForms[String(submission.id)].feedback" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.feedback', 'Feedback')" :aria-label="tx('learning_studio_ui.feedback', 'Feedback')">
+                                            <button class="rounded-lg border border-air-blue/40 px-3 py-2 text-xs font-semibold text-air-blue" @click="gradeSubmission(submission)">{{ tx('learning_studio_ui.grade', 'Bewerten') }}</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <p v-if="!selectedCourse.assignments?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">Noch keine Aufgaben angelegt.</p>
+                            <p v-if="!selectedCourse.assignments?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">{{ tx('learning_studio_ui.no_assignments', 'Noch keine Aufgaben angelegt.') }}</p>
                         </div>
                         <form class="grid gap-3 rounded-lg border border-border bg-bg p-4" @submit.prevent="createAssignment">
-                            <h3 class="font-semibold text-primary">Aufgabe erstellen</h3>
-                            <select v-model="assignmentForm.learning_lesson_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option value="">Allgemeine Kursaufgabe</option>
+                            <h3 class="font-semibold text-primary">{{ tx('learning_studio_ui.create_assignment', 'Aufgabe erstellen') }}</h3>
+                            <select v-model="assignmentForm.learning_lesson_id" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.lesson_scope', 'Lektion zuordnen')">
+                                <option value="">{{ tx('learning_studio_ui.general_course_assignment', 'Allgemeine Kursaufgabe') }}</option>
                                 <option v-for="lesson in allLessons" :key="lesson.id" :value="lesson.id">{{ lesson.title }}</option>
                             </select>
-                            <input v-model="assignmentForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Aufgabentitel">
-                            <textarea v-model="assignmentForm.instructions" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Aufgabenstellung"></textarea>
+                            <input v-model="assignmentForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.assignment_title', 'Aufgabentitel')" :aria-label="tx('learning_studio_ui.assignment_title', 'Aufgabentitel')">
+                            <textarea v-model="assignmentForm.instructions" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.instructions', 'Aufgabenstellung')" :aria-label="tx('learning_studio_ui.instructions', 'Aufgabenstellung')"></textarea>
                             <div class="grid gap-3 sm:grid-cols-2">
-                                <input v-model="assignmentForm.points" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Punkte">
-                                <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Fällig nach Tagen">
+                                <input v-model="assignmentForm.points" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.points', 'Punkte')" :aria-label="tx('learning_studio_ui.points', 'Punkte')">
+                                <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.due_after_days', 'Fällig nach Tagen')" :aria-label="tx('learning_studio_ui.due_after_days', 'Fällig nach Tagen')">
                             </div>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary">
-                                <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg">
-                                Pflichtaufgabe
+                                <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe')">
+                                {{ tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe') }}
                             </label>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Aufgabe speichern</button>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.save_assignment', 'Aufgabe speichern') }}</button>
                         </form>
                     </div>
                 </article>
 
                 <article v-show="activePanel === 'students'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
-                        <h2 class="text-lg font-semibold text-primary">Teilnehmer und Betreuung</h2>
-                        <p class="mt-1 text-sm text-secondary">Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.students_heading', 'Teilnehmer und Betreuung') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.students_intro', 'Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting.') }}</p>
                         <div class="mt-4 flex flex-wrap gap-2">
                             <form class="flex min-w-0 flex-1 gap-2" @submit.prevent="grantEnrollment">
-                                <input v-model="enrollmentForm.email" type="email" class="min-w-0 flex-1 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="E-Mail für manuellen Zugang">
-                                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Freischalten</button>
+                                <input v-model="enrollmentForm.email" type="email" class="min-w-0 flex-1 rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.enrollment_email', 'E-Mail für manuellen Zugang')" :aria-label="tx('learning_studio_ui.enrollment_email', 'E-Mail für manuellen Zugang')">
+                                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.grant_access', 'Freischalten') }}</button>
                             </form>
-                            <a :href="route('auth.learning.studio.courses.report', selectedCourse.id)" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">CSV Export</a>
+                            <a :href="route('auth.learning.studio.courses.report', selectedCourse.id)" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ tx('learning_studio_ui.csv_export', 'CSV Export') }}</a>
                         </div>
                     </div>
                     <div class="divide-y divide-border">
                         <div v-for="enrollment in selectedCourse.enrollments" :key="enrollment.id" class="grid gap-3 p-5 md:grid-cols-[minmax(0,1fr)_8rem_8rem_auto] md:items-center">
                             <div>
-                                <p class="font-semibold text-primary">{{ enrollment.user?.name || 'Teilnehmer' }}</p>
+                                <p class="font-semibold text-primary">{{ enrollment.user?.name || tx('learning_studio_ui.participant', 'Teilnehmer') }}</p>
                                 <p class="text-sm text-secondary">{{ enrollment.user?.email }}</p>
                                 <p class="mt-1 text-xs text-secondary">
-                                    {{ enrollment.completed_lessons_count || 0 }} Lektionen erledigt -
-                                    {{ enrollment.passed_quizzes_count || 0 }} Quiz bestanden -
-                                    {{ enrollment.assignments_passed_count || 0 }} Aufgaben bestanden
+                                    {{ enrollment.completed_lessons_count || 0 }} {{ tx('learning_studio_ui.lessons_completed', 'Lektionen erledigt') }} -
+                                    {{ enrollment.passed_quizzes_count || 0 }} {{ tx('learning_studio_ui.quizzes_passed', 'Quiz bestanden') }} -
+                                    {{ enrollment.assignments_passed_count || 0 }} {{ tx('learning_studio_ui.assignments_passed', 'Aufgaben bestanden') }}
                                 </p>
                                 <p v-if="enrollment.completion_requirements" class="mt-1 text-xs text-secondary">
-                                    Abschluss: {{ enrollment.completion_requirements.lessons.completed }}/{{ enrollment.completion_requirements.lessons.total }} Lektionen,
-                                    {{ enrollment.completion_requirements.quizzes.completed }}/{{ enrollment.completion_requirements.quizzes.total }} Quiz,
-                                    {{ enrollment.completion_requirements.assignments.completed }}/{{ enrollment.completion_requirements.assignments.total }} Pflicht-Aufgaben
+                                    {{ tx('learning_studio_ui.completion', 'Abschluss') }}: {{ enrollment.completion_requirements.lessons.completed }}/{{ enrollment.completion_requirements.lessons.total }} {{ tx('learning_studio_ui.lessons', 'Lektionen') }},
+                                    {{ enrollment.completion_requirements.quizzes.completed }}/{{ enrollment.completion_requirements.quizzes.total }} {{ tx('learning_studio_ui.quiz', 'Quiz') }},
+                                    {{ enrollment.completion_requirements.assignments.completed }}/{{ enrollment.completion_requirements.assignments.total }} {{ tx('learning_studio_ui.required_assignments', 'Pflicht-Aufgaben') }}
                                 </p>
-                                <p v-if="enrollment.certificate" class="mt-1 text-xs font-semibold text-success">Zertifikat {{ enrollment.certificate.code }}</p>
+                                <p v-if="enrollment.certificate" class="mt-1 text-xs font-semibold text-success">{{ tx('learning_studio_ui.certificate', 'Zertifikat') }} {{ enrollment.certificate.code }}</p>
                             </div>
-                            <p class="text-sm font-semibold text-secondary">{{ enrollment.status }}</p>
+                            <p class="text-sm font-semibold text-secondary">{{ enrollmentStatusLabel(enrollment.status) }}</p>
                             <p class="text-sm font-semibold text-primary">{{ enrollment.progress_percent }}%</p>
-                            <button class="rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="revokeEnrollment(enrollment)">Deaktivieren</button>
+                            <button class="rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="revokeEnrollment(enrollment)">{{ tx('learning_studio_ui.deactivate', 'Deaktivieren') }}</button>
                         </div>
-                        <p v-if="!selectedCourse.enrollments?.length" class="p-5 text-sm text-secondary">Noch keine Teilnehmer eingeschrieben.</p>
+                        <p v-if="!selectedCourse.enrollments?.length" class="p-5 text-sm text-secondary">{{ tx('learning_studio_ui.no_enrollments', 'Noch keine Teilnehmer eingeschrieben.') }}</p>
                     </div>
                 </article>
 
                 <article v-show="activePanel === 'questions'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
-                        <h2 class="text-lg font-semibold text-primary">Fragen-Inbox</h2>
-                        <p class="mt-1 text-sm text-secondary">Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_ui.questions_heading', 'Fragen-Inbox') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('learning_studio_ui.questions_intro', 'Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit.') }}</p>
                     </div>
                     <div class="divide-y divide-border">
                         <div v-for="question in selectedCourse.questions" :key="question.id" class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_12rem]">
@@ -1070,34 +1088,34 @@ const submitQuestionReply = (question) => {
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="rounded-full bg-bg px-2 py-1 text-xs font-semibold text-secondary">{{ question.lesson_title }}</span>
                                     <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="question.status === 'resolved' ? 'bg-success/10 text-success' : question.status === 'answered' ? 'bg-air-blue/10 text-air-blue' : 'bg-warning/10 text-warning'">
-                                        {{ question.status }}
+                                        {{ questionStatusLabel(question.status) }}
                                     </span>
                                 </div>
-                                <p class="mt-2 text-sm font-semibold text-primary">{{ question.user?.name || 'Teilnehmer' }}</p>
+                                <p class="mt-2 text-sm font-semibold text-primary">{{ question.user?.name || tx('learning_studio_ui.participant', 'Teilnehmer') }}</p>
                                 <p class="mt-1 text-sm leading-relaxed text-secondary">{{ question.body }}</p>
                                 <div v-if="question.replies?.length" class="mt-3 grid gap-2 border-l border-border pl-3">
                                     <div v-for="reply in question.replies" :key="reply.id" class="rounded-lg bg-bg p-3">
-                                        <p class="text-xs font-semibold text-air-blue">{{ reply.user?.name || 'Tutor' }}</p>
+                                        <p class="text-xs font-semibold text-air-blue">{{ reply.user?.name || tx('learning_studio_ui.tutor', 'Tutor') }}</p>
                                         <p class="mt-1 text-sm leading-relaxed text-secondary">{{ reply.body }}</p>
                                     </div>
                                 </div>
                                 <form class="mt-3 grid gap-2" @submit.prevent="submitQuestionReply(question)">
-                                    <textarea v-model="replyForms[String(question.id)]" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwort für den Teilnehmer schreiben"></textarea>
+                                    <textarea v-model="replyForms[String(question.id)]" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.reply_placeholder', 'Antwort für den Teilnehmer schreiben')" :aria-label="tx('learning_studio_ui.reply_placeholder', 'Antwort für den Teilnehmer schreiben')"></textarea>
                                     <button class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-xs font-semibold text-buttonTextPrimary">
-                                        Antwort senden
+                                        {{ tx('learning_studio_ui.send_reply', 'Antwort senden') }}
                                     </button>
                                 </form>
                             </div>
                             <div class="flex flex-wrap items-start gap-2 lg:justify-end">
                                 <button class="rounded-lg border border-air-blue/40 px-3 py-2 text-xs font-semibold text-air-blue" @click="updateQuestionStatus(question, 'answered')">
-                                    Beantwortet
+                                    {{ tx('learning_studio_ui.answered', 'Beantwortet') }}
                                 </button>
                                 <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateQuestionStatus(question, 'resolved')">
-                                    Erledigt
+                                    {{ tx('learning_studio_ui.resolved', 'Erledigt') }}
                                 </button>
                             </div>
                         </div>
-                        <p v-if="!selectedCourse.questions?.length" class="p-5 text-sm text-secondary">Noch keine Kursfragen vorhanden.</p>
+                        <p v-if="!selectedCourse.questions?.length" class="p-5 text-sm text-secondary">{{ tx('learning_studio_ui.no_questions', 'Noch keine Kursfragen vorhanden.') }}</p>
                     </div>
                 </article>
             </section>
@@ -1107,8 +1125,8 @@ const submitQuestionReply = (question) => {
                     <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-border bg-bg">
                         <i class="las la-graduation-cap text-4xl text-air-blue"></i>
                     </div>
-                    <h2 class="mt-4 text-xl font-bold text-primary">Starte deine Online-Sportschule</h2>
-                    <p class="mt-2 text-sm text-secondary">Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen.</p>
+                    <h2 class="mt-4 text-xl font-bold text-primary">{{ tx('learning_studio_ui.start_title', 'Starte deine Online-Sportschule') }}</h2>
+                    <p class="mt-2 text-sm text-secondary">{{ tx('learning_studio_ui.start_intro', 'Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen.') }}</p>
                 </div>
             </section>
         </section>

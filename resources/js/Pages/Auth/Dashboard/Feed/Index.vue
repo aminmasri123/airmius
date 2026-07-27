@@ -599,6 +599,7 @@ const visitPage = (url) => url && router.visit(url, {
                                 v-else-if="attachment.file"
                                 :href="storageUrl(attachment.file.path)"
                                 target="_blank"
+                                rel="noopener noreferrer"
                                 class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             >
                                 <i class="las la-paperclip"></i>

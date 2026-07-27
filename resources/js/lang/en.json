@@ -1571,7 +1571,91 @@
               "add_chapter": "Add chapter",
               "chapter_name": "Chapter name",
               "short_description": "Short description",
-              "create_chapter": "Create chapter"
+              "create_chapter": "Create chapter",
+              "sales_heading": "Landing page, coupons and review",
+              "sales_intro": "Everything visitors need before buying: benefits, FAQ, discounts and quality status.",
+              "quality_review": "Quality review",
+              "quality_pending": "Pending",
+              "quality_approved": "Approved",
+              "quality_rejected": "Needs revision",
+              "used": "used",
+              "discount": "discount",
+              "no_coupons": "No coupons created yet.",
+              "create_coupon": "Create coupon",
+              "coupon_code": "Code, e.g. TEAM20",
+              "percent": "Percent",
+              "fixed_amount_cents": "Fixed amount in cents",
+              "value": "Value",
+              "max_redemptions": "Maximum uses",
+              "active": "Active",
+              "save_coupon": "Save coupon",
+              "quiz_heading": "Quizzes and knowledge checks",
+              "no_description_text": "No description text",
+              "passing": "to pass",
+              "questions": "questions",
+              "delete_quiz": "Delete quiz",
+              "no_quizzes": "No quiz created yet.",
+              "create_quiz": "Create quiz",
+              "general_course_quiz": "General course quiz",
+              "quiz_title": "Quiz title",
+              "description": "Description",
+              "pass_percent": "Passing threshold in %",
+              "first_question_optional": "First question (optional)",
+              "answer_options": "Answer options, one per line",
+              "correct_answers": "Correct answer(s), one per line",
+              "answer_explanation": "Explanation after answer",
+              "save_quiz": "Save quiz",
+              "assignment_heading": "Assignments and manual grading",
+              "assignment_intro": "Participants submit text or links; tutors return a score and feedback.",
+              "no_description": "No description",
+              "points": "points",
+              "participant": "Participant",
+              "open_attachment": "Open attachment",
+              "passed": "Passed",
+              "needs_revision": "Needs revision",
+              "rejected": "Rejected",
+              "score": "Score",
+              "feedback": "Feedback",
+              "grade": "Grade",
+              "no_assignments": "No assignments created yet.",
+              "create_assignment": "Create assignment",
+              "general_course_assignment": "General course assignment",
+              "assignment_title": "Assignment title",
+              "instructions": "Instructions",
+              "due_after_days": "Due after days",
+              "required_assignment": "Required assignment",
+              "save_assignment": "Save assignment"
+              ,"discount_type": "Discount type"
+              ,"expires_at": "Valid until"
+              ,"lesson_scope": "Assign to lesson"
+              ,"students_heading": "Participants and support"
+              ,"students_intro": "Enrolments, progress, manual access and CSV reporting."
+              ,"enrollment_email": "Email for manual access"
+              ,"grant_access": "Grant access"
+              ,"csv_export": "CSV export"
+              ,"lessons_completed": "lessons completed"
+              ,"quizzes_passed": "quizzes passed"
+              ,"assignments_passed": "assignments passed"
+              ,"completion": "Completion"
+              ,"quiz": "quiz"
+              ,"required_assignments": "required assignments"
+              ,"certificate": "Certificate"
+              ,"deactivate": "Deactivate"
+              ,"no_enrollments": "No participants enrolled yet."
+              ,"enrollment_active": "Active"
+              ,"enrollment_completed": "Completed"
+              ,"enrollment_revoked": "Deactivated"
+              ,"questions_heading": "Question inbox"
+              ,"questions_intro": "Open lesson questions with status for support and follow-up."
+              ,"question_open": "Open"
+              ,"answered": "Answered"
+              ,"resolved": "Resolved"
+              ,"tutor": "Tutor"
+              ,"reply_placeholder": "Write a reply for the participant"
+              ,"send_reply": "Send reply"
+              ,"no_questions": "No course questions yet."
+              ,"start_title": "Start your online sports school"
+              ,"start_intro": "Create your first course on the left. Then build chapters, lessons and quizzes directly in the studio."
             },
             "learning_studio_form": {
               "edit_lesson": "Edit lesson",

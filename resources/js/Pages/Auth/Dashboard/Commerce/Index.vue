@@ -530,25 +530,25 @@ const {
             <article class="surface-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Eigene Angebote verwalten</h2>
-                        <p class="mt-1 text-sm text-secondary">Erst nach einem freigegebenen Shop-Antrag kannst du Produkte im Marketplace verkaufen.</p>
+                        <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Eigene Angebote verwalten', 'Eigene Angebote verwalten') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('auto.Erst nach einem freigegebenen Shop-Antrag kannst du Produkte im Marketplace verkaufen.', 'Erst nach einem freigegebenen Shop-Antrag kannst du Produkte im Marketplace verkaufen.') }}</p>
                     </div>
                     <button v-if="sellerCanSell" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="productCreateModal = true">
-                        Produkt erstellen
+                        {{ tx('auto.Produkt erstellen', 'Produkt erstellen') }}
                     </button>
                 </div>
                 <div v-if="sellerCanSell" class="mt-5 grid gap-3 rounded-lg border border-border bg-bg p-4">
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase text-air-blue">Excel-Import</p>
-                            <h3 class="mt-1 font-semibold text-primary">Viele Angebote auf einmal hochladen</h3>
+                            <p class="text-xs font-semibold uppercase text-air-blue">{{ tx('auto.Excel-Import', 'Excel-Import') }}</p>
+                            <h3 class="mt-1 font-semibold text-primary">{{ tx('auto.Viele Angebote auf einmal hochladen', 'Viele Angebote auf einmal hochladen') }}</h3>
                             <p class="mt-1 text-sm text-secondary">
-                                Lade die Vorlage herunter. Preise bleiben in EUR, die Airmius-Provision wird in der Tabelle automatisch je Kategorie mitgerechnet.
+                                {{ tx('auto.Lade die Vorlage herunter. Preise bleiben in EUR, die Airmius-Provision wird in der Tabelle automatisch je Kategorie mitgerechnet.', 'Lade die Vorlage herunter. Preise bleiben in EUR, die Airmius-Provision wird in der Tabelle automatisch je Kategorie mitgerechnet.') }}
                             </p>
-                            <p class="mt-1 text-xs text-secondary">Bilder werden per Hauptbild-URL und Galerie-URLs importiert.</p>
+                            <p class="mt-1 text-xs text-secondary">{{ tx('auto.Bilder werden per Hauptbild-URL und Galerie-URLs importiert.', 'Bilder werden per Hauptbild-URL und Galerie-URLs importiert.') }}</p>
                         </div>
                         <a :href="route('auth.commerce.products.import-template')" class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                            Vorlage herunterladen
+                            {{ tx('auto.Vorlage herunterladen', 'Vorlage herunterladen') }}
                         </a>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" @submit.prevent="importProducts">
@@ -559,7 +559,7 @@ const {
                             @change="setProductImportFile"
                         >
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="productImportForm.processing || !productImportForm.import_file">
-                            Importieren
+                            {{ tx('auto.Importieren', 'Importieren') }}
                         </button>
                     </form>
                     <p v-if="productImportForm.errors.import_file" class="text-sm text-error">{{ productImportForm.errors.import_file }}</p>
@@ -567,8 +567,8 @@ const {
                 <div v-if="!sellerCanSell" class="mt-5 rounded-lg border border-border bg-bg p-4">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-xs font-semibold uppercase text-air-blue">Shop-Antrag</p>
-                            <h3 class="mt-1 font-semibold text-primary">Verkäufer-Zugang beantragen</h3>
+                            <p class="text-xs font-semibold uppercase text-air-blue">{{ tx('auto.Shop-Antrag', 'Shop-Antrag') }}</p>
+                            <h3 class="mt-1 font-semibold text-primary">{{ tx('auto.Verkäufer-Zugang beantragen', 'Verkäufer-Zugang beantragen') }}</h3>
                             <p class="mt-1 text-sm text-secondary">Status: {{ sellerApplicationStatusLabel(sellerApplication?.status) }}</p>
                             <p v-if="sellerApplication?.review_note" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">{{ sellerApplication.review_note }}</p>
                         </div>
@@ -576,41 +576,41 @@ const {
 
                     <form class="mt-4 grid gap-3" @submit.prevent="storeSellerApplication">
                         <select v-model="sellerApplicationForm.applicant_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="private">Privatperson</option>
-                            <option value="business">Gewerblicher Anbieter</option>
-                            <option value="club">Verein / Organisation</option>
+                            <option value="private">{{ tx('auto.Privatperson', 'Privatperson') }}</option>
+                            <option value="business">{{ tx('auto.Gewerblicher Anbieter', 'Gewerblicher Anbieter') }}</option>
+                            <option value="club">{{ tx('auto.Verein / Organisation', 'Verein / Organisation') }}</option>
                         </select>
                         <p v-if="sellerApplicationForm.errors.applicant_type" class="text-sm text-error">{{ sellerApplicationForm.errors.applicant_type }}</p>
-                        <input v-model="sellerApplicationForm.business_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Shop-/Firmenname optional">
-                        <textarea v-model="sellerApplicationForm.notes" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurz beschreiben, was du verkaufen möchtest"></textarea>
+                        <input v-model="sellerApplicationForm.business_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Shop-/Firmenname optional', 'Shop-/Firmenname optional')">
+                        <textarea v-model="sellerApplicationForm.notes" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Kurz beschreiben, was du verkaufen möchtest', 'Kurz beschreiben, was du verkaufen möchtest')"></textarea>
 
                         <div class="grid gap-2 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_product_truth" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich bestätige, dass Preise, Bilder, Bestand und Beschreibung korrekt sind.</span>
+                                <span>{{ tx('auto.Ich bestätige, dass Preise, Bilder, Bestand und Beschreibung korrekt sind.', 'Ich bestätige, dass Preise, Bilder, Bestand und Beschreibung korrekt sind.') }}</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_rights" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich habe die Rechte an Bildern, Texten und angebotenen Leistungen.</span>
+                                <span>{{ tx('auto.Ich habe die Rechte an Bildern, Texten und angebotenen Leistungen.', 'Ich habe die Rechte an Bildern, Texten und angebotenen Leistungen.') }}</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_shipping_returns" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich beachte Versand-, Rückgabe- und Kundenservice-Pflichten.</span>
+                                <span>{{ tx('auto.Ich beachte Versand-, Rückgabe- und Kundenservice-Pflichten.', 'Ich beachte Versand-, Rückgabe- und Kundenservice-Pflichten.') }}</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_commission" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich akzeptiere Marketplace-Provisionen und Auszahlungsprüfung.</span>
+                                <span>{{ tx('auto.Ich akzeptiere Marketplace-Provisionen und Auszahlungsprüfung.', 'Ich akzeptiere Marketplace-Provisionen und Auszahlungsprüfung.') }}</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_data_privacy" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich gehe sorgsam mit Kundendaten um und nutze sie nur für die Bestellung.</span>
+                                <span>{{ tx('auto.Ich gehe sorgsam mit Kundendaten um und nutze sie nur für die Bestellung.', 'Ich gehe sorgsam mit Kundendaten um und nutze sie nur für die Bestellung.') }}</span>
                             </label>
                         </div>
                         <div v-if="Object.keys(sellerApplicationForm.errors).length" class="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
-                            Bitte bestätige alle Regeln, bevor du den Shop-Antrag absendest.
+                            {{ tx('auto.Bitte bestätige alle Regeln, bevor du den Shop-Antrag absendest.', 'Bitte bestätige alle Regeln, bevor du den Shop-Antrag absendest.') }}
                         </div>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="sellerApplicationForm.processing">
-                            Shop-Antrag senden
+                            {{ tx('auto.Shop-Antrag senden', 'Shop-Antrag senden') }}
                         </button>
                     </form>
                 </div>

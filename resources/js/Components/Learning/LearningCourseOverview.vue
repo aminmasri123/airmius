@@ -37,7 +37,7 @@ const panels = [
                 <p class="mt-2 text-xs text-secondary">
                     {{ selectedCourse.is_free ? 'Kostenlos' : formatMoney(selectedCourse.price_cents, selectedCourse.currency) }} - {{ formatMinutes(selectedCourse.estimated_minutes) }}
                 </p>
-                <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
+                <a v-if="selectedCourse.preview_url" :href="selectedCourse.preview_url" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted">
                     Als Teilnehmer ansehen
                 </a>
             </div>
@@ -138,4 +138,3 @@ const panels = [
         </div>
     </article>
 </template>
-

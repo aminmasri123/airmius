@@ -89,7 +89,7 @@ const documentItem = () => {
                             {{ key }}: {{ value }}
                         </span>
                     </div>
-                    <a v-if="item.video_url" :href="item.video_url" target="_blank" class="inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                    <a v-if="item.video_url" :href="item.video_url" target="_blank" rel="noopener noreferrer" class="inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                         {{ tx('Video öffnen') }}
                     </a>
                 </div>
@@ -143,4 +143,3 @@ const documentItem = () => {
         </section>
     </div>
 </template>
-

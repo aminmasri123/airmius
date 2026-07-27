@@ -281,7 +281,7 @@ const comparisonRows = computed(() => {
                             <p class="text-sm text-secondary">{{ tx('training_log.labels.distance') }} <span class="font-semibold text-primary">{{ formatDistance(entry.distance_meters) }}</span></p>
                             <p class="text-sm text-secondary">{{ tx('training_log.labels.intensity') }} <span class="font-semibold text-primary">{{ entry.intensity || '-' }}</span></p>
                             <p v-if="entry.notes" class="text-sm text-secondary sm:col-span-2 lg:col-span-6">{{ entry.notes }}</p>
-                            <a v-if="entry.metrics?.media_url" :href="entry.metrics.media_url" target="_blank" class="text-sm font-semibold text-air-blue underline sm:col-span-2 lg:col-span-6">
+                            <a v-if="entry.metrics?.media_url" :href="entry.metrics.media_url" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-air-blue underline sm:col-span-2 lg:col-span-6">
                                 {{ tx('training_log.media') }}
                             </a>
                         </div>

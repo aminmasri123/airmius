@@ -1570,7 +1570,91 @@
               "add_chapter": "Kapitel hinzufügen",
               "chapter_name": "Kapitelname",
               "short_description": "Kurzbeschreibung",
-              "create_chapter": "Kapitel erstellen"
+              "create_chapter": "Kapitel erstellen",
+              "sales_heading": "Landingpage, Gutscheine und Review",
+              "sales_intro": "Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitätsstatus.",
+              "quality_review": "Qualitätsreview",
+              "quality_pending": "Ausstehend",
+              "quality_approved": "Freigegeben",
+              "quality_rejected": "Überarbeitung nötig",
+              "used": "genutzt",
+              "discount": "Rabatt",
+              "no_coupons": "Noch keine Gutscheine angelegt.",
+              "create_coupon": "Gutschein anlegen",
+              "coupon_code": "Code, z. B. TEAM20",
+              "percent": "Prozent",
+              "fixed_amount_cents": "Fixbetrag in Cent",
+              "value": "Wert",
+              "max_redemptions": "Max. Nutzungen",
+              "active": "Aktiv",
+              "save_coupon": "Gutschein speichern",
+              "quiz_heading": "Quiz und Wissenschecks",
+              "no_description_text": "Kein Beschreibungstext",
+              "passing": "Bestehen",
+              "questions": "Fragen",
+              "delete_quiz": "Quiz löschen",
+              "no_quizzes": "Noch kein Quiz angelegt.",
+              "create_quiz": "Quiz erstellen",
+              "general_course_quiz": "Allgemeines Kursquiz",
+              "quiz_title": "Quiztitel",
+              "description": "Beschreibung",
+              "pass_percent": "Bestehensgrenze in %",
+              "first_question_optional": "Erste Frage optional",
+              "answer_options": "Antwortoptionen, je Zeile eine",
+              "correct_answers": "Korrekte Antwort(en), je Zeile eine",
+              "answer_explanation": "Erklärung nach Antwort",
+              "save_quiz": "Quiz speichern",
+              "assignment_heading": "Aufgaben und manuelle Bewertung",
+              "assignment_intro": "Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurück.",
+              "no_description": "Keine Beschreibung",
+              "points": "Punkte",
+              "participant": "Teilnehmer",
+              "open_attachment": "Anhang öffnen",
+              "passed": "Bestanden",
+              "needs_revision": "Revision",
+              "rejected": "Abgelehnt",
+              "score": "Score",
+              "feedback": "Feedback",
+              "grade": "Bewerten",
+              "no_assignments": "Noch keine Aufgaben angelegt.",
+              "create_assignment": "Aufgabe erstellen",
+              "general_course_assignment": "Allgemeine Kursaufgabe",
+              "assignment_title": "Aufgabentitel",
+              "instructions": "Aufgabenstellung",
+              "due_after_days": "Fällig nach Tagen",
+              "required_assignment": "Pflichtaufgabe",
+              "save_assignment": "Aufgabe speichern"
+              ,"discount_type": "Rabattart"
+              ,"expires_at": "Gültig bis"
+              ,"lesson_scope": "Lektion zuordnen"
+              ,"students_heading": "Teilnehmer und Betreuung"
+              ,"students_intro": "Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting."
+              ,"enrollment_email": "E-Mail für manuellen Zugang"
+              ,"grant_access": "Freischalten"
+              ,"csv_export": "CSV Export"
+              ,"lessons_completed": "Lektionen erledigt"
+              ,"quizzes_passed": "Quiz bestanden"
+              ,"assignments_passed": "Aufgaben bestanden"
+              ,"completion": "Abschluss"
+              ,"quiz": "Quiz"
+              ,"required_assignments": "Pflicht-Aufgaben"
+              ,"certificate": "Zertifikat"
+              ,"deactivate": "Deaktivieren"
+              ,"no_enrollments": "Noch keine Teilnehmer eingeschrieben."
+              ,"enrollment_active": "Aktiv"
+              ,"enrollment_completed": "Abgeschlossen"
+              ,"enrollment_revoked": "Deaktiviert"
+              ,"questions_heading": "Fragen-Inbox"
+              ,"questions_intro": "Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit."
+              ,"question_open": "Offen"
+              ,"answered": "Beantwortet"
+              ,"resolved": "Erledigt"
+              ,"tutor": "Tutor"
+              ,"reply_placeholder": "Antwort für den Teilnehmer schreiben"
+              ,"send_reply": "Antwort senden"
+              ,"no_questions": "Noch keine Kursfragen vorhanden."
+              ,"start_title": "Starte deine Online-Sportschule"
+              ,"start_intro": "Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen."
             },
             "learning_studio_form": {
               "edit_lesson": "Lektion bearbeiten",

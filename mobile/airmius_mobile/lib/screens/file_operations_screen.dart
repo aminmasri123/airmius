@@ -131,7 +131,7 @@ class _FileOperationsScreenState extends State<FileOperationsScreen> {
     return source
         .where(
           (item) =>
-              '${t(item.titleKey)} ${t(item.bodyKey)} ${item.endpoint} ${item.method}'
+              '${t(item.titleKey)} ${t(item.bodyKey)} ${AirmiusApiContract.mobileApiPath(item.endpoint)} ${item.method}'
                   .toLowerCase()
                   .contains(_query),
         )
@@ -155,6 +155,7 @@ class _FileOperationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final endpoint = AirmiusApiContract.mobileApiPath(operation.endpoint);
     final operationColor = operation.color == AirmiusColors.blue
         ? airmiusAccentColor(context)
         : operation.color;
@@ -217,7 +218,7 @@ class _FileOperationCard extends StatelessWidget {
               border: Border.all(color: airmiusBorderColor(context)),
             ),
             child: Text(
-              '${operation.method} ${operation.endpoint}',
+              '${operation.method} $endpoint',
               style: TextStyle(
                 color: AirmiusColors.green,
                 fontSize: 12,
@@ -254,7 +255,7 @@ class _FileOperationCard extends StatelessWidget {
                       ),
                     ),
                     content: Text(
-                      '${t('filesOps.apiBody')}\n\n${operation.method} ${operation.endpoint}',
+                      '${t('filesOps.apiBody')}\n\n${operation.method} $endpoint',
                       style: TextStyle(color: airmiusMutedColor(dialogContext)),
                     ),
                     actions: [

@@ -72,6 +72,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
+            // The versioned mobile API authenticates with short-lived bearer
+            // tokens and is also consumed by the Flutter web build. A browser
+            // Origin must not turn the public token login into a stateful SPA
+            // request that fails before AuthController can validate credentials.
+            'api/v1/auth/login',
             'webhooks/stripe',
             'webhooks/paypal',
             'webhooks/commerce/stripe',

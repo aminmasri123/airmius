@@ -74,9 +74,9 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _hero(data),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 _tabs(),
-                const SizedBox(height: 14),
+                const SizedBox(height: 18),
                 if (_tab == 'teams')
                   _teams(data)
                 else if (_tab == 'feedback')
@@ -102,6 +102,7 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
     final risk = _coachText(weekly['risk_level'], fallback: 'empty');
     return AirmiusPanel(
       gradient: true,
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -111,38 +112,42 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(15),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(13),
+                  padding: const EdgeInsets.all(11),
                   child: Icon(
                     Icons.sports_score_outlined,
                     color: theme.colorScheme.primary,
-                    size: 32,
+                    size: 28,
                   ),
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Eyebrow(t('coach.eyebrow')),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
                     Text(
                       t('coach.headline'),
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w900,
+                        height: 1.06,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(t('coach.heroBody')),
+                    const SizedBox(height: 5),
+                    Text(
+                      t('coach.heroBody'),
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -160,24 +165,22 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 '$score%',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 8),
               StatusPill(
                 t('coach.readiness.$risk'),
                 color: _riskColor(context, risk),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          const SizedBox(height: 12),
+          _MetricGrid(
             children: [
               _CoachMetric(
                 icon: Icons.groups_2_outlined,
@@ -216,21 +219,40 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
     };
     return Semantics(
       label: t('coach.navigation'),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: tabs.entries
-            .map(
-              (entry) => ChoiceChip(
-                selected: _tab == entry.key,
-                label: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  child: Text(entry.value),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final chips = tabs.entries
+              .map(
+                (entry) => ChoiceChip(
+                  selected: _tab == entry.key,
+                  avatar: _tab == entry.key
+                      ? const Icon(Icons.check, size: 18)
+                      : null,
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Text(entry.value),
+                  ),
+                  onSelected: (_) => setState(() => _tab = entry.key),
                 ),
-                onSelected: (_) => setState(() => _tab = entry.key),
-              ),
-            )
-            .toList(),
+              )
+              .toList();
+          if (constraints.maxWidth < 520) {
+            return Wrap(spacing: 8, runSpacing: 8, children: chips);
+          }
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: chips
+                  .map(
+                    (chip) => Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: chip,
+                    ),
+                  )
+                  .toList(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -251,9 +273,7 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
           body: t('coach.weeklyControlBody'),
         ),
         const SizedBox(height: 10),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+        _MetricGrid(
           children: [
             _CoachMetric(
               icon: Icons.fitness_center_outlined,
@@ -277,9 +297,9 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         _quickActions(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         _sectionHeader(
           icon: Icons.health_and_safety_outlined,
           title: t('coach.riskAthletes'),
@@ -327,27 +347,43 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
   Widget _quickActions() {
     final t = AirmiusScope.of(context).t;
     return AirmiusPanel(
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Eyebrow(t('coach.quickActions')),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AirmiusButton(
-                label: t('coach.openPlans'),
-                icon: Icons.assignment_outlined,
-                onPressed: _openTraining,
-              ),
-              AirmiusButton(
-                label: t('coach.openEvents'),
-                icon: Icons.event_available_outlined,
-                secondary: true,
-                onPressed: _openEvents,
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 420;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 10) / 2,
+                    child: AirmiusButton(
+                      label: t('coach.openPlans'),
+                      icon: Icons.assignment_outlined,
+                      onPressed: _openTraining,
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 10) / 2,
+                    child: AirmiusButton(
+                      label: t('coach.openEvents'),
+                      icon: Icons.event_available_outlined,
+                      secondary: true,
+                      onPressed: _openEvents,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -595,6 +631,32 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
   }
 }
 
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth < 360 ? 1 : 2;
+        final spacing = 10.0;
+        final tileWidth =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: children
+              .map((child) => SizedBox(width: tileWidth, child: child))
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
 class _CoachMetric extends StatelessWidget {
   const _CoachMetric({
     required this.icon,
@@ -610,29 +672,38 @@ class _CoachMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      constraints: const BoxConstraints(minWidth: 135, maxWidth: 280),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      constraints: const BoxConstraints(minHeight: 82),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: theme.dividerColor),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.max,
         children: [
-          Icon(icon, color: theme.colorScheme.primary, size: 23),
-          const SizedBox(width: 10),
-          Flexible(
+          Icon(icon, color: theme.colorScheme.primary, size: 22),
+          const SizedBox(width: 9),
+          Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
+                    height: 1,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Text(label, style: theme.textTheme.bodySmall),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

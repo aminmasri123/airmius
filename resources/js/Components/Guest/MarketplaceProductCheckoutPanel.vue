@@ -295,9 +295,9 @@ const updateAddressChoice = (event) => emit('update:addressChoice', event.target
                                 <input v-model="form.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     {{ $t("Ich akzeptiere") }}
-                                    <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("AGB") }}</Link>
+                                    <Link :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("AGB") }}</Link>
                                     {{ $t("und") }}
-                                    <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("Widerrufshinweise") }}</Link>.
+                                    <Link :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("Widerrufshinweise") }}</Link>.
                                     Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
                                 </span>
                             </label>

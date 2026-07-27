@@ -16,6 +16,25 @@ class MobileAuthSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mobile_login_is_not_blocked_by_a_browser_origin(): void
+    {
+        config(['sanctum.stateful' => ['airmius.com']]);
+
+        $response = $this
+            ->withHeader('Origin', 'https://airmius.com')
+            ->withHeader('Accept', 'application/json')
+            ->postJson('/api/v1/auth/login', [
+                'email' => 'not-a-real-user@example.invalid',
+                'password' => 'wrong-password',
+                'device_name' => 'Airmius Browser Contract Test',
+            ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.email.0', 'auth.failed')
+            ->assertHeader('Access-Control-Allow-Origin', 'https://airmius.com');
+    }
+
     public function test_mobile_login_requires_two_factor_before_issuing_a_token(): void
     {
         $user = User::factory()->create([

@@ -9,5 +9,6 @@ class AccountOperationsScreen extends StatelessWidget {
   final String initialTab;
 
   @override
-  Widget build(BuildContext context) => const AccountManagementScreen();
+  Widget build(BuildContext context) =>
+      AccountManagementScreen(initialSection: initialTab);
 }

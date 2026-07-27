@@ -148,7 +148,7 @@ const filterSearchModel = computed({
                                         v-if="contract.website"
                                         :href="contract.website"
                                         target="_blank"
-                                        rel="noopener"
+                                        rel="noopener noreferrer"
                                         class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted"
                                     >
                                         Website
@@ -157,7 +157,7 @@ const filterSearchModel = computed({
                                         v-if="contract.document_url"
                                         :href="contract.document_url"
                                         target="_blank"
-                                        rel="noopener"
+                                        rel="noopener noreferrer"
                                         class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted"
                                     >
                                         Beleg
@@ -236,6 +236,5 @@ const filterSearchModel = computed({
         </section>
     </div>
 </template>
-
 
 

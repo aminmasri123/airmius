@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
+import '../core/airmius_preferences.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -33,6 +34,8 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
   bool _camera = false;
   bool _files = true;
   bool _guardian = false;
+  bool _saving = false;
+  bool _profileRestoreStarted = false;
   Future<JsonMap>? _serverOnboardingFuture;
 
   int get _done => [
@@ -47,6 +50,33 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _serverOnboardingFuture ??= _loadServerOnboarding();
+    if (!_profileRestoreStarted) {
+      _profileRestoreStarted = true;
+      _restoreOnboardingProfile();
+    }
+  }
+
+  Future<void> _restoreOnboardingProfile() async {
+    final profile = await AirmiusPreferences().readOnboardingProfile();
+    if (!mounted || profile == null) return;
+    final role = profile['role'];
+    final workspace = profile['workspace'];
+    final permissions = profile['permissions'];
+    final savedPermissions = permissions is Map
+        ? permissions.map((key, value) => MapEntry('$key', value == true))
+        : <String, bool>{};
+    setState(() {
+      if (role is String && _onboardingRoles.contains(role)) _role = role;
+      if (workspace is String && _onboardingWorkspaces.contains(workspace)) {
+        _workspace = workspace;
+      }
+      _privacy = savedPermissions['privacy'] ?? _privacy;
+      _push = savedPermissions['push'] ?? _push;
+      _location = savedPermissions['location'] ?? _location;
+      _camera = savedPermissions['camera'] ?? _camera;
+      _files = savedPermissions['files'] ?? _files;
+      _guardian = savedPermissions['guardian'] ?? _guardian;
+    });
   }
 
   Future<JsonMap> _loadServerOnboarding() async {
@@ -58,6 +88,46 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
     return data is Map
         ? data.map((key, value) => MapEntry('$key', value))
         : <String, dynamic>{};
+  }
+
+  Future<void> _finishOnboarding(AirmiusScope scope) async {
+    if (!_privacy || _saving) {
+      if (!_privacy) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(scope.t('onboarding.privacyRequired'))),
+        );
+      }
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await AirmiusPreferences().writeOnboardingProfile(
+        role: _role,
+        workspace: _workspace,
+        permissions: {
+          'privacy': _privacy,
+          'push': _push,
+          'location': _location,
+          'camera': _camera,
+          'files': _files,
+          'guardian': _guardian,
+        },
+      );
+      await AirmiusPreferences().writePermissionOnboardingComplete(true);
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('onboarding.saved'))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(scope.t('onboarding.saveFailed'))),
+      );
+    }
   }
 
   @override
@@ -159,14 +229,7 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                       labelText: scope.t('onboarding.role'),
                     ),
                     items:
-                        const [
-                              'Sportler',
-                              'Vereinsadmin',
-                              'Trainer',
-                              'Guardian',
-                              'Gast',
-                              'Seller',
-                            ]
+                        _onboardingRoles
                             .map(
                               (item) => DropdownMenuItem(
                                 value: item,
@@ -185,14 +248,7 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                       labelText: scope.t('onboarding.startArea'),
                     ),
                     items:
-                        const [
-                              'Privat',
-                              'Verein',
-                              'Team',
-                              'Trainer',
-                              'Admin',
-                              'Public',
-                            ]
+                        _onboardingWorkspaces
                             .map(
                               (item) => DropdownMenuItem(
                                 value: item,
@@ -421,16 +477,9 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                       AirmiusButton(
                         label: scope.t('onboarding.finish'),
                         icon: Icons.task_alt_outlined,
-                        onPressed: () => openUiAction(
-                          context,
-                          title: scope.t('onboarding.finish'),
-                          body:
-                              '${scope.t('onboarding.role')}: $roleLabel, '
-                              '${scope.t('onboarding.startArea')}: $workspaceLabel. '
-                              '${scope.t('onboarding.permissionExplanation')}',
-                          status: scope.t('onboarding.title'),
-                          icon: Icons.task_alt_outlined,
-                        ),
+                        onPressed: _saving
+                            ? null
+                            : () => _finishOnboarding(scope),
                       ),
                       AirmiusButton(
                         label: scope.t('ops.hub'),
@@ -454,6 +503,24 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
     );
   }
 }
+
+const _onboardingRoles = [
+  'Sportler',
+  'Vereinsadmin',
+  'Trainer',
+  'Guardian',
+  'Gast',
+  'Seller',
+];
+
+const _onboardingWorkspaces = [
+  'Privat',
+  'Verein',
+  'Team',
+  'Trainer',
+  'Admin',
+  'Public',
+];
 
 String _onboardingRoleLabel(AirmiusScope scope, String value) {
   final key = switch (value) {

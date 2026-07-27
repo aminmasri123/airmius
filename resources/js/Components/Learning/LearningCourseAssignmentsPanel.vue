@@ -29,7 +29,7 @@ defineEmits(['createAssignment', 'gradeSubmission'])
                         <div v-for="submission in assignment.submissions" :key="submission.id" class="rounded-lg border border-border bg-card p-3">
                             <p class="text-sm font-semibold text-primary">{{ submission.user?.name || 'Teilnehmer' }}</p>
                             <p class="mt-1 whitespace-pre-line text-sm text-secondary">{{ submission.body }}</p>
-                            <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" class="mt-2 inline-flex text-xs font-semibold text-air-blue">Anhang öffnen</a>
+                            <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-xs font-semibold text-air-blue">Anhang öffnen</a>
                             <div v-if="gradingForms[String(submission.id)]" class="mt-3 grid gap-2 md:grid-cols-[8rem_7rem_minmax(0,1fr)_auto]">
                                 <select v-model="gradingForms[String(submission.id)].status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                     <option value="passed">Bestanden</option>
@@ -66,4 +66,3 @@ defineEmits(['createAssignment', 'gradeSubmission'])
         </div>
     </article>
 </template>
-

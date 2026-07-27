@@ -285,6 +285,7 @@ const markTransferPaid = (checkout) => {
                 <a
                     :href="route('guest.pricing')"
                     target="_blank"
+                    rel="noopener noreferrer"
                     class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                 >
                     <i class="las la-external-link-alt"></i>

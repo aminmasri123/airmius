@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'email_verification_screen.dart';
+import 'password_recovery_screen.dart';
 import 'support_helpdesk_screen.dart';
 
 class AuthRecoverySecurityScreen extends StatefulWidget {
@@ -14,86 +17,80 @@ class AuthRecoverySecurityScreen extends StatefulWidget {
 
 class _AuthRecoverySecurityScreenState
     extends State<AuthRecoverySecurityScreen> {
-  String _filter = 'Alle';
+  String _filter = 'all';
   bool _showRecovery = true;
   bool _showSecurity = true;
   bool _showAccountState = true;
 
   final List<_AuthFlow> _flows = const [
     _AuthFlow(
-      title: 'Profil vervollstaendigen',
-      area: 'Profil',
-      status: 'Pflicht',
-      body:
-          'Mobile UI für fehlende Profildaten, Rolle, Verein, Standort und erste Sicherheitsprüfung.',
+      titleKey: 'authRecovery.flow.profile.title',
+      area: 'profile',
+      statusKey: 'authRecovery.flow.profile.status',
+      bodyKey: 'authRecovery.flow.profile.body',
       icon: Icons.assignment_ind_outlined,
       color: Color(0xFF5BA7FF),
     ),
     _AuthFlow(
-      title: 'Passwort vergessen',
-      area: 'Recovery',
-      status: 'E-Mail',
-      body:
-          'Anfrage für Passwort-Reset mit E-Mail, Sicherheitsmeldung und Rückkehr zum Login.',
+      titleKey: 'authRecovery.flow.forgot.title',
+      area: 'recovery',
+      statusKey: 'authRecovery.flow.forgot.status',
+      bodyKey: 'authRecovery.flow.forgot.body',
       icon: Icons.lock_reset_outlined,
       color: Color(0xFF2EE59D),
     ),
     _AuthFlow(
-      title: 'Passwort zurücksetzen',
-      area: 'Recovery',
-      status: 'Token',
-      body:
-          'Reset-Formular mit Token, neuem Passwort, Bestätigung und Erfolgsmeldung.',
+      titleKey: 'authRecovery.flow.reset.title',
+      area: 'recovery',
+      statusKey: 'authRecovery.flow.reset.status',
+      bodyKey: 'authRecovery.flow.reset.body',
       icon: Icons.password_outlined,
       color: Color(0xFF2EE59D),
     ),
     _AuthFlow(
-      title: 'Passwort bestätigen',
-      area: 'Security',
-      status: 'Check',
-      body:
-          'Sicherheitsabfrage vor sensiblen Aktionen wie Konto löschen, 2FA oder Zahlungsdaten.',
+      titleKey: 'authRecovery.flow.confirm.title',
+      area: 'security',
+      statusKey: 'authRecovery.flow.confirm.status',
+      bodyKey: 'authRecovery.flow.confirm.body',
       icon: Icons.enhanced_encryption_outlined,
       color: Color(0xFFF8B84E),
     ),
     _AuthFlow(
-      title: 'Zwei-Faktor Challenge',
-      area: 'Security',
-      status: '2FA',
-      body:
-          'Code-Eingabe, Recovery-Code Umschaltung und klare Fehlermeldungen für Login-Schutz.',
+      titleKey: 'authRecovery.flow.twoFactor.title',
+      area: 'security',
+      statusKey: 'authRecovery.flow.twoFactor.status',
+      bodyKey: 'authRecovery.flow.twoFactor.body',
       icon: Icons.pin_outlined,
       color: Color(0xFFF8B84E),
     ),
     _AuthFlow(
-      title: 'E-Mail verifizieren',
-      area: 'Security',
-      status: 'Verify',
-      body:
-          'Hinweise, erneutes Senden der Verifizierung und Status, ob der Account freigeschaltet ist.',
+      titleKey: 'authRecovery.flow.email.title',
+      area: 'security',
+      statusKey: 'authRecovery.flow.email.status',
+      bodyKey: 'authRecovery.flow.email.body',
       icon: Icons.mark_email_read_outlined,
       color: Color(0xFFB084FF),
     ),
     _AuthFlow(
-      title: 'Account suspendiert',
-      area: 'Status',
-      status: 'Gesperrt',
-      body:
-          'Mobile Sperrseite mit Grund, Support-Kontakt, Einspruch und sicherer Abmeldung.',
+      titleKey: 'authRecovery.flow.suspended.title',
+      area: 'status',
+      statusKey: 'authRecovery.flow.suspended.status',
+      bodyKey: 'authRecovery.flow.suspended.body',
       icon: Icons.block_outlined,
       color: Color(0xFFFF6B6B),
     ),
   ];
 
   List<_AuthFlow> get _visibleFlows {
-    if (_filter == 'Alle') return _flows;
+    if (_filter == 'all') return _flows;
     return _flows.where((flow) => flow.area == _filter).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return Scaffold(
-      backgroundColor: const Color(0xFF070B12),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -108,17 +105,26 @@ class _AuthRecoverySecurityScreenState
                     const _IntroPanel(),
                     const SizedBox(height: 18),
                     Row(
-                      children: const [
+                      children: [
                         Expanded(
-                          child: _MetricCard(value: '7', label: 'Flows'),
+                          child: _MetricCard(
+                            value: '7',
+                            label: t('authRecovery.metricFlows'),
+                          ),
                         ),
                         SizedBox(width: 10),
                         Expanded(
-                          child: _MetricCard(value: '3', label: 'Security'),
+                          child: _MetricCard(
+                            value: '3',
+                            label: t('authRecovery.metricSecurity'),
+                          ),
                         ),
                         SizedBox(width: 10),
                         Expanded(
-                          child: _MetricCard(value: '2', label: 'Recovery'),
+                          child: _MetricCard(
+                            value: '2',
+                            label: t('authRecovery.metricRecovery'),
+                          ),
                         ),
                       ],
                     ),
@@ -126,11 +132,11 @@ class _AuthRecoverySecurityScreenState
                     _FilterTabs(
                       value: _filter,
                       values: const [
-                        'Alle',
-                        'Profil',
-                        'Recovery',
-                        'Security',
-                        'Status',
+                        'all',
+                        'profile',
+                        'recovery',
+                        'security',
+                        'status',
                       ],
                       onChanged: (value) => setState(() => _filter = value),
                     ),
@@ -152,17 +158,15 @@ class _AuthRecoverySecurityScreenState
                       const SizedBox(height: 12),
                     ],
                     _ActionPanel(
-                      onReset: () => openUiAction(
-                        context,
-                        title: 'Passwort-Reset',
-                        message:
-                            'Hier wird später die Laravel-API für Forgot/Reset Password angebunden.',
+                      onReset: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PasswordRecoveryScreen(),
+                        ),
                       ),
-                      onVerify: () => openUiAction(
-                        context,
-                        title: 'E-Mail erneut senden',
-                        message:
-                            'Die mobile UI ist vorbereitet; die API sendet später den Verify-Link.',
+                      onVerify: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const EmailVerificationScreen(),
+                        ),
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -177,8 +181,8 @@ class _AuthRecoverySecurityScreenState
   }
 
   bool _isVisible(_AuthFlow flow) {
-    if (flow.area == 'Recovery') return _showRecovery;
-    if (flow.area == 'Security') return _showSecurity;
+    if (flow.area == 'recovery') return _showRecovery;
+    if (flow.area == 'security') return _showSecurity;
     return _showAccountState;
   }
 
@@ -191,18 +195,18 @@ class _AuthRecoverySecurityScreenState
 
 class _AuthFlow {
   const _AuthFlow({
-    required this.title,
+    required this.titleKey,
     required this.area,
-    required this.status,
-    required this.body,
+    required this.statusKey,
+    required this.bodyKey,
     required this.icon,
     required this.color,
   });
 
-  final String title;
+  final String titleKey;
   final String area;
-  final String status;
-  final String body;
+  final String statusKey;
+  final String bodyKey;
   final IconData icon;
   final Color color;
 }
@@ -214,15 +218,17 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
     return Row(
       children: [
         const AirmiusLogo(markOnly: true, size: 34),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Text(
             'Airmius',
             style: TextStyle(
-              color: Colors.white,
+              color: text,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -230,10 +236,7 @@ class _TopBar extends StatelessWidget {
         ),
         IconButton(
           onPressed: onSupport,
-          icon: const Icon(
-            Icons.support_agent_outlined,
-            color: Color(0xFFAFC0D8),
-          ),
+          icon: Icon(Icons.support_agent_outlined, color: muted),
         ),
       ],
     );
@@ -245,42 +248,51 @@ class _IntroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final scheme = Theme.of(context).colorScheme;
+    final surface = airmiusSurfaceColor(context);
+    final soft = airmiusSurfaceSoftColor(context);
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF26364D)),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF121A27), Color(0xFF0B111B)],
+        border: Border.all(color: airmiusBorderColor(context)),
+        gradient: LinearGradient(
+          colors: [
+            Color.alphaBlend(scheme.primary.withValues(alpha: .10), surface),
+            soft,
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            'AUTH SECURITY',
+            t('authRecovery.eyebrow'),
             style: TextStyle(
-              color: Color(0xFF5BA7FF),
+              color: scheme.primary,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'Login-Randfaelle',
+            t('authRecovery.title'),
             style: TextStyle(
-              color: Colors.white,
+              color: text,
               fontSize: 28,
               fontWeight: FontWeight.w900,
             ),
           ),
           SizedBox(height: 8),
           Text(
-            'Mobile UI für Complete Profile, Forgot/Reset Password, Confirm Password, 2FA, Verify Email und Suspended.',
+            t('authRecovery.description'),
             style: TextStyle(
-              color: Color(0xFFAFC0D8),
+              color: muted,
               height: 1.45,
               fontWeight: FontWeight.w600,
             ),
@@ -299,20 +311,22 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF101722),
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF26364D)),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: text,
               fontSize: 24,
               fontWeight: FontWeight.w900,
             ),
@@ -320,10 +334,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: Color(0xFFAFC0D8),
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(color: muted, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -344,6 +355,10 @@ class _FilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
+    final accent = airmiusAccentColor(context);
     return SizedBox(
       height: 42,
       child: ListView.separated(
@@ -354,18 +369,18 @@ class _FilterTabs extends StatelessWidget {
           final item = values[index];
           final active = item == value;
           return ChoiceChip(
-            label: Text(item),
+            label: Text(t('authRecovery.filter.$item')),
             selected: active,
             onSelected: (_) => onChanged(item),
             labelStyle: TextStyle(
-              color: active ? Colors.white : const Color(0xFFAFC0D8),
+              color: active ? text : muted,
               fontWeight: FontWeight.w900,
             ),
-            selectedColor: const Color(0xFF173D68),
-            backgroundColor: const Color(0xFF101722),
+            selectedColor: accent.withValues(alpha: .20),
+            backgroundColor: airmiusSurfaceSoftColor(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
-              side: const BorderSide(color: Color(0xFF26364D)),
+              side: BorderSide(color: airmiusBorderColor(context)),
             ),
           );
         },
@@ -393,22 +408,23 @@ class _VisibilityPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _Panel(
-      title: 'Mobile Zustandsgruppen',
+      title: t('authRecovery.groups'),
       child: Column(
         children: [
           _SwitchRow(
-            label: 'Recovery anzeigen',
+            label: t('authRecovery.showRecovery'),
             value: showRecovery,
             onChanged: onRecovery,
           ),
           _SwitchRow(
-            label: 'Security anzeigen',
+            label: t('authRecovery.showSecurity'),
             value: showSecurity,
             onChanged: onSecurity,
           ),
           _SwitchRow(
-            label: 'Account-Status anzeigen',
+            label: t('authRecovery.showAccountState'),
             value: showAccountState,
             onChanged: onAccountState,
           ),
@@ -425,12 +441,15 @@ class _AuthFlowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF101722),
+        color: airmiusSurfaceSoftColor(context),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF26364D)),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,22 +473,22 @@ class _AuthFlowCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        flow.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        t(flow.titleKey),
+                        style: TextStyle(
+                          color: text,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
-                    _Pill(label: flow.status, color: flow.color),
+                    _Pill(label: t(flow.statusKey), color: flow.color),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  flow.body,
-                  style: const TextStyle(
-                    color: Color(0xFFDDE7F5),
+                  t(flow.bodyKey),
+                  style: TextStyle(
+                    color: muted,
                     height: 1.45,
                     fontWeight: FontWeight.w600,
                   ),
@@ -496,25 +515,26 @@ class _ActionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
     return _Panel(
-      title: 'Schnellaktionen',
+      title: t('authRecovery.quickActions'),
       child: Column(
         children: [
           _ActionButton(
             icon: Icons.lock_reset_outlined,
-            label: 'Passwort-Reset starten',
+            label: t('passwordRecovery.title'),
             onTap: onReset,
           ),
           const SizedBox(height: 10),
           _ActionButton(
             icon: Icons.mark_email_read_outlined,
-            label: 'Verify-Mail senden',
+            label: t('emailVerification.resend'),
             onTap: onVerify,
           ),
           const SizedBox(height: 10),
           _ActionButton(
             icon: Icons.support_agent_outlined,
-            label: 'Support kontaktieren',
+            label: t('settings.support'),
             onTap: onSupport,
           ),
         ],
@@ -531,25 +551,23 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D131D),
+        color: airmiusSurfaceColor(context),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF26364D)),
+        border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
-          child,
+          Material(color: Colors.transparent, child: child),
         ],
       ),
     );
@@ -569,18 +587,16 @@ class _SwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
     return SwitchListTile.adaptive(
       value: value,
       onChanged: onChanged,
       dense: true,
       contentPadding: EdgeInsets.zero,
-      activeThumbColor: const Color(0xFF5BA7FF),
+      activeThumbColor: airmiusAccentColor(context),
       title: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
+        style: TextStyle(color: text, fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -599,30 +615,29 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = airmiusTextColor(context);
+    final muted = airmiusMutedColor(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFF111A27),
+          color: airmiusSurfaceSoftColor(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF26364D)),
+          border: Border.all(color: airmiusBorderColor(context)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AirmiusColors.blue),
+            Icon(icon, color: airmiusAccentColor(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: TextStyle(color: text, fontWeight: FontWeight.w900),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFFAFC0D8)),
+            Icon(Icons.chevron_right, color: muted),
           ],
         ),
       ),

@@ -281,91 +281,95 @@ const copy = {
         next: 'Suivant',
         savePlan: 'Enregistrer le plan',
     },
-    ar: {
-        step: 'ا�"خط�^ة',
-        step1: 'ا�"خط�^ة 1',
-        step2: 'ا�"خط�^ة 2',
-        step3: 'ا�"خط�^ة 3',
-        step4: 'ا�"خط�^ة 4',
-        basis: 'أساس ا�"خطة',
-        basisHelp: 'ابدأ با�"أ�?�.: ا�"اس�. �^ا�"إ�S�,اع.',
-        planName: 'اس�. ا�"خطة',
-        planNamePlaceholder: '�.ث�"ا�<: ب�?اء 10 �f�.�O ج�S�. دفع/سحب�O ع�^دة',
-        cadence: 'ا�"إ�S�,اع',
-        single: '�.رة �^احدة',
-        daily: '�S�^�.�S',
-        weekly: 'أسب�^ع�S',
-        monthly: 'ش�?ر�S',
-        goalTime: 'ا�"�?دف �^ا�"فترة',
-        goalTimeHelp: '�f�" ش�Sء �?�?ا اخت�Sار�S �"�f�?�? �Sساعد ف�S ا�"ت�?ظ�S�. �^ا�"تح�"�S�".',
-        planGoal: '�?دف ا�"خطة',
-        planGoalPlaceholder: '�.ث�"ا�< 10 �f�. تحت 45 د�,�S�,ة�O ب�?اء عض�"ات�O ع�^دة �"�"تدر�Sب',
-        phase: '�.رح�"ة ا�"تدر�Sب',
-        base: 'أساس',
-        build: 'ب�?اء',
-        peak: 'ذر�^ة / �.�?افسة',
-        recovery: 'استشفاء',
-        rehab: 'تأ�?�S�" / ع�^دة',
-        level: 'ا�"�.ست�^�?',
-        beginner: '�.بتدئ',
-        intermediate: '�.ت�^سط',
-        advanced: '�.ت�,د�.',
-        elite: 'أداء',
-        start: 'ا�"بدا�Sة',
-        end: 'ا�"�?�?ا�Sة',
-        weeks: 'أساب�Sع',
-        weeklySessions: 'ا�"حصص ف�S ا�"أسب�^ع',
-        advancedPlanning: 'تخط�Sط �.ت�,د�.',
-        macrocycle: 'د�^رة �fبر�?',
-        macrocyclePlaceholder: '�.ث�"ا�< ب�?اء ص�Sف 2026',
-        mesocycle: 'د�^رة �.ت�^سطة',
-        mesocyclePlaceholder: '�.ث�"ا�< �fت�"ة �,�^ة 1',
-        deloadWeek: 'أسب�^ع تخف�Sف',
-        competitionDate: '�.�?افسة / تار�Sخ ا�"�?دف',
-        description: 'ا�"�^صف',
-        release: 'ا�"�?شر',
-        releaseHelp: 'اختر �?�" ت�f�^�? ا�"خطة �.رئ�Sة ف�^را�< �^�.�? �S�.�f�?�? ا�"�^ص�^�".',
-        status: 'ا�"حا�"ة',
-        publishNow: '�?شر ا�"آ�?',
-        draft: '�.س�^دة',
-        permission: 'ا�"ص�"اح�Sة',
-        readOnly: '�,راءة ف�,ط',
-        write: '�fتابة / تحس�S�?',
-        team: 'ا�"فر�S�,',
-        noFullTeam: '�"�Sس فر�S�,ا�< �fا�.�"ا�<',
-        individualAthletes: 'ر�Sاض�S�^�? أفراد',
-        selected: '�.ختار',
-        noPeople: '�"ا �S�^جد ر�Sاض�S�^�? أفراد.',
-        teamSelection: 'اخت�Sار ا�"فر�S�, �Sش�.�"',
-        people: 'أشخاص.',
-        firstSession: 'ا�"حصة ا�"أ�^�"�?',
-        firstSessionHelp: 'تحتاج ا�"خطة إ�"�? حصة أ�^�"�?. �S�.�f�?�f إضافة ا�"�.ز�Sد �"اح�,ا�<.',
-        quickStart: 'بدا�Sة سر�Sعة',
-        sessionType: '�?�^ع ا�"حصة',
-        sessionTypeHelp: 'ا�"�.�,ص�^د �?�?ا �?�^ع ا�"حصة �^�"�Sس ا�"ر�Sاضة.',
-        title: 'ا�"ع�?�^ا�?',
-        titlePlaceholder: '�.ث�"ا�< جر�S ط�^�S�"�O تدر�Sب دفع�O ت�.ر�S�? ت�,�?�Sة',
-        appointment: 'ا�"�.�^عد',
-        week: 'ا�"أسب�^ع',
-        duration: 'ا�"�.دة',
-        distanceKm: 'ا�"�.سافة �f�.',
-        load: 'ا�"ح�.�"',
-        low: 'س�?�"',
-        medium: '�.ت�^سط',
-        high: 'عا�"ٍ',
-        test: 'اختبار',
-        focus: 'ا�"تر�f�Sز',
-        focusPlaceholder: '�.ث�"ا�< ت�,�?�Sة�O ا�"�.�?ط�,ة 2�O ا�"ا�?فجار',
-        mediaTasks: '�^سائط �^�.�?ا�.',
-        todoList: '�,ائ�.ة �.�?ا�.',
-        todoPlaceholder: '�.�?�.ة �^احدة ف�S �f�" سطر',
-        videoLink: 'رابط ا�"ف�Sد�S�^',
-        image: 'ص�^رة',
-        back: 'رج�^ع',
-        next: 'ا�"تا�"�S',
-        savePlan: 'حفظ ا�"خطة',
-    },
+    ar: {},
 }
+
+// Keep Arabic copy explicit here so the wizard never falls back to a damaged
+// or stale generated catalog while the selected locale changes.
+Object.assign(copy.ar, {
+    step: 'خطوة',
+    step1: 'الخطوة 1',
+    step2: 'الخطوة 2',
+    step3: 'الخطوة 3',
+    step4: 'الخطوة 4',
+    basis: 'أساس الخطة',
+    basisHelp: 'ابدأ بالأهم: الاسم والإيقاع.',
+    planName: 'اسم الخطة',
+    planNamePlaceholder: 'مثال: إعداد 10 كم، تمارين دفع/سحب، عودة للتدريب',
+    cadence: 'الإيقاع',
+    single: 'مرة واحدة',
+    daily: 'يومي',
+    weekly: 'أسبوعي',
+    monthly: 'شهري',
+    goalTime: 'الهدف والفترة الزمنية',
+    goalTimeHelp: 'كل ما هنا اختياري، لكنه يساعد في التنظيم والتحليل.',
+    planGoal: 'هدف الخطة',
+    planGoalPlaceholder: 'مثال: 10 كم في أقل من 45 دقيقة، بناء العضلات، العودة للتدريب',
+    phase: 'مرحلة التدريب',
+    base: 'أساس',
+    build: 'بناء',
+    peak: 'ذروة / استعداد للمنافسة',
+    recovery: 'استشفاء',
+    rehab: 'تأهيل / عودة',
+    level: 'المستوى',
+    beginner: 'مبتدئ',
+    intermediate: 'متوسط',
+    advanced: 'متقدم',
+    elite: 'أداء عالٍ',
+    start: 'البداية',
+    end: 'النهاية',
+    weeks: 'أسابيع',
+    weeklySessions: 'الجلسات أسبوعياً',
+    advancedPlanning: 'تخطيط متقدم',
+    macrocycle: 'الدورة الكبرى',
+    macrocyclePlaceholder: 'مثال: إعداد صيف 2026',
+    mesocycle: 'الدورة المتوسطة',
+    mesocyclePlaceholder: 'مثال: كتلة قوة 1',
+    deloadWeek: 'أسبوع تخفيف الحمل',
+    competitionDate: 'المنافسة / التاريخ المستهدف',
+    description: 'الوصف',
+    release: 'النشر والمشاركة',
+    releaseHelp: 'اختر ما إذا كانت الخطة ستظهر فوراً ومن يمكنه الوصول إليها.',
+    status: 'الحالة',
+    publishNow: 'نشر الآن',
+    draft: 'مسودة',
+    permission: 'الصلاحية',
+    readOnly: 'قراءة فقط',
+    write: 'كتابة / تحسين',
+    team: 'الفريق',
+    noFullTeam: 'لا يوجد فريق كامل',
+    individualAthletes: 'رياضيون أفراد',
+    selected: 'محدد',
+    noPeople: 'لا يوجد رياضيون أفراد متاحون.',
+    teamSelection: 'يشمل اختيار الفريق',
+    people: 'أشخاص.',
+    firstSession: 'الجلسة الأولى',
+    firstSessionHelp: 'تحتاج الخطة إلى جلسة أولى. يمكنك إضافة جلسات أخرى لاحقاً.',
+    quickStart: 'بدء سريع',
+    sessionType: 'نوع الجلسة',
+    sessionTypeHelp: 'المقصود هنا نوع الجلسة، وليس الرياضة نفسها.',
+    title: 'العنوان',
+    titlePlaceholder: 'مثال: جري طويل، تمارين دفع، تدريب تقني',
+    appointment: 'الموعد',
+    week: 'الأسبوع',
+    duration: 'المدة',
+    distanceKm: 'المسافة بالكيلومتر',
+    load: 'الحمل',
+    low: 'خفيف',
+    medium: 'متوسط',
+    high: 'عالٍ',
+    test: 'اختبار',
+    focus: 'التركيز',
+    focusPlaceholder: 'مثال: تقنية، المنطقة 2، القوة الانفجارية',
+    mediaTasks: 'الوسائط والمهام',
+    todoList: 'قائمة المهام',
+    todoPlaceholder: 'مهمة واحدة في كل سطر',
+    videoLink: 'رابط الفيديو',
+    image: 'صورة',
+    back: 'رجوع',
+    next: 'التالي',
+    savePlan: 'حفظ الخطة',
+})
 
 const labels = computed(() => copy[locale.value] || copy.de)
 const c = (key) => labels.value[key] || copy.de[key] || key
@@ -415,12 +419,7 @@ const cadenceOptions = computed(() => [
                     <p class="text-sm font-semibold text-primary">{{ c('cadence') }}</p>
                     <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <button
-                            v-for="option in [
-                                { value: 'single', label: 'Einmalig', icon: 'las la-calendar-day' },
-                                { value: 'daily', label: 'Täglich', icon: 'las la-redo' },
-                                { value: 'weekly', label: 'Wöchentlich', icon: 'las la-calendar-week' },
-                                { value: 'monthly', label: 'Monatlich', icon: 'las la-calendar-alt' },
-                            ]"
+                            v-for="option in cadenceOptions"
                             :key="option.value"
                             type="button"
                             class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
@@ -445,19 +444,19 @@ const cadenceOptions = computed(() => [
                 </label>
                 <label class="block text-sm font-semibold text-primary">{{ c('phase') }}
                     <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                        <option value="base">Grundlage</option>
-                        <option value="build">Aufbau</option>
-                        <option value="peak">Peak / Wettkampfnähe</option>
-                        <option value="recovery">Regeneration</option>
-                        <option value="rehab">Reha / Wiedereinstieg</option>
+                        <option value="base">{{ c('base') }}</option>
+                        <option value="build">{{ c('build') }}</option>
+                        <option value="peak">{{ c('peak') }}</option>
+                        <option value="recovery">{{ c('recovery') }}</option>
+                        <option value="rehab">{{ c('rehab') }}</option>
                     </select>
                 </label>
                 <label class="block text-sm font-semibold text-primary">{{ c('level') }}
                     <select v-model="planForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                        <option value="beginner">Einsteiger</option>
-                        <option value="intermediate">Fortgeschritten</option>
-                        <option value="advanced">Advanced</option>
-                        <option value="elite">Leistung</option>
+                        <option value="beginner">{{ c('beginner') }}</option>
+                        <option value="intermediate">{{ c('intermediate') }}</option>
+                        <option value="advanced">{{ c('advanced') }}</option>
+                        <option value="elite">{{ c('elite') }}</option>
                     </select>
                 </label>
                 <label class="block text-sm font-semibold text-primary">{{ c('start') }}
@@ -499,7 +498,7 @@ const cadenceOptions = computed(() => [
         <section v-if="planWizardStep === 2" class="rounded-2xl border border-border bg-card p-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ c('step3') }}</p>
             <h3 class="mt-1 text-lg font-semibold text-primary">{{ c('release') }}</h3>
-            <p class="mt-1 text-sm text-secondary">Wähle, ob der Plan sofort sichtbar ist und wer Zugriff bekommt.</p>
+            <p class="mt-1 text-sm text-secondary">{{ c('releaseHelp') }}</p>
 
             <div class="mt-4 grid gap-4 md:grid-cols-2">
                 <label class="block text-sm font-semibold text-primary">{{ c('status') }}
@@ -525,23 +524,23 @@ const cadenceOptions = computed(() => [
             <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-sm font-semibold text-primary">{{ c('individualAthletes') }}</p>
-                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} {{ c('selected') }}</span>
                 </div>
                 <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
                     <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
                         <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
                         <span class="truncate">{{ person.name }}</span>
                     </label>
-                    <p v-if="!people.length" class="text-sm text-secondary">Keine einzelnen Sportler verfügbar.</p>
+                    <p v-if="!people.length" class="text-sm text-secondary">{{ c('noPeople') }}</p>
                 </div>
-                <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
+                <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">{{ c('teamSelection') }} {{ selectedTeamMembers.length }} {{ c('people') }}</p>
             </div>
         </section>
 
         <section v-if="planWizardStep === 3" class="rounded-2xl border border-border bg-card p-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ c('step4') }}</p>
             <h3 class="mt-1 text-lg font-semibold text-primary">{{ c('firstSession') }}</h3>
-            <p class="mt-1 text-sm text-secondary">Der Plan braucht eine erste Einheit. Weitere Einheiten kannst du danach hinzufügen.</p>
+            <p class="mt-1 text-sm text-secondary">{{ c('firstSessionHelp') }}</p>
 
             <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ c('quickStart') }}</p>
@@ -556,7 +555,7 @@ const cadenceOptions = computed(() => [
             <div class="mt-4 grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2">
                     <p class="text-sm font-semibold text-primary">{{ c('sessionType') }}</p>
-                    <p class="mt-1 text-xs text-secondary">Hier geht es um die Art dieser Einheit, nicht um die Sportart.</p>
+                    <p class="mt-1 text-xs text-secondary">{{ c('sessionTypeHelp') }}</p>
                     <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <button
                             v-for="type in planTrainingTypes"
@@ -632,7 +631,3 @@ const cadenceOptions = computed(() => [
         </div>
     </form>
 </template>
-
-
-
-

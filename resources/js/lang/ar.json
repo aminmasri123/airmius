@@ -1570,7 +1570,91 @@
               "add_chapter": "إضافة فصل",
               "chapter_name": "اسم الفصل",
               "short_description": "وصف مختصر",
-              "create_chapter": "إنشاء الفصل"
+              "create_chapter": "إنشاء الفصل",
+              "sales_heading": "صفحة الهبوط والقسائم والمراجعة",
+              "sales_intro": "كل ما يحتاجه الزوار قبل الشراء: الفوائد والأسئلة الشائعة والخصومات وحالة الجودة.",
+              "quality_review": "مراجعة الجودة",
+              "quality_pending": "قيد الانتظار",
+              "quality_approved": "معتمد",
+              "quality_rejected": "يحتاج إلى مراجعة",
+              "used": "مستخدم",
+              "discount": "خصم",
+              "no_coupons": "لم تتم إضافة قسائم بعد.",
+              "create_coupon": "إنشاء قسيمة",
+              "coupon_code": "الرمز، مثل TEAM20",
+              "percent": "نسبة مئوية",
+              "fixed_amount_cents": "مبلغ ثابت بالسنت",
+              "value": "القيمة",
+              "max_redemptions": "الحد الأقصى للاستخدامات",
+              "active": "نشط",
+              "save_coupon": "حفظ القسيمة",
+              "quiz_heading": "الاختبارات والتحقق من المعرفة",
+              "no_description_text": "لا يوجد وصف",
+              "passing": "للنجاح",
+              "questions": "أسئلة",
+              "delete_quiz": "حذف الاختبار",
+              "no_quizzes": "لم تتم إضافة اختبار بعد.",
+              "create_quiz": "إنشاء اختبار",
+              "general_course_quiz": "اختبار عام للدورة",
+              "quiz_title": "عنوان الاختبار",
+              "description": "الوصف",
+              "pass_percent": "حد النجاح بالنسبة المئوية",
+              "first_question_optional": "السؤال الأول (اختياري)",
+              "answer_options": "خيارات الإجابة، خيار في كل سطر",
+              "correct_answers": "الإجابة/الإجابات الصحيحة، واحدة في كل سطر",
+              "answer_explanation": "الشرح بعد الإجابة",
+              "save_quiz": "حفظ الاختبار",
+              "assignment_heading": "المهام والتقييم اليدوي",
+              "assignment_intro": "يقدم المشاركون نصوصاً أو روابط، ويرسل المدربون النتيجة والملاحظات.",
+              "no_description": "لا يوجد وصف",
+              "points": "نقاط",
+              "participant": "مشارك",
+              "open_attachment": "فتح المرفق",
+              "passed": "ناجح",
+              "needs_revision": "يحتاج إلى مراجعة",
+              "rejected": "مرفوض",
+              "score": "النتيجة",
+              "feedback": "ملاحظات",
+              "grade": "تقييم",
+              "no_assignments": "لم تتم إضافة مهام بعد.",
+              "create_assignment": "إنشاء مهمة",
+              "general_course_assignment": "مهمة عامة للدورة",
+              "assignment_title": "عنوان المهمة",
+              "instructions": "التعليمات",
+              "due_after_days": "الاستحقاق بعد أيام",
+              "required_assignment": "مهمة إلزامية",
+              "save_assignment": "حفظ المهمة"
+              ,"discount_type": "نوع الخصم"
+              ,"expires_at": "صالح حتى"
+              ,"lesson_scope": "ربط بالدرس"
+              ,"students_heading": "المشاركون والدعم"
+              ,"students_intro": "التسجيلات والتقدم والوصول اليدوي وتقارير CSV."
+              ,"enrollment_email": "البريد الإلكتروني للوصول اليدوي"
+              ,"grant_access": "منح الوصول"
+              ,"csv_export": "تصدير CSV"
+              ,"lessons_completed": "دروس مكتملة"
+              ,"quizzes_passed": "اختبارات ناجحة"
+              ,"assignments_passed": "مهام ناجحة"
+              ,"completion": "الإكمال"
+              ,"quiz": "اختبار"
+              ,"required_assignments": "مهام إلزامية"
+              ,"certificate": "شهادة"
+              ,"deactivate": "تعطيل"
+              ,"no_enrollments": "لم يسجل أي مشارك بعد."
+              ,"enrollment_active": "نشط"
+              ,"enrollment_completed": "مكتمل"
+              ,"enrollment_revoked": "معطل"
+              ,"questions_heading": "صندوق الأسئلة"
+              ,"questions_intro": "أسئلة الدروس المفتوحة مع حالة الدعم والمتابعة."
+              ,"question_open": "مفتوح"
+              ,"answered": "تمت الإجابة"
+              ,"resolved": "تم الحل"
+              ,"tutor": "مدرب"
+              ,"reply_placeholder": "اكتب رداً للمشارك"
+              ,"send_reply": "إرسال الرد"
+              ,"no_questions": "لا توجد أسئلة للدورة بعد."
+              ,"start_title": "ابدأ مدرستك الرياضية عبر الإنترنت"
+              ,"start_intro": "أنشئ دورتك الأولى على اليسار، ثم ابنِ الفصول والدروس والاختبارات مباشرة في الاستوديو."
             },
             "learning_studio_form": {
               "edit_lesson": "تعديل الدرس",

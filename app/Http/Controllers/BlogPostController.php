@@ -318,6 +318,17 @@ class BlogPostController extends Controller
         }, $content) ?? '';
         $content = preg_replace('/\sstyle\s*=\s*([\'"]).*?\1/is', '', $content) ?? $content;
         $content = preg_replace('/\s(srcdoc|xmlns|xlink:href|srcset|ping|poster)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? $content;
+        $content = preg_replace_callback('/<a\b([^>]*)>/i', function (array $matches) {
+            $attributes = $matches[1];
+
+            if (! preg_match('/\btarget\s*=\s*("|\')_blank\1/i', $attributes)) {
+                return $matches[0];
+            }
+
+            $attributes = preg_replace('/\srel\s*=\s*("|\').*?\1/i', '', $attributes) ?? $attributes;
+
+            return '<a'.$attributes.' rel="noopener noreferrer">';
+        }, $content) ?? $content;
         $content = preg_replace_callback('/\sclass\s*=\s*([\'"])(.*?)\1/is', function (array $matches) {
             $allowedClasses = [
                 'blog-lead',

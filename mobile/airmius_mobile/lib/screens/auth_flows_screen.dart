@@ -6,6 +6,7 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'account_operations_screen.dart';
+import 'auth_recovery_security_screen.dart';
 import 'email_verification_screen.dart';
 import 'password_recovery_screen.dart';
 import 'profile_completion_gate_screen.dart';
@@ -234,6 +235,20 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                           ),
                         ),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: AirmiusButton(
+                      label: scope.t('authFlow.securityOverview'),
+                      icon: Icons.shield_outlined,
+                      secondary: true,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AuthRecoverySecurityScreen(),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

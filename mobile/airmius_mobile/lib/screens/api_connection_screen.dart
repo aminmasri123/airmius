@@ -35,10 +35,15 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final services = AirmiusServicesScope.of(context);
+    final activeBaseUrl = services.environment.apiBaseUrl;
+
     return Scaffold(
-      backgroundColor: AirmiusColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor:
+            theme.appBarTheme.backgroundColor ?? airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'API Connection',
@@ -62,7 +67,6 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
                   const Text(
                     'Die Webversion wird nicht geraten, sondern systematisch angebunden.',
                     style: TextStyle(
-                      color: AirmiusColors.text,
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       height: 1.08,
@@ -70,17 +74,19 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Diese Übersicht zeigt den aktiven Laravel-Vertrag und die Antwortdaten des echten API-Clients. Token, Lade-, Fehler-, Retry- und Offline-Status werden von den jeweiligen Modulen verarbeitet.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.4),
+                    'Diese Übersicht zeigt den aktiven Laravel-Vertrag und die Antwortdaten des echten API-Clients. Der Verbindungsstatus wird direkt aus der aktuellen Anfrage gelesen.',
+                    style: TextStyle(height: 1.4),
                   ),
                   const SizedBox(height: 14),
                   AirmiusPanel(
                     padding: const EdgeInsets.all(12),
-                    borderColor: AirmiusColors.blue.withValues(alpha: .45),
+                    borderColor: theme.colorScheme.primary.withValues(
+                      alpha: .45,
+                    ),
                     child: SelectableText(
-                      AirmiusApiContract.baseUrl,
-                      style: const TextStyle(
-                        color: AirmiusColors.blue,
+                      activeBaseUrl,
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -98,26 +104,37 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
                     : const <String, dynamic>{};
                 final flags = meta['feature_flags'];
                 final flagCount = flags is Map ? flags.length : 0;
-                return Row(
-                  children: [
-                    Expanded(
-                      child: MetricCard(
-                        value: meta['api_version']?.toString() ?? 'v1',
-                        label: 'API',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value: meta['minimum_app_version']?.toString() ?? '-',
-                        label: 'Min App',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(value: '$flagCount', label: 'Flags'),
-                    ),
-                  ],
+                final status =
+                    snapshot.connectionState == ConnectionState.waiting
+                    ? '…'
+                    : snapshot.hasError
+                    ? 'Offline'
+                    : 'Online';
+                final cards = [
+                  MetricCard(
+                    value: meta['api_version']?.toString() ?? 'v1',
+                    label: 'API',
+                  ),
+                  MetricCard(
+                    value: meta['minimum_app_version']?.toString() ?? '-',
+                    label: 'Min App',
+                  ),
+                  MetricCard(value: '$flagCount', label: 'Flags'),
+                  MetricCard(value: status, label: 'Status'),
+                ];
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth < 520 ? 2 : 4;
+                    final width =
+                        (constraints.maxWidth - (10 * (columns - 1))) / columns;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: cards
+                          .map((card) => SizedBox(width: width, child: card))
+                          .toList(),
+                    );
+                  },
                 );
               },
             ),
@@ -127,15 +144,18 @@ class _ApiConnectionScreenState extends State<ApiConnectionScreen> {
               const SizedBox(height: 12),
             ],
             AirmiusPanel(
-              borderColor: AirmiusColors.green.withValues(alpha: .45),
+              borderColor: theme.colorScheme.primary.withValues(alpha: .45),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Sicherheit & Betrieb'),
+                  const Eyebrow('Live-Verbindung'),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Wenn die UI final genug ist, verbinden wir diese Gruppen mit einem AirmiusApiClient: Auth-Token, Request-Queue, Fehlertexte, Refresh, Uploads und Rollenrechte.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.35),
+                  Text(
+                    'Aktive Basis-URL: $activeBaseUrl',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.35,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   AirmiusButton(
@@ -184,8 +204,8 @@ class _EndpointGroupCard extends StatelessWidget {
                 children: [
                   Text(
                     group.title,
-                    style: const TextStyle(
-                      color: AirmiusColors.text,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
                     ),
@@ -193,8 +213,8 @@ class _EndpointGroupCard extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     group.body,
-                    style: const TextStyle(
-                      color: AirmiusColors.muted,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
                       height: 1.35,
                     ),
                   ),
@@ -213,10 +233,9 @@ class _EndpointGroupCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        for (final endpoint in group.endpoints) ...[
-          _EndpointLine(endpoint),
-          const SizedBox(height: 8),
-        ],
+        for (final endpoint in group.endpoints.map(
+          AirmiusApiContract.mobileApiPath,
+        )) ...[_EndpointLine(endpoint), const SizedBox(height: 8)],
       ],
     ),
   );
@@ -231,14 +250,14 @@ class _EndpointLine extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
-      color: AirmiusColors.cardSoft,
+      color: airmiusSurfaceSoftColor(context),
       borderRadius: BorderRadius.circular(13),
-      border: Border.all(color: AirmiusColors.border),
+      border: Border.all(color: airmiusBorderColor(context)),
     ),
     child: SelectableText(
       endpoint,
-      style: const TextStyle(
-        color: AirmiusColors.text,
+      style: TextStyle(
+        color: airmiusTextColor(context),
         fontWeight: FontWeight.w800,
         fontSize: 12,
       ),
@@ -273,11 +292,11 @@ final _groups = <_EndpointGroup>[
     icon: Icons.manage_accounts_outlined,
     color: AirmiusColors.blue,
     endpoints: [
-      AirmiusApiContract.login,
-      AirmiusApiContract.register,
-      AirmiusApiContract.twoFactor,
-      AirmiusApiContract.me,
-      AirmiusApiContract.language,
+      '/api/v1/auth/login',
+      '/api/v1/auth/register',
+      '/api/v1/auth/two-factor-challenge',
+      '/api/v1/me',
+      '/api/v1/me/language',
     ],
   ),
   _EndpointGroup(

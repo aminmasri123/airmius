@@ -5,32 +5,45 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.12+13` (working-tree release candidate)
+- Version: `1.0.13+14` (working-tree release candidate; fixes the production login connection contract)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
-- API environment:
+- API environment: `https://airmius.com`
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final UI-polish patch; do not upload as the final build): `build/app/outputs/bundle/release/app-release.aab` (25.07.2026 16:56, 70.2 MiB / 73,650,123 bytes)
 - Previous AAB SHA-256: `2ff66fff6496fe46d2cee30f5c771a2ee8312beccf6a714898d2887715f92af5`
-- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (26.07.2026 18:58, 84,644,613 bytes; Version 1.0.12+13).
-- Fresh AAB SHA-256: `bc6c4dddd406642a3247d73145158851ef5fc47b41943c2e7c52f5cbf2622e9d`.
-- Fresh direct-install APK: `build/app/outputs/flutter-apk/app-release.apk` (26.07.2026 18:58, 95,639,248 bytes).
-- Fresh APK SHA-256: `46dbc2145ec6d1b95a6c285c4d2a4d061164c63a71598ef1adeff5b20ec949b0`.
-- Source verification: `flutter test test/widget_test.dart test/localization_l10n_test.dart` (204 passed), `flutter analyze` (no issues), `php artisan test` (548 passed, 4 skipped, 5,367 assertions).
+- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (26.07.2026 23:54, 84,719,967 bytes; Version 1.0.13+14).
+- Fresh AAB SHA-256: `ee8ef6e31c36430d932ec3b70a02d836ca5dbf1be4a28c9961d372f364cd6b9b`.
+- Fresh direct-install APK: `build/app/outputs/flutter-apk/app-release.apk` (26.07.2026 23:55, 95,885,044 bytes).
+- Fresh APK SHA-256: `ca9e74dacd8217aba92daec7479925e07208f09426e64c598fd21693ed97d7c0`.
+- Source verification: `flutter test` (221 passed including onboarding persistence and social-callback security), `flutter analyze --no-pub` (no issues), `php artisan test --filter=MobileAuthSecurityTest` (5 passed, 45 assertions).
 - Fresh artifact verification: `jarsigner -verify` exited successfully; the standard JarInputStream warning for bundled entries is informational.
-- Backend verification: `php artisan test` (548 passed, 4 skipped, 5,367 assertions); `composer validate --strict` passed. Composer's online vulnerability audit remains an external-network gate.
+- Backend verification: `php artisan test --filter=MobileAuthSecurityTest` (5 passed, 45 assertions); `composer validate --strict` passed. Composer's online vulnerability audit remains an external-network gate.
+- Hostinger deployment gate: the live Origin login probe still returns HTTP 419 until the matching `bootstrap/app.php` change is uploaded; after deployment the same invalid test request must return HTTP 422 (`auth.failed`) instead.
 
 ## Gebündelter Änderungsentwurf (Arbeitsstand)
 
 Dieser Abschnitt beschreibt den aktuellen Sammel-Release. Das frische AAB ist gebaut und signiert; vor dem Play-Console-Upload bleiben die üblichen Store-, Review-, Datenschutz- und Realgeräte-Gates.
 
 - Die produktive API-Adresse der Android-App verwendet jetzt `https://airmius.com`. Dadurch schlägt der Login nicht mehr wegen des nicht auflösbaren alten Hosts `app.airmius.com` fehl; bestehende Social-Login-Rückruflinks über den alten Host bleiben kompatibel.
+- Auch Debug-Android-Builds verwenden ohne explizites `AIRMIUS_API_BASE_URL` den produktiven HTTPS-Origin statt `http://localhost`, das auf einem echten Gerät auf das Gerät selbst zeigen würde.
+- Der versionierte Login-Endpunkt ist zusätzlich von der SPA-CSRF-Prüfung ausgenommen: Browser-Origin- und Flutter-Web-Anfragen werden nicht mehr vor der eigentlichen Zugangsdatenprüfung mit HTTP 419 abgebrochen; die Anmeldung bleibt durch Rate-Limit und Bearer-Token geschützt.
+- Bei unterbrochener oder zu langsamer Verbindung liefert die App nun eine verständliche, lokalisierte Login-Fehlermeldung statt eines unklaren generischen Fehlers; Requests werden nach 20 Sekunden sauber abgebrochen.
 - Die API-Konfiguration normalisiert zusätzlich alte Alias- und bereits versionierte Eingaben automatisch, damit weder `app.airmius.com` noch ein doppelter `/api/v1/api/v1`-Pfad die Anmeldung unterbrechen kann.
+- Social-Login-Callbacks von Produktionsdomains akzeptieren ausschließlich HTTPS; HTTP-Token-Callbacks werden blockiert und durch Regressionstests abgesichert.
+- Diagnose-, Datei- und Safety-Ansichten zeigen alte `/friends/...`-Quellen jetzt als kanonische `/api/v1/...`-Mobile-Routen; dadurch werden keine falschen Serverpfade mehr weitergegeben.
+- Die Auth-Recovery-Seite öffnet Passwort-Reset und E-Mail-Verifizierung jetzt als echte API-Flows statt Demo-Dialogen; die Schnellaktionen, Panels und Switches folgen der aktiven Farbpalette und bleiben auf kleinen/hellen/RTL-Ansichten bedienbar.
+- Die Sicherheitsübersicht ist jetzt aus dem erreichbaren Auth-Bereich „Konto & Sicherheit“ geöffnet; ihre Filter, Statusgruppen, Flows und Aktionen sind in Deutsch, Englisch, Französisch und Arabisch lokalisiert und für kleine Arabic-RTL-Ansichten getestet.
+- Konto-Aktionen respektieren jetzt den angeforderten Einstiegsbereich: Passwort-, Sicherheits- und Kontolöschungs-Aktionen springen direkt zum passenden Abschnitt statt nur an den Seitenanfang.
 - Die Web-Chat-Ansicht ist durchgehend in Deutsch, Englisch, Französisch und Arabisch nutzbar: Suche, Gruppenverwaltung, Einladungen, Meldungen, Reaktionen, Anhänge, Leerzustände und Screenreader-Beschriftungen folgen jetzt dem aktiven Sprachkatalog.
 - Der Web-Dateimanager übernimmt Übersetzungen, semantische Theme-Farben und klare Tast-/Touch-Beschriftungen für Suche, Sortierung, Speicherstatus, Upload, Freigabe, Umbenennen, Löschen und Download.
 - Shop-, Warenkorb- und Outfit-Übersichten verwenden lokalisierte Artikel-, Preis-, Zahlungs-, Leer- und Checkout-Texte sowie interpolierte Mengen, Länder und Anbieter in allen vier Sprachen.
 - Das Learning-Studio nutzt für Kursanlage, Kursübersicht, Analytics, Publish-Check, Tabs, Kapitel und Lektionen lokalisierte Eingaben, Statuswerte, Aktionen und Leerzustände in allen vier Sprachen.
+- Die Studio-Bereiche für Landingpage, Gutscheine, Quiz, Aufgaben, Teilnehmer und Fragen-Inbox sind ebenfalls vollständig lokalisiert und mit klaren Screenreader-Beschriftungen versehen.
+- Externe Lern-, Medien-, Bewerbungs- und Rechtslinks öffnen neue Tabs jetzt mit `noopener noreferrer`, um das ursprüngliche Fenster gegen Tabnabbing abzusichern.
+- Das Trainer-Cockpit ordnet seine Navigation auf kleinen Bildschirmen automatisch um: Tabs brechen lesbar um, während breite Ansichten kompakt horizontal bleiben.
+- Der webbasierte Trainingsplan-Dialog lokalisiert jetzt auch Rhythmus, Ziel, Zeitraum, Freigabe, Sportlerauswahl und erste Einheit; die beschädigte arabische Darstellung wurde durch korrektes RTL-Arabisch ersetzt.
 
 - Einheitliches, responsives Designsystem mit mehreren Farbpaletten, Hell/Dunkel/System-Modus und besser lesbaren Textstufen.
 - Hauptbereiche übernehmen AppBar- und Oberflächenfarben jetzt aus der aktiven Palette, sodass Hell-, Dunkel- und Kontrastmodus auch beim Wechsel zwischen Seiten konsistent bleiben.
@@ -47,6 +60,7 @@ Dieser Abschnitt beschreibt den aktuellen Sammel-Release. Das frische AAB ist ge
 - Der Konto-/Sicherheitsbereich ist vollständig lokalisiert; Passwort-Hilfe, 2FA, E-Mail-Verifizierung, Profilabschluss, Support und Kontolöschung öffnen echte Seiten statt Platzhalteraktionen.
 - Datenschutz, E-Mail-Verifizierung und 2FA verwenden für Schutzstatus, Warnungen und Fehler jetzt adaptive Theme-Tokens; der 2FA-Workflow ist zusätzlich in arabischer RTL-Light-Ansicht mit großer Schrift geprüft.
 - Das App-Onboarding ist vollständig mehrsprachig für Deutsch, Englisch, Französisch und Arabisch; Rollen, Startbereiche, Berechtigungsgründe und Folgeaktionen bleiben in allen hellen/dunklen Farbpaletten lesbar und sind mit großer RTL-Schrift geprüft.
+- Der Onboarding-Abschluss speichert Rolle, Startbereich und die gewählten Berechtigungen jetzt lokal mit Zeitstempel, setzt den Abschlussstatus und verhindert ein Fortfahren ohne Datenschutz-/AGB-Zustimmung; Lade-, Erfolgs- und Fehlerzustände sind lokalisiert.
 - Operations- und Release-Hub verwenden adaptive Oberflächen-, Akzent- und Statusfarben; die arabische Light-/Champion-Darstellung bleibt bei 1,35× Schrift bedienbar.
 - Commerce/Seller, Training/Events, Sportprofile, Sportkarte, Lernbereich, Abos, Badges, Freunde, Chat, Dateien, Blog und Sponsoren verwenden semantische Theme-Tokens für Erfolg, Warnung und Fehler statt fester Dark-Theme-Farben.
 - Arbeitsbereiche, Teams, Einstellungen, Guardian, Sportintegrationen und Vereinsdarstellung verwenden ebenfalls die aktive Palette; schwarze Schatten und Statusfarben bleiben in hellen, dunklen und kontrastreichen Modi lesbar.

@@ -720,7 +720,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                             v-if="document.url"
                                             :href="document.url"
                                             target="_blank"
-                                            rel="noreferrer"
+                                            rel="noopener noreferrer"
                                             class="mt-2 inline-flex text-xs font-semibold text-air-blue hover:underline"
                                         >
                                             {{ tAuto('Dokument öffnen') }}

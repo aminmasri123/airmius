@@ -333,7 +333,7 @@ const paginationLabel = (label) => String(label || '')
                         v-if="sponsor.website"
                         :href="sponsor.website"
                         target="_blank"
-                        rel="noopener"
+                        rel="noopener noreferrer"
                         class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10"
                     >
                         <i class="las la-external-link-alt"></i>

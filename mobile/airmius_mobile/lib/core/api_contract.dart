@@ -2,11 +2,26 @@ class AirmiusApiContract {
   const AirmiusApiContract._();
 
   static const baseUrl = String.fromEnvironment(
-    'AIRMIUS_API_URL',
+    'AIRMIUS_API_BASE_URL',
     defaultValue: 'https://airmius.com',
   );
 
   static const meta = '/api/v1/meta';
+
+  /// Returns the canonical route used by the native mobile API.
+  ///
+  /// Older operation catalogues stored Laravel web paths below `/friends`.
+  /// They remain source metadata, but must not be shown as native API routes.
+  /// Request code should continue to use [AirmiusApiClient] directly.
+  static String mobileApiPath(String endpoint) {
+    final value = endpoint.trim();
+    if (value == '/friends') return '/api/v1';
+    if (value.startsWith('/friends/')) {
+      return '/api/v1/${value.substring('/friends/'.length)}';
+    }
+    return value;
+  }
+
   static const csrfToken = '/friends/checkout/csrf-token';
   static const robots = '/friends/robots.txt';
   static const sitemap = '/friends/sitemap.xml';

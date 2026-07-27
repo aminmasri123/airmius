@@ -319,12 +319,14 @@ const goBack = () => {
                             <a
                                 target="_blank"
                                 :href="route('terms.show')"
+                                rel="noopener noreferrer"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
                             >{{ $t('AGB') }}</a>
                             {{ $t('und die') }}
                             <a
                                 target="_blank"
                                 :href="route('policy.show')"
+                                rel="noopener noreferrer"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
                             >{{ $t('Datenschutzerklärung') }}</a>
                         </div>
@@ -349,4 +351,3 @@ const goBack = () => {
         <AuthVisualSlider :slides="loginImages" title="Airmius starten" subtitle="Teams - Events - Marketplace" />
     </div>
 </template>
-

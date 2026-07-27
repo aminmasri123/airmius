@@ -12,7 +12,9 @@ import 'email_verification_screen.dart';
 import 'two_factor_security_screen.dart';
 
 class AccountManagementScreen extends StatefulWidget {
-  const AccountManagementScreen({super.key});
+  const AccountManagementScreen({super.key, this.initialSection = 'Auth'});
+
+  final String initialSection;
 
   @override
   State<AccountManagementScreen> createState() =>
@@ -30,11 +32,32 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   bool _loadingSessions = true;
   bool _busy = false;
   bool _deletionCodeSent = false;
+  final _securitySectionKey = GlobalKey();
+  final _passwordSectionKey = GlobalKey();
+  final _deleteSectionKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadSessions());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focusInitialSection());
+  }
+
+  Future<void> _focusInitialSection() async {
+    final section = widget.initialSection.trim().toLowerCase();
+    final key = switch (section) {
+      'delete' => _deleteSectionKey,
+      'password' => _passwordSectionKey,
+      _ => _securitySectionKey,
+    };
+    final target = key.currentContext;
+    if (target == null || !mounted) return;
+    await Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      alignment: .08,
+    );
   }
 
   @override
@@ -63,282 +86,292 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: Text(t('account.title'))),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          children: [
-            AirmiusPanel(
-              title: t('account.securityTitle'),
-              gradient: true,
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      user?.emailVerified == true
-                          ? Icons.mark_email_read_outlined
-                          : Icons.mark_email_unread_outlined,
-                      color: user?.emailVerified == true
-                          ? scheme.tertiary
-                          : scheme.secondary,
-                    ),
-                    title: Text(
-                      t('account.emailStatus'),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    subtitle: Text(
-                      t(
-                        user?.emailVerified == true
-                            ? 'account.statusVerified'
-                            : 'account.statusUnverified',
-                      ),
-                    ),
-                    trailing: user?.emailVerified == true
-                        ? Icon(Icons.check_circle, color: scheme.tertiary)
-                        : TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _openSecurityScreen(
-                                    const EmailVerificationScreen(),
-                                  ),
-                            child: Text(t('account.manage')),
-                          ),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      user?.twoFactorEnabled == true
-                          ? Icons.verified_user
-                          : Icons.security_outlined,
-                      color: user?.twoFactorEnabled == true
-                          ? scheme.tertiary
-                          : scheme.secondary,
-                    ),
-                    title: Text(
-                      t('account.twoFactor'),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    subtitle: Text(
-                      t(
-                        user?.twoFactorEnabled == true
-                            ? 'account.statusEnabled'
-                            : 'account.statusDisabled',
-                      ),
-                    ),
-                    trailing: TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _openSecurityScreen(
-                              const TwoFactorSecurityScreen(),
-                            ),
-                      child: Text(t('account.manage')),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              title: t('account.profilePhoto'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AirmiusPanel(
+                  key: _securitySectionKey,
+                  title: t('account.securityTitle'),
+                  gradient: true,
+                  child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 34,
-                        backgroundImage: avatarUrl == null
-                            ? null
-                            : NetworkImage(avatarUrl),
-                        child: avatarUrl == null
-                            ? const Icon(Icons.person_outline, size: 34)
-                            : null,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          user?.name ?? t('account.profile'),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(
-                        label: t('account.choosePhoto'),
-                        icon: Icons.photo_library_outlined,
-                        onPressed: _busy ? null : _pickAndUploadPhoto,
-                      ),
-                      AirmiusButton(
-                        label: t('account.removePhoto'),
-                        icon: Icons.delete_outline,
-                        secondary: true,
-                        onPressed: _busy ? null : _removePhoto,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              title: t('account.changePassword'),
-              child: Column(
-                children: [
-                  AirmiusTextField(
-                    label: t('account.currentPassword'),
-                    hint: t('account.currentPassword'),
-                    icon: Icons.lock_outline,
-                    controller: _currentPassword,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: t('account.newPassword'),
-                    hint: t('account.newPasswordHint'),
-                    icon: Icons.password_outlined,
-                    controller: _newPassword,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusTextField(
-                    label: t('account.confirmPassword'),
-                    hint: t('account.confirmPasswordHint'),
-                    icon: Icons.check_circle_outline,
-                    controller: _passwordConfirmation,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: AirmiusButton(
-                      label: t('account.savePassword'),
-                      icon: Icons.save_outlined,
-                      onPressed: _busy ? null : _changePassword,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              title: t('account.activeSessions'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_loadingSessions)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (_sessions.isEmpty)
-                    Text(t('account.noSessions'))
-                  else
-                    for (final session in _sessions)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(
-                          session.current
-                              ? Icons.phone_android
-                              : Icons.devices_other,
-                          color: session.current
+                          user?.emailVerified == true
+                              ? Icons.mark_email_read_outlined
+                              : Icons.mark_email_unread_outlined,
+                          color: user?.emailVerified == true
                               ? scheme.tertiary
-                              : scheme.primary,
+                              : scheme.secondary,
                         ),
                         title: Text(
-                          session.deviceName.isEmpty
-                              ? t('account.unknownDevice')
-                              : session.deviceName,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          t('account.emailStatus'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                         subtitle: Text(
-                          session.current
-                              ? t('account.thisDevice')
-                              : session.lastUsedLabel(t),
-                        ),
-                        trailing: IconButton(
-                          tooltip: t('account.endSession'),
-                          onPressed: _busy ? null : () => _endSession(session),
-                          icon: Icon(
-                            Icons.logout_outlined,
-                            color: scheme.error,
+                          t(
+                            user?.emailVerified == true
+                                ? 'account.statusVerified'
+                                : 'account.statusUnverified',
                           ),
                         ),
+                        trailing: user?.emailVerified == true
+                            ? Icon(Icons.check_circle, color: scheme.tertiary)
+                            : TextButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _openSecurityScreen(
+                                        const EmailVerificationScreen(),
+                                      ),
+                                child: Text(t('account.manage')),
+                              ),
                       ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(
-                        label: t('account.refreshSessions'),
-                        icon: Icons.refresh,
-                        secondary: true,
-                        onPressed: _busy ? null : _loadSessions,
-                      ),
-                      AirmiusButton(
-                        label: t('account.signOutOthers'),
-                        icon: Icons.phonelink_erase,
-                        danger: true,
-                        onPressed: _busy ? null : _endOtherSessions,
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          user?.twoFactorEnabled == true
+                              ? Icons.verified_user
+                              : Icons.security_outlined,
+                          color: user?.twoFactorEnabled == true
+                              ? scheme.tertiary
+                              : scheme.secondary,
+                        ),
+                        title: Text(
+                          t('account.twoFactor'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                        subtitle: Text(
+                          t(
+                            user?.twoFactorEnabled == true
+                                ? 'account.statusEnabled'
+                                : 'account.statusDisabled',
+                          ),
+                        ),
+                        trailing: TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => _openSecurityScreen(
+                                  const TwoFactorSecurityScreen(),
+                                ),
+                          child: Text(t('account.manage')),
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
-              title: t('account.deleteAccount'),
-              borderColor: scheme.error.withValues(alpha: .55),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(t('account.deleteAccountDescription')),
-                  const SizedBox(height: 12),
-                  AirmiusTextField(
-                    label: t('account.identityPassword'),
-                    hint: t('account.identityHint'),
-                    icon: Icons.lock_outline,
-                    controller: _deletionPassword,
-                    obscureText: true,
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  title: t('account.profilePhoto'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 34,
+                            backgroundImage: avatarUrl == null
+                                ? null
+                                : NetworkImage(avatarUrl),
+                            child: avatarUrl == null
+                                ? const Icon(Icons.person_outline, size: 34)
+                                : null,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              user?.name ?? t('account.profile'),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          AirmiusButton(
+                            label: t('account.choosePhoto'),
+                            icon: Icons.photo_library_outlined,
+                            onPressed: _busy ? null : _pickAndUploadPhoto,
+                          ),
+                          AirmiusButton(
+                            label: t('account.removePhoto'),
+                            icon: Icons.delete_outline,
+                            secondary: true,
+                            onPressed: _busy ? null : _removePhoto,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  if (_deletionCodeSent) ...[
-                    const SizedBox(height: 10),
-                    AirmiusTextField(
-                      label: t('account.confirmationCode'),
-                      hint: t('account.confirmationCodeHint'),
-                      icon: Icons.pin_outlined,
-                      controller: _deletionCode,
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  AirmiusButton(
-                    label: _deletionCodeSent
-                        ? t('account.deleteAccountFinal')
-                        : t('account.requestDeletionCode'),
-                    icon: Icons.delete_forever_outlined,
-                    danger: true,
-                    onPressed: _busy
-                        ? null
-                        : (_deletionCodeSent
-                              ? _deleteAccount
-                              : _requestDeletionCode),
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  key: _passwordSectionKey,
+                  title: t('account.changePassword'),
+                  child: Column(
+                    children: [
+                      AirmiusTextField(
+                        label: t('account.currentPassword'),
+                        hint: t('account.currentPassword'),
+                        icon: Icons.lock_outline,
+                        controller: _currentPassword,
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: t('account.newPassword'),
+                        hint: t('account.newPasswordHint'),
+                        icon: Icons.password_outlined,
+                        controller: _newPassword,
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 10),
+                      AirmiusTextField(
+                        label: t('account.confirmPassword'),
+                        hint: t('account.confirmPasswordHint'),
+                        icon: Icons.check_circle_outline,
+                        controller: _passwordConfirmation,
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: AirmiusButton(
+                          label: t('account.savePassword'),
+                          icon: Icons.save_outlined,
+                          onPressed: _busy ? null : _changePassword,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  title: t('account.activeSessions'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_loadingSessions)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_sessions.isEmpty)
+                        Text(t('account.noSessions'))
+                      else
+                        for (final session in _sessions)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              session.current
+                                  ? Icons.phone_android
+                                  : Icons.devices_other,
+                              color: session.current
+                                  ? scheme.tertiary
+                                  : scheme.primary,
+                            ),
+                            title: Text(
+                              session.deviceName.isEmpty
+                                  ? t('account.unknownDevice')
+                                  : session.deviceName,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Text(
+                              session.current
+                                  ? t('account.thisDevice')
+                                  : session.lastUsedLabel(t),
+                            ),
+                            trailing: IconButton(
+                              tooltip: t('account.endSession'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => _endSession(session),
+                              icon: Icon(
+                                Icons.logout_outlined,
+                                color: scheme.error,
+                              ),
+                            ),
+                          ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          AirmiusButton(
+                            label: t('account.refreshSessions'),
+                            icon: Icons.refresh,
+                            secondary: true,
+                            onPressed: _busy ? null : _loadSessions,
+                          ),
+                          AirmiusButton(
+                            label: t('account.signOutOthers'),
+                            icon: Icons.phonelink_erase,
+                            danger: true,
+                            onPressed: _busy ? null : _endOtherSessions,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
+                  key: _deleteSectionKey,
+                  title: t('account.deleteAccount'),
+                  borderColor: scheme.error.withValues(alpha: .55),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(t('account.deleteAccountDescription')),
+                      const SizedBox(height: 12),
+                      AirmiusTextField(
+                        label: t('account.identityPassword'),
+                        hint: t('account.identityHint'),
+                        icon: Icons.lock_outline,
+                        controller: _deletionPassword,
+                        obscureText: true,
+                      ),
+                      if (_deletionCodeSent) ...[
+                        const SizedBox(height: 10),
+                        AirmiusTextField(
+                          label: t('account.confirmationCode'),
+                          hint: t('account.confirmationCodeHint'),
+                          icon: Icons.pin_outlined,
+                          controller: _deletionCode,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      AirmiusButton(
+                        label: _deletionCodeSent
+                            ? t('account.deleteAccountFinal')
+                            : t('account.requestDeletionCode'),
+                        icon: Icons.delete_forever_outlined,
+                        danger: true,
+                        onPressed: _busy
+                            ? null
+                            : (_deletionCodeSent
+                                  ? _deleteAccount
+                                  : _requestDeletionCode),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

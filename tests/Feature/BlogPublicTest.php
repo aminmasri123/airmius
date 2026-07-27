@@ -293,7 +293,7 @@ class BlogPublicTest extends TestCase
             'title' => 'Sicherer Inhalt',
             'slug' => 'sicherer-inhalt',
             'excerpt' => 'Kurztext',
-            'content' => '<p onclick="alert(1)">Text</p><a href=javascript:alert(1)>Link</a><img src="data:text/html;base64,abc" onerror="alert(1)"><script>alert(1)</script><span class="blog-mark unknown">Markiert</span>',
+            'content' => '<p onclick="alert(1)">Text</p><a href=javascript:alert(1)>Link</a><a href="https://example.com" target="_blank" rel="nofollow">Extern</a><img src="data:text/html;base64,abc" onerror="alert(1)"><script>alert(1)</script><span class="blog-mark unknown">Markiert</span>',
             'blog_category_id' => $category->id,
             'tags' => 'Security, Blog',
             'status' => 'draft',
@@ -308,6 +308,8 @@ class BlogPublicTest extends TestCase
         $this->assertStringNotContainsString('javascript:', $content);
         $this->assertStringNotContainsString('data:text/html', $content);
         $this->assertStringNotContainsString('<script', $content);
+        $this->assertStringContainsString('rel="noopener noreferrer"', $content);
+        $this->assertStringNotContainsString('rel="nofollow"', $content);
         $this->assertStringContainsString('class="blog-mark"', $content);
         $this->assertStringNotContainsString('unknown', $content);
     }
@@ -316,13 +318,13 @@ class BlogPublicTest extends TestCase
     {
         $post = BlogPost::factory()->published()->create([
             'slug' => 'legacy-unsicherer-inhalt',
-            'content' => '<p onclick="alert(1)">Sicherer Text</p><script>alert(1)</script>',
+            'content' => '<p onclick="alert(1)">Sicherer Text</p><a href="https://example.com" target="_blank">Extern</a><script>alert(1)</script>',
         ]);
 
         $this->get(route('guest.blog.show', $post))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('post.content', '<p>Sicherer Text</p>')
+                ->where('post.content', '<p>Sicherer Text</p><a href="https://example.com" target="_blank" rel="noopener noreferrer">Extern</a>')
                 ->where('post.slug', 'legacy-unsicherer-inhalt'));
     }
 }

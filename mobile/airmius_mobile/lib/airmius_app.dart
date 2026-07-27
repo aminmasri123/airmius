@@ -24,6 +24,39 @@ import 'screens/profile_completion_gate_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/two_factor_challenge_screen.dart';
 
+bool isAirmiusSocialLoginCallback(Uri uri, {bool web = kIsWeb}) {
+  if (uri.scheme == 'airmius' &&
+      uri.host == 'auth' &&
+      uri.path == '/callback') {
+    return true;
+  }
+
+  if (web &&
+      ['127.0.0.1', 'localhost'].contains(uri.host) &&
+      _callbackToken(uri).isNotEmpty) {
+    return true;
+  }
+
+  return uri.scheme == 'https' &&
+      (uri.host == 'airmius.com' || uri.host == 'app.airmius.com') &&
+      uri.path == '/auth/callback';
+}
+
+String _callbackToken(Uri uri) {
+  final queryToken = uri.queryParameters['token']?.trim();
+  if (queryToken != null && queryToken.isNotEmpty) return queryToken;
+  var fragment = uri.fragment.trim();
+  if (fragment.startsWith('?') || fragment.startsWith('&')) {
+    fragment = fragment.substring(1);
+  }
+  if (fragment.isEmpty) return '';
+  try {
+    return Uri.splitQueryString(fragment)['token']?.trim() ?? '';
+  } catch (_) {
+    return '';
+  }
+}
+
 class AirmiusApp extends StatefulWidget {
   const AirmiusApp({super.key});
 
@@ -42,7 +75,15 @@ class _AirmiusAppState extends State<AirmiusApp> {
     if (kIsWeb && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https')) {
       return _normalizeApiBaseUrl(Uri.base.origin);
     }
-    return kReleaseMode ? 'https://airmius.com' : 'http://localhost';
+    // A debug build running on a physical Android device (or an emulator)
+    // cannot reach the developer machine through `http://localhost`; there,
+    // localhost points back to the device itself and produces the misleading
+    // “server connection interrupted” login error. Local development can
+    // still opt into a backend explicitly with
+    // `--dart-define=AIRMIUS_API_BASE_URL=http://10.0.2.2:8000` (emulator) or
+    // the machine's LAN address. Use the production origin as the safe,
+    // working default for every native build.
+    return 'https://airmius.com';
   }
 
   /// The mobile API client uses versioned request paths (for example
@@ -315,21 +356,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
   }
 
   bool _isSocialLoginCallback(Uri uri) {
-    if (uri.scheme == 'airmius' &&
-        uri.host == 'auth' &&
-        uri.path == '/callback') {
-      return true;
-    }
-
-    if (kIsWeb &&
-        _socialLoginParameters(uri)['token']?.isNotEmpty == true &&
-        ['127.0.0.1', 'localhost'].contains(uri.host)) {
-      return true;
-    }
-
-    return (uri.scheme == 'https' || uri.scheme == 'http') &&
-        (uri.host == 'airmius.com' || uri.host == 'app.airmius.com') &&
-        uri.path == '/auth/callback';
+    return isAirmiusSocialLoginCallback(uri);
   }
 
   Map<String, String> _socialLoginParameters(Uri uri) {

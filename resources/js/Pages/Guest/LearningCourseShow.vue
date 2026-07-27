@@ -443,7 +443,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         @ended="finishVideoProgress"
                                     ></video>
                                 </div>
-                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Video öffnen') }}</a>
+                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">{{ t('Video öffnen') }}</a>
                                 <div v-if="canTrackSelectedLesson && selectedLesson.video_url" class="rounded-lg border border-border bg-bg p-3">
                                     <div class="flex items-center justify-between text-xs font-semibold text-secondary">
                                         <span>{{ t('Video-Fortschritt') }}</span>
@@ -455,7 +455,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     <p class="mt-2 text-xs text-secondary">{{ t('Ab 80% Watch-Time wird die Lektion automatisch abgeschlossen.') }}</p>
                                 </div>
                                 <div v-if="selectedLesson.attachments?.length" class="grid gap-2">
-                                    <a v-for="attachment in selectedLesson.attachments" :key="attachment.url || attachment.name" :href="attachment.url" target="_blank" class="rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                                    <a v-for="attachment in selectedLesson.attachments" :key="attachment.url || attachment.name" :href="attachment.url" target="_blank" rel="noopener noreferrer" class="rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                         {{ attachment.name || t('Material öffnen') }}
                                     </a>
                                 </div>
