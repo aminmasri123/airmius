@@ -55,7 +55,7 @@ const enableTwoFactorAuthentication = () => {
             showRecoveryCodes(),
         ]))
         .then(() => {
-            confirming.value = props.requiresConfirmation;
+            confirming.value = true;
         })
         .finally(() => {
             enabling.value = false;
