@@ -21,15 +21,45 @@ const emit = defineEmits(['close']);
 const dialog = ref();
 const showSlot = ref(props.show);
 
+const openDialog = () => {
+    if (! dialog.value) {
+        return;
+    }
+
+    if (typeof dialog.value.showModal === 'function') {
+        if (! dialog.value.open) {
+            dialog.value.showModal();
+        }
+
+        return;
+    }
+
+    dialog.value.setAttribute('open', 'open');
+};
+
+const closeDialog = () => {
+    if (! dialog.value) {
+        return;
+    }
+
+    if (typeof dialog.value.close === 'function' && dialog.value.open) {
+        dialog.value.close();
+
+        return;
+    }
+
+    dialog.value.removeAttribute('open');
+};
+
 watch(() => props.show, () => {
     if (props.show) {
         document.body.style.overflow = 'hidden';
         showSlot.value = true;
-        dialog.value?.showModal();
+        openDialog();
     } else {
         document.body.style.overflow = null;
         setTimeout(() => {
-            dialog.value?.close();
+            closeDialog();
             showSlot.value = false;
         }, 200);
     }
