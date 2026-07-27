@@ -105,10 +105,17 @@ class CreateNewUser implements CreatesNewUsers
             GuardianConsentNotifier::send($user, $guardianEmail);
         }
 
-        app(\App\Http\Controllers\CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
-            'registered_user_id' => $user->id,
-            'country' => $user->country,
-        ]);
+        try {
+            app(\App\Http\Controllers\CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
+                'registered_user_id' => $user->id,
+                'country' => $user->country,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Registration ad conversion tracking could not be completed.', [
+                'user_id' => $user->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
         return $user;
     }

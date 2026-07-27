@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Jetstream\Features;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -146,6 +147,19 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function supervisedChildren()
     {
         return $this->hasMany(User::class, 'guardian_user_id');
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        try {
+            parent::sendEmailVerificationNotification();
+        } catch (\Throwable $exception) {
+            Log::warning('Email verification notification could not be sent.', [
+                'user_id' => $this->id,
+                'email' => $this->email,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function clubs()

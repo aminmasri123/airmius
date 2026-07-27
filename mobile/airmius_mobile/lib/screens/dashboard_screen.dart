@@ -433,10 +433,15 @@ class _WidgetToggle extends StatelessWidget {
     final surface = _dashSurface(context);
     final border = _dashBorder(context);
     final accent = Theme.of(context).colorScheme.primary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
+    return Semantics(
+      button: true,
+      toggled: active,
+      label: t(item.label),
+      hint: active ? t('dashboard.widgetEnabled') : t('dashboard.widgetDisabled'),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
         decoration: BoxDecoration(
           color: active ? accent.withValues(alpha: 0.15) : surface,
@@ -459,6 +464,7 @@ class _WidgetToggle extends StatelessWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -501,7 +507,7 @@ class _QuickActions extends StatelessWidget {
         subtitle: t('dashboard.review'),
         icon: Icons.notifications_outlined,
         color: Theme.of(context).colorScheme.tertiary,
-        onTap: () => onOpenTab(AppTab.updates),
+        onTap: () => onOpenTab(AppTab.nutrition),
       ),
       _QuickAction(
         title: t('dashboard.feed'),
@@ -531,10 +537,14 @@ class _QuickActions extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         final action = actions[index];
-        return InkWell(
-          onTap: action.onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
+        return Semantics(
+          button: true,
+          label: action.title,
+          hint: action.subtitle,
+          child: InkWell(
+            onTap: action.onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: action.color.withValues(alpha: 0.14),
@@ -564,6 +574,7 @@ class _QuickActions extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
             ),
           ),
         );
@@ -804,7 +815,7 @@ class _DashboardWidgets extends StatelessWidget {
             color: Theme.of(context).colorScheme.tertiary,
             lines: liveData?.notificationLines ?? const [],
             emptyLabel: t('dashboard.noLiveData'),
-            onOpen: () => onOpenTab(AppTab.updates),
+            onOpen: () => onOpenTab(AppTab.nutrition),
           ),
         ],
       ],
@@ -915,7 +926,7 @@ class _FocusWidget extends StatelessWidget {
               'route' => () => onOpenModule(_module('Sportkarte')),
               'nutrition' ||
               'hydration' => () => onOpenModule(_module('Ernährung')),
-              'reminders' => () => onOpenTab(AppTab.updates),
+              'reminders' => () => onOpenTab(AppTab.nutrition),
               _ => () => onOpenModule(_module('Events & Training')),
             };
             final icon = switch (step.key) {

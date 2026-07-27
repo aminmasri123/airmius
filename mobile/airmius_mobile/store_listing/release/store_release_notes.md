@@ -5,22 +5,22 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.13+14` (working-tree release candidate; fixes the production login connection contract)
+- Version: `1.0.15+16` (working-tree release candidate; pragmatic navigation, drink quick entry and camera-based meal photo estimates)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
+- New in 1.0.15+16: Main navigation now focuses on Training, Teams, Feed, Nutrition and Profile. Nutrition asks whether to open Nutrition or Drink tracking, Drink tracking supports quick water entries, and meal photo estimates can use either the camera or gallery.
+- Fresh release build is available for Play Console upload; artifact details below match the freshly built 1.0.15+16 AAB.
 - Release owner:
 - Release date:
 - Previous local release AAB (before the final UI-polish patch; do not upload as the final build): `build/app/outputs/bundle/release/app-release.aab` (25.07.2026 16:56, 70.2 MiB / 73,650,123 bytes)
 - Previous AAB SHA-256: `2ff66fff6496fe46d2cee30f5c771a2ee8312beccf6a714898d2887715f92af5`
-- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (26.07.2026 23:54, 84,719,967 bytes; Version 1.0.13+14).
-- Fresh AAB SHA-256: `ee8ef6e31c36430d932ec3b70a02d836ca5dbf1be4a28c9961d372f364cd6b9b`.
-- Fresh direct-install APK: `build/app/outputs/flutter-apk/app-release.apk` (26.07.2026 23:55, 95,885,044 bytes).
-- Fresh APK SHA-256: `ca9e74dacd8217aba92daec7479925e07208f09426e64c598fd21693ed97d7c0`.
-- Source verification: `flutter test` (221 passed including onboarding persistence and social-callback security), `flutter analyze --no-pub` (no issues), `php artisan test --filter=MobileAuthSecurityTest` (5 passed, 45 assertions).
-- Fresh artifact verification: `jarsigner -verify` exited successfully; the standard JarInputStream warning for bundled entries is informational.
+- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (27.07.2026 14:24 CEST, 84,938,241 bytes; Version 1.0.15+16).
+- Fresh AAB SHA-256: `e0d5b421ccab683e252d4ac022d9aad7f676ff2b8cd6481336b9bc4be82398b5`.
+- Source verification: `flutter analyze` (no issues).
+- Fresh artifact verification: `jarsigner -verify` exited successfully (`jar verified`); the self-signed upload-key and JarInputStream warnings are informational for this Android App Bundle.
 - Backend verification: `php artisan test --filter=MobileAuthSecurityTest` (5 passed, 45 assertions); `composer validate --strict` passed. Composer's online vulnerability audit remains an external-network gate.
-- Hostinger deployment gate: the live Origin login probe still returns HTTP 419 until the matching `bootstrap/app.php` change is uploaded; after deployment the same invalid test request must return HTTP 422 (`auth.failed`) instead.
+- Hostinger deployment gate: the matching `bootstrap/app.php` change is live. The invalid Origin login probe returns HTTP 422 (`auth.failed`) and the preflight returns HTTP 204 with the expected CORS headers; a real account/device smoke test remains the final external check.
 
 ## Gebündelter Änderungsentwurf (Arbeitsstand)
 

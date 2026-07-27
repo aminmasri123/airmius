@@ -8,32 +8,32 @@ const { locale } = useI18n()
 
 const copy = {
     de: {
-        today: 'Heute',
-        start: 'Start',
-        map: 'Karte',
-        team: 'Team',
-        more: 'Mehr',
+        training: 'Training',
+        teams: 'Teams',
+        feed: 'Feed',
+        nutrition: 'Ernährung',
+        profile: 'Profil',
     },
     en: {
-        today: 'Today',
-        start: 'Start',
-        map: 'Map',
-        team: 'Team',
-        more: 'More',
+        training: 'Training',
+        teams: 'Teams',
+        feed: 'Feed',
+        nutrition: 'Nutrition',
+        profile: 'Profile',
     },
     fr: {
-        today: "Aujourd'hui",
-        start: 'Depart',
-        map: 'Carte',
-        team: 'Equipe',
-        more: 'Plus',
+        training: 'Entrainement',
+        teams: 'Equipes',
+        feed: 'Fil',
+        nutrition: 'Nutrition',
+        profile: 'Profil',
     },
     ar: {
-        today: 'اليوم',
-        start: 'ابدأ',
-        map: 'الخريطة',
-        team: 'الفريق',
-        more: 'المزيد',
+        training: 'التدريب',
+        teams: 'الفرق',
+        feed: 'الخلاصة',
+        nutrition: 'التغذية',
+        profile: 'الملف',
     },
 }
 
@@ -43,40 +43,40 @@ const path = computed(() => page.url || window.location.pathname)
 
 const items = computed(() => [
     {
-        key: 'today',
-        label: c('today'),
-        icon: 'las la-home',
-        href: route('auth.dashboard'),
-        active: path.value.startsWith('/dashboard'),
+        key: 'training',
+        label: c('training'),
+        icon: 'las la-dumbbell',
+        href: route('auth.training.index'),
+        active: path.value.startsWith('/training'),
     },
     {
-        key: 'map',
-        label: c('map'),
-        icon: 'las la-route',
-        href: route('auth.sport-map.index'),
-        active: path.value.startsWith('/sport-map'),
-    },
-    {
-        key: 'start',
-        label: c('start'),
-        icon: 'las la-play',
-        href: route('auth.training.logs.create'),
-        active: path.value.startsWith('/training/logs/create'),
-        primary: true,
-    },
-    {
-        key: 'team',
-        label: c('team'),
+        key: 'teams',
+        label: c('teams'),
         icon: 'las la-users',
         href: route('auth.teams.index'),
         active: path.value.startsWith('/teams'),
     },
     {
-        key: 'more',
-        label: c('more'),
-        icon: 'las la-ellipsis-h',
-        href: route('auth.settings'),
-        active: path.value.startsWith('/settings'),
+        key: 'feed',
+        label: c('feed'),
+        icon: 'las la-newspaper',
+        href: route('auth.feed.index'),
+        active: path.value.startsWith('/feed'),
+        primary: true,
+    },
+    {
+        key: 'nutrition',
+        label: c('nutrition'),
+        icon: 'las la-apple-alt',
+        href: route('auth.nutrition.index'),
+        active: path.value.startsWith('/nutrition'),
+    },
+    {
+        key: 'profile',
+        label: c('profile'),
+        icon: 'las la-user',
+        href: route('profile.show'),
+        active: path.value.startsWith('/user/profile') || path.value.startsWith('/settings'),
     },
 ])
 </script>
@@ -106,4 +106,3 @@ const items = computed(() => [
         </div>
     </nav>
 </template>
-

@@ -1,0 +1,7 @@
+New in 1.0.15:
+
+- More practical main navigation: Training, Teams, Feed, Nutrition and Profile.
+- Nutrition now asks whether to open Nutrition or Drink tracking.
+- Drink tracking supports quick entries for 150, 250, 500 and 750 ml.
+- Meal photo estimates now support taking a new photo or choosing one from the gallery.
+- Improved usability and stability for daily mobile use.

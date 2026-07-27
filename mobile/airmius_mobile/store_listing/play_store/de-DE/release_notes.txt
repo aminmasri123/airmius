@@ -1,0 +1,7 @@
+Neu in 1.0.15:
+
+- Hauptnavigation pragmatischer aufgebaut: Training, Teams, Feed, Ernährung und Profil.
+- Ernährung fragt beim Öffnen nach Ernährung oder Trinken.
+- Trinken unterstützt schnelle Einträge mit 150, 250, 500 und 750 ml.
+- Mahlzeiten können per Foto geschätzt werden, jetzt wahlweise mit Kameraaufnahme oder Galerie.
+- Verbesserte Bedienbarkeit und Stabilität im mobilen Alltag.

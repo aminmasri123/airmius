@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -12,8 +13,16 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
+enum NutritionSection { overview, drink }
+enum _MealImageSource { camera, gallery }
+
 class NutritionCenterScreen extends StatefulWidget {
-  const NutritionCenterScreen({super.key});
+  const NutritionCenterScreen({
+    super.key,
+    this.initialSection = NutritionSection.overview,
+  });
+
+  final NutritionSection initialSection;
 
   @override
   State<NutritionCenterScreen> createState() => _NutritionCenterScreenState();
@@ -23,6 +32,8 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
   DateTime _selectedDate = _dateOnly(DateTime.now());
   Future<JsonMap>? _dayFuture;
   bool _busy = false;
+  late NutritionSection _section = widget.initialSection;
+  static const _quickWaterAmounts = [150, 250, 500, 750];
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -132,6 +143,54 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
               : () => _changeDay(1),
         ),
         const SizedBox(height: 14),
+        _NutritionSectionTabs(
+          section: _section,
+          onChanged: (section) => setState(() => _section = section),
+        ),
+        if (_section == NutritionSection.drink) ...[
+          const SizedBox(height: 14),
+          _QuickWaterPanel(
+            consumedMl: _integer(summary['water_ml']),
+            targetMl: waterTarget,
+            amounts: _quickWaterAmounts,
+            busy: _busy,
+            onAdd: _logWaterAmount,
+          ),
+          const SizedBox(height: 14),
+          AirmiusPanel(
+            title: t('nutrition.water'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ProgressLine(
+                  title: t('nutrition.water'),
+                  current: _number(summary['water_ml']),
+                  target: waterTarget.toDouble(),
+                  label: '${_integer(summary['water_ml'])} / $waterTarget ml',
+                  color: airmiusAccentColor(context),
+                ),
+                if (_text(water['source_label']).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _text(water['source_label']),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                AirmiusButton(
+                  label: t('nutrition.addWater'),
+                  icon: Icons.water_drop_outlined,
+                  onPressed: _busy ? null : _addWater,
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+        const SizedBox(height: 14),
         AirmiusPanel(
           gradient: true,
           child: Column(
@@ -166,6 +225,14 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
                     '${t('nutrition.water')} / ${_waterLitres(waterTarget)} L',
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+              _QuickWaterPanel(
+                consumedMl: _integer(summary['water_ml']),
+                targetMl: waterTarget,
+                amounts: _quickWaterAmounts,
+                busy: _busy,
+                onAdd: _logWaterAmount,
               ),
             ],
           ),
@@ -333,6 +400,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
           const SizedBox(height: 14),
           _SuggestionsPanel(tips: tips, recipes: recipes),
         ],
+        ],
       ],
     );
   }
@@ -392,6 +460,11 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
       builder: (_) => const _WaterDialog(),
     );
     if (amount == null || !mounted) return;
+    await _logWaterAmount(amount);
+  }
+
+  Future<void> _logWaterAmount(int amount) async {
+    if (amount <= 0) return;
     await _run(() async {
       await _client.logNutritionWater(
         date: _isoDate(_selectedDate),
@@ -436,15 +509,9 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
     );
     if (consent == null || !mounted) return;
 
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
-      allowMultiple: false,
-      withData: true,
-    );
-    final file = picked?.files.single;
+    final file = await _pickMealImage();
     if (file == null || !mounted) return;
-    final extension = (file.extension ?? '').toLowerCase();
+    final extension = _imageExtension(file);
     if (!const ['jpg', 'jpeg', 'png', 'webp'].contains(extension)) {
       _toast(t('nutrition.aiInvalidImage'));
       return;
@@ -497,6 +564,76 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
     );
   }
 
+  Future<PlatformFile?> _pickMealImage() async {
+    final t = AirmiusScope.of(context).t;
+    final source = await showModalBottomSheet<_MealImageSource>(
+      context: context,
+      backgroundColor: airmiusSurfaceColor(context),
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('nutrition.choosePhoto'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _NutritionChoiceTile(
+                icon: Icons.photo_camera_outlined,
+                title: t('nutrition.takePhoto'),
+                subtitle: t('permissions.cameraTitle'),
+                onTap: () =>
+                    Navigator.pop(context, _MealImageSource.camera),
+              ),
+              const SizedBox(height: 8),
+              _NutritionChoiceTile(
+                icon: Icons.photo_library_outlined,
+                title: t('nutrition.choosePhoto'),
+                subtitle: t('nutrition.image'),
+                onTap: () =>
+                    Navigator.pop(context, _MealImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null || !mounted) return null;
+
+    if (source == _MealImageSource.gallery) {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
+        allowMultiple: false,
+        withData: true,
+      );
+      return picked?.files.single;
+    }
+
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: 88,
+      maxWidth: 1800,
+      maxHeight: 1800,
+    );
+    if (picked == null) return null;
+    final bytes = await picked.readAsBytes();
+    return PlatformFile(
+      name: picked.name,
+      size: bytes.length,
+      bytes: bytes,
+      path: picked.path,
+    );
+  }
+
   Future<JsonMap> _uploadMealImage(
     PlatformFile file, {
     required String mealType,
@@ -521,7 +658,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
           ..fields['ai_consent'] = '1'
           ..fields['meal_type'] = mealType
           ..fields['diet_style'] = dietStyle;
-    final contentType = switch ((file.extension ?? '').toLowerCase()) {
+    final contentType = switch (_imageExtension(file)) {
       'png' => MediaType('image', 'png'),
       'webp' => MediaType('image', 'webp'),
       _ => MediaType('image', 'jpeg'),
@@ -867,6 +1004,198 @@ class _MetricGrid extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _NutritionSectionTabs extends StatelessWidget {
+  const _NutritionSectionTabs({
+    required this.section,
+    required this.onChanged,
+  });
+
+  final NutritionSection section;
+  final ValueChanged<NutritionSection> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return SegmentedButton<NutritionSection>(
+      segments: [
+        ButtonSegment(
+          value: NutritionSection.overview,
+          icon: const Icon(Icons.restaurant_menu_outlined),
+          label: Text(t('nutrition.title')),
+        ),
+        ButtonSegment(
+          value: NutritionSection.drink,
+          icon: const Icon(Icons.water_drop_outlined),
+          label: Text(t('nutrition.addWater')),
+        ),
+      ],
+      selected: {section},
+      onSelectionChanged: (selection) => onChanged(selection.first),
+    );
+  }
+}
+
+class _NutritionChoiceTile extends StatelessWidget {
+  const _NutritionChoiceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: airmiusAccentColor(context)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickWaterPanel extends StatelessWidget {
+  const _QuickWaterPanel({
+    required this.consumedMl,
+    required this.targetMl,
+    required this.amounts,
+    required this.busy,
+    required this.onAdd,
+  });
+
+  final int consumedMl;
+  final int targetMl;
+  final List<int> amounts;
+  final bool busy;
+  final ValueChanged<int> onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final remaining = (targetMl - consumedMl).clamp(0, targetMl);
+    final progress = targetMl <= 0
+        ? 0.0
+        : (consumedMl / targetMl).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceColor(context).withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                height: 38,
+                width: 38,
+                decoration: BoxDecoration(
+                  color: airmiusAccentColor(context).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.water_drop_outlined,
+                  color: airmiusAccentColor(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t('nutrition.addWater'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      '${_waterLitres(remaining)} offen',
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: progress,
+              backgroundColor: airmiusBorderColor(context),
+              color: airmiusAccentColor(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final amount in amounts)
+                FilledButton.tonalIcon(
+                  onPressed: busy ? null : () => onAdd(amount),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text('$amount ml'),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2183,6 +2512,14 @@ String _sourceForPrefill(JsonMap food) {
   if (source == 'barcode') return 'barcode';
   if (source == 'photo_estimate') return 'photo_estimate';
   return 'manual';
+}
+
+String _imageExtension(PlatformFile file) {
+  final explicit = (file.extension ?? '').toLowerCase();
+  if (explicit.isNotEmpty) return explicit;
+  final source = [file.name, file.path].whereType<String>().join('.');
+  final match = RegExp(r'\.([a-zA-Z0-9]+)$').firstMatch(source);
+  return match?.group(1)?.toLowerCase() ?? 'jpg';
 }
 
 IconData _mealIcon(String type) => switch (type) {

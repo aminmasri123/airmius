@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -1138,6 +1139,7 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
   late String _routeType;
   late String _targetMode;
   String? _error;
+  bool _locating = false;
 
   @override
   void initState() {
@@ -1257,6 +1259,25 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
                 latitude: _startLat,
                 longitude: _startLng,
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: OutlinedButton.icon(
+                  onPressed: _locating ? null : _useCurrentLocation,
+                  icon: _locating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_outlined),
+                  label: Text(
+                    _locating
+                        ? t('sportMap.locating')
+                        : t('sportMap.useCurrentLocation'),
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
               if (isPointToPoint)
                 _CoordinateEditor(
@@ -1349,6 +1370,55 @@ class _RouteGeneratorDialogState extends State<_RouteGeneratorDialog> {
     }
     Navigator.pop(context, payload);
   }
+
+  Future<void> _useCurrentLocation() async {
+    final t = AirmiusScope.of(context).t;
+    setState(() {
+      _locating = true;
+      _error = null;
+    });
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw const _LocationUnavailable();
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw const _LocationPermissionDenied();
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _startLat.text = position.latitude.toStringAsFixed(6);
+        _startLng.text = position.longitude.toStringAsFixed(6);
+        _startName.text = t('sportMap.currentLocation');
+      });
+    } on _LocationPermissionDenied {
+      if (mounted) setState(() => _error = t('sportMap.locationPermissionDenied'));
+    } on _LocationUnavailable {
+      if (mounted) setState(() => _error = t('sportMap.locationServiceDisabled'));
+    } catch (_) {
+      if (mounted) setState(() => _error = t('sportMap.locationUnavailable'));
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+}
+
+class _LocationPermissionDenied implements Exception {
+  const _LocationPermissionDenied();
+}
+
+class _LocationUnavailable implements Exception {
+  const _LocationUnavailable();
 }
 
 class _PlaceEditorDialog extends StatefulWidget {

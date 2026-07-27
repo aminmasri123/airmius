@@ -1,6 +1,8 @@
-# Hostinger: Login-Patch sicher einspielen
+# Hostinger: Login-Patch und Live-Prüfung
 
-Der mobile Native-Login erreicht `https://airmius.com` bereits. Der Browser-/Flutter-Web-Login wird aktuell noch vor der Zugangsdatenprüfung mit HTTP 419 abgewiesen.
+Der Patch ist auf `https://airmius.com` eingespielt. Der Login erreicht jetzt die eigentliche Zugangsdatenprüfung: Ein absichtlich ungültiger Origin-Request liefert HTTP `422` (`auth.failed`) statt HTTP `419`. Die CORS-Preflight-Anfrage liefert HTTP `204` mit dem erwarteten Origin.
+
+Der einzige noch externe Nachweis ist die Anmeldung mit einem eigenen Testkonto auf dem echten Gerät. Keine Zugangsdaten oder Tokens in Support-Nachrichten teilen.
 
 ## 1. Datei hochladen
 

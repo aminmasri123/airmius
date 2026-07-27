@@ -88,7 +88,11 @@ const tAuto = (value) => {
 const selectedDateValue = ref(props.selectedDate)
 const editingMealId = ref(null)
 const deleteCandidate = ref(null)
-const activeSection = ref('today')
+const sectionFromQuery = () => {
+    const section = new URLSearchParams(window.location.search).get('section')
+    return ['today', 'add', 'drink', 'goals', 'ideas'].includes(section) ? section : 'today'
+}
+const activeSection = ref(sectionFromQuery())
 const showAdvancedMeal = ref(false)
 const recipeFilter = ref('all')
 const foodSearchQuery = ref('')
@@ -414,7 +418,7 @@ const normalizeDrinkSearch = (value) => String(value || '')
     .trim()
 
 const changeDate = () => {
-    router.get(route('auth.nutrition.index'), { date: selectedDateValue.value }, {
+    router.get(route('auth.nutrition.index'), { date: selectedDateValue.value, section: activeSection.value }, {
         preserveScroll: true,
         preserveState: false,
     })

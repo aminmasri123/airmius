@@ -1,12 +1,11 @@
-enum AppTab { dashboard, clubs, feed, updates, profile }
+enum AppTab { training, clubs, feed, nutrition, profile }
 
 extension AppTabLabel on AppTab {
   String get i18nKey => switch (this) {
-        AppTab.dashboard => 'dashboard',
+        AppTab.training => 'training.nav',
         AppTab.clubs => 'clubs',
         AppTab.feed => 'feed.title',
-        AppTab.updates => 'updates',
+        AppTab.nutrition => 'nutrition.title',
         AppTab.profile => 'profile',
       };
 }
-

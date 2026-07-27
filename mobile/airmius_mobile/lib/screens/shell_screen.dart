@@ -16,7 +16,6 @@ import '../widgets/airmius_widgets.dart';
 import 'club_cockpit_screen.dart';
 import 'clubs_screen.dart';
 import 'conversations_center_screen.dart';
-import 'dashboard_screen.dart';
 import 'feed_center_screen.dart';
 import 'global_search_screen.dart';
 import 'guest_portal_screen.dart';
@@ -24,7 +23,6 @@ import 'module_screen.dart';
 import 'notifications_center_screen.dart';
 import 'profile_screen.dart';
 import 'settings_center_screen.dart';
-import 'updates_center_screen.dart';
 import 'workspace_center_screen.dart';
 import 'teams_center_screen.dart';
 import 'roles_permissions_screen.dart';
@@ -32,6 +30,7 @@ import 'sports_center_screen.dart';
 import 'sport_integrations_screen.dart';
 import 'event_management_screen.dart';
 import 'trainer_cockpit_screen.dart';
+import 'training_center_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'friends_social_graph_screen.dart';
@@ -63,7 +62,8 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
-  AppTab _tab = AppTab.dashboard;
+  AppTab _tab = AppTab.training;
+  NutritionSection _nutritionSection = NutritionSection.overview;
   ModuleDefinition? _openedModule;
   final List<AppTab> _tabHistory = [];
   final Set<int> _requestedClubIds = {};
@@ -112,9 +112,52 @@ class _ShellScreenState extends State<ShellScreen> {
       _tab = tab;
       _openedModule = null;
     });
-    if (tab == AppTab.updates) {
-      _refreshNotificationCount();
-    }
+  }
+
+  Future<void> _chooseNutritionTab() async {
+    final t = AirmiusScope.of(context).t;
+    final selected = await showModalBottomSheet<NutritionSection>(
+      context: context,
+      backgroundColor: airmiusSurfaceColor(context),
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('nutrition.title'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _NutritionChoiceTile(
+                icon: Icons.restaurant_menu_outlined,
+                title: t('nutrition.title'),
+                subtitle: t('nutrition.dailyOverview'),
+                onTap: () =>
+                    Navigator.pop(context, NutritionSection.overview),
+              ),
+              const SizedBox(height: 8),
+              _NutritionChoiceTile(
+                icon: Icons.water_drop_outlined,
+                title: t('nutrition.addWater'),
+                subtitle: t('nutrition.waterAmount'),
+                onTap: () => Navigator.pop(context, NutritionSection.drink),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _nutritionSection = selected);
+    _openTab(AppTab.nutrition);
   }
 
   bool _handleBackNavigation() {
@@ -129,8 +172,8 @@ class _ShellScreenState extends State<ShellScreen> {
       return true;
     }
 
-    if (_tab != AppTab.dashboard) {
-      _openTab(AppTab.dashboard, remember: false);
+    if (_tab != AppTab.training) {
+      _openTab(AppTab.training, remember: false);
       return true;
     }
 
@@ -308,10 +351,10 @@ class _ShellScreenState extends State<ShellScreen> {
   void _requestClub(ClubSummary club) {
     setState(() {
       _requestedClubIds.add(club.id);
-      if (_tab != AppTab.updates) {
+      if (_tab != AppTab.clubs) {
         _tabHistory.add(_tab);
       }
-      _tab = AppTab.updates;
+      _tab = AppTab.clubs;
       _openedModule = null;
     });
     _refreshNotificationCount();
@@ -340,20 +383,15 @@ class _ShellScreenState extends State<ShellScreen> {
             onWithdrawClub: _withdrawClub,
           )
         : switch (_tab) {
-            AppTab.dashboard => DashboardScreen(
-              onOpenTab: _openTab,
-              onOpenModule: _openModule,
-              requestedClubIds: _requestedClubIds,
-            ),
+            AppTab.training => const TrainingCenterScreen(),
             AppTab.clubs => ClubsScreen(
               requestedClubIds: _requestedClubIds,
               onRequestClub: _requestClub,
               onWithdrawClub: _withdrawClub,
             ),
             AppTab.feed => const FeedCenterScreen(),
-            AppTab.updates => UpdatesCenterScreen(
-              requestedClubIds: _requestedClubIds,
-              onWithdrawClub: _withdrawClub,
+            AppTab.nutrition => NutritionCenterScreen(
+              initialSection: _nutritionSection,
             ),
             AppTab.profile => const ProfileScreen(),
           };
@@ -362,7 +400,7 @@ class _ShellScreenState extends State<ShellScreen> {
       canPop:
           _openedModule == null &&
           _tabHistory.isEmpty &&
-          _tab == AppTab.dashboard,
+          _tab == AppTab.training,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackNavigation();
@@ -408,6 +446,7 @@ class _ShellScreenState extends State<ShellScreen> {
         drawer: _ModuleDrawer(
           currentTab: _tab,
           onOpenTab: _openTab,
+          onChooseNutritionTab: _chooseNutritionTab,
           onOpenModule: _openModule,
           onSignOut: () {
             Navigator.pop(context);
@@ -438,12 +477,19 @@ class _ShellScreenState extends State<ShellScreen> {
               alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14,
             ),
             selectedIndex: AppTab.values.indexOf(_tab),
-            onDestinationSelected: (index) => _openTab(AppTab.values[index]),
+            onDestinationSelected: (index) {
+              final tab = AppTab.values[index];
+              if (tab == AppTab.nutrition) {
+                _chooseNutritionTab();
+                return;
+              }
+              _openTab(tab);
+            },
             destinations: [
               NavigationDestination(
-                icon: const Icon(Icons.grid_view_outlined),
-                selectedIcon: const Icon(Icons.grid_view),
-                label: scope.t('dashboard'),
+                icon: const Icon(Icons.fitness_center_outlined),
+                selectedIcon: const Icon(Icons.fitness_center),
+                label: scope.t('training.nav'),
               ),
               NavigationDestination(
                 icon: const Icon(Icons.groups_outlined),
@@ -456,15 +502,9 @@ class _ShellScreenState extends State<ShellScreen> {
                 label: scope.t('feed.title'),
               ),
               NavigationDestination(
-                icon: _NavigationBadgeIcon(
-                  icon: Icons.notifications_outlined,
-                  count: _notificationCount,
-                ),
-                selectedIcon: _NavigationBadgeIcon(
-                  icon: Icons.notifications,
-                  count: _notificationCount,
-                ),
-                label: scope.t('updates'),
+                icon: const Icon(Icons.restaurant_menu_outlined),
+                selectedIcon: const Icon(Icons.restaurant_menu),
+                label: scope.t('nutrition.title'),
               ),
               NavigationDestination(
                 icon: const Icon(Icons.person_outline),
@@ -511,50 +551,6 @@ Color _shellMuted(BuildContext context) {
   return Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
 }
 
-class _NavigationBadgeIcon extends StatelessWidget {
-  const _NavigationBadgeIcon({required this.icon, required this.count});
-
-  final IconData icon;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(icon),
-        if (count > 0)
-          Positioned(
-            right: -9,
-            top: -7,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: AirmiusColors.red,
-                borderRadius: BorderRadius.circular(99),
-                border: Border.all(
-                  color: _bottomNavBackground(context),
-                  width: 2,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                count > 99 ? '99+' : '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 String? _userInitials({String? firstName, String? lastName, String? name}) {
   final fullName = [firstName, lastName]
       .whereType<String>()
@@ -570,12 +566,14 @@ class _ModuleDrawer extends StatelessWidget {
   const _ModuleDrawer({
     required this.currentTab,
     required this.onOpenTab,
+    required this.onChooseNutritionTab,
     required this.onOpenModule,
     required this.onSignOut,
   });
 
   final AppTab currentTab;
   final ValueChanged<AppTab> onOpenTab;
+  final Future<void> Function() onChooseNutritionTab;
   final ValueChanged<ModuleDefinition> onOpenModule;
   final VoidCallback onSignOut;
 
@@ -662,10 +660,10 @@ class _ModuleDrawer extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
                   children: [
                     _DrawerTab(
-                      icon: Icons.home_outlined,
-                      label: scope.t('dashboard'),
-                      active: currentTab == AppTab.dashboard,
-                      onTap: () => _selectTab(context, AppTab.dashboard),
+                      icon: Icons.fitness_center_outlined,
+                      label: scope.t('training.nav'),
+                      active: currentTab == AppTab.training,
+                      onTap: () => _selectTab(context, AppTab.training),
                     ),
                     _DrawerTab(
                       icon: Icons.groups_outlined,
@@ -680,10 +678,13 @@ class _ModuleDrawer extends StatelessWidget {
                       onTap: () => _selectTab(context, AppTab.feed),
                     ),
                     _DrawerTab(
-                      icon: Icons.notifications_outlined,
-                      label: scope.t('updates'),
-                      active: currentTab == AppTab.updates,
-                      onTap: () => _selectTab(context, AppTab.updates),
+                      icon: Icons.restaurant_menu_outlined,
+                      label: scope.t('nutrition.title'),
+                      active: currentTab == AppTab.nutrition,
+                      onTap: () {
+                        Navigator.pop(context);
+                        onChooseNutritionTab();
+                      },
                     ),
                     if (AirmiusMvpSurface.showDeveloperSuites)
                       _DrawerTab(
@@ -822,6 +823,66 @@ bool _canOpenPlatformAdmin(AirmiusUser? user) {
   ]);
   if (hasCommercePermission && !platformAdmin) return true;
   return platformAdmin && user.twoFactorEnabled;
+}
+
+class _NutritionChoiceTile extends StatelessWidget {
+  const _NutritionChoiceTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: airmiusSurfaceColor(context),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: airmiusBorderColor(context)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: airmiusAccentColor(context)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: airmiusMutedColor(context)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DrawerTab extends StatelessWidget {
