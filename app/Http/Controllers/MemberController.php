@@ -7,10 +7,10 @@ use App\Models\MailDelivery;
 use App\Models\User;
 use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\InactiveAccountNotice;
+use App\Services\AdminCreatedUserProvisioner;
 use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Inertia\Inertia;
@@ -151,25 +151,36 @@ class MemberController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, AdminCreatedUserProvisioner $provisioner)
     {
         $this->authorize('create', User::class);
 
-        $request->validate([
+        $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
+            'generate_password' => ['sometimes', 'boolean'],
+            'send_credentials' => ['sometimes', 'boolean'],
+            'password' => ['nullable', 'string', 'min:8', Rule::requiredIf(! $request->boolean('generate_password'))],
+            'password_confirmation' => ['nullable', 'same:password', Rule::requiredIf(! $request->boolean('generate_password'))],
             'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
         ]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'profile_visibility' => $request->input('profile_visibility', 'public'),
+        $result = $provisioner->create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'] ?? null,
+            'profile_visibility' => $data['profile_visibility'] ?? 'public',
+            'generate_password' => $request->boolean('generate_password'),
+            'send_credentials' => $request->boolean('send_credentials'),
         ]);
 
-        return redirect()->route('members.index')->with('success', 'User created successfully.');
+        $message = $result['credentials_sent']
+            ? 'Nutzer wurde erstellt. Die Zugangsdaten wurden per E-Mail versendet.'
+            : ($request->boolean('generate_password')
+                ? 'Nutzer wurde erstellt. Das generierte Kennwort wurde nicht per E-Mail versendet.'
+                : 'Nutzer wurde erstellt.');
+
+        return redirect()->route('members.index')->with('success', $message);
     }
 
     /**

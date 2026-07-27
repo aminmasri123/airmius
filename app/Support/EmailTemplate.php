@@ -106,6 +106,17 @@ class EmailTemplate
                     'action_label' => 'Airmius öffnen',
                 ],
             ],
+            'account_created_with_credentials' => [
+                'label' => 'Konto: Zugangsdaten bei Erstellung',
+                'description' => 'Wird gesendet, wenn ein Admin ein Konto mit generiertem Passwort anlegt.',
+                'variables' => ['name', 'email', 'temporary_password'],
+                'template' => [
+                    'subject' => 'Dein Airmius-Konto wurde erstellt',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "für dich wurde ein Airmius-Konto erstellt.\nE-Mail: {{ email }}\nTemporäres Passwort: {{ temporary_password }}\nBitte melde dich an und ändere dein Passwort direkt nach dem ersten Login.\nWenn du diese Kontoerstellung nicht erwartest, kontaktiere bitte den Airmius-Support.",
+                    'action_label' => 'Bei Airmius anmelden',
+                ],
+            ],
             'account_deletion_code' => [
                 'label' => 'Kontolöschung: Code',
                 'description' => 'Wird gesendet, bevor ein Konto gelöscht werden kann.',
@@ -410,5 +421,4 @@ class EmailTemplate
         };
     }
 }
-
 

@@ -754,6 +754,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'updateContract'])->name('admin.backoffice.contracts.update');
             Route::delete('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'destroyContract'])->name('admin.backoffice.contracts.destroy');
             Route::get('/admin/platform', [PlatformAdminController::class, 'dashboard'])->name('admin.platform.dashboard');
+            Route::post('/admin/platform/users', [PlatformAdminController::class, 'storeUser'])->name('admin.platform.users.store');
             Route::patch('/admin/platform/users/{user}/status', [PlatformAdminController::class, 'updateUserStatus'])->name('admin.platform.users.status');
             Route::patch('/admin/platform/clubs/{club}/approve', [PlatformAdminController::class, 'approveClub'])->name('admin.platform.clubs.approve');
             Route::patch('/admin/platform/clubs/{club}/reject', [PlatformAdminController::class, 'rejectClub'])->name('admin.platform.clubs.reject');

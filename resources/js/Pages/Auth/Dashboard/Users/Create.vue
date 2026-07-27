@@ -12,6 +12,8 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     profile_visibility: 'public',
+    generate_password: true,
+    send_credentials: true,
 })
 
 const submit = () => {
@@ -58,8 +60,9 @@ const submit = () => {
                         <input
                             v-model="form.password"
                             type="password"
+                            :disabled="form.generate_password"
                             class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
-                            required
+                            :required="!form.generate_password"
                         />
                         <div v-if="form.errors.password" class="mt-1 text-sm text-error">{{ form.errors.password }}</div>
                     </div>
@@ -69,9 +72,31 @@ const submit = () => {
                         <input
                             v-model="form.password_confirmation"
                             type="password"
+                            :disabled="form.generate_password"
                             class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
-                            required
+                            :required="!form.generate_password"
                         />
+                        <div v-if="form.generate_password" class="mt-1 text-sm text-secondary">
+                            {{ tx('Das Kennwort wird automatisch generiert.') }}
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 rounded-lg border border-border bg-inputBg/40 p-4">
+                        <label class="flex items-start gap-3">
+                            <input v-model="form.generate_password" type="checkbox" class="mt-1">
+                            <span>
+                                <span class="block text-sm font-medium text-primary">{{ tx('Kennwort automatisch generieren') }}</span>
+                                <span class="block text-sm text-secondary">{{ tx('Erstellt ein sicheres temporäres Kennwort für den neuen Nutzer.') }}</span>
+                            </span>
+                        </label>
+
+                        <label class="flex items-start gap-3">
+                            <input v-model="form.send_credentials" type="checkbox" class="mt-1">
+                            <span>
+                                <span class="block text-sm font-medium text-primary">{{ tx('Zugangsdaten per E-Mail senden') }}</span>
+                                <span class="block text-sm text-secondary">{{ tx('Versendet E-Mail-Adresse und temporäres Kennwort direkt an den neuen Nutzer.') }}</span>
+                            </span>
+                        </label>
                     </div>
 
                     <div>

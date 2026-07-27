@@ -2324,6 +2324,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminPlatformDashboard() =>
       _json('GET', '/api/v1/admin/platform');
 
+  Future<AirmiusJson> adminCreatePlatformUser(AirmiusJson body) =>
+      _json('POST', '/api/v1/admin/platform/users', body: body);
+
   Future<AirmiusJson> adminUpdateUserStatus(int userId, AirmiusJson body) =>
       _json('PATCH', '/api/v1/admin/platform/users/$userId/status', body: body);
 
