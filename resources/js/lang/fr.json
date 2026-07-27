@@ -414,6 +414,8 @@
       "current_password": "Mot de passe actuel",
       "new_password": "Nouveau mot de passe",
       "confirm_password": "Confirmer le mot de passe",
+      "confirm_password_prompt": "Pour ta sécurité, confirme ton mot de passe pour continuer.",
+      "confirm_password_failed": "La confirmation du mot de passe n'a pas pu être effectuée. Réessaie.",
       "two_factor_title": "Authentification à deux facteurs",
       "two_factor_description": "Ajoute une sécurité supplàmentaire à ton compte.",
       "two_factor_enabled": "Tu as activé l'authentification à deux facteurs.",

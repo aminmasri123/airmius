@@ -12,15 +12,15 @@ const emit = defineEmits(['confirmed']);
 defineProps({
     title: {
         type: String,
-        default: 'Confirm Password',
+        default: 'settings.security.confirm_password',
     },
     content: {
         type: String,
-        default: 'For your security, please confirm your password to continue.',
+        default: 'settings.security.confirm_password_prompt',
     },
     button: {
         type: String,
-        default: 'Confirm',
+        default: 'settings.security.confirm',
     },
 });
 
@@ -54,16 +54,32 @@ const confirmPassword = () => {
 
     axios.post(route('password.confirm'), {
         password: form.password,
+    }, {
+        headers: {
+            Accept: 'application/json',
+        },
     }).then(() => {
+        return axios.get(route('password.confirmation'), {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+    }).then((response) => {
         form.processing = false;
+
+        if (!response.data?.confirmed) {
+            form.error = localize('settings.security.confirm_password_failed');
+            passwordInput.value?.focus();
+            return;
+        }
 
         closeModal();
         nextTick().then(() => emit('confirmed'));
-
     }).catch(error => {
         form.processing = false;
-        form.error = error.response.data.errors.password[0];
-        passwordInput.value.focus();
+        form.error = error.response?.data?.errors?.password?.[0]
+            ?? localize('settings.security.confirm_password_failed');
+        passwordInput.value?.focus();
     });
 };
 

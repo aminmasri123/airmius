@@ -413,6 +413,8 @@
       "current_password": "Aktuelles Passwort",
       "new_password": "Neues Passwort",
       "confirm_password": "Passwort bestätigen",
+      "confirm_password_prompt": "Bitte bestätige aus Sicherheitsgründen dein Passwort, um fortzufahren.",
+      "confirm_password_failed": "Die Passwortbestätigung konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       "two_factor_title": "Zwei-Faktor-Authentifizierung",
       "two_factor_description": "Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu.",
       "two_factor_enabled": "Du hast die Zwei-Faktor-Authentifizierung aktiviert.",

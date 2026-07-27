@@ -414,6 +414,8 @@
       "current_password": "Current password",
       "new_password": "New password",
       "confirm_password": "Confirm password",
+      "confirm_password_prompt": "For your security, please confirm your password to continue.",
+      "confirm_password_failed": "Password confirmation could not be completed. Please try again.",
       "two_factor_title": "Two-factor authentication",
       "two_factor_description": "Add extra security to your account.",
       "two_factor_enabled": "You have enabled two-factor authentication.",

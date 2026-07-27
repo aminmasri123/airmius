@@ -413,6 +413,8 @@
       "current_password": "كلمة المرور الحالية",
       "new_password": "كلمة المرور الجديدة",
       "confirm_password": "تأكيد كلمة المرور",
+      "confirm_password_prompt": "لأمانك، يرجى تأكيد كلمة المرور للمتابعة.",
+      "confirm_password_failed": "تعذر إكمال تأكيد كلمة المرور. يرجى المحاولة مرة أخرى.",
       "two_factor_title": "المصادقة الثنائية",
       "two_factor_description": "أضف طبقة أمان إضافية إلى حسابك.",
       "two_factor_enabled": "لقد فعّلت المصادقة الثنائية.",
