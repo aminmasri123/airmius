@@ -1,12 +1,16 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
 const { t } = useI18n()
 const tx = (value, params = {}) => t(value, params)
+
+const logout = () => {
+    router.post(route('logout'))
+}
 
 defineProps({
     status: { type: Number, default: 403 },
@@ -48,6 +52,14 @@ defineProps({
                 <Link :href="route('auth.dashboard')" class="rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary hover:border-borderHover">
                     {{ tx('Zurück zum Dashboard') }}
                 </Link>
+
+                <button
+                    type="button"
+                    class="rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary hover:border-borderHover"
+                    @click="logout"
+                >
+                    {{ tx('Abmelden') }}
+                </button>
             </div>
         </section>
     </div>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\MyCustomResetPassword;
+use App\Notifications\VerifyEmailNotification;
 use App\Support\MinorSafety;
 use App\Support\UploadStorage;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
@@ -152,7 +153,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function sendEmailVerificationNotification(): void
     {
         try {
-            parent::sendEmailVerificationNotification();
+            $this->notify(new VerifyEmailNotification);
         } catch (\Throwable $exception) {
             Log::warning('Email verification notification could not be sent.', [
                 'user_id' => $this->id,

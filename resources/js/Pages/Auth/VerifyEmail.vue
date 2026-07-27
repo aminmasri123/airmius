@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -13,6 +13,10 @@ const form = useForm({});
 
 const submit = () => {
     form.post(route('verification.send'));
+};
+
+const editProfile = () => {
+    router.visit(route('profile.show'));
 };
 
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent');
@@ -45,11 +49,13 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                 </PrimaryButton>
 
                 <div class="grid gap-2 sm:grid-cols-2">
-                    <Link
-                        :href="route('profile.show')"
+                    <button
+                        type="button"
+                        @click="editProfile"
                         class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-card px-3 py-2 text-center text-sm font-semibold text-primary hover:border-borderHover focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
-                        {{ $t('Profil bearbeiten') }}</Link>
+                        {{ $t('Profil bearbeiten') }}
+                    </button>
 
                     <Link
                         :href="route('logout')"
