@@ -70,13 +70,18 @@ class AuthController extends Controller
         if ($user->hasEnabledTwoFactorAuthentication()) {
             Auth::logout();
             $challenge = $challenges->issue($user, $tokenName);
+            $availableMethods = ['authenticator', 'recovery_code'];
+
+            if ($user->hasVerifiedEmail()) {
+                $availableMethods[] = 'email_otp';
+            }
 
             return response()->json([
                 'data' => [
                     'two_factor_required' => true,
                     'challenge_token' => $challenge['token'],
                     'expires_in' => $challenge['expires_in'],
-                    'available_methods' => ['authenticator', 'recovery_code'],
+                    'available_methods' => $availableMethods,
                 ],
             ], 202);
         }

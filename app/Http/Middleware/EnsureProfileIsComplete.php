@@ -18,6 +18,9 @@ class EnsureProfileIsComplete
 
         if ($request->routeIs(
             'auth.profile-completion.*',
+            'profile.show',
+            'user-profile-information.update',
+            'current-user-photo.destroy',
             'logout',
             'verification.*',
             'password.*',

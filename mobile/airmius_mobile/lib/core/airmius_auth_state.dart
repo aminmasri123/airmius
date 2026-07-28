@@ -90,6 +90,7 @@ class AirmiusAuthState extends ChangeNotifier {
   AirmiusAuthPhase _phase = AirmiusAuthPhase.booting;
   String? _error;
   String? _twoFactorChallengeToken;
+  Set<String> _twoFactorAvailableMethods = const {};
   String _twoFactorLocale = 'de';
   String _locale = 'de';
 
@@ -103,6 +104,8 @@ class AirmiusAuthState extends ChangeNotifier {
   bool get requiresTwoFactor =>
       _phase == AirmiusAuthPhase.twoFactorRequired &&
       _twoFactorChallengeToken != null;
+  bool get supportsTwoFactorEmail =>
+      _twoFactorAvailableMethods.contains('email_otp');
 
   Future<void> restore() async {
     _setPhase(AirmiusAuthPhase.loading);
@@ -156,6 +159,10 @@ class AirmiusAuthState extends ChangeNotifier {
           return;
         }
         _twoFactorChallengeToken = challengeToken;
+        final methods = data['available_methods'];
+        _twoFactorAvailableMethods = methods is List
+            ? methods.map((method) => method.toString()).toSet()
+            : const {};
         _twoFactorLocale = locale;
         _setPhase(AirmiusAuthPhase.twoFactorRequired);
         return;
@@ -178,6 +185,7 @@ class AirmiusAuthState extends ChangeNotifier {
   Future<void> completeTwoFactor({
     required String value,
     bool recoveryCode = false,
+    bool emailCode = false,
   }) async {
     _locale = _twoFactorLocale;
     final challengeToken = _twoFactorChallengeToken;
@@ -193,8 +201,11 @@ class AirmiusAuthState extends ChangeNotifier {
     try {
       final json = await clientFactory(null).completeTwoFactorChallenge(
         challengeToken: challengeToken,
-        code: recoveryCode ? null : normalizedValue.replaceAll(' ', ''),
+        code: recoveryCode || emailCode
+            ? null
+            : normalizedValue.replaceAll(' ', ''),
         recoveryCode: recoveryCode ? normalizedValue : null,
+        emailCode: emailCode ? normalizedValue.replaceAll(' ', '') : null,
       );
       await _completeTokenSignIn(
         json,
@@ -209,8 +220,35 @@ class AirmiusAuthState extends ChangeNotifier {
     }
   }
 
+  Future<bool> requestTwoFactorEmailCode() async {
+    _locale = _twoFactorLocale;
+    final challengeToken = _twoFactorChallengeToken;
+    if (challengeToken == null || !supportsTwoFactorEmail) {
+      _error = _authMessage('auth.error.unexpected');
+      _setPhase(AirmiusAuthPhase.twoFactorRequired);
+      return false;
+    }
+
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      await clientFactory(
+        null,
+      ).requestTwoFactorEmailCode(challengeToken: challengeToken);
+      _setPhase(AirmiusAuthPhase.twoFactorRequired);
+      return true;
+    } catch (error) {
+      _error = error is AirmiusApiException
+          ? _readableAuthError(error)
+          : _authMessage('auth.error.unexpected');
+      _setPhase(AirmiusAuthPhase.twoFactorRequired);
+      return false;
+    }
+  }
+
   void cancelTwoFactor() {
     _twoFactorChallengeToken = null;
+    _twoFactorAvailableMethods = const {};
     _error = null;
     _setPhase(AirmiusAuthPhase.guest);
   }
@@ -393,6 +431,7 @@ class AirmiusAuthState extends ChangeNotifier {
     await tokenStore.clear();
     _session = null;
     _twoFactorChallengeToken = null;
+    _twoFactorAvailableMethods = const {};
     _setPhase(AirmiusAuthPhase.guest);
   }
 
@@ -440,6 +479,7 @@ class AirmiusAuthState extends ChangeNotifier {
     await tokenStore.write(session);
     _session = session;
     _twoFactorChallengeToken = null;
+    _twoFactorAvailableMethods = const {};
     _setPhase(AirmiusAuthPhase.authenticated);
     _notifyAuthenticated(session);
   }

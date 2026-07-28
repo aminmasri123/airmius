@@ -142,6 +142,10 @@ class MobileChatRealtimeContractTest extends TestCase
             ->assertJsonPath('data.typing', true);
 
         Sanctum::actingAs($recipient);
+        $this->getJson('/api/v1/chat/conversations')
+            ->assertOk()
+            ->assertJsonPath('data.0.unread_messages_count', 1);
+
         $this->getJson("/api/v1/chat/conversations/{$conversation->id}/messages")
             ->assertOk()
             ->assertJsonPath('chat.typing_users.0.name', 'Lena Lauf');
@@ -150,6 +154,10 @@ class MobileChatRealtimeContractTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.read_count', 1)
             ->assertJsonPath('data.read_message_ids.0', $message->id);
+
+        $this->getJson('/api/v1/chat/conversations')
+            ->assertOk()
+            ->assertJsonPath('data.0.unread_messages_count', 0);
 
         $this->assertNotNull($receipt->fresh()->read_at);
         $this->assertTrue($notification->fresh()->read);

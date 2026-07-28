@@ -146,11 +146,18 @@ class NutritionController extends Controller
         $entry = NutritionMeal::query()->create(
             $this->waterPayload($request->user(), $this->validateWaterData($request))
         );
+        $waterTotalMl = NutritionMeal::query()
+            ->forUser($request->user())
+            ->whereDate('eaten_on', $entry->eaten_on)
+            ->sum('water_ml');
 
-        return (new NutritionMealResource($entry))
-            ->additional(['message' => 'Trinken gespeichert.'])
-            ->response()
-            ->setStatusCode(201);
+        return response()->json([
+            'data' => [
+                ...(new NutritionMealResource($entry))->resolve(),
+                'water_total_ml' => (int) $waterTotalMl,
+            ],
+            'message' => 'Trinken gespeichert.',
+        ], 201);
     }
 
     public function updateMeal(Request $request, NutritionMeal $nutritionMeal)

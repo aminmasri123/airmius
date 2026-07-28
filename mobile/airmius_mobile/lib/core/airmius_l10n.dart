@@ -17363,7 +17363,13 @@ final _strings = {
     'auth2fa.description':
         'Öffne deine Authenticator-App und gib den aktuellen sechsstelligen Code ein.',
     'auth2fa.code': 'Authenticator-Code',
+    'auth2fa.emailCode': 'E-Mail-Code',
     'auth2fa.recoveryCode': 'Wiederherstellungscode',
+    'auth2fa.useEmail': 'E-Mail-Code',
+    'auth2fa.sendEmail': 'Code per E-Mail senden',
+    'auth2fa.resendEmail': 'Neuen E-Mail-Code senden',
+    'auth2fa.emailSent':
+        'Der Code wurde an deine verifizierte E-Mail-Adresse gesendet und ist 10 Minuten gültig.',
     'auth2fa.useRecovery': 'Wiederherstellungscode verwenden',
     'auth2fa.useAuthenticator': 'Authenticator-Code verwenden',
     'auth2fa.verify': 'Sicher anmelden',
@@ -17818,6 +17824,8 @@ final _strings = {
     'nutrition.mealCreated': 'Die Mahlzeit wurde gespeichert.',
     'nutrition.mealUpdated': 'Die Mahlzeit wurde aktualisiert.',
     'nutrition.waterAdded': 'Der Wassereintrag wurde gespeichert.',
+    'nutrition.undo': 'Rückgängig',
+    'nutrition.waterRemoved': 'Der Wassereintrag wurde entfernt.',
     'nutrition.mealDeleted': 'Der Eintrag wurde gelöscht.',
     'nutrition.saveError': 'Die Änderung konnte nicht gespeichert werden:',
     'nutrition.deleteTitle': 'Eintrag löschen?',
@@ -17953,9 +17961,12 @@ final _strings = {
     'sportMap.useCurrentLocation': 'Meinen aktuellen Standort verwenden',
     'sportMap.locating': 'Standort wird ermittelt …',
     'sportMap.currentLocation': 'Mein aktueller Standort',
-    'sportMap.locationPermissionDenied': 'Standortberechtigung wurde nicht erteilt.',
-    'sportMap.locationServiceDisabled': 'Bitte aktiviere die Ortungsdienste auf deinem Gerät.',
-    'sportMap.locationUnavailable': 'Der aktuelle Standort konnte nicht ermittelt werden.',
+    'sportMap.locationPermissionDenied':
+        'Standortberechtigung wurde nicht erteilt.',
+    'sportMap.locationServiceDisabled':
+        'Bitte aktiviere die Ortungsdienste auf deinem Gerät.',
+    'sportMap.locationUnavailable':
+        'Der aktuelle Standort konnte nicht ermittelt werden.',
     'sportMap.destination': 'Ziel',
     'sportMap.coordinates': 'Koordinaten',
     'sportMap.coordinateHint':
@@ -19059,9 +19070,12 @@ final _strings = {
     'onboarding.wellbeing': 'Wohlbefinden',
     'onboarding.nextStep': 'Nächster Schritt',
     'onboarding.finish': 'Onboarding abschließen',
-    'onboarding.saved': 'Onboarding gespeichert. Deine Auswahl ist jetzt lokal aktiv.',
-    'onboarding.saveFailed': 'Onboarding konnte nicht gespeichert werden. Bitte erneut versuchen.',
-    'onboarding.privacyRequired': 'Bitte Datenschutz & AGB akzeptieren, bevor du fortfährst.',
+    'onboarding.saved':
+        'Onboarding gespeichert. Deine Auswahl ist jetzt lokal aktiv.',
+    'onboarding.saveFailed':
+        'Onboarding konnte nicht gespeichert werden. Bitte erneut versuchen.',
+    'onboarding.privacyRequired':
+        'Bitte Datenschutz & AGB akzeptieren, bevor du fortfährst.',
     'onboarding.languageBody':
         'Airmius unterstützt vier Sprachen und richtet arabische Inhalte automatisch von rechts nach links aus.',
     'onboarding.languageCenter': 'Sprachzentrale',
@@ -19504,7 +19518,13 @@ final _strings = {
     'auth2fa.description':
         'Open your authenticator app and enter the current six-digit code.',
     'auth2fa.code': 'Authenticator code',
+    'auth2fa.emailCode': 'Email code',
     'auth2fa.recoveryCode': 'Recovery code',
+    'auth2fa.useEmail': 'Email code',
+    'auth2fa.sendEmail': 'Send code by email',
+    'auth2fa.resendEmail': 'Send a new email code',
+    'auth2fa.emailSent':
+        'The code was sent to your verified email address and is valid for 10 minutes.',
     'auth2fa.useRecovery': 'Use a recovery code',
     'auth2fa.useAuthenticator': 'Use an authenticator code',
     'auth2fa.verify': 'Sign in securely',
@@ -19949,6 +19969,8 @@ final _strings = {
     'nutrition.mealCreated': 'The meal has been saved.',
     'nutrition.mealUpdated': 'The meal has been updated.',
     'nutrition.waterAdded': 'The water entry has been saved.',
+    'nutrition.undo': 'Undo',
+    'nutrition.waterRemoved': 'The water entry has been removed.',
     'nutrition.mealDeleted': 'The entry has been deleted.',
     'nutrition.saveError': 'The change could not be saved:',
     'nutrition.deleteTitle': 'Delete entry?',
@@ -20065,7 +20087,8 @@ final _strings = {
     'sportMap.locating': 'Finding your location …',
     'sportMap.currentLocation': 'My current location',
     'sportMap.locationPermissionDenied': 'Location permission was not granted.',
-    'sportMap.locationServiceDisabled': 'Please enable location services on your device.',
+    'sportMap.locationServiceDisabled':
+        'Please enable location services on your device.',
     'sportMap.locationUnavailable': 'Your current location could not be found.',
     'sportMap.destination': 'Destination',
     'sportMap.coordinates': 'Coordinates',
@@ -21148,9 +21171,11 @@ final _strings = {
     'onboarding.wellbeing': 'Wellbeing',
     'onboarding.nextStep': 'Next step',
     'onboarding.finish': 'Finish onboarding',
-    'onboarding.saved': 'Onboarding saved. Your choices are now active locally.',
+    'onboarding.saved':
+        'Onboarding saved. Your choices are now active locally.',
     'onboarding.saveFailed': 'Onboarding could not be saved. Please try again.',
-    'onboarding.privacyRequired': 'Please accept Privacy & Terms before continuing.',
+    'onboarding.privacyRequired':
+        'Please accept Privacy & Terms before continuing.',
     'onboarding.languageBody':
         'Airmius supports four languages and automatically uses right-to-left layout for Arabic content.',
     'onboarding.languageCenter': 'Language center',
@@ -21586,7 +21611,13 @@ final _strings = {
     'auth2fa.description':
         'Ouvre ton application d’authentification et saisis le code actuel à six chiffres.',
     'auth2fa.code': 'Code d’authentification',
+    'auth2fa.emailCode': 'Code reçu par e-mail',
     'auth2fa.recoveryCode': 'Code de récupération',
+    'auth2fa.useEmail': 'Code par e-mail',
+    'auth2fa.sendEmail': 'Envoyer le code par e-mail',
+    'auth2fa.resendEmail': 'Renvoyer un code par e-mail',
+    'auth2fa.emailSent':
+        'Le code a été envoyé à votre adresse e-mail vérifiée et reste valable 10 minutes.',
     'auth2fa.useRecovery': 'Utiliser un code de récupération',
     'auth2fa.useAuthenticator': 'Utiliser le code d’authentification',
     'auth2fa.verify': 'Se connecter en sécurité',
@@ -22043,6 +22074,8 @@ final _strings = {
     'nutrition.mealCreated': 'Le repas a été enregistré.',
     'nutrition.mealUpdated': 'Le repas a été mis à jour.',
     'nutrition.waterAdded': 'L’entrée d’eau a été enregistrée.',
+    'nutrition.undo': 'Annuler',
+    'nutrition.waterRemoved': 'L’entrée d’eau a été supprimée.',
     'nutrition.mealDeleted': 'L’entrée a été supprimée.',
     'nutrition.saveError': 'Impossible d’enregistrer la modification :',
     'nutrition.deleteTitle': 'Supprimer l’entrée ?',
@@ -22161,8 +22194,10 @@ final _strings = {
     'sportMap.useCurrentLocation': 'Utiliser ma position actuelle',
     'sportMap.locating': 'Localisation en cours…',
     'sportMap.currentLocation': 'Ma position actuelle',
-    'sportMap.locationPermissionDenied': 'L’autorisation de localisation n’a pas été accordée.',
-    'sportMap.locationServiceDisabled': 'Activez les services de localisation sur votre appareil.',
+    'sportMap.locationPermissionDenied':
+        'L’autorisation de localisation n’a pas été accordée.',
+    'sportMap.locationServiceDisabled':
+        'Activez les services de localisation sur votre appareil.',
     'sportMap.locationUnavailable': 'Position actuelle introuvable.',
     'sportMap.destination': 'Arrivée',
     'sportMap.coordinates': 'Coordonnées',
@@ -23261,9 +23296,11 @@ final _strings = {
     'onboarding.wellbeing': 'Bien-être',
     'onboarding.nextStep': 'Prochaine étape',
     'onboarding.finish': 'Terminer l’onboarding',
-    'onboarding.saved': 'Onboarding enregistré. Tes choix sont maintenant actifs localement.',
+    'onboarding.saved':
+        'Onboarding enregistré. Tes choix sont maintenant actifs localement.',
     'onboarding.saveFailed': 'Impossible d’enregistrer l’onboarding. Réessaie.',
-    'onboarding.privacyRequired': 'Accepte la confidentialité et les conditions avant de continuer.',
+    'onboarding.privacyRequired':
+        'Accepte la confidentialité et les conditions avant de continuer.',
     'onboarding.languageBody':
         'Airmius prend en charge quatre langues et active automatiquement le sens droite-gauche pour l’arabe.',
     'onboarding.languageCenter': 'Centre des langues',
@@ -23699,7 +23736,13 @@ final _strings = {
     'auth2fa.description':
         'افتح تطبيق المصادقة وأدخل الرمز الحالي المكوّن من ستة أرقام.',
     'auth2fa.code': 'رمز المصادقة',
+    'auth2fa.emailCode': 'رمز البريد الإلكتروني',
     'auth2fa.recoveryCode': 'رمز الاسترداد',
+    'auth2fa.useEmail': 'رمز عبر البريد الإلكتروني',
+    'auth2fa.sendEmail': 'إرسال الرمز عبر البريد الإلكتروني',
+    'auth2fa.resendEmail': 'إرسال رمز جديد عبر البريد الإلكتروني',
+    'auth2fa.emailSent':
+        'تم إرسال الرمز إلى عنوان بريدك الإلكتروني الموثق، وهو صالح لمدة 10 دقائق.',
     'auth2fa.useRecovery': 'استخدام رمز استرداد',
     'auth2fa.useAuthenticator': 'استخدام رمز المصادقة',
     'auth2fa.verify': 'تسجيل الدخول بأمان',
@@ -24132,6 +24175,8 @@ final _strings = {
     'nutrition.mealCreated': 'تم حفظ الوجبة.',
     'nutrition.mealUpdated': 'تم تحديث الوجبة.',
     'nutrition.waterAdded': 'تم حفظ إدخال الماء.',
+    'nutrition.undo': 'تراجع',
+    'nutrition.waterRemoved': 'تم حذف إدخال الماء.',
     'nutrition.mealDeleted': 'تم حذف الإدخال.',
     'nutrition.saveError': 'تعذر حفظ التغيير:',
     'nutrition.deleteTitle': 'حذف الإدخال؟',

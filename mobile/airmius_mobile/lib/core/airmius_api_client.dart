@@ -77,6 +77,7 @@ class AirmiusApiClient {
     required String challengeToken,
     String? code,
     String? recoveryCode,
+    String? emailCode,
   }) {
     return _json(
       'POST',
@@ -85,7 +86,18 @@ class AirmiusApiClient {
         'challenge_token': challengeToken,
         'code': ?code,
         'recovery_code': ?recoveryCode,
+        'email_code': ?emailCode,
       },
+    );
+  }
+
+  Future<AirmiusJson> requestTwoFactorEmailCode({
+    required String challengeToken,
+  }) {
+    return _json(
+      'POST',
+      '/api/v1/auth/two-factor-challenge/email-code',
+      body: {'challenge_token': challengeToken},
     );
   }
 

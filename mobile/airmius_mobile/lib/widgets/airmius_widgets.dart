@@ -758,6 +758,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onLogoTap,
     this.onMessages,
     this.onNotifications,
+    this.messageCount = 0,
     this.notificationCount = 0,
     this.userLabel,
     this.userImageUrl,
@@ -771,6 +772,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSearch;
   final VoidCallback? onMessages;
   final VoidCallback? onNotifications;
+  final int messageCount;
   final int notificationCount;
   final String? userLabel;
   final String? userImageUrl;
@@ -825,12 +827,17 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           tooltip: messagesLabel,
           onPressed: onMessages,
-          icon: Icon(Icons.chat_bubble_outline, color: muted),
+          icon: _CountBadgeIcon(
+            icon: Icons.chat_bubble_outline,
+            count: messageCount,
+            semanticLabel: messagesLabel,
+          ),
         ),
         IconButton(
           tooltip: notificationsLabel,
           onPressed: onNotifications,
-          icon: _NotificationBell(
+          icon: _CountBadgeIcon(
+            icon: Icons.notifications_none,
             count: notificationCount,
             semanticLabel: notificationsLabel,
           ),
@@ -860,9 +867,14 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _NotificationBell extends StatelessWidget {
-  const _NotificationBell({required this.count, required this.semanticLabel});
+class _CountBadgeIcon extends StatelessWidget {
+  const _CountBadgeIcon({
+    required this.icon,
+    required this.count,
+    required this.semanticLabel,
+  });
 
+  final IconData icon;
   final int count;
   final String semanticLabel;
 
@@ -875,7 +887,7 @@ class _NotificationBell extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Icon(Icons.notifications_none, color: muted),
+          Icon(icon, color: muted),
           if (count > 0)
             Positioned(
               right: -6,

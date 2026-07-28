@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Notifications\MobileVerifyEmail;
+use App\Notifications\TwoFactorLoginCodeRequested;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -97,6 +98,83 @@ class MobileAuthSecurityTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('code');
 
         $this->assertCount(0, $user->tokens()->get());
+    }
+
+    public function test_verified_user_can_complete_mobile_two_factor_with_email_otp(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create([
+            'email' => 'email-otp@example.test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('Secure-password-123!'),
+        ]);
+        app(EnableTwoFactorAuthentication::class)($user);
+        $user->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Secure-password-123!',
+            'device_name' => 'Airmius Email OTP Test',
+        ]);
+
+        $login
+            ->assertStatus(202)
+            ->assertJsonPath('data.available_methods.2', 'email_otp');
+
+        $challengeToken = $login->json('data.challenge_token');
+
+        $this->postJson('/api/v1/auth/two-factor-challenge/email-code', [
+            'challenge_token' => $challengeToken,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.expires_in', 600);
+
+        $emailCode = null;
+        Notification::assertSentTo(
+            $user,
+            TwoFactorLoginCodeRequested::class,
+            function (TwoFactorLoginCodeRequested $notification) use (&$emailCode): bool {
+                $emailCode = $notification->code;
+
+                return true;
+            }
+        );
+
+        $this->postJson('/api/v1/auth/two-factor-challenge', [
+            'challenge_token' => $challengeToken,
+            'email_code' => $emailCode,
+        ])
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['token', 'token_type', 'user']]);
+
+        $this->assertSame(
+            'Airmius Email OTP Test',
+            $user->tokens()->latest('id')->first()->name
+        );
+    }
+
+    public function test_unverified_email_is_not_offered_as_mobile_two_factor_method(): void
+    {
+        $user = User::factory()->unverified()->create([
+            'password' => Hash::make('Secure-password-123!'),
+        ]);
+        app(EnableTwoFactorAuthentication::class)($user);
+        $user->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Secure-password-123!',
+        ]);
+
+        $login
+            ->assertStatus(202)
+            ->assertJsonMissing(['email_otp']);
+
+        $this->postJson('/api/v1/auth/two-factor-challenge/email-code', [
+            'challenge_token' => $login->json('data.challenge_token'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
     }
 
     public function test_mobile_two_factor_can_be_managed_with_password_confirmation(): void

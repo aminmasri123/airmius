@@ -437,34 +437,36 @@ class _WidgetToggle extends StatelessWidget {
       button: true,
       toggled: active,
       label: t(item.label),
-      hint: active ? t('dashboard.widgetEnabled') : t('dashboard.widgetDisabled'),
+      hint: active
+          ? t('dashboard.widgetEnabled')
+          : t('dashboard.widgetDisabled'),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? accent.withValues(alpha: 0.15) : surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active ? accent.withValues(alpha: 0.75) : border,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(item.icon, size: 16, color: active ? accent : muted),
-            const SizedBox(width: 7),
-            Text(
-              t(item.label),
-              style: TextStyle(
-                color: active ? accent : muted,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
-              ),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? accent.withValues(alpha: 0.15) : surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: active ? accent.withValues(alpha: 0.75) : border,
             ),
-          ],
-        ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(item.icon, size: 16, color: active ? accent : muted),
+              const SizedBox(width: 7),
+              Text(
+                t(item.label),
+                style: TextStyle(
+                  color: active ? accent : muted,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -503,13 +505,6 @@ class _QuickActions extends StatelessWidget {
         onTap: () => onOpenModule(_module('Dateien')),
       ),
       _QuickAction(
-        title: t('dashboard.updates'),
-        subtitle: t('dashboard.review'),
-        icon: Icons.notifications_outlined,
-        color: Theme.of(context).colorScheme.tertiary,
-        onTap: () => onOpenTab(AppTab.nutrition),
-      ),
-      _QuickAction(
         title: t('dashboard.feed'),
         subtitle: t('dashboard.post'),
         icon: Icons.dynamic_feed_outlined,
@@ -545,36 +540,36 @@ class _QuickActions extends StatelessWidget {
             onTap: action.onTap,
             borderRadius: BorderRadius.circular(20),
             child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: action.color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: action.color.withValues(alpha: 0.34)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(action.icon, color: action.color, size: 24),
-                const Spacer(),
-                Text(
-                  action.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: text, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  action.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: action.color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: action.color.withValues(alpha: 0.34)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(action.icon, color: action.color, size: 24),
+                  const Spacer(),
+                  Text(
+                    action.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: text, fontWeight: FontWeight.w900),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 2),
+                  Text(
+                    action.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

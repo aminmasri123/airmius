@@ -69,6 +69,11 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
     });
   }
 
+  Future<void> _refreshNotifications() async {
+    _reload();
+    await _notificationsFuture;
+  }
+
   Future<void> _toggleNotificationReadState(
     AirmiusNotification notification,
   ) async {
@@ -152,6 +157,7 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
         title: scope.t('notifications.title'),
         subtitle: scope.t('notifications.subtitle'),
         showHeader: true,
+        onRefresh: _refreshNotifications,
         child: body,
       ),
     );
@@ -160,155 +166,136 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   Widget _buildNotifications(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final accent = _notificationAccent(context);
-    final surface = _notificationSurface(context);
     final surfaceSoft = _notificationSurfaceSoft(context);
     final muted = _notificationMuted(context);
     final border = _notificationBorder(context);
-    return RefreshIndicator(
-      color: accent,
-      backgroundColor: surface,
-      onRefresh: () async {
-        _reload();
-        await _notificationsFuture;
-      },
-      child: FutureBuilder<AirmiusPage<AirmiusNotification>>(
-        future: _notificationsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _ScrollableNotifications(
-              child: _LoadingNotifications(),
-            );
-          }
-          if (snapshot.hasError) {
-            return _ScrollableNotifications(
-              child: _ErrorNotifications(onRetry: _reload),
-            );
-          }
+    return FutureBuilder<AirmiusPage<AirmiusNotification>>(
+      future: _notificationsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingNotifications();
+        }
+        if (snapshot.hasError) {
+          return _ErrorNotifications(onRetry: _reload);
+        }
 
-          final page = _lastNotificationsPage ?? snapshot.data;
-          final allItems = page?.items ?? const <AirmiusNotification>[];
-          final items = allItems
-              .where(
-                (item) => _filter == 'all' || _typeKey(item.type) == _filter,
-              )
-              .toList();
-          final unread = allItems.where((item) => item.unread).length;
-          final requests = allItems
-              .where((item) => _typeKey(item.type) == 'club')
-              .length;
-          final system = allItems
-              .where((item) => _typeKey(item.type) == 'system')
-              .length;
+        final page = _lastNotificationsPage ?? snapshot.data;
+        final allItems = page?.items ?? const <AirmiusNotification>[];
+        final items = allItems
+            .where((item) => _filter == 'all' || _typeKey(item.type) == _filter)
+            .toList();
+        final unread = allItems.where((item) => item.unread).length;
+        final requests = allItems
+            .where((item) => _typeKey(item.type) == 'club')
+            .length;
+        final system = allItems
+            .where((item) => _typeKey(item.type) == 'system')
+            .length;
 
-          return _ScrollableNotifications(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cards = [
-                      MetricCard(
-                        value: '$unread',
-                        label: scope.t('messages.unread'),
-                      ),
-                      MetricCard(
-                        value: '$requests',
-                        label: scope.t('notifications.requests'),
-                      ),
-                      MetricCard(
-                        value: '$system',
-                        label: scope.t('notifications.system'),
-                      ),
-                    ];
-                    final columns = constraints.maxWidth < 520 ? 2 : 3;
-                    final gap = 10.0;
-                    final width = columns == 2
-                        ? (constraints.maxWidth - gap) / 2
-                        : (constraints.maxWidth - gap * 2) / 3;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        for (final card in cards)
-                          SizedBox(width: width, child: card),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cards = [
+                  MetricCard(
+                    value: '$unread',
+                    label: scope.t('messages.unread'),
+                  ),
+                  MetricCard(
+                    value: '$requests',
+                    label: scope.t('notifications.requests'),
+                  ),
+                  MetricCard(
+                    value: '$system',
+                    label: scope.t('notifications.system'),
+                  ),
+                ];
+                final columns = constraints.maxWidth < 520 ? 2 : 3;
+                final gap = 10.0;
+                final width = columns == 2
+                    ? (constraints.maxWidth - gap) / 2
+                    : (constraints.maxWidth - gap * 2) / 3;
+                return Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
                   children: [
-                    for (final entry in _filters(scope).entries)
-                      ChoiceChip(
-                        selected: _filter == entry.key,
-                        label: Text(entry.value),
-                        onSelected: (_) => setState(() => _filter = entry.key),
-                        selectedColor: accent.withValues(
-                          alpha: _notificationDarkUi(context) ? 0.22 : 0.14,
-                        ),
-                        backgroundColor: surfaceSoft,
-                        checkmarkColor: accent,
-                        side: BorderSide(
-                          color: _filter == entry.key ? accent : border,
-                        ),
-                        labelStyle: TextStyle(
-                          color: _filter == entry.key ? accent : muted,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
+                    for (final card in cards)
+                      SizedBox(width: width, child: card),
                   ],
-                ),
-                const SizedBox(height: 14),
-                if (unread > 0) ...[
-                  AirmiusButton(
-                    label: scope.t('notifications.markAllRead'),
-                    icon: Icons.done_all_outlined,
-                    secondary: true,
-                    onPressed: _markingAllRead
-                        ? null
-                        : _markAllNotificationsRead,
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                if (items.isEmpty)
-                  EmptyPanel(scope.t('notifications.empty'))
-                else
-                  AirmiusPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SectionLabel(scope.t('notifications.title')),
-                        const SizedBox(height: 10),
-                        for (final item in items) ...[
-                          _NotificationLine(
-                            item: item,
-                            onChanged: _reload,
-                            onToggleReadState: _toggleNotificationReadState,
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                      ],
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final entry in _filters(scope).entries)
+                  ChoiceChip(
+                    selected: _filter == entry.key,
+                    label: Text(entry.value),
+                    onSelected: (_) => setState(() => _filter = entry.key),
+                    selectedColor: accent.withValues(
+                      alpha: _notificationDarkUi(context) ? 0.22 : 0.14,
+                    ),
+                    backgroundColor: surfaceSoft,
+                    checkmarkColor: accent,
+                    side: BorderSide(
+                      color: _filter == entry.key ? accent : border,
+                    ),
+                    labelStyle: TextStyle(
+                      color: _filter == entry.key ? accent : muted,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                const SizedBox(height: 14),
-                AirmiusButton(
-                  label: scope.t('notificationSettings.channel.push'),
-                  icon: Icons.tune_outlined,
-                  secondary: true,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationPreferencesScreen(),
-                    ),
-                  ),
-                ),
               ],
             ),
-          );
-        },
-      ),
+            const SizedBox(height: 14),
+            if (unread > 0) ...[
+              AirmiusButton(
+                label: scope.t('notifications.markAllRead'),
+                icon: Icons.done_all_outlined,
+                secondary: true,
+                onPressed: _markingAllRead ? null : _markAllNotificationsRead,
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (items.isEmpty)
+              EmptyPanel(scope.t('notifications.empty'))
+            else
+              AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SectionLabel(scope.t('notifications.title')),
+                    const SizedBox(height: 10),
+                    for (final item in items) ...[
+                      _NotificationLine(
+                        item: item,
+                        onChanged: _reload,
+                        onToggleReadState: _toggleNotificationReadState,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
+              ),
+            const SizedBox(height: 14),
+            AirmiusButton(
+              label: scope.t('notificationSettings.channel.push'),
+              icon: Icons.tune_outlined,
+              secondary: true,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationPreferencesScreen(),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -387,20 +374,6 @@ Color _notificationBorder(BuildContext context) {
   return _notificationDarkUi(context)
       ? AirmiusColors.border
       : palette.lightBorder;
-}
-
-class _ScrollableNotifications extends StatelessWidget {
-  const _ScrollableNotifications({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: child,
-    );
-  }
 }
 
 class _NotificationLine extends StatefulWidget {

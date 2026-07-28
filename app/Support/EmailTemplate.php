@@ -194,6 +194,17 @@ class EmailTemplate
                     'action_label' => '',
                 ],
             ],
+            'login_two_factor_code' => [
+                'label' => 'Sicherheit: Anmeldecode',
+                'description' => 'Einmalcode zur Bestätigung einer Anmeldung.',
+                'variables' => ['name', 'code', 'expires_minutes'],
+                'template' => [
+                    'subject' => 'Dein Sicherheitscode für Airmius',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "dein Sicherheitscode für die Anmeldung lautet: {{ code }}\nDer Code ist {{ expires_minutes }} Minuten gültig und kann nur einmal verwendet werden.\nWenn du diese Anmeldung nicht gestartet hast, ändere bitte dein Passwort.",
+                    'action_label' => '',
+                ],
+            ],
             'login_lockout' => [
                 'label' => 'Sicherheit: Login blockiert',
                 'description' => 'Hinweis bei mehreren fehlgeschlagenen Login-Versuchen.',
@@ -421,4 +432,3 @@ class EmailTemplate
         };
     }
 }
-

@@ -77,6 +77,7 @@ import 'package:airmius/screens/badges_center_screen.dart';
 import 'package:airmius/screens/blog_media_center_screen.dart';
 import 'package:airmius/screens/carpool_center_screen.dart';
 import 'package:airmius/screens/certificate_verification_screen.dart';
+import 'package:airmius/screens/chat_detail_screen.dart';
 import 'package:airmius/screens/club_cockpit_screen.dart';
 import 'package:airmius/screens/club_request_inbox_screen.dart';
 import 'package:airmius/screens/club_event_attendance_screen.dart';
@@ -382,6 +383,7 @@ void main() {
       findsWidgets,
     );
     expect(find.text('Training'), findsWidgets);
+    expect(find.text('Updates'), findsNothing);
 
     await tester.tap(find.text('Anpassen'));
     await tester.pump();
@@ -597,6 +599,65 @@ void main() {
       ),
     );
     expect(transport.requests[1].body, containsPair('code', '123456'));
+  });
+
+  test('auth state requests and submits an email OTP', () async {
+    final tokenStore = AirmiusMemoryTokenStore();
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 202,
+        body:
+            '{"data":{"two_factor_required":true,"challenge_token":"challenge-token-with-sufficient-length-1234567890","expires_in":600,"available_methods":["authenticator","recovery_code","email_otp"]}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"message":"sent","expires_in":600}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"token":"email-otp-session-token","token_type":"Bearer","user":{"id":7,"name":"Mina Sprint","email":"mina@example.test","email_verified":true,"two_factor_enabled":true,"role":"athlete"}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":7,"name":"Mina Sprint","email":"mina@example.test","email_verified":true,"two_factor_enabled":true,"role":"athlete","first_name":"Mina","last_name":"Sprint","birth_date":"2000-01-01","gender":"female","country":"DE"}}',
+      ),
+    ]);
+    final container = AirmiusServiceContainer(
+      environment: const AirmiusAppEnvironment(
+        apiBaseUrl: 'https://airmius.test',
+        enableOfflineQueue: false,
+      ),
+      transport: transport,
+      tokenStore: tokenStore,
+      pushDeviceStore: _MemoryPreferencesStore(),
+    );
+
+    await container.authState.signIn(
+      email: 'mina@example.test',
+      password: 'secret',
+    );
+
+    expect(container.authState.supportsTwoFactorEmail, isTrue);
+    expect(await container.authState.requestTwoFactorEmailCode(), isTrue);
+    await container.authState.completeTwoFactor(
+      value: '654321',
+      emailCode: true,
+    );
+
+    expect(container.authState.phase, AirmiusAuthPhase.authenticated);
+    expect(
+      transport.requests.map((request) => request.path),
+      containsAllInOrder([
+        '/api/v1/auth/login',
+        '/api/v1/auth/two-factor-challenge/email-code',
+        '/api/v1/auth/two-factor-challenge',
+        '/api/v1/me',
+      ]),
+    );
+    expect(transport.requests[2].body, containsPair('email_code', '654321'));
+    expect(transport.requests[2].body?.containsKey('code'), isFalse);
   });
 
   test(
@@ -2827,6 +2888,68 @@ void main() {
     expect(transport.paths, contains('/api/v1/nutrition'));
   });
 
+  testWidgets('water updates inline and can be undone without reloading', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1200));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"selected_date":"2026-07-28","goal":{"water_target_ml":2500,"water_target_mode":"manual"},"meals":[],"summary":{"water_ml":400},"weekly_summaries":[],"water_recommendation":{"target_ml":2500,"source_label":"Manuell festgelegt"},"catalog":{},"recipes":[],"tips":[],"ai_capabilities":{}}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body:
+            '{"data":{"id":91,"water_ml":250,"water_total_ml":650},"message":"Trinken gespeichert."}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"deleted":true}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const NutritionCenterScreen(initialSection: NutritionSection.drink),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('400 / 2500 ml'), findsOneWidget);
+    await tester.tap(find.text('250 ml'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('650 / 2500 ml'), findsOneWidget);
+    expect(find.text('Rückgängig'), findsOneWidget);
+    expect(
+      transport.requests
+          .where((request) => request.path == '/api/v1/nutrition')
+          .length,
+      1,
+    );
+
+    await tester.tap(find.text('Rückgängig'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('400 / 2500 ml'), findsOneWidget);
+    expect(
+      transport.requests.map((request) => request.path),
+      containsAllInOrder([
+        '/api/v1/nutrition',
+        '/api/v1/nutrition/water',
+        '/api/v1/nutrition/meals/91',
+      ]),
+    );
+    expect(
+      transport.requests
+          .where((request) => request.path == '/api/v1/nutrition')
+          .length,
+      1,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('badges screen renders a real personal award', (
     WidgetTester tester,
   ) async {
@@ -4686,6 +4809,68 @@ void main() {
 
     expect(find.byType(ConversationsCenterScreen), findsOneWidget);
     expect(find.byType(NotificationsCenterScreen), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('top bar shows the unread chat count on the message icon', (
+    WidgetTester tester,
+  ) async {
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      const Scaffold(
+        appBar: AirmiusTopBar(
+          title: 'Feed',
+          messageCount: 7,
+          notificationCount: 2,
+        ),
+      ),
+    );
+
+    expect(find.text('7'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'Nachrichten, 7')), findsOneWidget);
+  });
+
+  testWidgets('chat polling keeps messages visible without a loading flash', (
+    WidgetTester tester,
+  ) async {
+    final transport = _ChatPollingTransport();
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ChatDetailScreen(
+        conversationId: 12,
+        title: 'Lena Lauf',
+        kind: 'Direkt',
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Training startet um 18 Uhr.'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Training startet um 18 Uhr.'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(transport.messageRequests, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('authenticated app shell opens on the feed', (
+    WidgetTester tester,
+  ) async {
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      const ShellScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FeedCenterScreen), findsOneWidget);
+    expect(find.byType(TrainingCenterScreen), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -7133,6 +7318,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('notifications center scrolls as one page on a phone', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 700));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":1,"type":"system","title":"Benachrichtigung 1","body":"Erste Meldung","read":false,"time_label":"2026-07-25T12:00:00Z"},{"id":2,"type":"system","title":"Benachrichtigung 2","body":"Zweite Meldung","read":true,"time_label":"2026-07-25T11:00:00Z"},{"id":3,"type":"system","title":"Benachrichtigung 3","body":"Dritte Meldung","read":true,"time_label":"2026-07-25T10:00:00Z"},{"id":4,"type":"system","title":"Benachrichtigung 4","body":"Vierte Meldung","read":true,"time_label":"2026-07-25T09:00:00Z"},{"id":5,"type":"system","title":"Benachrichtigung 5","body":"Fünfte Meldung","read":true,"time_label":"2026-07-25T08:00:00Z"},{"id":6,"type":"system","title":"Benachrichtigung 6","body":"Sechste Meldung","read":true,"time_label":"2026-07-25T07:00:00Z"}],"meta":{"total":6}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const NotificationsCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Scrollable), findsOneWidget);
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+    expect(scrollable.position.pixels, 0);
+
+    await tester.drag(find.text('Benachrichtigung 1'), const Offset(0, -500));
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, greaterThan(0));
+    expect(find.text('Benachrichtigung 6'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('membership request status is localized for Arabic large text', (
     WidgetTester tester,
   ) async {
@@ -7275,6 +7491,32 @@ class _SequencedTransport implements AirmiusApiTransport {
     }
     if (_responses.length == 1) return _responses.single;
     return _responses.removeAt(0);
+  }
+}
+
+class _ChatPollingTransport implements AirmiusApiTransport {
+  int messageRequests = 0;
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.path == '/api/v1/chat/conversations/12/messages') {
+      messageRequests++;
+      if (messageRequests > 1) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":41,"conversation_id":12,"sender_id":8,"current_user_id":3,"message":"Training startet um 18 Uhr.","sender":{"id":8,"name":"Lena Lauf"},"status":"sent","created_at":"2026-07-28T16:00:00Z","reactions":[]}],"chat":{"typing_users":[]},"meta":{"current_page":1,"last_page":1,"per_page":20,"total":1}}',
+      );
+    }
+    if (request.path == '/api/v1/chat/conversations/12/read') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"read_count":1,"read_message_ids":[41]}}',
+      );
+    }
+    return const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}');
   }
 }
 

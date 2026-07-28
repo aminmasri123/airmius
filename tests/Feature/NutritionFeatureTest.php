@@ -114,10 +114,23 @@ class NutritionFeatureTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.title', 'Runner Oats');
 
+        $water = $this->postJson('/api/v1/nutrition/water', [
+            'eaten_on' => '2026-05-19',
+            'amount_ml' => 250,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.water_ml', 250)
+            ->assertJsonPath('data.water_total_ml', 250);
+
+        $this->deleteJson('/api/v1/nutrition/meals/'.$water->json('data.id'))
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true);
+
         $this->getJson('/api/v1/nutrition?date=2026-05-19')
             ->assertOk()
             ->assertJsonPath('data.goal.goal_type', 'performance')
             ->assertJsonPath('data.summary.calories', 520)
+            ->assertJsonPath('data.summary.water_ml', 0)
             ->assertJsonPath('data.meals.0.title', 'Runner Oats')
             ->assertJsonPath('data.catalog.meal_types.0.key', 'breakfast');
     }

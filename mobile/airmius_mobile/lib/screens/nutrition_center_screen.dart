@@ -14,6 +14,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 enum NutritionSection { overview, drink }
+
 enum _MealImageSource { camera, gallery }
 
 class NutritionCenterScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class NutritionCenterScreen extends StatefulWidget {
 class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
   DateTime _selectedDate = _dateOnly(DateTime.now());
   Future<JsonMap>? _dayFuture;
+  JsonMap? _dayData;
   bool _busy = false;
   late NutritionSection _section = widget.initialSection;
   static const _quickWaterAmounts = [150, 250, 500, 750];
@@ -48,11 +50,16 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
 
   Future<JsonMap> _loadDay() async {
     final response = await _client.nutrition(date: _isoDate(_selectedDate));
-    return _map(response['data']);
+    final data = _map(response['data']);
+    _dayData = data;
+    return data;
   }
 
   void _reload() {
-    setState(() => _dayFuture = _loadDay());
+    setState(() {
+      _dayData = null;
+      _dayFuture = _loadDay();
+    });
   }
 
   void _changeDay(int offset) {
@@ -60,6 +67,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
     if (next.isAfter(_dateOnly(DateTime.now()))) return;
     setState(() {
       _selectedDate = next;
+      _dayData = null;
       _dayFuture = _loadDay();
     });
   }
@@ -97,7 +105,7 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             if (snapshot.hasError) {
               return _NutritionError(error: snapshot.error, onRetry: _reload);
             }
-            return _buildDay(snapshot.data ?? const {});
+            return _buildDay(_dayData ?? snapshot.data ?? const {});
           },
         ),
       ),
@@ -190,216 +198,219 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             ),
           ),
         ] else ...[
-        const SizedBox(height: 14),
-        AirmiusPanel(
-          gradient: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Eyebrow(t('nutrition.dailyOverview')),
-              const SizedBox(height: 8),
-              Text(
-                t('nutrition.dailyOverviewHint'),
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _MetricGrid(
-                values: [
-                  (
-                    '${_integer(summary['calories'])}',
-                    '${t('nutrition.calories')} / $calorieTarget',
-                  ),
-                  (
-                    '${_numberLabel(summary['protein_g'])} g',
-                    '${t('nutrition.protein')} / $proteinTarget g',
-                  ),
-                  (
-                    '${_numberLabel(summary['carbs_g'])} g',
-                    '${t('nutrition.carbs')} / $carbsTarget g',
-                  ),
-                  (
-                    '${_waterLitres(_integer(summary['water_ml']))} L',
-                    '${t('nutrition.water')} / ${_waterLitres(waterTarget)} L',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _QuickWaterPanel(
-                consumedMl: _integer(summary['water_ml']),
-                targetMl: waterTarget,
-                amounts: _quickWaterAmounts,
-                busy: _busy,
-                onAdd: _logWaterAmount,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        AirmiusPanel(
-          title: t('nutrition.targets'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ProgressLine(
-                title: t('nutrition.calories'),
-                current: _number(summary['calories']),
-                target: calorieTarget.toDouble(),
-                label: '${_integer(summary['calories'])} / $calorieTarget kcal',
-              ),
-              const SizedBox(height: 13),
-              _ProgressLine(
-                title: t('nutrition.protein'),
-                current: _number(summary['protein_g']),
-                target: proteinTarget.toDouble(),
-                label:
-                    '${_numberLabel(summary['protein_g'])} / $proteinTarget g',
-              ),
-              const SizedBox(height: 13),
-              _ProgressLine(
-                title: t('nutrition.carbs'),
-                current: _number(summary['carbs_g']),
-                target: carbsTarget.toDouble(),
-                label: '${_numberLabel(summary['carbs_g'])} / $carbsTarget g',
-              ),
-              const SizedBox(height: 13),
-              _ProgressLine(
-                title: t('nutrition.fat'),
-                current: _number(summary['fat_g']),
-                target: fatTarget.toDouble(),
-                label: '${_numberLabel(summary['fat_g'])} / $fatTarget g',
-              ),
-              const SizedBox(height: 13),
-              _ProgressLine(
-                title: t('nutrition.water'),
-                current: _number(summary['water_ml']),
-                target: waterTarget.toDouble(),
-                label: '${_integer(summary['water_ml'])} / $waterTarget ml',
-                color: airmiusAccentColor(context),
-              ),
-              if (_text(water['source_label']).isNotEmpty) ...[
-                const SizedBox(height: 12),
+          const SizedBox(height: 14),
+          AirmiusPanel(
+            gradient: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Eyebrow(t('nutrition.dailyOverview')),
+                const SizedBox(height: 8),
                 Text(
-                  _text(water['source_label']),
+                  t('nutrition.dailyOverviewHint'),
                   style: TextStyle(
                     color: airmiusMutedColor(context),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    height: 1.35,
                   ),
                 ),
+                const SizedBox(height: 16),
+                _MetricGrid(
+                  values: [
+                    (
+                      '${_integer(summary['calories'])}',
+                      '${t('nutrition.calories')} / $calorieTarget',
+                    ),
+                    (
+                      '${_numberLabel(summary['protein_g'])} g',
+                      '${t('nutrition.protein')} / $proteinTarget g',
+                    ),
+                    (
+                      '${_numberLabel(summary['carbs_g'])} g',
+                      '${t('nutrition.carbs')} / $carbsTarget g',
+                    ),
+                    (
+                      '${_waterLitres(_integer(summary['water_ml']))} L',
+                      '${t('nutrition.water')} / ${_waterLitres(waterTarget)} L',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _QuickWaterPanel(
+                  consumedMl: _integer(summary['water_ml']),
+                  targetMl: waterTarget,
+                  amounts: _quickWaterAmounts,
+                  busy: _busy,
+                  onAdd: _logWaterAmount,
+                ),
               ],
-              const SizedBox(height: 14),
+            ),
+          ),
+          const SizedBox(height: 14),
+          AirmiusPanel(
+            title: t('nutrition.targets'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ProgressLine(
+                  title: t('nutrition.calories'),
+                  current: _number(summary['calories']),
+                  target: calorieTarget.toDouble(),
+                  label:
+                      '${_integer(summary['calories'])} / $calorieTarget kcal',
+                ),
+                const SizedBox(height: 13),
+                _ProgressLine(
+                  title: t('nutrition.protein'),
+                  current: _number(summary['protein_g']),
+                  target: proteinTarget.toDouble(),
+                  label:
+                      '${_numberLabel(summary['protein_g'])} / $proteinTarget g',
+                ),
+                const SizedBox(height: 13),
+                _ProgressLine(
+                  title: t('nutrition.carbs'),
+                  current: _number(summary['carbs_g']),
+                  target: carbsTarget.toDouble(),
+                  label: '${_numberLabel(summary['carbs_g'])} / $carbsTarget g',
+                ),
+                const SizedBox(height: 13),
+                _ProgressLine(
+                  title: t('nutrition.fat'),
+                  current: _number(summary['fat_g']),
+                  target: fatTarget.toDouble(),
+                  label: '${_numberLabel(summary['fat_g'])} / $fatTarget g',
+                ),
+                const SizedBox(height: 13),
+                _ProgressLine(
+                  title: t('nutrition.water'),
+                  current: _number(summary['water_ml']),
+                  target: waterTarget.toDouble(),
+                  label: '${_integer(summary['water_ml'])} / $waterTarget ml',
+                  color: airmiusAccentColor(context),
+                ),
+                if (_text(water['source_label']).isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _text(water['source_label']),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                AirmiusButton(
+                  label: t('nutrition.editTargets'),
+                  icon: Icons.tune_outlined,
+                  secondary: true,
+                  onPressed: _busy
+                      ? null
+                      : () => _editGoal(goal: goal, catalog: catalog),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
               AirmiusButton(
-                label: t('nutrition.editTargets'),
-                icon: Icons.tune_outlined,
+                label: t('nutrition.addMeal'),
+                icon: Icons.add_circle_outline,
+                onPressed: _busy ? null : () => _editMeal(catalog: catalog),
+              ),
+              AirmiusButton(
+                label: t('nutrition.addWater'),
+                icon: Icons.water_drop_outlined,
+                secondary: true,
+                onPressed: _busy ? null : _addWater,
+              ),
+              AirmiusButton(
+                label: t('nutrition.searchFood'),
+                icon: Icons.search_outlined,
+                secondary: true,
+                onPressed: _busy ? null : () => _searchFood(catalog: catalog),
+              ),
+              AirmiusButton(
+                label: t('nutrition.barcode'),
+                icon: Icons.qr_code_scanner_outlined,
                 secondary: true,
                 onPressed: _busy
                     ? null
-                    : () => _editGoal(goal: goal, catalog: catalog),
+                    : () => _lookupBarcode(catalog: catalog),
+              ),
+              AirmiusButton(
+                label: t(
+                  _truthy(imageAnalysis['available'])
+                      ? 'nutrition.aiPhoto'
+                      : 'nutrition.aiPhotoPro',
+                ),
+                icon: Icons.auto_awesome_outlined,
+                secondary: true,
+                onPressed: _busy || !_truthy(imageAnalysis['available'])
+                    ? null
+                    : () => _analyzeMealPhoto(
+                        catalog: catalog,
+                        goal: goal,
+                        capabilities: aiCapabilities,
+                      ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            AirmiusButton(
-              label: t('nutrition.addMeal'),
-              icon: Icons.add_circle_outline,
-              onPressed: _busy ? null : () => _editMeal(catalog: catalog),
-            ),
-            AirmiusButton(
-              label: t('nutrition.addWater'),
-              icon: Icons.water_drop_outlined,
-              secondary: true,
-              onPressed: _busy ? null : _addWater,
-            ),
-            AirmiusButton(
-              label: t('nutrition.searchFood'),
-              icon: Icons.search_outlined,
-              secondary: true,
-              onPressed: _busy ? null : () => _searchFood(catalog: catalog),
-            ),
-            AirmiusButton(
-              label: t('nutrition.barcode'),
-              icon: Icons.qr_code_scanner_outlined,
-              secondary: true,
-              onPressed: _busy ? null : () => _lookupBarcode(catalog: catalog),
-            ),
-            AirmiusButton(
-              label: t(
-                _truthy(imageAnalysis['available'])
-                    ? 'nutrition.aiPhoto'
-                    : 'nutrition.aiPhotoPro',
+          if (!_truthy(imageAnalysis['available']) &&
+              _text(imageAnalysis['access_reason']).isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              _text(imageAnalysis['access_reason']),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 12,
+                height: 1.35,
               ),
-              icon: Icons.auto_awesome_outlined,
-              secondary: true,
-              onPressed: _busy || !_truthy(imageAnalysis['available'])
-                  ? null
-                  : () => _analyzeMealPhoto(
-                      catalog: catalog,
-                      goal: goal,
-                      capabilities: aiCapabilities,
-                    ),
             ),
           ],
-        ),
-        if (!_truthy(imageAnalysis['available']) &&
-            _text(imageAnalysis['access_reason']).isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            _text(imageAnalysis['access_reason']),
-            style: TextStyle(
-              color: airmiusMutedColor(context),
-              fontSize: 12,
-              height: 1.35,
-            ),
-          ),
-        ],
-        const SizedBox(height: 14),
-        _SectionHeading(title: t('nutrition.meals'), count: meals.length),
-        const SizedBox(height: 10),
-        if (meals.isEmpty)
-          AirmiusPanel(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Center(
-                child: Text(
-                  t('nutrition.emptyMeals'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: airmiusMutedColor(context)),
+          const SizedBox(height: 14),
+          _SectionHeading(title: t('nutrition.meals'), count: meals.length),
+          const SizedBox(height: 10),
+          if (meals.isEmpty)
+            AirmiusPanel(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Center(
+                  child: Text(
+                    t('nutrition.emptyMeals'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
                 ),
               ),
-            ),
-          )
-        else
-          for (final meal in meals) ...[
-            _MealCard(
-              meal: meal,
-              mealTypeLabel: _catalogLabel(
-                context,
-                catalog['meal_types'],
-                _text(meal['meal_type']),
-                'nutrition.mealType',
+            )
+          else
+            for (final meal in meals) ...[
+              _MealCard(
+                meal: meal,
+                mealTypeLabel: _catalogLabel(
+                  context,
+                  catalog['meal_types'],
+                  _text(meal['meal_type']),
+                  'nutrition.mealType',
+                ),
+                busy: _busy,
+                onEdit: () => _editMeal(catalog: catalog, meal: meal),
+                onDelete: () => _deleteMeal(meal),
               ),
-              busy: _busy,
-              onEdit: () => _editMeal(catalog: catalog, meal: meal),
-              onDelete: () => _deleteMeal(meal),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
+            ],
+          if (weekly.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _WeeklyPanel(days: weekly, calorieTarget: calorieTarget),
           ],
-        if (weekly.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          _WeeklyPanel(days: weekly, calorieTarget: calorieTarget),
-        ],
-        if (tips.isNotEmpty || recipes.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _SuggestionsPanel(tips: tips, recipes: recipes),
-        ],
+          if (tips.isNotEmpty || recipes.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _SuggestionsPanel(tips: tips, recipes: recipes),
+          ],
         ],
       ],
     );
@@ -464,13 +475,107 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
   }
 
   Future<void> _logWaterAmount(int amount) async {
-    if (amount <= 0) return;
-    await _run(() async {
-      await _client.logNutritionWater(
+    if (amount <= 0 || _busy) return;
+    final previousData = _dayData;
+    final optimisticTotal =
+        _integer(_map(previousData?['summary'])['water_ml']) + amount;
+    final t = AirmiusScope.of(context).t;
+
+    setState(() {
+      _busy = true;
+      if (previousData != null) {
+        _dayData = _withWaterTotal(previousData, optimisticTotal);
+      }
+    });
+
+    try {
+      final response = await _client.logNutritionWater(
         date: _isoDate(_selectedDate),
         amountMl: amount,
       );
-    }, successKey: 'nutrition.waterAdded');
+      if (!mounted) return;
+      final data = _map(response['data']);
+      final authoritativeTotal = _integer(
+        data['water_total_ml'],
+        fallback: optimisticTotal,
+      );
+      final entryId = _integer(data['id']);
+
+      setState(() {
+        final currentData = _dayData ?? previousData;
+        if (currentData != null) {
+          _dayData = _withWaterTotal(currentData, authoritativeTotal);
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(t('nutrition.waterAdded')),
+          duration: const Duration(seconds: 6),
+          action: entryId > 0
+              ? SnackBarAction(
+                  label: t('nutrition.undo'),
+                  onPressed: () =>
+                      _undoWaterEntry(entryId: entryId, amount: amount),
+                )
+              : null,
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('nutrition.saveError'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _undoWaterEntry({
+    required int entryId,
+    required int amount,
+  }) async {
+    if (_busy) return;
+    final previousData = _dayData;
+    final currentTotal = _integer(_map(previousData?['summary'])['water_ml']);
+    final optimisticTotal = (currentTotal - amount).clamp(0, currentTotal);
+    final t = AirmiusScope.of(context).t;
+
+    setState(() {
+      _busy = true;
+      if (previousData != null) {
+        _dayData = _withWaterTotal(previousData, optimisticTotal);
+      }
+    });
+
+    try {
+      await _client.deleteNutritionMeal(entryId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('nutrition.waterRemoved'))));
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _dayData = previousData);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('nutrition.saveError'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _searchFood({required JsonMap catalog}) async {
@@ -590,16 +695,14 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
                 icon: Icons.photo_camera_outlined,
                 title: t('nutrition.takePhoto'),
                 subtitle: t('permissions.cameraTitle'),
-                onTap: () =>
-                    Navigator.pop(context, _MealImageSource.camera),
+                onTap: () => Navigator.pop(context, _MealImageSource.camera),
               ),
               const SizedBox(height: 8),
               _NutritionChoiceTile(
                 icon: Icons.photo_library_outlined,
                 title: t('nutrition.choosePhoto'),
                 subtitle: t('nutrition.image'),
-                onTap: () =>
-                    Navigator.pop(context, _MealImageSource.gallery),
+                onTap: () => Navigator.pop(context, _MealImageSource.gallery),
               ),
             ],
           ),
@@ -1009,10 +1112,7 @@ class _MetricGrid extends StatelessWidget {
 }
 
 class _NutritionSectionTabs extends StatelessWidget {
-  const _NutritionSectionTabs({
-    required this.section,
-    required this.onChanged,
-  });
+  const _NutritionSectionTabs({required this.section, required this.onChanged});
 
   final NutritionSection section;
   final ValueChanged<NutritionSection> onChanged;
@@ -2462,6 +2562,13 @@ String _inputNumber(Object? value) {
 
 String _waterLitres(int ml) =>
     (ml / 1000).toStringAsFixed(ml % 1000 == 0 ? 0 : 1).replaceAll('.', ',');
+
+JsonMap _withWaterTotal(JsonMap data, int waterMl) {
+  return {
+    ...data,
+    'summary': {..._map(data['summary']), 'water_ml': waterMl},
+  };
+}
 
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);

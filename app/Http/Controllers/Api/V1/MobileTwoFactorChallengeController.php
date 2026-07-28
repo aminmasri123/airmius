@@ -22,8 +22,9 @@ class MobileTwoFactorChallengeController extends Controller
     ) {
         $data = $request->validate([
             'challenge_token' => ['required', 'string', 'min:40', 'max:255'],
-            'code' => ['nullable', 'string', 'max:32', 'required_without:recovery_code'],
-            'recovery_code' => ['nullable', 'string', 'max:100', 'required_without:code'],
+            'code' => ['nullable', 'string', 'max:32'],
+            'recovery_code' => ['nullable', 'string', 'max:100'],
+            'email_code' => ['nullable', 'string', 'max:32'],
         ]);
 
         $challenge = $challenges->find($data['challenge_token']);
@@ -37,6 +38,7 @@ class MobileTwoFactorChallengeController extends Controller
 
         $valid = false;
         $recoveryCode = trim((string) ($data['recovery_code'] ?? ''));
+        $emailCode = preg_replace('/\s+/', '', (string) ($data['email_code'] ?? ''));
 
         if ($recoveryCode !== '') {
             $matchingCode = collect($user->recoveryCodes())
@@ -45,6 +47,9 @@ class MobileTwoFactorChallengeController extends Controller
                 $user->replaceRecoveryCode($matchingCode);
                 $valid = true;
             }
+        } elseif ($emailCode !== '') {
+            $valid = $user->hasVerifiedEmail()
+                && $challenges->verifyEmailCode($data['challenge_token'], $emailCode);
         } else {
             $code = preg_replace('/\s+/', '', (string) ($data['code'] ?? ''));
             $valid = $code !== '' && $provider->verify(
@@ -56,7 +61,9 @@ class MobileTwoFactorChallengeController extends Controller
         if (! $valid) {
             event(new TwoFactorAuthenticationFailed($user));
             throw ValidationException::withMessages([
-                'code' => ['Der Sicherheitscode ist ungültig. Bitte prüfe ihn und versuche es erneut.'],
+                $emailCode !== '' ? 'email_code' : 'code' => [
+                    'Der Sicherheitscode ist ungültig oder abgelaufen. Bitte prüfe ihn und versuche es erneut.',
+                ],
             ]);
         }
 

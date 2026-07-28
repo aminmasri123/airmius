@@ -69,4 +69,23 @@ class EmailVerificationTest extends TestCase
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
     }
+
+    public function test_unverified_user_can_open_profile_page_from_verify_screen(): void
+    {
+        if (! Features::enabled(Features::emailVerification())) {
+            $this->markTestSkipped('Email verification not enabled.');
+        }
+
+        $user = User::factory()->unverified()->create([
+            'first_name' => null,
+            'last_name' => null,
+            'country' => null,
+            'birth_date' => null,
+            'gender' => null,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('profile.show'));
+
+        $response->assertOk();
+    }
 }

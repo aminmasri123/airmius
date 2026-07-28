@@ -5,6 +5,8 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
+enum _TwoFactorMethod { authenticator, email, recovery }
+
 class TwoFactorChallengeScreen extends StatefulWidget {
   const TwoFactorChallengeScreen({super.key, required this.authState});
 
@@ -17,7 +19,8 @@ class TwoFactorChallengeScreen extends StatefulWidget {
 
 class _TwoFactorChallengeScreenState extends State<TwoFactorChallengeScreen> {
   final _code = TextEditingController();
-  bool _useRecoveryCode = false;
+  _TwoFactorMethod _method = _TwoFactorMethod.authenticator;
+  bool _emailCodeSent = false;
 
   @override
   void dispose() {
@@ -29,6 +32,8 @@ class _TwoFactorChallengeScreenState extends State<TwoFactorChallengeScreen> {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final loading = widget.authState.phase == AirmiusAuthPhase.loading;
+    final isRecovery = _method == _TwoFactorMethod.recovery;
+    final isEmail = _method == _TwoFactorMethod.email;
 
     return Scaffold(
       body: SafeArea(
@@ -63,18 +68,75 @@ class _TwoFactorChallengeScreenState extends State<TwoFactorChallengeScreen> {
                       ).textTheme.bodyMedium?.copyWith(height: 1.45),
                     ),
                     const SizedBox(height: 20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text(t('auth2fa.useAuthenticator')),
+                          selected: _method == _TwoFactorMethod.authenticator,
+                          onSelected: loading
+                              ? null
+                              : (_) => _selectMethod(
+                                  _TwoFactorMethod.authenticator,
+                                ),
+                        ),
+                        if (widget.authState.supportsTwoFactorEmail)
+                          ChoiceChip(
+                            label: Text(t('auth2fa.useEmail')),
+                            selected: isEmail,
+                            onSelected: loading
+                                ? null
+                                : (_) => _selectMethod(_TwoFactorMethod.email),
+                          ),
+                        ChoiceChip(
+                          label: Text(t('auth2fa.useRecovery')),
+                          selected: isRecovery,
+                          onSelected: loading
+                              ? null
+                              : (_) => _selectMethod(_TwoFactorMethod.recovery),
+                        ),
+                      ],
+                    ),
+                    if (isEmail) ...[
+                      const SizedBox(height: 12),
+                      AirmiusButton(
+                        label: t(
+                          _emailCodeSent
+                              ? 'auth2fa.resendEmail'
+                              : 'auth2fa.sendEmail',
+                        ),
+                        icon: Icons.email_outlined,
+                        secondary: true,
+                        onPressed: loading ? null : _sendEmailCode,
+                      ),
+                      if (_emailCodeSent) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          t('auth2fa.emailSent'),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                    const SizedBox(height: 16),
                     AirmiusTextField(
                       label: t(
-                        _useRecoveryCode
+                        isRecovery
                             ? 'auth2fa.recoveryCode'
+                            : isEmail
+                            ? 'auth2fa.emailCode'
                             : 'auth2fa.code',
                       ),
-                      hint: _useRecoveryCode ? 'xxxx-xxxx-xxxx' : '123456',
-                      icon: _useRecoveryCode
+                      hint: isRecovery ? 'xxxx-xxxx-xxxx' : '123456',
+                      icon: isRecovery
                           ? Icons.key_outlined
+                          : isEmail
+                          ? Icons.email_outlined
                           : Icons.password_outlined,
                       controller: _code,
-                      keyboardType: _useRecoveryCode
+                      keyboardType: isRecovery
                           ? TextInputType.text
                           : TextInputType.number,
                     ),
@@ -99,28 +161,9 @@ class _TwoFactorChallengeScreenState extends State<TwoFactorChallengeScreen> {
                           ? null
                           : () => widget.authState.completeTwoFactor(
                               value: _code.text,
-                              recoveryCode: _useRecoveryCode,
+                              recoveryCode: isRecovery,
+                              emailCode: isEmail,
                             ),
-                    ),
-                    const SizedBox(height: 8),
-                    AirmiusButton(
-                      label: t(
-                        _useRecoveryCode
-                            ? 'auth2fa.useAuthenticator'
-                            : 'auth2fa.useRecovery',
-                      ),
-                      icon: _useRecoveryCode
-                          ? Icons.phone_android_outlined
-                          : Icons.key_outlined,
-                      secondary: true,
-                      onPressed: loading
-                          ? null
-                          : () {
-                              _code.clear();
-                              setState(
-                                () => _useRecoveryCode = !_useRecoveryCode,
-                              );
-                            },
                     ),
                     const SizedBox(height: 8),
                     TextButton.icon(
@@ -138,5 +181,16 @@ class _TwoFactorChallengeScreenState extends State<TwoFactorChallengeScreen> {
         ),
       ),
     );
+  }
+
+  void _selectMethod(_TwoFactorMethod method) {
+    _code.clear();
+    setState(() => _method = method);
+  }
+
+  Future<void> _sendEmailCode() async {
+    final sent = await widget.authState.requestTwoFactorEmailCode();
+    if (!mounted || !sent) return;
+    setState(() => _emailCodeSent = true);
   }
 }

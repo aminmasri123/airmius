@@ -62,44 +62,61 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
-  AppTab _tab = AppTab.training;
+  AppTab _tab = AppTab.feed;
   NutritionSection _nutritionSection = NutritionSection.overview;
   ModuleDefinition? _openedModule;
   final List<AppTab> _tabHistory = [];
   final Set<int> _requestedClubIds = {};
+  int _messageCount = 0;
   int _notificationCount = 0;
-  Timer? _notificationTimer;
+  Timer? _badgeTimer;
+  bool _refreshingBadges = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _refreshNotificationCount(),
-    );
-    _notificationTimer = Timer.periodic(
-      const Duration(seconds: 45),
-      (_) => _refreshNotificationCount(),
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshBadgeCounts());
+    _badgeTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshBadgeCounts(),
     );
   }
 
   @override
   void dispose() {
-    _notificationTimer?.cancel();
+    _badgeTimer?.cancel();
     super.dispose();
   }
 
-  Future<void> _refreshNotificationCount() async {
+  Future<void> _refreshBadgeCounts() async {
+    if (_refreshingBadges) return;
+    _refreshingBadges = true;
     try {
-      final page = await AirmiusServicesScope.of(
-        context,
-      ).repositories.notifications.notifications();
+      final repositories = AirmiusServicesScope.of(context).repositories;
+      final notificationsFuture = repositories.notifications.notifications();
+      final conversationsFuture = repositories.conversations.conversations();
+      final notifications = await notificationsFuture;
+      final conversations = await conversationsFuture;
       if (!mounted) return;
-      setState(
-        () => _notificationCount =
-            page.unreadCount ?? page.items.where((item) => item.unread).length,
+      final nextNotificationCount =
+          notifications.unreadCount ??
+          notifications.items.where((item) => item.unread).length;
+      final nextMessageCount = conversations.items.fold<int>(
+        0,
+        (sum, conversation) => sum + conversation.unreadCount,
       );
+      if (_notificationCount == nextNotificationCount &&
+          _messageCount == nextMessageCount) {
+        return;
+      }
+      setState(() {
+        _notificationCount = nextNotificationCount;
+        _messageCount = nextMessageCount;
+      });
     } catch (_) {
-      // Badge refresh is best-effort; the notification center still shows its own error state.
+      // Badge refresh is best-effort; both centers retain their own error state.
+    } finally {
+      _refreshingBadges = false;
     }
   }
 
@@ -140,8 +157,7 @@ class _ShellScreenState extends State<ShellScreen> {
                 icon: Icons.restaurant_menu_outlined,
                 title: t('nutrition.title'),
                 subtitle: t('nutrition.dailyOverview'),
-                onTap: () =>
-                    Navigator.pop(context, NutritionSection.overview),
+                onTap: () => Navigator.pop(context, NutritionSection.overview),
               ),
               const SizedBox(height: 8),
               _NutritionChoiceTile(
@@ -172,8 +188,8 @@ class _ShellScreenState extends State<ShellScreen> {
       return true;
     }
 
-    if (_tab != AppTab.training) {
-      _openTab(AppTab.training, remember: false);
+    if (_tab != AppTab.feed) {
+      _openTab(AppTab.feed, remember: false);
       return true;
     }
 
@@ -357,7 +373,7 @@ class _ShellScreenState extends State<ShellScreen> {
       _tab = AppTab.clubs;
       _openedModule = null;
     });
-    _refreshNotificationCount();
+    _refreshBadgeCounts();
   }
 
   void _withdrawClub(ClubSummary club) {
@@ -398,9 +414,7 @@ class _ShellScreenState extends State<ShellScreen> {
 
     return PopScope(
       canPop:
-          _openedModule == null &&
-          _tabHistory.isEmpty &&
-          _tab == AppTab.training,
+          _openedModule == null && _tabHistory.isEmpty && _tab == AppTab.feed,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackNavigation();
@@ -416,17 +430,21 @@ class _ShellScreenState extends State<ShellScreen> {
             context,
             MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
           ),
-          onMessages: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ConversationsCenterScreen()),
-          ),
+          onMessages: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ConversationsCenterScreen()),
+            );
+            if (mounted) _refreshBadgeCounts();
+          },
           onNotifications: () async {
             await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => NotificationsCenterScreen()),
             );
-            if (mounted) _refreshNotificationCount();
+            if (mounted) _refreshBadgeCounts();
           },
+          messageCount: _messageCount,
           notificationCount: _notificationCount,
           userLabel: userLabel,
           userImageUrl: authState.user?.avatarUrl,

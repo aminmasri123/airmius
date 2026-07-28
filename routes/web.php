@@ -8,8 +8,16 @@ use App\Http\Controllers\GuardianConsentController;
 use App\Http\Controllers\OutfitSubscriptionController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
+use App\Http\Controllers\TwoFactorEmailCodeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/two-factor-challenge/email-code', [TwoFactorEmailCodeController::class, 'send'])
+    ->middleware(['guest', 'throttle:3,1'])
+    ->name('two-factor.email.send');
+Route::post('/two-factor-challenge/email-login', [TwoFactorEmailCodeController::class, 'store'])
+    ->middleware(['guest', 'throttle:two-factor'])
+    ->name('two-factor.email.login');
 
 Route::get('/site.webmanifest', function () {
     return response()->json([

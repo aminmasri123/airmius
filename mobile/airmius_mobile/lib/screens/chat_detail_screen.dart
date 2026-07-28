@@ -38,6 +38,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _messagesLoaded = false;
   bool _sending = false;
   bool _markingRead = false;
+  bool _refreshingRealtime = false;
   bool _typing = false;
   List<PlatformFile> _attachments = const [];
 
@@ -68,6 +69,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<AirmiusPage<AirmiusMessage>> _loadMessages() async {
+    final snapshot = await _fetchMessages();
+    _messages = snapshot.page.items;
+    _typingUsers = snapshot.typingUsers;
+    unawaited(_markRead());
+    return snapshot.page;
+  }
+
+  Future<_MessagesSnapshot> _fetchMessages() async {
     final services = AirmiusServicesScope.of(context);
     final json = await services
         .clientForSession(services.authState.session)
@@ -76,10 +85,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       json,
       AirmiusMessage.fromJson,
     );
-    _messages = page.items;
-    _updateTypingUsers(json);
-    unawaited(_markRead());
-    return page;
+    return _MessagesSnapshot(page: page, typingUsers: _typingUsersFrom(json));
   }
 
   void _reload() {
@@ -96,14 +102,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _refreshRealtime() async {
+    if (_refreshingRealtime) return;
+    _refreshingRealtime = true;
     try {
-      final page = await _loadMessages();
+      final snapshot = await _fetchMessages();
       if (!mounted) return;
+      final messagesChanged = !_sameMessages(_messages, snapshot.page.items);
+      final typingChanged = !_sameStrings(_typingUsers, snapshot.typingUsers);
+      if (!messagesChanged && !typingChanged) return;
       setState(() {
-        _messagesFuture = Future.value(page);
+        _messages = snapshot.page.items;
+        _typingUsers = snapshot.typingUsers;
       });
+      if (messagesChanged) unawaited(_markRead());
     } catch (_) {
       // Keep the current chat view during transient realtime refresh failures.
+    } finally {
+      _refreshingRealtime = false;
     }
   }
 
@@ -122,24 +137,55 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
-  void _updateTypingUsers(JsonMap json) {
+  List<String> _typingUsersFrom(JsonMap json) {
     final chat = json['chat'];
     final typingUsers = chat is JsonMap ? chat['typing_users'] : null;
-    final nextUsers = typingUsers is List
+    return typingUsers is List
         ? typingUsers
               .whereType<JsonMap>()
               .map((user) => user['name']?.toString().trim() ?? '')
               .where((name) => name.isNotEmpty)
               .toList()
         : const <String>[];
-    if (_sameStrings(_typingUsers, nextUsers)) return;
-    _typingUsers = nextUsers;
   }
 
   bool _sameStrings(List<String> first, List<String> second) {
     if (first.length != second.length) return false;
     for (var index = 0; index < first.length; index++) {
       if (first[index] != second[index]) return false;
+    }
+    return true;
+  }
+
+  bool _sameMessages(List<AirmiusMessage>? first, List<AirmiusMessage> second) {
+    if (first == null || first.length != second.length) return false;
+    for (var index = 0; index < first.length; index++) {
+      final left = first[index];
+      final right = second[index];
+      if (left.id != right.id ||
+          left.conversationId != right.conversationId ||
+          left.message != right.message ||
+          left.senderName != right.senderName ||
+          left.createdAt != right.createdAt ||
+          left.mine != right.mine ||
+          left.status != right.status ||
+          left.read != right.read ||
+          left.reactions.length != right.reactions.length) {
+        return false;
+      }
+      for (
+        var reactionIndex = 0;
+        reactionIndex < left.reactions.length;
+        reactionIndex++
+      ) {
+        final leftReaction = left.reactions[reactionIndex];
+        final rightReaction = right.reactions[reactionIndex];
+        if (leftReaction.id != rightReaction.id ||
+            leftReaction.userId != rightReaction.userId ||
+            leftReaction.reaction != rightReaction.reaction) {
+          return false;
+        }
+      }
     }
     return true;
   }
@@ -198,12 +244,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
       if (!mounted) return;
       _messageController.clear();
-      setState(() => _attachments = const []);
-      unawaited(_sendTyping(false));
       setState(() {
+        _attachments = const [];
         _sending = false;
-        _messagesFuture = _loadMessages();
       });
+      unawaited(_sendTyping(false));
+      unawaited(_refreshRealtime());
     } catch (_) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -877,6 +923,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 }
 
+class _MessagesSnapshot {
+  const _MessagesSnapshot({required this.page, required this.typingUsers});
+
+  final AirmiusPage<AirmiusMessage> page;
+  final List<String> typingUsers;
+}
+
 class _ConversationHeader extends StatelessWidget {
   const _ConversationHeader({
     required this.title,
@@ -1257,7 +1310,9 @@ class _ChatBubble extends StatelessWidget {
                                   color: selected
                                       ? airmiusAccentColor(context)
                                       : (isMine
-                                            ? colors.primary.withValues(alpha: .46)
+                                            ? colors.primary.withValues(
+                                                alpha: .46,
+                                              )
                                             : airmiusBorderColor(context)),
                                 ),
                               ),

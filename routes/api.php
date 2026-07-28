@@ -9,17 +9,16 @@ use App\Http\Controllers\Api\V1\AdminOutfitController;
 use App\Http\Controllers\Api\V1\AdminSystemController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
+use App\Http\Controllers\Api\V1\ClubAnnouncementController;
 use App\Http\Controllers\Api\V1\ClubController;
 use App\Http\Controllers\Api\V1\ClubMemberCardController;
-use App\Http\Controllers\Api\V1\ClubAnnouncementController;
 use App\Http\Controllers\Api\V1\ClubSurveyController;
 use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
 use App\Http\Controllers\Api\V1\CommerceController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\EditorialController;
-use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\EventCompetitivenessController;
-use App\Http\Controllers\FolderController;
+use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FeedController;
 use App\Http\Controllers\Api\V1\GuardianController;
 use App\Http\Controllers\Api\V1\LearningController as MobileLearningController;
@@ -32,6 +31,7 @@ use App\Http\Controllers\Api\V1\MobilePushDeviceController;
 use App\Http\Controllers\Api\V1\MobileSyncController;
 use App\Http\Controllers\Api\V1\MobileTwoFactorChallengeController;
 use App\Http\Controllers\Api\V1\MobileTwoFactorController;
+use App\Http\Controllers\Api\V1\MobileTwoFactorEmailCodeController;
 use App\Http\Controllers\Api\V1\NotificationController as MobileNotificationController;
 use App\Http\Controllers\Api\V1\NutritionController;
 use App\Http\Controllers\Api\V1\PasswordRecoveryController;
@@ -42,32 +42,32 @@ use App\Http\Controllers\Api\V1\PublicContentController;
 use App\Http\Controllers\Api\V1\RideController as MobileRideController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SponsorManagementController;
+use App\Http\Controllers\Api\V1\SportIntegrationController as MobileSportIntegrationController;
 use App\Http\Controllers\Api\V1\SportMapController as MobileSportMapController;
 use App\Http\Controllers\Api\V1\SportProfileController;
-use App\Http\Controllers\Api\V1\SportIntegrationController as MobileSportIntegrationController;
-use App\Http\Controllers\Api\V1\SupportTicketController;
 use App\Http\Controllers\Api\V1\StoryController as MobileStoryController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\SupportTicketController;
 use App\Http\Controllers\Api\V1\TeamCompetitivenessController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
-use App\Http\Controllers\Api\V1\TrainingController;
-use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\Api\V1\TrainingAnalyticsController;
 use App\Http\Controllers\Api\V1\TrainingAvailabilityController;
+use App\Http\Controllers\Api\V1\TrainingController;
+use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\Api\V1\UploadController;
-use App\Support\UploadStorage;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
+use App\Http\Controllers\FolderController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\KontaktController as MobileContactController;
 use App\Http\Controllers\LearningStudioController as MobileLearningStudioController;
 use App\Http\Controllers\OutfitSubscriptionController as MobileOutfitSubscriptionController;
+use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicLearningController as MobilePublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
-use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
 use App\Http\Controllers\TrainingController as MobileTrainerFeedbackController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
@@ -81,6 +81,7 @@ use App\Models\Sport;
 use App\Models\Team;
 use App\Services\ClubService;
 use App\Services\TeamDailyLifeService;
+use App\Support\UploadStorage;
 use App\Support\Validation\ClubProfileRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -158,6 +159,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::post('/auth/two-factor-challenge', MobileTwoFactorChallengeController::class)
         ->middleware('throttle:6,1')
         ->name('auth.two-factor.challenge');
+    Route::post('/auth/two-factor-challenge/email-code', MobileTwoFactorEmailCodeController::class)
+        ->middleware('throttle:3,1')
+        ->name('auth.two-factor.email-code');
     Route::get('/auth/verify-email/{id}/{hash}', [MobileEmailVerificationController::class, 'verify'])
         ->middleware(['signed:relative', 'throttle:10,1'])
         ->whereNumber('id')

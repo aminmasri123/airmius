@@ -39,10 +39,17 @@ class ChatController extends Controller
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
         ]);
 
+        $userId = $request->user()->id;
         $conversationsQuery = $request->user()
             ->conversations()
             ->with(['users', 'team', 'owner'])
-            ->withCount('messages')
+            ->withCount([
+                'messages',
+                'messages as unread_messages_count' => fn ($query) => $query
+                    ->whereHas('receipts', fn ($receipts) => $receipts
+                        ->where('user_id', $userId)
+                        ->whereNull('read_at')),
+            ])
             ->orderByDesc('conversations.updated_at');
 
         if ($request->filled('team_id')) {
