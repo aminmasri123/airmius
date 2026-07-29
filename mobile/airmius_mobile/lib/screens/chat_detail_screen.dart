@@ -30,6 +30,7 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _messagesScrollController = ScrollController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
   List<AirmiusMessage>? _messages;
   List<String> _typingUsers = const [];
@@ -39,6 +40,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _sending = false;
   bool _markingRead = false;
   bool _refreshingRealtime = false;
+  bool _initialScrollScheduled = false;
   bool _typing = false;
   List<PlatformFile> _attachments = const [];
 
@@ -65,6 +67,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _typingStopTimer?.cancel();
     _messageController.removeListener(_onComposerChanged);
     _messageController.dispose();
+    _messagesScrollController.dispose();
     super.dispose();
   }
 
@@ -90,6 +93,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _reload() {
     setState(() {
+      _initialScrollScheduled = false;
       _messagesFuture = _loadMessages();
     });
   }
@@ -107,6 +111,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     try {
       final snapshot = await _fetchMessages();
       if (!mounted) return;
+      final previousMessageIds =
+          _messages?.map((message) => message.id).toSet() ?? const <int>{};
+      final hasNewMessage = snapshot.page.items.any(
+        (message) => !previousMessageIds.contains(message.id),
+      );
       final messagesChanged = !_sameMessages(_messages, snapshot.page.items);
       final typingChanged = !_sameStrings(_typingUsers, snapshot.typingUsers);
       if (!messagesChanged && !typingChanged) return;
@@ -115,6 +124,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _typingUsers = snapshot.typingUsers;
       });
       if (messagesChanged) unawaited(_markRead());
+      if (hasNewMessage) _scheduleScrollToLatest();
     } catch (_) {
       // Keep the current chat view during transient realtime refresh failures.
     } finally {
@@ -188,6 +198,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
     }
     return true;
+  }
+
+  void _scheduleScrollToLatest({bool animated = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_messagesScrollController.hasClients) return;
+      final target = _messagesScrollController.position.minScrollExtent;
+      if (animated) {
+        _messagesScrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _messagesScrollController.jumpTo(target);
+      }
+    });
   }
 
   void _onComposerChanged() {
@@ -859,11 +885,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       }
 
                       final messages =
-                          (_messages ??
-                                  snapshot.data?.items ??
-                                  const <AirmiusMessage>[])
-                              .reversed
-                              .toList();
+                          _messages ??
+                          snapshot.data?.items ??
+                          const <AirmiusMessage>[];
                       if (messages.isEmpty) {
                         return Center(
                           child: Padding(
@@ -880,7 +904,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         );
                       }
 
+                      if (!_initialScrollScheduled) {
+                        _initialScrollScheduled = true;
+                        _scheduleScrollToLatest(animated: false);
+                      }
+
                       return ListView.separated(
+                        controller: _messagesScrollController,
+                        reverse: true,
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
                         itemCount: messages.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 10),

@@ -23,7 +23,6 @@ class TrainingCenterScreen extends StatefulWidget {
 }
 
 class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
-  final TextEditingController _searchController = TextEditingController();
   Future<AirmiusEventWorkspace>? _workspaceFuture;
   _EventPeriod _period = _EventPeriod.upcoming;
   _EventViewMode _viewMode = _EventViewMode.calendar;
@@ -37,7 +36,6 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   String _visibility = '';
   int? _clubId;
   int? _teamId;
-  bool _filtersOpen = false;
   int? _savingEventId;
   bool _creatingEvent = false;
 
@@ -45,19 +43,12 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   void initState() {
     super.initState();
     _search = widget.initialSearch;
-    _searchController.text = widget.initialSearch;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _workspaceFuture ??= _loadWorkspace();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<AirmiusEventWorkspace> _loadWorkspace() {
@@ -78,13 +69,6 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     });
   }
 
-  void _setPeriod(_EventPeriod period) {
-    setState(() {
-      _period = period;
-      _workspaceFuture = _loadWorkspace();
-    });
-  }
-
   void _resetFilters() {
     setState(() {
       _search = '';
@@ -92,9 +76,56 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
       _visibility = '';
       _clubId = null;
       _teamId = null;
-      _searchController.clear();
+      _period = _EventPeriod.upcoming;
+      _workspaceFuture = _loadWorkspace();
     });
   }
+
+  Future<void> _openSearchFilters() async {
+    final currentFuture = _workspaceFuture;
+    final workspace = currentFuture == null
+        ? _emptyWorkspace()
+        : await currentFuture;
+    if (!mounted) return;
+    final selection = await showModalBottomSheet<_EventFilterSelection>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: airmiusSurfaceColor(context),
+      showDragHandle: true,
+      builder: (context) => _EventSearchSheet(
+        initialSearch: _search,
+        initialPeriod: _period,
+        initialType: _type,
+        initialVisibility: _visibility,
+        initialClubId: _clubId,
+        initialTeamId: _teamId,
+        eventTypes: workspace.eventTypes,
+        visibilities: workspace.visibilities,
+        clubs: workspace.clubs,
+        teams: workspace.teams,
+      ),
+    );
+    if (selection == null || !mounted) return;
+    setState(() {
+      _search = selection.search;
+      _period = selection.period;
+      _type = selection.type;
+      _visibility = selection.visibility;
+      _clubId = selection.clubId;
+      _teamId = selection.teamId;
+      _workspaceFuture = _loadWorkspace();
+    });
+  }
+
+  int get _activeFilterCount => [
+    _search,
+    _type,
+    _visibility,
+    if (_clubId != null) 'club',
+    if (_teamId != null) 'team',
+    if (_period != _EventPeriod.upcoming) 'period',
+  ].where((value) => value.isNotEmpty).length;
 
   Future<void> _respond(AirmiusEvent event, String status) async {
     if (_savingEventId != null ||
@@ -218,142 +249,103 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
           scope.t('training.title'),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
+        actions: [
+          _EventSearchAction(
+            activeFilterCount: _activeFilterCount,
+            onPressed: _openSearchFilters,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: PageFrame(
         title: scope.t('training.title'),
         subtitle: '',
         showHeader: false,
-        child: RefreshIndicator(
-          color: airmiusAccentColor(context),
-          backgroundColor: airmiusSurfaceColor(context),
-          onRefresh: () async {
-            _reload();
-            await _workspaceFuture;
-          },
-          child: FutureBuilder<AirmiusEventWorkspace>(
-            future: _workspaceFuture,
-            builder: (context, snapshot) {
-              final workspace = snapshot.data ?? _emptyWorkspace();
-              final events = workspace.events;
-              final visibleEvents = _filtered(events);
-              final calendarEvents = workspace.calendarEvents;
-              final selectedEvents = calendarEvents
-                  .where((event) => _isSameDay(event.startsAt, _selectedDate))
-                  .toList();
+        onRefresh: () async {
+          _reload();
+          await _workspaceFuture;
+        },
+        child: FutureBuilder<AirmiusEventWorkspace>(
+          future: _workspaceFuture,
+          builder: (context, snapshot) {
+            final workspace = snapshot.data ?? _emptyWorkspace();
+            final events = workspace.events;
+            final visibleEvents = _filtered(events);
+            final calendarEvents = workspace.calendarEvents;
+            final selectedEvents = calendarEvents
+                .where((event) => _isSameDay(event.startsAt, _selectedDate))
+                .toList();
 
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _WebParityHeader(
-                      workspace: workspace,
-                      creating: _creatingEvent,
-                      onCreate: _openCreateEventDialog,
-                      onOpenPlansAndLogs: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const TrainingPlansLogsScreen(),
-                        ),
-                      ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _WebParityHeader(
+                  workspace: workspace,
+                  creating: _creatingEvent,
+                  onCreate: _openCreateEventDialog,
+                  onOpenPlansAndLogs: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const TrainingPlansLogsScreen(),
                     ),
-                    const SizedBox(height: 14),
-                    if (snapshot.hasError) ...[
-                      _ErrorEvents(onRetry: _reload),
-                      const SizedBox(height: 14),
-                    ],
-                    _FilterBar(
-                      controller: _searchController,
-                      period: _period,
-                      filtersOpen: _filtersOpen,
-                      activeFilterCount: [
-                        _search,
-                        _type,
-                        _visibility,
-                        if (_clubId != null) 'club',
-                        if (_teamId != null) 'team',
-                      ].where((value) => value.isNotEmpty).length,
-                      onSearchChanged: (value) =>
-                          setState(() => _search = value),
-                      onPeriodChanged: _setPeriod,
-                      onToggleFilters: () =>
-                          setState(() => _filtersOpen = !_filtersOpen),
-                      onSubmit: _reload,
-                    ),
-                    if (_filtersOpen) ...[
-                      const SizedBox(height: 10),
-                      _AdvancedFilters(
-                        type: _type,
-                        visibility: _visibility,
-                        clubId: _clubId,
-                        teamId: _teamId,
-                        eventTypes: workspace.eventTypes,
-                        visibilities: workspace.visibilities,
-                        clubs: workspace.clubs,
-                        teams: workspace.teams,
-                        onTypeChanged: (value) => setState(() => _type = value),
-                        onVisibilityChanged: (value) =>
-                            setState(() => _visibility = value),
-                        onClubChanged: (value) => setState(() {
-                          _clubId = value;
-                          if (value != null &&
-                              _teamId != null &&
-                              !workspace.teams.any(
-                                (team) =>
-                                    team.id == _teamId && team.clubId == value,
-                              )) {
-                            _teamId = null;
-                          }
-                        }),
-                        onTeamChanged: (value) =>
-                            setState(() => _teamId = value),
-                        onReset: _resetFilters,
-                        onApply: _reload,
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    if (snapshot.connectionState == ConnectionState.waiting &&
-                        events.isEmpty)
-                      const _LoadingEvents()
-                    else if (!snapshot.hasError && visibleEvents.isEmpty)
-                      _EmptyEvents(
-                        onReset: _resetFilters,
-                        onCreate: _openCreateEventDialog,
-                      )
-                    else
-                      _EventsSurface(
-                        viewMode: _viewMode,
-                        events: visibleEvents,
-                        calendarEvents: calendarEvents,
-                        selectedEvents: selectedEvents,
-                        calendarCursor: _calendarCursor,
-                        selectedDate: _selectedDate,
-                        savingEventId: _savingEventId,
-                        onViewModeChanged: (value) =>
-                            setState(() => _viewMode = value),
-                        onCalendarMove: (delta) => setState(() {
-                          _calendarCursor = DateTime(
-                            _calendarCursor.year,
-                            _calendarCursor.month + delta,
-                          );
-                          _workspaceFuture = _loadWorkspace();
-                        }),
-                        onToday: () => setState(() {
-                          _calendarCursor = DateTime(
-                            DateTime.now().year,
-                            DateTime.now().month,
-                          );
-                          _selectedDate = _dateOnly(DateTime.now());
-                          _workspaceFuture = _loadWorkspace();
-                        }),
-                        onDateSelected: (value) =>
-                            setState(() => _selectedDate = value),
-                        onRespond: _respond,
-                      ),
-                  ],
+                  ),
                 ),
-              );
-            },
-          ),
+                const SizedBox(height: 14),
+                if (snapshot.hasError) ...[
+                  _ErrorEvents(onRetry: _reload),
+                  const SizedBox(height: 14),
+                ],
+                if (_activeFilterCount > 0) ...[
+                  const SizedBox(height: 10),
+                  _ActiveFilterSummary(
+                    count: _activeFilterCount,
+                    search: _search,
+                    period: _period,
+                    onEdit: _openSearchFilters,
+                    onReset: _resetFilters,
+                  ),
+                ],
+                const SizedBox(height: 14),
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    events.isEmpty)
+                  const _LoadingEvents()
+                else if (!snapshot.hasError && visibleEvents.isEmpty)
+                  _EmptyEvents(
+                    onReset: _resetFilters,
+                    onCreate: _openCreateEventDialog,
+                  )
+                else
+                  _EventsSurface(
+                    viewMode: _viewMode,
+                    events: visibleEvents,
+                    calendarEvents: calendarEvents,
+                    selectedEvents: selectedEvents,
+                    calendarCursor: _calendarCursor,
+                    selectedDate: _selectedDate,
+                    savingEventId: _savingEventId,
+                    onViewModeChanged: (value) =>
+                        setState(() => _viewMode = value),
+                    onCalendarMove: (delta) => setState(() {
+                      _calendarCursor = DateTime(
+                        _calendarCursor.year,
+                        _calendarCursor.month + delta,
+                      );
+                      _workspaceFuture = _loadWorkspace();
+                    }),
+                    onToday: () => setState(() {
+                      _calendarCursor = DateTime(
+                        DateTime.now().year,
+                        DateTime.now().month,
+                      );
+                      _selectedDate = _dateOnly(DateTime.now());
+                      _workspaceFuture = _loadWorkspace();
+                    }),
+                    onDateSelected: (value) =>
+                        setState(() => _selectedDate = value),
+                    onRespond: _respond,
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -381,6 +373,429 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
               .toLowerCase();
       return haystack.contains(needle);
     }).toList();
+  }
+}
+
+class _EventSearchAction extends StatelessWidget {
+  const _EventSearchAction({
+    required this.activeFilterCount,
+    required this.onPressed,
+  });
+
+  final int activeFilterCount;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = AirmiusScope.of(context).t('events.search');
+    return IconButton(
+      tooltip: label,
+      onPressed: onPressed,
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(Icons.search_rounded),
+          if (activeFilterCount > 0)
+            Positioned(
+              right: -7,
+              top: -7,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(
+                    color: airmiusSurfaceColor(context),
+                    width: 2,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$activeFilterCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveFilterSummary extends StatelessWidget {
+  const _ActiveFilterSummary({
+    required this.count,
+    required this.search,
+    required this.period,
+    required this.onEdit,
+    required this.onReset,
+  });
+
+  final int count;
+  final String search;
+  final _EventPeriod period;
+  final VoidCallback onEdit;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final periodLabel = switch (period) {
+      _EventPeriod.upcoming => scope.t('events.upcoming'),
+      _EventPeriod.past => scope.t('events.past'),
+      _EventPeriod.all => scope.t('events.all'),
+    };
+    return Material(
+      color: airmiusSurfaceSoftColor(context),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onEdit,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.filter_alt_outlined,
+                size: 20,
+                color: airmiusAccentColor(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  search.trim().isEmpty
+                      ? '$periodLabel · $count ${scope.t('events.filters')}'
+                      : '“${search.trim()}” · $periodLabel',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: scope.t('events.resetFilters'),
+                onPressed: onReset,
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EventFilterSelection {
+  const _EventFilterSelection({
+    required this.search,
+    required this.period,
+    required this.type,
+    required this.visibility,
+    required this.clubId,
+    required this.teamId,
+  });
+
+  final String search;
+  final _EventPeriod period;
+  final String type;
+  final String visibility;
+  final int? clubId;
+  final int? teamId;
+}
+
+class _EventSearchSheet extends StatefulWidget {
+  const _EventSearchSheet({
+    required this.initialSearch,
+    required this.initialPeriod,
+    required this.initialType,
+    required this.initialVisibility,
+    required this.initialClubId,
+    required this.initialTeamId,
+    required this.eventTypes,
+    required this.visibilities,
+    required this.clubs,
+    required this.teams,
+  });
+
+  final String initialSearch;
+  final _EventPeriod initialPeriod;
+  final String initialType;
+  final String initialVisibility;
+  final int? initialClubId;
+  final int? initialTeamId;
+  final List<String> eventTypes;
+  final List<String> visibilities;
+  final List<AirmiusClub> clubs;
+  final List<AirmiusTeam> teams;
+
+  @override
+  State<_EventSearchSheet> createState() => _EventSearchSheetState();
+}
+
+class _EventSearchSheetState extends State<_EventSearchSheet> {
+  late final TextEditingController _searchController;
+  late _EventPeriod _period;
+  late String _type;
+  late String _visibility;
+  late int? _clubId;
+  late int? _teamId;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController(text: widget.initialSearch);
+    _period = widget.initialPeriod;
+    _type = widget.initialType;
+    _visibility = widget.initialVisibility;
+    _clubId = widget.initialClubId;
+    _teamId = widget.initialTeamId;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final filteredTeams = widget.teams
+        .where((team) => _clubId == null || team.clubId == _clubId)
+        .toList();
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    scope.t('events.search'),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: scope.t('shell.closeMenu'),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: scope.t('events.searchHint'),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.clear),
+                            ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _apply(),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    scope.t('events.filters'),
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<_EventPeriod>(
+                    segments: [
+                      ButtonSegment(
+                        value: _EventPeriod.upcoming,
+                        label: Text(scope.t('events.upcoming')),
+                      ),
+                      ButtonSegment(
+                        value: _EventPeriod.past,
+                        label: Text(scope.t('events.past')),
+                      ),
+                      ButtonSegment(
+                        value: _EventPeriod.all,
+                        label: Text(scope.t('events.all')),
+                      ),
+                    ],
+                    selected: {_period},
+                    onSelectionChanged: (value) =>
+                        setState(() => _period = value.first),
+                  ),
+                  const SizedBox(height: 18),
+                  DropdownButtonFormField<String>(
+                    initialValue: _type,
+                    decoration: InputDecoration(
+                      labelText: scope.t('events.type'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: '',
+                        child: Text(scope.t('events.allTypes')),
+                      ),
+                      for (final item in widget.eventTypes)
+                        DropdownMenuItem(
+                          value: item,
+                          child: Text(_typeLabel(context, item)),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _type = value ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _visibility,
+                    decoration: InputDecoration(
+                      labelText: scope.t('events.visibility'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: '',
+                        child: Text(scope.t('events.all')),
+                      ),
+                      for (final item in widget.visibilities)
+                        DropdownMenuItem(
+                          value: item,
+                          child: Text(_visibilityLabel(context, item)),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _visibility = value ?? ''),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int?>(
+                    initialValue: _clubId,
+                    decoration: InputDecoration(
+                      labelText: scope.t('events.club'),
+                    ),
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(scope.t('events.allClubs')),
+                      ),
+                      for (final club in widget.clubs)
+                        DropdownMenuItem<int?>(
+                          value: club.id,
+                          child: Text(club.name),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() {
+                      _clubId = value;
+                      if (_teamId != null &&
+                          !widget.teams.any(
+                            (team) =>
+                                team.id == _teamId &&
+                                (_clubId == null || team.clubId == _clubId),
+                          )) {
+                        _teamId = null;
+                      }
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int?>(
+                    key: ValueKey('event-team-${_clubId ?? 'all'}-$_teamId'),
+                    initialValue: _teamId,
+                    decoration: InputDecoration(
+                      labelText: scope.t('events.team'),
+                    ),
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(scope.t('events.allTeams')),
+                      ),
+                      for (final team in filteredTeams)
+                        DropdownMenuItem<int?>(
+                          value: team.id,
+                          child: Text(team.name),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _teamId = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _reset,
+                    icon: const Icon(Icons.restart_alt),
+                    label: Text(scope.t('events.resetFilters')),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _apply,
+                    icon: const Icon(Icons.search),
+                    label: Text(scope.t('events.search')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _reset() {
+    setState(() {
+      _searchController.clear();
+      _period = _EventPeriod.upcoming;
+      _type = '';
+      _visibility = '';
+      _clubId = null;
+      _teamId = null;
+    });
+  }
+
+  void _apply() {
+    Navigator.pop(
+      context,
+      _EventFilterSelection(
+        search: _searchController.text.trim(),
+        period: _period,
+        type: _type,
+        visibility: _visibility,
+        clubId: _clubId,
+        teamId: _teamId,
+      ),
+    );
   }
 }
 
@@ -586,253 +1001,6 @@ class _EventsTitle extends StatelessWidget {
         fontSize: 28,
         height: 1.05,
         fontWeight: FontWeight.w900,
-      ),
-    );
-  }
-}
-
-class _FilterBar extends StatelessWidget {
-  const _FilterBar({
-    required this.controller,
-    required this.period,
-    required this.filtersOpen,
-    required this.activeFilterCount,
-    required this.onSearchChanged,
-    required this.onPeriodChanged,
-    required this.onToggleFilters,
-    required this.onSubmit,
-  });
-
-  final TextEditingController controller;
-  final _EventPeriod period;
-  final bool filtersOpen;
-  final int activeFilterCount;
-  final ValueChanged<String> onSearchChanged;
-  final ValueChanged<_EventPeriod> onPeriodChanged;
-  final VoidCallback onToggleFilters;
-  final VoidCallback onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-    return AirmiusPanel(
-      child: Column(
-        children: [
-          TextField(
-            controller: controller,
-            onChanged: onSearchChanged,
-            onSubmitted: (_) => onSubmit(),
-            style: TextStyle(
-              color: airmiusTextColor(context),
-              fontWeight: FontWeight.w800,
-            ),
-            decoration: InputDecoration(
-              hintText: scope.t('events.searchHint'),
-              prefixIcon: Icon(Icons.search, color: airmiusMutedColor(context)),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _PeriodButton(
-                label: scope.t('events.upcoming'),
-                selected: period == _EventPeriod.upcoming,
-                onTap: () => onPeriodChanged(_EventPeriod.upcoming),
-              ),
-              _PeriodButton(
-                label: scope.t('events.past'),
-                selected: period == _EventPeriod.past,
-                onTap: () => onPeriodChanged(_EventPeriod.past),
-              ),
-              _PeriodButton(
-                label: scope.t('events.all'),
-                selected: period == _EventPeriod.all,
-                onTap: () => onPeriodChanged(_EventPeriod.all),
-              ),
-              OutlinedButton.icon(
-                onPressed: onToggleFilters,
-                icon: Icon(Icons.tune, size: 18),
-                label: Text(
-                  activeFilterCount == 0
-                      ? scope.t('events.filters')
-                      : '${scope.t('events.filters')} $activeFilterCount',
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: onSubmit,
-                icon: Icon(Icons.search, size: 18),
-                label: Text(scope.t('events.search')),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PeriodButton extends StatelessWidget {
-  const _PeriodButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      selected: selected,
-      label: Text(label),
-      onSelected: (_) => onTap(),
-      selectedColor: airmiusAccentColor(context),
-      backgroundColor: airmiusSurfaceSoftColor(context),
-      side: BorderSide(
-        color: selected
-            ? airmiusAccentColor(context)
-            : airmiusBorderColor(context),
-      ),
-      labelStyle: TextStyle(
-        color: selected
-            ? airmiusOnColor(airmiusAccentColor(context))
-            : airmiusMutedColor(context),
-        fontWeight: FontWeight.w900,
-      ),
-    );
-  }
-}
-
-class _AdvancedFilters extends StatelessWidget {
-  const _AdvancedFilters({
-    required this.type,
-    required this.visibility,
-    required this.clubId,
-    required this.teamId,
-    required this.eventTypes,
-    required this.visibilities,
-    required this.clubs,
-    required this.teams,
-    required this.onTypeChanged,
-    required this.onVisibilityChanged,
-    required this.onClubChanged,
-    required this.onTeamChanged,
-    required this.onReset,
-    required this.onApply,
-  });
-
-  final String type;
-  final String visibility;
-  final int? clubId;
-  final int? teamId;
-  final List<String> eventTypes;
-  final List<String> visibilities;
-  final List<AirmiusClub> clubs;
-  final List<AirmiusTeam> teams;
-  final ValueChanged<String> onTypeChanged;
-  final ValueChanged<String> onVisibilityChanged;
-  final ValueChanged<int?> onClubChanged;
-  final ValueChanged<int?> onTeamChanged;
-  final VoidCallback onReset;
-  final VoidCallback onApply;
-
-  @override
-  Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-    return AirmiusPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: type,
-            decoration: InputDecoration(labelText: scope.t('events.type')),
-            dropdownColor: airmiusSurfaceColor(context),
-            items: [
-              DropdownMenuItem(
-                value: '',
-                child: Text(scope.t('events.allTypes')),
-              ),
-              for (final item in eventTypes)
-                DropdownMenuItem(
-                  value: item,
-                  child: Text(_typeLabel(context, item)),
-                ),
-            ],
-            onChanged: (value) => onTypeChanged(value ?? ''),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: visibility,
-            decoration: InputDecoration(
-              labelText: scope.t('events.visibility'),
-            ),
-            dropdownColor: airmiusSurfaceColor(context),
-            items: [
-              DropdownMenuItem(value: '', child: Text(scope.t('events.all'))),
-              for (final item in visibilities)
-                DropdownMenuItem(
-                  value: item,
-                  child: Text(_visibilityLabel(context, item)),
-                ),
-            ],
-            onChanged: (value) => onVisibilityChanged(value ?? ''),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int?>(
-            initialValue: clubId,
-            decoration: InputDecoration(labelText: scope.t('events.club')),
-            dropdownColor: airmiusSurfaceColor(context),
-            items: [
-              DropdownMenuItem<int?>(
-                value: null,
-                child: Text(scope.t('events.allClubs')),
-              ),
-              for (final club in clubs)
-                DropdownMenuItem<int?>(value: club.id, child: Text(club.name)),
-            ],
-            onChanged: onClubChanged,
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int?>(
-            initialValue: teamId,
-            decoration: InputDecoration(labelText: scope.t('events.team')),
-            dropdownColor: airmiusSurfaceColor(context),
-            items: [
-              DropdownMenuItem<int?>(
-                value: null,
-                child: Text(scope.t('events.allTeams')),
-              ),
-              for (final team in teams.where(
-                (team) => clubId == null || team.clubId == clubId,
-              ))
-                DropdownMenuItem<int?>(value: team.id, child: Text(team.name)),
-            ],
-            onChanged: onTeamChanged,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              AirmiusButton(
-                label: scope.t('events.resetFilters'),
-                icon: Icons.restart_alt,
-                onPressed: onReset,
-                secondary: true,
-              ),
-              AirmiusButton(
-                label: scope.t('events.applyFilters'),
-                icon: Icons.check,
-                onPressed: onApply,
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

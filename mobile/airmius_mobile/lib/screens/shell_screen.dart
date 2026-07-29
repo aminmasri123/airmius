@@ -33,6 +33,7 @@ import 'trainer_cockpit_screen.dart';
 import 'training_center_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'sport_map_center_screen.dart';
+import 'sport_matching_screen.dart';
 import 'friends_social_graph_screen.dart';
 import 'carpool_center_screen.dart';
 import 'file_manager_screen.dart';
@@ -343,6 +344,7 @@ class _ShellScreenState extends State<ShellScreen> {
       'Vereins-Cockpit' => const ClubCockpitScreen(),
       'Ernährung' => const NutritionCenterScreen(),
       'Sportkarte' => const SportMapCenterScreen(),
+      'Sport-Matching' => const SportMatchingScreen(),
       'Freunde' => const FriendsSocialGraphScreen(),
       'Fahrgemeinschaften' => const CarpoolCenterScreen(),
       'Dateien' => const FileManagerScreen(),

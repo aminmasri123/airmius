@@ -993,6 +993,50 @@ class AirmiusApiClient {
     query: {'page': '$page', if (teamId != null) 'team_id': '$teamId'},
   );
 
+  Future<AirmiusJson> sportMatchings({
+    String mode = 'partner',
+    String? city,
+    int? sportId,
+  }) => _json(
+    'GET',
+    '/api/v1/sport-matching',
+    query: {
+      'mode': mode,
+      if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
+      if (sportId != null) 'sport_id': '$sportId',
+    },
+  );
+
+  Future<AirmiusJson> createSportMatching(AirmiusJson body) =>
+      _json('POST', '/api/v1/sport-matching', body: body);
+
+  Future<AirmiusJson> applyForSportMatching(
+    int matchingId, {
+    int? teamId,
+    String? message,
+  }) => _json(
+    'POST',
+    '/api/v1/sport-matching/$matchingId/apply',
+    body: {
+      'team_id': ?teamId,
+      if (message != null && message.trim().isNotEmpty)
+        'message': message.trim(),
+    },
+  );
+
+  Future<AirmiusJson> decideSportMatchingApplication(
+    int matchingId,
+    int applicationId,
+    String status,
+  ) => _json(
+    'PUT',
+    '/api/v1/sport-matching/$matchingId/applications/$applicationId',
+    body: {'status': status},
+  );
+
+  Future<AirmiusJson> cancelSportMatching(int matchingId) =>
+      _json('POST', '/api/v1/sport-matching/$matchingId/cancel');
+
   Future<AirmiusJson> createConversation({
     required String type,
     List<int> participantIds = const [],

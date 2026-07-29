@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:airmius/airmius_app.dart';
 import 'package:airmius/core/airmius_accessibility_scope.dart';
 import 'package:airmius/core/airmius_api_client.dart';
@@ -158,6 +160,7 @@ import 'package:airmius/screens/sponsors_center_screen.dart';
 import 'package:airmius/screens/settings_center_screen.dart';
 import 'package:airmius/screens/saved_view_search_alert_suite_screen.dart';
 import 'package:airmius/screens/sport_integrations_screen.dart';
+import 'package:airmius/screens/sport_matching_screen.dart';
 import 'package:airmius/screens/subscription_entitlement_feature_gate_suite_screen.dart';
 import 'package:airmius/screens/system_status_incident_center_suite_screen.dart';
 import 'package:airmius/screens/shared_file_access_screen.dart';
@@ -1068,6 +1071,73 @@ void main() {
     },
   );
 
+  testWidgets('training workspace scrolls as one continuous mobile page', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 700));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[],"calendar_events":[],"event_stats":{"upcoming":0,"today":0,"cancelled":0},"event_creation":{"allows_recurring":false},"event_types":["training","match"],"visibilities":["public","private"],"clubs":[],"teams":[],"sports":[]}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final pageScroll = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(pageScroll.position.maxScrollExtent, greaterThan(0));
+    expect(pageScroll.position.pixels, 0);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -350));
+    await tester.pumpAndSettle();
+
+    expect(pageScroll.position.pixels, greaterThan(0));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('training search opens compact filters in a modal sheet', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[],"calendar_events":[],"event_stats":{"upcoming":0,"today":0,"cancelled":0},"event_creation":{"allows_recurring":false},"event_types":["training","match"],"visibilities":["public","private"],"clubs":[],"teams":[],"sports":[]}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Suche nach Titel, Ort, Team oder Verein'), findsNothing);
+    await tester.tap(find.byTooltip('Suchen'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(
+      find.text('Suche nach Titel, Ort, Team oder Verein'),
+      findsOneWidget,
+    );
+    expect(find.text('Kommend'), findsOneWidget);
+    expect(find.text('Vergangen'), findsOneWidget);
+    expect(find.text('Alle Typen'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('event detail renders management attendance and comments', (
     WidgetTester tester,
   ) async {
@@ -1727,6 +1797,75 @@ void main() {
     expect(transport.requests[4].method, 'DELETE');
     expect(transport.requests[6].method, 'POST');
     expect(transport.requests[10].method, 'PATCH');
+  });
+
+  test(
+    'sport matching client covers partner and team matching contracts',
+    () async {
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
+      );
+      final client = AirmiusApiClient(
+        transport: transport,
+        baseUrl: 'https://airmius.test',
+        token: 'token',
+      );
+
+      await client.sportMatchings(mode: 'team', city: 'Berlin', sportId: 3);
+      await client.createSportMatching({
+        'mode': 'team',
+        'sport_id': 3,
+        'team_id': 8,
+        'title': 'Gegner gesucht',
+      });
+      await client.applyForSportMatching(
+        12,
+        teamId: 9,
+        message: 'Wir spielen.',
+      );
+      await client.decideSportMatchingApplication(12, 21, 'accepted');
+      await client.cancelSportMatching(12);
+
+      expect(
+        transport.requests.map(
+          (request) => '${request.method} ${request.path}',
+        ),
+        [
+          'GET /api/v1/sport-matching',
+          'POST /api/v1/sport-matching',
+          'POST /api/v1/sport-matching/12/apply',
+          'PUT /api/v1/sport-matching/12/applications/21',
+          'POST /api/v1/sport-matching/12/cancel',
+        ],
+      );
+      expect(transport.requests.first.query['mode'], 'team');
+      expect(transport.requests.first.query['city'], 'Berlin');
+      expect(transport.requests[2].body, containsPair('team_id', 9));
+    },
+  );
+
+  testWidgets('sport matching screen separates partners and team opponents', (
+    WidgetTester tester,
+  ) async {
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":1,"mode":"partner","title":"Lauf in Kenitra","city":"Kenitra","country_code":"MA","radius_km":20,"starts_at":"2026-08-10T09:00:00Z","participants_needed":2,"skill_level":"recreational","mine":false,"sport":{"id":1,"name":"Laufen","slug":"running"},"owner":{"id":2,"name":"Nora"}}],"meta":{"sports":[{"id":1,"name":"Laufen","slug":"running"}],"teams":[]}}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SportMatchingScreen(),
+    );
+    await tester.pump();
+
+    expect(find.text('Sportpartner'), findsOneWidget);
+    expect(find.text('Teamgegner'), findsOneWidget);
+    expect(find.text('Lauf in Kenitra'), findsOneWidget);
+    expect(find.textContaining('Kenitra'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   test('friends client uses list, invitation and removal contracts', () async {
@@ -4847,15 +4986,63 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Training startet um 18 Uhr.'), findsOneWidget);
+    expect(find.text('Neue Nachricht 12'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Training startet um 18 Uhr.'), findsOneWidget);
+    expect(find.text('Neue Nachricht 13'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(transport.messageRequests, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('chat scrolls to the latest received message automatically', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 700));
+    final transport = _ChatPollingTransport();
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ChatDetailScreen(
+        conversationId: 12,
+        title: 'Lena Lauf',
+        kind: 'Direkt',
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(
+      scrollable.position.pixels,
+      closeTo(scrollable.position.minScrollExtent, 0.1),
+    );
+
+    scrollable.position.jumpTo(200);
+    await tester.pump();
+    expect(
+      scrollable.position.pixels,
+      greaterThan(scrollable.position.minScrollExtent),
+    );
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.text('Neue Nachricht 13'), findsOneWidget);
+    expect(
+      scrollable.position.pixels,
+      closeTo(scrollable.position.minScrollExtent, 0.1),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -7504,10 +7691,35 @@ class _ChatPollingTransport implements AirmiusApiTransport {
       if (messageRequests > 1) {
         await Future<void>.delayed(const Duration(seconds: 1));
       }
-      return const AirmiusApiResponse(
+      final messageCount = messageRequests > 1 ? 13 : 12;
+      final messages = List.generate(
+        messageCount,
+        (index) => {
+          'id': index + 41,
+          'conversation_id': 12,
+          'sender_id': 8,
+          'current_user_id': 3,
+          'message': index == 0
+              ? 'Training startet um 18 Uhr.'
+              : 'Neue Nachricht ${index + 1}',
+          'sender': {'id': 8, 'name': 'Lena Lauf'},
+          'status': 'sent',
+          'created_at': '2026-07-28T16:${index.toString().padLeft(2, '0')}:00Z',
+          'reactions': <Object>[],
+        },
+      ).reversed.toList();
+      return AirmiusApiResponse(
         statusCode: 200,
-        body:
-            '{"data":[{"id":41,"conversation_id":12,"sender_id":8,"current_user_id":3,"message":"Training startet um 18 Uhr.","sender":{"id":8,"name":"Lena Lauf"},"status":"sent","created_at":"2026-07-28T16:00:00Z","reactions":[]}],"chat":{"typing_users":[]},"meta":{"current_page":1,"last_page":1,"per_page":20,"total":1}}',
+        body: jsonEncode({
+          'data': messages,
+          'chat': {'typing_users': <Object>[]},
+          'meta': {
+            'current_page': 1,
+            'last_page': 1,
+            'per_page': 20,
+            'total': messageCount,
+          },
+        }),
       );
     }
     if (request.path == '/api/v1/chat/conversations/12/read') {

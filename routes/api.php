@@ -44,6 +44,7 @@ use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SponsorManagementController;
 use App\Http\Controllers\Api\V1\SportIntegrationController as MobileSportIntegrationController;
 use App\Http\Controllers\Api\V1\SportMapController as MobileSportMapController;
+use App\Http\Controllers\Api\V1\SportMatchingController;
 use App\Http\Controllers\Api\V1\SportProfileController;
 use App\Http\Controllers\Api\V1\StoryController as MobileStoryController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
@@ -575,6 +576,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/chat/conversations/{conversation}/typing', [ChatController::class, 'typing'])->middleware('throttle:chat-presence')->name('chat.typing');
 
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
+        Route::get('/sport-matching', [SportMatchingController::class, 'index'])->name('sport-matching.index');
+        Route::post('/sport-matching', [SportMatchingController::class, 'store'])->name('sport-matching.store');
+        Route::post('/sport-matching/{sportMatching}/apply', [SportMatchingController::class, 'apply'])->name('sport-matching.apply');
+        Route::put('/sport-matching/{sportMatching}/applications/{application}', [SportMatchingController::class, 'decide'])->name('sport-matching.applications.update');
+        Route::post('/sport-matching/{sportMatching}/cancel', [SportMatchingController::class, 'cancel'])->name('sport-matching.cancel');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
         Route::get('/events/{event}/comments', [EventController::class, 'comments'])->name('events.comments.index');

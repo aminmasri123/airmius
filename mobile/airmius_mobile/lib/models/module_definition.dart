@@ -111,6 +111,17 @@ const appModules = [
     metrics: {'Routen': '8', 'Orte': '6'},
   ),
   ModuleDefinition(
+    title: 'Sport-Matching',
+    subtitle: 'Sportpartner und Teamgegner in deiner Nähe finden',
+    icon: Icons.connect_without_contact_outlined,
+    actions: [
+      'Sportpartner suchen',
+      'Teamgegner finden',
+      'Anfragen bearbeiten',
+    ],
+    metrics: {},
+  ),
+  ModuleDefinition(
     title: 'Freunde',
     subtitle: 'Kontakte, Einladungen und Empfehlungen',
     icon: Icons.person_add_alt_1_outlined,

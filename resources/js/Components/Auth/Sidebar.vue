@@ -140,6 +140,7 @@ const closeSidebar = () => {
             <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingspläne" icon="las la-clipboard-list" />
             <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
             <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
+            <NavItem @navigate="closeSidebar" :href="route('auth.sport-matching.index')" label="Sport-Matching" icon="las la-people-arrows" />
             <NavItem
                 v-if="can('friends.view')"
                 @navigate="closeSidebar"

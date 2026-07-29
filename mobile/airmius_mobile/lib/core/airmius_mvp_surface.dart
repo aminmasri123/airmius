@@ -20,6 +20,7 @@ class AirmiusMvpSurface {
     'Trainer-Cockpit',
     'Ernährung',
     'Sportkarte',
+    'Sport-Matching',
     'Freunde',
     'Fahrgemeinschaften',
     'Badges',
