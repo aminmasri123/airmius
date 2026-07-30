@@ -566,12 +566,14 @@ class AirmiusNamedItem {
     required this.name,
     this.subtitle,
     this.membershipRole,
+    this.canManage = false,
   });
 
   final int id;
   final String name;
   final String? subtitle;
   final String? membershipRole;
+  final bool canManage;
 
   factory AirmiusNamedItem.fromJson(JsonMap json) {
     final membership = json['membership'];
@@ -584,6 +586,7 @@ class AirmiusNamedItem {
       membershipRole: _nullableString(
         membership is JsonMap ? membership['role'] : json['team_role'],
       ),
+      canManage: _bool(json['can_manage']),
     );
   }
 }

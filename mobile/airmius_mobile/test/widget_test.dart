@@ -8,7 +8,9 @@ import 'package:airmius/core/airmius_api_repositories.dart';
 import 'package:airmius/core/airmius_auth_state.dart';
 import 'package:airmius/core/airmius_deep_links.dart';
 import 'package:airmius/core/airmius_l10n.dart';
+import 'package:airmius/core/airmius_module_access.dart';
 import 'package:airmius/core/airmius_mvp_surface.dart';
+import 'package:airmius/core/airmius_preferences.dart';
 import 'package:airmius/core/airmius_preferences_store_base.dart';
 import 'package:airmius/core/airmius_push_device_registry.dart';
 import 'package:airmius/core/airmius_secure_token_store.dart';
@@ -19,6 +21,7 @@ import 'package:airmius/core/airmius_theme_mode_scope.dart';
 import 'package:airmius/core/airmius_upload_retry_policy.dart';
 import 'package:airmius/models/app_tab.dart';
 import 'package:airmius/models/club_summary.dart';
+import 'package:airmius/models/footer_navigation_destination.dart';
 import 'package:airmius/models/module_definition.dart';
 import 'package:airmius/navigation/airmius_deep_link_navigator.dart';
 import 'package:airmius/screens/admin_backoffice_screen.dart';
@@ -1746,11 +1749,20 @@ void main() {
       'role': 'redaktor',
       'roles': ['redaktor'],
       'permissions': ['blog.view', 'blog.create'],
+      'clubs': [
+        {
+          'id': 9,
+          'name': 'Editorial Club',
+          'can_manage': true,
+          'membership': {'role': 'admin'},
+        },
+      ],
     });
 
     expect(user.hasRole('redaktor'), isTrue);
     expect(user.can('blog.view'), isTrue);
     expect(user.can('finance.edit'), isFalse);
+    expect(user.clubs.single.canManage, isTrue);
   });
 
   test('sport map client uses real route, track and place contracts', () async {
@@ -1865,6 +1877,36 @@ void main() {
     expect(find.text('Teamgegner'), findsOneWidget);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sport matching hides technical server errors from users', (
+    WidgetTester tester,
+  ) async {
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(
+        transport: _RecordingTransport(
+          const AirmiusApiResponse(
+            statusCode: 500,
+            body:
+                '{"message":"An unexpected error occurred.","code":"server_error"}',
+          ),
+        ),
+      ),
+      const SportMatchingScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Sport-Matching konnte gerade nicht geladen werden. Bitte versuche es erneut.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Erneut versuchen'), findsOneWidget);
+    expect(find.textContaining('AirmiusApiException'), findsNothing);
+    expect(find.textContaining('server_error'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -4910,6 +4952,140 @@ void main() {
     expect(AirmiusMvpSurface.isDashboardWidgetVisible('sport_map'), isFalse);
   });
 
+  test('module access limits athletes to personal sport areas', () {
+    const athlete = AirmiusUser(
+      id: 10,
+      name: 'Mina Sport',
+      email: 'mina@example.test',
+      role: 'player',
+      roles: ['player'],
+      permissions: [
+        'event.join',
+        'post.create',
+        'file.view',
+        'clubs.view',
+        'teams.view',
+        'training.view',
+      ],
+    );
+
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Events & Training'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Sport-Matching'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Dateien'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Trainer-Cockpit'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Vereins-Cockpit'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Commerce'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Sponsoren'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Blog & Medien'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Nutzer'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(athlete, 'Admin'), isFalse);
+  });
+
+  test('module access grants only role-specific operational areas', () {
+    const coach = AirmiusUser(
+      id: 11,
+      name: 'Coach',
+      email: 'coach@example.test',
+      role: 'coach',
+      roles: ['coach'],
+      permissions: ['training.view', 'training.create', 'file.view'],
+    );
+    const clubAdmin = AirmiusUser(
+      id: 12,
+      name: 'Club Admin',
+      email: 'club@example.test',
+      role: 'club_admin',
+      roles: ['club_admin'],
+      permissions: [
+        'finance.view',
+        'subscriptions.manage',
+        'clubs.manage_members',
+      ],
+      clubs: [
+        AirmiusNamedItem(
+          id: 7,
+          name: 'Scoped Club',
+          membershipRole: 'admin',
+          canManage: true,
+        ),
+      ],
+    );
+    const guardian = AirmiusUser(
+      id: 13,
+      name: 'Guardian',
+      email: 'guardian@example.test',
+      role: 'guardian',
+      roles: ['guardian'],
+      permissions: ['guardians.children.view'],
+    );
+    const marketplaceManager = AirmiusUser(
+      id: 14,
+      name: 'Marketplace',
+      email: 'market@example.test',
+      role: 'marketplace_manager',
+      roles: ['marketplace_manager'],
+      permissions: ['marketplace.manage', 'commerce.orders.manage'],
+    );
+
+    expect(AirmiusModuleAccess.canOpen(coach, 'Trainer-Cockpit'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(coach, 'Vereins-Cockpit'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(coach, 'Admin'), isFalse);
+
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Vereins-Cockpit'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Trainer-Cockpit'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Sponsoren'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Commerce'), isFalse);
+    expect(AirmiusModuleAccess.canOpen(clubAdmin, 'Admin'), isFalse);
+
+    expect(
+      AirmiusModuleAccess.canOpen(guardian, 'Eltern & Jugendschutz'),
+      isTrue,
+    );
+    expect(AirmiusModuleAccess.canOpen(guardian, 'Trainer-Cockpit'), isFalse);
+
+    expect(AirmiusModuleAccess.canOpen(marketplaceManager, 'Commerce'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(marketplaceManager, 'Admin'), isTrue);
+    expect(
+      AirmiusModuleAccess.canOpen(marketplaceManager, 'Gamification-Regeln'),
+      isFalse,
+    );
+  });
+
+  test('platform administration remains hidden until 2FA is enabled', () {
+    const withoutTwoFactor = AirmiusUser(
+      id: 15,
+      name: 'Admin',
+      email: 'admin@example.test',
+      role: 'admin',
+      roles: ['admin'],
+      permissions: ['system.manage', 'users.view', 'users.assign_roles'],
+    );
+    const withTwoFactor = AirmiusUser(
+      id: 15,
+      name: 'Admin',
+      email: 'admin@example.test',
+      role: 'admin',
+      roles: ['admin'],
+      permissions: ['system.manage', 'users.view', 'users.assign_roles'],
+      twoFactorEnabled: true,
+    );
+
+    expect(AirmiusModuleAccess.canOpen(withoutTwoFactor, 'Admin'), isFalse);
+    expect(
+      AirmiusModuleAccess.canOpen(withoutTwoFactor, 'Rollen & Rechte'),
+      isFalse,
+    );
+    expect(AirmiusModuleAccess.canOpen(withTwoFactor, 'Admin'), isTrue);
+    expect(
+      AirmiusModuleAccess.canOpen(withTwoFactor, 'Rollen & Rechte'),
+      isTrue,
+    );
+    expect(
+      AirmiusModuleAccess.canOpen(withTwoFactor, 'Gamification-Regeln'),
+      isTrue,
+    );
+  });
+
   testWidgets('module overview avoids placeholder metrics in the MVP surface', (
     WidgetTester tester,
   ) async {
@@ -4927,9 +5103,19 @@ void main() {
   testWidgets('messages module opens the chat inbox instead of notifications', (
     WidgetTester tester,
   ) async {
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 20,
+        name: 'Mina Sport',
+        email: 'mina@example.test',
+        role: 'player',
+        roles: ['player'],
+        permissions: ['training.view', 'event.join', 'file.view'],
+      ),
+    );
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(),
+      container,
       const ShellScreen(),
       themeMode: ThemeMode.light,
       palette: AirmiusThemePalette.air,
@@ -5061,12 +5247,62 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('app shell loads a personal three-item footer navigation', (
+    WidgetTester tester,
+  ) async {
+    final store = _MemoryPreferencesStore();
+    final preferences = AirmiusPreferences(store: store);
+    const user = AirmiusUser(
+      id: 31,
+      name: 'Mina Sport',
+      email: 'mina@example.test',
+      role: 'player',
+      roles: ['player'],
+      permissions: ['training.view', 'event.join'],
+    );
+    await preferences.writeFooterNavigation(user.id, const [
+      FooterNavigationDestination.messages,
+      FooterNavigationDestination.drink,
+      FooterNavigationDestination.feed,
+    ]);
+    final container = await _authenticatedWidgetTestContainer(user);
+
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      ShellScreen(preferences: preferences),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Nachrichten'), findsOneWidget);
+    expect(find.text('Trinken'), findsOneWidget);
+    expect(find.text('Training'), findsNothing);
+    expect(find.text('Teams'), findsNothing);
+
+    await tester.tap(find.text('Trinken'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NutritionCenterScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sport integrations open directly from the module drawer', (
     WidgetTester tester,
   ) async {
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 21,
+        name: 'Mina Sport',
+        email: 'mina@example.test',
+        role: 'player',
+        roles: ['player'],
+        permissions: ['training.view', 'event.join', 'file.view'],
+      ),
+    );
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(),
+      container,
       const ShellScreen(),
       themeMode: ThemeMode.light,
       palette: AirmiusThemePalette.air,
@@ -5087,6 +5323,92 @@ void main() {
     expect(find.text('Sport-Apps & Gesundheitsdaten'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('athlete sidebar hides operational and admin modules', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 2200));
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 22,
+        name: 'Alex Athlete',
+        email: 'alex@example.test',
+        role: 'player',
+        roles: ['player'],
+        permissions: [
+          'event.join',
+          'post.create',
+          'file.view',
+          'clubs.view',
+          'teams.view',
+          'training.view',
+        ],
+      ),
+    );
+    await _pumpAirmiusWidget(tester, container, const ShellScreen());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Menü'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Events & Training'), findsOneWidget);
+    expect(find.text('Sport-Matching'), findsOneWidget);
+    expect(find.text('Dateien'), findsOneWidget);
+    expect(find.text('Trainer-Cockpit'), findsNothing);
+    expect(find.text('Vereins-Cockpit'), findsNothing);
+    expect(find.text('Commerce'), findsNothing);
+    expect(find.text('Sponsoren'), findsNothing);
+    expect(find.text('Medienrichtlinien'), findsNothing);
+    expect(find.text('Blog & Medien'), findsNothing);
+    expect(find.text('Nutzer'), findsNothing);
+    expect(find.text('Rollen & Rechte'), findsNothing);
+    expect(find.text('Admin'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'club-scoped finance does not expose trainer sponsor or platform admin',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 2200));
+      final container = await _authenticatedWidgetTestContainer(
+        const AirmiusUser(
+          id: 23,
+          name: 'Club Scoped User',
+          email: 'club-scoped@example.test',
+          role: 'club_admin',
+          roles: ['club_admin'],
+          permissions: [
+            'clubs.manage_members',
+            'finance.view',
+            'subscriptions.manage',
+            'training.view',
+            'file.view',
+          ],
+          clubs: [
+            AirmiusNamedItem(
+              id: 8,
+              name: 'Scoped Club',
+              membershipRole: 'admin',
+              canManage: true,
+            ),
+          ],
+        ),
+      );
+      await _pumpAirmiusWidget(tester, container, const ShellScreen());
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Menü'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Arbeitsbereiche'), findsOneWidget);
+      expect(find.text('Vereins-Cockpit'), findsOneWidget);
+      expect(find.text('Trainer-Cockpit'), findsNothing);
+      expect(find.text('Sponsoren'), findsNothing);
+      expect(find.text('Commerce'), findsNothing);
+      expect(find.text('Admin'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('compatibility admin entries open their matching section', (
     WidgetTester tester,
@@ -7623,6 +7945,7 @@ Future<void> _pumpAirmiusWidget(
 AirmiusServiceContainer _widgetTestContainer({
   AirmiusApiTransport? transport,
   AirmiusPreferencesStore? pushDeviceStore,
+  AirmiusTokenStore? tokenStore,
 }) {
   return AirmiusServiceContainer(
     environment: const AirmiusAppEnvironment(
@@ -7634,9 +7957,24 @@ AirmiusServiceContainer _widgetTestContainer({
         _RecordingTransport(
           const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
         ),
-    tokenStore: AirmiusMemoryTokenStore(),
+    tokenStore: tokenStore ?? AirmiusMemoryTokenStore(),
     pushDeviceStore: pushDeviceStore ?? _MemoryPreferencesStore(),
   );
+}
+
+Future<AirmiusServiceContainer> _authenticatedWidgetTestContainer(
+  AirmiusUser user,
+) async {
+  final tokenStore = AirmiusMemoryTokenStore();
+  await tokenStore.write(
+    AirmiusSession(token: 'role-test-token', locale: 'de', user: user),
+  );
+  final container = _widgetTestContainer(
+    tokenStore: tokenStore,
+    transport: _AuthenticatedShellTransport(user),
+  );
+  await container.authState.restore();
+  return container;
 }
 
 void _setTestViewport(WidgetTester tester, Size size) {
@@ -7660,6 +7998,54 @@ class _RecordingTransport implements AirmiusApiTransport {
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
     return response;
+  }
+}
+
+class _AuthenticatedShellTransport implements AirmiusApiTransport {
+  const _AuthenticatedShellTransport(this.user);
+
+  final AirmiusUser user;
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.path == '/api/v1/me') {
+      return AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'role': user.role,
+            'roles': user.roles,
+            'permissions': user.permissions,
+            'two_factor_enabled': user.twoFactorEnabled,
+            'clubs': [
+              for (final club in user.clubs)
+                {
+                  'id': club.id,
+                  'name': club.name,
+                  'can_manage': club.canManage,
+                  'membership': {'role': club.membershipRole},
+                },
+            ],
+            'teams': [
+              for (final team in user.teams)
+                {
+                  'id': team.id,
+                  'name': team.name,
+                  'can_manage': team.canManage,
+                  'membership': {'role': team.membershipRole},
+                },
+            ],
+          },
+        }),
+      );
+    }
+    return const AirmiusApiResponse(
+      statusCode: 200,
+      body: '{"data":[],"meta":{"unread_count":0}}',
+    );
   }
 }
 

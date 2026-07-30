@@ -6,6 +6,7 @@ import 'airmius_l10n.dart';
 import 'airmius_accessibility_scope.dart';
 import 'airmius_preferences_store.dart';
 import 'airmius_theme.dart';
+import '../models/footer_navigation_destination.dart';
 
 class AirmiusPreferences {
   AirmiusPreferences({AirmiusPreferencesStore? store})
@@ -105,6 +106,56 @@ class AirmiusPreferences {
     }
   }
 
+  Future<List<FooterNavigationDestination>?> readFooterNavigation(
+    int userId,
+  ) async {
+    final raw = await _store.readString(_footerNavigationKey(userId));
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return null;
+      final destinations = decoded
+          .whereType<String>()
+          .map(FooterNavigationDestination.fromStorageKey)
+          .whereType<FooterNavigationDestination>()
+          .toList(growable: false);
+      if (destinations.length < 3 ||
+          destinations.length > 5 ||
+          destinations.toSet().length != destinations.length) {
+        return null;
+      }
+      return destinations;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> writeFooterNavigation(
+    int userId,
+    List<FooterNavigationDestination> destinations,
+  ) {
+    if (destinations.length < 3 || destinations.length > 5) {
+      throw ArgumentError.value(
+        destinations.length,
+        'destinations',
+        'Footer navigation must contain between 3 and 5 items.',
+      );
+    }
+    if (destinations.toSet().length != destinations.length) {
+      throw ArgumentError.value(
+        destinations,
+        'destinations',
+        'Footer navigation items must be unique.',
+      );
+    }
+    return _store.writeString(
+      _footerNavigationKey(userId),
+      jsonEncode(
+        destinations.map((destination) => destination.storageKey).toList(),
+      ),
+    );
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
   static const _themePaletteKey = 'airmius.themePalette';
@@ -112,4 +163,6 @@ class AirmiusPreferences {
   static const _permissionOnboardingCompleteKey =
       'airmius.permissionOnboardingComplete';
   static const _onboardingProfileKey = 'airmius.onboardingProfile';
+  static String _footerNavigationKey(int userId) =>
+      'airmius.footerNavigation.v1.$userId';
 }

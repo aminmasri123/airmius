@@ -1710,6 +1710,30 @@ const _settingsDe = {
   'settings.family': 'Familie',
   'settings.securityNote':
       'Sensible Änderungen werden erneut serverseitig geprüft. Passwörter, Wiederherstellungscodes und Gerätekennungen werden nie an den Support übertragen.',
+  'footerNav.settingsTitle': 'Footer-Menü anpassen',
+  'footerNav.settingsHeadline': 'Deine wichtigsten Bereiche',
+  'footerNav.settingsBody':
+      'Wähle 3 bis 5 Bereiche für die untere App-Navigation und bestimme ihre Reihenfolge.',
+  'footerNav.itemRange': '3–5 Einträge',
+  'footerNav.selected': 'Im Footer',
+  'footerNav.available': 'Weitere Bereiche',
+  'footerNav.reorderHint':
+      'Halte den Griff gedrückt und verschiebe den Eintrag.',
+  'footerNav.addHint': 'Tippe auf Plus, um einen Bereich hinzuzufügen.',
+  'footerNav.maximumReached': 'Maximal fünf Einträge sind möglich.',
+  'footerNav.allSelected': 'Alle verfügbaren Bereiche sind ausgewählt.',
+  'footerNav.restoreDefault': 'Standard wiederherstellen',
+  'footerNav.save': 'Footer-Menü speichern',
+  'footerNav.add': 'Hinzufügen',
+  'footerNav.remove': 'Entfernen',
+  'footerNav.reorder': 'Reihenfolge ändern',
+  'footerNav.events': 'Events',
+  'footerNav.drink': 'Trinken',
+  'footerNav.courses': 'Kurse',
+  'footerNav.sportMap': 'Sportkarte',
+  'footerNav.sportMatching': 'Sportmatching',
+  'footerNav.carpool': 'Fahrgemeinschaft',
+  'footerNav.marketplace': 'Marketplace',
 };
 
 final _settingsEn = {
@@ -1755,6 +1779,29 @@ final _settingsEn = {
   'settings.family': 'Family',
   'settings.securityNote':
       'Sensitive changes are checked again on the server. Passwords, recovery codes and device identifiers are never sent to support.',
+  'footerNav.settingsTitle': 'Customise footer menu',
+  'footerNav.settingsHeadline': 'Your most important areas',
+  'footerNav.settingsBody':
+      'Choose 3 to 5 areas for the bottom app navigation and set their order.',
+  'footerNav.itemRange': '3–5 items',
+  'footerNav.selected': 'In the footer',
+  'footerNav.available': 'More areas',
+  'footerNav.reorderHint': 'Hold the handle and drag the item.',
+  'footerNav.addHint': 'Tap plus to add an area.',
+  'footerNav.maximumReached': 'A maximum of five items is allowed.',
+  'footerNav.allSelected': 'All available areas are selected.',
+  'footerNav.restoreDefault': 'Restore default',
+  'footerNav.save': 'Save footer menu',
+  'footerNav.add': 'Add',
+  'footerNav.remove': 'Remove',
+  'footerNav.reorder': 'Change order',
+  'footerNav.events': 'Events',
+  'footerNav.drink': 'Water',
+  'footerNav.courses': 'Courses',
+  'footerNav.sportMap': 'Sports map',
+  'footerNav.sportMatching': 'Sports matching',
+  'footerNav.carpool': 'Carpool',
+  'footerNav.marketplace': 'Marketplace',
 };
 
 final _settingsFr = {
@@ -1800,6 +1847,29 @@ final _settingsFr = {
   'settings.family': 'Famille',
   'settings.securityNote':
       'Les changements sensibles sont revérifiés sur le serveur. Les mots de passe, codes de récupération et identifiants d’appareil ne sont jamais envoyés au support.',
+  'footerNav.settingsTitle': 'Personnaliser le menu inférieur',
+  'footerNav.settingsHeadline': 'Vos espaces principaux',
+  'footerNav.settingsBody':
+      'Choisissez 3 à 5 espaces pour la navigation inférieure et définissez leur ordre.',
+  'footerNav.itemRange': '3–5 éléments',
+  'footerNav.selected': 'Dans le menu',
+  'footerNav.available': 'Autres espaces',
+  'footerNav.reorderHint': 'Maintenez la poignée et déplacez l’élément.',
+  'footerNav.addHint': 'Appuyez sur plus pour ajouter un espace.',
+  'footerNav.maximumReached': 'Cinq éléments au maximum sont autorisés.',
+  'footerNav.allSelected': 'Tous les espaces disponibles sont sélectionnés.',
+  'footerNav.restoreDefault': 'Restaurer la valeur par défaut',
+  'footerNav.save': 'Enregistrer le menu',
+  'footerNav.add': 'Ajouter',
+  'footerNav.remove': 'Supprimer',
+  'footerNav.reorder': 'Modifier l’ordre',
+  'footerNav.events': 'Événements',
+  'footerNav.drink': 'Eau',
+  'footerNav.courses': 'Cours',
+  'footerNav.sportMap': 'Carte sportive',
+  'footerNav.sportMatching': 'Partenaires sportifs',
+  'footerNav.carpool': 'Covoiturage',
+  'footerNav.marketplace': 'Marketplace',
 };
 
 final _settingsAr = {
@@ -1843,6 +1913,28 @@ final _settingsAr = {
   'settings.family': 'العائلة',
   'settings.securityNote':
       'تُراجع التغييرات الحساسة مرة أخرى على الخادم. لا تُرسل كلمات المرور أو رموز الاسترداد أو معرفات الأجهزة إلى الدعم.',
+  'footerNav.settingsTitle': 'تخصيص القائمة السفلية',
+  'footerNav.settingsHeadline': 'أهم أقسامك',
+  'footerNav.settingsBody': 'اختر من 3 إلى 5 أقسام للتنقل السفلي وحدد ترتيبها.',
+  'footerNav.itemRange': '3–5 عناصر',
+  'footerNav.selected': 'في القائمة السفلية',
+  'footerNav.available': 'أقسام أخرى',
+  'footerNav.reorderHint': 'اضغط مطولًا على المقبض واسحب العنصر.',
+  'footerNav.addHint': 'اضغط على علامة الجمع لإضافة قسم.',
+  'footerNav.maximumReached': 'الحد الأقصى خمسة عناصر.',
+  'footerNav.allSelected': 'تم اختيار جميع الأقسام المتاحة.',
+  'footerNav.restoreDefault': 'استعادة الافتراضي',
+  'footerNav.save': 'حفظ القائمة السفلية',
+  'footerNav.add': 'إضافة',
+  'footerNav.remove': 'إزالة',
+  'footerNav.reorder': 'تغيير الترتيب',
+  'footerNav.events': 'الفعاليات',
+  'footerNav.drink': 'الماء',
+  'footerNav.courses': 'الدورات',
+  'footerNav.sportMap': 'الخريطة الرياضية',
+  'footerNav.sportMatching': 'المطابقة الرياضية',
+  'footerNav.carpool': 'مشاركة الرحلات',
+  'footerNav.marketplace': 'السوق',
 };
 
 const _fitnessDe = {

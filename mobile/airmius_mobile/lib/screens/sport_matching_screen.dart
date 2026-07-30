@@ -332,13 +332,45 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Widget _error(Object? error) => AirmiusPanel(
-    children: [
-      Text('${error ?? ''}'),
-      const SizedBox(height: 8),
-      OutlinedButton(onPressed: _reload, child: const Text('Retry')),
-    ],
-  );
+  Widget _error(Object? error) {
+    final message = error is AirmiusApiException
+        ? error.statusCode >= 500
+              ? _c(
+                  'Sport-Matching konnte gerade nicht geladen werden. Bitte versuche es erneut.',
+                  'Sport matching could not be loaded right now. Please try again.',
+                  'Le matching sportif ne peut pas être chargé actuellement. Réessayez.',
+                  'تعذر تحميل المطابقة الرياضية حاليًا. يرجى المحاولة مرة أخرى.',
+                )
+              : error.userMessage
+        : _c(
+            'Bitte prüfe deine Verbindung und versuche es erneut.',
+            'Check your connection and try again.',
+            'Vérifiez votre connexion puis réessayez.',
+            'تحقق من اتصالك ثم حاول مرة أخرى.',
+          );
+    return AirmiusPanel(
+      children: [
+        Icon(
+          Icons.cloud_off_outlined,
+          color: Theme.of(context).colorScheme.error,
+          size: 34,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w800, height: 1.35),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _reload,
+          icon: const Icon(Icons.refresh),
+          label: Text(
+            _c('Erneut versuchen', 'Try again', 'Réessayer', 'إعادة المحاولة'),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _apply(JsonMap matching, List<JsonMap> teams) async {
     int? teamId;
@@ -383,9 +415,17 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       if (mounted) _reload();
     } catch (error) {
       if (mounted) {
+        final message = error is AirmiusApiException
+            ? error.userMessage
+            : _c(
+                'Die Aktion konnte nicht abgeschlossen werden.',
+                'The action could not be completed.',
+                'L’action n’a pas pu être terminée.',
+                'تعذر إكمال الإجراء.',
+              );
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('$error')));
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -393,7 +433,26 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   }
 
   Future<void> _openCreate() async {
-    final response = await _future;
+    JsonMap? response;
+    try {
+      response = await _future;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _c(
+                'Sportarten und Teams konnten nicht geladen werden. Bitte versuche es erneut.',
+                'Sports and teams could not be loaded. Please try again.',
+                'Les sports et les équipes n’ont pas pu être chargés. Réessayez.',
+                'تعذر تحميل الرياضات والفرق. يرجى المحاولة مرة أخرى.',
+              ),
+            ),
+          ),
+        );
+      }
+      return;
+    }
     if (!mounted || response == null) return;
     final meta = response['meta'] is JsonMap
         ? response['meta'] as JsonMap

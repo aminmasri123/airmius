@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_preferences.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -9,11 +10,19 @@ import 'guardian_center_screen.dart';
 import 'sport_integrations_screen.dart';
 import 'legal_status_center_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'footer_navigation_settings_screen.dart';
 import 'privacy_consent_center_screen.dart';
 import 'support_helpdesk_screen.dart';
 
 class SettingsCenterScreen extends StatelessWidget {
-  const SettingsCenterScreen({super.key});
+  const SettingsCenterScreen({
+    super.key,
+    this.preferences,
+    this.onFooterNavigationChanged,
+  });
+
+  final AirmiusPreferences? preferences;
+  final VoidCallback? onFooterNavigationChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +98,15 @@ class SettingsCenterScreen extends StatelessWidget {
             const SizedBox(height: 14),
             const AirmiusThemeChooser(),
             const SizedBox(height: 14),
+            _SettingsAction(
+              icon: Icons.view_week_outlined,
+              title: t('footerNav.settingsTitle'),
+              body: t('footerNav.settingsBody'),
+              status: t('footerNav.itemRange'),
+              color: accent,
+              onTap: () => _openFooterNavigation(context),
+            ),
+            const SizedBox(height: 12),
             _SettingsAction(
               icon: Icons.notifications_active_outlined,
               title: t('settings.notifications'),
@@ -210,6 +228,16 @@ class SettingsCenterScreen extends StatelessWidget {
 
   void _open(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
+
+  Future<void> _openFooterNavigation(BuildContext context) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            FooterNavigationSettingsScreen(preferences: preferences),
+      ),
+    );
+    if (changed == true) onFooterNavigationChanged?.call();
   }
 }
 
