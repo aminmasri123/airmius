@@ -9,13 +9,14 @@ use App\Models\SportSkill;
 use App\Models\Story;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\AthleteDailyFlowService;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\PostService;
 use App\Support\ClubRoles;
-use App\Support\UploadStorage;
 use App\Support\Roles;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -141,6 +142,7 @@ class PostController extends Controller
             'posts' => $posts,
             'stories' => $stories,
             'feedFilter' => $activeFilter,
+            'dailyFlow' => app(AthleteDailyFlowService::class)->forUser($user),
             'clubs' => Club::query()
                 ->when(
                     $user->hasAnyRole(Roles::FULL_ACCESS),

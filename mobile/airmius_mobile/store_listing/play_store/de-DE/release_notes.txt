@@ -1,7 +1,8 @@
-Neu in 1.0.15:
+Neu in 1.0.28:
 
-- Hauptnavigation pragmatischer aufgebaut: Training, Teams, Feed, Ernährung und Profil.
-- Ernährung fragt beim Öffnen nach Ernährung oder Trinken.
-- Trinken unterstützt schnelle Einträge mit 150, 250, 500 und 750 ml.
-- Mahlzeiten können per Foto geschätzt werden, jetzt wahlweise mit Kameraaufnahme oder Galerie.
-- Verbesserte Bedienbarkeit und Stabilität im mobilen Alltag.
+- Personalisierte Startseiten und Navigation für Sportler, Trainer, Vereine und Sponsoren.
+- Neues Sponsor-Cockpit für Profile, Partnerschaften, Kampagnen und Reichweite.
+- Verbessertes Onboarding, Tagesablauf, Feed, Training und Leerzustände.
+- Wasser- und Mahlzeiteinträge ohne Neuladen, inklusive Rückgängig.
+- Besseres Sport-Matching, Chat-Autoscroll und Hintergrund-Badges.
+- Personalisierbarer Footer mit drei bis fünf Schnellzugriffen.

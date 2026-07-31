@@ -5,6 +5,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import 'clubs_screen.dart';
 import 'event_management_screen.dart';
 import 'training_plans_logs_screen.dart';
 
@@ -40,6 +41,19 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
     });
   }
 
+  void _openClubs() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ClubsScreen(
+          requestedClubIds: const {},
+          onRequestClub: (_) {},
+          onWithdrawClub: (_) {},
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -67,6 +81,7 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
             return _CoachFailure(error: snapshot.error, onRetry: _reload);
           }
           final data = snapshot.data ?? const <String, dynamic>{};
+          final hasTeams = _coachMaps(data['teams']).isNotEmpty;
           return PageFrame(
             title: t('coach.title'),
             subtitle: t('coach.subtitle'),
@@ -75,16 +90,29 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
               children: [
                 _hero(data),
                 const SizedBox(height: 12),
-                _tabs(),
-                const SizedBox(height: 18),
-                if (_tab == 'teams')
-                  _teams(data)
-                else if (_tab == 'feedback')
-                  _feedback(data)
-                else if (_tab == 'planning')
-                  _planning(data)
-                else
-                  _overview(data),
+                if (!hasTeams)
+                  _CoachEmpty(
+                    icon: Icons.groups_2_outlined,
+                    title: t('coach.noTeams'),
+                    body: t('coach.noTeamsBody'),
+                    action: AirmiusButton(
+                      label: t('coach.findTeam'),
+                      icon: Icons.search_outlined,
+                      onPressed: _openClubs,
+                    ),
+                  )
+                else ...[
+                  _tabs(),
+                  const SizedBox(height: 18),
+                  if (_tab == 'teams')
+                    _teams(data)
+                  else if (_tab == 'feedback')
+                    _feedback(data)
+                  else if (_tab == 'planning')
+                    _planning(data)
+                  else
+                    _overview(data),
+                ],
               ],
             ),
           );
@@ -398,6 +426,11 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
         icon: Icons.groups_2_outlined,
         title: t('coach.noTeams'),
         body: t('coach.noTeamsBody'),
+        action: AirmiusButton(
+          label: t('coach.findTeam'),
+          icon: Icons.search_outlined,
+          onPressed: _openClubs,
+        ),
       );
     }
     return Column(

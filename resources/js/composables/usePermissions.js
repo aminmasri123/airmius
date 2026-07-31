@@ -5,7 +5,8 @@ export const usePermissions = () => {
 
     const can = (permission) => Boolean(page.props.auth?.user?.can?.[permission])
     const hasRole = (role) => page.props.auth?.user?.roles?.includes(role) || false
+    const hasAnyRole = (roles) => roles.some((role) => hasRole(role))
     const hasAny = (permissions) => permissions.some((permission) => can(permission))
 
-    return { can, hasRole, hasAny }
+    return { can, hasRole, hasAnyRole, hasAny }
 }

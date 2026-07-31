@@ -24,6 +24,7 @@ class AuthFlowsScreen extends StatefulWidget {
 
 class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   String _flow = 'Registrieren';
+  String _accountType = 'athlete';
   bool _terms = false;
   String _gender = '';
   String? _registerError;
@@ -118,6 +119,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       locale: language,
       payload: {
         'first_name': _firstNameController.text.trim(),
+        'account_type': _accountType,
         'last_name': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'country': _countryController.text.trim().toUpperCase(),
@@ -290,6 +292,35 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         children: [
           Eyebrow(scope.t('authFlow.register')),
           const SizedBox(height: 12),
+          Text(
+            scope.t('accountType.question'),
+            style: TextStyle(color: text, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            scope.t('accountType.hint'),
+            style: TextStyle(color: muted, height: 1.35),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final type in const [
+                ('athlete', Icons.directions_run_outlined),
+                ('coach', Icons.sports_outlined),
+                ('club', Icons.apartment_outlined),
+                ('sponsor', Icons.handshake_outlined),
+              ])
+                ChoiceChip(
+                  selected: _accountType == type.$1,
+                  avatar: Icon(type.$2, size: 18),
+                  label: Text(scope.t('accountType.${type.$1}')),
+                  onSelected: (_) => setState(() => _accountType = type.$1),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
           AirmiusTextField(
             label: scope.t('application.firstName'),
             hint: 'Alex',

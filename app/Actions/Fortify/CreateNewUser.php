@@ -2,19 +2,19 @@
 
 namespace App\Actions\Fortify;
 
+use App\Http\Controllers\CommerceCheckoutController;
 use App\Models\User;
 use App\Notifications\AccountWelcomeNotification;
+use App\Support\AccountType;
 use App\Support\GuardianConsentNotifier;
 use App\Support\MinorSafety;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -28,6 +28,7 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         $input['gender'] = filled($input['gender'] ?? null) ? $input['gender'] : 'not_specified';
+        $input['account_type'] = AccountType::normalize($input['account_type'] ?? null);
 
         Validator::make($input, [
             'first_name' => ['required', 'string', 'max:120'],
@@ -41,6 +42,7 @@ class CreateNewUser implements CreatesNewUsers
             'state' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
+            'account_type' => ['required', Rule::in(AccountType::VALUES)],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
             'terms' => ['accepted', 'required'],
@@ -91,10 +93,10 @@ class CreateNewUser implements CreatesNewUsers
             'password' => Hash::make($input['password']),
         ]);
 
-        $user->assignRole($this->registrationRole($requiresGuardianConsent));
+        AccountType::assignInitialRole($user, $input['account_type'], $requiresGuardianConsent);
 
         try {
-            $user->notify(new AccountWelcomeNotification());
+            $user->notify(new AccountWelcomeNotification);
         } catch (\Throwable $exception) {
             Log::warning('Account welcome notification could not be sent.', [
                 'user_id' => $user->id,
@@ -108,7 +110,7 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         try {
-            app(\App\Http\Controllers\CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
+            app(CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
                 'registered_user_id' => $user->id,
                 'country' => $user->country,
             ]);
@@ -120,16 +122,5 @@ class CreateNewUser implements CreatesNewUsers
         }
 
         return $user;
-    }
-
-    private function registrationRole(bool $requiresGuardianConsent): Role
-    {
-        $roleName = $requiresGuardianConsent ? 'minor_pending_consent' : 'player';
-
-        $role = Role::findOrCreate($roleName, 'web');
-
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        return $role;
     }
 }

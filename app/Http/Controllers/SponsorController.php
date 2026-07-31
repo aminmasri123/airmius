@@ -16,7 +16,7 @@ class SponsorController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($request->user()->can('org.manage'), 403);
+        abort_unless($this->canManageGlobal($request), 403);
 
         $scope = (string) $request->input('scope', 'all');
         $scope = in_array($scope, ['all', 'platform', 'outfit_subscription', 'club'], true) ? $scope : 'all';
@@ -80,7 +80,6 @@ class SponsorController extends Controller
                 'scope' => $scope,
             ],
             'clubs' => Club::query()
-                ->visibleTo($request->user())
                 ->with('currentSubscription.plan')
                 ->select(['id', 'name'])
                 ->orderBy('name')
@@ -95,14 +94,14 @@ class SponsorController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($request->user()->can('org.manage'), 403);
+        abort_unless($this->canManageGlobal($request), 403);
 
         $data = $this->validated($request);
 
         $data = $this->normalizeScope($data);
 
         if (($data['scope'] ?? 'platform') === 'club') {
-            $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+            $club = Club::query()->findOrFail($data['club_id']);
             $this->planFeatures->ensureAllows($club, 'sponsors');
         }
 
@@ -115,14 +114,14 @@ class SponsorController extends Controller
 
     public function update(Request $request, Sponsor $sponsor)
     {
-        abort_unless($request->user()->can('org.manage'), 403);
+        abort_unless($this->canManageGlobal($request), 403);
 
         $data = $this->validated($request);
 
         $data = $this->normalizeScope($data);
 
         if (($data['scope'] ?? 'platform') === 'club') {
-            $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+            $club = Club::query()->findOrFail($data['club_id']);
             $this->planFeatures->ensureAllows($club, 'sponsors');
         }
 
@@ -135,7 +134,7 @@ class SponsorController extends Controller
 
     public function destroy(Request $request, Sponsor $sponsor)
     {
-        abort_unless($request->user()->can('org.manage'), 403);
+        abort_unless($this->canManageGlobal($request), 403);
 
         $sponsor->delete();
 
@@ -180,5 +179,11 @@ class SponsorController extends Controller
         $data['logo_dark'] = $data['logo_dark'] ?: $data['logo_light'];
 
         return $data;
+    }
+
+    private function canManageGlobal(Request $request): bool
+    {
+        return $request->user()->can('system.manage')
+            || $request->user()->hasAnyRole(['super_admin', 'admin', 'sponsor_manager']);
     }
 }

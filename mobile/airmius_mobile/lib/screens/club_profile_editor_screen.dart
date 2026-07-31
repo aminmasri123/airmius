@@ -456,4 +456,18 @@ class _SwitchLine extends StatelessWidget {
   );
 }
 
-const _countryOptions = ['DE', 'AT', 'CH', 'FR', 'NL', 'BE', 'TR', 'US'];
+const _countryOptions = [
+  'DE',
+  'AT',
+  'CH',
+  'FR',
+  'NL',
+  'BE',
+  'MA',
+  'ES',
+  'PT',
+  'IT',
+  'GB',
+  'TR',
+  'US',
+];

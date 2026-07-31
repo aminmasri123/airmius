@@ -19,6 +19,7 @@ const props = defineProps({
     visibilities: { type: Array, default: () => ['team', 'organization', 'public'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
+    dailyFlow: { type: Object, default: () => ({}) },
 })
 
 const { can } = usePermissions()
@@ -59,6 +60,7 @@ const feedTabs = [
     { key: 'training', label: 'Training', icon: 'las la-dumbbell' },
 ]
 const activeFeedFilterLabel = computed(() => feedTabs.find((tab) => tab.key === activeFeedFilter.value)?.label || 'Alle')
+const dailySteps = computed(() => (props.dailyFlow?.steps || []).slice(0, 3))
 const reportReasons = [
     { value: 'insult', label: 'Beleidigung' },
     { value: 'bullying', label: 'Mobbing' },
@@ -251,6 +253,41 @@ const visitPage = (url) => url && router.visit(url, {
           <div class="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-4 overflow-hidden px-3 pb-24 sm:px-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
 
         <section class="min-w-0 space-y-4">
+
+            <section class="surface-card overflow-hidden">
+                <div class="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-4 border-buttonPrimary/35 bg-buttonPrimary/10 text-lg font-black text-buttonPrimary">
+                            {{ Number(dailyFlow.score || 0) }}%
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold uppercase tracking-wide text-buttonPrimary">{{ tx('Heute für dich') }}</p>
+                            <h1 class="mt-1 text-lg font-bold text-primary">{{ tx('Dein Tagesflow') }}</h1>
+                            <p class="mt-1 line-clamp-2 text-sm text-secondary">{{ dailyFlow.summary || tx('Training, Ernährung und Termine kompakt im Blick.') }}</p>
+                        </div>
+                    </div>
+                    <Link :href="route('auth.dashboard')" class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-bold text-primary hover:border-borderHover">
+                        {{ tx('Tagesübersicht') }}
+                        <i class="las la-arrow-right"></i>
+                    </Link>
+                </div>
+
+                <div v-if="dailySteps.length" class="custom-scrollbar flex gap-2 overflow-x-auto border-t border-border p-3">
+                    <Link
+                        v-for="step in dailySteps"
+                        :key="step.key"
+                        :href="step.href"
+                        class="flex min-w-[190px] flex-1 items-center gap-3 rounded-lg bg-inputBg px-3 py-3 transition hover:bg-muted"
+                    >
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-buttonPrimary"><i :class="step.icon"></i></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-bold text-primary">{{ step.title }}</span>
+                            <span class="block truncate text-xs text-secondary">{{ step.meta }}</span>
+                        </span>
+                        <span class="text-xs font-black text-buttonPrimary">{{ Number(step.progress || 0) }}%</span>
+                    </Link>
+                </div>
+            </section>
 
             <FeedStories
                 :can-create="canCreatePost"

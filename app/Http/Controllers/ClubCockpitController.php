@@ -28,7 +28,12 @@ class ClubCockpitController extends Controller
                 $this->scopeManageableClubs($query, $user);
             })->exists();
 
-        abort_unless($hasManageableClubs, 403);
+        abort_unless(
+            $hasManageableClubs
+                || $user->hasAnyRole(Roles::CLUB_ADMIN)
+                || $user->can('org.manage'),
+            403,
+        );
 
         $clubs = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
@@ -242,6 +247,7 @@ class ClubCockpitController extends Controller
 
         return is_array($decoded) ? $decoded : [];
     }
+
     private function actions(Club $club, int $membershipRequests, int $teamRequests, int $openInvoices, int $sepaMissing, int $upcomingEvents): array
     {
         return [

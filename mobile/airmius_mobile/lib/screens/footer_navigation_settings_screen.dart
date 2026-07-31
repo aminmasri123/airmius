@@ -47,7 +47,7 @@ class _FooterNavigationSettingsScreenState
     setState(() {
       _available = available;
       _selected = sanitizeFooterNavigation(
-        destinations: stored ?? FooterNavigationDestination.defaultDestinations,
+        destinations: stored ?? FooterNavigationDestination.defaultsFor(user),
         user: user,
       );
       _loading = false;
@@ -81,7 +81,7 @@ class _FooterNavigationSettingsScreenState
     final user = AirmiusServicesScope.of(context).authState.user;
     setState(
       () => _selected = sanitizeFooterNavigation(
-        destinations: FooterNavigationDestination.defaultDestinations,
+        destinations: FooterNavigationDestination.defaultsFor(user),
         user: user,
       ),
     );

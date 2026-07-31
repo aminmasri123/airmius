@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AdminCommerceController;
-use App\Http\Controllers\LearningStudioController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BlogCategoryController;
@@ -9,6 +8,7 @@ use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\ClubVerificationController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LearningStudioController;
 use App\Http\Controllers\MailCenterController;
 use App\Http\Controllers\MediaGuidelineController;
 use App\Http\Controllers\MemberController;
@@ -18,14 +18,12 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProviderCostController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SettingController;
-use App\Http\Controllers\SportAdminController;
 use App\Http\Controllers\SponsorController;
+use App\Http\Controllers\SportAdminController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
-
-
 
 Route::middleware([
     'auth:sanctum',
@@ -35,7 +33,6 @@ Route::middleware([
     'throttle:admin-area',
 ])->group(function () {
 
-    
     // Users
     Route::get('/admin/users', [MemberController::class, 'index'])->middleware('can:users.view')->name('users.index');
     Route::get('/admin/users/create', [MemberController::class, 'create'])->middleware('can:users.create')->name('users.create');
@@ -45,7 +42,7 @@ Route::middleware([
     Route::delete('/admin/users/{user}', [MemberController::class, 'destroy'])->middleware('can:users.delete')->name('users.destroy');
     Route::post('/admin/members/{user}/inactivity-notice', [MemberController::class, 'sendInactivityNotice'])->middleware('can:system.manage')->name('admin.members.inactivity-notice');
     Route::redirect('/admin/inactive-users', '/admin/members?tab=inactivity')->middleware('can:system.manage')->name('admin.inactive-users.index');
-   
+
     // MEMBERS
     Route::get('/admin/members', [MemberController::class, 'index'])->middleware('can:users.view')->name('members.index');
     Route::get('/admin/members/create', [MemberController::class, 'create'])->middleware('can:users.create')->name('members.create');
@@ -178,10 +175,10 @@ Route::middleware([
     Route::delete('/admin/invoices/{invoice}', [InvoiceController::class, 'destroy'])->middleware('can:billing.manage')->name('invoices.destroy');
 
     // SPONSORS
-    Route::get('/admin/sponsors', [SponsorController::class, 'index'])->middleware('can:finance.view')->name('sponsors.index');
-    Route::post('/admin/sponsors', [SponsorController::class, 'store'])->middleware('can:finance.edit')->name('sponsors.store');
-    Route::put('/admin/sponsors/{sponsor}', [SponsorController::class, 'update'])->middleware('can:finance.edit')->name('sponsors.update');
-    Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->middleware('can:finance.edit')->name('sponsors.destroy');
+    Route::get('/admin/sponsors', [SponsorController::class, 'index'])->name('sponsors.index');
+    Route::post('/admin/sponsors', [SponsorController::class, 'store'])->name('sponsors.store');
+    Route::put('/admin/sponsors/{sponsor}', [SponsorController::class, 'update'])->name('sponsors.update');
+    Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->name('sponsors.destroy');
 
     // OPERATING CONTRACTS
     Route::get('/admin/operating-contracts', [OperatingContractController::class, 'index'])->name('admin.operating-contracts.index');

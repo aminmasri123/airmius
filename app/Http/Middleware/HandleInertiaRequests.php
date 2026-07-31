@@ -2,11 +2,24 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\TrainerCockpitController;
+use App\Models\Club;
+use App\Models\CommerceCart;
+use App\Models\Event;
+use App\Models\File;
+use App\Models\MessageReceipt;
+use App\Models\Post;
+use App\Models\Ride;
+use App\Models\Setting;
+use App\Models\Team;
+use App\Services\PlanFeatureService;
+use App\Support\ClubRoles;
+use App\Support\Roles;
+use App\Support\UploadStorage;
 use Closure;
 use Illuminate\Http\Request;
-use Inertia\Middleware;
-use App\Support\ClubRoles;
 use Illuminate\Support\Str;
+use Inertia\Middleware;
 use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
@@ -54,7 +67,7 @@ class HandleInertiaRequests extends Middleware
             ? $user->appNotifications()->where('read', false)->where('type', '!=', 'chat.message')->count()
             : 0;
         $unreadChatsCount = $user
-            ? \App\Models\MessageReceipt::where('user_id', $user->id)
+            ? MessageReceipt::where('user_id', $user->id)
                 ->whereNull('read_at')
                 ->count()
             : 0;
@@ -64,7 +77,7 @@ class HandleInertiaRequests extends Middleware
                 ->count()
             : 0;
         $commerceCartCount = $user
-            ? (int) \App\Models\CommerceCart::query()
+            ? (int) CommerceCart::query()
                 ->where('user_id', $user->id)
                 ->withSum('items as items_quantity_sum', 'quantity')
                 ->first()?->items_quantity_sum
@@ -97,7 +110,7 @@ class HandleInertiaRequests extends Middleware
             ->sortByDesc(fn ($subscription) => $subscription->current_period_ends_at?->timestamp ?? 0)
             ->first();
         $storageUsage = $user
-            ? app(\App\Services\PlanFeatureService::class)->userStorageSummary($user)
+            ? app(PlanFeatureService::class)->userStorageSummary($user)
             : null;
         $flash = [
             'success' => $request->session()->get('success'),
@@ -132,7 +145,6 @@ class HandleInertiaRequests extends Middleware
                     'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
                     'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
                     'has_social_login' => $user->socialAccounts()->exists(),
-
 
                     // 🔥 HIER IST DER FIX
                     'roles' => $user->getRoleNames()->values()->all(),
@@ -223,7 +235,7 @@ class HandleInertiaRequests extends Middleware
 
     private function permissionsFor($user): array
     {
-        $hasFullAccess = $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS);
+        $hasFullAccess = $user->hasAnyRole(Roles::FULL_ACCESS);
 
         return [
             'dashboard.view' => true,
@@ -234,52 +246,61 @@ class HandleInertiaRequests extends Middleware
             'profile.view' => true,
             'guardians.children.view' => $user->can('guardians.children.view'),
             'guardians.children.manage' => $user->can('guardians.children.manage'),
+            'sponsor.workspace.view' => $user->hasAnyRole(['sponsor', 'sponsor_manager'])
+                || $user->can('sponsor.workspace.view')
+                || $hasFullAccess
+                || $user->can('system.manage'),
+            'sponsor.profile.edit' => $user->can('sponsor.profile.edit')
+                || $user->hasRole('sponsor'),
+            'trainer-cockpit.view' => TrainerCockpitController::userCanView($user),
 
-            'feed.view' => $user->can('viewAny', \App\Models\Post::class),
-            'post.create' => $user->can('create', \App\Models\Post::class),
-            'post.store' => $user->can('create', \App\Models\Post::class),
+            'feed.view' => $user->can('viewAny', Post::class),
+            'post.create' => $user->can('create', Post::class),
+            'post.store' => $user->can('create', Post::class),
             'post.update' => $user->can('post.update'),
             'post.delete' => $user->can('post.delete'),
 
-            'clubs.view' => $user->can('viewAny', \App\Models\Club::class),
-            'clubs.create' => $user->can('create', \App\Models\Club::class),
-            'club.index' => $user->can('viewAny', \App\Models\Club::class),
-            'club.create' => $user->can('create', \App\Models\Club::class),
-            'club.store' => $user->can('create', \App\Models\Club::class),
+            'clubs.view' => $user->can('viewAny', Club::class),
+            'clubs.create' => $user->can('create', Club::class),
+            'club.index' => $user->can('viewAny', Club::class),
+            'club.create' => $user->can('create', Club::class),
+            'club.store' => $user->can('create', Club::class),
             'club.update' => $user->can('clubs.edit') || $user->can('org.manage'),
             'club.delete' => $user->can('clubs.delete'),
             'club.jobs.manage' => $user->can('club.jobs.manage'),
-            'club-memberships.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
+            'club-memberships.view' => $user->hasAnyRole(Roles::FULL_ACCESS)
                 || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
-            'club-cockpit.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
+            'club-cockpit.view' => $user->hasAnyRole(Roles::FULL_ACCESS)
+                || $user->hasAnyRole(Roles::CLUB_ADMIN)
+                || $user->can('org.manage')
                 || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
 
-            'teams.view' => $user->can('viewAny', \App\Models\Team::class),
-            'teams.create' => $user->can('create', \App\Models\Team::class),
-            'team.index' => $user->can('viewAny', \App\Models\Team::class),
-            'team.create' => $user->can('create', \App\Models\Team::class),
-            'team.store' => $user->can('create', \App\Models\Team::class),
+            'teams.view' => $user->can('viewAny', Team::class),
+            'teams.create' => $user->can('create', Team::class),
+            'team.index' => $user->can('viewAny', Team::class),
+            'team.create' => $user->can('create', Team::class),
+            'team.store' => $user->can('create', Team::class),
             'team.update' => $user->can('team.update') || $user->can('teams.edit'),
             'team.delete' => $user->can('team.delete') || $user->can('teams.delete'),
             'team.invite' => $user->can('team.invite') || $user->can('teams.manage_players'),
             'team.kick' => $user->can('team.kick'),
 
-            'events.view' => $user->can('viewAny', \App\Models\Event::class),
-            'event.index' => $user->can('viewAny', \App\Models\Event::class),
-            'event.create' => $user->can('create', \App\Models\Event::class),
-            'event.store' => $user->can('create', \App\Models\Event::class),
+            'events.view' => $user->can('viewAny', Event::class),
+            'event.index' => $user->can('viewAny', Event::class),
+            'event.create' => $user->can('create', Event::class),
+            'event.store' => $user->can('create', Event::class),
             'event.update' => $user->can('event.update'),
             'event.delete' => $user->can('event.delete'),
             'event.join' => $user->can('event.join'),
 
-            'files.view' => $user->can('viewAny', \App\Models\File::class),
-            'file.index' => $user->can('viewAny', \App\Models\File::class),
+            'files.view' => $user->can('viewAny', File::class),
+            'file.index' => $user->can('viewAny', File::class),
             'file.upload' => $user->can('file.upload'),
             'file.store' => $user->can('file.upload'),
             'file.delete' => $user->can('file.delete'),
 
             'chat.view' => $user->teams()->exists() || $user->clubs()->exists(),
-            'rides.view' => $user->can('viewAny', \App\Models\Ride::class),
+            'rides.view' => $user->can('viewAny', Ride::class),
 
             'users.view' => $user->can('users.view'),
             'users.create' => $user->can('users.create'),
@@ -300,7 +321,9 @@ class HandleInertiaRequests extends Middleware
             'subscriptions.view' => $user->can('subscriptions.manage') || $user->can('system.manage'),
             'outfit-subscriptions.view' => true,
             'outfit-subscriptions.manage' => $hasFullAccess || $user->can('outfit-subscriptions.manage'),
-            'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
+            'sponsors.view' => $hasFullAccess
+                || $user->hasRole('sponsor_manager')
+                || $user->can('system.manage'),
             'system.manage' => $user->can('system.manage'),
             'admin.moderation.view' => $user->can('system.manage'),
             'admin.mail-center.view' => $user->can('system.manage'),
@@ -313,12 +336,12 @@ class HandleInertiaRequests extends Middleware
         $fallback = $this->defaultLoginSliderSources();
         $legacySourceMap = $this->legacyLoginSliderSourceMap();
 
-        $stored = \App\Models\Setting::valueFor('login_visual_slider');
+        $stored = Setting::valueFor('login_visual_slider');
         $decoded = is_string($stored) ? json_decode($stored, true) : null;
         $sources = is_array($decoded) && count(array_filter($decoded))
             ? $decoded
             : collect($fallback)
-                ->map(fn (string $source, int $index) => \App\Models\Setting::valueFor('login_visual_slide_'.($index + 1), $source))
+                ->map(fn (string $source, int $index) => Setting::valueFor('login_visual_slide_'.($index + 1), $source))
                 ->all();
 
         return collect($sources)
@@ -327,7 +350,7 @@ class HandleInertiaRequests extends Middleware
             ->map(fn (string $source) => $legacySourceMap[$source] ?? $source)
             ->values()
             ->map(fn (string $source, int $index) => [
-                'src' => \App\Support\UploadStorage::url($source),
+                'src' => UploadStorage::url($source),
                 'alt' => 'Airmius Login-Slider Bild '.($index + 1),
             ])
             ->all();

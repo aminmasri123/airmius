@@ -10,9 +10,18 @@ import TextInput from '@/Components/TextInput.vue'
 
 const props = defineProps({
     user: { type: Object, default: () => ({}) },
+    accountType: { type: String, default: 'athlete' },
 })
 
+const accountTypes = [
+    { value: 'athlete', label: 'Sportler', icon: 'las la-running' },
+    { value: 'coach', label: 'Trainer / Coach', icon: 'las la-chalkboard-teacher' },
+    { value: 'club', label: 'Verein', icon: 'las la-building' },
+    { value: 'sponsor', label: 'Sponsor', icon: 'las la-handshake' },
+]
+
 const form = useForm({
+    account_type: props.accountType,
     first_name: props.user.first_name || '',
     last_name: props.user.last_name || '',
     country: props.user.country || 'DE',
@@ -56,6 +65,17 @@ const submit = () => {
         </div>
 
         <form @submit.prevent="submit">
+            <fieldset class="mb-5">
+                <legend class="text-sm font-bold text-primary">{{ $t('Wie möchtest du Airmius nutzen?') }}</legend>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <label v-for="type in accountTypes" :key="type.value" class="cursor-pointer rounded-lg border p-3" :class="form.account_type === type.value ? 'border-buttonPrimary bg-buttonPrimary/10' : 'border-border bg-inputBg'">
+                        <input v-model="form.account_type" type="radio" :value="type.value" class="sr-only" />
+                        <span class="flex items-center gap-2 text-sm font-bold text-primary"><i :class="[type.icon, 'text-buttonPrimary']"></i>{{ $t(type.label) }}</span>
+                    </label>
+                </div>
+                <InputError class="mt-2" :message="form.errors.account_type" />
+            </fieldset>
+
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel for="first_name" :value="$t('Vorname')" />
@@ -100,6 +120,11 @@ const submit = () => {
                         <option value="FR">{{ $t('Frankreich') }}</option>
                         <option value="NL">{{ $t('Niederlande') }}</option>
                         <option value="BE">{{ $t('Belgien') }}</option>
+                        <option value="MA">{{ $t('Marokko') }}</option>
+                        <option value="ES">{{ $t('Spanien') }}</option>
+                        <option value="PT">{{ $t('Portugal') }}</option>
+                        <option value="IT">{{ $t('Italien') }}</option>
+                        <option value="GB">{{ $t('Großbritannien') }}</option>
                         <option value="TR">{{ $t('Türkei') }}</option>
                         <option value="US">{{ $t('USA') }}</option>
                     </select>
@@ -124,4 +149,3 @@ const submit = () => {
         </form>
     </AuthenticationCard>
 </template>
-

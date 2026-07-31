@@ -8,6 +8,7 @@ import { useTeamsWorkspace } from "@/composables/useTeamsWorkspace"
 import { usePermissions } from "@/composables/usePermissions"
 import { Head, Link } from "@inertiajs/vue3"
 import { useI18n } from "vue-i18n"
+import { onMounted } from "vue"
 
 defineOptions({ layout: AppLayout })
 
@@ -18,6 +19,7 @@ const props = defineProps({
     teamRoles: { type: Array, default: () => ["Coach", "Captain", "Player"] },
     filters: { type: Object, default: () => ({}) },
     receivedInvitations: { type: Array, default: () => [] },
+    startClubOnboarding: { type: Boolean, default: false },
 })
 
 const { can } = usePermissions()
@@ -136,6 +138,12 @@ const {
     deleteClub,
     deleteTeam,
 } = useTeamsWorkspace({ props, t, te })
+
+onMounted(() => {
+    if (props.startClubOnboarding && can('club.create')) {
+        openClubModal()
+    }
+})
 </script>
 
 <template>
@@ -1588,6 +1596,11 @@ const {
                                 <option value="FR">{{ tAuto('Frankreich') }}</option>
                                 <option value="NL">{{ tAuto('Niederlande') }}</option>
                                 <option value="BE">{{ tAuto('Belgien') }}</option>
+                                <option value="MA">{{ tAuto('Marokko') }}</option>
+                                <option value="ES">{{ tAuto('Spanien') }}</option>
+                                <option value="PT">{{ tAuto('Portugal') }}</option>
+                                <option value="IT">{{ tAuto('Italien') }}</option>
+                                <option value="GB">{{ tAuto('Großbritannien') }}</option>
                                 <option value="TR">{{ tAuto('Türkei') }}</option>
                                 <option value="US">USA</option>
                             </select>

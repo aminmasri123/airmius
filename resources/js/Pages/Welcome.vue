@@ -113,6 +113,7 @@ const tabs = [
     { key: 'sportler', labelKey: 'guest.welcome.audiences.athletes' },
     { key: 'trainer', labelKey: 'guest.welcome.audiences.coaches' },
     { key: 'vereine', labelKey: 'guest.welcome.audiences.clubs' },
+    { key: 'sponsoren', labelKey: 'guest.welcome.audiences.sponsors' },
 ]
 
 const heroTrustItems = [
@@ -249,6 +250,14 @@ const benefitCards = {
         ['las la-handshake', 'guest.welcome.benefits.cards.clubs.sponsors.title', 'guest.welcome.benefits.cards.clubs.sponsors.text'],
         ['las la-file-invoice', 'guest.welcome.benefits.cards.clubs.accounting.title', 'guest.welcome.benefits.cards.clubs.accounting.text'],
         ['las la-calendar-plus', 'guest.welcome.benefits.cards.clubs.events.title', 'guest.welcome.benefits.cards.clubs.events.text'],
+    ],
+    sponsoren: [
+        ['las la-search-location', 'guest.welcome.benefits.cards.sponsors.discovery.title', 'guest.welcome.benefits.cards.sponsors.discovery.text'],
+        ['las la-bullseye', 'guest.welcome.benefits.cards.sponsors.audience.title', 'guest.welcome.benefits.cards.sponsors.audience.text'],
+        ['las la-handshake', 'guest.welcome.benefits.cards.sponsors.partnerships.title', 'guest.welcome.benefits.cards.sponsors.partnerships.text'],
+        ['las la-photo-video', 'guest.welcome.benefits.cards.sponsors.assets.title', 'guest.welcome.benefits.cards.sponsors.assets.text'],
+        ['las la-chart-line', 'guest.welcome.benefits.cards.sponsors.impact.title', 'guest.welcome.benefits.cards.sponsors.impact.text'],
+        ['las la-file-contract', 'guest.welcome.benefits.cards.sponsors.documents.title', 'guest.welcome.benefits.cards.sponsors.documents.text'],
     ],
 }
 
@@ -715,6 +724,9 @@ const onBannerSecondaryCtaClick = () => {
                         <h4 class="font-heading font-600 text-sm mb-1">{{ t(card[1]) }}</h4>
                         <p class="text-xs text-gray-400">{{ t(card[2]) }}</p>
                     </div>
+                    <Link :href="route('register', { account: 'coach' })" class="col-span-full mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-air-green px-6 py-3 text-sm font-bold text-slate-950">
+                        <i class="las la-arrow-right"></i>{{ t('Als Trainer starten') }}
+                    </Link>
                 </div>
 
                 <div v-if="activeTab === 'vereine'" id="tabpanel-vereine" role="tabpanel" aria-labelledby="tab-vereine"
@@ -730,6 +742,27 @@ const onBannerSecondaryCtaClick = () => {
                         <h4 class="font-heading font-600 text-sm mb-1">{{ t(card[1]) }}</h4>
                         <p class="text-xs text-gray-400">{{ t(card[2]) }}</p>
                     </div>
+                    <Link :href="route('register', { account: 'club' })" class="col-span-full mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-air-orange px-6 py-3 text-sm font-bold text-slate-950">
+                        <i class="las la-arrow-right"></i>{{ t('Verein registrieren') }}
+                    </Link>
+                </div>
+
+                <div v-if="activeTab === 'sponsoren'" id="tabpanel-sponsoren" role="tabpanel" aria-labelledby="tab-sponsoren"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div
+                        v-for="card in benefitCards.sponsoren"
+                        :key="card[1]"
+                        class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5"
+                    >
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-violet-500/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i :class="[card[0], 'text-violet-300 text-lg sm:text-xl']"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">{{ t(card[1]) }}</h4>
+                        <p class="text-xs text-gray-400">{{ t(card[2]) }}</p>
+                    </div>
+                    <Link :href="route('register', { account: 'sponsor' })" class="col-span-full mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-violet-500 px-6 py-3 text-sm font-bold text-white">
+                        <i class="las la-arrow-right"></i>{{ t('Als Sponsor starten') }}
+                    </Link>
                 </div>
             </div>
         </section>
@@ -1083,9 +1116,6 @@ details summary {
     }
 }
 </style>
-
-
-
 
 
 

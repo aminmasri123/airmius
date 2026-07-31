@@ -12,6 +12,7 @@ import 'package:airmius/core/airmius_module_access.dart';
 import 'package:airmius/core/airmius_mvp_surface.dart';
 import 'package:airmius/core/airmius_preferences.dart';
 import 'package:airmius/core/airmius_preferences_store_base.dart';
+import 'package:airmius/core/airmius_persona.dart';
 import 'package:airmius/core/airmius_push_device_registry.dart';
 import 'package:airmius/core/airmius_secure_token_store.dart';
 import 'package:airmius/core/airmius_service_container.dart';
@@ -1877,6 +1878,27 @@ void main() {
     expect(find.text('Teamgegner'), findsOneWidget);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);
+
+    final sportSearch = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField &&
+          widget.decoration?.labelText?.startsWith('Wunschsport suchen') ==
+              true,
+    );
+    expect(sportSearch, findsOneWidget);
+    await tester.enterText(sportSearch, 'Lauf');
+    await tester.pump();
+    expect(find.text('Laufen'), findsWidgets);
+    await tester.tap(find.widgetWithText(ListTile, 'Laufen'));
+    await tester.pump();
+
+    await tester.tap(find.text('Suche erstellen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ort oder Adresse'), findsOneWidget);
+    expect(find.text('Land'), findsOneWidget);
+    expect(find.text('Land (ISO)'), findsNothing);
+    expect(find.text('Deutschland'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -3064,6 +3086,16 @@ void main() {
       find.text('Für diesen Tag gibt es noch keine Mahlzeiten oder Getränke.'),
       findsOneWidget,
     );
+    expect(find.byTooltip('Eintrag hinzufügen'), findsOneWidget);
+    expect(find.text('Lebensmittel suchen'), findsNothing);
+    expect(find.text('Barcode nachschlagen'), findsNothing);
+    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Was möchtest du erfassen?'), findsOneWidget);
+    expect(find.text('Mahlzeit erfassen'), findsOneWidget);
+    expect(find.text('Lebensmittel suchen'), findsOneWidget);
+    expect(find.text('Barcode nachschlagen'), findsOneWidget);
     expect(find.text('Mahlzeit per Foto schätzen'), findsOneWidget);
     expect(find.text('1840'), findsNothing);
     expect(transport.paths, contains('/api/v1/nutrition'));
@@ -5287,6 +5319,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('club finance permission does not turn a user into a sponsor', () {
+    const user = AirmiusUser(
+      id: 32,
+      name: 'Club Finance',
+      email: 'finance@example.test',
+      role: 'financial_controller',
+      roles: ['financial_controller'],
+      permissions: ['finance.edit', 'sponsors.view'],
+    );
+
+    expect(AirmiusPersonaResolver.primary(user), AirmiusPersona.club);
+    expect(
+      FooterNavigationDestination.defaultsFor(user),
+      isNot(contains(FooterNavigationDestination.sponsors)),
+    );
+  });
+
   testWidgets('sport integrations open directly from the module drawer', (
     WidgetTester tester,
   ) async {
@@ -5351,9 +5400,9 @@ void main() {
     await tester.tap(find.byTooltip('Menü'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Events & Training'), findsOneWidget);
-    expect(find.text('Sport-Matching'), findsOneWidget);
-    expect(find.text('Dateien'), findsOneWidget);
+    expect(find.text('Events & Training'), findsWidgets);
+    expect(find.text('Sport-Matching'), findsWidgets);
+    expect(find.text('Dateien'), findsWidgets);
     expect(find.text('Trainer-Cockpit'), findsNothing);
     expect(find.text('Vereins-Cockpit'), findsNothing);
     expect(find.text('Commerce'), findsNothing);
@@ -5400,8 +5449,8 @@ void main() {
       await tester.tap(find.byTooltip('Menü'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Arbeitsbereiche'), findsOneWidget);
-      expect(find.text('Vereins-Cockpit'), findsOneWidget);
+      expect(find.text('Arbeitsbereiche'), findsWidgets);
+      expect(find.text('Vereins-Cockpit'), findsWidgets);
       expect(find.text('Trainer-Cockpit'), findsNothing);
       expect(find.text('Sponsoren'), findsNothing);
       expect(find.text('Commerce'), findsNothing);

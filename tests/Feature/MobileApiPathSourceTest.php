@@ -20,7 +20,7 @@ class MobileApiPathSourceTest extends TestCase
         $app = file_get_contents(base_path('mobile/airmius_mobile/lib/airmius_app.dart'));
         $client = file_get_contents(base_path('mobile/airmius_mobile/lib/core/airmius_api_client.dart'));
 
-        $this->assertStringContainsString("return kReleaseMode ? 'https://app.airmius.com' : 'http://localhost'", $app);
+        $this->assertStringContainsString("return 'https://airmius.com'", $app);
         $this->assertStringContainsString("'/api/v1/auth/login'", $client);
         $this->assertStringContainsString("'/api/v1/mobile/push-devices'", $client);
     }
@@ -31,9 +31,11 @@ class MobileApiPathSourceTest extends TestCase
         preg_match_all('/[\'\"](\/api\/v1(?:\/[^\'\"]*)?)[\'\"]/', $client, $matches);
 
         $normalize = static function (string $path): string {
+            $path = str_replace('{slash}', '', $path);
             $path = preg_replace('/\$\{[^}]+\}/', '{}', $path);
             $path = preg_replace('/\$[A-Za-z_][A-Za-z0-9_]*/', '{}', (string) $path);
             $path = preg_replace('/\{[^}]+\}/', '{}', (string) $path);
+
             return preg_replace('#/+#', '/', (string) $path);
         };
 

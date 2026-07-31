@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Support\AccountType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,11 +14,15 @@ use Laravel\Socialite\Facades\Socialite;
 class SocialAuthController extends Controller
 {
     private const PROVIDERS = ['google', 'microsoft'];
+
     private const MOBILE_STATE_PREFIX = 'airmius-mobile:';
 
     public function redirect(Request $request, string $provider)
     {
         abort_unless(in_array($provider, self::PROVIDERS, true), 404);
+
+        $accountType = AccountType::normalize($request->input('account_type'));
+        $request->session()->put('social_auth.account_type', $accountType);
 
         if ($request->boolean('mobile')) {
             $request->session()->put('social_auth.mobile', true);
@@ -77,7 +82,7 @@ class SocialAuthController extends Controller
                 return $this->mobileCallbackRedirect($account->user, $provider, $mobileLocale, $mobileReturnUrl);
             }
 
-            return redirect()->intended(route('auth.dashboard'));
+            return redirect()->intended(route('auth.home'));
         }
 
         $created = false;
@@ -104,7 +109,7 @@ class SocialAuthController extends Controller
             return $this->mobileCallbackRedirect($user, $provider, $mobileLocale, $mobileReturnUrl);
         }
 
-        return redirect()->intended(route('auth.dashboard'));
+        return redirect()->intended(route('auth.home'));
     }
 
     private function userForSocialAccount($socialUser, bool &$created = false): User

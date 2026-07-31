@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Support;
 
 class Roles
@@ -46,6 +47,10 @@ class Roles
         'captain',          // Team Kapitän
     ];
 
+    public const SPONSOR = [
+        'sponsor',
+    ];
+
     // 👤 PLAYER
     public const PLAYER = [
         'player',           // Spieler
@@ -77,6 +82,7 @@ class Roles
             self::MARKETPLACE_OPERATIONS,
             self::CLUB_ADMIN,
             self::COACH,
+            self::SPONSOR,
             self::PLAYER,
             self::PARENT,
             self::PASSIVE
@@ -112,6 +118,9 @@ class Roles
             ['name' => 'fitness_coach', 'description' => 'Fitness Trainer'],
             ['name' => 'team_manager', 'description' => 'Team Organisation'],
             ['name' => 'captain', 'description' => 'Team Kapitän'],
+
+            // 🤝 SPONSOR
+            ['name' => 'sponsor', 'description' => 'Eigene Sponsorprofile, Partnerschaften und Kampagnen verwalten'],
 
             // 👤 PLAYER
             ['name' => 'player', 'description' => 'Spieler'],

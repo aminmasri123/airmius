@@ -181,13 +181,53 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     const _ClubWorkspaceNav(canManageClubs: false),
                     const SizedBox(height: 24),
                     AirmiusPanel(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Text(
-                            t('clubs.empty'),
-                            style: TextStyle(color: airmiusMutedColor(context)),
-                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.groups_2_outlined,
+                              size: 46,
+                              color: airmiusAccentColor(context),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              t('clubs.empty'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              t('clubs.emptyBody'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            AirmiusButton(
+                              label: t('clubs.find'),
+                              icon: Icons.search_outlined,
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => GlobalSearchScreen(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            AirmiusButton(
+                              label: t('clubs.register'),
+                              icon: Icons.add_business_outlined,
+                              secondary: true,
+                              onPressed: _openCreateClub,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -280,6 +320,11 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
     ('FR', 'Frankreich'),
     ('NL', 'Niederlande'),
     ('BE', 'Belgien'),
+    ('MA', 'Marokko'),
+    ('ES', 'Spanien'),
+    ('PT', 'Portugal'),
+    ('IT', 'Italien'),
+    ('GB', 'Grossbritannien'),
     ('TR', 'Tuerkei'),
     ('US', 'USA'),
   ];

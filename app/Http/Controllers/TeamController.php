@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
 use App\Models\Conversation;
 use App\Models\Event;
@@ -13,16 +14,15 @@ use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Models\UserBadge;
-use App\Http\Resources\Api\V1\TeamResource;
 use App\Notifications\ExternalTeamInvitation;
-use App\Services\MediaOptimizer;
 use App\Services\GamificationService;
+use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
-use App\Support\UploadStorage;
+use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
-use App\Support\AppNotification;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -160,6 +160,7 @@ class TeamController extends Controller
             'teamRoles' => Team::ROLES,
             'clubRoles' => self::CLUB_MEMBER_ROLES,
             'filters' => $filters,
+            'startClubOnboarding' => request()->boolean('create_club'),
             'sports' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')

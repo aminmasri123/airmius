@@ -28,6 +28,7 @@ class _ProfileCompletionGateScreenState
   late final TextEditingController _countryController;
   late final TextEditingController _guardianEmailController;
   String _gender = '';
+  String _accountType = 'athlete';
   String? _localError;
 
   @override
@@ -109,6 +110,43 @@ class _ProfileCompletionGateScreenState
                 AirmiusPanel(
                   child: Column(
                     children: [
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          scope.t('accountType.question'),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final type in const [
+                              ('athlete', Icons.directions_run_outlined),
+                              ('coach', Icons.sports_outlined),
+                              ('club', Icons.apartment_outlined),
+                              ('sponsor', Icons.handshake_outlined),
+                            ])
+                              ChoiceChip(
+                                selected: _accountType == type.$1,
+                                avatar: Icon(type.$2, size: 18),
+                                label: Text(scope.t('accountType.${type.$1}')),
+                                onSelected: loading
+                                    ? null
+                                    : (_) => setState(
+                                        () => _accountType = type.$1,
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       AirmiusTextField(
                         label: scope.t('profileGate.firstName'),
                         icon: Icons.person_outline,
@@ -268,6 +306,7 @@ class _ProfileCompletionGateScreenState
     await widget.authState.completeProfile(
       payload: {
         'first_name': _firstNameController.text.trim(),
+        'account_type': _accountType,
         'last_name': _lastNameController.text.trim(),
         'birth_date': _dateText(birthDate),
         'gender': _gender,

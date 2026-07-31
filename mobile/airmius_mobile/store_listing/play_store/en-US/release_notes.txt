@@ -1,7 +1,8 @@
-New in 1.0.15:
+New in 1.0.28:
 
-- More practical main navigation: Training, Teams, Feed, Nutrition and Profile.
-- Nutrition now asks whether to open Nutrition or Drink tracking.
-- Drink tracking supports quick entries for 150, 250, 500 and 750 ml.
-- Meal photo estimates now support taking a new photo or choosing one from the gallery.
-- Improved usability and stability for daily mobile use.
+- Personalized home screens and navigation for athletes, coaches, clubs and sponsors.
+- New sponsor cockpit for profiles, partnerships, campaigns and reach.
+- Improved onboarding, daily flow, feed, training and empty states.
+- Water and meal updates without page reloads, including undo.
+- Better sport matching, chat auto-scroll and background badges.
+- Customizable footer with three to five shortcuts.

@@ -1734,6 +1734,10 @@ const _settingsDe = {
   'footerNav.sportMatching': 'Sportmatching',
   'footerNav.carpool': 'Fahrgemeinschaft',
   'footerNav.marketplace': 'Marketplace',
+  'footerNav.workspaces': 'Bereiche',
+  'footerNav.coachCockpit': 'Coach',
+  'footerNav.clubCockpit': 'Verein',
+  'footerNav.sponsors': 'Sponsoren',
 };
 
 final _settingsEn = {
@@ -1802,6 +1806,10 @@ final _settingsEn = {
   'footerNav.sportMatching': 'Sports matching',
   'footerNav.carpool': 'Carpool',
   'footerNav.marketplace': 'Marketplace',
+  'footerNav.workspaces': 'Workspaces',
+  'footerNav.coachCockpit': 'Coach',
+  'footerNav.clubCockpit': 'Club',
+  'footerNav.sponsors': 'Sponsors',
 };
 
 final _settingsFr = {
@@ -1870,6 +1878,10 @@ final _settingsFr = {
   'footerNav.sportMatching': 'Partenaires sportifs',
   'footerNav.carpool': 'Covoiturage',
   'footerNav.marketplace': 'Marketplace',
+  'footerNav.workspaces': 'Espaces',
+  'footerNav.coachCockpit': 'Coach',
+  'footerNav.clubCockpit': 'Club',
+  'footerNav.sponsors': 'Sponsors',
 };
 
 final _settingsAr = {
@@ -1935,6 +1947,328 @@ final _settingsAr = {
   'footerNav.sportMatching': 'المطابقة الرياضية',
   'footerNav.carpool': 'مشاركة الرحلات',
   'footerNav.marketplace': 'السوق',
+  'footerNav.workspaces': 'المساحات',
+  'footerNav.coachCockpit': 'المدرب',
+  'footerNav.clubCockpit': 'النادي',
+  'footerNav.sponsors': 'الرعاة',
+};
+
+const _sponsorCockpitDe = {
+  'sponsorCockpit.title': 'Sponsor-Cockpit',
+  'sponsorCockpit.subtitle':
+      'Partnerschaften, Kampagnen und Wirkung an einem Ort',
+  'sponsorCockpit.eyebrow': 'SPONSORING & REICHWEITE',
+  'sponsorCockpit.heroTitle': 'Deine Marke in der Sport-Community',
+  'sponsorCockpit.heroBody':
+      'Pflege dein Markenprofil, starte Kampagnen und erkenne transparent, welche Reichweite und Reaktionen entstehen.',
+  'sponsorCockpit.createCampaign': 'Kampagne erstellen',
+  'sponsorCockpit.createProfile': 'Profil anlegen',
+  'sponsorCockpit.editProfile': 'Profil bearbeiten',
+  'sponsorCockpit.profileMissing':
+      'Dein Markenprofil ist noch nicht vollständig',
+  'sponsorCockpit.profileMissingBody':
+      'Logo, Website und Kontakt schaffen Vertrauen bei Vereinen und Sportlern.',
+  'sponsorCockpit.setupNow': 'Jetzt einrichten',
+  'sponsorCockpit.partners': 'Aktive Partner',
+  'sponsorCockpit.activeCampaigns': 'Aktive Kampagnen',
+  'sponsorCockpit.impressions': 'Impressionen',
+  'sponsorCockpit.ctr': 'Klickrate',
+  'sponsorCockpit.budget': 'Budget',
+  'sponsorCockpit.clicks': 'Klicks',
+  'sponsorCockpit.campaigns': 'Letzte Kampagnen',
+  'sponsorCockpit.openCampaigns': 'Alle öffnen',
+  'sponsorCockpit.noCampaigns': 'Noch keine Kampagne vorhanden',
+  'sponsorCockpit.noCampaignsBody':
+      'Starte klein, regional und mit einem klar messbaren Ziel.',
+  'sponsorCockpit.partnerships': 'Partnerschaften',
+  'sponsorCockpit.publicView': 'Öffentlich ansehen',
+  'sponsorCockpit.noPartners': 'Noch keine Partnerschaft verknüpft',
+  'sponsorCockpit.noPartnersBody':
+      'Ein Verein oder das Airmius-Team kann die Zusammenarbeit deinem Konto zuordnen.',
+  'sponsorCockpit.platform': 'Airmius Plattform',
+  'sponsorCockpit.nextStep': 'NÄCHSTER SINNVOLLER SCHRITT',
+  'sponsorCockpit.nextProfile': 'Markenprofil vervollständigen',
+  'sponsorCockpit.nextProfileBody':
+      'Ein vollständiges Profil verbessert Vertrauen und Wiedererkennung.',
+  'sponsorCockpit.nextMeasure': 'Wirkung regelmäßig prüfen',
+  'sponsorCockpit.nextMeasureBody':
+      'Beobachte Klickrate, Budget und Laufzeit. Optimiere zuerst Zielgruppe und Botschaft.',
+  'sponsorCockpit.nextCampaign': 'Erste Reichweite aufbauen',
+  'sponsorCockpit.nextCampaignBody':
+      'Lege eine kleine regionale Kampagne an und miss die Reaktion der Sport-Community.',
+  'sponsorCockpit.profileTitle': 'Markenprofil bearbeiten',
+  'sponsorCockpit.profileBody':
+      'Diese Angaben können in der App und auf öffentlichen Sponsorenseiten erscheinen.',
+  'sponsorCockpit.brandName': 'Markenname',
+  'sponsorCockpit.contact': 'Ansprechperson',
+  'sponsorCockpit.email': 'E-Mail',
+  'sponsorCockpit.website': 'Website',
+  'sponsorCockpit.logoUrl': 'Logo-URL',
+  'sponsorCockpit.saveProfile': 'Profil speichern',
+  'sponsorCockpit.saved': 'Sponsorprofil gespeichert.',
+  'sponsorCockpit.saveFailed':
+      'Das Sponsorprofil konnte nicht gespeichert werden.',
+  'sponsorCockpit.loadFailed':
+      'Das Sponsor-Cockpit konnte nicht geladen werden.',
+  'sponsorCockpit.status.active': 'Aktiv',
+  'sponsorCockpit.status.upcoming': 'Demnächst',
+  'sponsorCockpit.status.ended': 'Beendet',
+  'sponsorCockpit.status.draft': 'Entwurf',
+  'sponsorCockpit.status.pending_review': 'In Prüfung',
+  'sponsorCockpit.status.paused': 'Pausiert',
+  'sponsorCockpit.status.completed': 'Abgeschlossen',
+  'sponsorCockpit.status.rejected': 'Abgelehnt',
+};
+
+const _sponsorCockpitEn = {
+  'sponsorCockpit.title': 'Sponsor cockpit',
+  'sponsorCockpit.subtitle': 'Partnerships, campaigns and impact in one place',
+  'sponsorCockpit.eyebrow': 'SPONSORSHIP & REACH',
+  'sponsorCockpit.heroTitle': 'Your brand in the sports community',
+  'sponsorCockpit.heroBody':
+      'Maintain your brand profile, launch campaigns and clearly see the reach and engagement they generate.',
+  'sponsorCockpit.createCampaign': 'Create campaign',
+  'sponsorCockpit.createProfile': 'Create profile',
+  'sponsorCockpit.editProfile': 'Edit profile',
+  'sponsorCockpit.profileMissing': 'Your brand profile is not complete yet',
+  'sponsorCockpit.profileMissingBody':
+      'A logo, website and contact build trust with clubs and athletes.',
+  'sponsorCockpit.setupNow': 'Set up now',
+  'sponsorCockpit.partners': 'Active partners',
+  'sponsorCockpit.activeCampaigns': 'Active campaigns',
+  'sponsorCockpit.impressions': 'Impressions',
+  'sponsorCockpit.ctr': 'Click rate',
+  'sponsorCockpit.budget': 'Budget',
+  'sponsorCockpit.clicks': 'Clicks',
+  'sponsorCockpit.campaigns': 'Recent campaigns',
+  'sponsorCockpit.openCampaigns': 'Open all',
+  'sponsorCockpit.noCampaigns': 'No campaign yet',
+  'sponsorCockpit.noCampaignsBody':
+      'Start small and local with one clearly measurable goal.',
+  'sponsorCockpit.partnerships': 'Partnerships',
+  'sponsorCockpit.publicView': 'View public page',
+  'sponsorCockpit.noPartners': 'No partnership linked yet',
+  'sponsorCockpit.noPartnersBody':
+      'A club or the Airmius team can link a partnership to your account.',
+  'sponsorCockpit.platform': 'Airmius platform',
+  'sponsorCockpit.nextStep': 'NEXT USEFUL STEP',
+  'sponsorCockpit.nextProfile': 'Complete your brand profile',
+  'sponsorCockpit.nextProfileBody':
+      'A complete profile improves trust and brand recognition.',
+  'sponsorCockpit.nextMeasure': 'Review impact regularly',
+  'sponsorCockpit.nextMeasureBody':
+      'Watch click rate, budget and duration. Improve audience and message before raising spend.',
+  'sponsorCockpit.nextCampaign': 'Build your first reach',
+  'sponsorCockpit.nextCampaignBody':
+      'Launch a small local campaign and measure how the sports community responds.',
+  'sponsorCockpit.profileTitle': 'Edit brand profile',
+  'sponsorCockpit.profileBody':
+      'These details may appear in the app and on public sponsor pages.',
+  'sponsorCockpit.brandName': 'Brand name',
+  'sponsorCockpit.contact': 'Contact person',
+  'sponsorCockpit.email': 'Email',
+  'sponsorCockpit.website': 'Website',
+  'sponsorCockpit.logoUrl': 'Logo URL',
+  'sponsorCockpit.saveProfile': 'Save profile',
+  'sponsorCockpit.saved': 'Sponsor profile saved.',
+  'sponsorCockpit.saveFailed': 'The sponsor profile could not be saved.',
+  'sponsorCockpit.loadFailed': 'The sponsor cockpit could not be loaded.',
+  'sponsorCockpit.status.active': 'Active',
+  'sponsorCockpit.status.upcoming': 'Upcoming',
+  'sponsorCockpit.status.ended': 'Ended',
+  'sponsorCockpit.status.draft': 'Draft',
+  'sponsorCockpit.status.pending_review': 'In review',
+  'sponsorCockpit.status.paused': 'Paused',
+  'sponsorCockpit.status.completed': 'Completed',
+  'sponsorCockpit.status.rejected': 'Rejected',
+};
+
+final _sponsorCockpitFr = {
+  ..._sponsorCockpitEn,
+  'sponsorCockpit.title': 'Espace sponsor',
+  'sponsorCockpit.subtitle':
+      'Partenariats, campagnes et impact au même endroit',
+  'sponsorCockpit.eyebrow': 'SPONSORING ET PORTÉE',
+  'sponsorCockpit.heroTitle': 'Votre marque dans la communauté sportive',
+  'sponsorCockpit.heroBody':
+      'Gérez votre profil de marque, lancez des campagnes et mesurez clairement leur portée et leur engagement.',
+  'sponsorCockpit.createCampaign': 'Créer une campagne',
+  'sponsorCockpit.createProfile': 'Créer le profil',
+  'sponsorCockpit.editProfile': 'Modifier le profil',
+  'sponsorCockpit.profileMissing':
+      'Votre profil de marque est encore incomplet',
+  'sponsorCockpit.profileMissingBody':
+      'Un logo, un site et un contact renforcent la confiance.',
+  'sponsorCockpit.setupNow': 'Configurer maintenant',
+  'sponsorCockpit.partners': 'Partenaires actifs',
+  'sponsorCockpit.activeCampaigns': 'Campagnes actives',
+  'sponsorCockpit.impressions': 'Impressions',
+  'sponsorCockpit.ctr': 'Taux de clic',
+  'sponsorCockpit.budget': 'Budget',
+  'sponsorCockpit.clicks': 'Clics',
+  'sponsorCockpit.campaigns': 'Campagnes récentes',
+  'sponsorCockpit.openCampaigns': 'Tout ouvrir',
+  'sponsorCockpit.partnerships': 'Partenariats',
+  'sponsorCockpit.publicView': 'Voir la page publique',
+  'sponsorCockpit.nextStep': 'PROCHAINE ÉTAPE UTILE',
+  'sponsorCockpit.profileTitle': 'Modifier le profil de marque',
+  'sponsorCockpit.brandName': 'Nom de la marque',
+  'sponsorCockpit.contact': 'Personne de contact',
+  'sponsorCockpit.saveProfile': 'Enregistrer le profil',
+  'sponsorCockpit.saved': 'Profil sponsor enregistré.',
+  'sponsorCockpit.status.active': 'Actif',
+  'sponsorCockpit.status.upcoming': 'À venir',
+  'sponsorCockpit.status.ended': 'Terminé',
+  'sponsorCockpit.status.draft': 'Brouillon',
+  'sponsorCockpit.status.pending_review': 'En vérification',
+  'sponsorCockpit.status.paused': 'En pause',
+  'sponsorCockpit.status.completed': 'Terminée',
+  'sponsorCockpit.status.rejected': 'Refusée',
+};
+
+final _sponsorCockpitAr = {
+  ..._sponsorCockpitEn,
+  'sponsorCockpit.title': 'مساحة الراعي',
+  'sponsorCockpit.subtitle': 'الشراكات والحملات والأثر في مكان واحد',
+  'sponsorCockpit.eyebrow': 'الرعاية والوصول',
+  'sponsorCockpit.heroTitle': 'علامتك داخل المجتمع الرياضي',
+  'sponsorCockpit.heroBody':
+      'أدر ملف علامتك وأطلق الحملات وتابع الوصول والتفاعل بوضوح.',
+  'sponsorCockpit.createCampaign': 'إنشاء حملة',
+  'sponsorCockpit.createProfile': 'إنشاء الملف',
+  'sponsorCockpit.editProfile': 'تعديل الملف',
+  'sponsorCockpit.profileMissing': 'ملف علامتك غير مكتمل بعد',
+  'sponsorCockpit.profileMissingBody':
+      'الشعار والموقع وبيانات التواصل تعزز الثقة.',
+  'sponsorCockpit.setupNow': 'الإعداد الآن',
+  'sponsorCockpit.partners': 'الشركاء النشطون',
+  'sponsorCockpit.activeCampaigns': 'الحملات النشطة',
+  'sponsorCockpit.impressions': 'مرات الظهور',
+  'sponsorCockpit.ctr': 'معدل النقر',
+  'sponsorCockpit.budget': 'الميزانية',
+  'sponsorCockpit.clicks': 'النقرات',
+  'sponsorCockpit.campaigns': 'أحدث الحملات',
+  'sponsorCockpit.openCampaigns': 'فتح الكل',
+  'sponsorCockpit.partnerships': 'الشراكات',
+  'sponsorCockpit.publicView': 'عرض الصفحة العامة',
+  'sponsorCockpit.nextStep': 'الخطوة المفيدة التالية',
+  'sponsorCockpit.profileTitle': 'تعديل ملف العلامة',
+  'sponsorCockpit.brandName': 'اسم العلامة',
+  'sponsorCockpit.contact': 'جهة الاتصال',
+  'sponsorCockpit.saveProfile': 'حفظ الملف',
+  'sponsorCockpit.saved': 'تم حفظ ملف الراعي.',
+  'sponsorCockpit.status.active': 'نشط',
+  'sponsorCockpit.status.upcoming': 'قادم',
+  'sponsorCockpit.status.ended': 'منتهي',
+  'sponsorCockpit.status.draft': 'مسودة',
+  'sponsorCockpit.status.pending_review': 'قيد المراجعة',
+  'sponsorCockpit.status.paused': 'متوقف مؤقتًا',
+  'sponsorCockpit.status.completed': 'مكتمل',
+  'sponsorCockpit.status.rejected': 'مرفوض',
+};
+
+const _clubCountriesDe = {
+  'clubs.country.DE': 'Deutschland',
+  'clubs.country.AT': 'Österreich',
+  'clubs.country.CH': 'Schweiz',
+  'clubs.country.FR': 'Frankreich',
+  'clubs.country.NL': 'Niederlande',
+  'clubs.country.BE': 'Belgien',
+  'clubs.country.MA': 'Marokko',
+  'clubs.country.ES': 'Spanien',
+  'clubs.country.PT': 'Portugal',
+  'clubs.country.IT': 'Italien',
+  'clubs.country.GB': 'Großbritannien',
+  'clubs.country.TR': 'Türkei',
+  'clubs.country.US': 'USA',
+};
+
+const _clubCountriesEn = {
+  'clubs.country.DE': 'Germany',
+  'clubs.country.AT': 'Austria',
+  'clubs.country.CH': 'Switzerland',
+  'clubs.country.FR': 'France',
+  'clubs.country.NL': 'Netherlands',
+  'clubs.country.BE': 'Belgium',
+  'clubs.country.MA': 'Morocco',
+  'clubs.country.ES': 'Spain',
+  'clubs.country.PT': 'Portugal',
+  'clubs.country.IT': 'Italy',
+  'clubs.country.GB': 'United Kingdom',
+  'clubs.country.TR': 'Türkiye',
+  'clubs.country.US': 'USA',
+};
+
+const _clubCountriesFr = {
+  'clubs.country.DE': 'Allemagne',
+  'clubs.country.AT': 'Autriche',
+  'clubs.country.CH': 'Suisse',
+  'clubs.country.FR': 'France',
+  'clubs.country.NL': 'Pays-Bas',
+  'clubs.country.BE': 'Belgique',
+  'clubs.country.MA': 'Maroc',
+  'clubs.country.ES': 'Espagne',
+  'clubs.country.PT': 'Portugal',
+  'clubs.country.IT': 'Italie',
+  'clubs.country.GB': 'Royaume-Uni',
+  'clubs.country.TR': 'Türkiye',
+  'clubs.country.US': 'États-Unis',
+};
+
+const _clubCountriesAr = {
+  'clubs.country.DE': 'ألمانيا',
+  'clubs.country.AT': 'النمسا',
+  'clubs.country.CH': 'سويسرا',
+  'clubs.country.FR': 'فرنسا',
+  'clubs.country.NL': 'هولندا',
+  'clubs.country.BE': 'بلجيكا',
+  'clubs.country.MA': 'المغرب',
+  'clubs.country.ES': 'إسبانيا',
+  'clubs.country.PT': 'البرتغال',
+  'clubs.country.IT': 'إيطاليا',
+  'clubs.country.GB': 'المملكة المتحدة',
+  'clubs.country.TR': 'تركيا',
+  'clubs.country.US': 'الولايات المتحدة',
+};
+
+const _accountTypeDe = {
+  'accountType.question': 'Wie möchtest du Airmius nutzen?',
+  'accountType.hint':
+      'Du erhältst den passenden Startbereich. Weitere Rollen können später ergänzt werden.',
+  'accountType.athlete': 'Sportler',
+  'accountType.coach': 'Trainer / Coach',
+  'accountType.club': 'Verein',
+  'accountType.sponsor': 'Sponsor',
+};
+
+const _accountTypeEn = {
+  'accountType.question': 'How would you like to use Airmius?',
+  'accountType.hint':
+      'You will get the right home workspace. More roles can be added later.',
+  'accountType.athlete': 'Athlete',
+  'accountType.coach': 'Trainer / coach',
+  'accountType.club': 'Club',
+  'accountType.sponsor': 'Sponsor',
+};
+
+const _accountTypeFr = {
+  'accountType.question': 'Comment souhaitez-vous utiliser Airmius ?',
+  'accountType.hint':
+      'Vous obtenez l’espace de départ adapté. D’autres rôles peuvent être ajoutés plus tard.',
+  'accountType.athlete': 'Sportif',
+  'accountType.coach': 'Entraîneur / coach',
+  'accountType.club': 'Club',
+  'accountType.sponsor': 'Sponsor',
+};
+
+const _accountTypeAr = {
+  'accountType.question': 'كيف تريد استخدام Airmius؟',
+  'accountType.hint':
+      'ستحصل على مساحة البداية المناسبة ويمكن إضافة أدوار أخرى لاحقًا.',
+  'accountType.athlete': 'رياضي',
+  'accountType.coach': 'مدرب',
+  'accountType.club': 'نادٍ',
+  'accountType.sponsor': 'راعٍ',
 };
 
 const _fitnessDe = {
@@ -6541,6 +6875,8 @@ const _clubsWorkspaceDe = {
   'clubs.loadFailed': 'Vereine konnten nicht geladen werden.',
   'clubs.reload': 'Neu laden',
   'clubs.empty': 'Keine Vereine gefunden.',
+  'clubs.emptyBody':
+      'Finde einen passenden Verein oder registriere einen neuen. Einladungen und Mitgliedschaften erscheinen danach automatisch hier.',
   'clubs.createdPending':
       'Verein registriert. Der Antrag wartet jetzt auf Prüfung.',
   'clubs.register': 'Verein registrieren',
@@ -6838,6 +7174,8 @@ const _clubsWorkspaceEn = {
   'clubs.loadFailed': 'Clubs could not be loaded.',
   'clubs.reload': 'Reload',
   'clubs.empty': 'No clubs found.',
+  'clubs.emptyBody':
+      'Find the right club or register a new one. Invitations and memberships will then appear here automatically.',
   'clubs.createdPending':
       'Club registered. The application is now awaiting review.',
   'clubs.register': 'Register club',
@@ -7129,6 +7467,8 @@ const _clubsWorkspaceFr = {
   'clubs.loadFailed': 'Impossible de charger les clubs.',
   'clubs.reload': 'Recharger',
   'clubs.empty': 'Aucun club trouvé.',
+  'clubs.emptyBody':
+      'Trouvez le club adapté ou enregistrez-en un nouveau. Les invitations et adhésions apparaîtront ensuite ici.',
   'clubs.createdPending':
       'Club enregistré. La demande attend maintenant une validation.',
   'clubs.register': 'Enregistrer un club',
@@ -7423,6 +7763,8 @@ const _clubsWorkspaceAr = {
   'clubs.loadFailed': 'تعذر تحميل الأندية.',
   'clubs.reload': 'إعادة التحميل',
   'clubs.empty': 'لم يتم العثور على أندية.',
+  'clubs.emptyBody':
+      'ابحث عن النادي المناسب أو سجّل ناديًا جديدًا. ستظهر الدعوات والعضويات هنا تلقائيًا بعد ذلك.',
   'clubs.createdPending': 'تم تسجيل النادي والطلب بانتظار المراجعة.',
   'clubs.register': 'تسجيل نادٍ',
   'clubs.find': 'العثور على نادٍ',
@@ -11075,7 +11417,8 @@ const _coachDe = {
   'coach.highLoad': 'Hohe Belastung',
   'coach.noTeams': 'Keine betreuten Teams',
   'coach.noTeamsBody':
-      'Das Cockpit zeigt nur Teams, für die du eine Trainer- oder Leitungsrolle besitzt.',
+      'Suche ein Team oder bitte einen Verein, dich als Trainer einzuladen. Danach erscheinen Planung, Athleten und Feedback hier automatisch.',
+  'coach.findTeam': 'Team oder Verein finden',
   'coach.myTeams': 'Meine Teams und Athleten',
   'coach.myTeamsBody':
       'Alle Personen stammen aus deinen tatsächlich betreuten Teams.',
@@ -11161,7 +11504,8 @@ final _coachEn = {
   'coach.highLoad': 'High load',
   'coach.noTeams': 'No managed teams',
   'coach.noTeamsBody':
-      'The cockpit only shows teams for which you have a coaching or management role.',
+      'Find a team or ask a club to invite you as a coach. Planning, athletes and feedback will then appear here automatically.',
+  'coach.findTeam': 'Find a team or club',
   'coach.myTeams': 'My teams and athletes',
   'coach.myTeamsBody': 'Every person comes from a team you actually manage.',
   'coach.noAthletes': 'No athletes are assigned to this team yet.',
@@ -11244,7 +11588,8 @@ final _coachFr = {
   'coach.highLoad': 'Charge élevée',
   'coach.noTeams': 'Aucune équipe encadrée',
   'coach.noTeamsBody':
-      'Le cockpit affiche seulement les équipes dont vous êtes entraîneur ou responsable.',
+      'Trouvez une équipe ou demandez à un club de vous inviter comme coach. La planification, les sportifs et les retours apparaîtront ensuite ici.',
+  'coach.findTeam': 'Trouver une équipe ou un club',
   'coach.myTeams': 'Mes équipes et athlètes',
   'coach.myTeamsBody':
       'Chaque personne appartient à une équipe que vous encadrez.',
@@ -11327,7 +11672,8 @@ final _coachAr = {
   'coach.highLoad': 'حمل مرتفع',
   'coach.noTeams': 'لا توجد فرق تديرها',
   'coach.noTeamsBody':
-      'تعرض اللوحة الفرق التي تمتلك فيها دور تدريب أو إدارة فقط.',
+      'ابحث عن فريق أو اطلب من نادٍ دعوتك كمدرب. سيظهر بعدها التخطيط والرياضيون والملاحظات هنا تلقائيًا.',
+  'coach.findTeam': 'البحث عن فريق أو نادٍ',
   'coach.myTeams': 'فرقي والرياضيون',
   'coach.myTeamsBody': 'كل شخص ينتمي إلى فريق تديره فعليًا.',
   'coach.noAthletes': 'لم تتم إضافة رياضيين إلى هذا الفريق بعد.',
@@ -17342,6 +17688,9 @@ final _strings = {
     ..._commerceAdvDe,
     ..._supportDe,
     ..._settingsDe,
+    ..._sponsorCockpitDe,
+    ..._clubCountriesDe,
+    ..._accountTypeDe,
     ..._fitnessDe,
     ..._legalHubDe,
     ..._platformAdminDe,
@@ -17881,6 +18230,10 @@ final _strings = {
     'nutrition.subtitle':
         'Mahlzeiten, Nährwerte, Wasser und persönliche Tagesziele',
     'nutrition.reload': 'Ernährung neu laden',
+    'nutrition.captureAction': 'Eintrag hinzufügen',
+    'nutrition.captureTitle': 'Was möchtest du erfassen?',
+    'nutrition.captureHint':
+        'Wähle den schnellsten Weg für deine Mahlzeit oder dein Lebensmittel.',
     'nutrition.dailyOverview': 'Tagesübersicht',
     'nutrition.dailyOverviewHint':
         'Alle Werte stammen aus deinen tatsächlich gespeicherten Einträgen.',
@@ -17892,9 +18245,13 @@ final _strings = {
     'nutrition.targets': 'Deine Ziele',
     'nutrition.editTargets': 'Ziele bearbeiten',
     'nutrition.addMeal': 'Mahlzeit erfassen',
+    'nutrition.addMealHint': 'Mahlzeit und Nährwerte manuell eingeben',
     'nutrition.addWater': 'Wasser eintragen',
     'nutrition.searchFood': 'Lebensmittel suchen',
+    'nutrition.searchFoodActionHint':
+        'Lebensmittel finden und als Mahlzeit übernehmen',
     'nutrition.barcode': 'Barcode nachschlagen',
+    'nutrition.barcodeActionHint': 'Produkt über seine Barcode-Nummer finden',
     'nutrition.meals': 'Einträge',
     'nutrition.emptyMeals':
         'Für diesen Tag gibt es noch keine Mahlzeiten oder Getränke.',
@@ -17941,6 +18298,9 @@ final _strings = {
     'nutrition.loadError': 'Die Ernährungsdaten konnten nicht geladen werden.',
     'nutrition.aiPhoto': 'Mahlzeit per Foto schätzen',
     'nutrition.aiPhotoPro': 'Foto-Schätzung (Pro)',
+    'nutrition.aiPhotoActionHint':
+        'Foto analysieren und geschätzte Nährwerte prüfen',
+    'nutrition.aiPhotoProHint': 'Diese Funktion benötigt einen Pro-Zugang.',
     'nutrition.aiConsentTitle': 'Foto sicher analysieren',
     'nutrition.aiConsentHint':
         'Das ausgewählte Essensfoto wird einmalig an einen freigeschalteten KI-Anbieter gesendet, um Nährwerte zu schätzen.',
@@ -18738,6 +19098,9 @@ final _strings = {
     'feed.placeholder': 'Was moechtest du teilen?',
     'feed.publish': 'Veröffentlichen',
     'feed.empty': 'Noch keine Beiträge sichtbar.',
+    'feed.emptyBody':
+        'Teile dein erstes Update oder verbinde dich mit Vereinen, Teams und Sportpartnern.',
+    'feed.createFirst': 'Ersten Beitrag erstellen',
     'feed.error': 'Feed konnte nicht geladen werden.',
     'feed.retry': 'Feed erneut laden',
     'feed.visibility': 'Sichtbarkeit',
@@ -19500,6 +19863,9 @@ final _strings = {
     ..._commerceAdvEn,
     ..._supportEn,
     ..._settingsEn,
+    ..._sponsorCockpitEn,
+    ..._clubCountriesEn,
+    ..._accountTypeEn,
     ..._fitnessEn,
     ..._legalHubEn,
     ..._platformAdminEn,
@@ -20027,6 +20393,10 @@ final _strings = {
     'nutrition.subtitle':
         'Meals, nutrients, water and your personal daily targets',
     'nutrition.reload': 'Reload nutrition',
+    'nutrition.captureAction': 'Add entry',
+    'nutrition.captureTitle': 'What would you like to log?',
+    'nutrition.captureHint':
+        'Choose the quickest way to add your meal or food.',
     'nutrition.dailyOverview': 'Daily overview',
     'nutrition.dailyOverviewHint':
         'All values come from entries you have actually saved.',
@@ -20038,9 +20408,12 @@ final _strings = {
     'nutrition.targets': 'Your targets',
     'nutrition.editTargets': 'Edit targets',
     'nutrition.addMeal': 'Log meal',
+    'nutrition.addMealHint': 'Enter a meal and its nutrition values manually',
     'nutrition.addWater': 'Log water',
     'nutrition.searchFood': 'Search foods',
+    'nutrition.searchFoodActionHint': 'Find a food and add it to a meal',
     'nutrition.barcode': 'Look up barcode',
+    'nutrition.barcodeActionHint': 'Find a product using its barcode number',
     'nutrition.meals': 'Entries',
     'nutrition.emptyMeals': 'There are no meals or drinks for this day yet.',
     'nutrition.today': 'Today',
@@ -20086,6 +20459,9 @@ final _strings = {
     'nutrition.loadError': 'Nutrition data could not be loaded.',
     'nutrition.aiPhoto': 'Estimate meal from photo',
     'nutrition.aiPhotoPro': 'Photo estimate (Pro)',
+    'nutrition.aiPhotoActionHint':
+        'Analyze a photo and review the estimated nutrition values',
+    'nutrition.aiPhotoProHint': 'This feature requires Pro access.',
     'nutrition.aiConsentTitle': 'Analyze photo securely',
     'nutrition.aiConsentHint':
         'The selected meal photo is sent once to an approved AI provider to estimate nutrition values.',
@@ -20848,6 +21224,9 @@ final _strings = {
     'feed.placeholder': 'What would you like to share?',
     'feed.publish': 'Publish',
     'feed.empty': 'No posts are visible yet.',
+    'feed.emptyBody':
+        'Share your first update or connect with clubs, teams and sport partners.',
+    'feed.createFirst': 'Create first post',
     'feed.error': 'Feed could not be loaded.',
     'feed.retry': 'Reload feed',
     'feed.visibility': 'Visibility',
@@ -21590,6 +21969,9 @@ final _strings = {
     ..._commerceAdvFr,
     ..._supportFr,
     ..._settingsFr,
+    ..._sponsorCockpitFr,
+    ..._clubCountriesFr,
+    ..._accountTypeFr,
     ..._fitnessFr,
     ..._legalHubFr,
     ..._platformAdminFr,
@@ -22131,6 +22513,10 @@ final _strings = {
     'nutrition.subtitle':
         'Repas, nutriments, eau et objectifs quotidiens personnels',
     'nutrition.reload': 'Actualiser la nutrition',
+    'nutrition.captureAction': 'Ajouter une entrée',
+    'nutrition.captureTitle': 'Que souhaites-tu enregistrer ?',
+    'nutrition.captureHint':
+        'Choisis la méthode la plus rapide pour ajouter ton repas ou aliment.',
     'nutrition.dailyOverview': 'Vue du jour',
     'nutrition.dailyOverviewHint':
         'Toutes les valeurs proviennent des entrées que tu as enregistrées.',
@@ -22142,9 +22528,15 @@ final _strings = {
     'nutrition.targets': 'Tes objectifs',
     'nutrition.editTargets': 'Modifier les objectifs',
     'nutrition.addMeal': 'Enregistrer un repas',
+    'nutrition.addMealHint':
+        'Saisir manuellement un repas et ses valeurs nutritionnelles',
     'nutrition.addWater': 'Enregistrer de l’eau',
     'nutrition.searchFood': 'Rechercher un aliment',
+    'nutrition.searchFoodActionHint':
+        'Trouver un aliment et l’ajouter à un repas',
     'nutrition.barcode': 'Rechercher un code-barres',
+    'nutrition.barcodeActionHint':
+        'Trouver un produit grâce à son numéro de code-barres',
     'nutrition.meals': 'Entrées',
     'nutrition.emptyMeals':
         'Aucun repas ou boisson n’est encore enregistré pour ce jour.',
@@ -22192,6 +22584,9 @@ final _strings = {
     'nutrition.loadError': 'Impossible de charger les données nutritionnelles.',
     'nutrition.aiPhoto': 'Estimer le repas par photo',
     'nutrition.aiPhotoPro': 'Estimation photo (Pro)',
+    'nutrition.aiPhotoActionHint':
+        'Analyser une photo et vérifier les valeurs nutritionnelles estimées',
+    'nutrition.aiPhotoProHint': 'Cette fonction nécessite un accès Pro.',
     'nutrition.aiConsentTitle': 'Analyser la photo en sécurité',
     'nutrition.aiConsentHint':
         'La photo du repas est envoyée une fois à un fournisseur IA approuvé afin d’estimer les valeurs nutritionnelles.',
@@ -22965,6 +23360,9 @@ final _strings = {
     'feed.placeholder': 'Que veux-tu partager ?',
     'feed.publish': 'Publier',
     'feed.empty': 'Aucun post visible pour le moment.',
+    'feed.emptyBody':
+        'Partagez votre première actualité ou rejoignez des clubs, équipes et partenaires sportifs.',
+    'feed.createFirst': 'Créer la première publication',
     'feed.error': 'Impossible de charger le feed.',
     'feed.retry': 'Recharger le feed',
     'feed.visibility': 'Visibilite',
@@ -23719,6 +24117,9 @@ final _strings = {
     ..._commerceAdvAr,
     ..._supportAr,
     ..._settingsAr,
+    ..._sponsorCockpitAr,
+    ..._clubCountriesAr,
+    ..._accountTypeAr,
     ..._fitnessAr,
     ..._legalHubAr,
     ..._platformAdminAr,
@@ -24233,6 +24634,9 @@ final _strings = {
     'nutrition.subtitle':
         'الوجبات والعناصر الغذائية والماء وأهدافك اليومية الشخصية',
     'nutrition.reload': 'إعادة تحميل التغذية',
+    'nutrition.captureAction': 'إضافة إدخال',
+    'nutrition.captureTitle': 'ماذا تريد أن تسجل؟',
+    'nutrition.captureHint': 'اختر أسرع طريقة لإضافة وجبتك أو طعامك.',
     'nutrition.dailyOverview': 'نظرة يومية',
     'nutrition.dailyOverviewHint':
         'جميع القيم مأخوذة من الإدخالات التي حفظتها بالفعل.',
@@ -24244,9 +24648,12 @@ final _strings = {
     'nutrition.targets': 'أهدافك',
     'nutrition.editTargets': 'تعديل الأهداف',
     'nutrition.addMeal': 'تسجيل وجبة',
+    'nutrition.addMealHint': 'أدخل الوجبة وقيمها الغذائية يدويًا',
     'nutrition.addWater': 'تسجيل الماء',
     'nutrition.searchFood': 'البحث عن طعام',
+    'nutrition.searchFoodActionHint': 'ابحث عن طعام وأضفه إلى وجبة',
     'nutrition.barcode': 'البحث بالرمز الشريطي',
+    'nutrition.barcodeActionHint': 'ابحث عن منتج باستخدام رقم الرمز الشريطي',
     'nutrition.meals': 'الإدخالات',
     'nutrition.emptyMeals': 'لا توجد وجبات أو مشروبات مسجلة لهذا اليوم.',
     'nutrition.today': 'اليوم',
@@ -24290,6 +24697,8 @@ final _strings = {
     'nutrition.loadError': 'تعذر تحميل بيانات التغذية.',
     'nutrition.aiPhoto': 'تقدير الوجبة من صورة',
     'nutrition.aiPhotoPro': 'تقدير الصورة (Pro)',
+    'nutrition.aiPhotoActionHint': 'حلل صورة وراجع القيم الغذائية المقدرة',
+    'nutrition.aiPhotoProHint': 'تتطلب هذه الميزة اشتراك Pro.',
     'nutrition.aiConsentTitle': 'تحليل الصورة بأمان',
     'nutrition.aiConsentHint':
         'تُرسل صورة الوجبة مرة واحدة إلى مزود ذكاء اصطناعي معتمد لتقدير القيم الغذائية.',
@@ -25788,6 +26197,9 @@ final _strings = {
       'feed.placeholder': 'ماذا تريد أن تشارك؟',
       'feed.publish': 'نشر',
       'feed.empty': 'لا توجد منشورات ظاهرة بعد.',
+      'feed.emptyBody':
+          'شارك أول تحديث لك أو تواصل مع الأندية والفرق والشركاء الرياضيين.',
+      'feed.createFirst': 'إنشاء أول منشور',
       'feed.error': 'تعذر تحميل الخلاصة.',
       'feed.retry': 'إعادة تحميل الخلاصة',
       'feed.visibility': 'الظهور',

@@ -1990,6 +1990,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicSponsors() =>
       _json('GET', '/api/v1/public/sponsors');
 
+  Future<AirmiusJson> sponsorWorkspace() =>
+      _json('GET', '/api/v1/sponsor-workspace');
+
+  Future<AirmiusJson> updateSponsorWorkspaceProfile(AirmiusJson body) =>
+      _json('PUT', '/api/v1/sponsor-workspace/profile', body: body);
+
   Future<AirmiusJson> publicClubs({
     String? query,
     String? sport,

@@ -12,6 +12,7 @@ import '../widgets/airmius_inline_video.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/content_report_dialog.dart';
 import 'feed_post_detail_screen.dart';
+import 'daily_flow_screen.dart';
 
 class FeedCommunitySocialSuiteScreen extends StatefulWidget {
   const FeedCommunitySocialSuiteScreen({super.key});
@@ -32,6 +33,7 @@ class _FeedCommunitySocialSuiteScreenState
   late Future<AirmiusPage<AirmiusClub>> _clubsFuture;
   late Future<AirmiusPage<AirmiusTeam>> _teamsFuture;
   late Future<AirmiusPage<AirmiusSport>> _sportsFuture;
+  late Future<JsonMap> _dailyFlowFuture;
   String _visibility = 'public';
   String _postType = 'normal';
   String _contentOrigin = 'self';
@@ -59,6 +61,7 @@ class _FeedCommunitySocialSuiteScreenState
     _clubsFuture = _loadClubs();
     _teamsFuture = _loadTeams();
     _sportsFuture = _loadSports();
+    _dailyFlowFuture = _loadDailyFlow();
     _loaded = true;
   }
 
@@ -88,6 +91,15 @@ class _FeedCommunitySocialSuiteScreenState
     return AirmiusServicesScope.of(context).repositories.sports.sports();
   }
 
+  Future<JsonMap> _loadDailyFlow() async {
+    final services = AirmiusServicesScope.of(context);
+    final response = await services
+        .clientForSession(services.authState.session)
+        .dashboardDailyFlow();
+    final data = response['data'];
+    return data is JsonMap ? data : <String, dynamic>{};
+  }
+
   void _reload() {
     setState(() {
       _postOverrides.clear();
@@ -98,6 +110,7 @@ class _FeedCommunitySocialSuiteScreenState
       _clubsFuture = _loadClubs();
       _teamsFuture = _loadTeams();
       _sportsFuture = _loadSports();
+      _dailyFlowFuture = _loadDailyFlow();
     });
   }
 
@@ -304,12 +317,14 @@ class _FeedCommunitySocialSuiteScreenState
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _FeedListScaffold(
+              dailyFlow: _DailyFlowTeaser(future: _dailyFlowFuture),
               composer: _ComposerTrigger(onTap: _openComposer),
               child: const _LoadingFeed(),
             );
           }
           if (snapshot.hasError) {
             return _FeedListScaffold(
+              dailyFlow: _DailyFlowTeaser(future: _dailyFlowFuture),
               composer: _ComposerTrigger(onTap: _openComposer),
               child: _ErrorFeed(onRetry: _reload),
             );
@@ -328,9 +343,10 @@ class _FeedCommunitySocialSuiteScreenState
                   .map((post) => _postOverrides[post.id] ?? post)
                   .toList();
           return _FeedListScaffold(
+            dailyFlow: _DailyFlowTeaser(future: _dailyFlowFuture),
             composer: _ComposerTrigger(onTap: _openComposer),
             child: posts.isEmpty
-                ? EmptyPanel(scope.t('feed.empty'))
+                ? _FeedEmpty(onCreate: _openComposer)
                 : Column(
                     children: [
                       _StoriesRail(
@@ -539,9 +555,61 @@ class _FeedCommunitySocialSuiteScreenState
   }
 }
 
-class _FeedListScaffold extends StatelessWidget {
-  const _FeedListScaffold({required this.composer, required this.child});
+class _FeedEmpty extends StatelessWidget {
+  const _FeedEmpty({required this.onCreate});
 
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    return AirmiusPanel(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Icon(
+              Icons.dynamic_feed_outlined,
+              size: 44,
+              color: airmiusAccentColor(context),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              scope.t('feed.empty'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              scope.t('feed.emptyBody'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: airmiusMutedColor(context), height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            AirmiusButton(
+              label: scope.t('feed.createFirst'),
+              icon: Icons.add_circle_outline,
+              onPressed: onCreate,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedListScaffold extends StatelessWidget {
+  const _FeedListScaffold({
+    required this.dailyFlow,
+    required this.composer,
+    required this.child,
+  });
+
+  final Widget dailyFlow;
   final Widget composer;
   final Widget child;
 
@@ -549,9 +617,205 @@ class _FeedListScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [composer, const SizedBox(height: 14), child],
+      children: [
+        dailyFlow,
+        const SizedBox(height: 14),
+        composer,
+        const SizedBox(height: 14),
+        child,
+      ],
     );
   }
+}
+
+class _DailyFlowTeaser extends StatelessWidget {
+  const _DailyFlowTeaser({required this.future});
+
+  final Future<JsonMap> future;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    return FutureBuilder<JsonMap>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return AirmiusPanel(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DailyFlowScreen()),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  color: airmiusMutedColor(context),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Eyebrow(scope.t('dailyFlow.today')),
+                      const SizedBox(height: 3),
+                      Text(scope.t('dailyFlow.noData')),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+              ],
+            ),
+          );
+        }
+        if (!snapshot.hasData) {
+          return AirmiusPanel(
+            child: Row(
+              children: [
+                const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Text(scope.t('dailyFlow.loading'))),
+              ],
+            ),
+          );
+        }
+        final data = snapshot.data ?? const <String, dynamic>{};
+        final score = _asInt(data['score']);
+        final summary = _asText(
+          data['summary'],
+          fallback: scope.t('dailyFlow.noData'),
+        );
+        final steps = data['steps'] is List
+            ? (data['steps'] as List).whereType<Map>().take(3).toList()
+            : const <Map>[];
+
+        return AirmiusPanel(
+          gradient: true,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DailyFlowScreen()),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: airmiusAccentColor(
+                        context,
+                      ).withValues(alpha: 0.14),
+                      border: Border.all(
+                        width: 4,
+                        color: airmiusAccentColor(
+                          context,
+                        ).withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Text(
+                      '$score%',
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Eyebrow(scope.t('dailyFlow.today')),
+                        const SizedBox(height: 4),
+                        Text(
+                          summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w800,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                ],
+              ),
+              if (steps.isNotEmpty) ...[
+                const SizedBox(height: 13),
+                Row(
+                  children: [
+                    for (var index = 0; index < steps.length; index++) ...[
+                      if (index > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: airmiusSurfaceSoftColor(context),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '${_asInt(steps[index]['progress'])}%',
+                                style: TextStyle(
+                                  color: airmiusAccentColor(context),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _stepLabel(scope, _asText(steps[index]['key'])),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  static String _stepLabel(AirmiusScope scope, String key) => switch (key) {
+    'training' => scope.t('training.nav'),
+    'route' => scope.t('footerNav.sportMap'),
+    'nutrition' => scope.t('nutrition.title'),
+    'hydration' => scope.t('footerNav.drink'),
+    'reminders' => scope.t('nav.notifications'),
+    _ => key,
+  };
+
+  static String _asText(Object? value, {String fallback = ''}) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  static int _asInt(Object? value) =>
+      value is num ? value.toInt() : int.tryParse(value?.toString() ?? '') ?? 0;
 }
 
 class _ComposerTrigger extends StatelessWidget {

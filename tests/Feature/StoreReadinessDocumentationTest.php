@@ -18,7 +18,9 @@ class StoreReadinessDocumentationTest extends TestCase
         $manifest = $this->releaseManifest();
 
         $this->assertSame('Airmius Mobile', $manifest['product']);
-        $this->assertSame('1.0.0+1', $manifest['version']);
+        preg_match('/^version:\s*(\S+)$/m', file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $version);
+
+        $this->assertSame($version[1] ?? null, $manifest['version']);
         $this->assertSame('com.airmius.app', $manifest['android_application_id']);
         $this->assertSame('com.airmius.app', $manifest['ios_bundle_id']);
 

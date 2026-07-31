@@ -51,6 +51,14 @@ final class AirmiusModuleAccess {
     'manager',
   };
 
+  static const _clubRoles = <String>{
+    'club_owner',
+    'club_admin',
+    'club_manager',
+    'academy_manager',
+    'financial_controller',
+  };
+
   static bool canOpen(AirmiusUser? user, String moduleTitle) {
     if (user == null) return false;
     if (_personalModules.contains(moduleTitle)) return true;
@@ -128,7 +136,9 @@ final class AirmiusModuleAccess {
     if (user == null) return false;
     final platformAdmin =
         user.hasAnyRole(_platformRoles) && user.twoFactorEnabled;
-    return platformAdmin || user.clubs.any((club) => club.canManage);
+    return platformAdmin ||
+        user.hasAnyRole(_clubRoles) ||
+        user.clubs.any((club) => club.canManage);
   }
 
   static bool canOpenAdmin(AirmiusUser? user) {
@@ -175,12 +185,18 @@ final class AirmiusModuleAccess {
         user.hasAnyRole(const {
           'marketplace_manager',
           'outfit_subscription_manager',
+          'sponsor',
+          'sponsor_manager',
         });
   }
 
   static bool _canManageSponsors(AirmiusUser user) {
-    return _hasAnyPermission(user, const {'sponsors.view', 'finance.edit'}) ||
-        user.hasAnyRole(const {'sponsor_manager'});
+    return _hasAnyPermission(user, const {
+          'sponsors.view',
+          'finance.edit',
+          'sponsor.workspace.view',
+        }) ||
+        user.hasAnyRole(const {'sponsor', 'sponsor_manager'});
   }
 
   static bool _canManageMedia(AirmiusUser user) {

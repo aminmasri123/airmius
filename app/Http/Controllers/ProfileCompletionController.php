@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AccountType;
 use App\Support\GuardianConsentNotifier;
 use App\Support\MinorSafety;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class ProfileCompletionController extends Controller
     {
         return Inertia::render('Auth/CompleteProfile', [
             'user' => $request->user()->only(['first_name', 'last_name', 'email', 'country', 'birth_date', 'gender', 'guardian_email']),
+            'accountType' => AccountType::normalize($request->session()->get('social_auth.account_type')),
         ]);
     }
 
@@ -27,6 +29,7 @@ class ProfileCompletionController extends Controller
             'country' => ['required', 'string', 'size:2'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
+            'account_type' => ['required', Rule::in(AccountType::VALUES)],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
         ]);
 
@@ -55,15 +58,19 @@ class ProfileCompletionController extends Controller
         ]);
 
         if ($requiresGuardianConsent) {
-            $user->syncRoles(['minor_pending_consent']);
+            AccountType::assignInitialRole($user, AccountType::ATHLETE, true);
 
             GuardianConsentNotifier::send($user, $guardianEmail);
 
             return redirect()->route('guardian-consent.pending');
         }
 
-        $user->syncRoles(['player']);
+        if (! $user->roles()->exists() || $user->hasRole('minor_pending_consent')) {
+            AccountType::assignInitialRole($user, $data['account_type'], false);
+        }
 
-        return redirect()->route('auth.dashboard')->with('success', 'Profil vervollständigt.');
+        $request->session()->forget('social_auth.account_type');
+
+        return redirect()->route('auth.home')->with('success', 'Profil vervollständigt.');
     }
 }

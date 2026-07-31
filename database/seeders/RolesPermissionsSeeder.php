@@ -5,12 +5,13 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolesPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]
+        app()[PermissionRegistrar::class]
             ->forgetCachedPermissions();
 
         /*
@@ -63,6 +64,8 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'users.assign_roles', 'description' => 'Rollen an Benutzer vergeben'],
             ['name' => 'guardians.children.view', 'description' => 'Verknuepfte Kinderprofile anzeigen'],
             ['name' => 'guardians.children.manage', 'description' => 'Zustimmung und Kinderprofile verwalten'],
+            ['name' => 'sponsor.workspace.view', 'description' => 'Eigenen Sponsor-Arbeitsbereich anzeigen'],
+            ['name' => 'sponsor.profile.edit', 'description' => 'Eigenes Sponsorprofil bearbeiten'],
 
             // CLUBS
             ['name' => 'clubs.view', 'description' => 'Clubs anzeigen'],
@@ -180,7 +183,7 @@ class RolesPermissionsSeeder extends Seeder
         */
 
         $roles = [
-            //👑 SYSTEM (GLOBAL)
+            // 👑 SYSTEM (GLOBAL)
             ['name' => 'super_admin', 'description' => 'Globaler Systemadministrator mit Vollzugriff'],
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
@@ -189,8 +192,9 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],
             ['name' => 'outfit_subscription_manager', 'description' => 'Sportkleidung-Abos und Outfit-Prozesse verwalten'],
             ['name' => 'sponsor_manager', 'description' => 'Sponsoren und Sponsor-Subventionen verwalten'],
+            ['name' => 'sponsor', 'description' => 'Eigene Sponsorprofile, Partnerschaften und Kampagnen verwalten'],
 
-            //🏢 CLUB MANAGEMENT
+            // 🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],
             ['name' => 'club_admin', 'description' => 'Verwaltet einen Club vollständig'],
             ['name' => 'club_manager', 'description' => 'Operativer Manager eines Clubs'],
@@ -198,7 +202,7 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'financial_controller', 'description' => 'Finanz Kontrolle'],
             ['name' => 'media_manager', 'description' => 'Medien & Content'],
 
-            //⚽ TEAM & Sport
+            // ⚽ TEAM & Sport
 
             ['name' => 'coach', 'description' => 'Trainer'],
             ['name' => 'assistant_coach', 'description' => 'Assistent Trainer'],
@@ -207,7 +211,7 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'team_manager', 'description' => 'Team Organisation'],
             ['name' => 'captain', 'description' => 'Team Kapitän'],
 
-            //👤 PLAYER
+            // 👤 PLAYER
 
             ['name' => 'player', 'description' => 'Spieler'],
             ['name' => 'youth_player', 'description' => 'Jugendspieler'],
@@ -215,16 +219,15 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'minor_player', 'description' => 'Minderjähriger Spieler mit Zustimmung der Erziehungsberechtigten'],
             ['name' => 'guest_player', 'description' => 'Gastspieler'],
 
-            //👪 COMMUNITY & Familly & OTHER
+            // 👪 COMMUNITY & Familly & OTHER
             ['name' => 'parent', 'description' => 'Elternteil'],
             ['name' => 'guardian', 'description' => 'Erziehungsberechtigter'],
 
-            //👀 PASSIVE
+            // 👀 PASSIVE
             ['name' => 'viewer', 'description' => 'Nur Ansicht Zugriff'],
             ['name' => 'guest', 'description' => 'Gast Benutzer'],
             ['name' => 'data_analyst', 'description' => 'Analysiert Leistungsdaten'],
             ['name' => 'physiotherapist', 'description' => 'Physiotherapeut'],
-
 
         ];
 
@@ -245,20 +248,20 @@ class RolesPermissionsSeeder extends Seeder
             ->givePermissionTo(Permission::all());
 
         Role::findByName('admin')->givePermissionTo([
-            'user.manage','org.create','org.manage',
-            'team.create','team.update','team.delete','team.invite','team.kick',
-            'event.create','event.update','event.delete','event.join',
-            'post.create','post.update','post.delete',
-            'file.upload','file.delete','file.view',
+            'user.manage', 'org.create', 'org.manage',
+            'team.create', 'team.update', 'team.delete', 'team.invite', 'team.kick',
+            'event.create', 'event.update', 'event.delete', 'event.join',
+            'post.create', 'post.update', 'post.delete',
+            'file.upload', 'file.delete', 'file.view',
             'follow.user',
-            'users.view','users.create','users.edit','users.delete','users.assign_roles',
-            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings','club.jobs.manage',
-            'teams.view','teams.create','teams.edit','teams.delete','teams.manage_players',
-            'training.view','training.create','training.edit','training.delete',
-            'matches.view','matches.create','matches.edit','matches.delete','matches.manage_lineup','matches.report',
-            'players.view','players.edit','players.stats.view',
-            'analytics.view','logs.view','system.manage',
-            'blog.view','blog.create','blog.update','blog.delete','blog.publish','blog.manage',
+            'users.view', 'users.create', 'users.edit', 'users.delete', 'users.assign_roles',
+            'clubs.view', 'clubs.create', 'clubs.edit', 'clubs.delete', 'clubs.manage_members', 'clubs.manage_settings', 'club.jobs.manage',
+            'teams.view', 'teams.create', 'teams.edit', 'teams.delete', 'teams.manage_players',
+            'training.view', 'training.create', 'training.edit', 'training.delete',
+            'matches.view', 'matches.create', 'matches.edit', 'matches.delete', 'matches.manage_lineup', 'matches.report',
+            'players.view', 'players.edit', 'players.stats.view',
+            'analytics.view', 'logs.view', 'system.manage',
+            'blog.view', 'blog.create', 'blog.update', 'blog.delete', 'blog.publish', 'blog.manage',
         ]);
 
         Role::findByName('redaktor')->givePermissionTo([
@@ -274,124 +277,124 @@ class RolesPermissionsSeeder extends Seeder
         ]);
 
         Role::findByName('club_owner')->givePermissionTo([
-            'org.create','org.manage',
-            'team.create','team.update','team.delete','team.invite','team.kick',
-            'event.create','event.update','event.delete','event.join',
-            'post.create','post.update','post.delete',
-            'file.upload','file.delete','file.view',
+            'org.create', 'org.manage',
+            'team.create', 'team.update', 'team.delete', 'team.invite', 'team.kick',
+            'event.create', 'event.update', 'event.delete', 'event.join',
+            'post.create', 'post.update', 'post.delete',
+            'file.upload', 'file.delete', 'file.view',
             'follow.user',
-            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings','club.jobs.manage',
-            'teams.view','teams.manage_players',
-            'training.view','training.create','training.edit',
-            'matches.view','matches.create','matches.edit',
-            'finance.view','billing.manage',
+            'clubs.view', 'clubs.create', 'clubs.edit', 'clubs.delete', 'clubs.manage_members', 'clubs.manage_settings', 'club.jobs.manage',
+            'teams.view', 'teams.manage_players',
+            'training.view', 'training.create', 'training.edit',
+            'matches.view', 'matches.create', 'matches.edit',
+            'finance.view', 'billing.manage',
         ]);
 
         Role::findByName('club_admin')->givePermissionTo([
             'org.manage',
-            'team.create','team.update','team.delete','team.invite','team.kick',
-            'event.create','event.update','event.delete','event.join',
-            'post.create','post.update','post.delete',
-            'file.upload','file.delete','file.view',
+            'team.create', 'team.update', 'team.delete', 'team.invite', 'team.kick',
+            'event.create', 'event.update', 'event.delete', 'event.join',
+            'post.create', 'post.update', 'post.delete',
+            'file.upload', 'file.delete', 'file.view',
             'follow.user',
-            'clubs.manage_members','clubs.manage_settings','club.jobs.manage',
-            'teams.view','teams.edit','teams.manage_players',
-            'training.view','training.edit',
-            'matches.view','matches.edit',
+            'clubs.manage_members', 'clubs.manage_settings', 'club.jobs.manage',
+            'teams.view', 'teams.edit', 'teams.manage_players',
+            'training.view', 'training.edit',
+            'matches.view', 'matches.edit',
             'players.view',
         ]);
 
         Role::findByName('club_manager')->givePermissionTo([
             'org.manage',
-            'team.create','team.update','team.invite','team.kick',
-            'event.create','event.update',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'team.create', 'team.update', 'team.invite', 'team.kick',
+            'event.create', 'event.update',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view','club.jobs.manage',
+            'clubs.view', 'teams.view', 'club.jobs.manage',
         ]);
 
         Role::findByName('academy_manager')->givePermissionTo([
             'org.manage',
-            'team.create','team.update','team.delete','team.invite','team.kick',
-            'event.create','event.update','event.delete',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'team.create', 'team.update', 'team.delete', 'team.invite', 'team.kick',
+            'event.create', 'event.update', 'event.delete',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view','club.jobs.manage',
+            'clubs.view', 'teams.view', 'club.jobs.manage',
         ]);
 
         Role::findByName('coach')->givePermissionTo([
-            'team.create','team.update','team.invite','team.kick',
-            'event.create','event.update','event.delete',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'team.create', 'team.update', 'team.invite', 'team.kick',
+            'event.create', 'event.update', 'event.delete',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'teams.view','teams.manage_players',
-            'training.view','training.create','training.edit',
-            'matches.view','matches.manage_lineup',
-            'players.view','players.stats.view',
-            'video.analyze','analytics.view',
+            'teams.view', 'teams.manage_players',
+            'training.view', 'training.create', 'training.edit',
+            'matches.view', 'matches.manage_lineup',
+            'players.view', 'players.stats.view',
+            'video.analyze', 'analytics.view',
         ]);
 
         Role::findByName('assistant_coach')->givePermissionTo([
-            'team.update','team.invite',
-            'event.create','event.update',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'team.update', 'team.invite',
+            'event.create', 'event.update',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('performance_coach')->givePermissionTo([
             'team.update',
-            'event.create','event.update',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'event.create', 'event.update',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('fitness_coach')->givePermissionTo([
             'team.update',
-            'event.create','event.update',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'event.create', 'event.update',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('team_manager')->givePermissionTo([
-            'team.update','team.invite','team.kick',
-            'event.create','event.update',
-            'post.create','post.update',
-            'file.upload','file.view',
+            'team.update', 'team.invite', 'team.kick',
+            'event.create', 'event.update',
+            'post.create', 'post.update',
+            'file.upload', 'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('captain')->givePermissionTo([
             'team.invite',
             'event.join',
-            'post.create','post.update','post.delete',
+            'post.create', 'post.update', 'post.delete',
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('player')->givePermissionTo([
             'event.join',
-            'post.create','post.update','post.delete',
+            'post.create', 'post.update', 'post.delete',
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
             'training.view',
             'matches.view',
             'players.stats.view',
         ]);
 
         Role::findByName('minor_pending_consent')->givePermissionTo([
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
             'training.view',
             'matches.view',
         ]);
@@ -400,7 +403,7 @@ class RolesPermissionsSeeder extends Seeder
             'event.join',
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
             'training.view',
             'matches.view',
             'players.stats.view',
@@ -408,17 +411,17 @@ class RolesPermissionsSeeder extends Seeder
 
         Role::findByName('youth_player')->givePermissionTo([
             'event.join',
-            'post.create','post.update',
+            'post.create', 'post.update',
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('guest_player')->givePermissionTo([
             'event.join',
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('parent')->givePermissionTo([
@@ -444,7 +447,7 @@ class RolesPermissionsSeeder extends Seeder
         Role::findByName('viewer')->givePermissionTo([
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view', 'teams.view',
         ]);
 
         Role::findByName('data_analyst')->givePermissionTo([
@@ -488,12 +491,17 @@ class RolesPermissionsSeeder extends Seeder
             'outfit-subscriptions.manage',
         ]);
 
+        Role::findByName('sponsor')->givePermissionTo([
+            'sponsor.workspace.view',
+            'sponsor.profile.edit',
+        ]);
+
         Role::findByName('media_manager')->givePermissionTo([
-            'post.create','post.update','post.delete',
-            'file.upload','file.delete','file.view',
+            'post.create', 'post.update', 'post.delete',
+            'file.upload', 'file.delete', 'file.view',
             'follow.user',
-            'content.create','content.edit','content.delete',
-            'media.upload','media.delete',
+            'content.create', 'content.edit', 'content.delete',
+            'media.upload', 'media.delete',
             'seo.manage',
         ]);
 
@@ -506,7 +514,7 @@ class RolesPermissionsSeeder extends Seeder
             'security.manage',
         ]);
 
-        app()[\Spatie\Permission\PermissionRegistrar::class]
+        app()[PermissionRegistrar::class]
             ->forgetCachedPermissions();
     }
 }

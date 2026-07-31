@@ -1,4 +1,69 @@
 {
+  "Wie möchtest du Airmius nutzen?": "Wie möchtest du Airmius nutzen?",
+  "Du erhältst den passenden Startbereich. Weitere Rollen können später durch Vereine oder Administratoren ergänzt werden.": "Du erhältst den passenden Startbereich. Weitere Rollen können später durch Vereine oder Administratoren ergänzt werden.",
+  "Trainer / Coach": "Trainer / Coach",
+  "Training, Teams, Feed und Sportpartner": "Training, Teams, Feed und Sportpartner",
+  "Athleten, Planung, Anwesenheit und Feedback": "Athleten, Planung, Anwesenheit und Feedback",
+  "Mitglieder, Teams, Beiträge und Organisation": "Mitglieder, Teams, Beiträge und Organisation",
+  "Partnerschaften, Kampagnen und Reichweite": "Partnerschaften, Kampagnen und Reichweite",
+  "Als Trainer starten": "Als Trainer starten",
+  "Als Sponsor starten": "Als Sponsor starten",
+  "Aktive Kampagnen": "Aktive Kampagnen",
+  "Alle Kampagnen": "Alle Kampagnen",
+  "Alle Platzierungen": "Alle Platzierungen",
+  "Ansprechperson": "Ansprechperson",
+  "Deine Marke": "Deine Marke",
+  "Gemessene Sichtkontakte": "Gemessene Sichtkontakte",
+  "Kampagnenbudget": "Kampagnenbudget",
+  "Letzte Kampagnen": "Letzte Kampagnen",
+  "Markenname": "Markenname",
+  "Logo hell": "Logo hell",
+  "Logo dunkel": "Logo dunkel",
+  "Optionale Logos für hellen und dunklen Hintergrund": "Optionale Logos für hellen und dunklen Hintergrund",
+  "Markenprofil anlegen": "Markenprofil anlegen",
+  "Markenprofil bearbeiten": "Markenprofil bearbeiten",
+  "Markenprofil vervollständigen": "Markenprofil vervollständigen",
+  "Dein Markenprofil ist noch nicht vollständig": "Dein Markenprofil ist noch nicht vollständig",
+  "Diese Angaben sind für Sportler, Vereine und öffentliche Sponsorenseiten sichtbar.": "Diese Angaben sind für Sportler, Vereine und öffentliche Sponsorenseiten sichtbar.",
+  "Füge Logo, Website und Kontakt hinzu, damit Vereine und Sportler deine Marke klar erkennen.": "Füge Logo, Website und Kontakt hinzu, damit Vereine und Sportler deine Marke klar erkennen.",
+  "Jetzt einrichten": "Jetzt einrichten",
+  "Erste Kampagne erstellen": "Erste Kampagne erstellen",
+  "Noch keine Kampagne vorhanden": "Noch keine Kampagne vorhanden",
+  "Starte mit einem klaren Ziel, einer Region und einem kontrollierbaren Budget.": "Starte mit einem klaren Ziel, einer Region und einem kontrollierbaren Budget.",
+  "Partnerschaften": "Partnerschaften",
+  "Netzwerk": "Netzwerk",
+  "Noch keine Partnerschaft verknüpft. Dein Verein oder das Airmius-Team kann eine Zusammenarbeit zuordnen.": "Noch keine Partnerschaft verknüpft. Dein Verein oder das Airmius-Team kann eine Zusammenarbeit zuordnen.",
+  "Nächster sinnvoller Schritt": "Nächster sinnvoller Schritt",
+  "Erste Reichweite aufbauen": "Erste Reichweite aufbauen",
+  "Performance regelmäßig prüfen": "Performance regelmäßig prüfen",
+  "Ein vollständiges Profil schafft Vertrauen und verbessert deine Darstellung in der App und auf der Website.": "Ein vollständiges Profil schafft Vertrauen und verbessert deine Darstellung in der App und auf der Website.",
+  "Beobachte CTR, Budget und Laufzeit. Optimiere zuerst Zielgruppe und Botschaft, bevor du das Budget erhöhst.": "Beobachte CTR, Budget und Laufzeit. Optimiere zuerst Zielgruppe und Botschaft, bevor du das Budget erhöhst.",
+  "Lege eine kleine, regional fokussierte Kampagne an und miss die Reaktion der Sport-Community.": "Lege eine kleine, regional fokussierte Kampagne an und miss die Reaktion der Sport-Community.",
+  "Sponsor-Cockpit": "Sponsor-Cockpit",
+  "Sponsoring & Reichweite": "Sponsoring & Reichweite",
+  "Steuere dein Markenprofil, Partnerschaften und Kampagnen. Reichweite und Wirkung bleiben dabei jederzeit nachvollziehbar.": "Steuere dein Markenprofil, Partnerschaften und Kampagnen. Reichweite und Wirkung bleiben dabei jederzeit nachvollziehbar.",
+  "Startet bald": "Startet bald",
+  "Wird gespeichert …": "Wird gespeichert …",
+  "{amount} eingesetzt": "{amount} eingesetzt",
+  "{count} insgesamt": "{count} insgesamt",
+  "Öffentlich ansehen": "Öffentlich ansehen",
+  "Richte deinen Vereinsbereich ein": "Richte deinen Vereinsbereich ein",
+  "Registriere zuerst deinen Verein. Danach führst du Teams, Mitglieder, Termine und Beiträge Schritt für Schritt zusammen.": "Registriere zuerst deinen Verein. Danach führst du Teams, Mitglieder, Termine und Beiträge Schritt für Schritt zusammen.",
+  "Dein Konto hat eine Vereinsrolle, ist aber noch keinem verwaltbaren Verein zugeordnet. Bitte den Vereinsinhaber um eine Einladung mit der passenden Rolle.": "Dein Konto hat eine Vereinsrolle, ist aber noch keinem verwaltbaren Verein zugeordnet. Bitte den Vereinsinhaber um eine Einladung mit der passenden Rolle.",
+  "Einladungen prüfen": "Einladungen prüfen",
+  "Basisdaten und Sichtbarkeit festlegen": "Basisdaten und Sichtbarkeit festlegen",
+  "Erstes Team erstellen und Trainer zuordnen": "Erstes Team erstellen und Trainer zuordnen",
+  "Einladen oder bestehende Daten importieren": "Einladen oder bestehende Daten importieren",
+  "Heute für dich": "Heute für dich",
+  "Dein Tagesflow": "Dein Tagesflow",
+  "Training, Ernährung und Termine kompakt im Blick.": "Training, Ernährung und Termine kompakt im Blick.",
+  "Tagesübersicht": "Tagesübersicht",
+  "Geschlecht": "Geschlecht",
+  "Weiblich": "Weiblich",
+  "Männlich": "Männlich",
+  "Portugal": "Portugal",
+  "Noch keine Beiträge in „{filter}”.": "Noch keine Beiträge in „{filter}”.",
+  "Wechsle den Filter oder erstelle den ersten passenden Beitrag.": "Wechsle den Filter oder erstelle den ersten passenden Beitrag.",
   "Dashboard": "Dashboard",
   "Vereine & Teams": "Vereine & Teams",
   "Verwalte Teams": "Verwalte Teams",
@@ -1393,7 +1458,8 @@
       "audiences": {
         "athletes": "Sportler",
         "coaches": "Trainer",
-        "clubs": "Vereine"
+        "clubs": "Vereine",
+        "sponsors": "Sponsoren"
       },
       "hero": {
         "variant_a": {
@@ -1457,8 +1523,8 @@
             "label": "statt WhatsApp, Excel und E-Mail"
           },
           "roles": {
-            "value": "3 Rollen",
-            "label": "Sportler, Trainer und Vereine"
+            "value": "4 Rollen",
+            "label": "Sportler, Trainer, Vereine und Sponsoren"
           },
           "chaos": {
             "value": "0 Chaos",
@@ -1488,7 +1554,7 @@
       "benefits": {
         "title_before": "Eine App für",
         "title_highlight": "alle im Sport",
-        "subtitle": "Egal ob Sportler, Trainer oder Verein - AIRMIUS macht deinen Alltag einfacher.",
+        "subtitle": "Ob Sportler, Trainer, Verein oder Sponsor - AIRMIUS verbindet den sportlichen Alltag.",
         "audience_label": "Zielgruppen",
         "cards": {
           "athletes": {
@@ -1786,6 +1852,32 @@
             "events": {
               "title": "Termine für alle",
               "text": "Versammlungen, Events und Spieltage anlegen - mit Zu-/Absagen für den ganzen Verein."
+            }
+          },
+          "sponsors": {
+            "discovery": {
+              "title": "Passende Vereine finden",
+              "text": "Entdecke Vereine nach Region, Sportart und Zielgruppe."
+            },
+            "audience": {
+              "title": "Relevante Zielgruppen",
+              "text": "Unterstütze genau die Teams und Sportangebote, die zu deiner Marke passen."
+            },
+            "partnerships": {
+              "title": "Partnerschaften steuern",
+              "text": "Anfragen, Pakete, Laufzeiten und Ansprechpartner an einem Ort."
+            },
+            "assets": {
+              "title": "Werbemittel austauschen",
+              "text": "Logos, Motive und Freigaben sicher mit dem Verein abstimmen."
+            },
+            "impact": {
+              "title": "Wirkung verstehen",
+              "text": "Sichtbarkeit, Klicks und Reaktionen transparent auswerten."
+            },
+            "documents": {
+              "title": "Verträge & Berichte",
+              "text": "Dokumente, Rechnungen und Berichte nachvollziehbar verwalten."
             }
           }
         }
@@ -8821,5 +8913,85 @@
     "last_login": "Letzter Login",
     "privacy_status": "DSGVO-Status",
     "mail_status": "Mailstatus"
+  },
+  "Trainer-Cockpit": "Trainer-Cockpit",
+  "trainerCockpit": {
+    "overview": "Übersicht",
+    "teams": "Teams",
+    "feedback": "Feedback",
+    "planning": "Planung",
+    "readinessScore": "Bereitschaft",
+    "teamCount": "Betreute Teams",
+    "athleteCount": "Athleten",
+    "upcomingEvents": "Kommende Termine",
+    "openFeedback": "Offenes Feedback",
+    "planTraining": "Training planen",
+    "documentTraining": "Training dokumentieren",
+    "openPlans": "Pläne öffnen",
+    "openEvents": "Termine öffnen",
+    "feedbackHint": "Offene Rückmeldungen zeitnah beantworten.",
+    "overdueItems": "Überfällige Einheiten",
+    "overdueHint": "Überfällige Einheiten prüfen und neu planen.",
+    "eventsHint": "Die nächsten Termine und Teilnehmer prüfen.",
+    "notScheduled": "Nicht terminiert",
+    "kilometers": "{count} km",
+    "minutes": "{count} Min.",
+    "eyebrow": "Dein Arbeitsbereich",
+    "title": "Trainer-Cockpit",
+    "subtitle": "Planung, Belastung, Anwesenheit und Feedback für deine betreuten Teams an einem Ort.",
+    "riskAthletes": "Athleten im Blick",
+    "quickActions": "Schnellaktionen",
+    "weeklyControl": "Wochensteuerung",
+    "weeklyControlHint": "Nutze echte Trainingsdaten, um Belastung und nächste Schritte sinnvoll zu steuern.",
+    "weekSessions": "Einheiten diese Woche",
+    "weekLoad": "Wochenumfang",
+    "sessionTrend": "Trend Einheiten",
+    "averageRpe": "Ø Belastung",
+    "coachActions": "Empfohlene nächste Schritte",
+    "rpe": "RPE",
+    "pain": "Schmerz",
+    "noRiskAthletes": "Aktuell gibt es keine auffälligen Belastungswerte.",
+    "team": "Team",
+    "sessionsShort": "Einheiten",
+    "feedbackShort": "Feedback",
+    "riskShort": "Risiko",
+    "todayFocus": "Heute im Fokus",
+    "nextSteps": "Deine nächsten Schritte",
+    "nextEvents": "Nächste Termine",
+    "open": "Öffnen",
+    "noTeam": "Kein Team",
+    "noEvents": "Noch keine kommenden Termine vorhanden.",
+    "teamOverview": "Teamübersicht",
+    "noClub": "Ohne Verein",
+    "preview": "Vorschau",
+    "athletes": "Athleten",
+    "plans": "Pläne",
+    "noTeams": "Noch kein Team zugewiesen",
+    "noTeamsText": "Suche ein Team oder bitte einen Verein, dich als Trainer einzuladen. Danach erscheinen Athleten, Planung und Feedback hier automatisch.",
+    "findTeam": "Team oder Verein finden",
+    "feedbackQueue": "Feedback-Warteschlange",
+    "athlete": "Athlet",
+    "noFeedback": "Alles beantwortet",
+    "recentDocumentation": "Letzte Dokumentation",
+    "recentLogs": "Letzte Trainingslogs",
+    "noLogs": "Noch keine Trainingslogs vorhanden.",
+    "overdueQueue": "Überfällige Planung",
+    "noOverdue": "Keine überfälligen Einheiten.",
+    "activePlans": "Aktive Pläne",
+    "plannedItems": "Geplante Einheiten",
+    "noPlans": "Noch keine aktiven Trainingspläne vorhanden.",
+    "readiness": {
+      "good": "Bereit",
+      "watch": "Beobachten",
+      "risk": "Risiko",
+      "empty": "Noch keine Daten"
+    },
+    "actions": {
+      "checkRiskAthletes": "Belastete Athleten prüfen",
+      "answerFeedback": "Offenes Feedback beantworten",
+      "rescheduleOverdue": "Überfällige Einheiten neu planen",
+      "planFirstSession": "Erste Einheit dieser Woche planen",
+      "keepRhythm": "Guten Trainingsrhythmus beibehalten"
+    }
   }
 }

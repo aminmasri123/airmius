@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 defineOptions({ layout: AppLayout })
 
@@ -12,6 +13,7 @@ const props = defineProps({
 
 const page = usePage()
 const { t } = useI18n()
+const { can } = usePermissions()
 const selectedClubId = ref(props.clubs[0]?.id || null)
 
 watch(() => props.clubs, (clubs) => {
@@ -122,8 +124,40 @@ const actionText = {
             </div>
         </section>
 
-        <section v-if="!selectedClub" class="surface-card p-6 text-sm text-secondary">
-            {{ t('Für dein Konto ist aktuell kein verwaltbarer Verein sichtbar.') }}
+        <section v-if="!selectedClub" class="surface-card overflow-hidden">
+            <div class="grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                    <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-buttonPrimary/10 text-buttonPrimary"><i class="las la-building text-2xl"></i></span>
+                    <h2 class="mt-4 text-xl font-bold text-primary">{{ t('Richte deinen Vereinsbereich ein') }}</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">
+                        {{ can('club.create')
+                            ? t('Registriere zuerst deinen Verein. Danach führst du Teams, Mitglieder, Termine und Beiträge Schritt für Schritt zusammen.')
+                            : t('Dein Konto hat eine Vereinsrolle, ist aber noch keinem verwaltbaren Verein zugeordnet. Bitte den Vereinsinhaber um eine Einladung mit der passenden Rolle.') }}
+                    </p>
+                </div>
+                <Link
+                    v-if="can('club.create')"
+                    :href="route('auth.teams.index', { create_club: 1 })"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary"
+                >
+                    <i class="las la-plus"></i>
+                    {{ t('Verein registrieren') }}
+                </Link>
+                <Link
+                    v-else
+                    :href="route('auth.teams.index')"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-5 py-3 text-sm font-bold text-primary"
+                >
+                    <i class="las la-envelope-open-text"></i>
+                    {{ t('Einladungen prüfen') }}
+                </Link>
+            </div>
+
+            <div class="grid gap-px border-t border-border bg-border sm:grid-cols-3">
+                <div class="bg-card p-4"><p class="text-xs font-bold uppercase text-secondary">1. {{ t('Verein') }}</p><p class="mt-1 text-sm text-primary">{{ t('Basisdaten und Sichtbarkeit festlegen') }}</p></div>
+                <div class="bg-card p-4"><p class="text-xs font-bold uppercase text-secondary">2. {{ t('Team') }}</p><p class="mt-1 text-sm text-primary">{{ t('Erstes Team erstellen und Trainer zuordnen') }}</p></div>
+                <div class="bg-card p-4"><p class="text-xs font-bold uppercase text-secondary">3. {{ t('Mitglieder') }}</p><p class="mt-1 text-sm text-primary">{{ t('Einladen oder bestehende Daten importieren') }}</p></div>
+            </div>
         </section>
 
         <template v-else>

@@ -1,52 +1,52 @@
 <?php
 
-use App\Http\Controllers\ClubController;
+use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\ClubCockpitController;
+use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubMembershipController;
-use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
-use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\FriendController;
-use App\Http\Controllers\LikeController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\LearningStudioController;
-use App\Http\Controllers\PublicLearningController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NutritionController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\OutfitSubscriptionController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostHelpfulController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileGamificationController;
+use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\RideController;
+use App\Http\Controllers\RoleHomeController;
 use App\Http\Controllers\RoleWorkspaceController;
+use App\Http\Controllers\SponsorWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\SportMapController;
 use App\Http\Controllers\SportMatchingController;
 use App\Http\Controllers\StoryController;
-use App\Http\Controllers\Api\V1\TeamPenaltyController;
-use App\Http\Controllers\TeamController;
-use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Http\Controllers\TrainingController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserBadgeController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPrivacyController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
-use Illuminate\Http\Request;
+use App\Http\Middleware\EnsureApiCorsHeaders;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::options('/team-join-requests/{joinRequest}/approve', fn () => response('', 204))
     ->middleware(EnsureApiCorsHeaders::class)
@@ -64,10 +64,11 @@ Route::options('/clubs/{club}/members/{user}', fn () => response('', 204))
     ->middleware(EnsureApiCorsHeaders::class)
     ->name('auth.clubs.members.update.options');
 
-Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])->group(function () {
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
 
     // DASHBOARD
 
+    Route::get('/home', RoleHomeController::class)->name('auth.home');
     Route::get('/profile-completion', [ProfileCompletionController::class, 'edit'])->name('auth.profile-completion.edit');
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
@@ -77,6 +78,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->name('auth.trainer-cockpit.index');
+    Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
+    Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
@@ -137,7 +140,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/profile/recommendations/{profileRecommendation}/approve', [ProfileGamificationController::class, 'approveRecommendation'])->name('auth.profile.recommendations.approve');
     Route::put('/profile/recommendations/{profileRecommendation}/reject', [ProfileGamificationController::class, 'rejectRecommendation'])->name('auth.profile.recommendations.reject');
 
-    //SETTINGS
+    // SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
     Route::get('/settings/privacy/export', [UserPrivacyController::class, 'export'])->name('auth.settings.privacy.export');
@@ -242,9 +245,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::delete('/settings/sport-activities/{activity}', [SportIntegrationController::class, 'destroyActivity'])
         ->name('auth.sport-activities.destroy');
     Route::get('/search', GlobalSearchController::class)->name('auth.search');
-
-
-
 
     // CLUBS
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
@@ -437,6 +437,5 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('auth.notifications.read');
     Route::post('/notifications/{notification}/unread', [NotificationController::class, 'markAsUnread'])->name('auth.notifications.unread');
     Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('auth.notifications.destroy');
-
 
 });

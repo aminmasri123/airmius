@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
-use App\Support\GuardianConsentState;
+use App\Support\AccountType;
 use App\Support\GuardianConsentNotifier;
+use App\Support\GuardianConsentState;
 use App\Support\MinorSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -52,6 +53,7 @@ class MeController extends Controller
             'country' => ['required', 'string', 'size:2'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
+            'account_type' => ['nullable', Rule::in(AccountType::VALUES)],
             'bio' => ['nullable', 'string', 'max:1000'],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
         ]);
@@ -86,13 +88,20 @@ class MeController extends Controller
         ]);
 
         if ($requiresGuardianConsent) {
-            $user->syncRoles(['minor_pending_consent']);
+            AccountType::assignInitialRole($user, AccountType::ATHLETE, true);
             GuardianConsentNotifier::send($user, $guardianEmail);
         } elseif ($user->hasRole('minor_pending_consent')) {
-            $user->removeRole('minor_pending_consent');
-            $user->assignRole('player');
+            AccountType::assignInitialRole(
+                $user,
+                AccountType::normalize($data['account_type'] ?? null),
+                false,
+            );
         } elseif (! $user->roles()->exists()) {
-            $user->assignRole('player');
+            AccountType::assignInitialRole(
+                $user,
+                AccountType::normalize($data['account_type'] ?? null),
+                false,
+            );
         }
 
         return new UserResource($user->refresh()->loadMissing([

@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\SponsorWorkspaceService;
+use App\Support\ClubRoles;
+use App\Support\Roles;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+
+class RoleHomeController extends Controller
+{
+    public function __invoke(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $roles = $user->getRoleNames();
+
+        if ($roles->intersect(Roles::FULL_ACCESS)->isNotEmpty()) {
+            return redirect()->route('auth.dashboard');
+        }
+
+        $canOpenClub = $roles->intersect(array_merge(Roles::FULL_ACCESS, Roles::CLUB_ADMIN))->isNotEmpty()
+            || $user->can('org.manage')
+            || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists();
+        $canOpenCoach = TrainerCockpitController::userCanView($user);
+        $canOpenSponsor = app(SponsorWorkspaceService::class)->canOpen($user);
+        $destinations = collect([
+            $canOpenClub
+                ? route('auth.club-cockpit.index')
+                : null,
+            $canOpenCoach
+                ? route('auth.trainer-cockpit.index')
+                : null,
+            $canOpenSponsor
+                ? route('auth.sponsor-workspace.index')
+                : null,
+            $roles->intersect(Roles::PARENT)->isNotEmpty()
+                ? route('guardian-access.children')
+                : null,
+        ])->filter()->unique()->values();
+
+        if ($destinations->count() > 1) {
+            return redirect()->route('auth.workspaces.index');
+        }
+
+        if ($destinations->isNotEmpty()) {
+            return redirect()->to($destinations->first());
+        }
+
+        return redirect()->route('auth.feed.index');
+    }
+}

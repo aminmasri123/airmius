@@ -8,6 +8,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_module_access.dart';
 import '../core/airmius_mvp_surface.dart';
+import '../core/airmius_persona.dart';
 import '../core/airmius_preferences.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_services_scope.dart';
@@ -46,6 +47,7 @@ import 'learning_screen.dart';
 import 'marketplace_screen.dart';
 import 'commerce_center_screen.dart';
 import 'sponsors_center_screen.dart';
+import 'sponsor_cockpit_screen.dart';
 import 'media_guidelines_screen.dart';
 import 'blog_media_center_screen.dart';
 import 'users_center_screen.dart';
@@ -79,6 +81,8 @@ class _ShellScreenState extends State<ShellScreen> {
   Timer? _badgeTimer;
   bool _refreshingBadges = false;
   int? _footerLoadedForUserId;
+  int? _roleExperienceLoadedForUserId;
+  String? _roleHomeModuleTitle;
   List<FooterNavigationDestination> _footerDestinations =
       FooterNavigationDestination.defaultDestinations;
 
@@ -96,7 +100,16 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final userId = AirmiusServicesScope.of(context).authState.user?.id;
+    final user = AirmiusServicesScope.of(context).authState.user;
+    final userId = user?.id;
+    if (user != null && _roleExperienceLoadedForUserId != user.id) {
+      _roleExperienceLoadedForUserId = user.id;
+      _roleHomeModuleTitle = AirmiusPersonaResolver.homeModuleTitle(user);
+      _footerDestinations = FooterNavigationDestination.defaultsFor(user);
+      _openedModule = _moduleByTitle(_roleHomeModuleTitle);
+      _tab = AppTab.feed;
+      _tabHistory.clear();
+    }
     if (userId == null || _footerLoadedForUserId == userId) return;
     _footerLoadedForUserId = userId;
     unawaited(_loadFooterNavigation());
@@ -149,7 +162,7 @@ class _ShellScreenState extends State<ShellScreen> {
       return;
     }
     final destinations = sanitizeFooterNavigation(
-      destinations: stored ?? FooterNavigationDestination.defaultDestinations,
+      destinations: stored ?? FooterNavigationDestination.defaultsFor(user),
       user: user,
     );
     setState(() => _footerDestinations = destinations);
@@ -213,7 +226,8 @@ class _ShellScreenState extends State<ShellScreen> {
 
   bool _handleBackNavigation() {
     if (_openedModule != null) {
-      setState(() => _openedModule = null);
+      if (_openedModule!.title == _roleHomeModuleTitle) return false;
+      setState(() => _openedModule = _moduleByTitle(_roleHomeModuleTitle));
       return true;
     }
 
@@ -230,6 +244,33 @@ class _ShellScreenState extends State<ShellScreen> {
 
     return false;
   }
+
+  ModuleDefinition? _moduleByTitle(String? title) {
+    if (title == null) return null;
+    for (final module in appModules) {
+      if (module.title == title) return module;
+    }
+    return null;
+  }
+
+  void _openRoleHome() {
+    final module = _moduleByTitle(_roleHomeModuleTitle);
+    if (module == null) {
+      _openTab(AppTab.feed, remember: false);
+      return;
+    }
+    setState(() {
+      _openedModule = module;
+      _tabHistory.clear();
+    });
+  }
+
+  bool get _isAtRoleHome =>
+      _tabHistory.isEmpty &&
+      ((_roleHomeModuleTitle == null &&
+              _openedModule == null &&
+              _tab == AppTab.feed) ||
+          (_openedModule?.title == _roleHomeModuleTitle));
 
   void _openModule(ModuleDefinition module) {
     if (!AirmiusMvpSurface.isModuleVisible(module)) {
@@ -464,7 +505,14 @@ class _ShellScreenState extends State<ShellScreen> {
       'Kurse' => const LearningScreen(),
       'Marketplace' => const MarketplaceScreen(),
       'Commerce' => const CommerceCenterScreen(),
-      'Sponsoren' => const SponsorsCenterScreen(),
+      'Sponsoren' =>
+        AirmiusServicesScope.of(context).authState.user?.hasAnyRole(const {
+                  'sponsor',
+                  'sponsor_manager',
+                }) ==
+                true
+            ? const SponsorCockpitScreen()
+            : const SponsorsCenterScreen(),
       'Medienrichtlinien' => const MediaGuidelinesScreen(),
       'Blog & Medien' => const BlogMediaCenterScreen(),
       'Nutzer' => const UsersCenterScreen(),
@@ -525,8 +573,7 @@ class _ShellScreenState extends State<ShellScreen> {
           };
 
     return PopScope(
-      canPop:
-          _openedModule == null && _tabHistory.isEmpty && _tab == AppTab.feed,
+      canPop: _isAtRoleHome,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _handleBackNavigation();
@@ -537,7 +584,7 @@ class _ShellScreenState extends State<ShellScreen> {
           title: _openedModule == null
               ? scope.t(_tab.i18nKey)
               : scope.copy(_openedModule!.title),
-          onLogoTap: () => _openTab(AppTab.feed),
+          onLogoTap: _openRoleHome,
           onSearch: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => GlobalSearchScreen()),
@@ -820,9 +867,13 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final user = AirmiusServicesScope.of(context).authState.user;
+    final recommendedModules = user == null
+        ? const <String>{}
+        : AirmiusPersonaResolver.navigationModules(user);
     final drawerModules = appModules
         .where(AirmiusMvpSurface.isModuleVisible)
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
+        .where((module) => recommendedModules.contains(module.title))
         .where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);

@@ -11,12 +11,21 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 
 const page = usePage()
-const redirectTarget = new URLSearchParams(page.url.split('?')[1] || '').get('redirect')
+const query = new URLSearchParams(page.url.split('?')[1] || '')
+const redirectTarget = query.get('redirect')
+const requestedAccountType = ['athlete', 'coach', 'club', 'sponsor'].includes(query.get('account')) ? query.get('account') : 'athlete'
 const authRouteParams = redirectTarget ? { redirect: redirectTarget } : {}
-const socialRouteParams = (provider) => ({ provider, ...authRouteParams })
+const socialRouteParams = (provider) => ({ provider, account_type: form.account_type, ...authRouteParams })
 const loginImages = computed(() => page.props.loginImages || [])
+const accountTypes = [
+    { value: 'athlete', label: 'Sportler', hint: 'Training, Teams, Feed und Sportpartner', icon: 'las la-running' },
+    { value: 'coach', label: 'Trainer / Coach', hint: 'Athleten, Planung, Anwesenheit und Feedback', icon: 'las la-chalkboard-teacher' },
+    { value: 'club', label: 'Verein', hint: 'Mitglieder, Teams, Beiträge und Organisation', icon: 'las la-building' },
+    { value: 'sponsor', label: 'Sponsor', hint: 'Partnerschaften, Kampagnen und Reichweite', icon: 'las la-handshake' },
+]
 
 const form = useForm({
+    account_type: requestedAccountType,
     first_name: '',
     last_name: '',
     email: '',
@@ -75,6 +84,26 @@ const goBack = () => {
                 <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
                     <AuthenticationCardLogo />
                 </div>
+
+                <fieldset class="mb-5">
+                    <legend class="text-sm font-bold text-primary">{{ $t('Wie möchtest du Airmius nutzen?') }}</legend>
+                    <p class="mt-1 text-xs text-secondary">{{ $t('Du erhältst den passenden Startbereich. Weitere Rollen können später durch Vereine oder Administratoren ergänzt werden.') }}</p>
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <label
+                            v-for="type in accountTypes"
+                            :key="type.value"
+                            class="cursor-pointer rounded-lg border p-3 transition"
+                            :class="form.account_type === type.value ? 'border-buttonPrimary bg-buttonPrimary/10' : 'border-border bg-inputBg hover:border-borderHover'"
+                        >
+                            <input v-model="form.account_type" type="radio" :value="type.value" class="sr-only" />
+                            <span class="flex items-start gap-3">
+                                <i :class="[type.icon, 'mt-0.5 text-xl text-buttonPrimary']"></i>
+                                <span><span class="block text-sm font-bold text-primary">{{ $t(type.label) }}</span><span class="mt-0.5 block text-xs leading-4 text-secondary">{{ $t(type.hint) }}</span></span>
+                            </span>
+                        </label>
+                    </div>
+                    <InputError class="mt-2" :message="form.errors.account_type" />
+                </fieldset>
 
                 <div class="mb-5 grid gap-2">
                     <a
@@ -188,7 +217,7 @@ const goBack = () => {
                         <option value="IN">{{$t('Indien')}}</option>
                         <option value="IT">{{$t('Italien')}}</option>
                         <option value="CA">{{$t('Kanada')}}</option>
-                        <option value="NL">{{$t('Marokko')}}</option>
+                        <option value="MA">{{$t('Marokko')}}</option>
                         <option value="NL">{{$t('Niederlande')}}</option>
                         <option value="AT">{{$t('Österreich')}}</option>
                         <option value="PL">{{$t('Polen')}}</option>
@@ -197,7 +226,7 @@ const goBack = () => {
                         <option value="ES">{{$t('Spanien')}}</option>
                         <option value="TR">{{$t('Türkei')}}</option>
                         <option value="US">{{$t('USA')}}</option>
-                        <option value="Other">{{$t('Anderes Land')}}</option>
+                        <option value="ZZ">{{$t('Anderes Land')}}</option>
                     </select>
                     <InputError class="mt-2" :message="form.errors.country" />
                 </div>

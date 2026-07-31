@@ -11,6 +11,7 @@ class Sponsor extends Model
 
     protected $fillable = [
         'club_id',
+        'owner_user_id',
         'scope',
         'name',
         'contact_name',
@@ -36,6 +37,11 @@ class Sponsor extends Model
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
     }
 
     public function outfitSubscriptionPlans()

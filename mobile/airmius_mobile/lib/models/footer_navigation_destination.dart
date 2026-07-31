@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
 import '../core/airmius_module_access.dart';
+import '../core/airmius_persona.dart';
 
 enum FooterNavigationDestination {
   training,
@@ -18,7 +19,11 @@ enum FooterNavigationDestination {
   carpool,
   files,
   marketplace,
-  settings;
+  settings,
+  workspaces,
+  coachCockpit,
+  clubCockpit,
+  sponsors;
 
   static const defaultDestinations = <FooterNavigationDestination>[
     training,
@@ -27,6 +32,36 @@ enum FooterNavigationDestination {
     nutrition,
     profile,
   ];
+
+  static List<FooterNavigationDestination> defaultsFor(AirmiusUser? user) {
+    if (user == null) return defaultDestinations;
+
+    return switch (AirmiusPersonaResolver.primary(user)) {
+      AirmiusPersona.athlete => defaultDestinations,
+      AirmiusPersona.coach => const [
+        coachCockpit,
+        training,
+        teams,
+        messages,
+        profile,
+      ],
+      AirmiusPersona.club => const [clubCockpit, teams, events, files, profile],
+      AirmiusPersona.sponsor => const [
+        sponsors,
+        marketplace,
+        messages,
+        settings,
+        profile,
+      ],
+      AirmiusPersona.multiWorkspace => const [
+        workspaces,
+        messages,
+        feed,
+        profile,
+        settings,
+      ],
+    };
+  }
 
   static FooterNavigationDestination? fromStorageKey(String value) {
     for (final destination in values) {
@@ -51,6 +86,10 @@ enum FooterNavigationDestination {
     files => 'files',
     marketplace => 'marketplace',
     settings => 'settings',
+    workspaces => 'workspaces',
+    coachCockpit => 'coach_cockpit',
+    clubCockpit => 'club_cockpit',
+    sponsors => 'sponsors',
   };
 
   String get labelKey => switch (this) {
@@ -69,6 +108,10 @@ enum FooterNavigationDestination {
     files => 'files',
     marketplace => 'footerNav.marketplace',
     settings => 'nav.settings',
+    workspaces => 'footerNav.workspaces',
+    coachCockpit => 'footerNav.coachCockpit',
+    clubCockpit => 'footerNav.clubCockpit',
+    sponsors => 'footerNav.sponsors',
   };
 
   IconData get icon => switch (this) {
@@ -87,6 +130,10 @@ enum FooterNavigationDestination {
     files => Icons.folder_outlined,
     marketplace => Icons.storefront_outlined,
     settings => Icons.settings_outlined,
+    workspaces => Icons.dashboard_customize_outlined,
+    coachCockpit => Icons.sports_score_outlined,
+    clubCockpit => Icons.apartment_outlined,
+    sponsors => Icons.handshake_outlined,
   };
 
   IconData get selectedIcon => switch (this) {
@@ -105,6 +152,10 @@ enum FooterNavigationDestination {
     files => Icons.folder,
     marketplace => Icons.storefront,
     settings => Icons.settings,
+    workspaces => Icons.dashboard_customize,
+    coachCockpit => Icons.sports_score,
+    clubCockpit => Icons.apartment,
+    sponsors => Icons.handshake,
   };
 
   String? get moduleTitle => switch (this) {
@@ -117,6 +168,10 @@ enum FooterNavigationDestination {
     files => 'Dateien',
     marketplace => 'Marketplace',
     settings => 'Einstellungen',
+    workspaces => 'Arbeitsbereiche',
+    coachCockpit => 'Trainer-Cockpit',
+    clubCockpit => 'Vereins-Cockpit',
+    sponsors => 'Sponsoren',
     _ => null,
   };
 
@@ -151,7 +206,7 @@ List<FooterNavigationDestination> sanitizeFooterNavigation({
     if (sanitized.length == 5) break;
   }
 
-  for (final destination in FooterNavigationDestination.defaultDestinations) {
+  for (final destination in FooterNavigationDestination.defaultsFor(user)) {
     if (sanitized.length >= 3) break;
     if (availableSet.contains(destination) &&
         !sanitized.contains(destination)) {

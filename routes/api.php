@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\PublicContentController;
 use App\Http\Controllers\Api\V1\RideController as MobileRideController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SponsorManagementController;
+use App\Http\Controllers\Api\V1\SponsorWorkspaceController;
 use App\Http\Controllers\Api\V1\SportIntegrationController as MobileSportIntegrationController;
 use App\Http\Controllers\Api\V1\SportMapController as MobileSportMapController;
 use App\Http\Controllers\Api\V1\SportMatchingController;
@@ -267,6 +268,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     ->get(),
             ]);
         })->name('sports.index');
+
+        Route::get('/sponsor-workspace', [SponsorWorkspaceController::class, 'index'])
+            ->name('sponsor-workspace.index');
+        Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
+            ->name('sponsor-workspace.profile.update');
 
         Route::get('/users/me/sport-cv', [SportProfileController::class, 'me'])->name('users.me.sport-cv');
         Route::get('/sport-integrations', [MobileSportIntegrationController::class, 'index'])

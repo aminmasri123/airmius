@@ -17,6 +17,8 @@ enum NutritionSection { overview, drink }
 
 enum _MealImageSource { camera, gallery }
 
+enum _NutritionCaptureAction { meal, food, barcode, photo }
+
 class NutritionCenterScreen extends StatefulWidget {
   const NutritionCenterScreen({
     super.key,
@@ -86,6 +88,11 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
+          IconButton(
+            tooltip: t('nutrition.captureAction'),
+            onPressed: _busy ? null : _openCaptureMenu,
+            icon: const Icon(Icons.add_circle_outline),
+          ),
           IconButton(
             tooltip: t('nutrition.reload'),
             onPressed: _busy ? null : _reload,
@@ -312,56 +319,9 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              AirmiusButton(
-                label: t('nutrition.addMeal'),
-                icon: Icons.add_circle_outline,
-                onPressed: _busy ? null : () => _editMeal(catalog: catalog),
-              ),
-              AirmiusButton(
-                label: t('nutrition.addWater'),
-                icon: Icons.water_drop_outlined,
-                secondary: true,
-                onPressed: _busy ? null : _addWater,
-              ),
-              AirmiusButton(
-                label: t('nutrition.searchFood'),
-                icon: Icons.search_outlined,
-                secondary: true,
-                onPressed: _busy ? null : () => _searchFood(catalog: catalog),
-              ),
-              AirmiusButton(
-                label: t('nutrition.barcode'),
-                icon: Icons.qr_code_scanner_outlined,
-                secondary: true,
-                onPressed: _busy
-                    ? null
-                    : () => _lookupBarcode(catalog: catalog),
-              ),
-              AirmiusButton(
-                label: t(
-                  _truthy(imageAnalysis['available'])
-                      ? 'nutrition.aiPhoto'
-                      : 'nutrition.aiPhotoPro',
-                ),
-                icon: Icons.auto_awesome_outlined,
-                secondary: true,
-                onPressed: _busy || !_truthy(imageAnalysis['available'])
-                    ? null
-                    : () => _analyzeMealPhoto(
-                        catalog: catalog,
-                        goal: goal,
-                        capabilities: aiCapabilities,
-                      ),
-              ),
-            ],
-          ),
           if (!_truthy(imageAnalysis['available']) &&
               _text(imageAnalysis['access_reason']).isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
             Text(
               _text(imageAnalysis['access_reason']),
               style: TextStyle(
@@ -414,6 +374,43 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
         ],
       ],
     );
+  }
+
+  Future<void> _openCaptureMenu() async {
+    final data = _dayData;
+    if (data == null || _busy) return;
+
+    final catalog = _map(data['catalog']);
+    final goal = _map(data['goal']);
+    final capabilities = _map(data['ai_capabilities']);
+    final imageAnalysis = _map(capabilities['nutrition_image_analysis']);
+    final photoAvailable = _truthy(imageAnalysis['available']);
+    final action = await showModalBottomSheet<_NutritionCaptureAction>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _NutritionCaptureSheet(
+        photoAvailable: photoAvailable,
+        photoAccessReason: _text(imageAnalysis['access_reason']),
+      ),
+    );
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case _NutritionCaptureAction.meal:
+        return _editMeal(catalog: catalog);
+      case _NutritionCaptureAction.food:
+        return _searchFood(catalog: catalog);
+      case _NutritionCaptureAction.barcode:
+        return _lookupBarcode(catalog: catalog);
+      case _NutritionCaptureAction.photo:
+        return _analyzeMealPhoto(
+          catalog: catalog,
+          goal: goal,
+          capabilities: capabilities,
+        );
+    }
   }
 
   Future<void> _editMeal({
@@ -1021,6 +1018,168 @@ class _AiPrivacyLine extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NutritionCaptureSheet extends StatelessWidget {
+  const _NutritionCaptureSheet({
+    required this.photoAvailable,
+    required this.photoAccessReason,
+  });
+
+  final bool photoAvailable;
+  final String photoAccessReason;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            t('nutrition.captureTitle'),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            t('nutrition.captureHint'),
+            style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+          ),
+          const SizedBox(height: 18),
+          _NutritionCaptureChoice(
+            title: t('nutrition.addMeal'),
+            subtitle: t('nutrition.addMealHint'),
+            icon: Icons.restaurant_outlined,
+            onTap: () => Navigator.pop(context, _NutritionCaptureAction.meal),
+          ),
+          const SizedBox(height: 10),
+          _NutritionCaptureChoice(
+            title: t('nutrition.searchFood'),
+            subtitle: t('nutrition.searchFoodActionHint'),
+            icon: Icons.search_outlined,
+            onTap: () => Navigator.pop(context, _NutritionCaptureAction.food),
+          ),
+          const SizedBox(height: 10),
+          _NutritionCaptureChoice(
+            title: t('nutrition.barcode'),
+            subtitle: t('nutrition.barcodeActionHint'),
+            icon: Icons.qr_code_scanner_outlined,
+            onTap: () =>
+                Navigator.pop(context, _NutritionCaptureAction.barcode),
+          ),
+          const SizedBox(height: 10),
+          _NutritionCaptureChoice(
+            title: t(
+              photoAvailable ? 'nutrition.aiPhoto' : 'nutrition.aiPhotoPro',
+            ),
+            subtitle: photoAvailable
+                ? t('nutrition.aiPhotoActionHint')
+                : photoAccessReason.isNotEmpty
+                ? photoAccessReason
+                : t('nutrition.aiPhotoProHint'),
+            icon: photoAvailable
+                ? Icons.auto_awesome_outlined
+                : Icons.lock_outline,
+            onTap: photoAvailable
+                ? () => Navigator.pop(context, _NutritionCaptureAction.photo)
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutritionCaptureChoice extends StatelessWidget {
+  const _NutritionCaptureChoice({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final accent = airmiusAccentColor(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHighest.withValues(
+        alpha: enabled ? 0.72 : 0.38,
+      ),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: enabled
+                      ? accent.withValues(alpha: 0.16)
+                      : scheme.onSurface.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  icon,
+                  color: enabled ? accent : airmiusMutedColor(context),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: enabled
+                            ? scheme.onSurface
+                            : airmiusMutedColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.3,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (enabled) ...[
+                const SizedBox(width: 10),
+                Icon(Icons.chevron_right, color: accent),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

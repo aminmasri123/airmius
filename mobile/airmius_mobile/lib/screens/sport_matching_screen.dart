@@ -16,6 +16,7 @@ class SportMatchingScreen extends StatefulWidget {
 
 class _SportMatchingScreenState extends State<SportMatchingScreen> {
   final _cityController = TextEditingController();
+  final _sportController = TextEditingController();
   Future<JsonMap>? _future;
   String _mode = 'partner';
   int? _sportId;
@@ -43,6 +44,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   @override
   void dispose() {
     _cityController.dispose();
+    _sportController.dispose();
     super.dispose();
   }
 
@@ -52,7 +54,11 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     sportId: _sportId,
   );
 
-  void _reload() => setState(() => _future = _load());
+  void _reload() {
+    setState(() {
+      _future = _load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,32 +137,24 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 ),
                 if (sports.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<int?>(
-                    initialValue: _sportId,
-                    decoration: InputDecoration(
-                      labelText: _c('Sportart', 'Sport', 'Sport', 'الرياضة'),
+                  _MatchingSportAutocomplete(
+                    controller: _sportController,
+                    sports: sports,
+                    hintText: _c(
+                      'Wunschsport suchen, z. B. Laufen',
+                      'Search for a sport, e.g. running',
+                      'Rechercher un sport, ex. course',
+                      'ابحث عن الرياضة المطلوبة، مثل الجري',
                     ),
-                    items: [
-                      DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text(
-                          _c(
-                            'Alle Sportarten',
-                            'All sports',
-                            'Tous les sports',
-                            'كل الرياضات',
-                          ),
-                        ),
-                      ),
-                      ...sports.map(
-                        (sport) => DropdownMenuItem<int?>(
-                          value: _int(sport['id']),
-                          child: Text('${sport['name'] ?? ''}'),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      _sportId = value;
+                    allSportsLabel: _c(
+                      'Alle Sportarten',
+                      'All sports',
+                      'Tous les sports',
+                      'كل الرياضات',
+                    ),
+                    onTextChanged: () => _sportId = null,
+                    onSelected: (sport) {
+                      _sportId = sport == null ? null : _int(sport['id']);
                       _reload();
                     },
                   ),
@@ -465,6 +463,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         mode: _mode,
         sports: _maps(meta['sports']),
         teams: _maps(meta['teams']),
+        defaultCountryCode: AirmiusServicesScope.of(
+          context,
+        ).authState.user?.country,
       ),
     );
     if (payload != null) {
@@ -483,11 +484,13 @@ class _CreateMatchingSheet extends StatefulWidget {
     required this.mode,
     required this.sports,
     required this.teams,
+    this.defaultCountryCode,
   });
 
   final String mode;
   final List<JsonMap> sports;
   final List<JsonMap> teams;
+  final String? defaultCountryCode;
 
   @override
   State<_CreateMatchingSheet> createState() => _CreateMatchingSheetState();
@@ -495,21 +498,32 @@ class _CreateMatchingSheet extends StatefulWidget {
 
 class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   final _title = TextEditingController();
-  final _city = TextEditingController();
-  final _country = TextEditingController(text: 'DE');
+  final _location = TextEditingController();
+  final _sport = TextEditingController();
   final _description = TextEditingController();
   final _count = TextEditingController(text: '1');
   final _teamSize = TextEditingController();
   int? _sportId;
   int? _teamId;
+  late String _countryCode;
   DateTime _startsAt = DateTime.now().add(const Duration(days: 1));
+
+  @override
+  void initState() {
+    super.initState();
+    final requested = widget.defaultCountryCode?.trim().toUpperCase();
+    _countryCode =
+        _matchingCountries.any((country) => country.code == requested)
+        ? requested!
+        : 'DE';
+  }
 
   @override
   void dispose() {
     for (final controller in [
       _title,
-      _city,
-      _country,
+      _location,
+      _sport,
       _description,
       _count,
       _teamSize,
@@ -534,17 +548,19 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 16),
-        DropdownButtonFormField<int>(
-          decoration: const InputDecoration(labelText: 'Sportart'),
-          items: widget.sports
-              .map(
-                (sport) => DropdownMenuItem(
-                  value: int.tryParse('${sport['id']}') ?? 0,
-                  child: Text('${sport['name']}'),
-                ),
-              )
-              .toList(),
-          onChanged: (value) => _sportId = value,
+        _MatchingSportAutocomplete(
+          controller: _sport,
+          sports: widget.sports,
+          hintText: _copy(
+            'Wunschsport suchen',
+            'Search for a sport',
+            'Rechercher un sport',
+            'ابحث عن الرياضة المطلوبة',
+          ),
+          onTextChanged: () => setState(() => _sportId = null),
+          onSelected: (sport) => setState(
+            () => _sportId = sport == null ? null : _int(sport['id']),
+          ),
         ),
         if (widget.mode == 'team') ...[
           const SizedBox(height: 10),
@@ -568,15 +584,43 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         ),
         const SizedBox(height: 10),
         TextField(
-          controller: _city,
-          decoration: const InputDecoration(labelText: 'Ort'),
+          controller: _location,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: _copy(
+              'Ort oder Adresse',
+              'City or address',
+              'Ville ou adresse',
+              'المدينة أو العنوان',
+            ),
+            hintText: _copy(
+              'z. B. Kenitra oder Plage Mehdia, Kenitra',
+              'e.g. Kenitra or Plage Mehdia, Kenitra',
+              'ex. Kénitra ou Plage Mehdia, Kénitra',
+              'مثال: القنيطرة أو شاطئ المهدية، القنيطرة',
+            ),
+            prefixIcon: const Icon(Icons.location_on_outlined),
+          ),
         ),
         const SizedBox(height: 10),
-        TextField(
-          controller: _country,
-          textCapitalization: TextCapitalization.characters,
-          maxLength: 2,
-          decoration: const InputDecoration(labelText: 'Land (ISO)'),
+        DropdownButtonFormField<String>(
+          initialValue: _countryCode,
+          isExpanded: true,
+          dropdownColor: airmiusSurfaceColor(context),
+          decoration: InputDecoration(
+            labelText: _copy('Land', 'Country', 'Pays', 'الدولة'),
+            prefixIcon: const Icon(Icons.public_outlined),
+          ),
+          items: [
+            for (final country in _matchingCountries)
+              DropdownMenuItem(
+                value: country.code,
+                child: Text(country.label(AirmiusScope.of(context).language)),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) setState(() => _countryCode = value);
+          },
         ),
         const SizedBox(height: 10),
         TextField(
@@ -624,7 +668,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   void _submit() {
     if (_sportId == null ||
         _title.text.trim().isEmpty ||
-        _city.text.trim().isEmpty ||
+        _location.text.trim().isEmpty ||
         (widget.mode == 'team' &&
             (_teamId == null || _teamSize.text.isEmpty))) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -638,8 +682,8 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       'team_id': widget.mode == 'team' ? _teamId : null,
       'title': _title.text.trim(),
       'description': _description.text.trim(),
-      'city': _city.text.trim(),
-      'country_code': _country.text.trim().toUpperCase(),
+      'city': _location.text.trim(),
+      'country_code': _countryCode,
       'radius_km': 25,
       'starts_at': _startsAt.toUtc().toIso8601String(),
       'participants_needed': widget.mode == 'team'
@@ -649,4 +693,192 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       'skill_level': 'all',
     });
   }
+
+  String _copy(String de, String en, String fr, String ar) =>
+      switch (AirmiusScope.of(context).language) {
+        AirmiusLanguage.de => de,
+        AirmiusLanguage.en => en,
+        AirmiusLanguage.fr => fr,
+        AirmiusLanguage.ar => ar,
+      };
+
+  static int _int(Object? value) => int.tryParse('$value') ?? 0;
+}
+
+class _MatchingSportAutocomplete extends StatelessWidget {
+  const _MatchingSportAutocomplete({
+    required this.controller,
+    required this.sports,
+    required this.hintText,
+    required this.onSelected,
+    this.allSportsLabel,
+    this.onTextChanged,
+  });
+
+  final TextEditingController controller;
+  final List<JsonMap> sports;
+  final String hintText;
+  final String? allSportsLabel;
+  final ValueChanged<JsonMap?> onSelected;
+  final VoidCallback? onTextChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Autocomplete<JsonMap>(
+      displayStringForOption: (sport) => '${sport['name'] ?? ''}',
+      optionsBuilder: (value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return sports.take(12);
+        return sports
+            .where((sport) {
+              final name = '${sport['name'] ?? ''}'.toLowerCase();
+              final slug = '${sport['slug'] ?? ''}'.toLowerCase();
+              return name.contains(query) || slug.contains(query);
+            })
+            .take(12);
+      },
+      onSelected: (sport) {
+        controller.text = '${sport['name'] ?? ''}';
+        onSelected(sport);
+      },
+      fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+        if (textController.text.isEmpty && controller.text.isNotEmpty) {
+          textController.text = controller.text;
+        }
+        return TextField(
+          controller: textController,
+          focusNode: focusNode,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: hintText,
+            prefixIcon: const Icon(Icons.sports_outlined),
+            suffixIcon: textController.text.isEmpty
+                ? const Icon(Icons.search)
+                : IconButton(
+                    tooltip: allSportsLabel,
+                    onPressed: () {
+                      textController.clear();
+                      controller.clear();
+                      onSelected(null);
+                    },
+                    icon: const Icon(Icons.clear),
+                  ),
+          ),
+          onChanged: (value) {
+            controller.text = value;
+            onTextChanged?.call();
+          },
+        );
+      },
+      optionsViewBuilder: (context, onOptionSelected, options) {
+        final items = options.toList(growable: false);
+        final width = (MediaQuery.sizeOf(context).width - 32)
+            .clamp(220.0, 560.0)
+            .toDouble();
+        return Align(
+          alignment: AlignmentDirectional.topStart,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: width,
+              margin: const EdgeInsets.only(top: 6),
+              constraints: const BoxConstraints(maxHeight: 300),
+              decoration: BoxDecoration(
+                color: airmiusSurfaceColor(context),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: airmiusBorderColor(context)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.24),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: items.isEmpty
+                  ? const SizedBox.shrink()
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: airmiusBorderColor(context),
+                      ),
+                      itemBuilder: (context, index) {
+                        final sport = items[index];
+                        return Material(
+                          color: Colors.transparent,
+                          child: ListTile(
+                            leading: const Icon(Icons.sports_outlined),
+                            title: Text(
+                              '${sport['name'] ?? ''}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onTap: () => onOptionSelected(sport),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+const _matchingCountries = <_MatchingCountry>[
+  _MatchingCountry('DE', 'Deutschland', 'Germany', 'Allemagne', 'ألمانيا'),
+  _MatchingCountry('MA', 'Marokko', 'Morocco', 'Maroc', 'المغرب'),
+  _MatchingCountry('AT', 'Österreich', 'Austria', 'Autriche', 'النمسا'),
+  _MatchingCountry('CH', 'Schweiz', 'Switzerland', 'Suisse', 'سويسرا'),
+  _MatchingCountry('FR', 'Frankreich', 'France', 'France', 'فرنسا'),
+  _MatchingCountry('BE', 'Belgien', 'Belgium', 'Belgique', 'بلجيكا'),
+  _MatchingCountry('NL', 'Niederlande', 'Netherlands', 'Pays-Bas', 'هولندا'),
+  _MatchingCountry('LU', 'Luxemburg', 'Luxembourg', 'Luxembourg', 'لوكسمبورغ'),
+  _MatchingCountry('ES', 'Spanien', 'Spain', 'Espagne', 'إسبانيا'),
+  _MatchingCountry('PT', 'Portugal', 'Portugal', 'Portugal', 'البرتغال'),
+  _MatchingCountry('IT', 'Italien', 'Italy', 'Italie', 'إيطاليا'),
+  _MatchingCountry(
+    'GB',
+    'Großbritannien',
+    'United Kingdom',
+    'Royaume-Uni',
+    'المملكة المتحدة',
+  ),
+  _MatchingCountry('IE', 'Irland', 'Ireland', 'Irlande', 'أيرلندا'),
+  _MatchingCountry('DK', 'Dänemark', 'Denmark', 'Danemark', 'الدنمارك'),
+  _MatchingCountry('SE', 'Schweden', 'Sweden', 'Suède', 'السويد'),
+  _MatchingCountry('NO', 'Norwegen', 'Norway', 'Norvège', 'النرويج'),
+  _MatchingCountry('PL', 'Polen', 'Poland', 'Pologne', 'بولندا'),
+  _MatchingCountry('CZ', 'Tschechien', 'Czechia', 'Tchéquie', 'التشيك'),
+  _MatchingCountry('TR', 'Türkei', 'Türkiye', 'Turquie', 'تركيا'),
+  _MatchingCountry(
+    'US',
+    'USA',
+    'United States',
+    'États-Unis',
+    'الولايات المتحدة',
+  ),
+  _MatchingCountry('CA', 'Kanada', 'Canada', 'Canada', 'كندا'),
+];
+
+class _MatchingCountry {
+  const _MatchingCountry(this.code, this.de, this.en, this.fr, this.ar);
+
+  final String code;
+  final String de;
+  final String en;
+  final String fr;
+  final String ar;
+
+  String label(AirmiusLanguage language) => switch (language) {
+    AirmiusLanguage.de => de,
+    AirmiusLanguage.en => en,
+    AirmiusLanguage.fr => fr,
+    AirmiusLanguage.ar => ar,
+  };
 }

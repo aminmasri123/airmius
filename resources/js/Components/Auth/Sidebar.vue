@@ -18,7 +18,7 @@ const page = usePage()
 const unreadNotificationsCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const pendingFriendInvitationsCount = computed(() => page.props.friendCenter?.pending_received_count || 0)
-const { can, hasAny } = usePermissions()
+const { can, hasAny, hasAnyRole } = usePermissions()
 const { items: clubWorkspaceItems, hasItems: canUseClubWorkspace } = useClubWorkspaceNavigation()
 const hasMultipleClubWorkspaceItems = computed(() => clubWorkspaceItems.value.length > 1)
 const singleClubWorkspaceItem = computed(() => clubWorkspaceItems.value[0] || null)
@@ -59,6 +59,38 @@ const canAdmin = computed(() => hasAny([
     'system.manage',
 ]))
 
+const athleteRoles = ['player', 'youth_player', 'minor_player', 'guest_player', 'captain']
+const coachRoles = ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'team_manager', 'captain', 'trainer']
+const clubRoles = ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller', 'media_manager']
+const sponsorRoles = ['sponsor', 'sponsor_manager']
+const platformRoles = ['super_admin', 'admin', 'system_admin']
+
+const isPlatformAdmin = computed(() => hasAnyRole(platformRoles))
+const isCoach = computed(() => !isPlatformAdmin.value && (hasAnyRole(coachRoles) || can('trainer-cockpit.view')))
+const isClubManager = computed(() => !isPlatformAdmin.value && (hasAnyRole(clubRoles) || can('club-cockpit.view') || can('club-memberships.view')))
+const isSponsor = computed(() => !isPlatformAdmin.value && (hasAnyRole(sponsorRoles) || can('sponsor.workspace.view')))
+const hasOperationalWorkspace = computed(() => isCoach.value || isClubManager.value || isSponsor.value)
+const isAthlete = computed(() => !isPlatformAdmin.value && (hasAnyRole(athleteRoles) || !hasOperationalWorkspace.value))
+const workspaceCount = computed(() => [isCoach.value, isClubManager.value, isSponsor.value].filter(Boolean).length)
+const roleHomeHref = computed(() => {
+    if (isPlatformAdmin.value) return route('auth.dashboard')
+    if (workspaceCount.value > 1) return route('auth.workspaces.index')
+    if (isClubManager.value) return route('auth.club-cockpit.index')
+    if (isCoach.value) return route('auth.trainer-cockpit.index')
+    if (isSponsor.value) return route('auth.sponsor-workspace.index')
+
+    return route('auth.feed.index')
+})
+const roleHomeLabel = computed(() => {
+    if (isPlatformAdmin.value) return 'Dashboard'
+    if (workspaceCount.value > 1) return 'Meine Arbeitsbereiche'
+    if (isClubManager.value) return 'Vereins-Cockpit'
+    if (isCoach.value) return 'Trainer-Cockpit'
+    if (isSponsor.value) return 'Sponsor-Cockpit'
+
+    return 'Mein Sport'
+})
+
 const isRtl = computed(() => page.props.direction === 'rtl')
 
 const closeSidebar = () => {
@@ -80,7 +112,7 @@ const closeSidebar = () => {
         <!-- Mobile header -->
         <div class="flex items-center justify-between p-4 md:hidden">
             <Link
-                :href="route('auth.feed.index')"
+                :href="roleHomeHref"
                 class="block w-40 shrink-0"
                 @click="closeSidebar"
             >
@@ -97,7 +129,7 @@ const closeSidebar = () => {
         </div>
 
         <Link
-            :href="route('auth.feed.index')"
+            :href="roleHomeHref"
             class="hidden w-48 shrink-0 px-4 py-4 md:block"
             @click="closeSidebar"
         >
@@ -107,49 +139,21 @@ const closeSidebar = () => {
         <!-- <TeamSwitcher /> -->
 
         <nav class="custom-scrollbar mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            <NavItem @navigate="closeSidebar" :href="route('welcome')" label="Zur Gastseite" icon="las la-external-link-alt" />
-            <NavItem v-if="can('dashboard.view')" @navigate="closeSidebar" :href="route('auth.dashboard')" label="Dashboard" icon="las la-th-large" />
-            <NavItem v-if="can('workspaces.view')" @navigate="closeSidebar" :href="route('auth.workspaces.index')" label="Arbeitsbereiche" icon="las la-compass" />
             <NavItem
-                v-if="canUseClubWorkspace && hasMultipleClubWorkspaceItems"
                 @navigate="closeSidebar"
-                :href="clubWorkspaceItems[0]?.href"
-                label="Vereinsbereich"
-                icon="las la-sitemap"
-                :subitems="clubWorkspaceItems"
+                :href="roleHomeHref"
+                :label="roleHomeLabel"
+                icon="las la-home"
             />
-            <NavItem
-                v-else-if="singleClubWorkspaceItem"
-                @navigate="closeSidebar"
-                :href="singleClubWorkspaceItem.href"
-                :label="singleClubWorkspaceItem.label"
-                :icon="singleClubWorkspaceItem.icon"
-                :active-paths="singleClubWorkspaceItem.activePaths"
-            />
+
             <NavItem
                 v-if="can('chat.view')"
                 @navigate="closeSidebar"
                 :href="route('auth.conversations.index')"
-                label="Chat"
+                label="Nachrichten"
                 icon="las la-comments"
                 :badge="unreadChatsCount || null"
             />
-            <NavItem v-if="can('feed.view')" @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
-            <NavItem v-if="can('file.index')" @navigate="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
-            <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingspläne" icon="las la-clipboard-list" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.sport-matching.index')" label="Sport-Matching" icon="las la-people-arrows" />
-            <NavItem
-                v-if="can('friends.view')"
-                @navigate="closeSidebar"
-                :href="route('auth.friends.index')"
-                label="Freunde"
-                icon="las la-user-plus"
-                :badge="pendingFriendInvitationsCount || null"
-            />
-            <NavItem v-if="can('rides.view')" @navigate="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
             <NavItem
                 v-if="can('notifications.view')"
                 @navigate="closeSidebar"
@@ -158,14 +162,79 @@ const closeSidebar = () => {
                 icon="las la-bell"
                 :badge="unreadNotificationsCount || null"
             />
-            <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
-            <NavItem v-if="can('guardians.children.view')" @navigate="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.learning.studio.index')" label="Sportschule" icon="las la-graduation-cap" />
-            <NavItem @navigate="closeSidebar" :href="route('guest.marketplace')" label="Marketplace" icon="las la-shopping-bag" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.commerce.index')" label="Commerce" icon="las la-credit-card" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
+
+            <NavGroup
+                v-if="isAthlete"
+                label="Mein Sport"
+                icon="las la-running"
+                :initial-open="!hasOperationalWorkspace"
+            >
+                <NavItem v-if="can('feed.view')" @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
+                <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events" icon="las la-calendar" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Training" icon="las la-clipboard-list" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.sport-matching.index')" label="Sport-Matching" icon="las la-people-arrows" />
+                <NavItem
+                    v-if="can('friends.view')"
+                    @navigate="closeSidebar"
+                    :href="route('auth.friends.index')"
+                    label="Freunde"
+                    icon="las la-user-plus"
+                    :badge="pendingFriendInvitationsCount || null"
+                />
+                <NavItem v-if="can('rides.view')" @navigate="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
+                <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
+            </NavGroup>
+
+            <NavGroup
+                v-if="isCoach"
+                label="Trainer & Team"
+                icon="las la-chalkboard-teacher"
+                :initial-open="!isClubManager && !isSponsor"
+            >
+                <NavItem @navigate="closeSidebar" :href="route('auth.trainer-cockpit.index')" label="Trainer-Cockpit" icon="las la-tachometer-alt" />
+                <NavItem v-if="can('team.index')" @navigate="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />
+                <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events & Anwesenheit" icon="las la-calendar-check" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingsplanung" icon="las la-clipboard-list" />
+                <NavItem v-if="can('file.index')" @navigate="closeSidebar" :href="route('auth.files.index')" label="Teamdateien" icon="las la-folder-open" />
+            </NavGroup>
+
             <NavItem
+                v-if="isClubManager && canUseClubWorkspace && hasMultipleClubWorkspaceItems"
+                @navigate="closeSidebar"
+                :href="clubWorkspaceItems[0]?.href"
+                label="Vereinsverwaltung"
+                icon="las la-building"
+                :subitems="clubWorkspaceItems"
+            />
+            <NavItem
+                v-else-if="isClubManager && singleClubWorkspaceItem"
+                @navigate="closeSidebar"
+                :href="singleClubWorkspaceItem.href"
+                :label="singleClubWorkspaceItem.label"
+                :icon="singleClubWorkspaceItem.icon"
+                :active-paths="singleClubWorkspaceItem.activePaths"
+            />
+
+            <NavGroup
+                v-if="isSponsor"
+                label="Sponsoring & Reichweite"
+                icon="las la-handshake"
+                :initial-open="!isClubManager"
+            >
+                <NavItem @navigate="closeSidebar" :href="route('auth.sponsor-workspace.index')" label="Sponsor-Cockpit" icon="las la-chart-line" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.commerce.index')" label="Kampagnen & Angebote" icon="las la-bullhorn" />
+                <NavItem @navigate="closeSidebar" :href="route('guest.sponsors')" label="Öffentliche Sponsorenseite" icon="las la-eye" />
+            </NavGroup>
+
+            <NavItem v-if="can('guardians.children.view')" @navigate="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
+            <NavItem v-if="can('file.index') && !isCoach && !isClubManager" @navigate="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
+            <NavItem @navigate="closeSidebar" :href="route('guest.marketplace')" label="Marketplace" icon="las la-shopping-bag" />
+            <NavItem v-if="isAthlete" @navigate="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
+            <NavItem
+                v-if="isAthlete"
                 @navigate="closeSidebar"
                 :href="route('guest.pricing', { audience: 'sportler' })"
                 :label="upgradeLabel"

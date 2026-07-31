@@ -96,6 +96,35 @@ class RegistrationTest extends TestCase
         Notification::assertSentTo($user, AccountWelcomeNotification::class);
     }
 
+    public function test_adult_can_register_as_sponsor_and_receives_sponsor_role(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Sponsor',
+            'last_name' => 'User',
+            'email' => 'sponsor@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'account_type' => 'sponsor',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+            'device_name' => 'airmius-mobile-test',
+        ]);
+
+        $response->assertCreated();
+
+        $user = User::where('email', 'sponsor@example.com')->firstOrFail();
+        $this->assertTrue($user->hasRole('sponsor'));
+        $this->assertFalse($user->hasRole('player'));
+    }
+
     public function test_mobile_api_rejects_duplicate_registration_email(): void
     {
         if (! Features::enabled(Features::registration())) {

@@ -141,7 +141,7 @@ const switchTab = (tab) => {
                 </div>
             </div>
 
-            <div class="border-t border-border p-4">
+            <div v-if="props.teams.length" class="border-t border-border p-4">
                 <p class="mb-3 text-xs font-bold uppercase text-buttonPrimary">{{ t('trainerCockpit.quickActions') }}</p>
                 <div class="flex gap-3 overflow-x-auto pb-1">
                     <Link
@@ -157,7 +157,19 @@ const switchTab = (tab) => {
             </div>
         </section>
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <section v-if="!props.teams.length" class="surface-card border border-dashed border-buttonPrimary/40 p-6 text-center">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-buttonPrimary/10 text-buttonPrimary">
+                <i class="las la-users text-2xl"></i>
+            </span>
+            <h2 class="mt-4 text-xl font-bold text-primary">{{ t('trainerCockpit.noTeams') }}</h2>
+            <p class="mx-auto mt-2 max-w-2xl text-sm leading-6 text-secondary">{{ t('trainerCockpit.noTeamsText') }}</p>
+            <Link :href="route('auth.teams.index')" class="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonPrimaryText">
+                <i class="las la-search"></i>
+                {{ t('trainerCockpit.findTeam') }}
+            </Link>
+        </section>
+
+        <section v-if="props.teams.length" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <article
                 v-for="card in statCards"
                 :key="card.key"
@@ -176,7 +188,7 @@ const switchTab = (tab) => {
             </article>
         </section>
 
-        <section class="surface-card p-2">
+        <section v-if="props.teams.length" class="surface-card p-2">
             <div class="grid gap-2 md:grid-cols-4">
                 <button
                     v-for="tab in tabs"
@@ -192,7 +204,7 @@ const switchTab = (tab) => {
             </div>
         </section>
 
-        <section v-if="activeTab === 'overview'" class="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
+        <section v-if="props.teams.length && activeTab === 'overview'" class="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
             <div class="surface-card p-5 xl:col-span-2">
                 <div class="grid gap-5 lg:grid-cols-[.75fr_1.25fr]">
                     <div>
@@ -349,7 +361,7 @@ const switchTab = (tab) => {
             </div>
         </section>
 
-        <section v-if="activeTab === 'teams'" class="surface-card p-5">
+        <section v-if="props.teams.length && activeTab === 'teams'" class="surface-card p-5">
             <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('trainerCockpit.teamOverview') }}</p>
             <h2 class="mt-1 text-xl font-bold text-primary">{{ t('trainerCockpit.teams') }}</h2>
 
@@ -399,7 +411,7 @@ const switchTab = (tab) => {
             </p>
         </section>
 
-        <section v-if="activeTab === 'feedback'" id="feedback" class="grid gap-5 xl:grid-cols-2">
+        <section v-if="props.teams.length && activeTab === 'feedback'" id="feedback" class="grid gap-5 xl:grid-cols-2">
             <div class="surface-card p-5">
                 <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('trainerCockpit.feedbackQueue') }}</p>
                 <h2 class="mt-1 text-xl font-bold text-primary">{{ t('trainerCockpit.openFeedback') }}</h2>
@@ -446,7 +458,7 @@ const switchTab = (tab) => {
             </div>
         </section>
 
-        <section v-if="activeTab === 'planning'" id="planning" class="grid gap-5 xl:grid-cols-2">
+        <section v-if="props.teams.length && activeTab === 'planning'" id="planning" class="grid gap-5 xl:grid-cols-2">
             <div class="surface-card p-5">
                 <p class="text-xs font-bold uppercase text-buttonPrimary">{{ t('trainerCockpit.overdueQueue') }}</p>
                 <h2 class="mt-1 text-xl font-bold text-primary">{{ t('trainerCockpit.overdueItems') }}</h2>
