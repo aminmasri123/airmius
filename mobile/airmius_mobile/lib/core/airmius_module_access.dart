@@ -8,7 +8,7 @@ import 'airmius_api_models.dart';
 final class AirmiusModuleAccess {
   const AirmiusModuleAccess._();
 
-  static const _personalModules = <String>{
+  static const personalModuleTitles = <String>{
     'Sportarten',
     'Sport-Apps & Gesundheitsdaten',
     'Feed',
@@ -61,7 +61,7 @@ final class AirmiusModuleAccess {
 
   static bool canOpen(AirmiusUser? user, String moduleTitle) {
     if (user == null) return false;
-    if (_personalModules.contains(moduleTitle)) return true;
+    if (personalModuleTitles.contains(moduleTitle)) return true;
 
     return switch (moduleTitle) {
       'Arbeitsbereiche' => _hasWorkspace(user),

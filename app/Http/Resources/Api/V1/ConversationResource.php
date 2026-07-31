@@ -22,11 +22,12 @@ class ConversationResource extends JsonResource
             'users' => UserResource::collection($this->whenLoaded('users')),
             'messages_count' => $this->whenCounted('messages'),
             'unread_messages_count' => $this->when(isset($this->unread_messages_count), $this->unread_messages_count),
-            'latest_message' => $this->whenLoaded('messages', function () {
-                $message = $this->messages->first();
-
-                return $message ? new MessageResource($message) : null;
-            }),
+            'latest_message' => $this->when(
+                $this->resource->relationLoaded('latestVisibleMessage'),
+                fn () => $this->latestVisibleMessage
+                    ? new MessageResource($this->latestVisibleMessage)
+                    : null,
+            ),
             'joined_at' => $this->pivot?->joined_at,
             'muted_until' => $this->pivot?->muted_until,
             'created_at' => $this->created_at?->toJSON(),

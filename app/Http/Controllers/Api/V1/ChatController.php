@@ -60,6 +60,10 @@ class ChatController extends Controller
         }
 
         $conversations = $conversationsQuery->paginate($this->perPage($request));
+        $this->attachLatestVisibleMessages(
+            $conversations->getCollection(),
+            (int) $request->user()->id,
+        );
 
         return ConversationResource::collection($conversations);
     }
@@ -453,6 +457,50 @@ class ChatController extends Controller
         return $conversation->fresh()
             ->loadMissing(['users', 'team', 'owner'])
             ->loadCount('messages');
+    }
+
+    private function attachLatestVisibleMessages($conversations, int $userId): void
+    {
+        if ($conversations->isEmpty()) {
+            return;
+        }
+
+        $conversationIds = $conversations->pluck('id');
+        $joinedAtByConversation = DB::table('conversation_users')
+            ->where('user_id', $userId)
+            ->whereIn('conversation_id', $conversationIds)
+            ->pluck('joined_at', 'conversation_id');
+
+        $latestMessageIds = Message::query()
+            ->selectRaw('MAX(messages.id) as id')
+            ->whereIn('conversation_id', $conversationIds)
+            ->where('moderation_status', '!=', 'removed')
+            ->whereDoesntHave('hides', fn ($hides) => $hides->where('user_id', $userId))
+            ->where(function ($visibleMessages) use ($conversations, $joinedAtByConversation) {
+                $conversations->each(function (Conversation $conversation) use ($visibleMessages, $joinedAtByConversation) {
+                    $visibleMessages->orWhere(function ($conversationMessages) use ($conversation, $joinedAtByConversation) {
+                        $conversationMessages->where('conversation_id', $conversation->id);
+
+                        $joinedAt = $joinedAtByConversation->get($conversation->id);
+                        if ($conversation->type === 'group' && $joinedAt) {
+                            $conversationMessages->where('created_at', '>=', $joinedAt);
+                        }
+                    });
+                });
+            })
+            ->groupBy('conversation_id')
+            ->pluck('id');
+
+        $latestMessages = Message::query()
+            ->whereIn('id', $latestMessageIds)
+            ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
+            ->get()
+            ->keyBy('conversation_id');
+
+        $conversations->each(fn (Conversation $conversation) => $conversation->setRelation(
+            'latestVisibleMessage',
+            $latestMessages->get($conversation->id),
+        ));
     }
 
     private function authorizeParticipant(Conversation $conversation, Request $request): void

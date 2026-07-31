@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\ConversationInvitation;
 use App\Models\Friendship;
 use App\Models\Message;
+use App\Models\MessageHide;
 use App\Models\MessageReceipt;
 use App\Models\Notification;
 use App\Models\Team;
@@ -144,7 +145,8 @@ class MobileChatRealtimeContractTest extends TestCase
         Sanctum::actingAs($recipient);
         $this->getJson('/api/v1/chat/conversations')
             ->assertOk()
-            ->assertJsonPath('data.0.unread_messages_count', 1);
+            ->assertJsonPath('data.0.unread_messages_count', 1)
+            ->assertJsonPath('data.0.latest_message.message', 'Training startet um 18 Uhr.');
 
         $this->getJson("/api/v1/chat/conversations/{$conversation->id}/messages")
             ->assertOk()
@@ -161,6 +163,63 @@ class MobileChatRealtimeContractTest extends TestCase
 
         $this->assertNotNull($receipt->fresh()->read_at);
         $this->assertTrue($notification->fresh()->read);
+    }
+
+    public function test_mobile_conversation_list_returns_latest_message_visible_to_current_user(): void
+    {
+        $user = User::factory()->create();
+        $member = User::factory()->create();
+        $conversation = Conversation::create(['type' => 'group']);
+
+        $conversation->users()->attach($member->id, ['joined_at' => now()->subHour()]);
+
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $member->id,
+            'message' => 'Nachricht vor dem Beitritt',
+            'status' => 'sent',
+            'created_at' => now()->subMinutes(20),
+            'updated_at' => now()->subMinutes(20),
+        ]);
+
+        $conversation->users()->attach($user->id, ['joined_at' => now()->subMinutes(10)]);
+
+        $visibleMessage = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $member->id,
+            'message' => 'Heute laufen wir um 18 Uhr.',
+            'status' => 'sent',
+            'created_at' => now()->subMinutes(5),
+            'updated_at' => now()->subMinutes(5),
+        ]);
+
+        $hiddenMessage = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $member->id,
+            'message' => 'Persoenlich ausgeblendete Nachricht',
+            'status' => 'sent',
+            'created_at' => now()->subMinutes(2),
+            'updated_at' => now()->subMinutes(2),
+        ]);
+        MessageHide::create([
+            'message_id' => $hiddenMessage->id,
+            'user_id' => $user->id,
+        ]);
+
+        Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $member->id,
+            'message' => 'Durch Moderation entfernte Nachricht',
+            'status' => 'sent',
+            'moderation_status' => 'removed',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/v1/chat/conversations')
+            ->assertOk()
+            ->assertJsonPath('data.0.latest_message.id', $visibleMessage->id)
+            ->assertJsonPath('data.0.latest_message.message', 'Heute laufen wir um 18 Uhr.');
     }
 
     public function test_mobile_group_chat_has_full_management_and_invitation_lifecycle(): void

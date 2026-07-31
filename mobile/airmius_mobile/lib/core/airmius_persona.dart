@@ -40,10 +40,19 @@ final class AirmiusPersonaResolver {
       'Nachrichten',
       'Einstellungen',
     };
+    // Persona selects the home/workspace experience. It must not hide
+    // personal sports and community features from club administrators,
+    // coaches or platform administrators.
+    modules.addAll(AirmiusModuleAccess.personalModuleTitles);
     final persona = primary(user);
     final coach = AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final club = AirmiusModuleAccess.canOpenClubCockpit(user);
     final sponsor = _canOpenSponsorWorkspace(user);
+    final platformAdmin = user.hasAnyRole(const {
+      'super_admin',
+      'admin',
+      'system_admin',
+    });
     final athlete =
         persona == AirmiusPersona.athlete ||
         user.hasAnyRole(const {
@@ -54,7 +63,10 @@ final class AirmiusPersonaResolver {
           'captain',
         });
 
-    if (athlete) {
+    // Platform admins are also regular app users. Keep the personal sports
+    // modules visible in the drawer instead of hiding them because their
+    // primary persona resolves to club/admin.
+    if (athlete || platformAdmin) {
       modules.addAll(const {
         'Vereine & Teams',
         'Teams',

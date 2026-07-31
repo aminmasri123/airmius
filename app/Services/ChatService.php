@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Events\MessageSent;
 use App\Events\ChatConversationUpdated;
+use App\Events\MessageSent;
 use App\Models\File;
 use App\Models\Message;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +26,7 @@ class ChatService
             ]);
 
             $conversation = $message->conversation;
+            $conversation->touch();
             $event = $conversation->event;
 
             foreach ($attachments as $attachment) {
