@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Airmius</string>
+    <string name="airmius_push_channel_id">airmius_notifications</string>
+    <string name="airmius_push_channel_name">Airmius Benachrichtigungen</string>
+    <string name="airmius_push_channel_description">Nachrichten, Termine und Vereinsupdates von Airmius.</string>
 </resources>

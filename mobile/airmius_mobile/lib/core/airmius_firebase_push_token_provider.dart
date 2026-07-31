@@ -1,18 +1,13 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
-import '../firebase_options.dart';
+import 'airmius_push_notifications.dart';
 import 'airmius_push_device_registry.dart';
 
 class AirmiusFirebasePushTokenProvider implements AirmiusPushTokenProvider {
   AirmiusFirebasePushTokenProvider();
 
   Future<FirebaseMessaging> _messaging() async {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    }
+    await AirmiusPushNotifications.initialize();
     return FirebaseMessaging.instance;
   }
 

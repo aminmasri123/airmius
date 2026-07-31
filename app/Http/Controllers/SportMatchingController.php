@@ -31,7 +31,13 @@ class SportMatchingController extends Controller
             ->where('starts_at', '>=', now()->subHours(3))
             ->when($request->input('mode'), fn ($q, $value) => $q->where('mode', $value))
             ->when($request->integer('sport_id'), fn ($q, $value) => $q->where('sport_id', $value))
-            ->when($request->input('city'), fn ($q, $value) => $q->where('city', 'like', '%'.$value.'%'))
+            ->when($request->input('location') ?: $request->input('city'), function ($q, $value) {
+                $q->where(function ($query) use ($value) {
+                    $query->where('city', 'like', '%'.$value.'%')
+                        ->orWhere('postal_code', 'like', '%'.$value.'%')
+                        ->orWhere('location_name', 'like', '%'.$value.'%');
+                });
+            })
             ->where('status', $request->input('status', 'open'))
             ->orderBy('starts_at')
             ->paginate(24)
@@ -42,7 +48,7 @@ class SportMatchingController extends Controller
             'sports' => Sport::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug']),
             'teams' => Team::query()->whereHas('users', fn ($q) => $q->where('users.id', $request->user()->id))
                 ->orderBy('name')->get(['id', 'name', 'sport_type']),
-            'filters' => $request->only(['mode', 'sport_id', 'city', 'status']),
+            'filters' => $request->only(['mode', 'sport_id', 'location', 'city', 'status']),
             'skillLevels' => SportMatching::SKILL_LEVELS,
         ]);
     }

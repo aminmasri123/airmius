@@ -1,8 +1,9 @@
-Neu in 1.0.28:
+Neu in 1.0.30:
 
-- Personalisierte Startseiten und Navigation für Sportler, Trainer, Vereine und Sponsoren.
-- Neues Sponsor-Cockpit für Profile, Partnerschaften, Kampagnen und Reichweite.
-- Verbessertes Onboarding, Tagesablauf, Feed, Training und Leerzustände.
-- Wasser- und Mahlzeiteinträge ohne Neuladen, inklusive Rückgängig.
-- Besseres Sport-Matching, Chat-Autoscroll und Hintergrund-Badges.
-- Personalisierbarer Footer mit drei bis fünf Schnellzugriffen.
+- Klare Registrierung ohne interne Konto-Verwaltungsoptionen.
+- Google- und Outlook-Registrierung übernehmen jetzt den ausgewählten Kontotyp.
+- Passwort-Hilfe, 2FA, E-Mail-Bestätigung und Kontolöschung erscheinen nur noch im passenden Bereich.
+- Verbesserte Hinweise auf Deutsch, Englisch, Französisch und Arabisch.
+- Sportpartner-Suchen zeigen jetzt Datum und Uhrzeit klar getrennt an.
+- Stadt, PLZ, Sportstätte und Adresse können getrennt angegeben werden.
+- Sportpartner lassen sich jetzt auch über PLZ und Sportstätte finden.

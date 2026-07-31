@@ -15,7 +15,7 @@ class SportMatching extends Model
 
     protected $fillable = [
         'user_id', 'sport_id', 'team_id', 'mode', 'title', 'description',
-        'city', 'country_code', 'latitude', 'longitude', 'radius_km',
+        'city', 'postal_code', 'location_name', 'address', 'country_code', 'latitude', 'longitude', 'radius_km',
         'starts_at', 'ends_at', 'participants_needed', 'team_size',
         'skill_level', 'status',
     ];

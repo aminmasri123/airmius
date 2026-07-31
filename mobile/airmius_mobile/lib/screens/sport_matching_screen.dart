@@ -264,8 +264,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         ],
         const SizedBox(height: 10),
         Text('📍 ${matching['city']}, ${matching['country_code']}'),
+        if ('${matching['location_name'] ?? ''}'.trim().isNotEmpty)
+          Text('🏟️ ${matching['location_name']}'),
+        if ('${matching['address'] ?? ''}'.trim().isNotEmpty)
+          Text('Adresse: ${matching['address']}'),
         Text(
-          '🗓 ${startsAt == null ? '' : MaterialLocalizations.of(context).formatMediumDate(startsAt.toLocal())}',
+          '🗓 ${startsAt == null ? '' : _formatMatchingDateTime(context, startsAt.toLocal())}',
         ),
         Text('🎯 ${matching['skill_level']} · ${matching['radius_km']} km'),
         if (team != null) Text('👥 ${team['name']}'),
@@ -499,6 +503,9 @@ class _CreateMatchingSheet extends StatefulWidget {
 class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
   final _title = TextEditingController();
   final _location = TextEditingController();
+  final _postalCode = TextEditingController();
+  final _locationName = TextEditingController();
+  final _address = TextEditingController();
   final _sport = TextEditingController();
   final _description = TextEditingController();
   final _count = TextEditingController(text: '1');
@@ -523,6 +530,9 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
     for (final controller in [
       _title,
       _location,
+      _postalCode,
+      _locationName,
+      _address,
       _sport,
       _description,
       _count,
@@ -577,10 +587,9 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             onChanged: (value) => _teamId = value,
           ),
         ],
-        const SizedBox(height: 10),
         TextField(
           controller: _title,
-          decoration: const InputDecoration(labelText: 'Titel'),
+          decoration: const InputDecoration(labelText: 'Titel (optional)'),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -588,18 +597,48 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
             labelText: _copy(
-              'Ort oder Adresse',
-              'City or address',
-              'Ville ou adresse',
-              'المدينة أو العنوان',
+              'Stadt / Ort',
+              'City',
+              'Ville',
+              'المدينة',
             ),
             hintText: _copy(
-              'z. B. Kenitra oder Plage Mehdia, Kenitra',
-              'e.g. Kenitra or Plage Mehdia, Kenitra',
-              'ex. Kénitra ou Plage Mehdia, Kénitra',
-              'مثال: القنيطرة أو شاطئ المهدية، القنيطرة',
+              'z. B. Kenitra',
+              'e.g. Kenitra',
+              'ex. Kénitra',
+              'مثال: القنيطرة',
             ),
             prefixIcon: const Icon(Icons.location_on_outlined),
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _postalCode,
+          keyboardType: TextInputType.streetAddress,
+          decoration: const InputDecoration(
+            labelText: 'PLZ (optional)',
+            hintText: 'z. B. 14000',
+            prefixIcon: Icon(Icons.local_post_office_outlined),
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _locationName,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Sportstätte / Treffpunkt (optional)',
+            hintText: 'z. B. Stadtpark oder Court 2',
+            prefixIcon: Icon(Icons.place_outlined),
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _address,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Adresse (optional)',
+            hintText: 'Straße und Hausnummer',
+            prefixIcon: Icon(Icons.signpost_outlined),
           ),
         ),
         const SizedBox(height: 10),
@@ -635,11 +674,11 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         const SizedBox(height: 10),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Termin'),
+          title: const Text('Datum und Uhrzeit'),
           subtitle: Text(
-            MaterialLocalizations.of(context).formatFullDate(_startsAt),
+            _formatMatchingDateTime(context, _startsAt),
           ),
-          trailing: const Icon(Icons.calendar_month),
+          trailing: const Icon(Icons.schedule),
           onTap: () async {
             final date = await showDatePicker(
               context: context,
@@ -648,8 +687,20 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
               lastDate: DateTime.now().add(const Duration(days: 730)),
             );
             if (date != null) {
+              if (!context.mounted) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(_startsAt),
+              );
+              if (time == null) return;
               setState(
-                () => _startsAt = DateTime(date.year, date.month, date.day, 10),
+                () => _startsAt = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                ),
               );
             }
           },
@@ -667,7 +718,6 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
 
   void _submit() {
     if (_sportId == null ||
-        _title.text.trim().isEmpty ||
         _location.text.trim().isEmpty ||
         (widget.mode == 'team' &&
             (_teamId == null || _teamSize.text.isEmpty))) {
@@ -680,9 +730,12 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       'mode': widget.mode,
       'sport_id': _sportId,
       'team_id': widget.mode == 'team' ? _teamId : null,
-      'title': _title.text.trim(),
+      if (_title.text.trim().isNotEmpty) 'title': _title.text.trim(),
       'description': _description.text.trim(),
       'city': _location.text.trim(),
+      'postal_code': _postalCode.text.trim(),
+      'location_name': _locationName.text.trim(),
+      'address': _address.text.trim(),
       'country_code': _countryCode,
       'radius_km': 25,
       'starts_at': _startsAt.toUtc().toIso8601String(),
@@ -703,6 +756,11 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
       };
 
   static int _int(Object? value) => int.tryParse('$value') ?? 0;
+}
+
+String _formatMatchingDateTime(BuildContext context, DateTime value) {
+  final localizations = MaterialLocalizations.of(context);
+  return '${localizations.formatMediumDate(value)} · ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(value), alwaysUse24HourFormat: true)} Uhr';
 }
 
 class _MatchingSportAutocomplete extends StatelessWidget {

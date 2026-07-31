@@ -322,13 +322,20 @@ void main() {
       const AuthFlowsScreen(),
     );
 
-    expect(find.text('Konto & Sicherheit'), findsWidgets);
+    expect(find.text('Registrieren'), findsWidgets);
+    expect(find.text('Konto-Aktionen'), findsNothing);
+    expect(find.text('Social Login'), findsNothing);
+    expect(find.text('2FA'), findsNothing);
+    expect(find.text('Profil'), findsNothing);
+    expect(find.text('Gesperrt'), findsNothing);
+    expect(find.text('Löschen'), findsNothing);
+    expect(find.text('Sicherheitsübersicht öffnen'), findsNothing);
     expect(find.text('Vorname'), findsOneWidget);
     expect(find.text('Nachname'), findsOneWidget);
     expect(find.text('Land'), findsOneWidget);
     expect(find.text('Geburtsdatum'), findsOneWidget);
     expect(find.text('Geschlecht'), findsOneWidget);
-    expect(find.text('Passwort'), findsWidgets);
+    expect(find.text('Neues Passwort'), findsOneWidget);
     expect(find.text('Passwort bestätigen'), findsOneWidget);
     expect(find.text('AGB und Datenschutz akzeptieren'), findsOneWidget);
 
@@ -340,6 +347,33 @@ void main() {
     await tester.pump();
 
     expect(find.text('Bitte wähle dein Geschlecht aus.'), findsOneWidget);
+  });
+
+  testWidgets('social registration keeps the selected account type', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(1000, 1600));
+    String? selectedProvider;
+    String? selectedAccountType;
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(),
+      AuthFlowsScreen(
+        onSocialRegister: (provider, accountType) {
+          selectedProvider = provider;
+          selectedAccountType = accountType;
+        },
+      ),
+    );
+
+    await tester.tap(find.text('Trainer / Coach'));
+    await tester.pump();
+    await tester.tap(find.text('Mit Google registrieren'));
+
+    expect(selectedProvider, 'google');
+    expect(selectedAccountType, 'coach');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('registration stacks address fields for compact Arabic layouts', (

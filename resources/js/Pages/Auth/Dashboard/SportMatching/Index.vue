@@ -15,7 +15,7 @@ const props = defineProps({
 
 const tab = ref(props.filters?.mode || 'partner')
 const showCreate = ref(false)
-const filterCity = ref(props.filters?.city || '')
+const filterLocation = ref(props.filters?.location || props.filters?.city || '')
 const filterSport = ref(props.filters?.sport_id || '')
 const form = useForm({
     mode: tab.value,
@@ -24,8 +24,13 @@ const form = useForm({
     title: '',
     description: '',
     city: '',
+    postal_code: '',
+    location_name: '',
+    address: '',
     country_code: 'DE',
     radius_km: 25,
+    start_date: '',
+    start_time: '',
     starts_at: '',
     participants_needed: 1,
     team_size: '',
@@ -38,20 +43,26 @@ const availableTeams = computed(() => props.teams || [])
 const switchTab = (mode) => {
     tab.value = mode
     form.mode = mode
-    router.get(route('auth.sport-matching.index'), { mode, city: filterCity.value, sport_id: filterSport.value }, { preserveState: true })
+    router.get(route('auth.sport-matching.index'), { mode, location: filterLocation.value, sport_id: filterSport.value }, { preserveState: true })
 }
 const search = () => router.get(route('auth.sport-matching.index'), {
     mode: tab.value,
-    city: filterCity.value || undefined,
+    location: filterLocation.value || undefined,
     sport_id: filterSport.value || undefined,
 }, { preserveState: true })
-const submit = () => form.post(route('auth.sport-matching.store'), {
+const submit = () => {
+    form.starts_at = form.start_date && form.start_time
+        ? `${form.start_date}T${form.start_time}`
+        : ''
+
+    form.post(route('auth.sport-matching.store'), {
     preserveScroll: true,
     onSuccess: () => {
         showCreate.value = false
-        form.reset('title', 'description', 'starts_at', 'team_id', 'team_size')
+        form.reset('title', 'description', 'postal_code', 'location_name', 'address', 'start_date', 'start_time', 'starts_at', 'team_id', 'team_size')
     },
-})
+    })
+}
 const apply = (matching) => router.post(route('auth.sport-matching.apply', matching.id), {
     team_id: matching.mode === 'team' ? selectedTeams.value[matching.id] : null,
     message: applicationMessages.value[matching.id] || null,
@@ -61,8 +72,10 @@ const decide = (matching, application, status) => router.put(
     { status },
     { preserveScroll: true },
 )
-const formatDate = (value) => new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium', timeStyle: 'short',
+const formatDateTime = (value) => new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    hour12: false,
 }).format(new Date(value))
 </script>
 
@@ -94,9 +107,16 @@ const formatDate = (value) => new Intl.DateTimeFormat(undefined, {
                 <label v-if="form.mode === 'team'" class="text-sm font-bold text-primary">Dein Team
                     <select v-model="form.team_id" required class="mt-1 w-full rounded-xl border-border bg-inputBg"><option value="">Bitte wählen</option><option v-for="team in availableTeams" :key="team.id" :value="team.id">{{ team.name }}</option></select>
                 </label>
-                <label class="text-sm font-bold text-primary">Titel<input v-model="form.title" required maxlength="140" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="z. B. Lauf am Strand von Kenitra" /></label>
-                <label class="text-sm font-bold text-primary">Termin<input v-model="form.starts_at" required type="datetime-local" class="mt-1 w-full rounded-xl border-border bg-inputBg" /></label>
-                <label class="text-sm font-bold text-primary">Ort<input v-model="form.city" required class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="Kenitra" /></label>
+                <label class="text-sm font-bold text-primary">Titel <span class="font-normal text-secondary">(optional)</span><input v-model="form.title" maxlength="140" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="z. B. Lockerer Lauf am Strand" /></label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="text-sm font-bold text-primary">Datum<input v-model="form.start_date" required type="date" class="mt-1 w-full rounded-xl border-border bg-inputBg" /></label>
+                    <label class="text-sm font-bold text-primary">Uhrzeit<input v-model="form.start_time" required type="time" class="mt-1 w-full rounded-xl border-border bg-inputBg" /></label>
+                    <p v-if="form.errors.starts_at" class="col-span-2 text-xs font-normal text-red-400">{{ form.errors.starts_at }}</p>
+                </div>
+                <label class="text-sm font-bold text-primary">Stadt / Ort<input v-model="form.city" required class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="z. B. Kenitra" /></label>
+                <label class="text-sm font-bold text-primary">PLZ <span class="font-normal text-secondary">(optional)</span><input v-model="form.postal_code" maxlength="20" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="z. B. 14000" /></label>
+                <label class="text-sm font-bold text-primary">Sportstätte / Treffpunkt <span class="font-normal text-secondary">(optional)</span><input v-model="form.location_name" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="z. B. Stadtpark, Court 2" /></label>
+                <label class="text-sm font-bold text-primary">Adresse <span class="font-normal text-secondary">(optional)</span><input v-model="form.address" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="Straße und Hausnummer" /></label>
                 <label class="text-sm font-bold text-primary">Land (ISO)<input v-model="form.country_code" required maxlength="2" class="mt-1 w-full rounded-xl border-border bg-inputBg uppercase" placeholder="MA" /></label>
                 <label v-if="form.mode === 'partner'" class="text-sm font-bold text-primary">Gesuchte Personen<input v-model.number="form.participants_needed" type="number" min="1" max="500" class="mt-1 w-full rounded-xl border-border bg-inputBg" /></label>
                 <label v-else class="text-sm font-bold text-primary">Personen pro Team<input v-model.number="form.team_size" required type="number" min="1" max="500" class="mt-1 w-full rounded-xl border-border bg-inputBg" placeholder="5, 7, 11 …" /></label>
@@ -110,7 +130,7 @@ const formatDate = (value) => new Intl.DateTimeFormat(undefined, {
             </form>
 
             <section class="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[1fr_1fr_auto]">
-                <input v-model="filterCity" class="rounded-xl border-border bg-inputBg" placeholder="Ort, z. B. Kenitra" />
+                <input v-model="filterLocation" class="rounded-xl border-border bg-inputBg" placeholder="Stadt, PLZ oder Sportstätte" />
                 <select v-model="filterSport" class="rounded-xl border-border bg-inputBg"><option value="">Alle Sportarten</option><option v-for="sport in sports" :key="sport.id" :value="sport.id">{{ sport.name }}</option></select>
                 <button class="rounded-xl border border-air-blue px-5 py-2 font-bold text-air-blue" @click="search">Suchen</button>
             </section>
@@ -119,7 +139,7 @@ const formatDate = (value) => new Intl.DateTimeFormat(undefined, {
                 <article v-for="matching in matchings.data" :key="matching.id" class="rounded-2xl border border-border bg-card p-5">
                     <div class="flex items-start justify-between gap-3"><div><span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-black text-air-blue">{{ matching.sport?.name }}</span><h2 class="mt-3 text-xl font-black text-primary">{{ matching.title }}</h2></div><span class="text-xs font-bold text-secondary">{{ matching.mode === 'team' ? `${matching.team_size} vs. ${matching.team_size}` : `${matching.participants_needed} gesucht` }}</span></div>
                     <p class="mt-2 text-sm text-secondary">{{ matching.description }}</p>
-                    <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><span>📍 {{ matching.city }}, {{ matching.country_code }}</span><span>🗓 {{ formatDate(matching.starts_at) }}</span><span>🎯 {{ matching.skill_level }}</span><span>📡 {{ matching.radius_km }} km</span></div>
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><span>📍 {{ matching.location_name ? `${matching.location_name} · ${matching.city}` : `${matching.city}, ${matching.country_code}` }}</span><span>🗓 {{ formatDateTime(matching.starts_at) }} Uhr</span><span v-if="matching.postal_code" class="text-secondary">PLZ: {{ matching.postal_code }}</span><span v-if="matching.address" class="col-span-2 text-secondary">Adresse: {{ matching.address }}</span><span>🎯 {{ matching.skill_level }}</span><span>📡 {{ matching.radius_km }} km</span></div>
                     <p class="mt-3 text-xs text-secondary">Von {{ matching.owner?.name }}<template v-if="matching.team"> · {{ matching.team.name }}</template></p>
 
                     <div v-if="matching.mine" class="mt-4 space-y-3 border-t border-border pt-4">

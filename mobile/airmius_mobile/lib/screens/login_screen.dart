@@ -15,11 +15,13 @@ class LoginScreen extends StatefulWidget {
     required this.authState,
     required this.onLogin,
     required this.onSocialLogin,
+    this.onSocialRegister,
   });
 
   final AirmiusAuthState authState;
   final void Function(String email, String password) onLogin;
   final void Function(String provider) onSocialLogin;
+  final void Function(String provider, String accountType)? onSocialRegister;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -219,6 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => AuthFlowsScreen(
                                     onSocialLogin: widget.onSocialLogin,
+                                    onSocialRegister: widget.onSocialRegister,
                                   ),
                                 ),
                               ),

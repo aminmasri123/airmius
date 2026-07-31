@@ -324,8 +324,31 @@ class MobilePushDeliveryService
                         'body' => (string) ($payload['body'] ?? ''),
                     ],
                     'data' => $data,
-                    'android' => ['priority' => ($payload['importance'] ?? 'default') === 'high' ? 'high' : 'normal'],
-                    'apns' => ['payload' => ['aps' => ['sound' => 'default']]],
+                    'android' => [
+                        'priority' => ($payload['importance'] ?? 'default') === 'high' ? 'high' : 'normal',
+                        'notification' => [
+                            'channel_id' => 'airmius_notifications',
+                            'sound' => 'default',
+                            'default_vibrate_timings' => true,
+                            'visibility' => 'PUBLIC',
+                        ],
+                    ],
+                    'apns' => [
+                        'headers' => [
+                            'apns-push-type' => 'alert',
+                            'apns-priority' => '10',
+                        ],
+                        'payload' => [
+                            'aps' => [
+                                'alert' => [
+                                    'title' => (string) ($payload['title'] ?? 'Airmius'),
+                                    'body' => (string) ($payload['body'] ?? ''),
+                                ],
+                                'sound' => 'default',
+                                'badge' => 1,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         )->throw()->json();

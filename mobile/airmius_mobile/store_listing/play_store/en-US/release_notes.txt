@@ -1,8 +1,9 @@
-New in 1.0.28:
+New in 1.0.30:
 
-- Personalized home screens and navigation for athletes, coaches, clubs and sponsors.
-- New sponsor cockpit for profiles, partnerships, campaigns and reach.
-- Improved onboarding, daily flow, feed, training and empty states.
-- Water and meal updates without page reloads, including undo.
-- Better sport matching, chat auto-scroll and background badges.
-- Customizable footer with three to five shortcuts.
+- Clear, focused account registration without internal account-management options.
+- Google and Outlook registration now preserve the selected account type.
+- Password help, 2FA, email verification and account deletion appear only in their correct areas.
+- Improved registration guidance in German, English, French and Arabic.
+- Sport partner searches now show date and time clearly.
+- City, postal code, venue and address can be entered separately.
+- Sport partners can also be found by postal code and venue.

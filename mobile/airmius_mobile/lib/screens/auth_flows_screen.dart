@@ -6,7 +6,6 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'account_operations_screen.dart';
-import 'auth_recovery_security_screen.dart';
 import 'email_verification_screen.dart';
 import 'password_recovery_screen.dart';
 import 'profile_completion_gate_screen.dart';
@@ -14,16 +13,17 @@ import 'support_helpdesk_screen.dart';
 import 'two_factor_challenge_screen.dart';
 
 class AuthFlowsScreen extends StatefulWidget {
-  const AuthFlowsScreen({super.key, this.onSocialLogin});
+  const AuthFlowsScreen({super.key, this.onSocialLogin, this.onSocialRegister});
 
   final void Function(String provider)? onSocialLogin;
+  final void Function(String provider, String accountType)? onSocialRegister;
 
   @override
   State<AuthFlowsScreen> createState() => _AuthFlowsScreenState();
 }
 
 class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
-  String _flow = 'Registrieren';
+  final String _flow = 'register';
   String _accountType = 'athlete';
   bool _terms = false;
   String _gender = '';
@@ -154,40 +154,23 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _authAccent(context);
     final scope = AirmiusScope.of(context);
-    final surfaceSoft = _authSurfaceSoft(context);
     final text = _authText(context);
     final muted = _authMuted(context);
-    final border = _authBorder(context);
     return Scaffold(
       backgroundColor: _authBackground(context),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.manage_accounts_outlined),
-        label: Text(
-          scope.t('authFlow.accountOps'),
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => AccountOperationsScreen(initialTab: 'Auth'),
-          ),
-        ),
-      ),
       appBar: AppBar(
         backgroundColor: _authHeader(context),
         foregroundColor: text,
         surfaceTintColor: Colors.transparent,
         title: Text(
-          scope.t('authFlow.title'),
+          scope.t('authFlow.register'),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
-        title: scope.t('authFlow.title'),
-        subtitle: scope.t('authFlow.subtitle'),
+        title: scope.t('authFlow.register'),
+        subtitle: scope.t('authFlow.registerSubtitle'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -198,59 +181,11 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                 children: [
                   const Center(child: AirmiusLogo(size: 72)),
                   const SizedBox(height: 12),
-                  Eyebrow(scope.t('authFlow.eyebrow')),
+                  Eyebrow(scope.t('authFlow.register')),
                   const SizedBox(height: 8),
                   Text(
-                    scope.t('authFlow.intro'),
+                    scope.t('authFlow.registerIntro'),
                     style: TextStyle(color: muted, height: 1.35),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final flow in const [
-                        ('register', 'authFlow.register'),
-                        ('social', 'authFlow.social'),
-                        ('password', 'authFlow.password'),
-                        ('twoFactor', 'authFlow.twoFactor'),
-                        ('email', 'authFlow.email'),
-                        ('profile', 'authFlow.profile'),
-                        ('suspended', 'authFlow.suspended'),
-                        ('delete', 'authFlow.delete'),
-                      ])
-                        ChoiceChip(
-                          selected: _flow == flow.$1,
-                          label: Text(scope.t(flow.$2)),
-                          onSelected: (_) => setState(() => _flow = flow.$1),
-                          selectedColor: accent.withValues(
-                            alpha: _authDarkUi(context) ? 0.22 : 0.14,
-                          ),
-                          backgroundColor: surfaceSoft,
-                          checkmarkColor: accent,
-                          side: BorderSide(
-                            color: _flow == flow.$1 ? accent : border,
-                          ),
-                          labelStyle: TextStyle(
-                            color: _flow == flow.$1 ? accent : muted,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: AirmiusButton(
-                      label: scope.t('authFlow.securityOverview'),
-                      icon: Icons.shield_outlined,
-                      secondary: true,
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AuthRecoverySecurityScreen(),
-                        ),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -320,6 +255,45 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                 ),
             ],
           ),
+          if (widget.onSocialRegister != null ||
+              widget.onSocialLogin != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              scope.t('authFlow.quickRegister'),
+              style: TextStyle(color: text, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _AuthAction(
+                  label: scope.t('authFlow.googleRegister'),
+                  icon: Icons.g_mobiledata,
+                  onPressed: () => _startSocialRegistration('google'),
+                ),
+                _AuthAction(
+                  label: scope.t('authFlow.outlookRegister'),
+                  icon: Icons.mail_outline,
+                  onPressed: () => _startSocialRegistration('microsoft'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    scope.t('authFlow.orEmail'),
+                    style: TextStyle(color: muted, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           AirmiusTextField(
             label: scope.t('application.firstName'),
@@ -529,27 +503,6 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               ),
             ),
           ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _AuthAction(
-                label: scope.t('authFlow.googleRegister'),
-                icon: Icons.g_mobiledata,
-                onPressed: widget.onSocialLogin == null
-                    ? null
-                    : () => widget.onSocialLogin!('google'),
-              ),
-              _AuthAction(
-                label: scope.t('authFlow.outlookRegister'),
-                icon: Icons.mail_outline,
-                onPressed: widget.onSocialLogin == null
-                    ? null
-                    : () => widget.onSocialLogin!('microsoft'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           if (error != null && error.isNotEmpty) ...[
             Text(
               error,
@@ -570,6 +523,15 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         ],
       ),
     );
+  }
+
+  void _startSocialRegistration(String provider) {
+    final register = widget.onSocialRegister;
+    if (register != null) {
+      register(provider, _accountType);
+      return;
+    }
+    widget.onSocialLogin?.call(provider);
   }
 
   Widget _socialLogin() {
@@ -924,13 +886,6 @@ Color _authSurface(BuildContext context) {
   return _authDarkUi(context) ? palette.darkSurface : palette.lightSurface;
 }
 
-Color _authSurfaceSoft(BuildContext context) {
-  final palette = _authPalette(context);
-  return _authDarkUi(context)
-      ? palette.darkSurfaceSoft
-      : palette.lightSurfaceSoft;
-}
-
 Color _authText(BuildContext context) {
   final palette = _authPalette(context);
   return _authDarkUi(context) ? AirmiusColors.text : palette.lightText;
@@ -939,11 +894,6 @@ Color _authText(BuildContext context) {
 Color _authMuted(BuildContext context) {
   final palette = _authPalette(context);
   return _authDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
-}
-
-Color _authBorder(BuildContext context) {
-  final palette = _authPalette(context);
-  return _authDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
 }
 
 class _AuthAction extends StatelessWidget {

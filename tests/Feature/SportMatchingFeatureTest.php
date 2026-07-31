@@ -49,18 +49,26 @@ class SportMatchingFeatureTest extends TestCase
         $matchingId = $this->postJson('/api/v1/sport-matching', [
             'mode' => 'partner',
             'sport_id' => $running->id,
-            'title' => 'Lauf am Strand von Kenitra',
             'description' => 'Etwa acht Kilometer in lockerem Tempo.',
             'city' => 'Kenitra',
+            'postal_code' => '14000',
+            'location_name' => 'Strandpromenade',
+            'address' => 'Avenue des Sports 12',
             'country_code' => 'MA',
             'radius_km' => 20,
             'starts_at' => now()->addDay()->toIso8601String(),
             'participants_needed' => 2,
             'skill_level' => 'recreational',
-        ])->assertCreated()->assertJsonPath('data.mode', 'partner')->json('data.id');
+        ])->assertCreated()
+            ->assertJsonPath('data.mode', 'partner')
+            ->assertJsonPath('data.title', 'Laufen-Sportpartner gesucht')
+            ->assertJsonPath('data.postal_code', '14000')
+            ->assertJsonPath('data.location_name', 'Strandpromenade')
+            ->assertJsonPath('data.address', 'Avenue des Sports 12')
+            ->json('data.id');
 
         Sanctum::actingAs($runner);
-        $this->getJson('/api/v1/sport-matching?mode=partner&city=Kenitra&sport_id='.$running->id)
+        $this->getJson('/api/v1/sport-matching?mode=partner&location=14000&sport_id='.$running->id)
             ->assertOk()
             ->assertJsonPath('data.0.id', $matchingId)
             ->assertJsonPath('data.0.city', 'Kenitra')

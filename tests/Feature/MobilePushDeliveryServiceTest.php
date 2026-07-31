@@ -80,7 +80,9 @@ class MobilePushDeliveryServiceTest extends TestCase
         $this->assertSame('sent', $delivery->status);
         $this->assertSame('projects/airmius/messages/42', $delivery->provider_message_id);
         Http::assertSent(fn ($request) => $request->url() === 'https://fcm.googleapis.com/v1/projects/airmius/messages:send'
-            && $request['message']['token'] === $device->token);
+            && $request['message']['token'] === $device->token
+            && $request['message']['android']['notification']['channel_id'] === 'airmius_notifications'
+            && $request['message']['apns']['payload']['aps']['alert']['title'] === 'Training');
     }
 
     public function test_provider_failure_is_recorded_as_failed_instead_of_fake_sent(): void

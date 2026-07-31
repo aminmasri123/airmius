@@ -1,5 +1,8 @@
 package com.airmius.app
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.content.Intent
 import android.net.Uri
 import io.flutter.embedding.android.FlutterActivity
@@ -11,6 +14,23 @@ class MainActivity : FlutterActivity() {
     private val browserChannelName = "com.airmius.app/browser"
     private var initialLink: String? = null
     private var methodChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                getString(R.string.airmius_push_channel_id),
+                getString(R.string.airmius_push_channel_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = getString(R.string.airmius_push_channel_description)
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            getSystemService(NotificationManager::class.java)
+                ?.createNotificationChannel(channel)
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

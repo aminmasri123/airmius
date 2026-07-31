@@ -54,7 +54,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('auth flow exposes the localized security overview', (
+  testWidgets('registration hides internal security and account actions', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1000, 1800);
@@ -73,16 +73,12 @@ void main() {
       ),
     );
 
-    await tester.scrollUntilVisible(
-      find.text('Sicherheitsübersicht öffnen'),
-      500,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Sicherheitsübersicht öffnen'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sicherheitsübersicht'), findsOneWidget);
-    expect(find.text('KONTO-SICHERHEIT'), findsOneWidget);
+    expect(find.text('Registrieren'), findsWidgets);
+    expect(find.text('Konto-Aktionen'), findsNothing);
+    expect(find.text('Sicherheitsübersicht öffnen'), findsNothing);
+    expect(find.text('2FA'), findsNothing);
+    expect(find.text('Gesperrt'), findsNothing);
+    expect(find.text('Löschen'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

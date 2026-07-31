@@ -7,7 +7,7 @@ import '../core/airmius_preferences.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'auth_flows_screen.dart';
+import 'account_management_screen.dart';
 import 'file_operations_screen.dart';
 import 'legal_support_operations_screen.dart';
 import 'localization_center_screen.dart';
@@ -118,15 +118,15 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
       setState(() {
         _saving = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(scope.t('onboarding.saved'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('onboarding.saved'))));
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(scope.t('onboarding.saveFailed'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scope.t('onboarding.saveFailed'))));
     }
   }
 
@@ -228,15 +228,14 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                     decoration: InputDecoration(
                       labelText: scope.t('onboarding.role'),
                     ),
-                    items:
-                        _onboardingRoles
-                            .map(
-                              (item) => DropdownMenuItem(
-                                value: item,
-                                child: Text(_onboardingRoleLabel(scope, item)),
-                              ),
-                            )
-                            .toList(),
+                    items: _onboardingRoles
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(_onboardingRoleLabel(scope, item)),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) =>
                         setState(() => _role = value ?? _role),
                   ),
@@ -247,17 +246,14 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                     decoration: InputDecoration(
                       labelText: scope.t('onboarding.startArea'),
                     ),
-                    items:
-                        _onboardingWorkspaces
-                            .map(
-                              (item) => DropdownMenuItem(
-                                value: item,
-                                child: Text(
-                                  _onboardingWorkspaceLabel(scope, item),
-                                ),
-                              ),
-                            )
-                            .toList(),
+                    items: _onboardingWorkspaces
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(_onboardingWorkspaceLabel(scope, item)),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) =>
                         setState(() => _workspace = value ?? _workspace),
                   ),
@@ -272,7 +268,9 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                         secondary: true,
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => AuthFlowsScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const AccountManagementScreen(),
+                          ),
                         ),
                       ),
                       AirmiusButton(

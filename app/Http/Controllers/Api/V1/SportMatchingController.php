@@ -20,6 +20,7 @@ class SportMatchingController extends Controller
             'mode' => ['nullable', Rule::in(SportMatching::MODES)],
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
             'city' => ['nullable', 'string', 'max:120'],
+            'location' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', Rule::in(SportMatching::STATUSES)],
         ]);
 
@@ -38,7 +39,13 @@ class SportMatchingController extends Controller
             ])
             ->when($filters['mode'] ?? null, fn ($q, $value) => $q->where('mode', $value))
             ->when($filters['sport_id'] ?? null, fn ($q, $value) => $q->where('sport_id', $value))
-            ->when($filters['city'] ?? null, fn ($q, $value) => $q->where('city', 'like', '%'.$value.'%'))
+            ->when($filters['location'] ?? $filters['city'] ?? null, function ($q, $value) {
+                $q->where(function ($query) use ($value) {
+                    $query->where('city', 'like', '%'.$value.'%')
+                        ->orWhere('postal_code', 'like', '%'.$value.'%')
+                        ->orWhere('location_name', 'like', '%'.$value.'%');
+                });
+            })
             ->when($filters['status'] ?? 'open', fn ($q, $value) => $q->where('status', $value))
             ->where('starts_at', '>=', now()->subHours(3))
             ->orderBy('starts_at');
@@ -51,6 +58,9 @@ class SportMatchingController extends Controller
     {
         $data = $this->validated($request);
         $data['user_id'] = $request->user()->id;
+        $data['title'] = blank($data['title'] ?? null)
+            ? $this->defaultTitle($data)
+            : $data['title'];
         $this->validateTeam($request, $data);
 
         return (new SportMatchingResource(
@@ -123,9 +133,12 @@ class SportMatchingController extends Controller
             'mode' => ['required', Rule::in(SportMatching::MODES)],
             'sport_id' => ['required', 'integer', 'exists:sports,id'],
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
-            'title' => ['required', 'string', 'max:140'],
+            'title' => ['nullable', 'string', 'max:140'],
             'description' => ['nullable', 'string', 'max:2000'],
             'city' => ['required', 'string', 'max:120'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'location_name' => ['nullable', 'string', 'max:160'],
+            'address' => ['nullable', 'string', 'max:240'],
             'country_code' => ['required', 'string', 'size:2'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -148,6 +161,15 @@ class SportMatchingController extends Controller
             $data['team_id'] = null;
             $data['team_size'] = null;
         }
+    }
+
+    private function defaultTitle(array $data): string
+    {
+        $sportName = Sport::query()->whereKey($data['sport_id'])->value('name') ?: 'Sport';
+
+        return $data['mode'] === 'team'
+            ? $sportName.'-Teamgegner gesucht'
+            : $sportName.'-Sportpartner gesucht';
     }
 
     private function assertTeamMember(Request $request, int $teamId): void

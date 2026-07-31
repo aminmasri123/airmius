@@ -18064,6 +18064,11 @@ final _strings = {
     'authFlow.intro':
         'Alle wichtigen Kontofunktionen an einem sicheren, übersichtlichen Ort.',
     'authFlow.register': 'Registrieren',
+    'authFlow.registerSubtitle': 'Erstelle dein persönliches Airmius-Konto',
+    'authFlow.registerIntro':
+        'Wähle deinen Kontotyp und registriere dich mit Google, Outlook oder E-Mail.',
+    'authFlow.quickRegister': 'Schnell registrieren',
+    'authFlow.orEmail': 'oder mit E-Mail',
     'authFlow.social': 'Social Login',
     'authFlow.password': 'Passwort',
     'authFlow.twoFactor': '2FA',
@@ -20231,6 +20236,11 @@ final _strings = {
     'authFlow.intro':
         'All important account features in one secure, clear place.',
     'authFlow.register': 'Register',
+    'authFlow.registerSubtitle': 'Create your personal Airmius account',
+    'authFlow.registerIntro':
+        'Choose your account type and register with Google, Outlook or email.',
+    'authFlow.quickRegister': 'Quick registration',
+    'authFlow.orEmail': 'or with email',
     'authFlow.social': 'Social sign-in',
     'authFlow.password': 'Password',
     'authFlow.twoFactor': '2FA',
@@ -22344,6 +22354,11 @@ final _strings = {
     'authFlow.intro':
         'Toutes les fonctions importantes du compte, dans un espace sûr et clair.',
     'authFlow.register': 'Créer un compte',
+    'authFlow.registerSubtitle': 'Crée ton compte Airmius personnel',
+    'authFlow.registerIntro':
+        'Choisis ton type de compte et inscris-toi avec Google, Outlook ou ton e-mail.',
+    'authFlow.quickRegister': 'Inscription rapide',
+    'authFlow.orEmail': 'ou avec un e-mail',
     'authFlow.social': 'Connexion sociale',
     'authFlow.password': 'Mot de passe',
     'authFlow.twoFactor': '2FA',
@@ -24478,6 +24493,11 @@ final _strings = {
     'authFlow.eyebrow': 'تسجيل الدخول',
     'authFlow.intro': 'كل وظائف الحساب المهمة في مكان آمن وواضح.',
     'authFlow.register': 'إنشاء حساب',
+    'authFlow.registerSubtitle': 'أنشئ حسابك الشخصي في Airmius',
+    'authFlow.registerIntro':
+        'اختر نوع الحساب وسجّل باستخدام Google أو Outlook أو البريد الإلكتروني.',
+    'authFlow.quickRegister': 'تسجيل سريع',
+    'authFlow.orEmail': 'أو بالبريد الإلكتروني',
     'authFlow.social': 'تسجيل اجتماعي',
     'authFlow.password': 'كلمة المرور',
     'authFlow.twoFactor': 'المصادقة الثنائية',

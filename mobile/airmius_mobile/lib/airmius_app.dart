@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,6 +12,7 @@ import 'core/airmius_deep_link_inbox.dart';
 import 'core/airmius_external_auth_launcher.dart';
 import 'core/airmius_http_transport.dart';
 import 'core/airmius_preferences.dart';
+import 'core/airmius_push_notifications.dart';
 import 'core/airmius_service_container.dart';
 import 'core/airmius_services_scope.dart';
 import 'core/airmius_theme.dart';
@@ -133,7 +135,25 @@ class _AirmiusAppState extends State<AirmiusApp> {
     super.initState();
     unawaited(_restorePreferences());
     _deepLinkInbox.start(_receiveNativeDeepLink);
+    if (AirmiusPushNotifications.supported) {
+      FirebaseMessaging.onMessageOpenedApp.listen(_receivePushMessage);
+      unawaited(_restoreInitialPushMessage());
+    }
     unawaited(_restoreAuth());
+  }
+
+  Future<void> _restoreInitialPushMessage() async {
+    try {
+      final message = await FirebaseMessaging.instance.getInitialMessage();
+      if (message != null) _receivePushMessage(message);
+    } catch (_) {
+      // Firebase setup errors must not prevent the app from opening.
+    }
+  }
+
+  void _receivePushMessage(RemoteMessage message) {
+    final deepLink = AirmiusPushNotifications.deepLinkFor(message);
+    if (deepLink != null) _receiveNativeDeepLink(deepLink);
   }
 
   Future<void> _restoreAuth() async {
@@ -303,6 +323,8 @@ class _AirmiusAppState extends State<AirmiusApp> {
         locale: _language.code.toLowerCase(),
       ),
       onSocialLogin: _openSocialLogin,
+      onSocialRegister: (provider, accountType) =>
+          _openSocialLogin(provider, accountType: accountType),
     );
   }
 
@@ -320,7 +342,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
     });
   }
 
-  void _openSocialLogin(String provider) {
+  void _openSocialLogin(String provider, {String? accountType}) {
     final base = Uri.parse(_apiBaseUrl);
     final path = '/auth/$provider/redirect';
     final url = base.replace(
@@ -330,6 +352,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
         'mobile': '1',
         'locale': _language.code.toLowerCase(),
         'return_url': kIsWeb ? _webReturnUrl() : 'airmius://auth/callback',
+        'account_type': ?accountType,
       },
     );
 
