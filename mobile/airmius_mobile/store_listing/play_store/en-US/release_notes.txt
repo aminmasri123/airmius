@@ -1,4 +1,4 @@
-New in 1.0.30:
+New in 1.0.31:
 
 - Clear, focused account registration without internal account-management options.
 - Google and Outlook registration now preserve the selected account type.

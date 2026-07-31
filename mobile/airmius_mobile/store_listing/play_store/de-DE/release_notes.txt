@@ -1,4 +1,4 @@
-Neu in 1.0.30:
+Neu in 1.0.31:
 
 - Klare Registrierung ohne interne Konto-Verwaltungsoptionen.
 - Google- und Outlook-Registrierung übernehmen jetzt den ausgewählten Kontotyp.
