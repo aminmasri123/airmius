@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import AuthenticationCard from '@/Components/AuthenticationCard.vue'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
+import DateInput from '@/Components/DateInput.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
@@ -93,7 +94,7 @@ const submit = () => {
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
-                    <TextInput id="birth_date" v-model="form.birth_date" type="date" class="mt-1 block w-full" required autocomplete="bday" />
+                    <DateInput id="birth_date" v-model="form.birth_date" class="mt-1 block w-full" required autocomplete="bday" />
                     <InputError class="mt-2" :message="form.errors.birth_date" />
                 </div>
 

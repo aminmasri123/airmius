@@ -25,11 +25,19 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   String _query = '';
   Future<_MarketplaceBundle>? _bundleFuture;
   bool _busy = false;
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _query = widget.initialQuery;
+    _searchController = TextEditingController(text: _query);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   AirmiusApiClient get _client {
@@ -51,8 +59,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _client.commerceCart(),
     ]);
     final checkout = _marketMap(responses[3]['data']);
+    final productResponse = responses[0];
     return _MarketplaceBundle(
-      products: _marketMaps(responses[0]['data']),
+      products: _marketMaps(productResponse['data']),
+      productTotal: _marketInt(_marketMap(productResponse['meta'])['total']),
       wishlist: _marketMaps(responses[1]['data']),
       orders: _marketMaps(responses[2]['data']),
       cart: _marketMap(checkout['cart']),
@@ -100,28 +110,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor:
-            Theme.of(context).appBarTheme.backgroundColor ??
-            Theme.of(context).colorScheme.surface,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          t('market.title'),
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        actions: [
-          IconButton(
-            tooltip: t('market.reload'),
-            onPressed: _busy ? null : _reload,
-            icon: Icon(Icons.refresh_outlined),
-          ),
-        ],
-      ),
-      body: PageFrame(
-        title: t('market.title'),
-        subtitle: t('market.subtitle'),
+      backgroundColor: _marketBackground,
+      body: SafeArea(
         child: FutureBuilder<_MarketplaceBundle>(
           future: _bundleFuture,
           builder: (context, snapshot) {
@@ -155,54 +146,22 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       bundle.cart['items'],
     ).fold<int>(0, (sum, item) => sum + _marketInt(item['quantity']));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    if (_section == 'products') {
+      final resultCount = normalized.isEmpty
+          ? bundle.productTotal
+          : products.length;
+      return _buildStorefront(products, cartCount, resultCount);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 28),
       children: [
-        AirmiusPanel(
-          gradient: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Eyebrow(t('market.overview')),
-              const SizedBox(height: 8),
-              Text(
-                t('market.overviewHint'),
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _MiniMetric(
-                    value: '${bundle.products.length}',
-                    label: t('market.products'),
-                  ),
-                  _MiniMetric(
-                    value: '$cartCount',
-                    label: t('market.cart'),
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                  _MiniMetric(
-                    value: '${bundle.orders.length}',
-                    label: t('market.orders'),
-                  ),
-                ],
-              ),
-            ],
+        if (_section == 'wishlist') ...[
+          _MarketplaceSectionToolbar(
+            onSections: () => _showSectionPicker(cartCount),
+            onReload: _busy ? null : _reload,
           ),
-        ),
-        const SizedBox(height: 14),
-        _MarketSectionPicker(
-          value: _section,
-          cartCount: cartCount,
-          onChanged: (value) => setState(() => _section = value),
-        ),
-        const SizedBox(height: 14),
-        if (_section == 'products' || _section == 'wishlist') ...[
+          const SizedBox(height: 12),
           SearchBox(
             hint: t('market.search'),
             onChanged: (value) => setState(() => _query = value),
@@ -230,26 +189,148 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               ),
               const SizedBox(height: 10),
             ],
-        ] else if (_section == 'cart')
+        ] else if (_section == 'cart') ...[
+          _MarketplaceSectionToolbar(
+            onSections: () => _showSectionPicker(cartCount),
+            onReload: _busy ? null : _reload,
+          ),
+          const SizedBox(height: 12),
           _CartSection(
             cart: bundle.cart,
             busy: _busy,
             onQuantityChanged: _updateCartQuantity,
             onRemove: _removeCartItem,
             onCheckout: () => _openCheckout(bundle),
-          )
-        else if (bundle.orders.isEmpty)
+          ),
+        ] else if (bundle.orders.isEmpty) ...[
+          _MarketplaceSectionToolbar(
+            onSections: () => _showSectionPicker(cartCount),
+            onReload: _busy ? null : _reload,
+          ),
+          const SizedBox(height: 12),
           _MarketEmpty(
             icon: Icons.receipt_long_outlined,
             text: t('market.emptyOrders'),
-          )
-        else
+          ),
+        ] else ...[
+          _MarketplaceSectionToolbar(
+            onSections: () => _showSectionPicker(cartCount),
+            onReload: _busy ? null : _reload,
+          ),
+          const SizedBox(height: 12),
           for (final order in bundle.orders) ...[
             _OrderCard(order: order, onTap: () => _openOrder(order)),
             const SizedBox(height: 10),
           ],
+        ],
       ],
     );
+  }
+
+  Widget _buildStorefront(
+    List<JsonMap> products,
+    int cartCount,
+    int resultCount,
+  ) {
+    final t = AirmiusScope.of(context).t;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 28),
+      children: [
+        _MarketplaceSearchBar(
+          controller: _searchController,
+          hint: t('market.search'),
+          onChanged: (value) => setState(() => _query = value),
+          onFilter: () => _showSectionPicker(cartCount),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '$resultCount ${t('market.results')}',
+          style: const TextStyle(
+            color: _marketBlue,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (products.isEmpty)
+          _MarketEmpty(
+            icon: Icons.storefront_outlined,
+            text: t('market.emptyProducts'),
+          )
+        else ...[
+          SizedBox(
+            height: 174,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) => _MarketplaceHeroCard(
+                product: products[index],
+                onTap: () => _openProduct(products[index]),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const _MarketplaceOfferHeader(),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 244,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) => _MarketplaceProductTile(
+                product: products[index],
+                onTap: () => _openProduct(products[index]),
+                onAddToCart: () => _addToCart(products[index]),
+                busy: _busy,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _MarketplaceGrid(
+            products: products,
+            busy: _busy,
+            onOpen: (product) => _openProduct(product),
+            onAddToCart: (product) => _addToCart(product),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _showSectionPicker(int cartCount) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.white,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                AirmiusScope.of(context).t('market.title'),
+                style: const TextStyle(
+                  color: _marketInk,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _MarketSectionPicker(
+                value: _section,
+                cartCount: cartCount,
+                onChanged: (value) => Navigator.pop(context, value),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _section = selected);
   }
 
   Future<void> _toggleWishlist(JsonMap product) async {
@@ -364,6 +445,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 class _MarketplaceBundle {
   const _MarketplaceBundle({
     this.products = const [],
+    this.productTotal = 0,
     this.wishlist = const [],
     this.orders = const [],
     this.cart = const {},
@@ -371,10 +453,513 @@ class _MarketplaceBundle {
   });
 
   final List<JsonMap> products;
+  final int productTotal;
   final List<JsonMap> wishlist;
   final List<JsonMap> orders;
   final JsonMap cart;
   final JsonMap checkout;
+}
+
+const _marketBackground = Color(0xFFF5FAFF);
+const _marketBlue = Color(0xFF0EA5E9);
+const _marketInk = Color(0xFF142033);
+const _marketMuted = Color(0xFF64748B);
+
+class _MarketplaceSectionToolbar extends StatelessWidget {
+  const _MarketplaceSectionToolbar({
+    required this.onSections,
+    required this.onReload,
+  });
+
+  final VoidCallback onSections;
+  final VoidCallback? onReload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD9E7F2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120B3555),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              AirmiusScope.of(context).t('market.title'),
+              style: const TextStyle(
+                color: _marketInk,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Bereiche',
+            onPressed: onSections,
+            color: _marketInk,
+            icon: const Icon(Icons.tune_outlined),
+          ),
+          IconButton(
+            tooltip: 'Neu laden',
+            onPressed: onReload,
+            color: _marketMuted,
+            icon: const Icon(Icons.refresh_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketplaceSearchBar extends StatelessWidget {
+  const _MarketplaceSearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+    required this.onFilter,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD9E7F2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F0B3555),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: const TextStyle(
+                color: _marketInk,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search, color: _marketBlue),
+                hintText: hint,
+                hintStyle: const TextStyle(color: _marketMuted),
+                filled: true,
+                fillColor: const Color(0xFFF9FCFF),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFD9E7F2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFD9E7F2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: _marketBlue, width: 1.5),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: const Color(0xFFF9FCFF),
+            borderRadius: BorderRadius.circular(11),
+            child: IconButton(
+              tooltip: 'Filter',
+              onPressed: onFilter,
+              color: _marketInk,
+              icon: const Icon(Icons.tune_outlined),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: _marketBlue,
+            borderRadius: BorderRadius.circular(11),
+            child: IconButton(
+              tooltip: 'Suchen',
+              onPressed: () => FocusScope.of(context).unfocus(),
+              color: Colors.white,
+              icon: const Icon(Icons.search),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketplaceHeroCard extends StatelessWidget {
+  const _MarketplaceHeroCard({required this.product, required this.onTap});
+
+  final JsonMap product;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = _marketNullableText(product['image_url']);
+    final title = _marketText(
+      product['title'],
+      fallback: AirmiusScope.of(context).t('market.title'),
+    );
+    final category = _marketText(
+      product['category'],
+      fallback: AirmiusScope.of(context).t('market.product'),
+    );
+
+    return SizedBox(
+      width: MediaQuery.sizeOf(context).width * .82,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(
+                color: const Color(0xFFB90022),
+                child: imageUrl == null
+                    ? const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: Colors.white,
+                        size: 54,
+                      )
+                    : Image.network(
+                        resolveAirmiusImageUrl(imageUrl) ?? imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xD9000000)],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: .45),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'AIRMIUS MARKETPLACE',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      category,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MarketplaceOfferHeader extends StatelessWidget {
+  const _MarketplaceOfferHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      decoration: BoxDecoration(
+        color: _marketBlue,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bolt, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(
+            AirmiusScope.of(context).t('market.currentOffers'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketplaceProductTile extends StatelessWidget {
+  const _MarketplaceProductTile({
+    required this.product,
+    required this.onTap,
+    required this.onAddToCart,
+    required this.busy,
+    this.width,
+  });
+
+  final JsonMap product;
+  final VoidCallback onTap;
+  final VoidCallback onAddToCart;
+  final bool busy;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _marketText(
+      product['title'],
+      fallback: AirmiusScope.of(context).t('market.untitledProduct'),
+    );
+    final imageUrl = _marketNullableText(product['image_url']);
+    final provider = _marketMap(product['provider_profile']);
+    final category = _marketText(
+      product['category'],
+      fallback: AirmiusScope.of(context).t('market.product'),
+    );
+
+    return SizedBox(
+      width: width ?? 142,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFD9E7F2)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 124,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(
+                        color: const Color(0xFFE7F1F8),
+                        child: imageUrl == null
+                            ? const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: _marketBlue,
+                                size: 42,
+                              )
+                            : Image.network(
+                                resolveAirmiusImageUrl(imageUrl) ?? imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: _marketMuted,
+                                ),
+                              ),
+                      ),
+                      Positioned(
+                        left: 7,
+                        top: 7,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          color: Colors.white.withValues(alpha: .9),
+                          child: Text(
+                            category,
+                            style: const TextStyle(
+                              color: _marketBlue,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 7, 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          provider['display_name'] == null
+                              ? title
+                              : '${provider['display_name']}: $title',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: _marketInk,
+                            fontSize: 11,
+                            height: 1.25,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _price(
+                                  context,
+                                  _marketInt(product['price_cents']),
+                                  _marketText(
+                                    product['currency'],
+                                    fallback: 'EUR',
+                                  ),
+                                ),
+                                style: const TextStyle(
+                                  color: _marketInk,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              tooltip: AirmiusScope.of(
+                                context,
+                              ).t('market.addToCart'),
+                              onPressed: busy ? null : onAddToCart,
+                              color: _marketBlue,
+                              icon: const Icon(
+                                Icons.add_shopping_cart_outlined,
+                                size: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MarketplaceGrid extends StatelessWidget {
+  const _MarketplaceGrid({
+    required this.products,
+    required this.busy,
+    required this.onOpen,
+    required this.onAddToCart,
+  });
+
+  final List<JsonMap> products;
+  final bool busy;
+  final ValueChanged<JsonMap> onOpen;
+  final ValueChanged<JsonMap> onAddToCart;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - 10) / 2;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AirmiusScope.of(context).t('market.products'),
+              style: const TextStyle(
+                color: _marketInk,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: products.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: .68,
+              ),
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return _MarketplaceProductTile(
+                  product: product,
+                  width: width,
+                  busy: busy,
+                  onTap: () => onOpen(product),
+                  onAddToCart: () => onAddToCart(product),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _MarketSectionPicker extends StatelessWidget {
@@ -428,48 +1013,6 @@ class _MarketSectionPicker extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({required this.value, required this.label, this.color});
-
-  final String value;
-  final String label;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final metricColor = color ?? airmiusAccentColor(context);
-    return Container(
-      constraints: const BoxConstraints(minWidth: 96),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: metricColor.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: metricColor.withValues(alpha: .35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: airmiusTextColor(context),
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: airmiusMutedColor(context),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );

@@ -106,7 +106,9 @@ class AirmiusDeepLinkResolver {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.passwordReset,
         path: path,
-        token: query['token'],
+        token:
+            query['token'] ??
+            (pathSegments.length > 1 ? pathSegments[1] : null),
         query: query,
       );
     }

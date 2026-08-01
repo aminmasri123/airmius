@@ -12,11 +12,21 @@ use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TwoFactorEmailCodeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware(['signed:relative', 'throttle:10,1'])
     ->whereNumber('id')
     ->name('email.verification.bridge');
+
+// Mobile reset emails use a query-string token. Keep this route alongside
+// Fortify's /reset-password/{token} route so browser links do not return 404.
+Route::get('/reset-password', function (Request $request) {
+    return Inertia::render('Auth/ResetPassword', [
+        'email' => $request->query('email'),
+        'token' => $request->query('token'),
+    ]);
+})->middleware('guest')->name('password.reset.query');
 
 Route::post('/two-factor-challenge/email-code', [TwoFactorEmailCodeController::class, 'send'])
     ->middleware(['guest', 'throttle:3,1'])

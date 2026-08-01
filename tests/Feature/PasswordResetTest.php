@@ -64,6 +64,32 @@ class PasswordResetTest extends TestCase
         });
     }
 
+    public function test_query_string_reset_password_screen_can_be_rendered(): void
+    {
+        if (! Features::enabled(Features::resetPasswords())) {
+            $this->markTestSkipped('Password updates are not enabled.');
+        }
+
+        Notification::fake();
+
+        $user = User::factory()->create();
+
+        $this->post('/forgot-password', [
+            'email' => $user->email,
+        ]);
+
+        Notification::assertSentTo($user, MyCustomResetPassword::class, function (object $notification) use ($user) {
+            $response = $this->get('/reset-password?'.http_build_query([
+                'token' => $notification->token,
+                'email' => $user->email,
+            ]));
+
+            $response->assertStatus(200);
+
+            return true;
+        });
+    }
+
     public function test_password_can_be_reset_with_valid_token(): void
     {
         if (! Features::enabled(Features::resetPasswords())) {

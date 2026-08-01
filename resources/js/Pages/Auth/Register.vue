@@ -9,6 +9,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import DateInput from '@/Components/DateInput.vue';
 
 const page = usePage()
 const query = new URLSearchParams(page.url.split('?')[1] || '')
@@ -168,10 +169,9 @@ const goBack = () => {
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
-                    <TextInput
+                    <DateInput
                         id="birth_date"
                         v-model="form.birth_date"
-                        type="date"
                         class="mt-1 block w-full"
                         required
                         autocomplete="bday"

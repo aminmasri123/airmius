@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -216,7 +217,12 @@ class _MembershipApplicationFormScreenState
                             ),
                             AirmiusTextField(
                               label: '${t('application.birthDate')} *',
+                              hint: t('application.dateHint'),
                               controller: _birthday,
+                              keyboardType: TextInputType.datetime,
+                              inputFormatters: const [
+                                AirmiusDateInputFormatter(),
+                              ],
                             ),
                           ],
                         ),
@@ -555,7 +561,7 @@ class _MembershipApplicationFormScreenState
         <String, Object?>{
           'first_name': _firstName.text.trim(),
           'last_name': _lastName.text.trim(),
-          'birth_date': birthDate?.toIso8601String().split('T').first,
+          'birth_date': formatAirmiusApiDate(birthDate),
           'gender': _gender,
           'email': _email.text.trim(),
           'phone': _phone.text.trim(),
@@ -637,7 +643,7 @@ class _MembershipApplicationFormScreenState
     if (_gender.isEmpty && _membershipGenderOptions.contains(user.gender)) {
       _gender = user.gender!;
     }
-    _fillIfEmpty(_birthday, _formatDate(user.birthDate));
+    _fillIfEmpty(_birthday, formatAirmiusDate(user.birthDate));
     _fillIfEmpty(_email, user.email);
     _fillIfEmpty(_street, user.street);
     _fillIfEmpty(_house, user.houseNumber);
@@ -666,24 +672,7 @@ class _MembershipApplicationFormScreenState
     return (parts.first, parts.skip(1).join(' '));
   }
 
-  String? _formatDate(DateTime? date) {
-    if (date == null) return null;
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day.$month.${date.year}';
-  }
-
-  DateTime? _parseBirthDate(String value) {
-    final text = value.trim();
-    if (text.isEmpty) return null;
-    final iso = DateTime.tryParse(text);
-    if (iso != null) return iso;
-    final match = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(text);
-    if (match == null) return null;
-    return DateTime.tryParse(
-      '${match.group(3)}-${match.group(2)!.padLeft(2, '0')}-${match.group(1)!.padLeft(2, '0')}',
-    );
-  }
+  DateTime? _parseBirthDate(String value) => parseAirmiusDate(value);
 
   bool _isKnownAdult(DateTime? birthDate) {
     if (birthDate == null) return false;

@@ -311,6 +311,12 @@ class _ShellScreenState extends State<ShellScreen> {
       unawaited(_openSettings());
       return;
     }
+    // Marketplace uses the real shell so the shared app bar, drawer,
+    // messages, notifications and profile actions remain available.
+    if (module.title == 'Marketplace') {
+      setState(() => _openedModule = module);
+      return;
+    }
     if (module.title == 'Eltern & Jugendschutz' &&
         !_canOpenGuardianCenter(
           AirmiusServicesScope.of(context).authState.user,
@@ -552,12 +558,14 @@ class _ShellScreenState extends State<ShellScreen> {
       name: authState.user?.name,
     );
     final page = _openedModule != null
-        ? ModuleScreen(
-            module: _openedModule!,
-            requestedClubIds: _requestedClubIds,
-            onRequestClub: _requestClub,
-            onWithdrawClub: _withdrawClub,
-          )
+        ? _openedModule!.title == 'Marketplace'
+              ? const MarketplaceScreen()
+              : ModuleScreen(
+                  module: _openedModule!,
+                  requestedClubIds: _requestedClubIds,
+                  onRequestClub: _requestClub,
+                  onWithdrawClub: _withdrawClub,
+                )
         : switch (_tab) {
             AppTab.training => const TrainingCenterScreen(),
             AppTab.clubs => ClubsScreen(

@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { Head, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import DateInput from '@/Components/DateInput.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -116,10 +117,9 @@ const submit = () => {
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="birth_date" class="block text-sm font-medium text-primary">{{ tx('Geburtsdatum') }}</label>
-                            <input
+                            <DateInput
                                 id="birth_date"
                                 v-model="form.birth_date"
-                                type="date"
                                 class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary focus:border-borderHover focus:outline-none focus:ring-borderHover"
                             />
                             <div v-if="form.errors.birth_date" class="mt-1 text-sm text-error">{{ form.errors.birth_date }}</div>
@@ -237,6 +237,5 @@ const submit = () => {
         </div>
     </AppLayout>
 </template>
-
 
 

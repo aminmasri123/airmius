@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_auth_state.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -42,7 +43,7 @@ class _ProfileCompletionGateScreenState
       text: user?.lastName ?? _splitName(user).$2 ?? '',
     );
     _birthDateController = TextEditingController(
-      text: _dateText(user?.birthDate),
+      text: formatAirmiusDate(user?.birthDate),
     );
     _countryController = TextEditingController(
       text: (user?.country ?? 'DE').toUpperCase(),
@@ -67,7 +68,7 @@ class _ProfileCompletionGateScreenState
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final loading = widget.authState.phase == AirmiusAuthPhase.loading;
-    final birthDate = DateTime.tryParse(_birthDateController.text.trim());
+    final birthDate = parseAirmiusDate(_birthDateController.text);
     final minor = birthDate != null && _isMinor(birthDate);
     final error = _localError ?? widget.authState.error;
 
@@ -165,6 +166,7 @@ class _ProfileCompletionGateScreenState
                         icon: Icons.cake_outlined,
                         controller: _birthDateController,
                         keyboardType: TextInputType.datetime,
+                        inputFormatters: const [AirmiusDateInputFormatter()],
                         suffixIcon: IconButton(
                           onPressed: loading ? null : _pickBirthDate,
                           icon: Icon(
@@ -267,7 +269,7 @@ class _ProfileCompletionGateScreenState
 
   Future<void> _pickBirthDate() async {
     final initial =
-        DateTime.tryParse(_birthDateController.text.trim()) ??
+        parseAirmiusDate(_birthDateController.text) ??
         DateTime(DateTime.now().year - 18, 1, 1);
     final picked = await showDatePicker(
       context: context,
@@ -276,11 +278,11 @@ class _ProfileCompletionGateScreenState
       lastDate: DateTime.now(),
     );
     if (picked == null) return;
-    setState(() => _birthDateController.text = _dateText(picked));
+    setState(() => _birthDateController.text = formatAirmiusDate(picked));
   }
 
   Future<void> _save() async {
-    final birthDate = DateTime.tryParse(_birthDateController.text.trim());
+    final birthDate = parseAirmiusDate(_birthDateController.text);
     final country = _countryController.text.trim().toUpperCase();
     if (_firstNameController.text.trim().isEmpty ||
         _lastNameController.text.trim().isEmpty ||
@@ -308,7 +310,7 @@ class _ProfileCompletionGateScreenState
         'first_name': _firstNameController.text.trim(),
         'account_type': _accountType,
         'last_name': _lastNameController.text.trim(),
-        'birth_date': _dateText(birthDate),
+        'birth_date': formatAirmiusApiDate(birthDate),
         'gender': _gender,
         'country': country,
         'guardian_email': _guardianEmailController.text.trim(),
@@ -563,13 +565,6 @@ const _genderValues = ['female', 'male', 'diverse', 'not_specified'];
   if (name.isEmpty) return (null, null);
   final parts = name.split(RegExp(r'\s+'));
   return (parts.first, parts.length > 1 ? parts.sublist(1).join(' ') : null);
-}
-
-String _dateText(DateTime? date) {
-  if (date == null) return '';
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '${date.year}-$month-$day';
 }
 
 bool _isMinor(DateTime birthDate) {

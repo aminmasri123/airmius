@@ -6,6 +6,7 @@ import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import TextInput from '@/Components/TextInput.vue'
+import DateInput from '@/Components/DateInput.vue'
 
 defineProps({
     email: {
@@ -96,10 +97,9 @@ const submit = () => {
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
                             <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
-                            <TextInput
+                            <DateInput
                                 id="birth_date"
                                 v-model="form.birth_date"
-                                type="date"
                                 class="mt-1 block w-full"
                                 required
                                 autocomplete="bday"
@@ -167,4 +167,3 @@ const submit = () => {
         </div>
     </AuthenticationCard>
 </template>
-

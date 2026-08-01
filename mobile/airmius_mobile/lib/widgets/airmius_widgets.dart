@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/airmius_accessibility_scope.dart';
 
 import '../core/airmius_external_url.dart';
@@ -1261,6 +1262,7 @@ class AirmiusTextField extends StatelessWidget {
     this.enabled = true,
     this.readOnly = false,
     this.autocorrect = true,
+    this.inputFormatters,
   });
 
   final String label;
@@ -1279,6 +1281,7 @@ class AirmiusTextField extends StatelessWidget {
   final bool enabled;
   final bool readOnly;
   final bool autocorrect;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -1295,6 +1298,7 @@ class AirmiusTextField extends StatelessWidget {
       enabled: enabled,
       readOnly: readOnly,
       autocorrect: autocorrect,
+      inputFormatters: inputFormatters,
       obscureText: obscureText,
       maxLines: maxLines,
       style: TextStyle(color: text, fontWeight: FontWeight.w700),

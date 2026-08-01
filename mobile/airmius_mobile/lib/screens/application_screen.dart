@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -243,6 +244,10 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                                     hint: t('application.dateHint'),
                                     icon: Icons.calendar_today_outlined,
                                     controller: _birthDate,
+                                    keyboardType: TextInputType.datetime,
+                                    inputFormatters: const [
+                                      AirmiusDateInputFormatter(),
+                                    ],
                                   ),
                                   DropdownButtonFormField<String>(
                                     isExpanded: true,
@@ -557,7 +562,9 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
           'membership_type': _membershipType,
           'first_name': _firstName.text.trim(),
           'last_name': _lastName.text.trim(),
-          'birth_date': _birthDate.text.trim(),
+          'birth_date': formatAirmiusApiDate(
+            parseAirmiusDate(_birthDate.text),
+          ),
           'gender': _gender.text.trim(),
           'license_number': _license.text.trim(),
           'email': _email.text.trim(),
@@ -636,24 +643,9 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     return (parts.first, parts.skip(1).join(' '));
   }
 
-  String? _formatDate(DateTime? date) {
-    if (date == null) return null;
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day.$month.${date.year}';
-  }
+  String? _formatDate(DateTime? date) => formatAirmiusDate(date);
 
-  DateTime? _parseBirthDate(String value) {
-    final text = value.trim();
-    if (text.isEmpty) return null;
-    final iso = DateTime.tryParse(text);
-    if (iso != null) return iso;
-    final match = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(text);
-    if (match == null) return null;
-    return DateTime.tryParse(
-      '${match.group(3)}-${match.group(2)!.padLeft(2, '0')}-${match.group(1)!.padLeft(2, '0')}',
-    );
-  }
+  DateTime? _parseBirthDate(String value) => parseAirmiusDate(value);
 
   bool _isKnownAdult(DateTime? birthDate) {
     if (birthDate == null) return false;

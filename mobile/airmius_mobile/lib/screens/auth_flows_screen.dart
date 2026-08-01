@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -32,11 +33,6 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _countryController = TextEditingController(text: 'DE');
-  final _streetController = TextEditingController();
-  final _houseNumberController = TextEditingController();
-  final _postalCodeController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _birthDateController = TextEditingController();
   final _guardianEmailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -55,11 +51,6 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     _lastNameController.dispose();
     _emailController.dispose();
     _countryController.dispose();
-    _streetController.dispose();
-    _houseNumberController.dispose();
-    _postalCodeController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
     _birthDateController.dispose();
     _guardianEmailController.dispose();
     _passwordController.dispose();
@@ -70,7 +61,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   void _onBirthDateChanged() => setState(() {});
 
   bool get _requiresGuardianConsent {
-    final birthDate = DateTime.tryParse(_birthDateController.text.trim());
+    final birthDate = parseAirmiusDate(_birthDateController.text);
     if (birthDate == null) return false;
 
     final today = DateTime.now();
@@ -86,7 +77,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
     final initialDate =
-        DateTime.tryParse(_birthDateController.text.trim()) ??
+        parseAirmiusDate(_birthDateController.text) ??
         DateTime(now.year - 16, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
@@ -96,7 +87,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     );
 
     if (picked == null) return;
-    _birthDateController.text = _formatDate(picked);
+    _birthDateController.text = formatAirmiusDate(picked);
   }
 
   Future<void> _submitRegister() async {
@@ -115,6 +106,12 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       return;
     }
 
+    final birthDate = parseAirmiusDate(_birthDateController.text);
+    if (birthDate == null) {
+      setState(() => _registerError = 'Bitte Geburtsdatum als TT.MM.JJJJ eingeben.');
+      return;
+    }
+
     await services.authState.register(
       locale: language,
       payload: {
@@ -123,12 +120,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         'last_name': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'country': _countryController.text.trim().toUpperCase(),
-        'street': _emptyToNull(_streetController.text),
-        'house_number': _emptyToNull(_houseNumberController.text),
-        'postal_code': _emptyToNull(_postalCodeController.text),
-        'city': _emptyToNull(_cityController.text),
-        'state': _emptyToNull(_stateController.text),
-        'birth_date': _birthDateController.text.trim(),
+        'birth_date': formatAirmiusApiDate(birthDate),
         'gender': _gender,
         'guardian_email': _requiresGuardianConsent
             ? _guardianEmailController.text.trim()
@@ -219,7 +211,6 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     final error = _registerError ?? services.authState.error;
     final text = _authText(context);
     final muted = _authMuted(context);
-    final narrow = MediaQuery.sizeOf(context).width < 500;
 
     return AirmiusPanel(
       child: Column(
@@ -324,96 +315,16 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
             controller: _countryController,
           ),
           const SizedBox(height: 12),
-          if (narrow) ...[
-            AirmiusTextField(
-              label: scope.t('authFlow.street'),
-              hint: scope.t('application.optional'),
-              icon: Icons.home_outlined,
-              controller: _streetController,
-            ),
-            const SizedBox(height: 12),
-            AirmiusTextField(
-              label: scope.t('authFlow.number'),
-              hint: '12a',
-              controller: _houseNumberController,
-            ),
-          ] else
-            Row(
-              children: [
-                Expanded(
-                  child: AirmiusTextField(
-                    label: scope.t('authFlow.street'),
-                    hint: scope.t('application.optional'),
-                    icon: Icons.home_outlined,
-                    controller: _streetController,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 110,
-                  child: AirmiusTextField(
-                    label: scope.t('authFlow.number'),
-                    hint: '12a',
-                    controller: _houseNumberController,
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-          if (narrow) ...[
-            AirmiusTextField(
-              label: scope.t('authFlow.postal'),
-              hint: '10115',
-              controller: _postalCodeController,
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            AirmiusTextField(
-              label: scope.t('authFlow.city'),
-              hint: 'Berlin',
-              icon: Icons.location_city_outlined,
-              controller: _cityController,
-            ),
-          ] else
-            Row(
-              children: [
-                SizedBox(
-                  width: 130,
-                  child: AirmiusTextField(
-                    label: scope.t('authFlow.postal'),
-                    hint: '10115',
-                    controller: _postalCodeController,
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AirmiusTextField(
-                    label: scope.t('authFlow.city'),
-                    hint: 'Berlin',
-                    icon: Icons.location_city_outlined,
-                    controller: _cityController,
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-          AirmiusTextField(
-            label: scope.t('application.stateRegion'),
-            hint: scope.t('application.optional'),
-            icon: Icons.map_outlined,
-            controller: _stateController,
-          ),
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: AirmiusTextField(
                   label: scope.t('application.birthDate'),
-                  hint: 'YYYY-MM-DD',
+                  hint: scope.t('application.dateHint'),
                   icon: Icons.cake_outlined,
                   controller: _birthDateController,
                   keyboardType: TextInputType.datetime,
+                  inputFormatters: const [AirmiusDateInputFormatter()],
                 ),
               ),
               const SizedBox(width: 10),
@@ -913,17 +824,6 @@ class _AuthAction extends StatelessWidget {
       onPressed: onPressed,
     );
   }
-}
-
-String _formatDate(DateTime date) {
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '${date.year}-$month-$day';
-}
-
-String? _emptyToNull(String value) {
-  final trimmed = value.trim();
-  return trimmed.isEmpty ? null : trimmed;
 }
 
 class _AuthStatusLine extends StatelessWidget {

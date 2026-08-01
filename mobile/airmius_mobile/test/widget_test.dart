@@ -5860,6 +5860,10 @@ void main() {
       'https://app.airmius.com/reset-password'
       '?token=secure-token&email=member%40example.test',
     );
+    final pathPasswordReset = resolver.resolve(
+      'https://app.airmius.com/reset-password/secure-token'
+      '?email=member%40example.test',
+    );
     final emailVerification = resolver.resolve(
       'https://app.airmius.com/api/v1/auth/verify-email/7/email-hash'
       '?expires=123&signature=signed-value',
@@ -5886,6 +5890,9 @@ void main() {
     expect(passwordReset.token, 'secure-token');
     expect(passwordReset.query['email'], 'member@example.test');
     expect(passwordReset.requiresAuth, isFalse);
+    expect(pathPasswordReset.type, AirmiusDeepLinkTargetType.passwordReset);
+    expect(pathPasswordReset.token, 'secure-token');
+    expect(pathPasswordReset.query['email'], 'member@example.test');
     expect(emailVerification.type, AirmiusDeepLinkTargetType.emailVerification);
     expect(emailVerification.id, 7);
     expect(emailVerification.token, 'email-hash');
