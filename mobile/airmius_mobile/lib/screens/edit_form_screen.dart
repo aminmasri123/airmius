@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_date_input.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -35,6 +36,14 @@ class _EditFormScreenState extends State<EditFormScreen> {
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
   late final TextEditingController _bioController;
+  late final TextEditingController _birthDateController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _countryController;
+  late final TextEditingController _streetController;
+  late final TextEditingController _houseNumberController;
+  late final TextEditingController _postalCodeController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _stateController;
 
   @override
   void initState() {
@@ -42,6 +51,14 @@ class _EditFormScreenState extends State<EditFormScreen> {
     _firstNameController = TextEditingController();
     _lastNameController = TextEditingController();
     _bioController = TextEditingController();
+    _birthDateController = TextEditingController();
+    _phoneController = TextEditingController();
+    _countryController = TextEditingController();
+    _streetController = TextEditingController();
+    _houseNumberController = TextEditingController();
+    _postalCodeController = TextEditingController();
+    _cityController = TextEditingController();
+    _stateController = TextEditingController();
   }
 
   @override
@@ -60,6 +77,14 @@ class _EditFormScreenState extends State<EditFormScreen> {
         ? user!.lastName!.trim()
         : '';
     _bioController.text = user?.bio?.trim() ?? '';
+    _birthDateController.text = formatAirmiusDate(user?.birthDate);
+    _phoneController.text = user?.phone?.trim() ?? '';
+    _countryController.text = (user?.country ?? 'DE').trim().toUpperCase();
+    _streetController.text = user?.street?.trim() ?? '';
+    _houseNumberController.text = user?.houseNumber?.trim() ?? '';
+    _postalCodeController.text = user?.postalCode?.trim() ?? '';
+    _cityController.text = user?.city?.trim() ?? '';
+    _stateController.text = user?.state?.trim() ?? '';
 
     final gender = user?.gender?.trim() ?? '';
     if (_gender.isEmpty && _genderOptions.contains(gender)) {
@@ -74,6 +99,14 @@ class _EditFormScreenState extends State<EditFormScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _bioController.dispose();
+    _birthDateController.dispose();
+    _phoneController.dispose();
+    _countryController.dispose();
+    _streetController.dispose();
+    _houseNumberController.dispose();
+    _postalCodeController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     super.dispose();
   }
 
@@ -249,6 +282,72 @@ class _EditFormScreenState extends State<EditFormScreen> {
               hint: t('profile.edit.bioHint'),
               controller: _bioController,
               maxLines: 3,
+            ),
+            const SizedBox(height: 18),
+            Eyebrow(t('profile.edit.contactAddress')),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.phone'),
+              hint: t('profile.edit.phoneHint'),
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              icon: Icons.phone_outlined,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.birthDate'),
+              hint: t('profileGate.birthDateHint'),
+              controller: _birthDateController,
+              keyboardType: TextInputType.datetime,
+              inputFormatters: const [AirmiusDateInputFormatter()],
+              icon: Icons.cake_outlined,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.country'),
+              hint: t('profile.edit.countryHint'),
+              controller: _countryController,
+              icon: Icons.public_outlined,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.street'),
+              hint: t('profile.edit.streetHint'),
+              controller: _streetController,
+              icon: Icons.home_outlined,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: AirmiusTextField(
+                    label: t('profile.edit.houseNumber'),
+                    controller: _houseNumberController,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: AirmiusTextField(
+                    label: t('profile.edit.postalCode'),
+                    controller: _postalCodeController,
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.city'),
+              hint: t('profile.edit.cityHint'),
+              controller: _cityController,
+              icon: Icons.location_city_outlined,
+            ),
+            const SizedBox(height: 12),
+            AirmiusTextField(
+              label: t('profile.edit.state'),
+              controller: _stateController,
             ),
           ],
         ),
@@ -463,8 +562,8 @@ class _EditFormScreenState extends State<EditFormScreen> {
     final user = authState.user;
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
-    final country = (user?.country ?? 'DE').trim().toUpperCase();
-    final birthDate = user?.birthDate;
+    final country = _countryController.text.trim().toUpperCase();
+    final birthDate = parseAirmiusDate(_birthDateController.text);
 
     if (firstName.isEmpty || lastName.isEmpty || _gender.isEmpty) {
       setState(() => _error = t('profile.edit.validation'));
@@ -482,13 +581,20 @@ class _EditFormScreenState extends State<EditFormScreen> {
     });
 
     await authState.completeProfile(
+      preserveAuthenticatedPhase: true,
       payload: {
         'first_name': firstName,
         'last_name': lastName,
-        'birth_date': _dateText(birthDate),
+        'birth_date': formatAirmiusApiDate(birthDate),
         'gender': _gender,
         'country': country,
         'bio': _bioController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'street': _streetController.text.trim(),
+        'house_number': _houseNumberController.text.trim(),
+        'postal_code': _postalCodeController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
         'guardian_email': user?.guardianEmail ?? '',
       },
     );
@@ -509,9 +615,3 @@ class _EditFormScreenState extends State<EditFormScreen> {
 }
 
 const _genderOptions = ['female', 'male', 'diverse', 'not_specified'];
-
-String _dateText(DateTime date) {
-  final month = date.month.toString().padLeft(2, '0');
-  final day = date.day.toString().padLeft(2, '0');
-  return '${date.year}-$month-$day';
-}

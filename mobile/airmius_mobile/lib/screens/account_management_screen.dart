@@ -33,6 +33,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   bool _busy = false;
   bool _deletionCodeSent = false;
   final _securitySectionKey = GlobalKey();
+  final _profilePhotoSectionKey = GlobalKey();
   final _passwordSectionKey = GlobalKey();
   final _deleteSectionKey = GlobalKey();
 
@@ -48,6 +49,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     final key = switch (section) {
       'delete' => _deleteSectionKey,
       'password' => _passwordSectionKey,
+      'profile-photo' => _profilePhotoSectionKey,
       _ => _securitySectionKey,
     };
     final target = key.currentContext;
@@ -166,6 +168,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 ),
                 const SizedBox(height: 14),
                 AirmiusPanel(
+                  key: _profilePhotoSectionKey,
                   title: t('account.profilePhoto'),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

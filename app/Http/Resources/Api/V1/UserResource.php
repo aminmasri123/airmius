@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'email' => $this->email,
+            'phone' => $this->phone,
             'email_verified' => $this->hasVerifiedEmail(),
             'email_verified_at' => $this->email_verified_at?->toJSON(),
             'two_factor_enabled' => $this->hasEnabledTwoFactorAuthentication(),

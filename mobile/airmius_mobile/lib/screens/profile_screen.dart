@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_auth_state.dart';
 import '../core/airmius_l10n.dart';
@@ -23,6 +26,12 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _activeTab = 'overview';
+  bool _photoBusy = false;
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
+                  onEditPhoto: _photoBusy ? null : () => _showPhotoActions(),
                   onAccount: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -223,6 +233,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+
+  Future<void> _showPhotoActions() async {
+    final t = AirmiusScope.of(context).t;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: airmiusSurfaceColor(context),
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                t('account.profilePhoto'),
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text(t('account.choosePhoto')),
+                onTap: () => Navigator.pop(sheetContext, 'choose'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: Text(t('account.removePhoto')),
+                onTap: () => Navigator.pop(sheetContext, 'remove'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'choose') {
+      await _pickAndUploadPhoto();
+    } else if (action == 'remove') {
+      await _removePhoto();
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || !mounted) return;
+
+    final services = AirmiusServicesScope.of(context);
+    final session = services.authState.session;
+    if (session == null) {
+      _toast(AirmiusScope.of(context).t('account.noSessionError'));
+      return;
+    }
+
+    setState(() => _photoBusy = true);
+    try {
+      final base = Uri.parse(_client.baseUrl);
+      final path =
+          '${base.path.endsWith('/') ? base.path : '${base.path}/'}api/v1/me/profile-photo';
+      final request =
+          http.MultipartRequest(
+              'POST',
+              base.replace(path: path, query: null, fragment: null),
+            )
+            ..headers['Authorization'] = 'Bearer ${session.token}'
+            ..headers['Accept'] = 'application/json';
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'photo',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+      } else if (file.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'photo',
+            file.path!,
+            filename: file.name,
+          ),
+        );
+      } else {
+        throw StateError(AirmiusScope.of(context).t('account.photoReadError'));
+      }
+      final response = await http.Response.fromStream(await request.send());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: '/api/v1/me/profile-photo',
+        );
+      }
+      await services.authState.refreshUser();
+      if (mounted) _toast(AirmiusScope.of(context).t('account.photoUpdated'));
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+    } catch (_) {
+      if (mounted) _toast(AirmiusScope.of(context).t('common.errorDetails'));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    final services = AirmiusServicesScope.of(context);
+    setState(() => _photoBusy = true);
+    try {
+      await _client.deleteProfilePhoto();
+      await services.authState.refreshUser();
+      if (mounted) _toast(AirmiusScope.of(context).t('account.photoRemoved'));
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+    } catch (_) {
+      if (mounted) _toast(AirmiusScope.of(context).t('common.errorDetails'));
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 }
 
 class _ProfileHero extends StatelessWidget {
@@ -232,6 +374,7 @@ class _ProfileHero extends StatelessWidget {
     required this.isLoading,
     required this.onOpenProfile,
     required this.onEdit,
+    this.onEditPhoto,
     required this.onAccount,
     required this.onMore,
   });
@@ -241,6 +384,7 @@ class _ProfileHero extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onOpenProfile;
   final VoidCallback onEdit;
+  final VoidCallback? onEditPhoto;
   final VoidCallback onAccount;
   final VoidCallback onMore;
 
@@ -313,6 +457,7 @@ class _ProfileHero extends StatelessWidget {
                         _ProfilePhoto(
                           name: user.name,
                           imageUrl: user.avatarUrl,
+                          onTap: onEditPhoto,
                         ),
                         const SizedBox(height: 14),
                         Wrap(
@@ -466,58 +611,97 @@ class _ProfileHero extends StatelessWidget {
 }
 
 class _ProfilePhoto extends StatelessWidget {
-  const _ProfilePhoto({required this.name, this.imageUrl});
+  const _ProfilePhoto({required this.name, this.imageUrl, this.onTap});
 
   final String name;
   final String? imageUrl;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final resolvedImageUrl = resolveAirmiusImageUrl(imageUrl);
     final initials = initialsFromName(name, fallback: '??');
 
-    return Container(
-      width: 112,
-      height: 112,
-      decoration: BoxDecoration(
-        color: airmiusAccentColor(context),
+    return Semantics(
+      button: onTap != null,
+      label: 'Profilbild ändern',
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: airmiusSurfaceColor(context), width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .28),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: resolvedImageUrl == null
-          ? Center(
-              child: Text(
-                initials,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
+        child: Stack(
+          children: [
+            Container(
+              width: 112,
+              height: 112,
+              decoration: BoxDecoration(
+                color: airmiusAccentColor(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: airmiusSurfaceColor(context),
+                  width: 4,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .28),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            )
-          : Image.network(
-              resolvedImageUrl,
-              fit: BoxFit.cover,
-              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-              errorBuilder: (_, _, _) => Center(
-                child: Text(
-                  initials,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
+              clipBehavior: Clip.antiAlias,
+              child: resolvedImageUrl == null
+                  ? Center(
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    )
+                  : Image.network(
+                      resolvedImageUrl,
+                      fit: BoxFit.cover,
+                      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                      errorBuilder: (_, _, _) => Center(
+                        child: Text(
+                          initials,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+            if (onTap != null)
+              Positioned(
+                right: 7,
+                bottom: 7,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: airmiusSurfaceColor(context),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Icon(
+                      Icons.camera_alt_outlined,
+                      color: Colors.white,
+                      size: 17,
+                    ),
                   ),
                 ),
               ),
-            ),
+          ],
+        ),
+      ),
     );
   }
 }

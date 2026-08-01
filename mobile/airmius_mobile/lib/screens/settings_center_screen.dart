@@ -13,6 +13,7 @@ import 'notification_preferences_screen.dart';
 import 'footer_navigation_settings_screen.dart';
 import 'privacy_consent_center_screen.dart';
 import 'support_helpdesk_screen.dart';
+import 'settings_preference_screens.dart';
 
 class SettingsCenterScreen extends StatelessWidget {
   const SettingsCenterScreen({
@@ -96,7 +97,23 @@ class SettingsCenterScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const AirmiusThemeChooser(),
+            _SettingsAction(
+              icon: Icons.palette_outlined,
+              title: t('accessibility.design'),
+              body: t('accessibility.designDescription'),
+              status: t('settings.open'),
+              color: accent,
+              onTap: () => _open(context, const SettingsAppearanceScreen()),
+            ),
+            const SizedBox(height: 14),
+            _SettingsAction(
+              icon: Icons.language_outlined,
+              title: t('settings.language'),
+              body: t('settings.languageBody'),
+              status: scope.language.code.toUpperCase(),
+              color: accent,
+              onTap: () => _open(context, const SettingsLanguageScreen()),
+            ),
             const SizedBox(height: 14),
             _SettingsAction(
               icon: Icons.view_week_outlined,
@@ -126,38 +143,6 @@ class SettingsCenterScreen extends StatelessWidget {
               onTap: () => _open(context, const SportIntegrationsScreen()),
             ),
             const SizedBox(height: 12),
-            AirmiusPanel(
-              title: t('settings.language'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    t('settings.languageBody'),
-                    style: TextStyle(color: muted, height: 1.4),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final language in AirmiusLanguage.values)
-                        ChoiceChip(
-                          selected: scope.language == language,
-                          label: Text(language.label),
-                          onSelected: (_) => scope.setLanguage(language),
-                          selectedColor: accent.withValues(alpha: 0.18),
-                          side: BorderSide(
-                            color: scope.language == language
-                                ? accent
-                                : Theme.of(context).dividerColor,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
             _SettingsAction(
               icon: Icons.manage_accounts_outlined,
               title: t('settings.account'),

@@ -380,11 +380,18 @@ class AirmiusAuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> completeProfile({required JsonMap payload}) async {
+  Future<void> completeProfile({
+    required JsonMap payload,
+    bool preserveAuthenticatedPhase = false,
+  }) async {
     final current = _session;
     if (current == null || !current.isAuthenticated) return;
     _error = null;
-    _setPhase(AirmiusAuthPhase.loading);
+    if (!preserveAuthenticatedPhase) {
+      _setPhase(AirmiusAuthPhase.loading);
+    } else {
+      notifyListeners();
+    }
     try {
       final sessionClient = clientFactory(current);
       final json = await sessionClient.updateProfile(payload);
@@ -401,7 +408,11 @@ class AirmiusAuthState extends ChangeNotifier {
       _error = error is AirmiusApiException
           ? _readableAuthError(error)
           : _authMessage('auth.error.unexpected');
-      _setPhase(AirmiusAuthPhase.error);
+      _setPhase(
+        preserveAuthenticatedPhase
+            ? AirmiusAuthPhase.authenticated
+            : AirmiusAuthPhase.error,
+      );
     }
   }
 

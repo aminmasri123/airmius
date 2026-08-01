@@ -7,6 +7,7 @@ class AirmiusUser {
     required this.email,
     required this.role,
     this.emailVerified = true,
+    this.phone,
     this.twoFactorEnabled = false,
     this.firstName,
     this.lastName,
@@ -37,6 +38,7 @@ class AirmiusUser {
   final int id;
   final String name;
   final String email;
+  final String? phone;
   final String role;
   final bool emailVerified;
   final bool twoFactorEnabled;
@@ -103,6 +105,7 @@ class AirmiusUser {
     id: _int(json['id']),
     name: _string(json['name']),
     email: _string(json['email']),
+    phone: _nullableString(json['phone']),
     role: _userRole(json),
     emailVerified: json.containsKey('email_verified')
         ? _bool(json['email_verified'])
