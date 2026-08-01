@@ -32,7 +32,17 @@ class MobilePasswordRecoveryTest extends TestCase
                 'Wenn ein Konto zu dieser E-Mail-Adresse existiert, wurde ein sicherer Reset-Link gesendet.'
             );
 
-        Notification::assertSentTo($user, MobilePasswordResetRequested::class);
+        Notification::assertSentTo($user, MobilePasswordResetRequested::class, function (MobilePasswordResetRequested $notification) use ($user): bool {
+            $mail = $notification->toMail($user);
+
+            $this->assertStringContainsString(
+                '/reset-password/'.$notification->token,
+                (string) $mail->actionUrl,
+            );
+            $this->assertStringContainsString('email='.rawurlencode($user->email), (string) $mail->actionUrl);
+
+            return true;
+        });
     }
 
     public function test_password_can_be_reset_and_existing_mobile_sessions_are_revoked(): void

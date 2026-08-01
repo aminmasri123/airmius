@@ -10,13 +10,13 @@ class MobilePasswordResetRequested extends ResetPassword
 {
     public function toMail($notifiable): MailMessage
     {
-        $baseUrl = rtrim((string) config('airmius.mobile_app_url', 'https://app.airmius.com'), '/');
-        // Keep the query-string shape for compatibility with already installed
-        // app versions. The web application also exposes this URL shape.
-        $url = $baseUrl.'/reset-password?'.http_build_query([
+        // Use the same canonical web URL as the website reset email. The
+        // app.airmius.com host does not serve the web reset page, while the
+        // main application host does.
+        $url = url(route('password.reset', [
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
-        ]);
+        ], false));
 
         return EmailTemplate::mail('password_reset', [
             'reset_url' => $url,
