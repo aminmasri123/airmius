@@ -12,7 +12,7 @@ class MobileVerifyEmail extends VerifyEmail
     protected function verificationUrl($notifiable): string
     {
         $relativeUrl = URL::temporarySignedRoute(
-            'api.v1.auth.email.verify',
+            'email.verification.bridge',
             now()->addMinutes((int) config('auth.verification.expire', 60)),
             [
                 'id' => $notifiable->getKey(),
@@ -21,7 +21,7 @@ class MobileVerifyEmail extends VerifyEmail
             absolute: false
         );
 
-        return rtrim((string) config('airmius.mobile_app_url'), '/').$relativeUrl;
+        return rtrim((string) config('airmius.verification_url'), '/').$relativeUrl;
     }
 
     public function toMail($notifiable): MailMessage

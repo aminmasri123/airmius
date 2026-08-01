@@ -9,6 +9,7 @@ import 'chat_detail_screen.dart';
 import 'global_search_screen.dart';
 import 'new_conversation_screen.dart';
 import 'notifications_center_screen.dart';
+import 'profile_screen.dart';
 
 class ConversationsCenterScreen extends StatefulWidget {
   const ConversationsCenterScreen({super.key, this.embedded = false});
@@ -28,6 +29,13 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   late Future<JsonMap> _invitationsFuture;
 
   String _t(String key) => AirmiusScope.of(context).t(key);
+
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -151,6 +159,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
           UserBubble(
             label: userLabel.isEmpty ? 'GK' : userLabel,
             imageUrl: authState.user?.avatarUrl,
+            onTap: _openProfile,
           ),
           const SizedBox(width: 12),
         ],

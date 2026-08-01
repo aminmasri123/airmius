@@ -2,6 +2,7 @@
 
 return [
     'mobile_app_url' => env('AIRMIUS_MOBILE_APP_URL', 'https://app.airmius.com'),
+    'verification_url' => env('AIRMIUS_VERIFICATION_URL', env('APP_URL', 'http://localhost')),
 
     'billing' => [
         'company_name' => env('AIRMIUS_BILLING_COMPANY_NAME', 'Airmius'),

@@ -11,6 +11,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'global_search_screen.dart';
 import 'notifications_center_screen.dart';
+import 'profile_screen.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   const ChatDetailScreen({
@@ -45,6 +46,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   List<PlatformFile> _attachments = const [];
 
   String _t(String key) => AirmiusScope.of(context).t(key);
+
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
 
   @override
   void initState() {
@@ -839,6 +847,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           UserBubble(
             label: userLabel.isEmpty ? 'ZK' : userLabel,
             imageUrl: authState.user?.avatarUrl,
+            onTap: _openProfile,
           ),
           Icon(Icons.keyboard_arrow_down, color: airmiusMutedColor(context)),
           const SizedBox(width: 8),

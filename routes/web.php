@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountDeletionController;
 use App\Http\Controllers\CommerceCheckoutController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\GuardianAccessController;
 use App\Http\Controllers\GuardianConsentController;
@@ -11,6 +12,11 @@ use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\TwoFactorEmailCodeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed:relative', 'throttle:10,1'])
+    ->whereNumber('id')
+    ->name('email.verification.bridge');
 
 Route::post('/two-factor-challenge/email-code', [TwoFactorEmailCodeController::class, 'send'])
     ->middleware(['guest', 'throttle:3,1'])

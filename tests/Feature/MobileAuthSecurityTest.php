@@ -243,9 +243,9 @@ class MobileAuthSecurityTest extends TestCase
             function (MobileVerifyEmail $notification) use ($user): bool {
                 $url = $notification->toMail($user)->actionUrl;
 
-                $this->getJson($url)
+                $this->get($url)
                     ->assertOk()
-                    ->assertJsonPath('data.verified', true);
+                    ->assertSee('E-Mail-Adresse bestätigt');
 
                 return true;
             }
