@@ -20,8 +20,10 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\ChatService;
 use App\Services\ModerationService;
+use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -256,6 +258,26 @@ class ChatController extends Controller
         );
 
         $this->moderation->flagIfNeeded($message, $message->message, $request->user()->id);
+
+        $sender = $request->user();
+        $conversation->users()
+            ->where('users.id', '!=', $sender->id)
+            ->get()
+            ->each(function (User $recipient) use ($conversation, $message, $sender) {
+                if ($this->recipientHasMutedConversation($recipient)) {
+                    return;
+                }
+
+                AppNotification::send($recipient, 'chat.message', [
+                    'title' => 'Neue Nachricht von '.$sender->name,
+                    'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
+                    'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+                    'actor_id' => $sender->id,
+                    'actor_name' => $sender->name,
+                    'conversation_id' => $conversation->id,
+                    'message_id' => $message->id,
+                ]);
+            });
 
         return (new MessageResource(
             $message->loadMissing(['sender', 'receipts', 'attachments.file', 'reactions.user'])
@@ -587,6 +609,13 @@ class ChatController extends Controller
             ->value('joined_at');
 
         abort_if($joinedAt && $message->created_at->lessThan($joinedAt), 403);
+    }
+
+    private function recipientHasMutedConversation(User $recipient): bool
+    {
+        $mutedUntil = $recipient->pivot?->muted_until;
+
+        return $mutedUntil && Carbon::parse($mutedUntil)->isFuture();
     }
 
     private function broadcastSafely(callable $callback): void

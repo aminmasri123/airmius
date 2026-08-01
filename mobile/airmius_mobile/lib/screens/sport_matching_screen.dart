@@ -572,8 +572,8 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             () => _sportId = sport == null ? null : _int(sport['id']),
           ),
         ),
+        const SizedBox(height: 14),
         if (widget.mode == 'team') ...[
-          const SizedBox(height: 10),
           DropdownButtonFormField<int>(
             decoration: const InputDecoration(labelText: 'Dein Team'),
             items: widget.teams
@@ -582,10 +582,11 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
                     value: int.tryParse('${team['id']}') ?? 0,
                     child: Text('${team['name']}'),
                   ),
-                )
+            )
                 .toList(),
             onChanged: (value) => _teamId = value,
           ),
+          const SizedBox(height: 14),
         ],
         TextField(
           controller: _title,

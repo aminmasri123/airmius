@@ -125,6 +125,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
   bool _permissionOnboardingComplete = false;
   String? _pendingNativeDeepLink;
   String? _lastHandledSocialLink;
+  StreamSubscription<String>? _pushTokenRefreshSubscription;
   late final AirmiusServiceContainer _services = AirmiusServiceContainer(
     environment: AirmiusAppEnvironment(apiBaseUrl: _apiBaseUrl, locale: 'de'),
     transport: AirmiusHttpTransport(baseUrl: _apiBaseUrl),
@@ -138,8 +139,25 @@ class _AirmiusAppState extends State<AirmiusApp> {
     if (AirmiusPushNotifications.supported) {
       FirebaseMessaging.onMessageOpenedApp.listen(_receivePushMessage);
       unawaited(_restoreInitialPushMessage());
+      _listenForPushTokenRefresh();
     }
     unawaited(_restoreAuth());
+  }
+
+  void _listenForPushTokenRefresh() {
+    try {
+      _pushTokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+          .listen((_) {
+            final session = _services.authState.session;
+            if (session?.isAuthenticated != true) return;
+            unawaited(
+              _services.pushDevices
+                  .registerIfOptedIn(_services.clientForSession(session)),
+            );
+          });
+    } catch (_) {
+      // Firebase setup errors must not prevent the app from opening.
+    }
   }
 
   Future<void> _restoreInitialPushMessage() async {
@@ -292,6 +310,17 @@ class _AirmiusAppState extends State<AirmiusApp> {
       return PermissionOnboardingScreen(
         onComplete: () async {
           await _preferences.writePermissionOnboardingComplete(true);
+          try {
+            await _services.pushDevices.enableIfPermissionGranted();
+            final session = _services.authState.session;
+            if (session?.isAuthenticated == true) {
+              await _services.pushDevices.registerIfOptedIn(
+                _services.clientForSession(session),
+              );
+            }
+          } catch (_) {
+            // Push setup must not block the rest of the app from opening.
+          }
           if (!mounted) return;
           setState(() => _permissionOnboardingComplete = true);
         },
@@ -326,6 +355,12 @@ class _AirmiusAppState extends State<AirmiusApp> {
       onSocialRegister: (provider, accountType) =>
           _openSocialLogin(provider, accountType: accountType),
     );
+  }
+
+  @override
+  void dispose() {
+    _pushTokenRefreshSubscription?.cancel();
+    super.dispose();
   }
 
   void _openNativeDeepLink(String link) {

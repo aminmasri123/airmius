@@ -118,6 +118,22 @@ class AirmiusPushDeviceRegistry {
     return (await store.readString(optInStorageKey)) == 'true';
   }
 
+  /// Remembers push consent after the system notification permission was
+  /// granted. The authenticated session callback performs the API
+  /// registration once a valid access token is available.
+  Future<bool> enableIfPermissionGranted() async {
+    try {
+      final token = await tokenProvider.currentToken();
+      if (token == null || token.token.trim().isEmpty) return false;
+
+      await store.writeString(optInStorageKey, 'true');
+      return true;
+    } catch (_) {
+      // Push setup must never block login or permission onboarding.
+      return false;
+    }
+  }
+
   Future<AirmiusPushDeviceRegistration?> lastRegistration() async {
     final raw = await store.readString(registrationStorageKey);
     if (raw == null || raw.trim().isEmpty) return null;
@@ -147,9 +163,23 @@ class AirmiusPushDeviceRegistry {
   Future<AirmiusPushRegistrationResult> registerIfOptedIn(
     AirmiusApiClient client,
   ) async {
-    if (!await optInEnabled()) {
+    final storedOptIn = await store.readString(optInStorageKey);
+    if (storedOptIn == 'false') {
       return const AirmiusPushRegistrationResult(status: 'disabled');
     }
+
+    // Older installations may already have granted the Android notification
+    // permission but have no push preference stored yet. Reuse that consent
+    // and register the device instead of requiring a second settings action.
+    if (storedOptIn == null || storedOptIn.trim().isEmpty) {
+      if (!await enableIfPermissionGranted()) {
+        return const AirmiusPushRegistrationResult(
+          status: 'missing_token',
+          message: 'Push-Token ist noch nicht verfuegbar.',
+        );
+      }
+    }
+
     return registerOrRefresh(client);
   }
 

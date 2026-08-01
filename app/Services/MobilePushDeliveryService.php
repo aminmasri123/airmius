@@ -153,9 +153,13 @@ class MobilePushDeliveryService
             Str::startsWith($type, 'chat.') || Str::contains($type, 'message') => 'chat_mentions',
             Str::startsWith($type, 'friend.') || Str::startsWith($type, 'social.') => 'social_updates',
             Str::startsWith($type, 'training.') => 'training_updates',
+            Str::startsWith($type, 'sport_matching.') => 'social_updates',
             Str::startsWith($type, 'commerce.') || Str::startsWith($type, 'marketplace.') || Str::startsWith($type, 'outfit.') => 'commerce_orders',
             Str::startsWith($type, 'club.') || Str::startsWith($type, 'invoice.') || Str::contains($type, 'billing') => 'club_billing',
-            default => null,
+            // Every in-app notification should also have an external push
+            // fallback. Types without a dedicated channel use the social
+            // channel so they are not silently discarded.
+            default => 'social_updates',
         };
     }
 
