@@ -32,6 +32,12 @@ class MobileFriendApiTest extends TestCase
             ->assertJsonPath('data.receivedInvitations.0.id', $invitationId)
             ->assertJsonPath('data.receivedInvitations.0.sender.id', $sender->id);
 
+        $this->actingAs($sender)
+            ->getJson('/api/v1/friends')
+            ->assertOk()
+            ->assertJsonPath('data.sentInvitations.0.id', $invitationId)
+            ->assertJsonPath('data.sentInvitations.0.recipient.id', $recipient->id);
+
         $this->actingAs($recipient)
             ->postJson('/api/v1/friends/invitations/'.$invitationId.'/accept')
             ->assertOk()

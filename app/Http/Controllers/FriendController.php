@@ -55,6 +55,7 @@ class FriendController extends Controller
                 ->map(fn (FriendInvitation $invitation) => [
                     'id' => $invitation->id,
                     'recipient' => [
+                        'id' => $invitation->recipient?->id,
                         'name' => $invitation->recipient?->name ?: $invitation->email,
                         'email' => $invitation->recipient?->email ?: $invitation->email,
                     ],

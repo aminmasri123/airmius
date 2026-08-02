@@ -119,9 +119,16 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     await _runAction(() async {
       final services = AirmiusServicesScope.of(context);
       final client = services.clientForSession(services.authState.session);
-      await client.inviteFriend(userId: userId);
+      final response = await client.inviteFriend(userId: userId);
+      final responseData = response['data'];
+      final invitationId = responseData is JsonMap
+          ? _id(responseData['invitation_id'])
+          : 0;
       if (!mounted) return;
-      setState(() => _relationship = 'sent');
+      setState(() {
+        _relationship = 'sent';
+        _invitationId = invitationId > 0 ? invitationId : null;
+      });
       _notify(_t('profile.detail.requestSent'));
     });
   }
