@@ -120,15 +120,29 @@ const setActiveTab = (tab) => {
     window.history.replaceState({}, '', url)
 }
 const trainerApplication = computed(() => props.roleApplications.find((application) => application.type === 'trainer'))
-const hasCoachRole = computed(() => props.userRoles.some((role) => role.name === 'coach'))
 const roleApplicationForm = useForm({
     type: 'trainer',
     message: '',
+    application_data: {
+        specialties: '',
+        experience: '',
+        certification: '',
+    },
 })
 const submitTrainerApplication = () => {
+    if (!roleApplicationForm.application_data.specialties.trim() || !roleApplicationForm.application_data.experience.trim()) {
+        if (!roleApplicationForm.application_data.specialties.trim()) {
+            roleApplicationForm.setError('application_data.specialties', settingsText('roles.specialties_required', 'Bitte gib deine Schwerpunkte an.'))
+        }
+        if (!roleApplicationForm.application_data.experience.trim()) {
+            roleApplicationForm.setError('application_data.experience', settingsText('roles.experience_required', 'Bitte gib deine Erfahrung an.'))
+        }
+        return
+    }
+
     roleApplicationForm.post(route('auth.role-applications.store'), {
         preserveScroll: true,
-        onFinish: () => roleApplicationForm.reset('message'),
+        onFinish: () => roleApplicationForm.reset('message', 'application_data'),
     })
 }
 const openPaymentModal = ref({
@@ -1624,6 +1638,65 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </p>
                     </div>
 
+                    <div v-if="trainerApplication?.status !== 'pending'" class="grid gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-primary" for="trainer-specialties">
+                                {{ settingsText('roles.specialties', 'Schwerpunkte') }}
+                            </label>
+                            <input
+                                id="trainer-specialties"
+                                v-model="roleApplicationForm.application_data.specialties"
+                                type="text"
+                                required
+                                class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                :placeholder="settingsText('roles.specialties_placeholder', 'z. B. Fußball, Athletik, Jugendtraining')"
+                            />
+                            <p v-if="roleApplicationForm.errors['application_data.specialties']" class="mt-1 text-sm text-error">
+                                {{ roleApplicationForm.errors['application_data.specialties'] }}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-primary" for="trainer-experience">
+                                {{ settingsText('roles.experience', 'Erfahrung') }}
+                            </label>
+                            <textarea
+                                id="trainer-experience"
+                                v-model="roleApplicationForm.application_data.experience"
+                                rows="2"
+                                required
+                                class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                :placeholder="settingsText('roles.experience_placeholder', 'Beschreibe kurz deine Erfahrung als Trainer.')"
+                            ></textarea>
+                            <p v-if="roleApplicationForm.errors['application_data.experience']" class="mt-1 text-sm text-error">
+                                {{ roleApplicationForm.errors['application_data.experience'] }}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-primary" for="trainer-certification">
+                                {{ settingsText('roles.certification', 'Zertifikate') }}
+                            </label>
+                            <input
+                                id="trainer-certification"
+                                v-model="roleApplicationForm.application_data.certification"
+                                type="text"
+                                class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                :placeholder="settingsText('roles.certification_placeholder', 'Optional: Lizenzen oder Zertifikate')"
+                            />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-primary" for="trainer-message">
+                                {{ settingsText('roles.message', 'Nachricht') }}
+                            </label>
+                            <textarea
+                                id="trainer-message"
+                                v-model="roleApplicationForm.message"
+                                rows="2"
+                                class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                :placeholder="settingsText('roles.message_placeholder', 'Optional: zusätzliche Informationen für Airmius')"
+                            ></textarea>
+                        </div>
+                    </div>
+
                     <div class="flex flex-wrap gap-2">
                         <span
                             v-if="trainerApplication?.status === 'pending'"
@@ -1632,7 +1705,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             {{ settingsText('roles.trainer_pending', 'Trainerantrag wird geprüft') }}
                         </span>
                         <button
-                            v-else-if="!hasCoachRole"
+                            v-else-if="trainerApplication?.status !== 'pending'"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
                             :disabled="roleApplicationForm.processing"

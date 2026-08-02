@@ -2275,6 +2275,123 @@ const _accountTypeAr = {
   'accountType.sponsor': 'راعٍ',
 };
 
+const _registrationOnboardingDe = {
+  'registrationOnboarding.title': 'Einrichtung nach der Registrierung',
+  'registrationOnboarding.clubTitle': 'Deinen Verein einrichten',
+  'registrationOnboarding.trainerTitle': 'Dein Trainerprofil einrichten',
+  'registrationOnboarding.subtitle':
+      'Du kannst jetzt starten oder die Einrichtung später fortsetzen.',
+  'registrationOnboarding.clubBody':
+      'Gib die Vereinsdaten jetzt ein. Der Verein wird anschließend erstellt und von Airmius geprüft.',
+  'registrationOnboarding.trainerBody':
+      'Gib deine Trainerdaten ein. Dein Trainerantrag wird anschließend von Airmius geprüft.',
+  'registrationOnboarding.setupQuestion':
+      'Möchtest du die Einrichtung jetzt starten?',
+  'registrationOnboarding.setupHint':
+      'Bei „Später“ bleibt dein Konto ein normales Nutzerkonto.',
+  'registrationOnboarding.startNow': 'Jetzt einrichten',
+  'registrationOnboarding.later': 'Später',
+  'registrationOnboarding.laterHint':
+      'Du findest die Einrichtung später in deinem Konto.',
+  'registrationOnboarding.specialties': 'Sportarten und Schwerpunkte *',
+  'registrationOnboarding.experience': 'Trainererfahrung *',
+  'registrationOnboarding.certification': 'Lizenzen und Qualifikationen',
+  'registrationOnboarding.message': 'Zusätzliche Nachricht',
+  'registrationOnboarding.trainerRequired':
+      'Bitte gib Sportarten und deine Trainererfahrung an.',
+  'registrationOnboarding.saving': 'Wird eingereicht …',
+  'registrationOnboarding.submitTrainer': 'Trainerantrag einreichen',
+  'registrationOnboarding.trainerSubmitted':
+      'Dein Trainerantrag wurde eingereicht und wird geprüft.',
+};
+
+const _registrationOnboardingEn = {
+  'registrationOnboarding.title': 'Set up after registration',
+  'registrationOnboarding.clubTitle': 'Set up your club',
+  'registrationOnboarding.trainerTitle': 'Set up your trainer profile',
+  'registrationOnboarding.subtitle':
+      'You can start now or continue the setup later.',
+  'registrationOnboarding.clubBody':
+      'Enter your club details now. The club will then be created and reviewed by Airmius.',
+  'registrationOnboarding.trainerBody':
+      'Enter your trainer details now. Your trainer application will then be reviewed by Airmius.',
+  'registrationOnboarding.setupQuestion':
+      'Would you like to start the setup now?',
+  'registrationOnboarding.setupHint':
+      'With “Later”, your account remains a regular user account.',
+  'registrationOnboarding.startNow': 'Set up now',
+  'registrationOnboarding.later': 'Later',
+  'registrationOnboarding.laterHint':
+      'You can find the setup in your account later.',
+  'registrationOnboarding.specialties': 'Sports and specialties *',
+  'registrationOnboarding.experience': 'Coaching experience *',
+  'registrationOnboarding.certification': 'Licenses and qualifications',
+  'registrationOnboarding.message': 'Additional message',
+  'registrationOnboarding.trainerRequired':
+      'Please enter your sports and coaching experience.',
+  'registrationOnboarding.saving': 'Submitting …',
+  'registrationOnboarding.submitTrainer': 'Submit trainer application',
+  'registrationOnboarding.trainerSubmitted':
+      'Your trainer application was submitted for review.',
+};
+
+const _registrationOnboardingFr = {
+  'registrationOnboarding.title': 'Configuration après inscription',
+  'registrationOnboarding.clubTitle': 'Configurer ton club',
+  'registrationOnboarding.trainerTitle': 'Configurer ton profil de coach',
+  'registrationOnboarding.subtitle':
+      'Tu peux commencer maintenant ou continuer plus tard.',
+  'registrationOnboarding.clubBody':
+      'Saisis maintenant les données du club. Il sera ensuite créé et vérifié par Airmius.',
+  'registrationOnboarding.trainerBody':
+      'Saisis tes données de coach. Ta demande sera ensuite vérifiée par Airmius.',
+  'registrationOnboarding.setupQuestion': 'Veux-tu commencer maintenant ?',
+  'registrationOnboarding.setupHint':
+      'Avec « Plus tard », ton compte reste un compte utilisateur normal.',
+  'registrationOnboarding.startNow': 'Configurer maintenant',
+  'registrationOnboarding.later': 'Plus tard',
+  'registrationOnboarding.laterHint':
+      'Tu retrouveras la configuration plus tard dans ton compte.',
+  'registrationOnboarding.specialties': 'Sports et spécialités *',
+  'registrationOnboarding.experience': 'Expérience de coach *',
+  'registrationOnboarding.certification': 'Licences et qualifications',
+  'registrationOnboarding.message': 'Message complémentaire',
+  'registrationOnboarding.trainerRequired':
+      'Indique tes sports et ton expérience de coach.',
+  'registrationOnboarding.saving': 'Envoi …',
+  'registrationOnboarding.submitTrainer': 'Envoyer la demande de coach',
+  'registrationOnboarding.trainerSubmitted':
+      'Ta demande de coach a été envoyée pour vérification.',
+};
+
+const _registrationOnboardingAr = {
+  'registrationOnboarding.title': 'الإعداد بعد التسجيل',
+  'registrationOnboarding.clubTitle': 'إعداد ناديك',
+  'registrationOnboarding.trainerTitle': 'إعداد ملف المدرب',
+  'registrationOnboarding.subtitle':
+      'يمكنك البدء الآن أو متابعة الإعداد لاحقًا.',
+  'registrationOnboarding.clubBody':
+      'أدخل بيانات النادي الآن، ثم سيتم إنشاؤه ومراجعته من Airmius.',
+  'registrationOnboarding.trainerBody':
+      'أدخل بيانات المدرب الآن، ثم ستتم مراجعة طلبك من Airmius.',
+  'registrationOnboarding.setupQuestion': 'هل تريد بدء الإعداد الآن؟',
+  'registrationOnboarding.setupHint':
+      'عند اختيار لاحقًا يبقى حسابك حساب مستخدم عادي.',
+  'registrationOnboarding.startNow': 'الإعداد الآن',
+  'registrationOnboarding.later': 'لاحقًا',
+  'registrationOnboarding.laterHint':
+      'يمكنك العثور على الإعداد لاحقًا في حسابك.',
+  'registrationOnboarding.specialties': 'الرياضات والتخصصات *',
+  'registrationOnboarding.experience': 'خبرة التدريب *',
+  'registrationOnboarding.certification': 'التراخيص والمؤهلات',
+  'registrationOnboarding.message': 'رسالة إضافية',
+  'registrationOnboarding.trainerRequired':
+      'يرجى إدخال الرياضات وخبرة التدريب.',
+  'registrationOnboarding.saving': 'جارٍ الإرسال …',
+  'registrationOnboarding.submitTrainer': 'إرسال طلب المدرب',
+  'registrationOnboarding.trainerSubmitted': 'تم إرسال طلب المدرب للمراجعة.',
+};
+
 const _fitnessDe = {
   'fitness.title': 'Sport-Apps & Gesundheitsdaten',
   'fitness.subtitle':
@@ -17763,6 +17880,7 @@ final _strings = {
     ..._sponsorCockpitDe,
     ..._clubCountriesDe,
     ..._accountTypeDe,
+    ..._registrationOnboardingDe,
     ..._fitnessDe,
     ..._legalHubDe,
     ..._platformAdminDe,
@@ -18575,6 +18693,8 @@ final _strings = {
     'friends.sendInvite': 'Einladung senden',
     'friends.emailInvalid': 'Bitte gib eine gültige E-Mail-Adresse ein.',
     'friends.inviteSent': 'Die Einladung wurde gesendet.',
+    'friends.alreadySent': 'Die Freundschaftsanfrage wurde bereits gesendet.',
+    'friends.alreadyFriends': 'Ihr seid bereits Freunde.',
     'friends.accepted': 'Die Einladung wurde angenommen.',
     'friends.declined': 'Die Einladung wurde abgelehnt.',
     'friends.withdrawn': 'Die Freundschaftsanfrage wurde zurückgezogen.',
@@ -19950,6 +20070,7 @@ final _strings = {
     ..._sponsorCockpitEn,
     ..._clubCountriesEn,
     ..._accountTypeEn,
+    ..._registrationOnboardingEn,
     ..._fitnessEn,
     ..._legalHubEn,
     ..._platformAdminEn,
@@ -20726,6 +20847,8 @@ final _strings = {
     'friends.sendInvite': 'Send invitation',
     'friends.emailInvalid': 'Please enter a valid email address.',
     'friends.inviteSent': 'The invitation has been sent.',
+    'friends.alreadySent': 'The friendship invitation has already been sent.',
+    'friends.alreadyFriends': 'You are already friends.',
     'friends.accepted': 'The invitation has been accepted.',
     'friends.declined': 'The invitation has been declined.',
     'friends.withdrawn': 'The friendship invitation has been withdrawn.',
@@ -22068,6 +22191,7 @@ final _strings = {
     ..._sponsorCockpitFr,
     ..._clubCountriesFr,
     ..._accountTypeFr,
+    ..._registrationOnboardingFr,
     ..._fitnessFr,
     ..._legalHubFr,
     ..._platformAdminFr,
@@ -22866,6 +22990,8 @@ final _strings = {
     'friends.sendInvite': 'Envoyer l’invitation',
     'friends.emailInvalid': 'Saisis une adresse e-mail valide.',
     'friends.inviteSent': 'L’invitation a été envoyée.',
+    'friends.alreadySent': 'L’invitation d’amitié a déjà été envoyée.',
+    'friends.alreadyFriends': 'Vous êtes déjà amis.',
     'friends.accepted': 'L’invitation a été acceptée.',
     'friends.declined': 'L’invitation a été refusée.',
     'friends.withdrawn': 'L’invitation d’amitié a été retirée.',
@@ -24228,6 +24354,7 @@ final _strings = {
     ..._sponsorCockpitAr,
     ..._clubCountriesAr,
     ..._accountTypeAr,
+    ..._registrationOnboardingAr,
     ..._fitnessAr,
     ..._legalHubAr,
     ..._platformAdminAr,
@@ -24979,6 +25106,8 @@ final _strings = {
     'friends.sendInvite': 'إرسال الدعوة',
     'friends.emailInvalid': 'يرجى إدخال بريد إلكتروني صالح.',
     'friends.inviteSent': 'تم إرسال الدعوة.',
+    'friends.alreadySent': 'تم إرسال طلب الصداقة مسبقًا.',
+    'friends.alreadyFriends': 'أنتم أصدقاء بالفعل.',
     'friends.accepted': 'تم قبول الدعوة.',
     'friends.declined': 'تم رفض الدعوة.',
     'friends.withdrawn': 'تم سحب طلب الصداقة.',

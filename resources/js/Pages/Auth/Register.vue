@@ -27,6 +27,7 @@ const accountTypes = [
 
 const form = useForm({
     account_type: requestedAccountType,
+    setup_mode: 'now',
     first_name: '',
     last_name: '',
     email: '',
@@ -104,6 +105,23 @@ const goBack = () => {
                         </label>
                     </div>
                     <InputError class="mt-2" :message="form.errors.account_type" />
+                </fieldset>
+
+                <fieldset v-if="['coach', 'club'].includes(form.account_type)" class="mb-5 rounded-lg border border-border bg-inputBg p-3">
+                    <legend class="text-sm font-bold text-primary">{{ $t('Einrichtung nach der Registrierung') }}</legend>
+                    <p class="mt-1 text-xs text-secondary">{{ $t('Möchtest du die Daten jetzt eintragen oder später als normaler Nutzer fortfahren?') }}</p>
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                        <label class="cursor-pointer rounded-lg border p-3" :class="form.setup_mode === 'now' ? 'border-buttonPrimary bg-buttonPrimary/10' : 'border-border bg-card'">
+                            <input v-model="form.setup_mode" type="radio" value="now" class="sr-only" />
+                            <span class="block text-sm font-bold text-primary">{{ $t('Jetzt einrichten') }}</span>
+                            <span class="mt-1 block text-xs text-secondary">{{ $t('Die Vereins- oder Trainerdaten direkt nach der Registrierung ergänzen.') }}</span>
+                        </label>
+                        <label class="cursor-pointer rounded-lg border p-3" :class="form.setup_mode === 'later' ? 'border-buttonPrimary bg-buttonPrimary/10' : 'border-border bg-card'">
+                            <input v-model="form.setup_mode" type="radio" value="later" class="sr-only" />
+                            <span class="block text-sm font-bold text-primary">{{ $t('Später') }}</span>
+                            <span class="mt-1 block text-xs text-secondary">{{ $t('Zuerst als normaler Nutzer registrieren und später einrichten.') }}</span>
+                        </label>
+                    </div>
                 </fieldset>
 
                 <div class="mb-5 grid gap-2">

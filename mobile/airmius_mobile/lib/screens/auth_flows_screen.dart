@@ -10,6 +10,7 @@ import 'account_operations_screen.dart';
 import 'email_verification_screen.dart';
 import 'password_recovery_screen.dart';
 import 'profile_completion_gate_screen.dart';
+import 'registration_onboarding_screen.dart';
 import 'support_helpdesk_screen.dart';
 import 'two_factor_challenge_screen.dart';
 
@@ -26,6 +27,7 @@ class AuthFlowsScreen extends StatefulWidget {
 class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   final String _flow = 'register';
   String _accountType = 'athlete';
+  String _setupMode = 'now';
   bool _terms = false;
   String _gender = '';
   String? _registerError;
@@ -108,7 +110,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
     final birthDate = parseAirmiusDate(_birthDateController.text);
     if (birthDate == null) {
-      setState(() => _registerError = 'Bitte Geburtsdatum als TT.MM.JJJJ eingeben.');
+      setState(
+        () => _registerError = 'Bitte Geburtsdatum als TT.MM.JJJJ eingeben.',
+      );
       return;
     }
 
@@ -117,6 +121,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       payload: {
         'first_name': _firstNameController.text.trim(),
         'account_type': _accountType,
+        'setup_mode': _setupMode,
         'last_name': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'country': _countryController.text.trim().toUpperCase(),
@@ -140,6 +145,17 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     }
 
     if (services.authState.isAuthenticated) {
+      if ((_accountType == 'club' || _accountType == 'coach') &&
+          _setupMode == 'now') {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (_) =>
+                RegistrationOnboardingScreen(accountType: _accountType),
+          ),
+        );
+      }
+      if (!mounted) return;
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
@@ -246,6 +262,36 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                 ),
             ],
           ),
+          if (_accountType == 'club' || _accountType == 'coach') ...[
+            const SizedBox(height: 14),
+            Text(
+              scope.t('registrationOnboarding.setupQuestion'),
+              style: TextStyle(color: text, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: [
+                ButtonSegment(
+                  value: 'now',
+                  icon: const Icon(Icons.play_arrow_outlined),
+                  label: Text(scope.t('registrationOnboarding.startNow')),
+                ),
+                ButtonSegment(
+                  value: 'later',
+                  icon: const Icon(Icons.schedule_outlined),
+                  label: Text(scope.t('registrationOnboarding.later')),
+                ),
+              ],
+              selected: {_setupMode},
+              onSelectionChanged: (selection) =>
+                  setState(() => _setupMode = selection.first),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              scope.t('registrationOnboarding.setupHint'),
+              style: TextStyle(color: muted, height: 1.35),
+            ),
+          ],
           if (widget.onSocialRegister != null ||
               widget.onSocialLogin != null) ...[
             const SizedBox(height: 16),

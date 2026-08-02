@@ -144,6 +144,7 @@ class UserSettingsController extends Controller
                     'type' => $application->type,
                     'status' => $application->status,
                     'message' => $application->message,
+                    'application_data' => $application->application_data ?? [],
                     'review_notes' => $application->review_notes,
                     'role_activated' => (bool) $application->role_activated,
                     'requested_at' => $application->requested_at?->toJSON(),

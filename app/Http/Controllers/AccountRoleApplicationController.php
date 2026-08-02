@@ -16,9 +16,18 @@ class AccountRoleApplicationController extends Controller
         $data = $request->validate([
             'type' => ['required', 'in:trainer'],
             'message' => ['nullable', 'string', 'max:2000'],
+            'application_data' => ['nullable', 'array'],
+            'application_data.specialties' => ['nullable', 'string', 'max:500'],
+            'application_data.experience' => ['nullable', 'string', 'max:2000'],
+            'application_data.certification' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $result = $applications->submitTrainer($request->user(), $data['message'] ?? null);
+        $result = $applications->submitTrainer(
+            $request->user(),
+            $data['message'] ?? null,
+            null,
+            $data['application_data'] ?? null,
+        );
         $application = $result['application'];
 
         return $this->response($request, [
@@ -144,6 +153,7 @@ class AccountRoleApplicationController extends Controller
             'type' => $application->type,
             'status' => $application->status,
             'message' => $application->message,
+            'application_data' => $application->application_data ?? [],
             'review_notes' => $application->review_notes,
             'role_activated' => (bool) $application->role_activated,
             'requested_at' => $application->requested_at?->toJSON(),

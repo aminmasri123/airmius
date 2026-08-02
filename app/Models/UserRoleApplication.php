@@ -23,6 +23,7 @@ class UserRoleApplication extends Model
         'type',
         'status',
         'message',
+        'application_data',
         'role_activated',
         'review_notes',
         'requested_at',
@@ -36,6 +37,7 @@ class UserRoleApplication extends Model
             'requested_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'role_activated' => 'boolean',
+            'application_data' => 'array',
         ];
     }
 

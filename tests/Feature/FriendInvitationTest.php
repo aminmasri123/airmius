@@ -124,4 +124,47 @@ class FriendInvitationTest extends TestCase
 
         $this->assertSame('pending', $invitation->fresh()->status);
     }
+
+    public function test_app_does_not_create_a_duplicate_pending_friend_invitation(): void
+    {
+        Notification::fake();
+
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        Sanctum::actingAs($sender);
+
+        $this->postJson('/api/v1/friends/invitations', [
+            'user_id' => $recipient->id,
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/friends/invitations', [
+            'user_id' => $recipient->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'already_sent');
+
+        $this->assertDatabaseCount('friend_invitations', 1);
+    }
+
+    public function test_app_reports_when_users_are_already_friends(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        Friendship::query()->create([
+            'user_id' => $sender->id,
+            'friend_id' => $recipient->id,
+        ]);
+
+        Sanctum::actingAs($sender);
+
+        $this->postJson('/api/v1/friends/invitations', [
+            'user_id' => $recipient->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'already_friends');
+
+        $this->assertDatabaseCount('friend_invitations', 0);
+    }
 }

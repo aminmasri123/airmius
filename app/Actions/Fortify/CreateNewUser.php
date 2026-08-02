@@ -5,7 +5,6 @@ namespace App\Actions\Fortify;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Models\User;
 use App\Notifications\AccountWelcomeNotification;
-use App\Services\AccountRoleApplicationService;
 use App\Support\AccountType;
 use App\Support\AppNotification;
 use App\Support\GuardianConsentNotifier;
@@ -31,6 +30,9 @@ class CreateNewUser implements CreatesNewUsers
     {
         $input['gender'] = filled($input['gender'] ?? null) ? $input['gender'] : 'not_specified';
         $input['account_type'] = AccountType::normalize($input['account_type'] ?? null);
+        $input['setup_mode'] = in_array($input['setup_mode'] ?? null, ['now', 'later'], true)
+            ? $input['setup_mode']
+            : 'now';
 
         Validator::make($input, [
             'first_name' => ['required', 'string', 'max:120'],
@@ -45,6 +47,7 @@ class CreateNewUser implements CreatesNewUsers
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
             'account_type' => ['required', Rule::in(AccountType::VALUES)],
+            'setup_mode' => ['nullable', Rule::in(['now', 'later'])],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
             'terms' => ['accepted', 'required'],
@@ -95,20 +98,31 @@ class CreateNewUser implements CreatesNewUsers
             'password' => Hash::make($input['password']),
         ]);
 
-        AccountType::assignInitialRole($user, $input['account_type'], $requiresGuardianConsent);
+        $initialAccountType = in_array($input['account_type'], [AccountType::COACH, AccountType::CLUB], true)
+            && $input['setup_mode'] === 'later'
+            ? AccountType::ATHLETE
+            : $input['account_type'];
 
-        if ($input['account_type'] === AccountType::COACH && ! $requiresGuardianConsent) {
-            // The coach role was already assigned as the account's initial role.
-            // Keep it if the review later rejects the application.
-            app(AccountRoleApplicationService::class)->submitTrainer($user, null, true);
+        AccountType::assignInitialRole($user, $initialAccountType, $requiresGuardianConsent);
+
+        if (! request()->expectsJson()
+            && ! $requiresGuardianConsent
+            && in_array($input['account_type'], [AccountType::COACH, AccountType::CLUB], true)
+            && $input['setup_mode'] === 'now') {
+            request()->session()->put('registration_onboarding', [
+                'type' => $input['account_type'],
+            ]);
         }
 
         if ($input['account_type'] === AccountType::CLUB && ! $requiresGuardianConsent) {
             AppNotification::send($user, 'club.account_activated', [
                 'title' => 'Vereinskonto aktiviert',
-                'body' => 'Dein Vereinsbereich ist aktiviert. Registriere jetzt deinen Verein; Airmius prüft ihn anschließend.',
+                'body' => $input['setup_mode'] === 'later'
+                    ? 'Dein Konto ist eingerichtet. Du kannst deinen Verein später mit den vollständigen Vereinsdaten registrieren.'
+                    : 'Dein Vereinsbereich ist aktiviert. Registriere jetzt deinen Verein; Airmius prüft ihn anschließend.',
                 'url' => route('auth.teams.index', ['create_club' => 1]),
                 'account_type' => AccountType::CLUB,
+                'setup_mode' => $input['setup_mode'],
             ]);
         }
 

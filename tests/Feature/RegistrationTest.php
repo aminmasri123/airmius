@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\UserRoleApplication;
 use App\Notifications\AccountWelcomeNotification;
 use App\Notifications\GuardianConsentRequested;
 use Database\Seeders\RolesPermissionsSeeder;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -123,6 +125,111 @@ class RegistrationTest extends TestCase
         $user = User::where('email', 'sponsor@example.com')->firstOrFail();
         $this->assertTrue($user->hasRole('sponsor'));
         $this->assertFalse($user->hasRole('player'));
+    }
+
+    public function test_coach_can_register_as_a_normal_user_and_set_up_later(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Later',
+            'last_name' => 'Coach',
+            'email' => 'later-coach@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'gender' => 'not_specified',
+            'account_type' => 'coach',
+            'setup_mode' => 'later',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+        ])->assertCreated();
+
+        $user = User::where('email', 'later-coach@example.com')->firstOrFail();
+
+        $this->assertTrue($user->hasRole('player'));
+        $this->assertFalse($user->hasRole('coach'));
+        $this->assertDatabaseCount('user_role_applications', 0);
+    }
+
+    public function test_web_coach_registration_opens_the_trainer_setup_after_registration(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $this->post('/register', [
+            'first_name' => 'Web',
+            'last_name' => 'Coach',
+            'email' => 'web-coach@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'gender' => 'not_specified',
+            'account_type' => 'coach',
+            'setup_mode' => 'now',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+        ])->assertRedirect(config('fortify.home'));
+
+        $webCoach = User::where('email', 'web-coach@example.com')->firstOrFail();
+        $webCoach->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($webCoach->fresh());
+
+        $this->get('/home')
+            ->assertRedirect(route('auth.settings', ['tab' => 'roles', 'onboarding' => 'trainer']));
+    }
+
+    public function test_trainer_application_stores_the_trainer_data_from_the_app(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Ready',
+            'last_name' => 'Coach',
+            'email' => 'ready-coach@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(30)->toDateString(),
+            'gender' => 'not_specified',
+            'account_type' => 'coach',
+            'setup_mode' => 'now',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+        ])->assertCreated();
+
+        $user = User::where('email', 'ready-coach@example.com')->firstOrFail();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/role-applications', [
+                'type' => 'trainer',
+                'application_data' => [
+                    'specialties' => 'Fußball',
+                    'experience' => '10 Jahre Jugendtraining',
+                    'certification' => 'C-Lizenz',
+                ],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.application.application_data.specialties', 'Fußball');
+
+        $this->assertDatabaseHas('user_role_applications', [
+            'user_id' => $user->id,
+            'type' => UserRoleApplication::TYPE_TRAINER,
+        ]);
     }
 
     public function test_mobile_api_rejects_duplicate_registration_email(): void

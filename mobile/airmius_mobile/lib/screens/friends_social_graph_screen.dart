@@ -213,9 +213,35 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
       builder: (_) => const _FriendInviteDialog(),
     );
     if (email == null || !mounted) return;
-    await _run(() async {
-      await _client.inviteFriend(email: email);
-    }, successKey: 'friends.inviteSent');
+    final t = AirmiusScope.of(context).t;
+    setState(() => _busy = true);
+    try {
+      final response = await _client.inviteFriend(email: email);
+      final data = response['data'];
+      final status = data is JsonMap ? data['status']?.toString() : null;
+      final messageKey = switch (status) {
+        'already_sent' => 'friends.alreadySent',
+        'already_friends' => 'friends.alreadyFriends',
+        _ => 'friends.inviteSent',
+      };
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t(messageKey))));
+      _reload();
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('friends.actionError'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _respond(JsonMap invitation, {required bool accept}) async {

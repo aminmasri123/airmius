@@ -89,6 +89,22 @@ class FriendController extends Controller
                 ]);
             }
 
+            $existingInvitation = FriendInvitation::query()
+                ->where('sender_id', $sender->id)
+                ->where('email', $email)
+                ->where('status', 'pending')
+                ->latest('id')
+                ->first();
+
+            if ($existingInvitation) {
+                return $this->duplicateInvitationResponse(
+                    $request,
+                    $existingInvitation,
+                    'already_sent',
+                    'Diese Einladung wurde bereits gesendet.',
+                );
+            }
+
             $invitation = FriendInvitation::updateOrCreate(
                 [
                     'sender_id' => $sender->id,
@@ -128,9 +144,12 @@ class FriendController extends Controller
             ->exists();
 
         if ($alreadyFriends) {
-            throw ValidationException::withMessages([
-                'email' => 'Ihr seid bereits Freunde.',
-            ]);
+            return $this->duplicateInvitationResponse(
+                $request,
+                null,
+                'already_friends',
+                'Ihr seid bereits Freunde.',
+            );
         }
 
         $inversePendingInvitation = FriendInvitation::query()
@@ -159,6 +178,15 @@ class FriendController extends Controller
             ->first();
 
         if ($invitation) {
+            if ($invitation->status === 'pending') {
+                return $this->duplicateInvitationResponse(
+                    $request,
+                    $invitation,
+                    'already_sent',
+                    'Diese Freundschaftsanfrage wurde bereits gesendet.',
+                );
+            }
+
             $invitation->update([
                 'recipient_id' => $recipient->id,
                 'email' => $recipient->email,
@@ -198,6 +226,26 @@ class FriendController extends Controller
         }
 
         return back()->with('success', 'Einladung gesendet.');
+    }
+
+    private function duplicateInvitationResponse(
+        Request $request,
+        ?FriendInvitation $invitation,
+        string $status,
+        string $message,
+    ) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation?->id,
+                    'recipient_id' => $invitation?->recipient_id,
+                    'status' => $status,
+                ],
+                'message' => $message,
+            ]);
+        }
+
+        return back()->with('success', $message);
     }
 
     public function accept(Request $request, FriendInvitation $invitation)

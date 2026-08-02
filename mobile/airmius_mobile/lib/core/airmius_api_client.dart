@@ -303,6 +303,7 @@ class AirmiusApiClient {
   Future<AirmiusJson> submitRoleApplication({
     required String type,
     String? message,
+    AirmiusJson? applicationData,
   }) => _json(
     'POST',
     '/api/v1/role-applications',
@@ -310,6 +311,8 @@ class AirmiusApiClient {
       'type': type,
       if (message != null && message.trim().isNotEmpty)
         'message': message.trim(),
+      if (applicationData != null && applicationData.isNotEmpty)
+        'application_data': applicationData,
     },
   );
 

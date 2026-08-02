@@ -16,7 +16,12 @@ class AccountRoleApplicationService
      *
      * @return array{application: UserRoleApplication, created: bool}
      */
-    public function submitTrainer(User $user, ?string $message = null, ?bool $roleWasAlreadyActive = null): array
+    public function submitTrainer(
+        User $user,
+        ?string $message = null,
+        ?bool $roleWasAlreadyActive = null,
+        ?array $applicationData = null,
+    ): array
     {
         $pending = $user->roleApplications()
             ->where('type', UserRoleApplication::TYPE_TRAINER)
@@ -25,6 +30,15 @@ class AccountRoleApplicationService
             ->first();
 
         if ($pending) {
+            if (filled($message) || filled($applicationData)) {
+                $pending->update([
+                    'message' => filled($message) ? $message : $pending->message,
+                    'application_data' => filled($applicationData)
+                        ? $applicationData
+                        : $pending->application_data,
+                ]);
+            }
+
             return ['application' => $pending, 'created' => false];
         }
 
@@ -34,6 +48,7 @@ class AccountRoleApplicationService
             'type' => UserRoleApplication::TYPE_TRAINER,
             'status' => UserRoleApplication::STATUS_PENDING,
             'message' => $message,
+            'application_data' => $applicationData,
             'role_activated' => ! $roleWasAlreadyActive,
             'requested_at' => now(),
         ]);

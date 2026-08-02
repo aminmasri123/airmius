@@ -268,7 +268,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => const _ClubCreateWizardScreen(),
+        builder: (_) => const ClubCreateWizardScreen(),
       ),
     );
     if (created == true && mounted) {
@@ -284,15 +284,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 }
 
-class _ClubCreateWizardScreen extends StatefulWidget {
-  const _ClubCreateWizardScreen();
+class ClubCreateWizardScreen extends StatefulWidget {
+  const ClubCreateWizardScreen({super.key});
 
   @override
-  State<_ClubCreateWizardScreen> createState() =>
-      _ClubCreateWizardScreenState();
+  State<ClubCreateWizardScreen> createState() => _ClubCreateWizardScreenState();
 }
 
-class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
+class _ClubCreateWizardScreenState extends State<ClubCreateWizardScreen> {
   final _name = TextEditingController();
   final _sportType = TextEditingController();
   final _officialNumber = TextEditingController();
