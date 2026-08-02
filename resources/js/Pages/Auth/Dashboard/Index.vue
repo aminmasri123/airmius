@@ -93,28 +93,28 @@ const quickActions = computed(() => [
         subtitle: tx('Dokumentieren'),
         href: route('auth.training.logs.create'),
         icon: 'las la-clipboard-check',
-        tone: 'bg-sky-500/15 text-sky-200 border-sky-400/30',
+        tone: 'bg-sky-500/10 border-sky-400/35',
     },
     {
         title: tx('Route'),
         subtitle: tx('Planen'),
         href: route('auth.sport-map.index'),
         icon: 'las la-route',
-        tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
+        tone: 'bg-emerald-500/10 border-emerald-400/35',
     },
     {
         title: tx('Ernährung'),
         subtitle: tx('Eintragen'),
         href: route('auth.nutrition.index'),
         icon: 'las la-utensils',
-        tone: 'bg-orange-500/15 text-orange-100 border-orange-400/30',
+        tone: 'bg-orange-500/10 border-orange-400/35',
     },
     {
         title: tx('Plan'),
         subtitle: tx('Öffnen'),
         href: route('auth.training.index'),
         icon: 'las la-calendar-plus',
-        tone: 'bg-violet-500/15 text-violet-100 border-violet-400/30',
+        tone: 'bg-violet-500/10 border-violet-400/35',
     },
 ])
 
@@ -322,9 +322,9 @@ watch(visibleWidgetKeys, (keys) => {
                         class="min-w-0 rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-air-blue sm:p-4"
                         :class="action.tone"
                     >
-                        <i :class="[action.icon, 'text-xl sm:text-2xl']"></i>
-                        <p class="mt-2 truncate text-sm font-black sm:mt-3">{{ action.title }}</p>
-                        <p class="truncate text-xs font-semibold opacity-80">{{ action.subtitle }}</p>
+                        <i :class="[action.icon, 'text-xl text-air-blue sm:text-2xl']"></i>
+                        <p class="mt-2 truncate text-sm font-black text-primary sm:mt-3">{{ action.title }}</p>
+                        <p class="truncate text-xs font-semibold text-secondary">{{ action.subtitle }}</p>
                     </Link>
                 </div>
             </div>

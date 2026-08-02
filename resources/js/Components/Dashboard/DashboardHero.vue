@@ -77,12 +77,11 @@ const customizeOpen = computed({
                     class="min-w-0 rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-air-blue sm:p-4"
                     :class="action.tone"
                 >
-                    <i :class="[action.icon, 'text-xl sm:text-2xl']"></i>
-                    <p class="mt-2 truncate text-sm font-black sm:mt-3">{{ action.title }}</p>
-                    <p class="truncate text-xs font-semibold opacity-80">{{ action.subtitle }}</p>
+                        <i :class="[action.icon, 'text-xl text-air-blue sm:text-2xl']"></i>
+                        <p class="mt-2 truncate text-sm font-black text-primary sm:mt-3">{{ action.title }}</p>
+                        <p class="truncate text-xs font-semibold text-secondary">{{ action.subtitle }}</p>
                 </Link>
             </div>
         </div>
     </section>
 </template>
-

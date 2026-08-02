@@ -89,28 +89,28 @@ export function useDashboardWorkspace(props) {
             subtitle: t('Dokumentieren'),
             href: route('auth.training.logs.create'),
             icon: 'las la-clipboard-check',
-            tone: 'bg-sky-500/15 text-sky-200 border-sky-400/30',
+            tone: 'bg-sky-500/10 border-sky-400/35',
         },
         {
             title: t('Route'),
             subtitle: t('Planen'),
             href: route('auth.sport-map.index'),
             icon: 'las la-route',
-            tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
+            tone: 'bg-emerald-500/10 border-emerald-400/35',
         },
         {
             title: t('Ernährung'),
             subtitle: t('Eintragen'),
             href: route('auth.nutrition.index'),
             icon: 'las la-utensils',
-            tone: 'bg-orange-500/15 text-orange-100 border-orange-400/30',
+            tone: 'bg-orange-500/10 border-orange-400/35',
         },
         {
             title: t('Plan'),
             subtitle: t('Öffnen'),
             href: route('auth.training.index'),
             icon: 'las la-calendar-plus',
-            tone: 'bg-violet-500/15 text-violet-100 border-violet-400/30',
+            tone: 'bg-violet-500/10 border-violet-400/35',
         },
     ])
 
@@ -322,4 +322,3 @@ export function useDashboardWorkspace(props) {
         translatedNotificationText,
     }
 }
-
