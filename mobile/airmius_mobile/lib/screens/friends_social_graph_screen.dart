@@ -196,7 +196,11 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
           ]
         else
           for (final invitation in items) ...[
-            _SentInvitationCard(invitation: invitation),
+            _SentInvitationCard(
+              invitation: invitation,
+              busy: _busy,
+              onWithdraw: () => _withdraw(invitation),
+            ),
             const SizedBox(height: 10),
           ],
       ],
@@ -223,6 +227,32 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
         await _client.declineFriendInvitation(id);
       }
     }, successKey: accept ? 'friends.accepted' : 'friends.declined');
+  }
+
+  Future<void> _withdraw(JsonMap invitation) async {
+    final t = AirmiusScope.of(context).t;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(context),
+        title: Text(t('friends.withdrawTitle')),
+        content: Text(t('friends.withdrawQuestion')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('friends.withdraw')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(() async {
+      await _client.withdrawFriendInvitation(_friendInt(invitation['id']));
+    }, successKey: 'friends.withdrawn');
   }
 
   Future<void> _remove(JsonMap friend) async {
@@ -481,9 +511,15 @@ class _ReceivedInvitationCard extends StatelessWidget {
 }
 
 class _SentInvitationCard extends StatelessWidget {
-  const _SentInvitationCard({required this.invitation});
+  const _SentInvitationCard({
+    required this.invitation,
+    required this.busy,
+    required this.onWithdraw,
+  });
 
   final JsonMap invitation;
+  final bool busy;
+  final VoidCallback onWithdraw;
 
   @override
   Widget build(BuildContext context) {
@@ -494,32 +530,44 @@ class _SentInvitationCard extends StatelessWidget {
       fallback: _friendText(recipient['email'], fallback: t('friends.friend')),
     );
     return AirmiusPanel(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _FriendIcon(icon: Icons.outgoing_mail),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
+          Row(
+            children: [
+              const _FriendIcon(icon: Icons.outgoing_mail),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (_friendText(recipient['email']).isNotEmpty)
+                      Text(
+                        _friendText(recipient['email']),
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                  ],
                 ),
-                if (_friendText(recipient['email']).isNotEmpty)
-                  Text(
-                    _friendText(recipient['email']),
-                    style: TextStyle(color: airmiusMutedColor(context)),
-                  ),
-              ],
-            ),
+              ),
+              StatusPill(
+                t('friends.pending'),
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+            ],
           ),
-          StatusPill(
-            t('friends.pending'),
-            color: Theme.of(context).colorScheme.tertiary,
+          const SizedBox(height: 12),
+          AirmiusButton(
+            label: t('friends.withdraw'),
+            icon: Icons.undo_outlined,
+            secondary: true,
+            onPressed: busy ? null : onWithdraw,
           ),
         ],
       ),

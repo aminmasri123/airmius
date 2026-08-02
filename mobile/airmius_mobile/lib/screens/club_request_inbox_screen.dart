@@ -66,12 +66,15 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
         return;
       }
       _clubId = managed.first.id;
-      final page = await services.repositories.memberships.clubRequests(
-        _clubId!,
+      final pages = await Future.wait(
+        managed.map(
+          (club) => services.repositories.memberships.clubRequests(club.id),
+        ),
       );
+      final allRequests = pages.expand((page) => page.items);
       if (!mounted) return;
       setState(() {
-        _requests = page.items.map(_mapRequest).toList();
+        _requests = allRequests.map(_mapRequest).toList();
         _loading = false;
         _loadError = null;
       });
@@ -97,6 +100,7 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' ');
     return _MembershipRequest(
       id: request.id,
+      clubId: request.clubId,
       apiStatus: request.status,
       status: _statusLabel(request.status, t),
       name: request.applicantName ?? t('membership.inbox.applicantFallback'),
@@ -107,6 +111,8 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
       body: request.message ?? t('membership.inbox.messageFallback'),
       payment:
           request.preferredPaymentMethod ?? t('membership.inbox.notProvided'),
+      data: data,
+      documentTitles: request.acceptedDocuments,
       hasDocuments: request.acceptedDocuments.isNotEmpty,
       documents: request.acceptedDocuments.isEmpty
           ? t('membership.inbox.documentsNone')
@@ -139,8 +145,7 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
   };
 
   Future<void> _decide(_MembershipRequest request, bool approve) async {
-    final clubId = _clubId;
-    if (clubId == null) return;
+    final clubId = request.clubId;
     final t = AirmiusScope.of(context).t;
     final action = approve
         ? t('membership.inbox.accept')
@@ -538,9 +543,7 @@ class _RequestCard extends StatelessWidget {
                         'membership.inbox.reviewTitle',
                       ).replaceFirst('{name}', request.name),
                     ),
-                    content: Text(
-                      '${request.body}\n\n${request.email}\n${request.address}',
-                    ),
+                    content: _RequestReviewContent(request: request),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -554,21 +557,13 @@ class _RequestCard extends StatelessWidget {
                 label: t('membership.inbox.accept'),
                 icon: Icons.check_circle_outline,
                 secondary: true,
-                onPressed:
-                    request.apiStatus == 'withdrawn' ||
-                        request.apiStatus == 'approved'
-                    ? null
-                    : onApprove,
+                onPressed: request.apiStatus != 'pending' ? null : onApprove,
               ),
               AirmiusButton(
                 label: t('membership.inbox.decline'),
                 icon: Icons.cancel_outlined,
                 danger: true,
-                onPressed:
-                    request.apiStatus == 'withdrawn' ||
-                        request.apiStatus == 'declined'
-                    ? null
-                    : onDecline,
+                onPressed: request.apiStatus != 'pending' ? null : onDecline,
               ),
               AirmiusButton(
                 label: t('membership.inbox.message'),
@@ -626,6 +621,64 @@ class _RequestDataGrid extends StatelessWidget {
           _DataLine(
             label: t('membership.inbox.received'),
             value: request.received,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestReviewContent extends StatelessWidget {
+  const _RequestReviewContent({required this.request});
+
+  final _MembershipRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final dataRows = request.data.entries
+        .where(
+          (entry) => entry.value != null && entry.value.toString().isNotEmpty,
+        )
+        .map(
+          (entry) => _DataLine(
+            label: entry.key,
+            value: entry.value is bool
+                ? (entry.value == true ? 'Ja' : 'Nein')
+                : entry.value.toString(),
+          ),
+        )
+        .toList();
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(request.body),
+          const SizedBox(height: 12),
+          _DataLine(label: t('membership.inbox.email'), value: request.email),
+          _DataLine(
+            label: t('membership.inbox.address'),
+            value: request.address,
+          ),
+          _DataLine(label: t('membership.inbox.type'), value: request.type),
+          _DataLine(
+            label: t('application.paymentMethod'),
+            value: request.payment,
+          ),
+          if (dataRows.isNotEmpty) ...[
+            const Divider(height: 22),
+            for (final row in dataRows) row,
+          ],
+          const Divider(height: 22),
+          Text(
+            t('membership.document'),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            request.documentTitles.isEmpty
+                ? t('membership.inbox.documentsNone')
+                : request.documentTitles.join('\n'),
           ),
         ],
       ),
@@ -763,6 +816,7 @@ class _InboxSwitch extends StatelessWidget {
 class _MembershipRequest {
   const _MembershipRequest({
     required this.id,
+    required this.clubId,
     required this.apiStatus,
     required this.status,
     required this.name,
@@ -774,10 +828,13 @@ class _MembershipRequest {
     required this.payment,
     required this.hasDocuments,
     required this.documents,
+    required this.data,
+    required this.documentTitles,
     required this.color,
   });
 
   final int id;
+  final int clubId;
   final String apiStatus;
   final String status;
   final String name;
@@ -789,6 +846,8 @@ class _MembershipRequest {
   final String payment;
   final bool hasDocuments;
   final String documents;
+  final JsonMap data;
+  final List<String> documentTitles;
   final Color color;
 }
 

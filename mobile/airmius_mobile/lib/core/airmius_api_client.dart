@@ -303,11 +303,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> submitRoleApplication({
     required String type,
     String? message,
-  }) =>
-      _json('POST', '/api/v1/role-applications', body: {
-        'type': type,
-        if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
-      });
+  }) => _json(
+    'POST',
+    '/api/v1/role-applications',
+    body: {
+      'type': type,
+      if (message != null && message.trim().isNotEmpty)
+        'message': message.trim(),
+    },
+  );
 
   Future<AirmiusJson> clubs({String? query, bool mine = false}) => _json(
     'GET',
@@ -2163,6 +2167,9 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> declineFriendInvitation(int invitationId) =>
       _json('POST', '/api/v1/friends/invitations/$invitationId/decline');
+
+  Future<AirmiusJson> withdrawFriendInvitation(int invitationId) =>
+      _json('DELETE', '/api/v1/friends/invitations/$invitationId');
 
   Future<AirmiusJson> removeFriend(int userId) =>
       _json('DELETE', '/api/v1/friends/$userId');

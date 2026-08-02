@@ -9,13 +9,13 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
-import 'application_screen.dart';
 import 'chat_detail_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'club_announcement_screen.dart';
 import 'club_survey_screen.dart';
 import 'global_search_screen.dart';
+import 'membership_application_form_screen.dart';
 import 'team_detail_screen.dart';
 
 String _safeClubError(BuildContext context, Object error) {
@@ -3121,7 +3121,8 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
       context,
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => ApplicationScreen(club: selectedClub),
+        builder: (_) =>
+            MembershipApplicationFormScreen(clubId: selectedClub.id),
       ),
     );
     if (sent == true && context.mounted) {

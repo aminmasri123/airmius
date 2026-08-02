@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\ExternalFriendInvitation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class FriendInvitationTest extends TestCase
@@ -70,5 +71,57 @@ class FriendInvitationTest extends TestCase
             ->where('user_id', $recipient->id)
             ->where('friend_id', $sender->id)
             ->exists());
+    }
+
+    public function test_sender_can_withdraw_a_pending_friend_invitation_from_the_app(): void
+    {
+        Notification::fake();
+
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        Sanctum::actingAs($sender);
+
+        $this->postJson('/api/v1/friends/invitations', [
+            'user_id' => $recipient->id,
+        ])->assertCreated();
+
+        $invitation = FriendInvitation::query()->firstOrFail();
+
+        $this->deleteJson("/api/v1/friends/invitations/{$invitation->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+
+        $this->assertDatabaseHas('friend_invitations', [
+            'id' => $invitation->id,
+            'sender_id' => $sender->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertNotNull($invitation->fresh()->responded_at);
+
+        Sanctum::actingAs($recipient);
+
+        $this->getJson('/api/v1/friends')
+            ->assertOk()
+            ->assertJsonPath('data.receivedInvitations', []);
+    }
+
+    public function test_recipient_cannot_withdraw_a_friend_invitation(): void
+    {
+        $sender = User::factory()->create();
+        $recipient = User::factory()->create();
+
+        Sanctum::actingAs($sender);
+        $this->postJson('/api/v1/friends/invitations', [
+            'user_id' => $recipient->id,
+        ])->assertCreated();
+
+        $invitation = FriendInvitation::query()->firstOrFail();
+
+        Sanctum::actingAs($recipient);
+        $this->deleteJson("/api/v1/friends/invitations/{$invitation->id}")
+            ->assertForbidden();
+
+        $this->assertSame('pending', $invitation->fresh()->status);
     }
 }

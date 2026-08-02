@@ -245,6 +245,40 @@ class FriendController extends Controller
         return back()->with('success', 'Einladung angenommen.');
     }
 
+    public function withdraw(Request $request, FriendInvitation $invitation)
+    {
+        abort_unless($invitation->sender_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+
+        $invitation->update([
+            'status' => 'cancelled',
+            'responded_at' => now(),
+        ]);
+
+        if ($invitation->recipient_id) {
+            AppNotification::send($invitation->recipient_id, 'friend.invite_withdrawn', [
+                'title' => $request->user()->name.' hat die Freundschaftsanfrage zurückgezogen',
+                'body' => 'Die offene Freundschaftsanfrage wurde zurückgezogen.',
+                'url' => route('auth.friends.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'invitation_id' => $invitation->id,
+            ]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'invitation_id' => $invitation->id,
+                    'status' => $invitation->status,
+                ],
+                'message' => 'Freundschaftsanfrage zurückgezogen.',
+            ]);
+        }
+
+        return back()->with('success', 'Freundschaftsanfrage zurückgezogen.');
+    }
+
     public function invitationByToken(Request $request, string $token)
     {
         $invitation = $this->pendingInvitationByToken($token);

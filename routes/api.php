@@ -387,6 +387,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/friends/invitations/token/{token}/decline', [FriendController::class, 'declineByToken'])->name('friends.invitations.token.decline');
         Route::post('/friends/invitations/{invitation}/accept', [FriendController::class, 'accept'])->name('friends.invitations.accept');
         Route::post('/friends/invitations/{invitation}/decline', [FriendController::class, 'decline'])->name('friends.invitations.decline');
+        Route::delete('/friends/invitations/{invitation}', [FriendController::class, 'withdraw'])->name('friends.invitations.withdraw');
         Route::delete('/friends/{user}', [FriendController::class, 'destroy'])->name('friends.destroy');
         Route::get('/maturity/feed-discovery', [MaturityController::class, 'feedDiscovery'])->name('maturity.feed-discovery');
         Route::get('/maturity/feed-trending', [MaturityController::class, 'feedTrending'])->name('maturity.feed-trending');

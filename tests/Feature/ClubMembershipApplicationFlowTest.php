@@ -71,6 +71,7 @@ class ClubMembershipApplicationFlowTest extends TestCase
         $owner = User::factory()->create();
         $applicant = User::factory()->create();
         $declinedApplicant = User::factory()->create();
+        $mobileApplicant = User::factory()->create();
         $club = $this->clubWithApplicationForm($owner);
         $type = $this->membershipTypeWithRule($club);
         $approvedRequest = ClubMembershipRequest::query()->create([
@@ -93,6 +94,37 @@ class ClubMembershipApplicationFlowTest extends TestCase
             'status' => 'pending',
             'application_data' => ['gender' => 'female'],
             'accepted_documents' => [],
+        ]);
+        $mobileRequest = ClubMembershipRequest::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $mobileApplicant->id,
+            'club_membership_type_id' => $type->id,
+            'type' => 'membership',
+            'status' => 'pending',
+            'application_data' => [
+                'first_name' => 'Mobile',
+                'email' => $mobileApplicant->email,
+                'gender' => 'male',
+            ],
+            'accepted_documents' => [],
+        ]);
+
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/membership-requests")
+            ->assertOk()
+            ->assertJsonPath('data.0.application_data', fn ($data) => is_array($data));
+
+        $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$mobileRequest->id}/approve", [
+            'review_note' => 'Per App geprüft.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'approved');
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $mobileApplicant->id,
+            'membership_status' => 'active',
         ]);
 
         $this->actingAs($owner)

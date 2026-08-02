@@ -18565,6 +18565,10 @@ final _strings = {
     'friends.remove': 'Freundschaft beenden',
     'friends.accept': 'Annehmen',
     'friends.decline': 'Ablehnen',
+    'friends.withdraw': 'Zurückziehen',
+    'friends.withdrawTitle': 'Anfrage zurückziehen?',
+    'friends.withdrawQuestion':
+        'Möchtest du diese Freundschaftsanfrage wirklich zurückziehen?',
     'friends.inviteHint':
         'Ist die Person bereits bei Airmius, erhält sie eine App-Anfrage. Andernfalls wird eine E-Mail-Einladung gesendet.',
     'friends.email': 'E-Mail-Adresse',
@@ -18573,6 +18577,7 @@ final _strings = {
     'friends.inviteSent': 'Die Einladung wurde gesendet.',
     'friends.accepted': 'Die Einladung wurde angenommen.',
     'friends.declined': 'Die Einladung wurde abgelehnt.',
+    'friends.withdrawn': 'Die Freundschaftsanfrage wurde zurückgezogen.',
     'friends.removeTitle': 'Freundschaft beenden?',
     'friends.removeQuestion':
         'Möchtest du diese Freundschaft wirklich auf beiden Seiten entfernen?',
@@ -20711,6 +20716,10 @@ final _strings = {
     'friends.remove': 'End friendship',
     'friends.accept': 'Accept',
     'friends.decline': 'Decline',
+    'friends.withdraw': 'Withdraw',
+    'friends.withdrawTitle': 'Withdraw invitation?',
+    'friends.withdrawQuestion':
+        'Do you really want to withdraw this friendship invitation?',
     'friends.inviteHint':
         'If the person already uses Airmius, they will receive an app request. Otherwise an email invitation will be sent.',
     'friends.email': 'Email address',
@@ -20719,6 +20728,7 @@ final _strings = {
     'friends.inviteSent': 'The invitation has been sent.',
     'friends.accepted': 'The invitation has been accepted.',
     'friends.declined': 'The invitation has been declined.',
+    'friends.withdrawn': 'The friendship invitation has been withdrawn.',
     'friends.removeTitle': 'End friendship?',
     'friends.removeQuestion':
         'Are you sure you want to remove this friendship for both people?',
@@ -22846,6 +22856,10 @@ final _strings = {
     'friends.remove': 'Mettre fin à l’amitié',
     'friends.accept': 'Accepter',
     'friends.decline': 'Refuser',
+    'friends.withdraw': 'Retirer',
+    'friends.withdrawTitle': 'Retirer l’invitation ?',
+    'friends.withdrawQuestion':
+        'Veux-tu vraiment retirer cette invitation d’amitié ?',
     'friends.inviteHint':
         'Si la personne utilise déjà Airmius, elle recevra une demande dans l’app. Sinon, une invitation lui sera envoyée par e-mail.',
     'friends.email': 'Adresse e-mail',
@@ -22854,6 +22868,7 @@ final _strings = {
     'friends.inviteSent': 'L’invitation a été envoyée.',
     'friends.accepted': 'L’invitation a été acceptée.',
     'friends.declined': 'L’invitation a été refusée.',
+    'friends.withdrawn': 'L’invitation d’amitié a été retirée.',
     'friends.removeTitle': 'Mettre fin à l’amitié ?',
     'friends.removeQuestion':
         'Veux-tu vraiment supprimer cette amitié pour les deux personnes ?',
@@ -24955,6 +24970,9 @@ final _strings = {
     'friends.remove': 'إنهاء الصداقة',
     'friends.accept': 'قبول',
     'friends.decline': 'رفض',
+    'friends.withdraw': 'سحب الدعوة',
+    'friends.withdrawTitle': 'سحب الدعوة؟',
+    'friends.withdrawQuestion': 'هل تريد حقًا سحب طلب الصداقة هذا؟',
     'friends.inviteHint':
         'إذا كان الشخص يستخدم Airmius فسيحصل على طلب داخل التطبيق، وإلا فستُرسل إليه دعوة بالبريد الإلكتروني.',
     'friends.email': 'البريد الإلكتروني',
@@ -24963,6 +24981,7 @@ final _strings = {
     'friends.inviteSent': 'تم إرسال الدعوة.',
     'friends.accepted': 'تم قبول الدعوة.',
     'friends.declined': 'تم رفض الدعوة.',
+    'friends.withdrawn': 'تم سحب طلب الصداقة.',
     'friends.removeTitle': 'إنهاء الصداقة؟',
     'friends.removeQuestion': 'هل تريد حقًا إزالة هذه الصداقة من الطرفين؟',
     'friends.removed': 'تم إنهاء الصداقة.',
