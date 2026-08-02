@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Club;
 use App\Models\User;
+use App\Support\Roles;
 use Illuminate\Auth\Access\Response;
 
 class ClubPolicy extends BasePolicy
@@ -31,6 +32,7 @@ class ClubPolicy extends BasePolicy
     {
         return $user->can('org.create')
             || $user->can('clubs.create')
+            || $user->hasAnyRole(Roles::PLAYER)
             || $this->hasFullAccess($user);
     }
 

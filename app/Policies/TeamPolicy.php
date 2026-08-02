@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Club;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
@@ -13,6 +14,7 @@ class TeamPolicy extends BasePolicy
         return $user->teams()->exists()
             || $user->clubs()->exists()
             || $user->teamInvitations()->where('status', 'pending')->exists()
+            || $user->can('create', Club::class)
             || $user->can('teams.view')
             || $user->can('clubs.view')
             || $this->hasFullAccess($user);

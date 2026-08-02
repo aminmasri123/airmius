@@ -440,6 +440,27 @@
       }
     },
     "header_subtitle": "Manage profile, security, design and address.",
+    "modules": {
+      "tab": "Areas",
+      "title": "Sidebar areas",
+      "description": "Choose which available areas appear in your sidebar. This choice does not change roles or permissions.",
+      "saved": "Areas saved.",
+      "save_failed": "The areas could not be saved.",
+      "saving": "Saving...",
+      "save": "Save areas",
+      "empty": "No additional areas are available for your account.",
+      "feed_note": "The feed is always visible for every account and cannot be disabled here.",
+      "labels": {
+        "athlete": "Athlete",
+        "coach": "Trainer / coach",
+        "club": "Club"
+      },
+      "descriptions": {
+        "athlete": "Training, nutrition, events, sports map and sport partners.",
+        "coach": "Teams, training plans, attendance and the coach cockpit.",
+        "club": "Club administration, members, teams, finance and organization."
+      }
+    },
     "language_description": "Choose the language for navigation, pages and controls.",
     "actions": {
       "save": "Save",

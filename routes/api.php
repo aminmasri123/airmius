@@ -58,6 +58,7 @@ use App\Http\Controllers\Api\V1\TrainingAvailabilityController;
 use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\Api\V1\UploadController;
+use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
@@ -179,6 +180,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
+        Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
         Route::post('/me/email/verification-notification', [MobileEmailVerificationController::class, 'send'])
             ->middleware('throttle:6,1')
             ->name('me.email.verification.send');

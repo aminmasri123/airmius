@@ -36,6 +36,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    navigationModules: {
+        type: Object,
+        default: () => ({ available: [], enabled: [], definitions: [] }),
+    },
     eventDefaults: {
         type: Object,
         default: () => ({ radius_km: null, sport_ids: [], filters: {} }),
@@ -69,6 +73,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    roleApplications: {
+        type: Array,
+        default: () => [],
+    },
     activities: {
         type: Array,
         default: () => [],
@@ -85,6 +93,7 @@ const settingsTabs = [
     'address',
     'billing',
     'roles',
+    'areas',
     'activities',
     'integrations',
     'design',
@@ -109,6 +118,18 @@ const setActiveTab = (tab) => {
     }
 
     window.history.replaceState({}, '', url)
+}
+const trainerApplication = computed(() => props.roleApplications.find((application) => application.type === 'trainer'))
+const hasCoachRole = computed(() => props.userRoles.some((role) => role.name === 'coach'))
+const roleApplicationForm = useForm({
+    type: 'trainer',
+    message: '',
+})
+const submitTrainerApplication = () => {
+    roleApplicationForm.post(route('auth.role-applications.store'), {
+        preserveScroll: true,
+        onFinish: () => roleApplicationForm.reset('message'),
+    })
 }
 const openPaymentModal = ref({
     show: false,
@@ -187,6 +208,18 @@ const { setTheme } = useTheme()
 const addressNotice = ref(null)
 const privacyNotice = ref(null)
 const currentTheme = ref(page.props.auth?.user?.theme || localStorage.getItem('theme') || 'air')
+const navigationNotice = ref(null)
+const navigationModuleOptions = computed(() => props.navigationModules.definitions || [])
+const navigationModuleSelected = (key) => (form.enabled_navigation_modules || []).includes(key)
+const toggleNavigationModule = (key) => {
+    const selected = [...(form.enabled_navigation_modules || [])]
+
+    form.enabled_navigation_modules = selected.includes(key)
+        ? selected.filter((value) => value !== key)
+        : [...selected, key]
+}
+const navigationModuleLabel = (key, fallback) => settingsText(`modules.labels.${key}`, fallback)
+const navigationModuleDescription = (key, fallback) => settingsText(`modules.descriptions.${key}`, fallback)
 const themeOptions = [
     { key: 'air', label: 'Air', descriptionKey: 'air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
     { key: 'dark', label: 'Dark', descriptionKey: 'dark', description: 'Konzentriert für späte Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
@@ -215,6 +248,7 @@ const form = useForm({
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
     ads_personalization_consent: Boolean(props.privacySettings.ads_personalization_consent),
     ads_measurement_consent: Boolean(props.privacySettings.ads_measurement_consent),
+    enabled_navigation_modules: props.navigationModules.enabled || [],
 })
 
 // Actions
@@ -239,6 +273,26 @@ const saveAddress = (showFeedback = true) => {
                     type: 'error',
                     message: settingsText('address.save_failed', 'Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
                 }
+            }
+        },
+    })
+}
+
+const saveNavigationModules = () => {
+    navigationNotice.value = null
+
+    form.put(route('auth.settings.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            navigationNotice.value = {
+                type: 'success',
+                message: settingsText('modules.saved', 'Bereiche wurden gespeichert.'),
+            }
+        },
+        onError: () => {
+            navigationNotice.value = {
+                type: 'error',
+                message: settingsText('modules.save_failed', 'Bereiche konnten nicht gespeichert werden.'),
             }
         },
     })
@@ -1149,6 +1203,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <button @click="setActiveTab('address')" :class="tabClass('address')">{{ t('Adresse') }}</button>
             <button @click="setActiveTab('billing')" :class="tabClass('billing')">{{ t('Zahlungen') }}</button>
             <button @click="setActiveTab('roles')" :class="tabClass('roles')">{{ t('Rollen') }}</button>
+            <button @click="setActiveTab('areas')" :class="tabClass('areas')">{{ settingsText('modules.tab', 'Bereiche') }}</button>
             <button @click="setActiveTab('activities')" :class="tabClass('activities')">{{ t('Aktivitäten') }}</button>
             <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">{{ t('Verknüpfungen') }}</button>
             <button @click="setActiveTab('design')" :class="tabClass('design')">{{ t('Design') }}</button>
@@ -1559,6 +1614,111 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
                 {{ settingsText('roles.empty', 'Deinem Konto ist noch keine Rolle zugewiesen.') }}
             </div>
+
+            <div class="mt-6 rounded-xl border border-air-blue/30 bg-air-blue/5 p-4">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h3 class="font-semibold text-primary">{{ settingsText('roles.apply_title', 'Weitere Funktion aktivieren') }}</h3>
+                        <p class="mt-1 max-w-2xl text-sm text-secondary">
+                            {{ settingsText('roles.apply_description', 'Trainer und Sportler können ihren Arbeitsbereich sofort aktivieren. Airmius prüft den Antrag anschließend.') }}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <span
+                            v-if="trainerApplication?.status === 'pending'"
+                            class="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2 text-sm font-semibold text-warning"
+                        >
+                            {{ settingsText('roles.trainer_pending', 'Trainerantrag wird geprüft') }}
+                        </span>
+                        <button
+                            v-else-if="!hasCoachRole"
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                            :disabled="roleApplicationForm.processing"
+                            @click="submitTrainerApplication"
+                        >
+                            {{ roleApplicationForm.processing ? settingsText('roles.applying', 'Wird aktiviert...') : settingsText('roles.apply_trainer', 'Trainer werden') }}
+                        </button>
+                        <Link
+                            :href="route('auth.teams.index', { create_club: 1 })"
+                            class="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                        >
+                            {{ settingsText('roles.apply_club', 'Verein anmelden') }}
+                        </Link>
+                    </div>
+                </div>
+
+                <p v-if="roleApplicationForm.errors.type || roleApplicationForm.errors.message" class="mt-3 text-sm text-error">
+                    {{ roleApplicationForm.errors.type || roleApplicationForm.errors.message }}
+                </p>
+                <p v-if="trainerApplication?.status === 'rejected' && trainerApplication.review_notes" class="mt-3 text-sm text-error">
+                    {{ settingsText('roles.rejection_note', 'Hinweis von Airmius:') }} {{ trainerApplication.review_notes }}
+                </p>
+            </div>
+        </div>
+
+        <!-- BEREICHE -->
+        <div v-if="activeTab === 'areas'" class="surface-card p-5">
+            <div>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('modules.title', 'Bereiche im Sidebar') }}</h2>
+                <p class="mt-1 max-w-3xl text-sm text-secondary">
+                    {{ settingsText('modules.description', 'Wähle, welche deiner verfügbaren Bereiche im Sidebar angezeigt werden. Diese Auswahl ändert keine Rollen oder Berechtigungen.') }}
+                </p>
+            </div>
+
+            <div
+                v-if="navigationNotice"
+                class="mt-4 rounded-lg border px-4 py-3 text-sm font-semibold"
+                :class="navigationNotice.type === 'success'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-error/30 bg-error/10 text-error'"
+            >
+                {{ navigationNotice.message }}
+            </div>
+
+            <div v-if="navigationModuleOptions.length" class="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <label
+                    v-for="module in navigationModuleOptions"
+                    :key="module.key"
+                    class="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg p-4 transition hover:border-borderHover"
+                    :class="navigationModuleSelected(module.key) ? 'ring-2 ring-air-blue/30' : 'opacity-80'"
+                >
+                    <input
+                        type="checkbox"
+                        class="mt-1 rounded border-border bg-inputBg"
+                        :checked="navigationModuleSelected(module.key)"
+                        @change="toggleNavigationModule(module.key)"
+                    />
+                    <span>
+                        <span class="flex items-center gap-2 font-semibold text-primary">
+                            <i :class="module.icon || 'las la-layer-group'" class="text-air-blue"></i>
+                            {{ navigationModuleLabel(module.key, module.label) }}
+                        </span>
+                        <span class="mt-1 block text-sm text-secondary">
+                            {{ navigationModuleDescription(module.key, module.description) }}
+                        </span>
+                    </span>
+                </label>
+            </div>
+
+            <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">
+                {{ settingsText('modules.empty', 'Für dein Konto sind keine zusätzlichen Bereiche verfügbar.') }}
+            </div>
+
+            <div class="mt-5 rounded-xl border border-air-blue/30 bg-air-blue/5 p-4 text-sm text-secondary">
+                <i class="las la-newspaper me-1 text-air-blue"></i>
+                {{ settingsText('modules.feed_note', 'Der Feed bleibt für alle Konten immer sichtbar und kann hier nicht deaktiviert werden.') }}
+            </div>
+
+            <button
+                type="button"
+                class="btn-primary mt-5 disabled:opacity-60"
+                :disabled="form.processing"
+                @click="saveNavigationModules"
+            >
+                {{ form.processing ? settingsText('modules.saving', 'Speichert...') : settingsText('modules.save', 'Bereiche speichern') }}
+            </button>
         </div>
 
         <!-- AKTIVITAETEN -->

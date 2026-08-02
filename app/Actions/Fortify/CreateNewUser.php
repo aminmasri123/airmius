@@ -5,7 +5,9 @@ namespace App\Actions\Fortify;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Models\User;
 use App\Notifications\AccountWelcomeNotification;
+use App\Services\AccountRoleApplicationService;
 use App\Support\AccountType;
+use App\Support\AppNotification;
 use App\Support\GuardianConsentNotifier;
 use App\Support\MinorSafety;
 use Illuminate\Support\Carbon;
@@ -94,6 +96,21 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         AccountType::assignInitialRole($user, $input['account_type'], $requiresGuardianConsent);
+
+        if ($input['account_type'] === AccountType::COACH && ! $requiresGuardianConsent) {
+            // The coach role was already assigned as the account's initial role.
+            // Keep it if the review later rejects the application.
+            app(AccountRoleApplicationService::class)->submitTrainer($user, null, true);
+        }
+
+        if ($input['account_type'] === AccountType::CLUB && ! $requiresGuardianConsent) {
+            AppNotification::send($user, 'club.account_activated', [
+                'title' => 'Vereinskonto aktiviert',
+                'body' => 'Dein Vereinsbereich ist aktiviert. Registriere jetzt deinen Verein; Airmius prüft ihn anschließend.',
+                'url' => route('auth.teams.index', ['create_club' => 1]),
+                'account_type' => AccountType::CLUB,
+            ]);
+        }
 
         try {
             $user->notify(new AccountWelcomeNotification);

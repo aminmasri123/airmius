@@ -439,6 +439,27 @@
       }
     },
     "header_subtitle": "Profil, Sicherheit, Design und Adresse verwalten.",
+    "modules": {
+      "tab": "Bereiche",
+      "title": "Bereiche im Sidebar",
+      "description": "Wähle, welche deiner verfügbaren Bereiche im Sidebar angezeigt werden. Diese Auswahl ändert keine Rollen oder Berechtigungen.",
+      "saved": "Bereiche wurden gespeichert.",
+      "save_failed": "Bereiche konnten nicht gespeichert werden.",
+      "saving": "Speichert...",
+      "save": "Bereiche speichern",
+      "empty": "Für dein Konto sind keine zusätzlichen Bereiche verfügbar.",
+      "feed_note": "Der Feed bleibt für alle Konten immer sichtbar und kann hier nicht deaktiviert werden.",
+      "labels": {
+        "athlete": "Sportler",
+        "coach": "Trainer / Coach",
+        "club": "Verein"
+      },
+      "descriptions": {
+        "athlete": "Training, Ernährung, Events, Sportkarte und Sportpartner.",
+        "coach": "Teams, Trainingsplanung, Anwesenheit und Trainer-Cockpit.",
+        "club": "Vereinsverwaltung, Mitglieder, Teams, Finanzen und Organisation."
+      }
+    },
     "language_description": "Wähle die Sprache für Navigation, Seiten und Bedienelemente.",
     "actions": {
       "save": "Speichern",

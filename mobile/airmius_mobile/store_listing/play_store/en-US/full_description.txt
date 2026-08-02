@@ -1,0 +1,17 @@
+Airmius brings sports clubs, teams, members and coaches together in one mobile platform.
+
+Find clubs and teams, view club information, manage membership requests, follow training and event dates, stay in touch through messages and notifications, and manage your profile and privacy settings.
+
+For clubs, Airmius provides mobile tools for member communication, membership requests, contribution information, documents, roles, teams and appointments. The app is designed to bring the Airmius web experience into a focused native Flutter app.
+
+Key features:
+- Find clubs and teams
+- Start and manage membership requests
+- Receive club news and notifications
+- Keep training and events in view
+- Access invoices and payment status where enabled
+- Manage documents and uploads where enabled
+- Manage your profile, sports profile and privacy settings
+- Use the app in German, English, French and Arabic
+
+Available features may vary depending on the club, your role and the Airmius configuration enabled for your account.

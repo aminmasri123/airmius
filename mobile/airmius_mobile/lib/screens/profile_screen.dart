@@ -17,6 +17,12 @@ import 'sport_profile_detail_screen.dart';
 import 'user_profile_detail_screen.dart';
 import 'member_card_screen.dart';
 
+String _safeRoleApplicationError(BuildContext context, Object error) {
+  return error is AirmiusApiException
+      ? error.userMessage
+      : AirmiusScope.of(context).t('common.errorDetails');
+}
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -110,6 +116,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onMore: () => _openMoreActions(context, authState),
                 ),
                 const SizedBox(height: 14),
+                _ProfileSectionHeading(
+                  icon: Icons.insights_outlined,
+                  title: scope.t('profile.statsTitle'),
+                  subtitle: scope.t('profile.statsBody'),
+                ),
+                const SizedBox(height: 8),
                 _ProfileStatsGrid(user: user),
                 if (authState.error != null) ...[
                   const SizedBox(height: 12),
@@ -136,6 +148,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
                 const SizedBox(height: 14),
+                _ProfileSectionHeading(
+                  icon: Icons.grid_view_rounded,
+                  title: scope.t('profile.tabsTitle'),
+                  subtitle: scope.t('profile.tabsBody'),
+                ),
+                const SizedBox(height: 8),
                 _ProfileTabs(
                   activeTab: _activeTab,
                   onChanged: (tab) => setState(() => _activeTab = tab),
@@ -219,6 +237,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     );
                   },
                 ),
+                if (authState.isAuthenticated &&
+                    !(authState.user?.hasAnyRole(const [
+                          'coach',
+                          'assistant_coach',
+                          'performance_coach',
+                          'fitness_coach',
+                          'team_manager',
+                        ]) ??
+                        false)) ...[
+                  const SizedBox(height: 10),
+                  AirmiusButton(
+                    label: t('accountType.coach'),
+                    icon: Icons.sports_outlined,
+                    secondary: true,
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      await _submitTrainerApplication(authState);
+                    },
+                  ),
+                ],
                 const SizedBox(height: 10),
                 AirmiusButton(
                   label: t('profile.signOut'),
@@ -232,6 +270,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  Future<void> _submitTrainerApplication(AirmiusAuthState authState) async {
+    final scope = AirmiusScope.of(context);
+
+    try {
+      await _client.submitRoleApplication(type: 'trainer');
+      await authState.refreshUser();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${scope.t('accountType.coach')}: ${scope.t('clubs.awaitingReview')}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_safeRoleApplicationError(context, error))),
+      );
+    }
   }
 
   Future<void> _showPhotoActions() async {
@@ -400,7 +460,7 @@ class _ProfileHero extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 132,
+              height: 96,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -450,7 +510,7 @@ class _ProfileHero extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Transform.translate(
-                    offset: const Offset(0, -54),
+                    offset: const Offset(0, -42),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -459,7 +519,7 @@ class _ProfileHero extends StatelessWidget {
                           imageUrl: user.avatarUrl,
                           onTap: onEditPhoto,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -478,19 +538,19 @@ class _ProfileHero extends StatelessWidget {
                               StatusPill(t('profile.synchronizing')),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 9),
                         Text(
                           user.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: airmiusTextColor(context),
-                            fontSize: 30,
+                            fontSize: 27,
                             fontWeight: FontWeight.w900,
                             height: 1.05,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Wrap(
                           spacing: 14,
                           runSpacing: 8,
@@ -510,7 +570,7 @@ class _ProfileHero extends StatelessWidget {
                           ],
                         ),
                         if (user.sportProfiles.isNotEmpty) ...[
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 10),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
@@ -527,30 +587,37 @@ class _ProfileHero extends StatelessWidget {
                     ),
                   ),
                   Transform.translate(
-                    offset: const Offset(0, -34),
+                    offset: const Offset(0, -24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Wrap(
-                          spacing: 9,
-                          runSpacing: 9,
+                        SizedBox(
+                          width: double.infinity,
+                          child: AirmiusButton(
+                            label: t('profile.edit'),
+                            icon: Icons.edit_outlined,
+                            onPressed: onEdit,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            AirmiusButton(
-                              label: t('profile.edit'),
-                              icon: Icons.edit_outlined,
-                              onPressed: onEdit,
+                            Expanded(
+                              child: AirmiusButton(
+                                label: t('profile.accountSecurity'),
+                                icon: Icons.manage_accounts_outlined,
+                                secondary: true,
+                                onPressed: onAccount,
+                              ),
                             ),
-                            AirmiusButton(
-                              label: t('profile.accountSecurity'),
-                              icon: Icons.manage_accounts_outlined,
-                              secondary: true,
-                              onPressed: onAccount,
-                            ),
-                            AirmiusButton(
-                              label: t('profile.more'),
-                              icon: Icons.more_horiz,
-                              secondary: true,
-                              onPressed: onMore,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: AirmiusButton(
+                                label: t('profile.more'),
+                                icon: Icons.more_horiz,
+                                secondary: true,
+                                onPressed: onMore,
+                              ),
                             ),
                           ],
                         ),
@@ -558,7 +625,7 @@ class _ProfileHero extends StatelessWidget {
                     ),
                   ),
                   Transform.translate(
-                    offset: const Offset(0, -20),
+                    offset: const Offset(0, -12),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -631,8 +698,8 @@ class _ProfilePhoto extends StatelessWidget {
         child: Stack(
           children: [
             Container(
-              width: 112,
-              height: 112,
+              width: 96,
+              height: 96,
               decoration: BoxDecoration(
                 color: airmiusAccentColor(context),
                 borderRadius: BorderRadius.circular(16),
@@ -655,7 +722,7 @@ class _ProfilePhoto extends StatelessWidget {
                         initials,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimary,
-                          fontSize: 34,
+                          fontSize: 30,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -669,7 +736,7 @@ class _ProfilePhoto extends StatelessWidget {
                           initials,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 34,
+                            fontSize: 30,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -796,24 +863,38 @@ class _ProfileStatsGrid extends StatelessWidget {
               SizedBox(
                 width: width,
                 child: AirmiusPanel(
-                  padding: const EdgeInsets.all(13),
-                  child: Column(
+                    padding: const EdgeInsets.all(13),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        stat.$1,
-                        style: TextStyle(
-                          color: airmiusTextColor(context),
-                          fontSize: 23,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              stat.$1,
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            _statIcon(stat.$2, t),
+                            size: 18,
+                            color: airmiusAccentColor(context),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         stat.$2.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: airmiusMutedColor(context),
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -824,6 +905,72 @@ class _ProfileStatsGrid extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  IconData _statIcon(String label, String Function(String) t) {
+    if (label == t('profile.followers')) return Icons.person_add_alt_1_outlined;
+    if (label == t('profile.following')) return Icons.person_outline;
+    if (label == t('profile.posts')) return Icons.dynamic_feed_outlined;
+    if (label == t('profile.level')) return Icons.trending_up_outlined;
+    return Icons.bolt_outlined;
+  }
+}
+
+class _ProfileSectionHeading extends StatelessWidget {
+  const _ProfileSectionHeading({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: airmiusAccentColor(context).withValues(alpha: 0.13),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: airmiusAccentColor(context),
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -856,28 +1003,22 @@ class _ProfileTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      padding: const EdgeInsets.all(8),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 560 ? 5 : 2;
-          final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
-
-          return Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final tab in _tabs)
-                SizedBox(
-                  width: width,
-                  child: _TabChip(
-                    tab: tab,
-                    active: activeTab == tab.key,
-                    onTap: () => onChanged(tab.key),
-                  ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final tab in _tabs)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: _TabChip(
+                  tab: tab,
+                  active: activeTab == tab.key,
+                  onTap: () => onChanged(tab.key),
                 ),
-            ],
-          );
-        },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -920,17 +1061,16 @@ class _TabChip extends StatelessWidget {
                 color: active ? activeForeground : airmiusMutedColor(context),
               ),
               const SizedBox(width: 7),
-              Flexible(
-                child: Text(
-                  t(tab.labelKey),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: active
-                        ? activeForeground
-                        : airmiusMutedColor(context),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
+              Text(
+                t(tab.labelKey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active
+                      ? activeForeground
+                      : airmiusMutedColor(context),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
                 ),
               ),
             ],

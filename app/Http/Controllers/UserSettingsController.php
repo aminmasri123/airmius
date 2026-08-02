@@ -8,9 +8,11 @@ use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
+use App\Models\UserRoleApplication;
 use App\Services\Training\AthleteSportProfileService;
 use App\Support\BillingOverview;
 use App\Support\MinorSafety;
+use App\Support\NavigationModules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -60,6 +62,7 @@ class UserSettingsController extends Controller
                 'ads_personalization_consent',
                 'ads_measurement_consent',
             ]),
+            'navigationModules' => NavigationModules::payload($user),
             'eventDefaults' => [
                 'radius_km' => $user->event_radius_km,
                 'sport_ids' => $user->event_default_sport_ids ?? [],
@@ -131,6 +134,20 @@ class UserSettingsController extends Controller
                     'name' => $role->name,
                     'description' => $role->description,
                     'permissions_count' => $role->permissions_count,
+                ]),
+            'roleApplications' => $user
+                ->roleApplications()
+                ->latest('requested_at')
+                ->get()
+                ->map(fn (UserRoleApplication $application) => [
+                    'id' => $application->id,
+                    'type' => $application->type,
+                    'status' => $application->status,
+                    'message' => $application->message,
+                    'review_notes' => $application->review_notes,
+                    'role_activated' => (bool) $application->role_activated,
+                    'requested_at' => $application->requested_at?->toJSON(),
+                    'reviewed_at' => $application->reviewed_at?->toJSON(),
                 ]),
             'activities' => Activity::query()
                 ->where('user_id', $user->id)
@@ -228,6 +245,8 @@ class UserSettingsController extends Controller
                 'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
                 'ads_personalization_consent' => ['boolean'],
                 'ads_measurement_consent' => ['boolean'],
+                'enabled_navigation_modules' => ['nullable', 'array'],
+                'enabled_navigation_modules.*' => ['string', Rule::in(NavigationModules::keys())],
             ]);
 
             if (empty($data['theme'])) {
@@ -236,6 +255,13 @@ class UserSettingsController extends Controller
 
             if (MinorSafety::isUnderConsentAge($request->user())) {
                 $data = array_merge($data, MinorSafety::privacyDefaults());
+            }
+
+            if (array_key_exists('enabled_navigation_modules', $data)) {
+                $data['enabled_navigation_modules'] = NavigationModules::sanitize(
+                    $request->user(),
+                    $data['enabled_navigation_modules'],
+                );
             }
 
             $eventSportIds = collect($data['event_default_sport_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();

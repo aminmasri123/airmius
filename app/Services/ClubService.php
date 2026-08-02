@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\ClubRegistrationReviewRequested;
 use App\Notifications\ClubRegistrationSubmitted;
+use App\Support\AppNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Throwable;
@@ -121,9 +122,25 @@ class ClubService
         try {
             $user->notify(new ClubRegistrationSubmitted($club));
 
+            AppNotification::send($user, 'club.registration_submitted', [
+                'title' => 'Vereinsbereich aktiviert',
+                'body' => 'Dein Vereinsbereich ist sofort aktiv. Airmius prüft den Vereinsantrag und informiert dich über das Ergebnis.',
+                'url' => route('auth.clubs.show', $club->id),
+                'club_id' => $club->id,
+                'club_name' => $club->name,
+                'verification_status' => $club->verification_status,
+            ]);
+
             $reviewers = User::permission('system.manage')->get();
             if ($reviewers->isNotEmpty()) {
                 Notification::send($reviewers, new ClubRegistrationReviewRequested($club, $user));
+                $reviewers->each(fn (User $reviewer) => AppNotification::send($reviewer, 'club.registration_review_requested', [
+                    'title' => 'Neuer Vereinsantrag',
+                    'body' => $user->name.' hat den Verein „'.$club->name.'“ registriert.',
+                    'url' => route('admin.club-verifications.index'),
+                    'club_id' => $club->id,
+                    'verification_status' => $club->verification_status,
+                ]));
             }
         } catch (Throwable $exception) {
             report($exception);

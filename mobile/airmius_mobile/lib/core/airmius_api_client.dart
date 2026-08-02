@@ -300,6 +300,15 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sports() => _json('GET', '/api/v1/sports');
 
+  Future<AirmiusJson> submitRoleApplication({
+    required String type,
+    String? message,
+  }) =>
+      _json('POST', '/api/v1/role-applications', body: {
+        'type': type,
+        if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+      });
+
   Future<AirmiusJson> clubs({String? query, bool mine = false}) => _json(
     'GET',
     '/api/v1/clubs',

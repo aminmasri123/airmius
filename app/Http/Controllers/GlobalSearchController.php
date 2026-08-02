@@ -28,18 +28,28 @@ class GlobalSearchController extends Controller
 
         $users = User::query()
             ->where('id', '!=', $user->id)
+            ->when(! $user->can('user.manage'), function ($query) use ($user) {
+                $query->where(function ($visibilityQuery) use ($user) {
+                    $visibilityQuery
+                        ->where('profile_visibility', 'public')
+                        ->orWhereHas('friendships', fn ($friendships) => $friendships
+                            ->where('friend_id', $user->id))
+                        ->orWhereHas('followers', fn ($followers) => $followers
+                            ->where('follower_id', $user->id));
+                });
+            })
             ->where(function ($query) use ($like) {
                 $query->where('name', 'like', $like)
                     ->orWhere('email', 'like', $like);
             })
             ->orderBy('name')
             ->limit(5)
-            ->get(['id', 'name', 'email', 'profile_photo_path'])
+            ->get(['id', 'name', 'profile_visibility', 'profile_photo_path'])
             ->map(fn (User $match) => [
                 'type' => 'user',
                 'id' => $match->id,
                 'title' => $match->name,
-                'subtitle' => $match->email,
+                'subtitle' => $match->profile_visibility === 'private' ? 'Privates Profil' : 'Profil',
                 'url' => route('auth.users.show', $match->id),
                 'avatar_url' => $match->profile_photo_thumb ?: $match->profile_photo_url,
             ]);

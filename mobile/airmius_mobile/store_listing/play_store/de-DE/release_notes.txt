@@ -1,5 +1,6 @@
 Neu in 1.0.31:
 
+- Private Profile erscheinen für fremde Personen nicht mehr in der globalen Suche.
 - Klare Registrierung ohne interne Konto-Verwaltungsoptionen.
 - Google- und Outlook-Registrierung übernehmen jetzt den ausgewählten Kontotyp.
 - Passwort-Hilfe, 2FA, E-Mail-Bestätigung und Kontolöschung erscheinen nur noch im passenden Bereich.

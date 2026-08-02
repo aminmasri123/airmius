@@ -14,6 +14,7 @@ use App\Models\Setting;
 use App\Models\Team;
 use App\Services\PlanFeatureService;
 use App\Support\ClubRoles;
+use App\Support\NavigationModules;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use Closure;
@@ -154,6 +155,7 @@ class HandleInertiaRequests extends Middleware
                         ->values()
                         ->all(),
                     'can' => $can,
+                    'navigation_modules' => NavigationModules::payload($user),
                     'unread_notifications_count' => $unreadNotificationsCount,
                     'active_subscription_plan_ids' => $activeUserSubscriptions
                         ->pluck('subscription_plan_id')

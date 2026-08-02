@@ -59,18 +59,21 @@ const canAdmin = computed(() => hasAny([
     'system.manage',
 ]))
 
-const athleteRoles = ['player', 'youth_player', 'minor_player', 'guest_player', 'captain']
-const coachRoles = ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'team_manager', 'captain', 'trainer']
-const clubRoles = ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller', 'media_manager']
 const sponsorRoles = ['sponsor', 'sponsor_manager']
 const platformRoles = ['super_admin', 'admin', 'system_admin']
 
 const isPlatformAdmin = computed(() => hasAnyRole(platformRoles))
-const isCoach = computed(() => !isPlatformAdmin.value && (hasAnyRole(coachRoles) || can('trainer-cockpit.view')))
-const isClubManager = computed(() => !isPlatformAdmin.value && (hasAnyRole(clubRoles) || can('club-cockpit.view') || can('club-memberships.view')))
+const enabledNavigationModules = computed(() => {
+    const modules = page.props.auth?.user?.navigation_modules?.enabled
+
+    return Array.isArray(modules) ? modules : []
+})
+const moduleEnabled = (module) => enabledNavigationModules.value.includes(module)
+const isCoach = computed(() => !isPlatformAdmin.value && moduleEnabled('coach'))
+const isClubManager = computed(() => !isPlatformAdmin.value && moduleEnabled('club'))
 const isSponsor = computed(() => !isPlatformAdmin.value && (hasAnyRole(sponsorRoles) || can('sponsor.workspace.view')))
 const hasOperationalWorkspace = computed(() => isCoach.value || isClubManager.value || isSponsor.value)
-const isAthlete = computed(() => !isPlatformAdmin.value && (hasAnyRole(athleteRoles) || !hasOperationalWorkspace.value))
+const isAthlete = computed(() => !isPlatformAdmin.value && moduleEnabled('athlete'))
 const workspaceCount = computed(() => [isCoach.value, isClubManager.value, isSponsor.value].filter(Boolean).length)
 const roleHomeHref = computed(() => {
     if (isPlatformAdmin.value) return route('auth.dashboard')
@@ -163,13 +166,11 @@ const closeSidebar = () => {
                 :badge="unreadNotificationsCount || null"
             />
 
-            <NavGroup
-                v-if="isAthlete"
-                label="Mein Sport"
-                icon="las la-running"
-                :initial-open="!hasOperationalWorkspace"
-            >
-                <NavItem v-if="can('feed.view')" @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
+            <!-- Feed is the common area and is never disabled by a role module preference. -->
+            <NavItem @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
+
+            <!-- Athlete functions are intentionally flat for athlete accounts. -->
+            <template v-if="isAthlete">
                 <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events" icon="las la-calendar" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Training" icon="las la-clipboard-list" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
@@ -186,7 +187,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('rides.view')" @navigate="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
                 <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
-            </NavGroup>
+            </template>
 
             <NavGroup
                 v-if="isCoach"
@@ -279,6 +280,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('admin.moderation.view')" @navigate="closeSidebar" :href="route('admin.moderation.index')" label="Moderation" icon="las la-user-check" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.sports.index')" label="Sportarten" icon="las la-running" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.club-verifications.index')" label="Vereinsprüfung" icon="las la-clipboard-check" />
+                <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.trainer-applications.index')" label="Traineranträge" icon="las la-chalkboard-teacher" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('gamification-rules.index')" label="Gamification" icon="las la-trophy" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.badges.index')" label="Badges" icon="las la-medal" />
                 <NavItem v-if="can('admin.mail-center.view')" @navigate="closeSidebar" :href="route('admin.mail-center.index')" label="Mail-Zentrale" icon="las la-envelope-open-text" />

@@ -6,6 +6,7 @@ use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CommerceCheckoutController;
+use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
@@ -73,6 +74,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
+    Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('auth.role-applications.store');
     Route::get('/dashboard/maturity', [DashboardController::class, 'maturity'])->name('auth.maturity.index');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');

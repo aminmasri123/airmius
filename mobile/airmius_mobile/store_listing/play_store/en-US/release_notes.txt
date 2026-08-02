@@ -1,5 +1,6 @@
 New in 1.0.31:
 
+- Private profiles are no longer shown to unrelated people in global search.
 - Clear, focused account registration without internal account-management options.
 - Google and Outlook registration now preserve the selected account type.
 - Password help, 2FA, email verification and account deletion appear only in their correct areas.

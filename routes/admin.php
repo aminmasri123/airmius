@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminCommerceController;
+use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BlogCategoryController;
@@ -76,6 +77,11 @@ Route::middleware([
     Route::get('/admin/club-verifications', [ClubVerificationController::class, 'index'])->middleware('can:system.manage')->name('admin.club-verifications.index');
     Route::put('/admin/club-verifications/{club}/approve', [ClubVerificationController::class, 'approve'])->middleware('can:system.manage')->name('admin.club-verifications.approve');
     Route::put('/admin/club-verifications/{club}/reject', [ClubVerificationController::class, 'reject'])->middleware('can:system.manage')->name('admin.club-verifications.reject');
+
+    // TRAINER APPLICATIONS
+    Route::get('/admin/trainer-applications', [AccountRoleApplicationController::class, 'index'])->middleware('can:system.manage')->name('admin.trainer-applications.index');
+    Route::put('/admin/trainer-applications/{application}/approve', [AccountRoleApplicationController::class, 'approve'])->middleware('can:system.manage')->name('admin.trainer-applications.approve');
+    Route::put('/admin/trainer-applications/{application}/reject', [AccountRoleApplicationController::class, 'reject'])->middleware('can:system.manage')->name('admin.trainer-applications.reject');
 
     // MODERATION
     Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:system.manage')->name('admin.moderation.index');

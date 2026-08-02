@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Notifications\ClubVerificationStatusUpdated;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -62,6 +63,15 @@ class ClubVerificationController extends Controller
         ])->save();
 
         $club->owner?->notify(new ClubVerificationStatusUpdated($club));
+        if ($club->owner) {
+            AppNotification::send($club->owner, 'club.verification_status_updated', [
+                'title' => 'Vereinsantrag freigegeben',
+                'body' => 'Airmius hat deinen Verein „'.$club->name.'“ geprüft und freigegeben.',
+                'url' => route('auth.clubs.show', $club->id),
+                'club_id' => $club->id,
+                'verification_status' => $club->verification_status,
+            ]);
+        }
 
         return back()->with('success', 'Verein wurde freigegeben.');
     }
@@ -85,6 +95,16 @@ class ClubVerificationController extends Controller
         ])->save();
 
         $club->owner?->notify(new ClubVerificationStatusUpdated($club));
+        if ($club->owner) {
+            AppNotification::send($club->owner, 'club.verification_status_updated', [
+                'title' => 'Vereinsantrag abgelehnt',
+                'body' => 'Airmius hat deinen Vereinsantrag abgelehnt. Bitte prüfe den Hinweis im Dashboard.',
+                'url' => route('auth.clubs.show', $club->id),
+                'club_id' => $club->id,
+                'verification_status' => $club->verification_status,
+                'verification_notes' => $club->verification_notes,
+            ]);
+        }
 
         return back()->with('success', 'Vereinsantrag wurde abgelehnt.');
     }

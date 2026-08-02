@@ -61,6 +61,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'event_default_sport_ids',
         'event_default_filters',
         'dashboard_widget_keys',
+        'enabled_navigation_modules',
         'status',
         'account_status',
         'suspended_until',
@@ -134,6 +135,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'event_default_sport_ids' => 'array',
             'event_default_filters' => 'array',
             'dashboard_widget_keys' => 'array',
+            'enabled_navigation_modules' => 'array',
             'notification_channels' => 'array',
             'ads_personalization_consent' => 'boolean',
             'ads_measurement_consent' => 'boolean',
@@ -371,6 +373,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function appNotifications()
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function roleApplications()
+    {
+        return $this->hasMany(UserRoleApplication::class);
     }
 
     public function sentFriendInvitations()

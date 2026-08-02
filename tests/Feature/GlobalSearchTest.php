@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
+use App\Models\Friendship;
 use App\Models\LearningCourse;
 use App\Models\MarketplaceProduct;
 use App\Models\Team;
@@ -66,6 +67,47 @@ class GlobalSearchTest extends TestCase
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'club' && $result['id'] === $club->id));
         $this->assertTrue($results->contains(fn (array $result) => $result['type'] === 'team' && $result['id'] === $team->id));
         $this->assertSame(route('auth.teams.join-requests.store', $team->id), $results->firstWhere('type', 'team')['join_url']);
+        $this->assertArrayNotHasKey('email', $results->firstWhere('type', 'user'));
+    }
+
+    public function test_private_profiles_are_hidden_from_strangers_in_web_and_mobile_search(): void
+    {
+        $viewer = User::factory()->create(['name' => 'Search Viewer']);
+        $privateUser = User::factory()->create([
+            'name' => 'Private Search Profile',
+            'email' => 'private-search@example.test',
+            'profile_visibility' => 'private',
+        ]);
+
+        foreach ([
+            route('auth.search', ['q' => 'Private Search']),
+            '/api/v1/search?q=Private%20Search',
+        ] as $endpoint) {
+            $results = collect($this->actingAs($viewer)
+                ->getJson($endpoint)
+                ->assertOk()
+                ->json('results'));
+
+            $this->assertFalse($results->contains('id', $privateUser->id));
+        }
+
+        Friendship::create([
+            'user_id' => $viewer->id,
+            'friend_id' => $privateUser->id,
+        ]);
+        Friendship::create([
+            'user_id' => $privateUser->id,
+            'friend_id' => $viewer->id,
+        ]);
+
+        $friendResult = collect($this->actingAs($viewer)
+            ->getJson('/api/v1/search?q=Private%20Search')
+            ->assertOk()
+            ->json('results'))
+            ->firstWhere('id', $privateUser->id);
+
+        $this->assertSame('Privates Profil', $friendResult['subtitle']);
+        $this->assertArrayNotHasKey('email', $friendResult);
     }
 
     public function test_mobile_search_returns_visible_events_courses_products_and_files(): void
