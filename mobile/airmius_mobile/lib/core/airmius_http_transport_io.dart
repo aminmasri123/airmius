@@ -20,10 +20,16 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
           .timeout(_requestTimeout);
       request.headers.forEach(ioRequest.headers.set);
       if (request.body != null) {
-        ioRequest.write(jsonEncode(request.body));
+        final bodyBytes = utf8.encode(jsonEncode(request.body));
+        ioRequest.contentLength = bodyBytes.length;
+        ioRequest.add(bodyBytes);
       }
       final response = await ioRequest.close().timeout(_requestTimeout);
-      final body = await utf8.decodeStream(response);
+      final responseBytes = await response.fold<List<int>>(
+        <int>[],
+        (buffer, chunk) => buffer..addAll(chunk),
+      );
+      final body = utf8.decode(responseBytes, allowMalformed: true);
       final headers = <String, String>{};
       response.headers.forEach(
         (name, values) => headers[name] = values.join(','),

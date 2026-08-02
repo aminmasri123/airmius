@@ -530,6 +530,8 @@ class AirmiusAuthState extends ChangeNotifier {
       if (_isUniqueValidationMessage(parsed)) {
         return _authMessage('auth.error.accountExists');
       }
+      final validation = _extractValidationMessage(error.body);
+      if (validation.isNotEmpty) return _readableValidationMessage(validation);
       return _authMessage('auth.error.invalidInput');
     }
     if (status == 0) {
@@ -592,6 +594,25 @@ class AirmiusAuthState extends ChangeNotifier {
         for (final entry in errors.values) {
           final first = _firstValidationMessage(entry);
           if (first.isNotEmpty) return _readableValidationMessage(first);
+        }
+      }
+    } catch (_) {
+      return '';
+    }
+    return '';
+  }
+
+  String _extractValidationMessage(String body) {
+    final dataStart = body.indexOf('{');
+    if (dataStart < 0) return '';
+    try {
+      final json = _safeJsonDecode(body.substring(dataStart).trim());
+      if (json == null) return '';
+      final errors = json['errors'];
+      if (errors is Map) {
+        for (final entry in errors.entries) {
+          final first = _firstValidationMessage(entry.value);
+          if (first.isNotEmpty) return '${entry.key}: $first';
         }
       }
     } catch (_) {

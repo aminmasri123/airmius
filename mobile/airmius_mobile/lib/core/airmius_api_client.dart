@@ -3070,7 +3070,7 @@ class AirmiusApiClient {
 
   AirmiusHeaders get _headers => {
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json; charset=utf-8',
     'X-Airmius-Locale': locale,
     if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
   };
