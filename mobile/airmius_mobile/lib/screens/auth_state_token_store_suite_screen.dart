@@ -89,7 +89,7 @@ class AuthStateTokenStoreSuiteScreen extends StatelessWidget {
                   const Eyebrow('SESSION CORE'),
                   const SizedBox(height: 10),
                   Text(
-                    'Die App braucht ein Gedaechtnis für Login und User.',
+                    'Die App braucht ein Gedächtnis für Login und User.',
                     style: TextStyle(
                       color: airmiusTextColor(context),
                       fontSize: 24,

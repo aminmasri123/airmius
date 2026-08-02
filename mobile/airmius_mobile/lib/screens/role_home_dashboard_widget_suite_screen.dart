@@ -40,7 +40,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState
       body: PageFrame(
         title: 'Role Home Dashboard Widgets',
         subtitle:
-            'Mobile Startseite für Rollen, Aufgaben, Statuskarten, Schnellaktionen und naechste Schritte im Web-App-Stil.',
+            'Mobile Startseite für Rollen, Aufgaben, Statuskarten, Schnellaktionen und nächste Schritte im Web-App-Stil.',
         trailing: StatusPill('Home', color: airmiusAccentColor(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,7 +139,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState
                     icon: Icons.task_alt_outlined,
                     title: 'Aufgaben anzeigen',
                     body:
-                        'Offene Antraege, Rückfragen, Formulare, Supportantworten und Admin-Entscheidungen erscheinen zuerst.',
+                        'Offene Anträge, Rückfragen, Formulare, Supportantworten und Admin-Entscheidungen erscheinen zuerst.',
                     enabled: _tasks,
                     onChanged: (value) => setState(() => _tasks = value),
                   ),
@@ -155,7 +155,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState
                     icon: Icons.event_available_outlined,
                     title: 'Training & Events',
                     body:
-                        'Naechste Trainings, RSVP, Check-in, Fahrgemeinschaften und Erinnerungen landen direkt im Home.',
+                        'Nächste Trainings, RSVP, Check-in, Fahrgemeinschaften und Erinnerungen landen direkt im Home.',
                     enabled: _training,
                     onChanged: (value) => setState(() => _training = value),
                   ),
@@ -275,7 +275,7 @@ const _widgets = [
     role: 'Mitglied',
     title: 'Meine Mitgliedschaften',
     body:
-        'Aktive Vereine, offene Anfragen, digitale Karte, Dokumente und naechste Schritte.',
+        'Aktive Vereine, offene Anfragen, digitale Karte, Dokumente und nächste Schritte.',
     status: '2 aktiv',
     icon: Icons.badge_outlined,
     color: AirmiusColors.green,
@@ -292,7 +292,7 @@ const _widgets = [
   _HomeWidget(
     role: 'Vereinsadmin',
     title: 'Anfrage-Eingang',
-    body: 'Neue Mitgliedsanträge, Rückzuege, Dokumentstatus und Rückfragen.',
+    body: 'Neue Mitgliedsanträge, Rückzüge, Dokumentstatus und Rückfragen.',
     status: '6 offen',
     icon: Icons.inbox_outlined,
     color: AirmiusColors.amber,
@@ -318,7 +318,7 @@ const _widgets = [
     role: 'Guardian',
     title: 'Guardian Aufgaben',
     body:
-        'Freigaben, Minderjaehrigenprofil, Notfallkontakt, Medienrechte und Event-Zustimmung.',
+        'Freigaben, Minderjährigenprofil, Notfallkontakt, Medienrechte und Event-Zustimmung.',
     status: '2 offen',
     icon: Icons.family_restroom_outlined,
     color: AirmiusColors.amber,

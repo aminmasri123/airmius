@@ -124,7 +124,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState
       group: 'Club Admin',
       title: 'Beitragsregel bearbeiten',
       body:
-          'Betrag, Frequenz, Zahlungsart, Faelligkeit, Mahnung, Rabatt, Dokument und Sichtbarkeit mit validierten Eingaben.',
+          'Betrag, Frequenz, Zahlungsart, Fälligkeit, Mahnung, Rabatt, Dokument und Sichtbarkeit mit validierten Eingaben.',
       inputType: 'Number + Select',
       icon: Icons.rule_folder_outlined,
       status: 'Rules',
@@ -259,7 +259,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('INPUT UX'),
           const SizedBox(height: 8),
           Text(
-            'Formulare müssen sich auf dem Handy leicht anfuehlen.',
+            'Formulare müssen sich auf dem Handy leicht anfühlen.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -544,7 +544,7 @@ class _InputFieldCard extends StatelessWidget {
           if (showValidation) ...[
             const SizedBox(height: 10),
             Text(
-              'Validierung: Pflichtfeld, Format, Laenge, API-Fehler und Offline-Draft werden am Feld sichtbar.',
+              'Validierung: Pflichtfeld, Format, Länge, API-Fehler und Offline-Draft werden am Feld sichtbar.',
               style: TextStyle(
                 color: Theme.of(context).colorScheme.secondary,
                 height: 1.35,
@@ -597,7 +597,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Input-/Accessibility-Paritaet',
+      title: 'Input-/Accessibility-Parität',
       subtitle: 'Was aus Web-Formularen mobil übersetzt wird.',
       children: [
         const _CheckLine(
@@ -614,7 +614,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Input-Paritaet markieren',
+          label: 'Input-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

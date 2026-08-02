@@ -42,7 +42,7 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
     final next = [
       _NextGate(
         'HTTP Transport',
-        'Echten Transport für mobile/web faehige Requests, Timeouts, Retry und Fehler-Mapping anschließen.',
+        'Echten Transport für mobile/web fähige Requests, Timeouts, Retry und Fehler-Mapping anschließen.',
       ),
       _NextGate(
         'Provider/State Layer',
@@ -203,7 +203,7 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('NAECHSTE API-SCHRITTE'),
+                  const Eyebrow('NÄCHSTE API-SCHRITTE'),
                   const SizedBox(height: 12),
                   for (final gate in next) ...[
                     _NextGateRow(item: gate),

@@ -61,7 +61,7 @@ class _DeepLinkRouteResolverSuiteScreenState
                   const Eyebrow('LINK ROUTER'),
                   const SizedBox(height: 8),
                   Text(
-                    'Jeder Link fuehrt an den richtigen Ort.',
+                    'Jeder Link führt an den richtigen Ort.',
                     style: TextStyle(
                       color: textColor,
                       fontSize: 24,
@@ -159,7 +159,7 @@ class _DeepLinkRouteResolverSuiteScreenState
                     icon: Icons.route_outlined,
                     title: 'Sicherer Fallback',
                     body:
-                        'Abgelaufene, falsche oder nicht erlaubte Links landen in einer klaren Erklaerungsseite statt im Nirgendwo.',
+                        'Abgelaufene, falsche oder nicht erlaubte Links landen in einer klaren Erklärungsseite statt im Nirgendwo.',
                     enabled: _safeFallback,
                     onChanged: (value) => setState(() => _safeFallback = value),
                   ),
@@ -277,7 +277,7 @@ const _links = [
     source: 'Invite',
     title: 'Vereinsbeitritt',
     body:
-        'Einladung fuehrt zu Club Public Preview, Mitgliedsantrag oder Konto-Verknuepfung.',
+        'Einladung führt zu Club Public Preview, Mitgliedsantrag oder Konto-Verknüpfung.',
     status: 'Mapped',
     rawLink: 'airmius://clubs/26',
     icon: Icons.person_add_alt_1_outlined,
@@ -317,7 +317,7 @@ const _links = [
     source: 'Mail',
     title: 'E-Mail Verifizierung',
     body:
-        'Mail-Link verifiziert Konto und fuehrt danach zum urspruenglichen Ziel.',
+        'Mail-Link verifiziert Konto und führt danach zum ursprünglichen Ziel.',
     status: 'Auth',
     rawLink: 'airmius://profile/security',
     icon: Icons.mark_email_read_outlined,
@@ -336,7 +336,7 @@ const _links = [
   _DeepLink(
     source: 'Chat',
     title: 'Support Ticket',
-    body: 'Support-Link öffnet Ticketverlauf, Anhaenge und Eskalationsstatus.',
+    body: 'Support-Link öffnet Ticketverlauf, Anhänge und Eskalationsstatus.',
     status: 'Mapped',
     rawLink: 'airmius://messages/4',
     icon: Icons.support_agent_outlined,

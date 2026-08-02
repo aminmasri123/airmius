@@ -141,7 +141,7 @@ class _SafetyCommunityOperationsScreenState
           style: const TextStyle(color: _text, fontWeight: FontWeight.w900),
         ),
         content: Text(
-          'Diese Aktion ist kritisch. Moechtest du fortfahren?',
+          'Diese Aktion ist kritisch. Möchtest du fortfahren?',
           style: const TextStyle(color: _muted),
         ),
         actions: [
@@ -214,7 +214,7 @@ class _SafetyCommunityOperationsScreenState
   static final _carpoolOps = <_Operation>[
     _Operation(
       'Fahrt anbieten',
-      'Fahrgemeinschaft mit Plaetzen, Route und Zeiten erstellen.',
+      'Fahrgemeinschaft mit Plätzen, Route und Zeiten erstellen.',
       'POST',
       ApiContract.carpools,
       Icons.add_circle_outline,
@@ -385,7 +385,7 @@ class _SafetyCommunityOperationsScreenState
     ),
     _Operation(
       'Maturity Suche',
-      'Suche mit Minderjaehrigen-Schutz ausfuehren.',
+      'Suche mit Minderjährigen-Schutz ausführen.',
       'GET',
       ApiContract.maturitySearch,
       Icons.search_outlined,

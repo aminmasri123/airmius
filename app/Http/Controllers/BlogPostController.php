@@ -396,7 +396,7 @@ class BlogPostController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'status' => "Zum Veröffentlichen braucht der Beitrag mindestens 85% SEO-Qualitaet. Aktuell: {$score}%.",
+            'status' => "Zum Veröffentlichen braucht der Beitrag mindestens 85% SEO-Qualität. Aktuell: {$score}%.",
         ]);
     }
 

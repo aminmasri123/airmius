@@ -18,14 +18,14 @@ defineProps({
         <div class="border-b border-border p-5">
             <h2 class="text-lg font-semibold text-primary">Mailbox-Audit</h2>
             <p class="mt-1 text-sm text-secondary">
-                Protokolliert werden Aenderungen und Testversand ohne Klartext-Passwoerter.
+                Protokolliert werden Änderungen und Testversand ohne Klartext-Passwörter.
             </p>
         </div>
 
         <AppTable
             :empty="!audits.length"
-            empty-title="Noch keine Audit-Eintraege"
-            empty-description="Sobald Mailboxen geaendert oder Testmails versendet werden, erscheint der Verlauf hier."
+            empty-title="Noch keine Audit-Einträge"
+            empty-description="Sobald Mailboxen geändert oder Testmails versendet werden, erscheint der Verlauf hier."
         >
             <template #head>
                 <tr>

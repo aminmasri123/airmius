@@ -59,7 +59,7 @@ class _GamificationRuleDetailScreenState
                   SizedBox(height: 10),
                   AirmiusTextField(
                     label: 'Beschreibung',
-                    hint: 'Wann wird die Regel ausgeloest?',
+                    hint: 'Wann wird die Regel ausgelöst?',
                     icon: Icons.notes_outlined,
                     maxLines: 3,
                   ),

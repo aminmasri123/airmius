@@ -61,7 +61,7 @@ const exampleTitles = {
     account_subscription: 'Konto-Abo / Upgrade',
     outfit_subscription_manual: 'Outfit-Abo Rechnung',
     marketplace_purchase: 'Marketplace Kauf',
-    elearning: 'E-Learning Kursgebuehr',
+    elearning: 'E-Learning Kursgebühr',
     ads: 'Werbekampagne / ADS',
     agency_website: 'Website-Projekt',
     agency_logo: 'Logo-Design',
@@ -576,7 +576,7 @@ const deleteInvoice = async (invoice) => {
 
                                     <label class="block md:col-span-2">
                                         <span class="text-sm font-semibold text-primary">Beschreibung / Leistungsdetails</span>
-                                        <textarea v-model="form.description" class="mt-1 min-h-28 w-full rounded-xl border-border bg-inputBg text-primary" placeholder="z.B. Website-Konzept, Logo-Entwurf, Kursgebuehr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ..."></textarea>
+                                        <textarea v-model="form.description" class="mt-1 min-h-28 w-full rounded-xl border-border bg-inputBg text-primary" placeholder="z.B. Website-Konzept, Logo-Entwurf, Kursgebühr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ..."></textarea>
                                         <p v-if="form.errors.description" class="mt-1 text-xs text-error">{{ form.errors.description }}</p>
                                     </label>
                                 </section>

@@ -447,7 +447,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Release Readiness',
     body:
-        'Mehrsprachigkeit, Store-Struktur, API-Verknuepfung, Safety und Betrieb als native Prüfansicht.',
+        'Mehrsprachigkeit, Store-Struktur, API-Verknüpfung, Safety und Betrieb als native Prüfansicht.',
     icon: Icons.fact_check_outlined,
     color: AirmiusColors.green,
     screen: ReleaseReadinessScreen(),
@@ -501,7 +501,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Media Upload Attachments',
     body:
-        'Dateien, Kamera, Galerie, Scan, Vorschau, Uploadstatus, Datenschutz und Dateimanager-Verknuepfung.',
+        'Dateien, Kamera, Galerie, Scan, Vorschau, Uploadstatus, Datenschutz und Dateimanager-Verknüpfung.',
     icon: Icons.cloud_upload_outlined,
     color: AirmiusColors.amber,
     screen: MediaUploadAttachmentParitySuiteScreen(),
@@ -519,7 +519,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Offline Sync Cache',
     body:
-        'Offline-Banner, Cache, Queue, Retry, Drafts, Upload Resume, Konflikte und Sync-Historie für mobile API-Zustaende.',
+        'Offline-Banner, Cache, Queue, Retry, Drafts, Upload Resume, Konflikte und Sync-Historie für mobile API-Zustände.',
     icon: Icons.sync_outlined,
     color: AirmiusColors.green,
     screen: OfflineSyncCacheParitySuiteScreen(),
@@ -528,7 +528,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Analytics Dashboards',
     body:
-        'Web-Reports, KPI-Karten, Mini-Charts, Trends, Exporte und Empty/Loading/Error-Zustaende als mobile Dashboards.',
+        'Web-Reports, KPI-Karten, Mini-Charts, Trends, Exporte und Empty/Loading/Error-Zustände als mobile Dashboards.',
     icon: Icons.insights_outlined,
     color: AirmiusColors.amber,
     screen: AnalyticsChartDashboardParitySuiteScreen(),
@@ -618,7 +618,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Web-App Conversion Control',
     body:
-        'Zentrale Übersicht für komplette Flutter-Paritaet zur mobilen Web-App: Bereiche, Status, Qualitaet und API-Naechstschritt.',
+        'Zentrale Übersicht für komplette Flutter-Parität zur mobilen Web-App: Bereiche, Status, Qualität und API-Nächstschritt.',
     icon: Icons.dashboard_customize_outlined,
     color: AirmiusColors.blue,
     screen: WebAppFullConversionControlScreen(),
@@ -627,7 +627,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Web-App Module Completion',
     body:
-        'Buendelt alle Web-App-Module und User-Flows als mobile Flutter-UI-Abdeckung für die spätere Laravel-API.',
+        'Bündelt alle Web-App-Module und User-Flows als mobile Flutter-UI-Abdeckung für die spätere Laravel-API.',
     icon: Icons.fact_check_outlined,
     color: AirmiusColors.green,
     screen: WebAppModuleCompletionSuiteScreen(),
@@ -654,7 +654,7 @@ final _items = <_OpsHubItem>[
     area: 'Clubs',
     title: 'Application Inbox',
     body:
-        'Vereinsadmins sehen neue Anfragen, Rückzuege, Dokumente, Rückfragen und Entscheidungen als mobile Inbox.',
+        'Vereinsadmins sehen neue Anfragen, Rückzüge, Dokumente, Rückfragen und Entscheidungen als mobile Inbox.',
     icon: Icons.inbox_outlined,
     color: AirmiusColors.blue,
     screen: ClubApplicationInboxSuiteScreen(),
@@ -681,7 +681,7 @@ final _items = <_OpsHubItem>[
     area: 'Clubs',
     title: 'Document Consent File Manager',
     body:
-        'Vereine laden Datenschutz, Satzung, Beitragsordnung und Nachweise hoch, versionieren sie und verknuepfen Consent-Pflichten.',
+        'Vereine laden Datenschutz, Satzung, Beitragsordnung und Nachweise hoch, versionieren sie und verknüpfen Consent-Pflichten.',
     icon: Icons.folder_copy_outlined,
     color: AirmiusColors.blue,
     screen: ClubDocumentConsentFileManagerSuiteScreen(),
@@ -735,7 +735,7 @@ final _items = <_OpsHubItem>[
     area: 'Support',
     title: 'Support Ticket Service Center',
     body:
-        'User, Vereine und Admins erstellen Tickets, sehen Verlauf, haengen Dateien an und eskalieren an Plattform oder Vereinsadmin.',
+        'User, Vereine und Admins erstellen Tickets, sehen Verlauf, hängen Dateien an und eskalieren an Plattform oder Vereinsadmin.',
     icon: Icons.support_agent_outlined,
     color: AirmiusColors.blue,
     screen: SupportTicketServiceCenterSuiteScreen(),
@@ -762,7 +762,7 @@ final _items = <_OpsHubItem>[
     area: 'Messages',
     title: 'Messaging Conversation Center',
     body:
-        'Private Chats, Vereinsadmin-Kanal, Teamchat, Support-Konversationen, Dateianhaenge, Lesestatus und Meldungen.',
+        'Private Chats, Vereinsadmin-Kanal, Teamchat, Support-Konversationen, Dateianhänge, Lesestatus und Meldungen.',
     icon: Icons.chat_bubble_outline,
     color: AirmiusColors.blue,
     screen: MessagingConversationCenterSuiteScreen(),
@@ -843,7 +843,7 @@ final _items = <_OpsHubItem>[
     area: 'Locations',
     title: 'Location Map Facilities',
     body:
-        'Vereinsorte, Trainingsstaetten, Treffpunkte, Routen, Fahrgemeinschaften, Abholung und Standort-Sichtbarkeit als mobile UI.',
+        'Vereinsorte, Trainingsstätten, Treffpunkte, Routen, Fahrgemeinschaften, Abholung und Standort-Sichtbarkeit als mobile UI.',
     icon: Icons.map_outlined,
     color: AirmiusColors.amber,
     screen: LocationMapFacilitySuiteScreen(),
@@ -924,7 +924,7 @@ final _items = <_OpsHubItem>[
     area: 'API',
     title: 'Laravel API Endpoint Mapping',
     body:
-        'Web-Routen, Flutter-Screens, Laravel-v1-Endpunkte, Auth-Regeln, Payloads, Fehlerzustaende und spätere Client-Bindings.',
+        'Web-Routen, Flutter-Screens, Laravel-v1-Endpunkte, Auth-Regeln, Payloads, Fehlerzustände und spätere Client-Bindings.',
     icon: Icons.hub_outlined,
     color: AirmiusColors.blue,
     screen: LaravelApiEndpointMappingSuiteScreen(),
@@ -942,7 +942,7 @@ final _items = <_OpsHubItem>[
     area: 'Admin',
     title: 'Audit Activity Timeline',
     body:
-        'Aktivitaeten, Vereinsaktionen, Mitgliedsanträge, Zahlungen, Rollenwechsel, Security-Events, Exporte und Aufbewahrung als mobile Timeline.',
+        'Aktivitäten, Vereinsaktionen, Mitgliedsanträge, Zahlungen, Rollenwechsel, Security-Events, Exporte und Aufbewahrung als mobile Timeline.',
     icon: Icons.history_outlined,
     color: AirmiusColors.amber,
     screen: AuditActivityTimelineSuiteScreen(),
@@ -1050,7 +1050,7 @@ final _items = <_OpsHubItem>[
     area: 'Events',
     title: 'Facility Booking Resource Scheduler',
     body:
-        'Plaetze, Hallen, Raeume, Geräte, Buchungen, Konflikte, Wartung, Rollenrechte und Serien-Termine als mobile Vereinsplanung.',
+        'Plätze, Hallen, Räume, Geräte, Buchungen, Konflikte, Wartung, Rollenrechte und Serien-Termine als mobile Vereinsplanung.',
     icon: Icons.event_available_outlined,
     color: AirmiusColors.green,
     screen: FacilityBookingResourceSchedulerSuiteScreen(),
@@ -1059,7 +1059,7 @@ final _items = <_OpsHubItem>[
     area: 'Events',
     title: 'Availability Absence Planning',
     body:
-        'Verfuegbarkeit, Abwesenheiten, Guardian-Meldungen, Trainerübersicht, Gesundheitsnotizen und Anwesenheits-Sync für Teams.',
+        'Verfügbarkeit, Abwesenheiten, Guardian-Meldungen, Trainerübersicht, Gesundheitsnotizen und Anwesenheits-Sync für Teams.',
     icon: Icons.how_to_reg_outlined,
     color: AirmiusColors.green,
     screen: AvailabilityAbsencePlanningSuiteScreen(),
@@ -1077,7 +1077,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Club Survey Poll Voting',
     body:
-        'Umfragen, Abstimmungen, Feedback, Quorum, Zielgruppen, Anonymitaet, Auswertung, Export und Audit für Vereine und Teams.',
+        'Umfragen, Abstimmungen, Feedback, Quorum, Zielgruppen, Anonymität, Auswertung, Export und Audit für Vereine und Teams.',
     icon: Icons.how_to_vote_outlined,
     color: AirmiusColors.blue,
     screen: ClubSurveyPollVotingSuiteScreen(),
@@ -1086,7 +1086,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Meeting Minutes Decision Log',
     body:
-        'Sitzungen, Agenda, Protokolle, Beschluesse, Aufgaben, Dokumentverknuepfung, Abstimmungen und Audit für Vereinsadmins.',
+        'Sitzungen, Agenda, Protokolle, Beschlüsse, Aufgaben, Dokumentverknüpfung, Abstimmungen und Audit für Vereinsadmins.',
     icon: Icons.fact_check_outlined,
     color: AirmiusColors.amber,
     screen: MeetingMinutesDecisionLogSuiteScreen(),
@@ -1095,7 +1095,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Club Asset Inventory Checkout',
     body:
-        'Vereinsmaterial, Schluessel, Trikots, Geräte, QR-Codes, Ausleihe, Rückgabe, Wartung, Fotos und Audit.',
+        'Vereinsmaterial, Schlüssel, Trikots, Geräte, QR-Codes, Ausleihe, Rückgabe, Wartung, Fotos und Audit.',
     icon: Icons.inventory_2_outlined,
     color: AirmiusColors.green,
     screen: ClubAssetInventoryCheckoutSuiteScreen(),
@@ -1140,7 +1140,7 @@ final _items = <_OpsHubItem>[
     area: 'Core',
     title: 'Mobile Visual Parity Progress Audit',
     body:
-        'Rest-Prozente, Web-App-Paritaet, UI-Qualitaet, API-Gaps, Store-Reife, Release-Gates und Produktfortschritt.',
+        'Rest-Prozente, Web-App-Parität, UI-Qualität, API-Gaps, Store-Reife, Release-Gates und Produktfortschritt.',
     icon: Icons.speed_outlined,
     color: AirmiusColors.amber,
     screen: MobileVisualParityProgressAuditSuiteScreen(),
@@ -1158,7 +1158,7 @@ final _items = <_OpsHubItem>[
     area: 'API',
     title: 'API Data Model Repository',
     body:
-        'Typed Models, Pagination, Repository-Verträge und Laravel-Response-Mapping für User, Vereine, Antraege, Dateien, Events und Rechnungen.',
+        'Typed Models, Pagination, Repository-Verträge und Laravel-Response-Mapping für User, Vereine, Anträge, Dateien, Events und Rechnungen.',
     icon: Icons.data_object_outlined,
     color: AirmiusColors.blue,
     screen: ApiDataModelRepositorySuiteScreen(),
@@ -1185,7 +1185,7 @@ final _items = <_OpsHubItem>[
     area: 'API',
     title: 'Service Container Transport',
     body:
-        'Environment, API-Client, Auth-State, TokenStore, RepositoryBundle, Offline Queue, Retry, Static Transport und naechste HTTP-Gates.',
+        'Environment, API-Client, Auth-State, TokenStore, RepositoryBundle, Offline Queue, Retry, Static Transport und nächste HTTP-Gates.',
     icon: Icons.settings_ethernet_outlined,
     color: AirmiusColors.blue,
     screen: ServiceContainerTransportSuiteScreen(),
@@ -1230,7 +1230,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Mitgliedschaft',
     body:
-        'Antraege, Formularfelder, Zahlweisen, Dokumente, Rückzug und Adminentscheidungen.',
+        'Anträge, Formularfelder, Zahlweisen, Dokumente, Rückzug und Adminentscheidungen.',
     icon: Icons.assignment_ind_outlined,
     color: AirmiusColors.green,
     screen: MembershipOperationsScreen(),
@@ -1248,7 +1248,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Anfrage-Eingang',
     body:
-        'Neue Mitgliedschaftsanfragen, Rückzuege, Antragstellerdaten, Dokumentstatus, Adminentscheidungen und Benachrichtigungen.',
+        'Neue Mitgliedschaftsanfragen, Rückzüge, Antragstellerdaten, Dokumentstatus, Adminentscheidungen und Benachrichtigungen.',
     icon: Icons.inbox_outlined,
     color: AirmiusColors.green,
     screen: ClubRequestInboxScreen(),
@@ -1257,7 +1257,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Beitragsregeln',
     body:
-        'Mitgliedschaftstypen, Beitragshoehen, Zahlungsrhythmus, Barzahlung, Überweisung, SEPA, Rechnungen und Mahnungen.',
+        'Mitgliedschaftstypen, Beitragshöhen, Zahlungsrhythmus, Barzahlung, Überweisung, SEPA, Rechnungen und Mahnungen.',
     icon: Icons.payments_outlined,
     color: AirmiusColors.amber,
     screen: ClubContributionRulesScreen(),
@@ -1301,7 +1301,7 @@ final _items = <_OpsHubItem>[
     area: 'Verein',
     title: 'Vereinsdokumente & Regeln',
     body:
-        'Datenschutz, Satzung, Beitragsordnung, SEPA, Uploadpflicht, Sichtbarkeit und Dateimanager-Verknuepfung.',
+        'Datenschutz, Satzung, Beitragsordnung, SEPA, Uploadpflicht, Sichtbarkeit und Dateimanager-Verknüpfung.',
     icon: Icons.rule_folder_outlined,
     color: AirmiusColors.green,
     screen: ClubPolicyDocumentsScreen(),
@@ -1369,7 +1369,7 @@ final _items = <_OpsHubItem>[
   _OpsHubItem(
     area: 'Commerce',
     title: 'Outfit-Abos',
-    body: 'Styleprofil, Plaene, Lieferungen, Zahlstatus, Pausen und Support.',
+    body: 'Styleprofil, Pläne, Lieferungen, Zahlstatus, Pausen und Support.',
     icon: Icons.checkroom_outlined,
     color: AirmiusColors.green,
     screen: OutfitOperationsScreen(),
@@ -1413,7 +1413,7 @@ final _items = <_OpsHubItem>[
     area: 'Admin',
     title: 'Trust',
     body:
-        'Club-Verifizierung, Moderation, Reports, Inaktivitaet und Operating Contracts.',
+        'Club-Verifizierung, Moderation, Reports, Inaktivität und Operating Contracts.',
     icon: Icons.verified_user_outlined,
     color: AirmiusColors.amber,
     screen: TrustOperationsScreen(),
@@ -1447,7 +1447,7 @@ final _items = <_OpsHubItem>[
   _OpsHubItem(
     area: 'Sport',
     title: 'Training',
-    body: 'Events, Trainingsplaene, Logs, Coach Weekly, Feedback und Risiken.',
+    body: 'Events, Trainingspläne, Logs, Coach Weekly, Feedback und Risiken.',
     icon: Icons.event_available_outlined,
     color: AirmiusColors.green,
     screen: TrainingOperationsScreen(),

@@ -12,14 +12,14 @@ class TrainingPlanPeriodizationSuiteScreen extends StatelessWidget {
       _PlanBlock(
         'Grundlage',
         'Woche 1-4',
-        'Ausdauer, Technik, Mobilitaet, Belastung langsam steigern.',
+        'Ausdauer, Technik, Mobilität, Belastung langsam steigern.',
         AirmiusColors.green,
         Icons.timeline_outlined,
       ),
       _PlanBlock(
         'Aufbau',
         'Woche 5-8',
-        'Intensitaet, Kraft, Teamdrills, Coach-Feedback und Tests.',
+        'Intensität, Kraft, Teamdrills, Coach-Feedback und Tests.',
         AirmiusColors.blue,
         Icons.fitness_center_outlined,
       ),
@@ -46,7 +46,7 @@ class TrainingPlanPeriodizationSuiteScreen extends StatelessWidget {
       ),
       _CheckItem(
         'Athletendaten',
-        'Alter, Leistungslevel, Verletzungen, Ziele, Verfuegbarkeit und Datenschutz.',
+        'Alter, Leistungslevel, Verletzungen, Ziele, Verfügbarkeit und Datenschutz.',
       ),
       _CheckItem(
         'Kalender-Sync',
@@ -222,12 +222,12 @@ class TrainingPlanPeriodizationSuiteScreen extends StatelessWidget {
                   _ApiLine(
                     label: 'plan_cycle',
                     value:
-                        'Sportart, Team, Ziel, Wochen, Einheiten, Intensitaet, Coach',
+                        'Sportart, Team, Ziel, Wochen, Einheiten, Intensität, Coach',
                   ),
                   _ApiLine(
                     label: 'athlete_scope',
                     value:
-                        'Alter, Level, Guardian, Verletzung, Verfuegbarkeit, Datenschutz',
+                        'Alter, Level, Guardian, Verletzung, Verfügbarkeit, Datenschutz',
                   ),
                   _ApiLine(
                     label: 'calendar_sync',

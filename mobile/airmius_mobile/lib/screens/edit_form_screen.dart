@@ -499,7 +499,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
             AirmiusTextField(label: 'Kategorie', hint: 'Vereinsdokumente'),
             SizedBox(height: 12),
             AirmiusTextField(
-              label: 'Verknuepfung',
+              label: 'Verknüpfung',
               hint: 'Mitgliedsantrag, Beitragsregel, Team',
             ),
           ],

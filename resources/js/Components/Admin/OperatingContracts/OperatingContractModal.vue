@@ -51,7 +51,7 @@ defineProps({
                             <section class="grid gap-4 rounded-2xl border border-border bg-inputBg p-4 md:grid-cols-2 xl:grid-cols-3">
                                 <label class="block md:col-span-2">
                                     <span class="text-sm font-semibold text-primary">Name</span>
-                                    <input v-model="form.name" class="mt-1 w-full rounded-xl border-border bg-card text-primary" placeholder="WLAN Buero, Handyvertrag, Fahrzeugleasing ..." required>
+                                    <input v-model="form.name" class="mt-1 w-full rounded-xl border-border bg-card text-primary" placeholder="WLAN Büro, Handyvertrag, Fahrzeugleasing ..." required>
                                     <p v-if="form.errors.name" class="mt-1 text-xs text-error">{{ form.errors.name }}</p>
                                 </label>
                                 <label class="block">
@@ -140,8 +140,8 @@ defineProps({
                                 <label class="flex items-center gap-3 rounded-xl border border-border bg-card p-3 md:col-span-2">
                                     <input v-model="form.auto_renews" type="checkbox" class="rounded border-border bg-inputBg text-air-blue">
                                     <span>
-                                        <span class="block text-sm font-semibold text-primary">Automatische Verlaengerung</span>
-                                        <span class="block text-xs text-secondary">Bei aktiven Abos und Leasingvertraegen eingeschaltet lassen.</span>
+                                        <span class="block text-sm font-semibold text-primary">Automatische Verlängerung</span>
+                                        <span class="block text-xs text-secondary">Bei aktiven Abos und Leasingverträgen eingeschaltet lassen.</span>
                                     </span>
                                 </label>
                             </section>

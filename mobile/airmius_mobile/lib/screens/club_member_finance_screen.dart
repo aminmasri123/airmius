@@ -483,7 +483,7 @@ class _ExportsPanel extends StatelessWidget {
               _FinanceLine(
                 icon: Icons.sync_alt_outlined,
                 title: 'SEPA-Lastschrift Export',
-                body: 'Faellige Mitgliedsbeiträge als SEPA-Datei vorbereiten',
+                body: 'Fällige Mitgliedsbeiträge als SEPA-Datei vorbereiten',
                 trailing: 'SEPA',
               ),
               SizedBox(height: 10),

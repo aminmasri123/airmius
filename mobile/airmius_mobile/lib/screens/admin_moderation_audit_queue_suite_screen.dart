@@ -86,7 +86,7 @@ class _AdminModerationAuditQueueSuiteScreenState
                 const SizedBox(height: 16),
                 GridWrap(
                   children: const [
-                    Metric(value: '4', label: 'Faelle'),
+                    Metric(value: '4', label: 'Fälle'),
                     Metric(value: 'Audit', label: 'Verlauf'),
                     Metric(value: 'SLA', label: 'Status'),
                     Metric(value: 'Admin', label: 'Entscheid'),
@@ -125,7 +125,7 @@ class _AdminModerationAuditQueueSuiteScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionLabel('PRUEFBEREICHE'),
+                const SectionLabel('PRÜFBEREICHE'),
                 const SizedBox(height: 8),
                 _AuditSwitch(
                   title: 'Content Reports',
@@ -157,7 +157,7 @@ class _AdminModerationAuditQueueSuiteScreenState
           ),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
-            const EmptyPanel('Keine Faelle in dieser Queue.')
+            const EmptyPanel('Keine Fälle in dieser Queue.')
           else
             for (final item in filtered) ...[
               _ModerationCaseCard(item: item),
@@ -294,7 +294,7 @@ class _ModerationCaseCard extends StatelessWidget {
                   context,
                   title: 'Fall prüfen',
                   body:
-                      'Diese UI bereitet Moderationsfaelle mit Kontext, Reporter, Adminentscheidung, Status und Audit-Verlauf für die spätere API vor.',
+                      'Diese UI bereitet Moderationsfälle mit Kontext, Reporter, Adminentscheidung, Status und Audit-Verlauf für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.fact_check_outlined,
                 ),

@@ -39,10 +39,10 @@ class _LocationMapFacilitySuiteScreenState
         color: AirmiusColors.green,
       ),
       const _PlaceRow(
-        title: 'Auswaertsspiel Saarbrücken',
+        title: 'Auswärtsspiel Saarbrücken',
         status: 'Route',
         body:
-            'Zielort mit Fahrgemeinschaft, freien Plaetzen, Treffpunkt und Abfahrtszeit.',
+            'Zielort mit Fahrgemeinschaft, freien Plätzen, Treffpunkt und Abfahrtszeit.',
         icon: Icons.route_outlined,
         color: AirmiusColors.amber,
       ),

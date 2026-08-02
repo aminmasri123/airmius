@@ -34,7 +34,7 @@ class ReleaseEvidenceCenterScreen extends StatelessWidget {
     _EvidenceItem(
       'iOS IPA',
       'flutter build ipa --release',
-      'IPA/Archive und TestFlight-faehiger Upload-Nachweis.',
+      'IPA/Archive und TestFlight-fähiger Upload-Nachweis.',
       'Pending',
       Icons.phone_iphone_outlined,
       AirmiusColors.blue,

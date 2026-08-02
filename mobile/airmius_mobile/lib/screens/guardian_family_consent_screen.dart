@@ -35,7 +35,7 @@ class _GuardianFamilyConsentScreenState
     _GuardianItem(
       title: 'Vereinsbeitritt freigeben',
       body:
-          'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten für Minderjaehrige prüfen.',
+          'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten für Minderjährige prüfen.',
       status: 'Prüfung',
       icon: Icons.assignment_turned_in_outlined,
       color: AirmiusColors.green,
@@ -155,7 +155,7 @@ class _GuardianFamilyConsentScreenState
                           const SizedBox(height: 12),
                         ],
                         AirmiusPanel(
-                          title: 'Verknuepfte Bereiche',
+                          title: 'Verknüpfte Bereiche',
                           child: Wrap(
                             spacing: 10,
                             runSpacing: 10,

@@ -185,7 +185,7 @@ class _Hero extends StatelessWidget {
             children: [
               _Metric(value: role, label: 'Rolle'),
               _Metric(value: workspace, label: 'Workspace'),
-              _Metric(value: '$groupCount', label: 'Menuegruppen'),
+              _Metric(value: '$groupCount', label: 'Menügruppen'),
               _Metric(
                 value: compactMode ? 'Kompakt' : 'Detail',
                 label: 'Mobile Modus',
@@ -264,7 +264,7 @@ class _ContextPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Rollen- und Workspace-Kontext',
       subtitle:
-          'So entscheidet die App später, welche Module im Menue sichtbar sind.',
+          'So entscheidet die App später, welche Module im Menü sichtbar sind.',
       children: [
         const Eyebrow('Rolle'),
         const SizedBox(height: 8),
@@ -352,7 +352,7 @@ class _SwitchPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Menue-Sichtbarkeit',
+      title: 'Menü-Sichtbarkeit',
       subtitle:
           'Rollen, Vereinskontext und Mobile-Modus steuern die Navigation.',
       children: [
@@ -584,7 +584,7 @@ class _NavigationChecklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Navigation-Paritaet',
+      title: 'Navigation-Parität',
       subtitle: 'Was von der mobilen Web-App übernommen wird.',
       children: [
         const _CheckLine(
@@ -709,14 +709,14 @@ class _MenuGroup {
 const _groups = <_MenuGroup>[
   _MenuGroup(
     title: 'Start & Alltag',
-    body: 'Dashboard, Gastseite, Arbeitsbereiche und persoenlicher Tagesfluss.',
+    body: 'Dashboard, Gastseite, Arbeitsbereiche und persönlicher Tagesfluss.',
     items: ['Gastseite', 'Dashboard', 'Arbeitsbereiche', 'Profil'],
     icon: Icons.dashboard_outlined,
     color: AirmiusColors.blue,
   ),
   _MenuGroup(
     title: 'Vereine & Teams',
-    body: 'Club-Profil, Teams, Mitglieder, Rollen, Antraege und Kommunikation.',
+    body: 'Club-Profil, Teams, Mitglieder, Rollen, Anträge und Kommunikation.',
     items: [
       'Vereine & Teams',
       'Mitgliedsantrag',
@@ -730,10 +730,10 @@ const _groups = <_MenuGroup>[
   ),
   _MenuGroup(
     title: 'Training & Sport',
-    body: 'Events, Trainingsplaene, Logs, Sportkarte und Coach-Kontext.',
+    body: 'Events, Trainingspläne, Logs, Sportkarte und Coach-Kontext.',
     items: [
       'Events & Training',
-      'Trainingsplaene',
+      'Trainingspläne',
       'Training Logs',
       'Sportkarte',
       'Sportprofil',
@@ -778,7 +778,7 @@ const _groups = <_MenuGroup>[
   ),
   _MenuGroup(
     title: 'Gesundheit',
-    body: 'Ernährung, Wasser, Wohlbefinden und persoenliche Auswertung.',
+    body: 'Ernährung, Wasser, Wohlbefinden und persönliche Auswertung.',
     items: ['Ernährung', 'Wasser', 'Wellbeing', 'Routen'],
     icon: Icons.favorite_border_outlined,
     color: AirmiusColors.green,

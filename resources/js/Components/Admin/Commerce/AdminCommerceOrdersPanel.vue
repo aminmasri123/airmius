@@ -76,7 +76,7 @@ const emit = defineEmits([
                         <div class="mt-3 flex flex-wrap gap-2">
                             <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('open-issue-reply', order)">Antworten</button>
                             <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-order-issue', order, 'reviewing')">Prüfen</button>
-                            <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="emit('update-order-issue', order, 'resolved')">Geloest</button>
+                            <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="emit('update-order-issue', order, 'resolved')">Gelöst</button>
                             <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="emit('update-order-issue', order, 'refunded', 'refunded')">Erstattet</button>
                         </div>
                     </article>
@@ -113,7 +113,7 @@ const emit = defineEmits([
                                 <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="emit('open-refund', order)">Teilerstattung</button>
                                 <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('open-issue-reply', order)">Antworten</button>
                                 <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-order-issue', order, 'reviewing')">Prüfen</button>
-                                <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="emit('update-order-issue', order, 'resolved')">Geloest</button>
+                                <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="emit('update-order-issue', order, 'resolved')">Gelöst</button>
                                 <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="emit('update-order-issue', order, 'refunded', 'refunded')">Erstattet</button>
                             </div>
                         </td>

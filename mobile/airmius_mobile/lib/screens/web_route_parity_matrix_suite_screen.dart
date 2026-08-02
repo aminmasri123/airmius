@@ -27,7 +27,7 @@ class _WebRouteParityMatrixSuiteScreenState
       count: '5',
       suite: 'Public System Pages',
       body:
-          'Welcome, Maintenance, Privacy Policy, Terms of Service und Legal Show sind als native System-/Legal-UI gebuendelt.',
+          'Welcome, Maintenance, Privacy Policy, Terms of Service und Legal Show sind als native System-/Legal-UI gebündelt.',
       icon: Icons.public_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -60,7 +60,7 @@ class _WebRouteParityMatrixSuiteScreenState
       count: '18+',
       suite: 'Operations + App Shell + Actions',
       body:
-          'Dashboard Index, Settings, Workspaces, Files, Notifications, Chat, Roles, Search und Aktionsseiten sind als mobile Suiten gebuendelt.',
+          'Dashboard Index, Settings, Workspaces, Files, Notifications, Chat, Roles, Search und Aktionsseiten sind als mobile Suiten gebündelt.',
       icon: Icons.dashboard_customize_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -137,7 +137,7 @@ class _WebRouteParityMatrixSuiteScreenState
       count: '1',
       suite: 'flutter analyze/build',
       body:
-          'Ein harter Compile-/Analyzer-Lauf wurde noch nicht ausgefuehrt und bleibt als naechster technischer Gate offen.',
+          'Ein harter Compile-/Analyzer-Lauf wurde noch nicht ausgeführt und bleibt als nächster technischer Gate offen.',
       icon: Icons.terminal_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -244,7 +244,7 @@ class _WebRouteParityMatrixSuiteScreenState
                         context,
                         title: 'Compile-Gate',
                         body:
-                            'Flutter Analyze/Build ist der naechste technische Qualitaetsschritt.',
+                            'Flutter Analyze/Build ist der nächste technische Qualitätsschritt.',
                         status: 'UI bereit',
                         icon: Icons.info_outline,
                       ),

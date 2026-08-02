@@ -2207,7 +2207,7 @@ class _PostCardState extends State<_PostCard> {
     final ok = await confirmDanger(
       context,
       'Beitrag löschen',
-      'Moechtest du diesen Beitrag wirklich löschen?',
+      'Möchtest du diesen Beitrag wirklich löschen?',
     );
     if (!ok || !mounted) return;
     final deletedPost = widget.post;

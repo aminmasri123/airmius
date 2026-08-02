@@ -362,7 +362,7 @@ trait ManagesNutritionPayloads
 
                 return [
                     'title' => 'Regeneration sichern',
-                    'body' => "Nach \"{$title}\" sind Protein, Fluessigkeit und eine einfache Mahlzeit sinnvoll.",
+                    'body' => "Nach \"{$title}\" sind Protein, Flüssigkeit und eine einfache Mahlzeit sinnvoll.",
                     'meal_type' => 'dinner',
                     'training_context' => 'post_workout',
                 ];

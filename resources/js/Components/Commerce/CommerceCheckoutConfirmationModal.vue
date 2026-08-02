@@ -58,8 +58,8 @@ const acceptedModel = computed({
                     size="sm"
                     icon-only
                     :disabled="processing"
-                    aria-label="Checkout schliessen"
-                    title="Checkout schliessen"
+                    aria-label="Checkout schließen"
+                    title="Checkout schließen"
                     @click="emit('close')"
                 >
                     <i class="las la-times text-xl" aria-hidden="true"></i>
@@ -99,4 +99,3 @@ const acceptedModel = computed({
         </div>
     </div>
 </template>
-

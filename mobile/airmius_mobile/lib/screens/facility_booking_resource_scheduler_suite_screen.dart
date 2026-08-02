@@ -13,7 +13,7 @@ class FacilityBookingResourceSchedulerSuiteScreen extends StatefulWidget {
 
 class _FacilityBookingResourceSchedulerSuiteScreenState
     extends State<FacilityBookingResourceSchedulerSuiteScreen> {
-  String _resourceType = 'Plaetze';
+  String _resourceType = 'Plätze';
   bool _conflictCheck = true;
   bool _roleRules = true;
   bool _maintenanceBlocks = true;
@@ -43,7 +43,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
       body: PageFrame(
         title: 'Facility Booking Resource Scheduler',
         subtitle:
-            'Mobile UI für Plaetze, Hallen, Raeume, Geräte, Buchungen, Konflikte, Wartung und Rollenrechte.',
+            'Mobile UI für Plätze, Hallen, Räume, Geräte, Buchungen, Konflikte, Wartung und Rollenrechte.',
         trailing: StatusPill(
           'Scheduler',
           color: Theme.of(context).colorScheme.secondary,
@@ -69,7 +69,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Die App bereitet Buchungen für Plaetze, Hallen, Raeume, Geräte und Trainingsfenster mit Konfliktprüfung und Rollenrechten vor.',
+                    'Die App bereitet Buchungen für Plätze, Hallen, Räume, Geräte und Trainingsfenster mit Konfliktprüfung und Rollenrechten vor.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -82,9 +82,9 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
                     children:
                         [
                           'Alle',
-                          'Plaetze',
+                          'Plätze',
                           'Hallen',
-                          'Raeume',
+                          'Räume',
                           'Geräte',
                           'Training',
                           'Wartung',
@@ -150,7 +150,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
                     icon: Icons.event_busy_outlined,
                     title: 'Konfliktprüfung',
                     body:
-                        'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfuegbarkeit werden vor dem Speichern geprüft.',
+                        'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfügbarkeit werden vor dem Speichern geprüft.',
                     enabled: _conflictCheck,
                     onChanged: (value) =>
                         setState(() => _conflictCheck = value),
@@ -167,7 +167,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
                     icon: Icons.build_outlined,
                     title: 'Wartungszeiten',
                     body:
-                        'Plaetze, Raeume oder Geräte können für Pflege, Reparatur oder externe Nutzung blockiert werden.',
+                        'Plätze, Räume oder Geräte können für Pflege, Reparatur oder externe Nutzung blockiert werden.',
                     enabled: _maintenanceBlocks,
                     onChanged: (value) =>
                         setState(() => _maintenanceBlocks = value),
@@ -176,7 +176,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState
                     icon: Icons.payments_outlined,
                     title: 'Zahlungspflichtige Slots',
                     body:
-                        'Optionale Gebuehren für externe Gäste, Court-Buchungen oder Sondernutzung können später angebunden werden.',
+                        'Optionale Gebühren für externe Gäste, Court-Buchungen oder Sondernutzung können später angebunden werden.',
                     enabled: _paymentRequired,
                     onChanged: (value) =>
                         setState(() => _paymentRequired = value),
@@ -291,7 +291,7 @@ class _Resource {
 
 const _resources = [
   _Resource(
-    type: 'Plaetze',
+    type: 'Plätze',
     title: 'Court 1',
     body: 'Tennisplatz mit Flutlicht, heute 18:00 durch U16 Training belegt.',
     status: 'Belegt',
@@ -299,7 +299,7 @@ const _resources = [
     color: AirmiusColors.amber,
   ),
   _Resource(
-    type: 'Plaetze',
+    type: 'Plätze',
     title: 'Court 2',
     body: 'Freier Slot um 18:30, buchbar für Mitglieder und Trainer.',
     status: 'Frei',
@@ -315,7 +315,7 @@ const _resources = [
     color: AirmiusColors.blue,
   ),
   _Resource(
-    type: 'Raeume',
+    type: 'Räume',
     title: 'Besprechungsraum',
     body: 'Vorstand, Trainermeeting, Elternabend oder Sponsorentermin.',
     status: 'Review',

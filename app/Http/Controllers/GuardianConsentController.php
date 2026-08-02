@@ -165,7 +165,7 @@ class GuardianConsentController extends Controller
 
         AppNotification::send($minor, 'guardian.consent_rejected', [
             'title' => 'Zustimmung abgelehnt',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde abgelehnt. Du kannst eine erneute Anfrage ausloesen.',
+            'body' => 'Die Freigabe deines Airmius-Kontos wurde abgelehnt. Du kannst eine erneute Anfrage auslösen.',
             'minor_id' => $minor->id,
             'guardian_user_id' => $minor->guardian_user_id,
             'url' => route('guardian-consent.pending'),

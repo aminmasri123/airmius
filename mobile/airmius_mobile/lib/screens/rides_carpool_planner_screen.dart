@@ -25,8 +25,8 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
       title: 'Zum Freitagstraining',
       area: 'Offen',
       body:
-          'Fahrt zum Lauftraining mit Treffpunkt, Uhrzeit und zwei freien Plaetzen.',
-      status: '2 Plaetze',
+          'Fahrt zum Lauftraining mit Treffpunkt, Uhrzeit und zwei freien Plätzen.',
+      status: '2 Plätze',
       meta: 'Kleinblittersdorf - 18:00',
       icon: Icons.directions_car_outlined,
       color: AirmiusColors.blue,
@@ -85,7 +85,7 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
                         const PageTitle(
                           title: 'Fahrgemeinschaften',
                           subtitle:
-                              'Rides, Fahrer, Mitfahrer, Plaetze, Treffpunkt, Kosten, Sicherheit und Stornierung.',
+                              'Rides, Fahrer, Mitfahrer, Plätze, Treffpunkt, Kosten, Sicherheit und Stornierung.',
                         ),
                         const SizedBox(height: 16),
                         _RidesHero(
@@ -120,7 +120,7 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
                               _SwitchRow(
                                 title: 'Mitfahrer anzeigen',
                                 subtitle:
-                                    'Freie Plaetze, Anfragen und bestätigte Mitfahrer anzeigen.',
+                                    'Freie Plätze, Anfragen und bestätigte Mitfahrer anzeigen.',
                                 value: _showPassengers,
                                 onChanged: (value) =>
                                     setState(() => _showPassengers = value),
@@ -266,7 +266,7 @@ class _RidesHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Das Rides-Webmodul wird als mobile UI abgebildet: Fahrten, Fahrer, Mitfahrer, Plaetze, Treffpunkte, Kostenhinweise und Sicherheit.',
+            'Das Rides-Webmodul wird als mobile UI abgebildet: Fahrten, Fahrer, Mitfahrer, Plätze, Treffpunkte, Kostenhinweise und Sicherheit.',
             style: TextStyle(
               color: AirmiusColors.muted,
               height: 1.45,
@@ -281,7 +281,7 @@ class _RidesHero extends StatelessWidget {
               ),
               SizedBox(width: 10),
               Expanded(
-                child: MetricCard(value: '2', label: 'Plaetze'),
+                child: MetricCard(value: '2', label: 'Plätze'),
               ),
               SizedBox(width: 10),
               Expanded(

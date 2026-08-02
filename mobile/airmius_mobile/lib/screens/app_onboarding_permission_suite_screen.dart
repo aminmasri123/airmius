@@ -27,7 +27,7 @@ class _AppOnboardingPermissionSuiteScreenState
         title: 'Sprache wählen',
         status: 'DE',
         body:
-            'Erststart mit Deutsch, Englisch, Franzoesisch und Arabisch inklusive späterer RTL-Unterstuetzung.',
+            'Erststart mit Deutsch, Englisch, Französisch und Arabisch inklusive späterer RTL-Unterstützung.',
         icon: Icons.language_outlined,
         color: AirmiusColors.blue,
       ),
@@ -43,7 +43,7 @@ class _AppOnboardingPermissionSuiteScreenState
         title: 'Berechtigungen prüfen',
         status: 'Native',
         body:
-            'Push, Standort, Dateien und Kamera werden mit erklaerendem Kontext abgefragt.',
+            'Push, Standort, Dateien und Kamera werden mit erklärendem Kontext abgefragt.',
         icon: Icons.security_outlined,
         color: AirmiusColors.amber,
       ),
@@ -51,7 +51,7 @@ class _AppOnboardingPermissionSuiteScreenState
         title: 'Datenschutz bestätigen',
         status: 'Consent',
         body:
-            'Privacy, Nutzungsregeln, Datenrechte und Profil-Sichtbarkeit werden vor Nutzung erklaert.',
+            'Privacy, Nutzungsregeln, Datenrechte und Profil-Sichtbarkeit werden vor Nutzung erklärt.',
         icon: Icons.privacy_tip_outlined,
         color: AirmiusColors.pink,
       ),
@@ -73,7 +73,7 @@ class _AppOnboardingPermissionSuiteScreenState
                 const SectionLabel('NATIVE START'),
                 const SizedBox(height: 8),
                 Text(
-                  'Eine echte Flutter-App braucht einen sauberen Erststart: Sprache, Rolle, Workspace, Datenschutz und native Berechtigungen werden freundlich erklaert.',
+                  'Eine echte Flutter-App braucht einen sauberen Erststart: Sprache, Rolle, Workspace, Datenschutz und native Berechtigungen werden freundlich erklärt.',
                   style: TextStyle(
                     color: airmiusTextColor(context),
                     height: 1.45,
@@ -138,7 +138,7 @@ class _AppOnboardingPermissionSuiteScreenState
                 ),
                 _PermissionSwitch(
                   title: 'Dateien',
-                  body: 'Für Dokumente, Nachweise, Uploads und Chat-Anhaenge.',
+                  body: 'Für Dokumente, Nachweise, Uploads und Chat-Anhänge.',
                   value: filePermission,
                   color: Theme.of(context).colorScheme.tertiary,
                   onChanged: (value) => setState(() => filePermission = value),
@@ -154,7 +154,7 @@ class _AppOnboardingPermissionSuiteScreenState
                 _PermissionSwitch(
                   title: 'Datenschutz akzeptiert',
                   body:
-                      'Consent, Datenrechte und Sichtbarkeitsregeln sind erklaert.',
+                      'Consent, Datenrechte und Sichtbarkeitsregeln sind erklärt.',
                   value: privacyAccepted,
                   color: Theme.of(context).colorScheme.secondary,
                   onChanged: (value) => setState(() => privacyAccepted = value),
@@ -174,7 +174,7 @@ class _AppOnboardingPermissionSuiteScreenState
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Startrolle: $startRole. Später verbindet die API Profil, Sprache, Workspace, Consent, Device Token und native Berechtigungszustaende.',
+                  'Startrolle: $startRole. Später verbindet die API Profil, Sprache, Workspace, Consent, Device Token und native Berechtigungszustände.',
                   style: TextStyle(
                     color: airmiusMutedColor(context),
                     height: 1.45,

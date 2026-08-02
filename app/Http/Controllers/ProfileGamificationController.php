@@ -128,7 +128,7 @@ class ProfileGamificationController extends Controller
             $userSportSkill->loadMissing('skill');
 
             AppNotification::send($user, 'profile.trainer_mentioned', [
-                'title' => 'Trainer-Erwaehnung erhalten',
+                'title' => 'Trainer-Erwähnung erhalten',
                 'body' => $request->user()->name.' hat dich bei '.$userSportSkill->skill->name.' mit Trainer-Bezug bestätigt.',
                 'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'skills']),
                 'skill_id' => $userSportSkill->id,
@@ -157,7 +157,7 @@ class ProfileGamificationController extends Controller
         ]);
 
         AppNotification::send($user, $data['relationship'] === 'trainer' ? 'profile.trainer_mentioned' : 'profile.recommendation_received', [
-            'title' => $data['relationship'] === 'trainer' ? 'Trainer-Erwaehnung erhalten' : 'Neue Empfehlung erhalten',
+            'title' => $data['relationship'] === 'trainer' ? 'Trainer-Erwähnung erhalten' : 'Neue Empfehlung erhalten',
             'body' => $data['relationship'] === 'trainer'
                 ? $request->user()->name.' hat eine Empfehlung mit Trainer-Bezug geschrieben. Sie wartet auf deine Freigabe.'
                 : $request->user()->name.' hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',

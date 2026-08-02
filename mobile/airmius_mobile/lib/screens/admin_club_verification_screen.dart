@@ -120,7 +120,7 @@ class _AdminClubVerificationScreenState
                               _SwitchRow(
                                 title: 'Inhaber prüfen',
                                 subtitle:
-                                    'Adminrolle, Kontakt, Identitaet und Verantwortlichkeit.',
+                                    'Adminrolle, Kontakt, Identität und Verantwortlichkeit.',
                                 value: _showOwnerCheck,
                                 onChanged: (value) =>
                                     setState(() => _showOwnerCheck = value),

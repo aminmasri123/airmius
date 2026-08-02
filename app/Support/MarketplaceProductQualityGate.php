@@ -18,7 +18,7 @@ class MarketplaceProductQualityGate
 
         $checks = [
             self::check('title', mb_strlen(trim((string) $product->title)) >= 8, 'required', 'Titel ist klar genug.'),
-            self::check('description', mb_strlen(trim((string) $product->description)) >= 80 || ($isLearningOffer && $hasLearningStructure && mb_strlen(trim((string) $product->description)) >= 30), 'required', 'Beschreibung erklärt Nutzen, Zustand, Ablauf und Einschraenkungen.'),
+            self::check('description', mb_strlen(trim((string) $product->description)) >= 80 || ($isLearningOffer && $hasLearningStructure && mb_strlen(trim((string) $product->description)) >= 30), 'required', 'Beschreibung erklärt Nutzen, Zustand, Ablauf und Einschränkungen.'),
             self::check('main_image', $isLearningOffer || filled($product->image_url), 'required', 'Hauptbild ist vorhanden.'),
             self::check('price', (int) $product->price_cents > 0, 'required', 'Preis ist gesetzt.'),
             self::check('seller', (bool) ($product->club_id || $product->user_id || $product->payout_status === 'not_applicable'), 'required', 'Anbieter ist zugeordnet.'),
@@ -66,7 +66,7 @@ class MarketplaceProductQualityGate
             $product->forceFill([
                 'status' => 'review',
                 'moderation_status' => 'pending',
-                'rejection_reason' => 'QualitaetsPrüfung offen: '.implode(', ', $gate['blocks']),
+                'rejection_reason' => 'QualitätsPrüfung offen: '.implode(', ', $gate['blocks']),
             ])->save();
 
             $product->setAttribute('quality_gate', $gate);

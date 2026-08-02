@@ -40,7 +40,7 @@ class _AuditActivityTimelineSuiteScreenState
       body: PageFrame(
         title: 'Audit Activity Timeline',
         subtitle:
-            'Mobile Web-App-UI für Aktivitaeten, Sicherheitsereignisse, Vereinsaktionen, Exporte und Admin-Audit.',
+            'Mobile Web-App-UI für Aktivitäten, Sicherheitsereignisse, Vereinsaktionen, Exporte und Admin-Audit.',
         trailing: StatusPill(
           'Audit',
           color: Theme.of(context).colorScheme.tertiary,

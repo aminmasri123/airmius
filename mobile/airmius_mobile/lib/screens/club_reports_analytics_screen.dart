@@ -53,9 +53,9 @@ class _ClubReportsAnalyticsScreenState
       points: ['Trainings: 14', 'Events: 3', 'No-Shows: 6'],
     ),
     _ReportCardData(
-      title: 'Vereinsaktivitaet',
+      title: 'Vereinsaktivität',
       subtitle:
-          'Beiträge, Kommentare, Chat-Aktivitaet, Dateien und sichtbare Inhalte.',
+          'Beiträge, Kommentare, Chat-Aktivität, Dateien und sichtbare Inhalte.',
       value: '42',
       trend: 'Aktionen',
       icon: Icons.insights_outlined,
@@ -83,7 +83,7 @@ class _ClubReportsAnalyticsScreenState
                         const PageTitle(
                           title: 'Vereinsberichte & Auswertungen',
                           subtitle:
-                              'Mitglieder, Zahlungen, Anwesenheit, Aktivitaet, Exporte und Vorstandsauswertung.',
+                              'Mitglieder, Zahlungen, Anwesenheit, Aktivität, Exporte und Vorstandsauswertung.',
                         ),
                         const SizedBox(height: 16),
                         _ReportsHero(
@@ -140,7 +140,7 @@ class _ClubReportsAnalyticsScreenState
                           const SizedBox(height: 12),
                         ],
                         AirmiusPanel(
-                          title: 'Verknuepfte Datenquellen',
+                          title: 'Verknüpfte Datenquellen',
                           child: Wrap(
                             spacing: 10,
                             runSpacing: 10,
@@ -258,7 +258,7 @@ class _ReportsHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Die mobile App bereitet Reports für Mitglieder, Finanzen, Anwesenheit und Aktivitaet vor, damit Vereine nicht im Blindflug arbeiten.',
+            'Die mobile App bereitet Reports für Mitglieder, Finanzen, Anwesenheit und Aktivität vor, damit Vereine nicht im Blindflug arbeiten.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,

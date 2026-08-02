@@ -200,7 +200,7 @@ class _BlogMediaDetailScreenState extends State<BlogMediaDetailScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      'Datei wird mit Richtlinie und Autor verknuepft.',
+                      'Datei wird mit Richtlinie und Autor verknüpft.',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                   ),
@@ -218,7 +218,7 @@ class _BlogMediaDetailScreenState extends State<BlogMediaDetailScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      'Pflicht bei Minderjaehrigen auf Foto oder Video.',
+                      'Pflicht bei Minderjährigen auf Foto oder Video.',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                   ),

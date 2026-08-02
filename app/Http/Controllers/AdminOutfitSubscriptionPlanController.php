@@ -822,7 +822,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'approved' => "Deine Meldung für {$planName} wurde freigegeben.",
             'return_waiting' => "Wir warten auf deine Rücksendung für {$planName}.",
             'replacement_preparing' => "Dein Ersatz für {$planName} wird vorbereitet.",
-            'resolved' => "Dein Support-Vorgang für {$planName} wurde geloest.",
+            'resolved' => "Dein Support-Vorgang für {$planName} wurde gelöst.",
             'rejected' => "Dein Support-Vorgang für {$planName} wurde abgeschlossen.",
             default => "Dein Support-Vorgang für {$planName} wurde aktualisiert.",
         };

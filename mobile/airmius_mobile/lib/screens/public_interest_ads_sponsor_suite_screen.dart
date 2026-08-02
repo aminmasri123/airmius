@@ -80,7 +80,7 @@ class _PublicInterestAdsSponsorSuiteScreenState
       'Sponsor Detail',
       'Sponsors',
       'Detail',
-      'Sponsorprofil, Kampagnen, Dokumente, Kontakt, Status und Aktivitaetsverlauf.',
+      'Sponsorprofil, Kampagnen, Dokumente, Kontakt, Status und Aktivitätsverlauf.',
       Icons.business_center_outlined,
       Color(0xFFF8B84E),
     ),

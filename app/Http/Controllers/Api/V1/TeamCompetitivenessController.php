@@ -533,7 +533,7 @@ class TeamCompetitivenessController extends Controller
         if (($feeSummary['counts']['open'] ?? 0) > 0) {
             $tasks->push([
                 'key' => 'collect_open_fees',
-                'title' => 'Offene Teambeitraege klaeren',
+                'title' => 'Offene Teambeiträge klären',
                 'priority' => 'normal',
                 'count' => (int) ($feeSummary['counts']['open'] ?? 0),
                 'assignee_role' => 'treasurer_or_coach',
@@ -555,7 +555,7 @@ class TeamCompetitivenessController extends Controller
                 'templates' => [
                     ['key' => 'attendance_confirmation', 'label' => 'Teilnahme final bestätigen'],
                     ['key' => 'transport_options', 'label' => 'Fahrgemeinschaften abstimmen'],
-                    ['key' => 'equipment_needed', 'label' => 'Materialbedarf klaeren'],
+                    ['key' => 'equipment_needed', 'label' => 'Materialbedarf klären'],
                 ],
             ],
             'season_plan' => [
@@ -576,7 +576,7 @@ class TeamCompetitivenessController extends Controller
             'remind_missing_responses' => 'Fehlende Rückmeldungen erinnern',
             'check_availability' => 'Kader und Verfügbarkeit prüfen',
             'review_open_fees' => 'Offene Beiträge prüfen',
-            'complete_roles' => 'Teamrollen vervollstaendigen',
+            'complete_roles' => 'Teamrollen vervollständigen',
         ][$key] ?? str($key)->replace('_', ' ')->headline()->toString();
     }
 
@@ -587,7 +587,7 @@ class TeamCompetitivenessController extends Controller
         }
 
         $base = [
-            ['key' => 'balls', 'label' => 'Baelle', 'required' => in_array($event->type, ['training', 'match'], true)],
+            ['key' => 'balls', 'label' => 'Bälle', 'required' => in_array($event->type, ['training', 'match'], true)],
             ['key' => 'first_aid', 'label' => 'Erste Hilfe', 'required' => true],
             ['key' => 'water', 'label' => 'Wasser', 'required' => true],
         ];
@@ -612,7 +612,7 @@ class TeamCompetitivenessController extends Controller
         $headline = match ($risk) {
             'critical' => 'Teilnahmefrist abgelaufen - Antworten fehlen.',
             'high' => 'Zu wenige Zusagen für den nächsten Termin.',
-            'watch' => 'Antwortquote beobachten und frueh erinnern.',
+            'watch' => 'Antwortquote beobachten und früh erinnern.',
             default => 'Team-Alltag wirkt stabil.',
         };
 

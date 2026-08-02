@@ -388,7 +388,7 @@ class OperatingContractController extends Controller
         return [
             'active' => 'Aktiv',
             'paused' => 'Pausiert',
-            'cancelled' => 'Gekuendigt',
+            'cancelled' => 'Gekündigt',
             'ended' => 'Beendet',
         ][$status] ?? ($status ?: '-');
     }
@@ -402,7 +402,7 @@ class OperatingContractController extends Controller
             'software' => 'Software',
             'hosting' => 'Hosting & Domains',
             'insurance' => 'Versicherung',
-            'office' => 'Buero & Standort',
+            'office' => 'Büro & Standort',
             'marketing' => 'Marketing',
             'finance' => 'Finanzen & Steuer',
             'service' => 'Dienstleister',
@@ -413,10 +413,10 @@ class OperatingContractController extends Controller
     private function billingIntervalLabel(?string $interval): string
     {
         return [
-            'weekly' => 'Woechentlich',
+            'weekly' => 'Wöchentlich',
             'monthly' => 'Monatlich',
             'quarterly' => 'Quartalsweise',
-            'yearly' => 'Jaehrlich',
+            'yearly' => 'Jährlich',
             'one_time' => 'Einmalig',
         ][$interval] ?? ($interval ?: '-');
     }

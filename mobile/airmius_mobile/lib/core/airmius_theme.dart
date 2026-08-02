@@ -130,10 +130,10 @@ extension AirmiusThemePaletteInfo on AirmiusThemePalette {
   String get description => switch (this) {
     AirmiusThemePalette.dark => 'Dunkel, klar und kontrastreich.',
     AirmiusThemePalette.air => 'Klar, leicht und fokussiert.',
-    AirmiusThemePalette.champion => 'Goldene Energie fuer Gewinner.',
+    AirmiusThemePalette.champion => 'Goldene Energie für Gewinner.',
     AirmiusThemePalette.sprint => 'Frisch, schnell und aktiv.',
     AirmiusThemePalette.arena => 'Ruhig, robust und professionell.',
-    AirmiusThemePalette.trail => 'Natuerlich, ausdauernd und bodenstaendig.',
+    AirmiusThemePalette.trail => 'Natürlich, ausdauernd und bodenstaendig.',
     AirmiusThemePalette.contrast => 'Maximale Lesbarkeit und klare Konturen.',
   };
 

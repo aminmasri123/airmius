@@ -38,7 +38,7 @@ class _SessionSecurityTokenParitySuiteScreenState
       scope: 'Session',
       title: 'Token Refresh',
       body:
-          'Access Token erneuern, API-Fehler behandeln, Retry zeigen und User bei abgelaufener Session freundlich zum Login fuehren.',
+          'Access Token erneuern, API-Fehler behandeln, Retry zeigen und User bei abgelaufener Session freundlich zum Login führen.',
       status: 'Refresh',
       icon: Icons.sync_outlined,
       primary: 'Token erneuern',
@@ -60,7 +60,7 @@ class _SessionSecurityTokenParitySuiteScreenState
       scope: '2FA',
       title: 'Recovery-Codes verwalten',
       body:
-          'Codes anzeigen, neu generieren, kopieren, warnen und mit Passwortbestätigung schuetzen.',
+          'Codes anzeigen, neu generieren, kopieren, warnen und mit Passwortbestätigung schützen.',
       status: 'Recovery',
       icon: Icons.key_outlined,
       primary: 'Codes',
@@ -71,7 +71,7 @@ class _SessionSecurityTokenParitySuiteScreenState
       scope: 'Devices',
       title: 'Geräte und Sessions',
       body:
-          'Aktuelles Gerät, Browser/Web-Sessions, letzte Aktivitaet, IP-Hinweis, Logout anderer Sessions und Audit.',
+          'Aktuelles Gerät, Browser/Web-Sessions, letzte Aktivität, IP-Hinweis, Logout anderer Sessions und Audit.',
       status: 'Devices',
       icon: Icons.devices_outlined,
       primary: 'Geräte',
@@ -93,7 +93,7 @@ class _SessionSecurityTokenParitySuiteScreenState
       scope: 'API Tokens',
       title: 'API Token verwalten',
       body:
-          'Tokenname, Scopes, Ablauf, Kopieren, Widerruf, letzte Nutzung und Laravel Sanctum-Kompatibilitaet als mobile UI.',
+          'Tokenname, Scopes, Ablauf, Kopieren, Widerruf, letzte Nutzung und Laravel Sanctum-Kompatibilität als mobile UI.',
       status: 'Token',
       icon: Icons.api_outlined,
       primary: 'Token',
@@ -126,7 +126,7 @@ class _SessionSecurityTokenParitySuiteScreenState
       scope: 'Account',
       title: 'Logout und Session-Ende',
       body:
-          'Einzelnes Gerät abmelden, alle Sessions beenden, Cache löschen, Offline-Drafts warnen und zur Loginseite fuehren.',
+          'Einzelnes Gerät abmelden, alle Sessions beenden, Cache löschen, Offline-Drafts warnen und zur Loginseite führen.',
       status: 'Logout',
       icon: Icons.logout_outlined,
       primary: 'Logout',
@@ -355,7 +355,7 @@ class _RulesPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Security-Regeln',
       subtitle:
-          'Diese Optionen machen Auth-Zustaende später mit Laravel/Sanctum nachvollziehbar.',
+          'Diese Optionen machen Auth-Zustände später mit Laravel/Sanctum nachvollziehbar.',
       children: [
         _SwitchLine(
           title: '2FA-Gate aktivieren',
@@ -457,7 +457,7 @@ class _SessionPreview extends StatelessWidget {
                   context,
                   title: 'Security Audit',
                   body:
-                      'Letzte Aktivitaet, Gerät, IP-Hinweis, Tokenstatus, Rollenwechsel und sensible Aktion.',
+                      'Letzte Aktivität, Gerät, IP-Hinweis, Tokenstatus, Rollenwechsel und sensible Aktion.',
                   status: 'Audit',
                   icon: Icons.history_outlined,
                 ),
@@ -581,14 +581,14 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Session-/Security-Paritaet',
+      title: 'Session-/Security-Parität',
       subtitle: 'Was Auth in der Mobile-App leisten muss.',
       children: [
         const _CheckLine(
           'Session Restore, Token Refresh und Rolle/Workspace werden beim App-Start sichtbar.',
         ),
         const _CheckLine(
-          '2FA, Recovery Codes, Trusted Device und Rate Limit haben eigene mobile Zustaende.',
+          '2FA, Recovery Codes, Trusted Device und Rate Limit haben eigene mobile Zustände.',
         ),
         const _CheckLine(
           'Geräte, Web-Sessions, API Tokens und Logout anderer Sessions sind als UI vorbereitet.',
@@ -598,7 +598,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Security-Paritaet markieren',
+          label: 'Security-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

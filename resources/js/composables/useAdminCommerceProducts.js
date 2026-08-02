@@ -66,7 +66,7 @@ export function useAdminCommerceProducts() {
         { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergänze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
         { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist für Käufer noch nicht eindeutig genug beschrieben. Bitte erkläre Inhalt, Umfang und Ablauf genauer.' },
         { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewählten Kategorie. Bitte Wähle die passende Marketplace-Kategorie.' },
-        { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irrefuehrende Bilder können nicht freigegeben werden.' },
+        { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irreführende Bilder können nicht freigegeben werden.' },
         { value: 'price_or_tax_issue', label: 'Preis, Steuer oder Versand unklar', text: 'Preis, Steuerklasse, Versand oder Lieferbedingungen sind nicht plausibel genug angegeben.' },
         { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthält Inhalte oder Leistungen, die auf Airmius nicht veröffentlicht werden können.' },
         { value: 'quality_review', label: 'Qualitätsprüfung nicht bestanden', text: 'Das Angebot erfüllt aktuell nicht die Qualitätsanforderungen für den Marketplace.' },
@@ -517,6 +517,5 @@ export function useAdminCommerceProducts() {
         submitEditProduct,
     }
 }
-
 
 

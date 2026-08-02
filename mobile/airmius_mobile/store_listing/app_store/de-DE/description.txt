@@ -2,7 +2,7 @@ Airmius bringt Sportvereine, Teams, Mitglieder und Trainer in eine mobile App.
 
 Die App hilft dir, Vereine zu finden, Mitgliedschaftsanfragen vorzubereiten, Vereinsupdates zu verfolgen, Nachrichten zu lesen, Trainings und Events im Blick zu behalten und dein Profil zu verwalten.
 
-Fuer Vereine entsteht eine mobile Grundlage fuer Mitgliedschaftsanfragen, Dokumente, Regeln, Beitragsinformationen, Teams, Rollen und Kommunikation.
+Für Vereine entsteht eine mobile Grundlage für Mitgliedschaftsanfragen, Dokumente, Regeln, Beitragsinformationen, Teams, Rollen und Kommunikation.
 
 Funktionen:
 - Vereine und Teams finden
@@ -10,8 +10,8 @@ Funktionen:
 - Benachrichtigungen und Nachrichten nutzen
 - Events und Training anzeigen
 - Rechnungen und Beitragsstatus vorbereiten
-- Vereinsdokumente und Datenschutzunterlagen verknuepfen
+- Vereinsdokumente und Datenschutzunterlagen verknüpfen
 - Profil und Sichtbarkeit verwalten
-- Mehrsprachige Oberflaeche
+- Mehrsprachige Oberfläche
 
-Die verfuegbaren Funktionen koennen je nach Verein, Rolle und gebuchter Airmius-Konfiguration abweichen.
+Die verfügbaren Funktionen können je nach Verein, Rolle und gebuchter Airmius-Konfiguration abweichen.

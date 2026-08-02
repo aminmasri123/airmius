@@ -26,14 +26,14 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
       _LeadItem(
         'Sparkasse Regional',
         'Freigabe',
-        'Jugendfoerderung, Vereinsprojekt, Vorstandsprüfung',
+        'Jugendförderung, Vereinsprojekt, Vorstandsprüfung',
         AirmiusColors.blue,
         Icons.account_balance_outlined,
       ),
       _LeadItem(
         'Sporthaus Weber',
         'Follow-up',
-        'Materialrabatt, Gutschein, Marketplace-Verknuepfung',
+        'Materialrabatt, Gutschein, Marketplace-Verknüpfung',
         AirmiusColors.pink,
         Icons.storefront_outlined,
       ),
@@ -221,7 +221,7 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const [
-                  Eyebrow('VERKNUEPFTE MODULE'),
+                  Eyebrow('VERKNÜPFTE MODULE'),
                   SizedBox(height: 10),
                   _ModuleLink(
                     title: 'Dateimanager',
@@ -231,7 +231,7 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
                   _ModuleLink(
                     title: 'Rechnungen',
                     body:
-                        'Sponsorvertrag in Rechnung, Zahlungsstatus und Mahnung überfuehren.',
+                        'Sponsorvertrag in Rechnung, Zahlungsstatus und Mahnung überführen.',
                   ),
                   _ModuleLink(
                     title: 'Ads & Public',

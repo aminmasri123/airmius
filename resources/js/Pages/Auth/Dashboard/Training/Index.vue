@@ -1517,7 +1517,7 @@ const {
                                 </select>
                             </label>
                             <label class="block text-sm font-semibold text-primary">Fokus
-                                <input v-model="planForm.item_focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Technik, Zone 2, Explosivitaet" />
+                                <input v-model="planForm.item_focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Technik, Zone 2, Explosivität" />
                             </label>
                             <label v-for="metric in planSport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
                                 {{ metric }}

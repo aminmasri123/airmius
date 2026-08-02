@@ -61,7 +61,7 @@ class _MobileStateFormErrorSuiteScreenState
       area: 'Forms',
       status: 'Upload',
       body:
-          'Datei auswählen, Dateiname, Groesse, Fortschritt, Uploadfehler und Dateimanager-Verknuepfung.',
+          'Datei auswählen, Dateiname, Größe, Fortschritt, Uploadfehler und Dateimanager-Verknüpfung.',
       icon: Icons.upload_file_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -124,7 +124,7 @@ class _MobileStateFormErrorSuiteScreenState
                     const SizedBox(height: 18),
                     const _Hero(
                       eyebrow: 'MOBILE STATES',
-                      title: 'Zustaende, Formulare & Fehler',
+                      title: 'Zustände, Formulare & Fehler',
                       subtitle:
                           'Native UI-Kontrollsuite für Loading, Empty, Success, Dynamic Forms, Uploads, Modals, Validierung, Rechte und Offline-Retry.',
                     ),
@@ -185,7 +185,7 @@ class _MobileStateFormErrorSuiteScreenState
                         context,
                         title: 'Form-State',
                         body:
-                            'Dynamische Formular- und Validierungszustaende sind als UI-Pattern vorbereitet.',
+                            'Dynamische Formular- und Validierungszustände sind als UI-Pattern vorbereitet.',
                         status: 'UI bereit',
                         icon: Icons.info_outline,
                       ),
@@ -193,7 +193,7 @@ class _MobileStateFormErrorSuiteScreenState
                         context,
                         title: 'Offline Retry',
                         body:
-                            'Offline-, Fehler- und Retry-Zustaende sind für API-Anbindung vorbereitet.',
+                            'Offline-, Fehler- und Retry-Zustände sind für API-Anbindung vorbereitet.',
                         status: 'UI bereit',
                         icon: Icons.info_outline,
                       ),

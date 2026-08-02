@@ -322,7 +322,7 @@ class SocialAuthController extends Controller
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
-    <title>Airmius App oeffnen</title>
+    <title>Airmius App öffnen</title>
     <style>
         :root { color-scheme: dark; }
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0c1016; color: #f4f7fb; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -337,13 +337,13 @@ class SocialAuthController extends Controller
 </head>
 <body>
     <main>
-        <h1>Login bestaetigt</h1>
-        <p>{$providerName} hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
+        <h1>Login bestätigt</h1>
+        <p>{$providerName} hat dich angemeldet. Öffne jetzt die Airmius App, um den Login abzuschließen.</p>
         <div class="actions">
-            <a class="primary" id="open-app" href="$deepLinkAttribute" data-intent-link="$androidIntentAttribute" data-custom-link="$customSchemeAttribute">Airmius App oeffnen</a>
+            <a class="primary" id="open-app" href="$deepLinkAttribute" data-intent-link="$androidIntentAttribute" data-custom-link="$customSchemeAttribute">Airmius App öffnen</a>
             <a href="$dashboardUrl">Im Browser weiter</a>
         </div>
-        <small>Wenn nichts passiert, tippe auf "Airmius App oeffnen". Airmius nutzt zuerst den HTTPS-App-Link und versucht auf Android zusaetzlich den App-Intent.</small>
+        <small>Wenn nichts passiert, tippe auf "Airmius App öffnen". Airmius nutzt zuerst den HTTPS-App-Link und versucht auf Android zusätzlich den App-Intent.</small>
     </main>
     <script>
         (function () {

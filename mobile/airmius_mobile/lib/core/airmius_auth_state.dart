@@ -567,7 +567,7 @@ class AirmiusAuthState extends ChangeNotifier {
       'unauthorized',
       'unauthenticated',
       'invalid',
-      'unguelt',
+      'ungült',
       'incorrect',
       'falsch',
       'verifiziert',

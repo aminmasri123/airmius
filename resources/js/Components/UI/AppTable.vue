@@ -8,7 +8,7 @@ defineProps({
     },
     emptyTitle: {
         type: String,
-        default: 'Keine Eintraege',
+        default: 'Keine Einträge',
     },
     emptyDescription: {
         type: String,

@@ -130,12 +130,12 @@ class MemberController extends Controller
         );
 
         if (! $sent) {
-            return back()->with('error', 'Inaktivitaets-Mail konnte nicht gesendet werden. Details stehen in der Mail-Zentrale.');
+            return back()->with('error', 'Inaktivitäts-Mail konnte nicht gesendet werden. Details stehen in der Mail-Zentrale.');
         }
 
         $this->markInactivityNoticeSent($user, $data['stage'], $scheduledAt);
 
-        return back()->with('success', 'Inaktivitaets-Mail wurde gesendet und protokolliert.');
+        return back()->with('success', 'Inaktivitäts-Mail wurde gesendet und protokolliert.');
     }
 
     /**
@@ -425,7 +425,7 @@ class MemberController extends Controller
             ['month' => '18 Monate', 'title' => 'Reaktivierungs-Mail senden', 'description' => 'Automatisch oder manuell erinnern und Versand in der Mail-Zentrale protokollieren.'],
             ['month' => '24 Monate', 'title' => 'Profil ausblenden', 'description' => 'öffentliches Profil, Suchbarkeit und Komfort-Kommunikation stoppen.'],
             ['month' => '36 Monate', 'title' => 'Anonymisieren', 'description' => 'Nicht notwendige personenbezogene Daten entfernen oder anonymisieren.'],
-            ['month' => 'Pflichtdaten', 'title' => 'Separat archivieren', 'description' => 'Rechnungen, Zahlungen und Vertragsdaten bleiben gemaess Aufbewahrungspflichten erhalten.'],
+            ['month' => 'Pflichtdaten', 'title' => 'Separat archivieren', 'description' => 'Rechnungen, Zahlungen und Vertragsdaten bleiben gemäß Aufbewahrungspflichten erhalten.'],
         ];
     }
 

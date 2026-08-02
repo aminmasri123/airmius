@@ -39,7 +39,7 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
         ),
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => TrustOperationsScreen(initialTab: 'Inaktivitaet'),
+            builder: (_) => TrustOperationsScreen(initialTab: 'Inaktivität'),
           ),
         ),
       ),
@@ -93,7 +93,7 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
                   ),
                   const SizedBox(height: 14),
                   const _ProfileProgress(
-                    title: 'Profilvollstaendigkeit',
+                    title: 'Profilvollständigkeit',
                     value: 0.82,
                     label: '82%',
                   ),
@@ -126,7 +126,7 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _role,
                     dropdownColor: airmiusSurfaceColor(context),
-                    decoration: _fieldDecoration('Primaere Rolle'),
+                    decoration: _fieldDecoration('Primäre Rolle'),
                     items:
                         const [
                               'Player',
@@ -294,7 +294,7 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
                       builder: (_) => UiActionResultScreen(
                         title: 'Supportfall erstellen',
                         body:
-                            'Supportfall für ${widget.name} erstellen und Moderationsnotiz verknuepfen.',
+                            'Supportfall für ${widget.name} erstellen und Moderationsnotiz verknüpfen.',
                         status: 'Support',
                         icon: Icons.support_agent_outlined,
                       ),

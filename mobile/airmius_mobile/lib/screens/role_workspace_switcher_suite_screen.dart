@@ -42,7 +42,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState
         title: 'Trainer',
         status: 'Team',
         body:
-            'Fokussiert Training, Kader, Anwesenheit, Vorfaelle, Teamchat, Kurse und Rollenrechte.',
+            'Fokussiert Training, Kader, Anwesenheit, Vorfälle, Teamchat, Kurse und Rollenrechte.',
         icon: Icons.sports_outlined,
         color: AirmiusColors.amber,
       ),
@@ -50,7 +50,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState
         title: 'Guardian',
         status: 'Safety',
         body:
-            'Zeigt Minderjaehrige, Freigaben, Notfallkontakte, Dokumente, Events und Benachrichtigungen.',
+            'Zeigt Minderjährige, Freigaben, Notfallkontakte, Dokumente, Events und Benachrichtigungen.',
         icon: Icons.family_restroom_outlined,
         color: AirmiusColors.pink,
       ),
@@ -141,7 +141,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState
                   onChanged: (value) => setState(() => showRoleBadges = value),
                 ),
                 _WorkspaceSwitch(
-                  title: 'Adminbereiche schuetzen',
+                  title: 'Adminbereiche schützen',
                   value: restrictAdminAreas,
                   color: Theme.of(context).colorScheme.tertiary,
                   onChanged: (value) =>

@@ -72,7 +72,7 @@ const emit = defineEmits([
 
                 <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
                     <h3 class="font-semibold text-primary">Sitzadresse</h3>
-                    <p class="mt-1 text-xs text-secondary">Die Sitzadresse ist deine rechtliche Anbieteradresse. Sie ist unabhaengig von Filialen, Boutiquen und Abholstationen.</p>
+                    <p class="mt-1 text-xs text-secondary">Die Sitzadresse ist deine rechtliche Anbieteradresse. Sie ist unabhängig von Filialen, Boutiquen und Abholstationen.</p>
                     <div class="mt-3 grid gap-3 md:grid-cols-6">
                         <input v-model="providerProfileForm.legal_country" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="DE" maxlength="2">
                         <input v-model="providerProfileForm.legal_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="PLZ">
@@ -111,7 +111,7 @@ const emit = defineEmits([
                 <p class="mt-1 text-sm text-secondary">Öffentliche Standorte können Kunden auf Anbieter- und Produktseiten sehen.</p>
 
                 <form class="mt-4 grid gap-3" @submit.prevent="emit('save-provider-location')">
-                    <input v-model="providerLocationForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name, z. B. Airmius Store Saarbruecken">
+                    <input v-model="providerLocationForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name, z. B. Airmius Store Saarbrücken">
                     <div class="grid gap-3 sm:grid-cols-2">
                         <select v-model="providerLocationForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="pickup">Abholstation</option>

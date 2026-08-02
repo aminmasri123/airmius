@@ -5,9 +5,13 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\UserRoleApplication;
 use Database\Seeders\RolesPermissionsSeeder;
+use Database\Seeders\SportsSeeder;
+use Database\Seeders\SportSkillSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use App\Models\Sport;
+use App\Models\SportSkill;
 
 class RoleApplicationTest extends TestCase
 {
@@ -59,6 +63,52 @@ class RoleApplicationTest extends TestCase
             ->assertJsonPath('data.application.status', 'pending');
 
         $this->assertTrue($athlete->fresh()->hasRole('coach'));
+    }
+
+    public function test_mobile_trainer_application_stores_multiple_sports_and_specialties(): void
+    {
+        $this->seed([
+            RolesPermissionsSeeder::class,
+            SportsSeeder::class,
+            SportSkillSeeder::class,
+        ]);
+
+        $athlete = User::factory()->create();
+        $athlete->assignRole('player');
+        Sanctum::actingAs($athlete);
+
+        $sports = Sport::query()->orderBy('id')->limit(2)->get();
+        $skills = SportSkill::query()
+            ->whereIn('sport_id', $sports->pluck('id'))
+            ->orderBy('id')
+            ->limit(3)
+            ->get();
+
+        $response = $this->postJson('/api/v1/role-applications', [
+            'type' => 'trainer',
+            'application_data' => [
+                'sports' => $sports->pluck('name')->implode(', '),
+                'sport_ids' => $sports->pluck('id')->values()->all(),
+                'specialties' => $skills->pluck('name')->implode(', '),
+                'sport_skill_ids' => $skills->pluck('id')->values()->all(),
+                'experience' => '10 Jahre Jugendtraining',
+            ],
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.application.application_data.sport_ids', $sports->pluck('id')->values()->all())
+            ->assertJsonPath('data.application.application_data.sport_skill_ids', $skills->pluck('id')->values()->all());
+
+        $this->assertDatabaseHas('user_role_applications', [
+            'user_id' => $athlete->id,
+            'type' => UserRoleApplication::TYPE_TRAINER,
+            'status' => UserRoleApplication::STATUS_PENDING,
+        ]);
+        $this->assertSame(
+            $sports->pluck('id')->values()->all(),
+            UserRoleApplication::query()->firstOrFail()->application_data['sport_ids'],
+        );
     }
 
     public function test_athlete_can_register_a_club_and_is_activated_as_owner_immediately(): void

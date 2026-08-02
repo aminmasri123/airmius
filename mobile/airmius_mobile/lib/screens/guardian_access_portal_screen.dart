@@ -35,7 +35,7 @@ class _GuardianAccessPortalScreenState
       area: 'Login',
       status: 'Sicher',
       description:
-          'Separater Login für Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschuetzt bleiben.',
+          'Separater Login für Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschützt bleiben.',
       icon: Icons.login_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -44,7 +44,7 @@ class _GuardianAccessPortalScreenState
       area: 'Verify',
       status: 'Prüfen',
       description:
-          'E-Mail, Token, Identitaetsstatus und offene Freigaben werden vor der Nutzung sichtbar gemacht.',
+          'E-Mail, Token, Identitätsstatus und offene Freigaben werden vor der Nutzung sichtbar gemacht.',
       icon: Icons.verified_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -375,7 +375,7 @@ class _StatePanel extends StatelessWidget {
             onChanged: onMailConfirmed,
           ),
           _SwitchRow(
-            label: 'Kind verknuepft',
+            label: 'Kind verknüpft',
             value: childLinked,
             onChanged: onChildLinked,
           ),

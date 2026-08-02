@@ -43,7 +43,7 @@ class _RoleBasedAppExperienceSuiteScreenState
       area: 'Member',
       status: 'Coach',
       body:
-          'Trainer Cockpit, Teams, Trainingsplaene, Events, Anwesenheit, Logs, Feedback, Dateien und Teamkommunikation.',
+          'Trainer Cockpit, Teams, Trainingspläne, Events, Anwesenheit, Logs, Feedback, Dateien und Teamkommunikation.',
       icon: Icons.sports_outlined,
       color: Color(0xFFF8B84E),
     ),

@@ -342,12 +342,12 @@ export function useCommerceWorkspace(props) {
 
     const adFormats = [
         { key: 'feed_square', label: 'Feed Quadrat', size: '1080 x 1080 px', ratio: '1:1', hint: 'Ideal für Marketplace-Karten und Feed.' },
-        { key: 'feed_portrait', label: 'Feed Portrait', size: '1080 x 1350 px', ratio: '4:5', hint: 'Mehr Flaeche im mobilen Feed.' },
+        { key: 'feed_portrait', label: 'Feed Portrait', size: '1080 x 1350 px', ratio: '4:5', hint: 'Mehr Fläche im mobilen Feed.' },
         { key: 'story_vertical', label: 'Story/Reel', size: '1080 x 1920 px', ratio: '9:16', hint: 'Vollbildformat für mobile Kampagnen.' },
         { key: 'banner_wide', label: 'Wide Banner', size: '1200 x 628 px', ratio: '1.91:1', hint: 'Gut für breite Sponsor- und Websitebereiche.' },
     ]
     const adPlacements = [
-        { key: 'marketplace_card', label: 'Marketplace Karte', formats: ['feed_square', 'banner_wide'], hint: 'Wird auf Marketplace-Karten und passenden Angebotsflaechen ausgespielt.' },
+        { key: 'marketplace_card', label: 'Marketplace Karte', formats: ['feed_square', 'banner_wide'], hint: 'Wird auf Marketplace-Karten und passenden Angebotsflächen ausgespielt.' },
         { key: 'feed', label: 'Feed', formats: ['feed_square', 'feed_portrait'], hint: 'Wird im Feed mit anderen aktiven Feed-Kampagnen rotiert. Budget, Tageslimit und Freigabe steuern die Ausspielung.' },
         { key: 'sidebar', label: 'Sidebar', formats: ['banner_wide', 'feed_square'], hint: 'Schmale Anzeige in passenden Seitenbereichen.' },
         { key: 'sponsor_section', label: 'Sponsor-Bereich', formats: ['banner_wide', 'feed_square'], hint: 'Anzeige in Sponsor- und Partnerbereichen.' },

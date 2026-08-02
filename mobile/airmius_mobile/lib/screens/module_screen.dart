@@ -125,7 +125,7 @@ class ModuleScreen extends StatelessWidget {
     if (action.contains('senden')) {
       return 'Formular- und Statuslogik wird später über API gespeichert.';
     }
-    return 'Native Oberflaeche für diese Funktion, passend zur Web-App-Struktur.';
+    return 'Native Oberfläche für diese Funktion, passend zur Web-App-Struktur.';
   }
 }
 

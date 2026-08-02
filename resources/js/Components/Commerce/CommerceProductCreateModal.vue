@@ -77,7 +77,7 @@ const copy = {
         coachingEnabled: 'Athleten-Feedback aktivieren',
         coachingInstructions: 'Was sollen Athleten als Fortschritt senden? Bilder, Notizen, Belastung, Fragen ...',
         standardTax: 'Standardsteuer',
-        reducedTax: 'Ermaessigt',
+        reducedTax: 'Ermäßigt',
         zeroTax: 'Nullsatz',
         price: 'Preis in EUR, z. B. 10,99',
         commission: 'Airmius-Provision',

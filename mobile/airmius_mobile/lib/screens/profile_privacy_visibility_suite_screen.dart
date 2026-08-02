@@ -36,7 +36,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState
       _PrivacyRow(
         title: 'Teams anzeigen',
         body:
-            'Teamzugehoerigkeit kann für Kontakte, Verein oder nur für Admins sichtbar sein.',
+            'Teamzugehörigkeit kann für Kontakte, Verein oder nur für Admins sichtbar sein.',
         value: showTeams,
         onChanged: (value) => setState(() => showTeams = value),
         icon: Icons.groups_2_outlined,
@@ -72,7 +72,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState
       _PrivacyRow(
         title: 'Blockierte Nutzer',
         body:
-            'Blockieren, Melden und Kontaktbeschraenkungen werden für private Nachrichten und Feed vorbereitet.',
+            'Blockieren, Melden und Kontaktbeschränkungen werden für private Nachrichten und Feed vorbereitet.',
         value: blockedUsers,
         onChanged: (value) => setState(() => blockedUsers = value),
         icon: Icons.block_outlined,
@@ -94,7 +94,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState
                 const SectionLabel('PRIVACY CENTER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'User brauchen Kontrolle über Profil, Suche, Vereinszugehoerigkeit, Teams, Nachrichten, blockierte Nutzer und Datenrechte.',
+                  'User brauchen Kontrolle über Profil, Suche, Vereinszugehörigkeit, Teams, Nachrichten, blockierte Nutzer und Datenrechte.',
                   style: TextStyle(
                     color: AirmiusColors.text,
                     height: 1.45,

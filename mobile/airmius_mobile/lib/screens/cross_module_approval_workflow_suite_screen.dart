@@ -161,7 +161,7 @@ class _CrossModuleApprovalWorkflowSuiteScreenState
                     icon: Icons.priority_high_outlined,
                     title: 'Eskalation',
                     body:
-                        'Überfaellige oder kritische Freigaben können an Vorstand, Kassenwart oder Plattformadmin gehen.',
+                        'Überfällige oder kritische Freigaben können an Vorstand, Kassenwart oder Plattformadmin gehen.',
                     enabled: _escalation,
                     onChanged: (value) => setState(() => _escalation = value),
                   ),
@@ -314,7 +314,7 @@ const _approvals = [
     queue: 'Finanzen',
     title: 'Refund prüfen',
     body:
-        'Rückerstattung für doppelte Beitragszahlung benoetigt Kassenwart-Freigabe.',
+        'Rückerstattung für doppelte Beitragszahlung benötigt Kassenwart-Freigabe.',
     status: 'Eilig',
     icon: Icons.payments_outlined,
     color: AirmiusColors.amber,

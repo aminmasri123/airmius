@@ -124,7 +124,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Produktqualitaet & Inventar'),
+                  const Eyebrow('Produktqualität & Inventar'),
                   const SizedBox(height: 8),
                   SwitchListTile(
                     value: _qualityApproved,
@@ -133,7 +133,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
                     activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: Text(
-                      'Qualitaetsfreigabe erteilt',
+                      'Qualitätsfreigabe erteilt',
                       style: TextStyle(
                         color: airmiusTextColor(context),
                         fontWeight: FontWeight.w900,
@@ -265,7 +265,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
                   const AirmiusTextField(
                     label: 'Rückgabegrund',
                     hint:
-                        'Groesse, Defekt, Falschlieferung oder sonstiger Grund',
+                        'Größe, Defekt, Falschlieferung oder sonstiger Grund',
                     icon: Icons.assignment_return_outlined,
                   ),
                   const SizedBox(height: 10),
@@ -330,7 +330,7 @@ class _CommerceDetailScreenState extends State<CommerceDetailScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      'Payout wird mit Rechnung, Provider und Verein verknuepft.',
+                      'Payout wird mit Rechnung, Provider und Verein verknüpft.',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                   ),

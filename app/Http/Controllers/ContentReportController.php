@@ -83,7 +83,7 @@ class ContentReportController extends Controller
     public function appeal(Request $request, ContentReport $report)
     {
         abort_unless((int) $report->reporter_id === (int) $request->user()->id, 403);
-        abort_if($report->status === 'open', 422, 'Eine Beschwerde ist erst nach einer Moderationsentscheidung moeglich.');
+        abort_if($report->status === 'open', 422, 'Eine Beschwerde ist erst nach einer Moderationsentscheidung möglich.');
         abort_if($report->appeal_status === 'pending', 422, 'Zu dieser Meldung ist bereits eine Beschwerde offen.');
 
         $data = $request->validate([

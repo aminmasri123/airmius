@@ -94,7 +94,7 @@ class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
                     dropdownColor: airmiusSurfaceColor(context),
                     decoration: _fieldDecoration('Zahlrhythmus'),
                     items:
-                        const ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich']
+                        const ['Monatlich', '4 Monate', '6 Monate', 'Jährlich']
                             .map(
                               (item) => DropdownMenuItem(
                                 value: item,
@@ -159,7 +159,7 @@ class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      'Nur bei Mandat und faelligem Beitrag.',
+                      'Nur bei Mandat und fälligem Beitrag.',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                   ),

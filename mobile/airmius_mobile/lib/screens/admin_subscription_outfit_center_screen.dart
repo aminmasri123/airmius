@@ -37,7 +37,7 @@ class _AdminSubscriptionOutfitCenterState
       title: 'Outfit Subscription',
       area: 'Outfits',
       body:
-          'Ausstattung, Groessen, Lieferung, Status und Support für Team-Outfits.',
+          'Ausstattung, Größen, Lieferung, Status und Support für Team-Outfits.',
       status: 'Lieferung',
       meta: 'Team U16',
       icon: Icons.checkroom_outlined,
@@ -46,8 +46,8 @@ class _AdminSubscriptionOutfitCenterState
     _SubscriptionItem(
       title: 'Renewal Entscheidung',
       area: 'Renewals',
-      body: 'Naechste Verlaengerung, Rechnung, Zahlung und Adminentscheidung.',
-      status: 'Faellig',
+      body: 'Nächste Verlängerung, Rechnung, Zahlung und Adminentscheidung.',
+      status: 'Fällig',
       meta: 'in 14 Tagen',
       icon: Icons.update_outlined,
       color: AirmiusColors.amber,
@@ -135,7 +135,7 @@ class _AdminSubscriptionOutfitCenterState
                               _SwitchRow(
                                 title: 'Pausierte anzeigen',
                                 subtitle:
-                                    'Pausen, Gruende und Reaktivierung sichtbar machen.',
+                                    'Pausen, Gründe und Reaktivierung sichtbar machen.',
                                 value: _showPaused,
                                 onChanged: (value) =>
                                     setState(() => _showPaused = value),
@@ -143,7 +143,7 @@ class _AdminSubscriptionOutfitCenterState
                               _SwitchRow(
                                 title: 'Renewals anzeigen',
                                 subtitle:
-                                    'Verlaengerungen, Fristen und Zahlungsstatus anzeigen.',
+                                    'Verlängerungen, Fristen und Zahlungsstatus anzeigen.',
                                 value: _showRenewals,
                                 onChanged: (value) =>
                                     setState(() => _showRenewals = value),
@@ -151,7 +151,7 @@ class _AdminSubscriptionOutfitCenterState
                               _SwitchRow(
                                 title: 'Outfit-Lieferungen anzeigen',
                                 subtitle:
-                                    'Groessen, Versand, Status und Support für Outfit-Abos.',
+                                    'Größen, Versand, Status und Support für Outfit-Abos.',
                                 value: _showDeliveries,
                                 onChanged: (value) =>
                                     setState(() => _showDeliveries = value),
@@ -314,7 +314,7 @@ class _SubscriptionHero extends StatelessWidget {
               ),
               SizedBox(width: 10),
               Expanded(
-                child: MetricCard(value: '2', label: 'Faellig'),
+                child: MetricCard(value: '2', label: 'Fällig'),
               ),
               SizedBox(width: 10),
               Expanded(

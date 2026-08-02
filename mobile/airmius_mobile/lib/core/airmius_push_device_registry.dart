@@ -175,7 +175,7 @@ class AirmiusPushDeviceRegistry {
       if (!await enableIfPermissionGranted()) {
         return const AirmiusPushRegistrationResult(
           status: 'missing_token',
-          message: 'Push-Token ist noch nicht verfuegbar.',
+          message: 'Push-Token ist noch nicht verfügbar.',
         );
       }
     }
@@ -194,7 +194,7 @@ class AirmiusPushDeviceRegistry {
     if (token.isEmpty) {
       return const AirmiusPushRegistrationResult(
         status: 'missing_token',
-        message: 'Push-Token ist noch nicht verfuegbar.',
+        message: 'Push-Token ist noch nicht verfügbar.',
       );
     }
 

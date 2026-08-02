@@ -25,7 +25,7 @@ class AccountSuspendedNotification extends Notification
     {
         return EmailTemplate::mail('account_suspended', [
             'name' => trim((string) ($notifiable->name ?? '')) ?: 'zusammen',
-            'reason' => $this->reason ?: 'Regelverstoss oder wiederholte Moderationsverstoesse',
+            'reason' => $this->reason ?: 'Regelverstoss oder wiederholte Moderationsverstöße',
             'suspended_until' => $this->suspendedUntil ?: 'bis zur Prüfung durch das Airmius-Team',
         ], route('legal.reporting'));
     }

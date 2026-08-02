@@ -74,8 +74,8 @@ const searchModel = computed({
                                 <option value="trialing">Testphase</option>
                                 <option value="active">Aktiv</option>
                                 <option value="past_due">Zahlung offen</option>
-                                <option value="cancels_at_period_end">Gekuendigt zum Ende</option>
-                                <option value="cancelled">Gekuendigt</option>
+                                <option value="cancels_at_period_end">Gekündigt zum Ende</option>
+                                <option value="cancelled">Gekündigt</option>
                             </select>
                             <p class="mt-1 text-xs text-secondary">{{ statusLabels[formForClub(club).status] }}</p>
                         </td>

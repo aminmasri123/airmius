@@ -89,7 +89,7 @@ class ClubController extends Controller
         $club->loadCount(['users', 'teams']);
 
         return response()->json([
-            'message' => 'Verein registriert. Der Antrag wartet jetzt auf Pruefung.',
+            'message' => 'Verein registriert. Der Antrag wartet jetzt auf Prüfung.',
             'data' => (new ClubResource($club))->resolve($request),
         ], 201);
     }
@@ -373,8 +373,8 @@ class ClubController extends Controller
             });
 
             AppNotification::send($existingUser, 'club.member_linked', [
-                'title' => 'Du wurdest mit '.$club->name.' verknuepft',
-                'body' => 'Der Verein hat dich als Mitglied hinzugefuegt.',
+                'title' => 'Du wurdest mit '.$club->name.' verknüpft',
+                'body' => 'Der Verein hat dich als Mitglied hinzugefügt.',
                 'url' => '/club-memberships',
                 'club_id' => $club->id,
             ]);
@@ -429,7 +429,7 @@ class ClubController extends Controller
                     ]);
 
                     throw ValidationException::withMessages([
-                        'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+                        'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
                     ]);
                 }
                 $result = 'invited';
@@ -437,7 +437,7 @@ class ClubController extends Controller
         }
 
         $messages = [
-            'linked' => 'Mitglied wurde direkt mit dem Verein verknuepft.',
+            'linked' => 'Mitglied wurde direkt mit dem Verein verknüpft.',
             'invited' => 'Einladung wurde versendet.',
             'stored' => 'Externes Mitglied wurde gespeichert.',
         ];
@@ -642,7 +642,7 @@ class ClubController extends Controller
         if ($invoice->user_id) {
             AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
                 'title' => 'Zahlung erfasst',
-                'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde markiert.',
+                'body' => 'Deine Zahlung für '.$invoice->number.' wurde markiert.',
                 'url' => '/settings',
                 'invoice_id' => $invoice->id,
                 'club_id' => $club->id,
@@ -1077,7 +1077,7 @@ class ClubController extends Controller
 
         $this->notifyClubManagers($club, 'club.membership_request_created', [
             'title' => 'Neue Mitgliedschaftsanfrage',
-            'body' => $request->user()->name.' moechte Mitglied bei '.$club->name.' werden.',
+            'body' => $request->user()->name.' möchte Mitglied bei '.$club->name.' werden.',
             'url' => '/club-memberships',
             'club_id' => $club->id,
             'membership_request_id' => $membershipRequest->id,
@@ -1107,8 +1107,8 @@ class ClubController extends Controller
         ]);
 
         $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
-            'title' => 'Mitgliedschaftsanfrage zurueckgezogen',
-            'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurueckgezogen.',
+            'title' => 'Mitgliedschaftsanfrage zurückgezogen',
+            'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurückgezogen.',
             'url' => '/club-memberships',
             'club_id' => $club->id,
             'membership_request_id' => $membershipRequest->id,
@@ -1317,7 +1317,7 @@ class ClubController extends Controller
     {
         app(WebClubMembershipController::class)->acceptExternalInvitation($request, $token);
 
-        return response()->json(['message' => 'Vereinsmitgliedschaft wurde mit deinem Konto verknuepft.']);
+        return response()->json(['message' => 'Vereinsmitgliedschaft wurde mit deinem Konto verknüpft.']);
     }
 
     public function externalInvitationByToken(Request $request, string $token)
@@ -1497,7 +1497,7 @@ class ClubController extends Controller
             $isAccepted = in_array((string) $document['id'], $acceptedDocumentIds, true);
 
             if (($document['is_required'] ?? false) && ! $isAccepted) {
-                $errors['accepted_documents.'.$document['id']] = $document['title'].' muss bestaetigt werden.';
+                $errors['accepted_documents.'.$document['id']] = $document['title'].' muss bestätigt werden.';
             }
 
             if ($isAccepted) {
@@ -1531,7 +1531,7 @@ class ClubController extends Controller
 
         if (! in_array($method, $allowed, true)) {
             throw ValidationException::withMessages([
-                'preferred_payment_method' => 'Diese Zahlmethode ist fuer diesen Verein nicht verfuegbar.',
+                'preferred_payment_method' => 'Diese Zahlmethode ist für diesen Verein nicht verfügbar.',
             ]);
         }
 
@@ -1546,7 +1546,7 @@ class ClubController extends Controller
 
         if (! in_array($interval, self::CONTRIBUTION_INTERVALS, true)) {
             throw ValidationException::withMessages([
-                'requested_billing_interval' => 'Dieses Beitragsintervall ist ungueltig.',
+                'requested_billing_interval' => 'Dieses Beitragsintervall ist ungültig.',
             ]);
         }
 
@@ -2078,7 +2078,7 @@ class ClubController extends Controller
 
         if ($ruleType === 'special' && ($data['billing_interval'] ?? null) !== 'once') {
             throw ValidationException::withMessages([
-                'billing_interval' => 'Sonderbeitraege muessen einmalig abgerechnet werden.',
+                'billing_interval' => 'Sonderbeiträge müssen einmalig abgerechnet werden.',
             ]);
         }
 

@@ -27,7 +27,7 @@ class _LocalizationRtlFormatParitySuiteScreenState
       format: 'Datum',
       title: 'Datum und Zeit',
       body:
-          'Geburtsdatum, Eventzeiten, Zahlungsfaelligkeit, Chatzeit und Trainingslogs brauchen locale-spezifische Darstellung.',
+          'Geburtsdatum, Eventzeiten, Zahlungsfälligkeit, Chatzeit und Trainingslogs brauchen locale-spezifische Darstellung.',
       exampleDe: '05.06.2026 · 18:30',
       exampleEn: '06/05/2026 · 6:30 PM',
       exampleFr: '05/06/2026 · 18:30',
@@ -212,7 +212,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Flutter bereitet Sprache, RTL, Datum, Währung, Einheiten, Fehlertexte, Legal-Versionen und API-Locale-Sync als echte App-Zustaende vor.',
+            'Flutter bereitet Sprache, RTL, Datum, Währung, Einheiten, Fehlertexte, Legal-Versionen und API-Locale-Sync als echte App-Zustände vor.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -536,7 +536,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Locale-Paritaet',
+      title: 'Locale-Parität',
       subtitle: 'Was für echte Mehrsprachigkeit vorbereitet ist.',
       children: [
         const _CheckLine(
@@ -553,7 +553,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Locale-Paritaet markieren',
+          label: 'Locale-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

@@ -35,7 +35,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState
       value: '24',
       trend: '+18%',
       body:
-          'Neue Antraege, Rückzuege, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
+          'Neue Anträge, Rückzüge, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
       icon: Icons.assignment_ind_outlined,
       color: AirmiusColors.green,
     ),
@@ -85,7 +85,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState
       value: '42',
       trend: '+6%',
       body:
-          'Abos, Lieferungen, Pausen, Zahlstatus, Supportfaelle und offene Pakete als mobile Kennzahlen.',
+          'Abos, Lieferungen, Pausen, Zahlstatus, Supportfälle und offene Pakete als mobile Kennzahlen.',
       icon: Icons.checkroom_outlined,
       color: AirmiusColors.blue,
     ),
@@ -105,13 +105,13 @@ class _AnalyticsChartDashboardParitySuiteScreenState
       value: '82%',
       trend: '+5%',
       body:
-          'Sportprofil, Trainingsplaene, Logs, Zielerreichung, Wellbeing und Coach-Freigabe als mobile Auswertung.',
+          'Sportprofil, Trainingspläne, Logs, Zielerreichung, Wellbeing und Coach-Freigabe als mobile Auswertung.',
       icon: Icons.insights_outlined,
       color: AirmiusColors.blue,
     ),
     _AnalyticsCard(
       area: 'Community',
-      title: 'Feed Aktivitaet',
+      title: 'Feed Aktivität',
       value: '1.2k',
       trend: '+31%',
       body:
@@ -214,7 +214,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState
                   context,
                   title: 'Analytics Dashboard Parity',
                   body:
-                      'Web-Dashboards, KPI-Karten, Diagramme, Trends, Reports, Exporte und Loading/Empty/Error-Zustaende sind als mobile Flutter-UI vorbereitet.',
+                      'Web-Dashboards, KPI-Karten, Diagramme, Trends, Reports, Exporte und Loading/Empty/Error-Zustände sind als mobile Flutter-UI vorbereitet.',
                   status: 'Analytics',
                   icon: Icons.insights_outlined,
                 ),
@@ -259,7 +259,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Flutter übernimmt Web-Reports nicht als breite Diagramme, sondern als KPI-Karten, Trendleisten, Reportdetails, Export-CTAs und saubere Empty/Loading/Error-Zustaende.',
+            'Flutter übernimmt Web-Reports nicht als breite Diagramme, sondern als KPI-Karten, Trendleisten, Reportdetails, Export-CTAs und saubere Empty/Loading/Error-Zustände.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -440,7 +440,7 @@ class _TrendPanel extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Trendbars ersetzen komplexe Web-Charts auf kleinen Screens und fuehren in Detailreports.',
+          'Trendbars ersetzen komplexe Web-Charts auf kleinen Screens und führen in Detailreports.',
           style: TextStyle(
             color: airmiusMutedColor(context),
             height: 1.35,
@@ -614,7 +614,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Dashboard-Paritaet',
+      title: 'Dashboard-Parität',
       subtitle: 'Was aus Web-Reports mobil übernommen wird.',
       children: [
         const _CheckLine(
@@ -631,7 +631,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Analytics-Paritaet markieren',
+          label: 'Analytics-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

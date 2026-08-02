@@ -49,7 +49,7 @@ class WebAppModuleCompletionSuiteScreen extends StatelessWidget {
           'Verein suchen',
           'Anfrage senden',
           'Anfrage zurückziehen',
-          'Dateien verknuepfen',
+          'Dateien verknüpfen',
         ],
         icon: Icons.groups_3_outlined,
         color: AirmiusColors.green,
@@ -74,7 +74,7 @@ class WebAppModuleCompletionSuiteScreen extends StatelessWidget {
         progress: .8,
         status: 'UI abgedeckt',
         body:
-            'Trainingsplaene, Events, Anwesenheit, Fahrgemeinschaften, Wohlbefinden, Kurse, Zertifikate und Badges.',
+            'Trainingspläne, Events, Anwesenheit, Fahrgemeinschaften, Wohlbefinden, Kurse, Zertifikate und Badges.',
         actions: [
           'Training planen',
           'Event buchen',
@@ -100,11 +100,11 @@ class WebAppModuleCompletionSuiteScreen extends StatelessWidget {
         color: AirmiusColors.amber,
       ),
       const _ModuleCompletion(
-        title: 'Mobile Qualitaet & Store',
+        title: 'Mobile Qualität & Store',
         progress: .74,
         status: 'UI vorbereitet',
         body:
-            'Responsive Shell, Bottom Navigation, Modals, Uploads, Offline-Zustaende, Push, Deep Links, RTL und Store-Readiness.',
+            'Responsive Shell, Bottom Navigation, Modals, Uploads, Offline-Zustände, Push, Deep Links, RTL und Store-Readiness.',
         actions: [
           'Offline sehen',
           'Push testen',

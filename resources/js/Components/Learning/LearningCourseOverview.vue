@@ -49,7 +49,7 @@ const panels = [
                 <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.average_progress || 0 }}%</p>
             </div>
             <div class="rounded-lg border border-border bg-bg p-3">
-                <p class="text-xs uppercase text-secondary">Abschluesse</p>
+                <p class="text-xs uppercase text-secondary">Abschlüsse</p>
                 <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.completed_enrollments || 0 }}</p>
             </div>
             <div class="rounded-lg border border-border bg-bg p-3">

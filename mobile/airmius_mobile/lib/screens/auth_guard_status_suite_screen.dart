@@ -23,7 +23,7 @@ class _AuthGuardStatusSuiteScreenState
   static const _steps = <_GuardStep>[
     _GuardStep(
       area: 'Account',
-      title: 'Profil vervollstaendigen',
+      title: 'Profil vervollständigen',
       route: 'Auth/CompleteProfile',
       status: 'Pflichtprofil',
       body:
@@ -94,7 +94,7 @@ class _AuthGuardStatusSuiteScreenState
       route: 'Auth/GuardianConsent/Pending',
       status: 'Einwilligung',
       body:
-          'Minderjaehrige sehen wartende Freigabe, Guardian-Kontakt, erneutes Senden und gesperrte App-Bereiche.',
+          'Minderjährige sehen wartende Freigabe, Guardian-Kontakt, erneutes Senden und gesperrte App-Bereiche.',
       icon: Icons.groups_outlined,
       primary: 'Erneut senden',
       secondary: 'Freigaben sehen',
@@ -215,7 +215,7 @@ class _AuthGuardStatusSuiteScreenState
                             context,
                             title: 'Guard Flow prüfen',
                             body:
-                                'Alle Auth-, Guardian-, Error- und Systemzustaende als mobile UI-Paritaet prüfen. Backend-API wird später verbunden.',
+                                'Alle Auth-, Guardian-, Error- und Systemzustände als mobile UI-Parität prüfen. Backend-API wird später verbunden.',
                             status: 'UI Parity',
                             icon: Icons.fact_check_outlined,
                           ),
@@ -262,7 +262,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Geschuetzte Web-Zustaende als App-Flows',
+            'Geschützte Web-Zustände als App-Flows',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -271,7 +271,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Complete Profile, Verify Email, Suspended, 2FA, Guardian Pending, Forbidden und Maintenance werden in der App nicht als nackte Seiten, sondern als klare mobile Entscheidungs- und Statuskarten gefuehrt.',
+            'Complete Profile, Verify Email, Suspended, 2FA, Guardian Pending, Forbidden und Maintenance werden in der App nicht als nackte Seiten, sondern als klare mobile Entscheidungs- und Statuskarten geführt.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.5,
@@ -374,7 +374,7 @@ class _SwitchPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Mobile Guard Simulation',
       subtitle:
-          'Diese Schalter zeigen später API-Zustaende aus Laravel und machen die App-Flows testbar.',
+          'Diese Schalter zeigen später API-Zustände aus Laravel und machen die App-Flows testbar.',
       children: [
         _SwitchLine(
           title: 'Gerät bei 2FA merken',
@@ -562,7 +562,7 @@ class _ChecklistPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Paritaets-Check für $active',
+      title: 'Paritäts-Check für $active',
       subtitle:
           'Was diese Suite für die Web-zu-Mobile-Konvertierung absichert.',
       children: [
@@ -573,7 +573,7 @@ class _ChecklistPanel extends StatelessWidget {
           'Jeder Zustand hat Primary-CTA, Secondary-CTA, Status und Route-Hinweis.',
         ),
         const _CheckLine(
-          'Fehler, gesperrte Bereiche und Guardian-Gates bleiben für User verstaendlich.',
+          'Fehler, gesperrte Bereiche und Guardian-Gates bleiben für User verständlich.',
         ),
         const _CheckLine(
           'Backend kommt später über Laravel API; UI-Intent ist bereits vorbereitet.',

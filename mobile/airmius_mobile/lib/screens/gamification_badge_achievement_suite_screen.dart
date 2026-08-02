@@ -34,7 +34,7 @@ class _GamificationBadgeAchievementSuiteScreenState
         title: 'Training Streak',
         status: 'Level 3',
         body:
-            'Auszeichnung für regelmaessige Teilnahme an Training und Events.',
+            'Auszeichnung für regelmäßige Teilnahme an Training und Events.',
         icon: Icons.local_fire_department_outlined,
         color: AirmiusColors.amber,
       ),

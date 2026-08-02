@@ -91,7 +91,7 @@ defineProps({
                         <div class="mt-4 rounded-lg border border-border bg-inputBg p-4">
                             <p class="text-xs font-semibold uppercase text-secondary">Empfohlenes Format</p>
                             <p class="mt-2 text-xl font-bold text-primary">{{ visuals.hero?.recommended_size || '1920 x 1080 px' }}</p>
-                            <p class="mt-1 text-sm text-secondary">Verhaeltnis {{ visuals.hero?.ratio || '16:9' }} - {{ visuals.hero?.formats || 'WebP, JPG, PNG' }}</p>
+                            <p class="mt-1 text-sm text-secondary">Verhältnis {{ visuals.hero?.ratio || '16:9' }} - {{ visuals.hero?.formats || 'WebP, JPG, PNG' }}</p>
                         </div>
 
                         <p class="mt-4 rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm leading-6 text-secondary">

@@ -55,7 +55,7 @@ class _ClubVisibilityRulesSuiteScreenState
       _RuleRow(
         title: 'Beitragsregeln anzeigen',
         body:
-            'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, bar oder Überweisung als sichtbare Optionen.',
+            'Monatlich, vierteljährlich, halbjährlich, jährlich, bar oder Überweisung als sichtbare Optionen.',
         value: showFees,
         onChanged: (value) => setState(() => showFees = value),
         icon: Icons.payments_outlined,
@@ -71,7 +71,7 @@ class _ClubVisibilityRulesSuiteScreenState
         color: AirmiusColors.blue,
       ),
       _RuleRow(
-        title: 'Vereinsregeln verknuepfen',
+        title: 'Vereinsregeln verknüpfen',
         body:
             'Satzung, Hausordnung, Trainingsregeln oder Teilnahmebedingungen als Link oder Upload verbinden.',
         value: requireClubRules,
@@ -91,7 +91,7 @@ class _ClubVisibilityRulesSuiteScreenState
       _RuleRow(
         title: 'Admins informieren',
         body:
-            'Neue Anfragen, Rückzuege, Dokumente und Formularänderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
+            'Neue Anfragen, Rückzüge, Dokumente und Formularänderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
         value: notifyAdmins,
         onChanged: (value) => setState(() => notifyAdmins = value),
         icon: Icons.notifications_active_outlined,

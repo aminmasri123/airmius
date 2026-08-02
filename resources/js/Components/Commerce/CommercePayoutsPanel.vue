@@ -92,7 +92,7 @@ const emit = defineEmits(['store-payout-profile', 'request-payout'])
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <p class="text-xs uppercase text-secondary">Bereits angefordert</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.requested_cents) }}</p>
-                        <p class="mt-1 text-xs text-secondary">{{ payoutSummary.requested_count || 0 }} offene Auszahlungsantraege</p>
+                        <p class="mt-1 text-xs text-secondary">{{ payoutSummary.requested_count || 0 }} offene Auszahlungsanträge</p>
                     </div>
                 </div>
             </aside>

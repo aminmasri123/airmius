@@ -49,7 +49,7 @@ class _OfflineSyncCacheParitySuiteScreenState
       title: 'Datei-Upload fortsetzen',
       area: 'Files',
       body:
-          'Upload-Fortschritt, Dateimanager-Verknuepfung und Datenschutz-Zweckbindung bleiben sichtbar, bis Laravel Storage bestätigt.',
+          'Upload-Fortschritt, Dateimanager-Verknüpfung und Datenschutz-Zweckbindung bleiben sichtbar, bis Laravel Storage bestätigt.',
       status: 'Resume',
       icon: Icons.cloud_upload_outlined,
       primary: 'Fortsetzen',
@@ -85,7 +85,7 @@ class _OfflineSyncCacheParitySuiteScreenState
           'Wenn zwei Admins dieselbe Anfrage bearbeiten, zeigt die App Konflikt, alten Wert, neuen Wert und sichere Entscheidung.',
       status: 'Conflict',
       icon: Icons.warning_amber_outlined,
-      primary: 'Konflikt loesen',
+      primary: 'Konflikt lösen',
       secondary: 'Audit',
       color: AirmiusColors.red,
     ),
@@ -107,7 +107,7 @@ class _OfflineSyncCacheParitySuiteScreenState
       body: SafeArea(
         child: PageFrame(
           title: 'Offline Sync Cache Parity',
-          subtitle: 'Mobile API-Zustaende für Laravel-Anbindung vorbereiten.',
+          subtitle: 'Mobile API-Zustände für Laravel-Anbindung vorbereiten.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -125,7 +125,7 @@ class _OfflineSyncCacheParitySuiteScreenState
                     context,
                     title: 'Verbindung prüfen',
                     body:
-                        'Netzwerkstatus $_network, Strategie $_strategy, Queue $queued und Retry $_retryEnabled als mobile API-Zustaende prüfen.',
+                        'Netzwerkstatus $_network, Strategie $_strategy, Queue $queued und Retry $_retryEnabled als mobile API-Zustände prüfen.',
                     status: 'Network',
                     icon: Icons.sync_outlined,
                   ),
@@ -603,7 +603,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Offline-/Sync-Paritaet',
+      title: 'Offline-/Sync-Parität',
       subtitle:
           'Was für die spätere Laravel-API-Verbindung sichtbar vorbereitet ist.',
       children: [
@@ -614,14 +614,14 @@ class _Checklist extends StatelessWidget {
           'Lange Formulare, Uploads, Chat und Training können als lokale Drafts/Queue abgebildet werden.',
         ),
         const _CheckLine(
-          'Konflikte zeigen alten Wert, neuen Wert, Bearbeiter und sichere Aufloesung.',
+          'Konflikte zeigen alten Wert, neuen Wert, Bearbeiter und sichere Auflösung.',
         ),
         const _CheckLine(
           'Cache, Sync-Historie und API-Fehler bekommen eigene mobile Statuskarten.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Sync-Paritaet markieren',
+          label: 'Sync-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

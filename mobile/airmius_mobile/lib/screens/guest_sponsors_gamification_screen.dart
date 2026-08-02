@@ -57,7 +57,7 @@ class _GuestSponsorsGamificationScreenState
       title: 'Reward Partner',
       area: 'Sponsoren',
       body:
-          'Sponsor-Rewards, Gutscheine, Marketplace-Verknuepfung und Reporting.',
+          'Sponsor-Rewards, Gutscheine, Marketplace-Verknüpfung und Reporting.',
       status: 'Reward',
       meta: 'Local',
       icon: Icons.card_giftcard_outlined,
@@ -155,7 +155,7 @@ class _GuestSponsorsGamificationScreenState
                         ],
                         if (items.isEmpty)
                           const EmptyPanel(
-                            'Keine Eintraege für diesen Bereich gefunden.',
+                            'Keine Einträge für diesen Bereich gefunden.',
                           ),
                         const SizedBox(height: 16),
                         AirmiusPanel(

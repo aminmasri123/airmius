@@ -314,7 +314,7 @@ class _ClubCreateWizardScreenState extends State<ClubCreateWizardScreen> {
 
   static const _countries = [
     ('DE', 'Deutschland'),
-    ('AT', 'Oesterreich'),
+    ('AT', 'Österreich'),
     ('CH', 'Schweiz'),
     ('FR', 'Frankreich'),
     ('NL', 'Niederlande'),
@@ -323,8 +323,8 @@ class _ClubCreateWizardScreenState extends State<ClubCreateWizardScreen> {
     ('ES', 'Spanien'),
     ('PT', 'Portugal'),
     ('IT', 'Italien'),
-    ('GB', 'Grossbritannien'),
-    ('TR', 'Tuerkei'),
+    ('GB', 'Großbritannien'),
+    ('TR', 'Türkei'),
     ('US', 'USA'),
   ];
 

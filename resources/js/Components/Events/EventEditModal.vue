@@ -152,7 +152,7 @@ defineEmits(['close'])
                     <div class="md:col-span-2">
                         <label class="text-sm font-semibold text-primary" for="edit-max-participants">Maximale Teilnehmerzahl</label>
                         <input id="edit-max-participants" v-model="editForm.max_participants" type="number" min="1" max="100000" inputmode="numeric" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Leer lassen = unbegrenzt" />
-                        <p class="mt-1 text-xs text-secondary">Nur Zusagen zaehlen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.</p>
+                        <p class="mt-1 text-xs text-secondary">Nur Zusagen zählen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.</p>
                         <p v-if="editForm.errors.max_participants" class="mt-1 text-sm text-error">{{ editForm.errors.max_participants }}</p>
                     </div>
 

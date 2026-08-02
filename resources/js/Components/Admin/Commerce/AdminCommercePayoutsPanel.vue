@@ -14,12 +14,12 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
         <div class="border-b border-border p-5">
             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
             <h2 class="mt-1 text-lg font-semibold text-primary">Auszahlungen</h2>
-            <p class="mt-1 text-sm text-secondary">Offene Marketplace-Erloese sammeln, Provision abziehen und Auszahlung vorbereiten.</p>
+            <p class="mt-1 text-sm text-secondary">Offene Marketplace-Erlöse sammeln, Provision abziehen und Auszahlung vorbereiten.</p>
         </div>
 
         <div class="grid gap-6 p-5 xl:grid-cols-2">
             <div>
-                <h3 class="font-semibold text-primary">Offene Auszahlungsbetraege</h3>
+                <h3 class="font-semibold text-primary">Offene Auszahlungsbeträge</h3>
                 <div class="mt-3 overflow-x-auto rounded-lg border border-border">
                     <table class="min-w-full text-left text-sm">
                         <tbody class="divide-y divide-border">

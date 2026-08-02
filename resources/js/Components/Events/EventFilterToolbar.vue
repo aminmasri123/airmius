@@ -131,7 +131,7 @@ const emit = defineEmits(['update:filterPanelOpen'])
 
                     <div>
                         <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-radius">
-                            PLZ-/Stadt-Naehe
+                            PLZ-/Stadt-Nähe
                         </label>
                         <div class="flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-3">
                             <input

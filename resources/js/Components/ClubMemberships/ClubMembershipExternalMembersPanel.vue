@@ -13,7 +13,7 @@ const invitationLabel = (status) => ({
 
 <template>
     <section v-if="externalMembers.length" class="surface-card p-5">
-        <h2 class="text-lg font-semibold text-primary">Externe Mitglieder ohne Verknuepfung</h2>
+        <h2 class="text-lg font-semibold text-primary">Externe Mitglieder ohne Verknüpfung</h2>
         <p class="mt-1 text-sm text-secondary">
             Diese Personen sind im Verein hinterlegt, aber noch nicht mit einem Airmius-Konto verbunden.
         </p>
@@ -41,7 +41,7 @@ const invitationLabel = (status) => ({
                         class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                         @click="inviteExternalMember(member)"
                     >
-                        Einladung/Verknuepfung
+                        Einladung/Verknüpfung
                     </button>
                 </div>
             </article>

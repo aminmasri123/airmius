@@ -338,7 +338,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
 
   String _specialIntro() {
     if (widget.title.contains('Mitglieder') || widget.title.contains('Users')) {
-      return 'Nutzerverwaltung aus der Web-App: Inaktivitaetsnotiz, Rollen, Sperre, DSGVO-Export und Statuswechsel.';
+      return 'Nutzerverwaltung aus der Web-App: Inaktivitätsnotiz, Rollen, Sperre, DSGVO-Export und Statuswechsel.';
     }
     if (widget.title.contains('Club-Verifizierungen')) {
       return 'Club-Verifizierung: Verein prüfen, Dokumente ansehen, genehmigen oder ablehnen.';
@@ -393,7 +393,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
 
     if (widget.title.contains('Mitglieder') || widget.title.contains('Users')) {
       add(
-        'Inaktivitaetsnotiz senden',
+        'Inaktivitätsnotiz senden',
         Icons.mark_email_read_outlined,
         'Notice',
       );
@@ -475,7 +475,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       return 'Invoice, Providerstatus, Banktransfer, Mahnung und Zahlungsausgleich ansehen.';
     }
     if (widget.area == 'Commerce') {
-      return 'Produktqualitaet, Bestand, Bestellung, Retoure oder Payout prüfen.';
+      return 'Produktqualität, Bestand, Bestellung, Retoure oder Payout prüfen.';
     }
     if (widget.area == 'System') {
       return 'Mail, Maintenance, globale Settings und Fehlerzustand prüfen.';
@@ -483,7 +483,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     if (widget.area == 'Nutzer') {
       return 'Profil, Rolle, Status, Verbindung und Verifizierung kontrollieren.';
     }
-    return 'Details und naechste Aktion prüfen.';
+    return 'Details und nächste Aktion prüfen.';
   }
 }
 

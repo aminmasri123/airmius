@@ -27,7 +27,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState
         status: 'Offen',
         amount: '120 EUR',
         body:
-            'Faellig am 01.07.2026. Zahlungsart: Überweisung. Beitragsordnung ist verknuepft.',
+            'Fällig am 01.07.2026. Zahlungsart: Überweisung. Beitragsordnung ist verknüpft.',
         color: AirmiusColors.blue,
       ),
       const _InvoiceRow(
@@ -35,7 +35,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState
         status: 'Bezahlt',
         amount: '60 EUR',
         body:
-            'Quittung verfuegbar. Guardian-Kontakt und SEPA-Status werden später per API geladen.',
+            'Quittung verfügbar. Guardian-Kontakt und SEPA-Status werden später per API geladen.',
         color: AirmiusColors.green,
       ),
       const _InvoiceRow(
@@ -135,7 +135,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState
                   onChanged: (value) => setState(() => showRefunds = value),
                 ),
                 _FinanceSwitch(
-                  title: 'Faelligkeit erinnern',
+                  title: 'Fälligkeit erinnern',
                   value: notifyOnDue,
                   color: AirmiusColors.pink,
                   onChanged: (value) => setState(() => notifyOnDue = value),

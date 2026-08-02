@@ -32,12 +32,12 @@ const appModules = [
     title: 'Vereins-Cockpit',
     subtitle: 'Profil, Teams, Mitglieder, Beiträge und Dokumente',
     icon: Icons.apartment_outlined,
-    actions: ['Profil bearbeiten', 'Anfragen prüfen', 'Dokumente verknuepfen'],
+    actions: ['Profil bearbeiten', 'Anfragen prüfen', 'Dokumente verknüpfen'],
     metrics: {'Anfragen': '1', 'Profil': '82%'},
   ),
   ModuleDefinition(
     title: 'Vereine & Teams',
-    subtitle: 'Profile, Teams, Mitglieder und Antraege',
+    subtitle: 'Profile, Teams, Mitglieder und Anträge',
     icon: Icons.groups_outlined,
     actions: ['Verein suchen', 'Team ansehen', 'Mitgliedschaft anfragen'],
     metrics: {'Vereine': '3', 'Teams': '11'},
@@ -84,10 +84,10 @@ const appModules = [
   ),
   ModuleDefinition(
     title: 'Events & Training',
-    subtitle: 'Termine, Teilnahme und Trainingsplaene',
+    subtitle: 'Termine, Teilnahme und Trainingspläne',
     icon: Icons.event_available_outlined,
     actions: ['Event beitreten', 'Training loggen', 'Plan öffnen'],
-    metrics: {'Events': '5', 'Plaene': '2'},
+    metrics: {'Events': '5', 'Pläne': '2'},
   ),
   ModuleDefinition(
     title: 'Trainer-Cockpit',
@@ -140,7 +140,7 @@ const appModules = [
     subtitle: 'Mitfahrten, Routen, Treffpunkte und Sicherheit',
     icon: Icons.directions_car_filled_outlined,
     actions: ['Fahrt anbieten', 'Mitfahrt suchen', 'Treffpunkt teilen'],
-    metrics: {'Fahrten': '3', 'Plaetze': '8'},
+    metrics: {'Fahrten': '3', 'Plätze': '8'},
   ),
   ModuleDefinition(
     title: 'Dateien',
@@ -179,7 +179,7 @@ const appModules = [
   ),
   ModuleDefinition(
     title: 'Commerce',
-    subtitle: 'Produkte, Orders, Coupons, Inventar, Payouts und Qualitaet',
+    subtitle: 'Produkte, Orders, Coupons, Inventar, Payouts und Qualität',
     icon: Icons.store_mall_directory_outlined,
     actions: ['Produkt anlegen', 'Order prüfen', 'Payout vorbereiten'],
     metrics: {'Orders': '12', 'Payouts': '2'},
@@ -214,7 +214,7 @@ const appModules = [
   ),
   ModuleDefinition(
     title: 'Abos & Rechnungen',
-    subtitle: 'Plaene, Checkouts, Banktransfer und Rechnungen',
+    subtitle: 'Pläne, Checkouts, Banktransfer und Rechnungen',
     icon: Icons.receipt_long_outlined,
     actions: [
       'Plan wechseln',
@@ -239,7 +239,7 @@ const appModules = [
   ),
   ModuleDefinition(
     title: 'Outfit-Abos',
-    subtitle: 'Style-Profil, Plaene, Lieferungen und Support',
+    subtitle: 'Style-Profil, Pläne, Lieferungen und Support',
     icon: Icons.checkroom_outlined,
     actions: ['Style bearbeiten', 'Lieferung ansehen', 'Abo pausieren'],
     metrics: {'Aktiv': '1', 'Lieferungen': '2'},

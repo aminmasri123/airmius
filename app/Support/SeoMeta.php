@@ -50,7 +50,7 @@ class SeoMeta
             ],
             'Guest/Events' => [
                 'title' => 'Sportevents entdecken',
-                'description' => 'Finde oeffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius.',
+                'description' => 'Finde öffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius.',
                 'canonical' => route('guest.events'),
             ],
             'Guest/Sportarten' => [

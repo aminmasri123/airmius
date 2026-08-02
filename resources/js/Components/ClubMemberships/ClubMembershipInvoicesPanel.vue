@@ -39,7 +39,7 @@ defineProps({
                         <th class="py-2 pr-4">User</th>
                         <th class="py-2 pr-4">Titel</th>
                         <th class="py-2 pr-4">Betrag</th>
-                        <th class="py-2 pr-4">Faellig</th>
+                        <th class="py-2 pr-4">Fällig</th>
                         <th class="py-2 pr-4">Status</th>
                         <th class="py-2 pr-4">Aktion</th>
                     </tr>

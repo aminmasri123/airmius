@@ -535,7 +535,7 @@ class SportRouteRoutingService
                 $point = $points[$pointIndex] ?? $start;
 
                 return [
-                    'name' => $isFirst ? 'Start' : ($isLast ? 'Zurueck zum Start' : 'Rundenpunkt '.$waypointIndex),
+                    'name' => $isFirst ? 'Start' : ($isLast ? 'Zurück zum Start' : 'Rundenpunkt '.$waypointIndex),
                     'latitude' => $isFirst || $isLast ? $start['latitude'] : $point['latitude'],
                     'longitude' => $isFirst || $isLast ? $start['longitude'] : $point['longitude'],
                 ];

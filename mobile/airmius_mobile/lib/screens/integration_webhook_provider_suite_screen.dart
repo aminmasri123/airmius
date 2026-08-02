@@ -321,7 +321,7 @@ const _providers = [
     area: 'Storage',
     name: 'File Storage',
     body:
-        'Vereinsdokumente, Chat-Anhaenge, Produktbilder, Reports und Upload-Scans.',
+        'Vereinsdokumente, Chat-Anhänge, Produktbilder, Reports und Upload-Scans.',
     status: 'Ready',
     icon: Icons.folder_copy_outlined,
     color: AirmiusColors.blue,
@@ -329,7 +329,7 @@ const _providers = [
   _Provider(
     area: 'Storage',
     name: 'Virus Scan',
-    body: 'Upload-Prüfung, Quarantaene, Freigabe, Löschung und Admin-Hinweis.',
+    body: 'Upload-Prüfung, Quarantäne, Freigabe, Löschung und Admin-Hinweis.',
     status: 'Queued',
     icon: Icons.security_outlined,
     color: AirmiusColors.amber,
@@ -364,7 +364,7 @@ const _providers = [
     area: 'AI',
     name: 'Document Assist',
     body:
-        'OCR, Dokumentklassifikation, Datenschutz-Hinweise und Formularvorbefuellung.',
+        'OCR, Dokumentklassifikation, Datenschutz-Hinweise und Formularvorbefüllung.',
     status: 'Optional',
     icon: Icons.document_scanner_outlined,
     color: AirmiusColors.blue,

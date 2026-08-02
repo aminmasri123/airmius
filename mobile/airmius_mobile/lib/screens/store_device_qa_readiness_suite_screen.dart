@@ -34,7 +34,7 @@ class _StoreDeviceQaReadinessSuiteScreenState
       area: 'Store',
       status: 'Privacy',
       body:
-          'Datenschutz-URL, Nutzungsbedingungen, Datenkategorien, Tracking-Angaben und App-Store-Frageboegen.',
+          'Datenschutz-URL, Nutzungsbedingungen, Datenkategorien, Tracking-Angaben und App-Store-Fragebögen.',
       icon: Icons.privacy_tip_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -43,7 +43,7 @@ class _StoreDeviceQaReadinessSuiteScreenState
       area: 'Store',
       status: 'Perms',
       body:
-          'Kamera, Dateien, Benachrichtigungen, Standort und optionale Berechtigungen mit klaren Begruendungen.',
+          'Kamera, Dateien, Benachrichtigungen, Standort und optionale Berechtigungen mit klaren Begründungen.',
       icon: Icons.security_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -88,7 +88,7 @@ class _StoreDeviceQaReadinessSuiteScreenState
       area: 'QA',
       status: 'Design',
       body:
-          'Screens werden gegen mobile Web-App verglichen: Farben, Abstaende, Cards, Header, Modals, Scroll und Typography.',
+          'Screens werden gegen mobile Web-App verglichen: Farben, Abstände, Cards, Header, Modals, Scroll und Typography.',
       icon: Icons.palette_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -193,7 +193,7 @@ class _StoreDeviceQaReadinessSuiteScreenState
                         context,
                         title: 'Store-Gate',
                         body:
-                            'Store-Daten, Datenschutz und Permissions bleiben als naechste App-Readiness-Gates sichtbar.',
+                            'Store-Daten, Datenschutz und Permissions bleiben als nächste App-Readiness-Gates sichtbar.',
                         status: 'UI bereit',
                         icon: Icons.info_outline,
                       ),

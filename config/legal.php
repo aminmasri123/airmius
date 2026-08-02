@@ -13,7 +13,7 @@ return [
     'representative' => env('LEGAL_REPRESENTATIVE', env('LEGAL_PROVIDER_NAME', env('APP_NAME', 'Airmius'))),
     'register' => env('LEGAL_REGISTER', 'Kein Registereintrag angegeben.'),
     'vat_id' => env('LEGAL_VAT_ID', 'Keine Umsatzsteuer-ID angegeben.'),
-    'supervisory_authority' => env('LEGAL_SUPERVISORY_AUTHORITY', 'Keine besondere Aufsichtsbehoerde angegeben.'),
+    'supervisory_authority' => env('LEGAL_SUPERVISORY_AUTHORITY', 'Keine besondere Aufsichtsbehörde angegeben.'),
     'content_responsible' => env('LEGAL_CONTENT_RESPONSIBLE', env('LEGAL_PROVIDER_NAME', env('APP_NAME', 'Airmius')).', '.env('LEGAL_COUNTRY', 'Deutschland')),
     'release' => [
         'approved_by' => env('LEGAL_APPROVED_BY'),

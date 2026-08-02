@@ -26,7 +26,7 @@ const principles = [
     ['Meaningful first', 'XP entsteht durch sinnvolle sportliche Aktionen, nicht durch reine Nutzungsdauer.'],
     ['Trust weighted', 'Vertrauenswürdige Nutzer erhalten mehr Wirkung, auffällige Muster weniger.'],
     ['Role aware', 'Sportler, Trainer, Teams und Vereine werden nach passenden Beiträgen bewertet.'],
-    ['Transparent by design', 'Regeln, Limits, Abzüge und Fortschritt sind nachvollziehbar erklaerbar.'],
+    ['Transparent by design', 'Regeln, Limits, Abzüge und Fortschritt sind nachvollziehbar erklärbar.'],
 ]
 
 const roleCards = [
@@ -48,7 +48,7 @@ const roleCards = [
         icon: 'las la-warehouse',
         title: 'Vereine',
         score: 'Organisation, Kultur, Events',
-        text: 'Vereins-XP macht Struktur, Trainingsbetrieb, Events, Profilqualitaet und informative Vereinskommunikation messbar.',
+        text: 'Vereins-XP macht Struktur, Trainingsbetrieb, Events, Profilqualität und informative Vereinskommunikation messbar.',
         metrics: ['Local Club', 'Growing Club', 'Established', 'Elite Club'],
     },
 ]
@@ -56,7 +56,7 @@ const roleCards = [
 const playerActions = [
     ['Sportart hinzufügen', '+15 XP', 'Strukturiert das sportliche Profil und erzeugt passende Skills.'],
     ['Skill bearbeiten', '+3 XP', 'Kompetenz, Notiz oder Sichtbarkeit pflegen. Maximal 3x täglich.'],
-    ['Skill-Level verbessern', '+8 XP', 'Anerkennt echte persoenliche Entwicklung. Maximal 3x täglich.'],
+    ['Skill-Level verbessern', '+8 XP', 'Anerkennt echte persönliche Entwicklung. Maximal 3x täglich.'],
     ['Skill-Bestätigung', '+10 XP', 'Bestätigung durch andere Nutzer, Trainer oder Vereine. Maximal 3x täglich.'],
     ['Empfehlung freigeben', '+10 XP', 'Qualitätsgesicherte Empfehlung auf dem Profil veröffentlichen. Maximal 2x täglich.'],
     ['Training zusagen', '+5 XP', 'Verbindliche Teilnahmezusage zu einer Trainingseinheit. Maximal 3x täglich.'],
@@ -109,7 +109,7 @@ const levelMilestones = [
 const lifecycle = [
     ['Onboarding', 'Sportart, Skills und erste Teilnahme geben schnelle Orientierung.'],
     ['Engagement', 'Streaks, Feedback und hilfreiche Beiträge halten Aktivität wertvoll.'],
-    ['Retention', 'Level, Badges und Rollen-Raenge schaffen langfristige Entwicklungspfade.'],
+    ['Retention', 'Level, Badges und Rollen-Ränge schaffen langfristige Entwicklungspfade.'],
     ['Reputation', 'Trust Score, Empfehlungen und Bestätigungen machen Qualität sichtbar.'],
 ]
 
@@ -124,7 +124,7 @@ const penalties = [
 const badges = [
     ['las la-seedling', 'Erste Schritte', '50 XP gesammelt', 'Für den sichtbaren Start in die sportliche Entwicklung.'],
     ['las la-fire', 'Streak Starter', '3 sinnvolle Tage', 'Belohnt wiederholte Qualität statt reines Einloggen.'],
-    ['las la-user-check', 'Verlaesslich', 'Trust stabil', 'Zeigt, dass Zusagen, Check-ins und Bestätigungen sauber bleiben.'],
+    ['las la-user-check', 'Verlässlich', 'Trust stabil', 'Zeigt, dass Zusagen, Check-ins und Bestätigungen sauber bleiben.'],
     ['las la-lightbulb', 'Wissensgeber', 'Hilfreicher Beitrag', 'Für Trainingstipps, Analysen oder Erfahrungswissen mit Mehrwert.'],
     ['las la-warehouse', 'Wachsender Verein', '250 Vereins-XP', 'Macht gute Organisation, Events und Kommunikation sichtbar.'],
     ['las la-shield-alt', 'Fair Play', 'Keine Auffälligkeiten', 'Ein Signal für respektvolle und manipulationsfreie Nutzung.'],
@@ -499,7 +499,7 @@ const badges = [
                         <p class="text-sm font-semibold uppercase tracking-wider text-air-green">{{ tx('Datenschutz & Jugendschutz') }}</p>
                         <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx('Gesunde Motivation statt sozialer Druck.') }}</h2>
                         <p class="mt-3 text-sm leading-relaxed text-secondary">
-                            {{ tx('Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschraenkt. Bei Minderjährigen stehen Sicherheit, Regeneration, altersgerechte Ziele und paedagogisch sinnvolle Anerkennung im Vordergrund.') }}
+                            {{ tx('Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschränkt. Bei Minderjährigen stehen Sicherheit, Regeneration, altersgerechte Ziele und pädagogisch sinnvolle Anerkennung im Vordergrund.') }}
                         </p>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
@@ -513,7 +513,7 @@ const badges = [
                         </div>
                         <div class="rounded-lg bg-bg p-4">
                             <p class="text-xs font-bold uppercase text-air-blue">{{ tx('Transparency') }}</p>
-                            <p class="mt-2 text-sm text-secondary">{{ tx('Regeln, Limits und Abzüge erklaerbar.') }}</p>
+                            <p class="mt-2 text-sm text-secondary">{{ tx('Regeln, Limits und Abzüge erklärbar.') }}</p>
                         </div>
                     </div>
                 </div>

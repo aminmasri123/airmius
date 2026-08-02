@@ -100,16 +100,256 @@ class TrainerRegistrationFormScreen extends StatefulWidget {
 
 class _TrainerRegistrationFormScreenState
     extends State<TrainerRegistrationFormScreen> {
-  final _specialties = TextEditingController();
   final _experience = TextEditingController();
   final _certification = TextEditingController();
   final _message = TextEditingController();
+  final List<Map<String, dynamic>> _sports = [];
+  final List<int> _selectedSportIds = [];
+  final List<int> _selectedSkillIds = [];
+  bool _loadingOptions = true;
   bool _saving = false;
   String? _error;
+  String? _optionsError;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_loadOptions);
+  }
+
+  Future<void> _loadOptions() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      final response = await client.sports();
+      final rawSports = response['data'];
+      final sports = rawSports is List
+          ? rawSports
+                .whereType<Map>()
+                .map((sport) => Map<String, dynamic>.from(sport))
+                .toList()
+          : <Map<String, dynamic>>[];
+
+      if (!mounted) return;
+      setState(() {
+        _sports
+          ..clear()
+          ..addAll(sports);
+        _loadingOptions = false;
+        _optionsError = sports.isEmpty
+            ? AirmiusScope.of(context).t('registrationOnboarding.optionsError')
+            : null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingOptions = false;
+        _optionsError = AirmiusScope.of(
+          context,
+        ).t('registrationOnboarding.optionsError');
+      });
+    }
+  }
+
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  List<Map<String, dynamic>> _skillOptionsForSportIds(Iterable<int> sportIds) {
+    final selectedSportIds = sportIds.toSet();
+    final options = <String, Map<String, dynamic>>{};
+
+    for (final sport in _sports) {
+      final sportId = _asInt(sport['id']);
+      if (selectedSportIds.isNotEmpty &&
+          (sportId == null || !selectedSportIds.contains(sportId))) {
+        continue;
+      }
+
+      final rawSkills = sport['skills'];
+      if (rawSkills is! List) continue;
+
+      for (final rawSkill in rawSkills.whereType<Map>()) {
+        final skill = Map<String, dynamic>.from(rawSkill);
+        final skillId = _asInt(skill['id']);
+        final name = skill['name']?.toString().trim() ?? '';
+        if (skillId == null || name.isEmpty) continue;
+        skill['sport_name'] = sport['name']?.toString() ?? '';
+        options.putIfAbsent(name.toLowerCase(), () => skill);
+      }
+    }
+
+    return options.values.toList();
+  }
+
+  List<Map<String, dynamic>> get _availableSkills =>
+      _skillOptionsForSportIds(_selectedSportIds);
+
+  String _selectedLabels(
+    Iterable<int> ids,
+    Iterable<Map<String, dynamic>> options,
+  ) {
+    final selected = ids.toSet();
+    return options
+        .where((option) => selected.contains(_asInt(option['id'])))
+        .map((option) => option['name']?.toString().trim() ?? '')
+        .where((name) => name.isNotEmpty)
+        .join(', ');
+  }
+
+  Future<List<int>?> _selectMultiple({
+    required String title,
+    required List<Map<String, dynamic>> options,
+    required List<int> initialSelection,
+  }) {
+    final draft = <int>{...initialSelection};
+    return showModalBottomSheet<List<int>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.75,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, index) {
+                        final option = options[index];
+                        final id = _asInt(option['id']);
+                        if (id == null) return const SizedBox.shrink();
+                        final name = option['name']?.toString() ?? '';
+                        final sportName = option['sport_name']?.toString();
+                        return CheckboxListTile(
+                          value: draft.contains(id),
+                          title: Text(name),
+                          subtitle: sportName == null || sportName.isEmpty
+                              ? null
+                              : Text(sportName),
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (checked) {
+                            setModalState(() {
+                              if (checked == true) {
+                                draft.add(id);
+                              } else {
+                                draft.remove(id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  AirmiusButton(
+                    label: AirmiusScope.of(
+                      context,
+                    ).t('registrationOnboarding.optionsSave'),
+                    icon: Icons.check_outlined,
+                    onPressed: () =>
+                        Navigator.of(sheetContext).pop(draft.toList()..sort()),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _multiSelectField({
+    required String label,
+    required String placeholder,
+    required String selectedText,
+    required VoidCallback? onTap,
+  }) {
+    final hasSelection = selectedText.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: placeholder,
+            suffixIcon: const Icon(Icons.expand_more_outlined),
+          ),
+          child: Text(
+            hasSelection ? selectedText : placeholder,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: hasSelection
+                  ? airmiusTextColor(context)
+                  : airmiusMutedColor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseSports() async {
+    final selected = await _selectMultiple(
+      title: AirmiusScope.of(context).t('registrationOnboarding.sports'),
+      options: _sports,
+      initialSelection: _selectedSportIds,
+    );
+    if (!mounted || selected == null) return;
+
+    final allowedSkillIds = _skillOptionsForSportIds(
+      selected,
+    ).map((skill) => _asInt(skill['id'])).whereType<int>().toSet();
+    setState(() {
+      _selectedSportIds
+        ..clear()
+        ..addAll(selected);
+      _selectedSkillIds.removeWhere(
+        (skillId) => !allowedSkillIds.contains(skillId),
+      );
+    });
+  }
+
+  Future<void> _chooseSkills() async {
+    if (_selectedSportIds.isEmpty) return;
+    final selected = await _selectMultiple(
+      title: AirmiusScope.of(context).t('registrationOnboarding.specialties'),
+      options: _availableSkills,
+      initialSelection: _selectedSkillIds,
+    );
+    if (!mounted || selected == null) return;
+    setState(() {
+      _selectedSkillIds
+        ..clear()
+        ..addAll(selected);
+    });
+  }
 
   @override
   void dispose() {
-    _specialties.dispose();
     _experience.dispose();
     _certification.dispose();
     _message.dispose();
@@ -118,7 +358,9 @@ class _TrainerRegistrationFormScreenState
 
   Future<void> _submit() async {
     final t = AirmiusScope.of(context).t;
-    if (_specialties.text.trim().isEmpty || _experience.text.trim().isEmpty) {
+    if (_selectedSportIds.isEmpty ||
+        _selectedSkillIds.isEmpty ||
+        _experience.text.trim().isEmpty) {
       setState(() => _error = t('registrationOnboarding.trainerRequired'));
       return;
     }
@@ -134,7 +376,10 @@ class _TrainerRegistrationFormScreenState
         type: 'trainer',
         message: _message.text.trim(),
         applicationData: {
-          'specialties': _specialties.text.trim(),
+          'sports': _selectedLabels(_selectedSportIds, _sports),
+          'sport_ids': List<int>.from(_selectedSportIds),
+          'sport_skill_ids': List<int>.from(_selectedSkillIds),
+          'specialties': _selectedLabels(_selectedSkillIds, _availableSkills),
           'experience': _experience.text.trim(),
           'certification': _certification.text.trim(),
         },
@@ -168,10 +413,51 @@ class _TrainerRegistrationFormScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              AirmiusTextField(
-                label: t('registrationOnboarding.specialties'),
-                controller: _specialties,
-              ),
+              if (_loadingOptions)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else ...[
+                _multiSelectField(
+                  label: t('registrationOnboarding.sports'),
+                  placeholder: t('registrationOnboarding.sportsPlaceholder'),
+                  selectedText: _selectedLabels(_selectedSportIds, _sports),
+                  onTap: _sports.isEmpty ? null : _chooseSports,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t('registrationOnboarding.multipleHint'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+                const SizedBox(height: 12),
+                _multiSelectField(
+                  label: t('registrationOnboarding.specialties'),
+                  placeholder: t(
+                    'registrationOnboarding.specialtiesPlaceholder',
+                  ),
+                  selectedText: _selectedLabels(
+                    _selectedSkillIds,
+                    _availableSkills,
+                  ),
+                  onTap: _selectedSportIds.isEmpty ? null : _chooseSkills,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  t('registrationOnboarding.multipleHint'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+                if (_optionsError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _optionsError!,
+                    style: const TextStyle(
+                      color: AirmiusColors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
               const SizedBox(height: 12),
               AirmiusTextField(
                 label: t('registrationOnboarding.experience'),

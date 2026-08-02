@@ -27,7 +27,7 @@ class _WorkspaceOperationsCenterState
       title: 'Vereinsvorstand',
       area: 'Aktiv',
       body:
-          'Gemeinsamer Arbeitsbereich für Vorstand, Dokumente, Aufgaben und Beschluesse.',
+          'Gemeinsamer Arbeitsbereich für Vorstand, Dokumente, Aufgaben und Beschlüsse.',
       status: 'Aktiv',
       meta: '5 Mitglieder',
       icon: Icons.groups_2_outlined,
@@ -125,7 +125,7 @@ class _WorkspaceOperationsCenterState
                               _SwitchRow(
                                 title: 'Dateien anzeigen',
                                 subtitle:
-                                    'Workspace-Dateien, Versionen und Verknuepfung zum Dateimanager.',
+                                    'Workspace-Dateien, Versionen und Verknüpfung zum Dateimanager.',
                                 value: _showFiles,
                                 onChanged: (value) =>
                                     setState(() => _showFiles = value),
@@ -133,7 +133,7 @@ class _WorkspaceOperationsCenterState
                               _SwitchRow(
                                 title: 'Aufgaben anzeigen',
                                 subtitle:
-                                    'To-dos, Beschluesse, offene Punkte und Verantwortlichkeiten.',
+                                    'To-dos, Beschlüsse, offene Punkte und Verantwortlichkeiten.',
                                 value: _showTasks,
                                 onChanged: (value) =>
                                     setState(() => _showTasks = value),

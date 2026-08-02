@@ -395,7 +395,7 @@ const submitPost = () => {
                         <AppLoadingState
                             v-if="postForm.processing"
                             class="sm:mr-auto"
-                            :label="tx('Post wird veroeffentlicht...', 'Post wird veröffentlicht...')"
+                            :label="tx('Post wird veröffentlicht...', 'Post wird veröffentlicht...')"
                             inline
                         />
 

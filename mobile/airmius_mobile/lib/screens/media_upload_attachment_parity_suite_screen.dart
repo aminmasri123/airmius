@@ -35,7 +35,7 @@ class _MediaUploadAttachmentParitySuiteScreenState
       route: 'ClubPolicyDocuments + Files/Index',
       purpose: 'Vereinsdokument',
       body:
-          'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln können hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknuepft werden.',
+          'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln können hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknüpft werden.',
       status: 'Pflichtdokument',
       icon: Icons.rule_folder_outlined,
       primary: 'Dokument hochladen',
@@ -71,7 +71,7 @@ class _MediaUploadAttachmentParitySuiteScreenState
       route: 'Chat/Index + Conversations',
       purpose: 'Chat',
       body:
-          'Bilder, PDFs, Trainingsplaene oder Vereinsdateien werden als Message Attachment mit Preview, Uploadstatus und Zugriffskontext gezeigt.',
+          'Bilder, PDFs, Trainingspläne oder Vereinsdateien werden als Message Attachment mit Preview, Uploadstatus und Zugriffskontext gezeigt.',
       status: 'Attachment',
       icon: Icons.attach_file,
       primary: 'Anhang senden',
@@ -133,7 +133,7 @@ class _MediaUploadAttachmentParitySuiteScreenState
       body: SafeArea(
         child: PageFrame(
           title: 'Media Upload Attachment Parity',
-          subtitle: 'Uploads, Medien, Vorschau und Dateimanager-Verknuepfung.',
+          subtitle: 'Uploads, Medien, Vorschau und Dateimanager-Verknüpfung.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -150,7 +150,7 @@ class _MediaUploadAttachmentParitySuiteScreenState
                   context,
                   title: 'Upload starten',
                   body:
-                      'Quelle $_source, Zweck $_purpose, Datenschutz $_needsPrivacyScope und Dateimanager-Verknuepfung $_autoLinkToManager als mobile Upload-Aktion vorbereiten.',
+                      'Quelle $_source, Zweck $_purpose, Datenschutz $_needsPrivacyScope und Dateimanager-Verknüpfung $_autoLinkToManager als mobile Upload-Aktion vorbereiten.',
                   status: 'Upload',
                   icon: Icons.upload_file_outlined,
                 ),
@@ -200,7 +200,7 @@ class _MediaUploadAttachmentParitySuiteScreenState
                   context,
                   title: 'Upload Parity',
                   body:
-                      'Dateien, Bilder, Scans, Chat-Anhaenge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile UI-Flows vorbereitet.',
+                      'Dateien, Bilder, Scans, Chat-Anhänge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile UI-Flows vorbereitet.',
                   status: 'Media Upload',
                   icon: Icons.cloud_upload_outlined,
                 ),
@@ -236,7 +236,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('UPLOADS & MEDIEN'),
           const SizedBox(height: 8),
           Text(
-            'Uploads müssen mobil einfach, sicher und verknuepft sein.',
+            'Uploads müssen mobil einfach, sicher und verknüpft sein.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -245,7 +245,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Flutter bildet Upload-Auswahl, Kamera/Galerie, Scan, Vorschau, Fortschritt, Datenschutz, Zweckbindung und Dateimanager-Verknuepfung als native App-Flows ab.',
+            'Flutter bildet Upload-Auswahl, Kamera/Galerie, Scan, Vorschau, Fortschritt, Datenschutz, Zweckbindung und Dateimanager-Verknüpfung als native App-Flows ab.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -314,7 +314,7 @@ class _UploadDropZone extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Datei auswählen, Kamera starten, Bild scannen oder bestehende Vereinsdatei verknuepfen.',
+            'Datei auswählen, Kamera starten, Bild scannen oder bestehende Vereinsdatei verknüpfen.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: airmiusMutedColor(context),
@@ -411,7 +411,7 @@ class _SwitchPanel extends StatelessWidget {
           'Diese Optionen werden später aus Route, Verein, Rolle und Laravel-API geladen.',
       children: [
         _SwitchLine(
-          title: 'Automatisch im Dateimanager verknuepfen',
+          title: 'Automatisch im Dateimanager verknüpfen',
           value: autoLinkToManager,
           onChanged: onAutoLink,
         ),
@@ -447,7 +447,7 @@ class _ProgressPanel extends StatelessWidget {
           status: 'Läuft',
         ),
         _ProgressLine(
-          label: 'Dateimanager verknuepfen',
+          label: 'Dateimanager verknüpfen',
           value: .38,
           status: 'Wartet',
         ),
@@ -607,7 +607,7 @@ class _UploadFlowCard extends StatelessWidget {
                   title: flow.secondary,
                   body:
                       'Dateimanager, Vorschau, Datenschutz, Version, Zweckbindung und Audit für ${flow.title}.',
-                  status: 'Verknuepfung',
+                  status: 'Verknüpfung',
                   icon: Icons.link_outlined,
                 ),
               ),
@@ -627,7 +627,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Upload-Paritaet',
+      title: 'Upload-Parität',
       subtitle: 'Was mobile Uploads aus der Web-App übernehmen.',
       children: [
         const _CheckLine(
@@ -637,14 +637,14 @@ class _Checklist extends StatelessWidget {
           'Jeder Upload hat Zweckbindung, Datenschutzstatus, Vorschau und Fortschritt.',
         ),
         const _CheckLine(
-          'Vereinsdokumente können automatisch im Dateimanager verknuepft werden.',
+          'Vereinsdokumente können automatisch im Dateimanager verknüpft werden.',
         ),
         const _CheckLine(
           'Chat, Blog, Marketplace, Training und Profil nutzen ein gemeinsames Medienmuster.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Upload-Paritaet markieren',
+          label: 'Upload-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

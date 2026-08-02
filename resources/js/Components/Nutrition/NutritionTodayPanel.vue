@@ -120,7 +120,7 @@ defineEmits(['delete-meal', 'edit-meal', 'set-active-section', 'submit-drink'])
                     <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Tageslog') }}</p>
                     <h2 class="mt-1 text-lg font-bold text-primary">{{ tAuto('Mahlzeiten') }}</h2>
                 </div>
-                <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ tAuto(`${sortedMeals.length} Eintraege`) }}</span>
+                <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ tAuto(`${sortedMeals.length} Einträge`) }}</span>
             </div>
 
             <div class="mt-4 space-y-3">

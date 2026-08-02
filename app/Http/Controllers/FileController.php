@@ -606,7 +606,7 @@ class FileController extends Controller
             foreach ($dispositionParts as $part) {
                 if (in_array($part, self::DISALLOWED_FILE_EXTENSIONS, true)) {
                     throw ValidationException::withMessages([
-                        'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+                        'file' => 'Dieser Dateityp ist aus Sicherheitsgründen nicht erlaubt.',
                     ]);
                 }
             }
@@ -614,7 +614,7 @@ class FileController extends Controller
 
         if ($extension !== '' && in_array($extension, self::DISALLOWED_FILE_EXTENSIONS, true)) {
             throw ValidationException::withMessages([
-                'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+                'file' => 'Dieser Dateityp ist aus Sicherheitsgründen nicht erlaubt.',
             ]);
         }
 
@@ -625,7 +625,7 @@ class FileController extends Controller
 
         if ($this->containsDisallowedMimeType($dangerousMimeTypes)) {
             throw ValidationException::withMessages([
-                'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+                'file' => 'Dieser Dateityp ist aus Sicherheitsgründen nicht erlaubt.',
             ]);
         }
 

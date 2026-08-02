@@ -19,19 +19,19 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Local Release Prerequisites',
       owner: 'Release',
-      requiredEvidence: 'Flutter, Android SDK, adb, cmdline-tools, Android-Lizenzen, Java und Pflichtdateien sind lokal verfuegbar',
+      requiredEvidence: 'Flutter, Android SDK, adb, cmdline-tools, Android-Lizenzen, Java und Pflichtdateien sind lokal verfügbar',
       status: 'Evidence-Log offen',
     ),
     AirmiusReleaseBlocker(
       title: 'Flutter Analyze',
       owner: 'Mobile',
-      requiredEvidence: 'Gruener flutter analyze Lauf',
-      status: 'Nicht ausgefuehrt',
+      requiredEvidence: 'Grüner flutter analyze Lauf',
+      status: 'Nicht ausgeführt',
     ),
     AirmiusReleaseBlocker(
       title: 'Flutter Dependency Lock',
       owner: 'Mobile',
-      requiredEvidence: 'pubspec.lock enthaelt flutter_secure_storage nach flutter pub get',
+      requiredEvidence: 'pubspec.lock enthält flutter_secure_storage nach flutter pub get',
       status: 'Skript vorbereitet',
     ),
     AirmiusReleaseBlocker(
@@ -43,7 +43,7 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'iOS Release Build',
       owner: 'Store',
-      requiredEvidence: 'IPA/TestFlight-faehiger Archive-Build',
+      requiredEvidence: 'IPA/TestFlight-fähiger Archive-Build',
       status: 'Runbook vorbereitet',
     ),
     AirmiusReleaseBlocker(
@@ -61,7 +61,7 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Real API QA',
       owner: 'Backend',
-      requiredEvidence: 'Staging/Production API Smoke Test für Kernfluesse',
+      requiredEvidence: 'Staging/Production API Smoke Test für Kernflüsse',
       status: 'Flutter-Vertrag vorbereitet',
     ),
     AirmiusReleaseBlocker(
@@ -133,7 +133,7 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Release Secrets Hygiene',
       owner: 'Security',
-      requiredEvidence: 'Keine Review-Passwoerter, Tokens, API Keys oder Bearer-Secrets in Release-Dateien',
+      requiredEvidence: 'Keine Review-Passwörter, Tokens, API Keys oder Bearer-Secrets in Release-Dateien',
       status: 'Skript vorbereitet',
     ),
     AirmiusReleaseBlocker(

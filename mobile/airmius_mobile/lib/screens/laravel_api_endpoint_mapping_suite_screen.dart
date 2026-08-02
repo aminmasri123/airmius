@@ -38,7 +38,7 @@ class _LaravelApiEndpointMappingSuiteScreenState
       body: PageFrame(
         title: 'Laravel API Endpoint Mapping',
         subtitle:
-            'Mobile UI-Matrix für Web-Routen, Flutter-Screens, API-Methoden, Payloads und Fehlerzustaende.',
+            'Mobile UI-Matrix für Web-Routen, Flutter-Screens, API-Methoden, Payloads und Fehlerzustände.',
         trailing: StatusPill('Laravel v1', color: airmiusAccentColor(context)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,7 +61,7 @@ class _LaravelApiEndpointMappingSuiteScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Jeder wichtige Web-App-Flow wird einem mobilen Screen, einem API-Endpunkt, Auth-Regeln, Payloads und Feedback-Zustaenden zugeordnet.',
+                    'Jeder wichtige Web-App-Flow wird einem mobilen Screen, einem API-Endpunkt, Auth-Regeln, Payloads und Feedback-Zuständen zugeordnet.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -163,7 +163,7 @@ class _LaravelApiEndpointMappingSuiteScreenState
                     icon: Icons.cloud_off_outlined,
                     title: 'Offline Queue',
                     body:
-                        'Antraege, Chat, Uploads und Form-Drafts können später in eine Retry-Queue gelegt werden.',
+                        'Anträge, Chat, Uploads und Form-Drafts können später in eine Retry-Queue gelegt werden.',
                     value: _offlineQueue,
                     onChanged: (value) => setState(() => _offlineQueue = value),
                     last: true,
@@ -186,7 +186,7 @@ class _LaravelApiEndpointMappingSuiteScreenState
                   const Eyebrow('BINDING NEXT STEP'),
                   const SizedBox(height: 8),
                   Text(
-                    'Wenn Laravel später API-Routen liefert, werden diese UI-Karten zu echten Client-Services, Repository-Methoden und Ladezustaenden.',
+                    'Wenn Laravel später API-Routen liefert, werden diese UI-Karten zu echten Client-Services, Repository-Methoden und Ladezuständen.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.38,

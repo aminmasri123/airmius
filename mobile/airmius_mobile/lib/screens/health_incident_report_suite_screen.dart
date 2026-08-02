@@ -26,7 +26,7 @@ class _HealthIncidentReportSuiteScreenState
         title: 'Knieverletzung beim Training',
         status: 'Dokumentiert',
         body:
-            'Trainer erfasst Zeitpunkt, Team, Erste-Hilfe-Notiz, betroffene Person und naechste Schritte.',
+            'Trainer erfasst Zeitpunkt, Team, Erste-Hilfe-Notiz, betroffene Person und nächste Schritte.',
         icon: Icons.healing_outlined,
         color: AirmiusColors.amber,
       ),
@@ -57,7 +57,7 @@ class _HealthIncidentReportSuiteScreenState
     ];
 
     return PageFrame(
-      title: 'Gesundheit & Vorfaelle',
+      title: 'Gesundheit & Vorfälle',
       subtitle: 'Training, Notfall und Dokumentation',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
@@ -82,7 +82,7 @@ class _HealthIncidentReportSuiteScreenState
                 const SizedBox(height: 16),
                 GridWrap(
                   children: const [
-                    Metric(value: '4', label: 'Faelle'),
+                    Metric(value: '4', label: 'Fälle'),
                     Metric(value: 'SOS', label: 'Kontakt'),
                     Metric(value: 'Docs', label: 'Notiz'),
                     Metric(value: 'Audit', label: 'Verlauf'),
@@ -132,7 +132,7 @@ class _HealthIncidentReportSuiteScreenState
                   onChanged: (value) => setState(() => notifyClubAdmin = value),
                 ),
                 _IncidentSwitch(
-                  title: 'Medizinische Notiz anhaengen',
+                  title: 'Medizinische Notiz anhängen',
                   value: attachMedicalNote,
                   color: airmiusSemanticColor(context, AirmiusColors.amber),
                   onChanged: (value) =>

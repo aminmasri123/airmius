@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserRoleApplication;
+use App\Models\SportSkill;
 use App\Services\AccountRoleApplicationService;
 use App\Notifications\TrainerApplicationStatusUpdated;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class AccountRoleApplicationController extends Controller
 {
@@ -18,15 +20,30 @@ class AccountRoleApplicationController extends Controller
             'message' => ['nullable', 'string', 'max:2000'],
             'application_data' => ['nullable', 'array'],
             'application_data.specialties' => ['nullable', 'string', 'max:500'],
+            'application_data.sports' => ['nullable', 'string', 'max:500'],
+            'application_data.sport_ids' => ['nullable', 'array', 'max:20'],
+            'application_data.sport_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('sports', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
+            'application_data.sport_skill_ids' => ['nullable', 'array', 'max:40'],
+            'application_data.sport_skill_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:sport_skills,id',
+            ],
             'application_data.experience' => ['nullable', 'string', 'max:2000'],
             'application_data.certification' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $applicationData = $this->normalizeTrainerApplicationData($data['application_data'] ?? []);
 
         $result = $applications->submitTrainer(
             $request->user(),
             $data['message'] ?? null,
             null,
-            $data['application_data'] ?? null,
+            $applicationData,
         );
         $application = $result['application'];
 
@@ -160,5 +177,42 @@ class AccountRoleApplicationController extends Controller
             'reviewed_at' => $application->reviewed_at?->toJSON(),
             ...($includeApplicant ? ['user' => $application->user?->only(['id', 'name', 'email'])] : []),
         ];
+    }
+
+    private function normalizeTrainerApplicationData(array $applicationData): array
+    {
+        $sportIds = collect($applicationData['sport_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $skillIds = collect($applicationData['sport_skill_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($sportIds !== [] && $skillIds !== []) {
+            $validSkillCount = SportSkill::query()
+                ->whereIn('id', $skillIds)
+                ->whereIn('sport_id', $sportIds)
+                ->count();
+
+            abort_if(
+                $validSkillCount !== count($skillIds),
+                422,
+                'Die gewählten Schwerpunkte passen nicht zu den ausgewählten Sportarten.',
+            );
+        }
+
+        if ($sportIds !== []) {
+            $applicationData['sport_ids'] = $sportIds;
+        }
+
+        if ($skillIds !== []) {
+            $applicationData['sport_skill_ids'] = $skillIds;
+        }
+
+        return $applicationData;
     }
 }

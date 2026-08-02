@@ -52,7 +52,7 @@ class _GuestMarketplaceFlowScreenState
       area: 'Shop',
       status: 'Merken',
       body:
-          'Merkliste für Gäste und User mit gespeicherten Produkten und späterer Account-Verknuepfung.',
+          'Merkliste für Gäste und User mit gespeicherten Produkten und späterer Account-Verknüpfung.',
       icon: Icons.favorite_border_outlined,
       color: Color(0xFFFF6B6B),
     ),

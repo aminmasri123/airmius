@@ -70,7 +70,7 @@ class _SystemStatusIncidentCenterSuiteScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Die App bereitet Statusbanner, Wartungsmodus, Incident-Verlauf, Service-Health und klare Nutzerhinweise für mobile Web-App-Paritaet vor.',
+                    'Die App bereitet Statusbanner, Wartungsmodus, Incident-Verlauf, Service-Health und klare Nutzerhinweise für mobile Web-App-Parität vor.',
                     style: TextStyle(color: mutedColor, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -146,7 +146,7 @@ class _SystemStatusIncidentCenterSuiteScreenState
                     icon: Icons.update_outlined,
                     title: 'Incident Updates',
                     body:
-                        'Updates erscheinen zeitlich sortiert mit Auswirkung, Ursache, Workaround und Loesungsstatus.',
+                        'Updates erscheinen zeitlich sortiert mit Auswirkung, Ursache, Workaround und Lösungsstatus.',
                     enabled: _incidentUpdates,
                     onChanged: (value) =>
                         setState(() => _incidentUpdates = value),
@@ -163,7 +163,7 @@ class _SystemStatusIncidentCenterSuiteScreenState
                     icon: Icons.support_agent_outlined,
                     title: 'Admin Eskalation',
                     body:
-                        'Kritische Stoerungen können an Platform Admins, Provider oder Support eskaliert werden.',
+                        'Kritische Störungen können an Platform Admins, Provider oder Support eskaliert werden.',
                     enabled: _adminEscalation,
                     onChanged: (value) =>
                         setState(() => _adminEscalation = value),
@@ -186,7 +186,7 @@ class _SystemStatusIncidentCenterSuiteScreenState
                   const SizedBox(height: 10),
                   const _IncidentLine(
                     time: '09:05',
-                    title: 'Webhook-Verzoegerung erkannt',
+                    title: 'Webhook-Verzögerung erkannt',
                     body:
                         'Payment-Events kamen verspätet an; Nutzer sehen Zahlungsstatus als “wird synchronisiert”.',
                     color: AirmiusColors.amber,
@@ -272,7 +272,7 @@ const _services = [
     scope: 'App',
     name: 'Mobile App Shell',
     body:
-        'Navigation, Header, Bottom Navigation, Rollenwechsel und lokale UI-Zustaende.',
+        'Navigation, Header, Bottom Navigation, Rollenwechsel und lokale UI-Zustände.',
     status: 'Operational',
     icon: Icons.phone_iphone_outlined,
     color: AirmiusColors.green,
@@ -298,7 +298,7 @@ const _services = [
     scope: 'API',
     name: 'Error Contract',
     body:
-        'Validation, Unauthorized, Forbidden, Rate Limit, Offline und Retry-Zustaende.',
+        'Validation, Unauthorized, Forbidden, Rate Limit, Offline und Retry-Zustände.',
     status: 'Mapped',
     icon: Icons.sync_problem_outlined,
     color: AirmiusColors.amber,

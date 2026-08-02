@@ -238,7 +238,7 @@ class FeedController extends Controller
 
             if ($post->user_id !== $request->user()->id) {
                 AppNotification::send($post->user_id, 'post.like', [
-                    'title' => $request->user()->name.' gefaellt dein Beitrag',
+                    'title' => $request->user()->name.' gefällt dein Beitrag',
                     'body' => str($post->content)->limit(120)->toString(),
                     'url' => '/feed',
                     'actor_id' => $request->user()->id,
@@ -338,7 +338,7 @@ class FeedController extends Controller
 
         if ($path === '' || str_contains($path, '..') || str_starts_with($path, '.')) {
             throw ValidationException::withMessages([
-                'image' => 'Der Bildpfad ist ungueltig.',
+                'image' => 'Der Bildpfad ist ungültig.',
             ]);
         }
 

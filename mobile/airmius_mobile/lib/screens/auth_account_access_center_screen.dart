@@ -37,7 +37,7 @@ class _AuthAccountAccessCenterScreenState
       color: AirmiusColors.green,
     ),
     _AuthFlowItem(
-      title: 'Profil vervollstaendigen',
+      title: 'Profil vervollständigen',
       body:
           'CompleteProfile mit Name, Rolle, Kontaktdaten und Onboarding-Hinweis.',
       status: 'Pflicht',
@@ -46,7 +46,7 @@ class _AuthAccountAccessCenterScreenState
     ),
     _AuthFlowItem(
       title: 'E-Mail verifizieren',
-      body: 'VerifyEmail mit Status, erneut senden und naechstem Schritt.',
+      body: 'VerifyEmail mit Status, erneut senden und nächstem Schritt.',
       status: 'Sicherheit',
       icon: Icons.mark_email_read_outlined,
       color: AirmiusColors.blueDeep,
@@ -69,7 +69,7 @@ class _AuthAccountAccessCenterScreenState
     _AuthFlowItem(
       title: 'Konto gesperrt',
       body:
-          'Suspended-Seite mit Grund, Supportkontakt, Status und naechster Aktion.',
+          'Suspended-Seite mit Grund, Supportkontakt, Status und nächster Aktion.',
       status: 'Sperre',
       icon: Icons.block_outlined,
       color: AirmiusColors.red,

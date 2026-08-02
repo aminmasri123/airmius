@@ -484,7 +484,7 @@ const _patterns = <_DesignPattern>[
     area: 'Action',
     title: 'Buttons und kritische Aktionen',
     body:
-        'Primaere Aktionen, sekundare Aktionen, Rückzug, Löschen, Sperren und Melden nutzen einheitliche Airmius-Buttons und Danger-Flows.',
+        'Primäre Aktionen, sekundare Aktionen, Rückzug, Löschen, Sperren und Melden nutzen einheitliche Airmius-Buttons und Danger-Flows.',
     status: 'Consistent',
     icon: Icons.touch_app_outlined,
     color: AirmiusColors.red,
@@ -493,7 +493,7 @@ const _patterns = <_DesignPattern>[
     area: 'State',
     title: 'Modal, Empty, Loading, Error',
     body:
-        'Modal-Layer, Empty Panels, API-Hinweise, Erfolgsmeldungen und spätere Loading/Error/Retry-Zustaende folgen dem dunklen Web-App-Stil.',
+        'Modal-Layer, Empty Panels, API-Hinweise, Erfolgsmeldungen und spätere Loading/Error/Retry-Zustände folgen dem dunklen Web-App-Stil.',
     status: 'Prepared',
     icon: Icons.layers_outlined,
     color: AirmiusColors.amber,

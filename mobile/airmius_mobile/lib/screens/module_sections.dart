@@ -295,7 +295,7 @@ class _WorkspaceSection extends StatelessWidget {
         ),
         const _WideStatus(
           title: 'Trainerbereich',
-          body: 'Trainingsplaene, Feedback, Teilnehmer und Termine.',
+          body: 'Trainingspläne, Feedback, Teilnehmer und Termine.',
           icon: Icons.sports_outlined,
         ),
       ],
@@ -359,7 +359,7 @@ class _ClubCockpitSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.folder_outlined,
           title: 'Vereinsdokumente',
-          body: 'Datenschutz, Beitragsordnung und Regeln verknuepfen.',
+          body: 'Datenschutz, Beitragsordnung und Regeln verknüpfen.',
           trailing: '3',
         ),
         const _WideStatus(
@@ -706,7 +706,7 @@ class _TeamsSection extends StatelessWidget {
         const _WideStatus(
           title: 'Teamkalender',
           body:
-              'Training, Events, Chat und Dateien direkt am Team verknuepfen.',
+              'Training, Events, Chat und Dateien direkt am Team verknüpfen.',
           icon: Icons.calendar_month_outlined,
         ),
       ],
@@ -837,13 +837,13 @@ class _SportsSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.fitness_center_outlined,
           title: 'Krafttraining',
-          body: 'Belastung, Volumen, Uebungen und Regeneration.',
+          body: 'Belastung, Volumen, Übungen und Regeneration.',
           trailing: 'Profil',
         ),
         const _WideStatus(
           title: 'KI-Plan-Voraussetzung',
           body:
-              'Fehlende Leistungsdaten vor KI-Trainingsplaenen sichtbar machen.',
+              'Fehlende Leistungsdaten vor KI-Trainingsplänen sichtbar machen.',
           icon: Icons.auto_awesome_outlined,
         ),
       ],
@@ -899,7 +899,7 @@ class _TrainingSection extends StatelessWidget {
           ),
         ),
         const _WideStatus(
-          title: 'Naechstes Event',
+          title: 'Nächstes Event',
           body: 'Intervalltraining - Morgen 18:30 - Sportplatz',
           icon: Icons.event_available_outlined,
         ),
@@ -1037,14 +1037,14 @@ class _NutritionSection extends StatelessWidget {
         ),
         const _ListLine(
           icon: Icons.breakfast_dining_outlined,
-          title: 'Fruehstueck',
+          title: 'Frühstück',
           body: 'Haferflocken, Banane, Protein',
           trailing: '520 kcal',
         ),
         const _ListLine(
           icon: Icons.camera_alt_outlined,
           title: 'KI-Mahlzeitenanalyse',
-          body: 'Foto aufnehmen und Makros schaetzen lassen.',
+          body: 'Foto aufnehmen und Makros schätzen lassen.',
           trailing: 'Beta',
         ),
       ],
@@ -1296,7 +1296,7 @@ class _CarpoolSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.directions_car_filled_outlined,
           title: 'Zum Training fahren',
-          body: '2 freie Plaetze - Heute 18:00',
+          body: '2 freie Plätze - Heute 18:00',
           trailing: 'Angebot',
         ),
         const _ListLine(
@@ -1371,7 +1371,7 @@ class _FilesSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.picture_as_pdf_outlined,
           title: 'Datenschutz.pdf',
-          body: 'Verknuepft mit Mitgliedsantrag',
+          body: 'Verknüpft mit Mitgliedsantrag',
           trailing: 'Pflicht',
         ),
         const _ListLine(
@@ -1433,7 +1433,7 @@ class _BadgesSection extends StatelessWidget {
           ),
         ),
         const _ProgressPanel(
-          title: 'Naechstes Badge',
+          title: 'Nächstes Badge',
           value: 0.82,
           label: '82% bis Vereinsstarter',
         ),
@@ -1624,7 +1624,7 @@ class _MarketplaceSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.shopping_bag_outlined,
           title: 'Airmius Teamshirt',
-          body: 'Groessen, Bestand und Varianten',
+          body: 'Größen, Bestand und Varianten',
           trailing: '29,90',
         ),
         const _ListLine(
@@ -1677,7 +1677,7 @@ class _CommerceSection extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Produkte, Orders, Coupons, Inventar, Payouts und Qualitaetsfreigaben.',
+                      'Produkte, Orders, Coupons, Inventar, Payouts und Qualitätsfreigaben.',
                       style: TextStyle(
                         color: airmiusMutedColor(context),
                         height: 1.35,
@@ -1698,7 +1698,7 @@ class _CommerceSection extends StatelessWidget {
         ),
         const _ListLine(
           icon: Icons.inventory_2_outlined,
-          title: 'Produktqualitaet',
+          title: 'Produktqualität',
           body: 'Bilder, Beschreibung, Varianten und Fulfillment prüfen.',
           trailing: 'Gate',
         ),
@@ -1769,7 +1769,7 @@ class _SponsorsSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.inventory_2_outlined,
           title: 'Sponsor-Paket',
-          body: 'Leistung, Preis, Reichweite und Verknuepfung mit Verein.',
+          body: 'Leistung, Preis, Reichweite und Verknüpfung mit Verein.',
           trailing: 'Paket',
         ),
         const _WideStatus(
@@ -1835,7 +1835,7 @@ class _MediaGuidelinesSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.family_restroom_outlined,
           title: 'Guardian Consent',
-          body: 'Medien mit Minderjaehrigen nur mit Zustimmung anzeigen.',
+          body: 'Medien mit Minderjährigen nur mit Zustimmung anzeigen.',
           trailing: 'Pflicht',
         ),
         const _WideStatus(
@@ -2001,7 +2001,7 @@ class _UsersSection extends StatelessWidget {
         const _ListLine(
           icon: Icons.account_circle_outlined,
           title: 'ZBB Konto',
-          body: 'Player - Profilvollstaendigkeit 82%',
+          body: 'Player - Profilvollständigkeit 82%',
           trailing: 'Aktiv',
         ),
         const _ListLine(
@@ -2069,14 +2069,14 @@ class _SettingsSection extends StatelessWidget {
           ),
         ),
         const _ProgressPanel(
-          title: 'Profilvollstaendigkeit',
+          title: 'Profilvollständigkeit',
           value: 0.82,
           label: '82% - Sportprofil und Notfallkontakt fehlen',
         ),
         const _ListLine(
           icon: Icons.language_outlined,
           title: 'Sprache',
-          body: 'Deutsch, Englisch, Franzoesisch, Arabisch',
+          body: 'Deutsch, Englisch, Französisch, Arabisch',
           trailing: 'DE',
         ),
         const _ListLine(
@@ -2103,7 +2103,7 @@ class _SubscriptionSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
       title: 'Abo- und Rechnungscenter öffnen',
-      body: 'Plaene, Checkouts, offene Zahlungen, Rechnungen und Banktransfer.',
+      body: 'Pläne, Checkouts, offene Zahlungen, Rechnungen und Banktransfer.',
       icon: Icons.receipt_long_outlined,
       onTap: () => Navigator.push(
         context,
@@ -2155,7 +2155,7 @@ class _OutfitSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
       title: 'Outfit-Abo-Center öffnen',
-      body: 'Style-Profil, Plaene, Lieferungen, Pause und Support-Faelle.',
+      body: 'Style-Profil, Pläne, Lieferungen, Pause und Support-Fälle.',
       icon: Icons.checkroom_outlined,
       onTap: () => Navigator.push(
         context,
@@ -2300,7 +2300,7 @@ class _GenericSection extends StatelessWidget {
     return const _WideStatus(
       title: 'Native UI vorbereitet',
       body:
-          'Dieses Modul ist in der App-Struktur eingebunden und wird mit API-Daten gefuellt.',
+          'Dieses Modul ist in der App-Struktur eingebunden und wird mit API-Daten gefüllt.',
       icon: Icons.widgets_outlined,
     );
   }

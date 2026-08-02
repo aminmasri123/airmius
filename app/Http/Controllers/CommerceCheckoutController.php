@@ -397,7 +397,7 @@ class CommerceCheckoutController extends Controller
             'equipment' => 'Sportgeräte & Equipment',
             'apparel' => 'Bekleidung & Schuhe',
             'nutrition' => 'Ernährung & Supplements',
-            'accessories' => 'Zubehoer',
+            'accessories' => 'Zubehör',
             'digital_products' => 'Digitale Produkte',
             'product' => 'Sonstige Produkte',
             'course' => 'Kurse / E-Learning',
@@ -695,7 +695,7 @@ class CommerceCheckoutController extends Controller
 
         if ($targetActor !== 'verein' && $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Dieses Add-on ist für dein persoenliches Konto gedacht. Bitte wähle Privat / kein Verein aus.',
+                'club_id' => 'Dieses Add-on ist für dein persönliches Konto gedacht. Bitte wähle Privat / kein Verein aus.',
             ]);
         }
 
@@ -1574,7 +1574,7 @@ class CommerceCheckoutController extends Controller
             );
         }
 
-        return back()->with('success', 'Bestellung wurde storniert. Nach Versand waere nur noch eine Rücksendung möglich.');
+        return back()->with('success', 'Bestellung wurde storniert. Nach Versand wäre nur noch eine Rücksendung möglich.');
     }
 
     public function requestReturn(Request $request, CommerceOrder $order)
@@ -1592,7 +1592,7 @@ class CommerceCheckoutController extends Controller
         ]);
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
-        abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
+        abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht rücksendepflichtig.');
         abort_if($item && ! $this->orderSupport->itemStillReturnable($item), 422, 'Die Rücksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
 
         CommerceReturnRequest::create([

@@ -138,7 +138,7 @@ class _BillingDetailScreenState extends State<BillingDetailScreen> {
                     activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: Text(
-                      'Automatisch verlaengern',
+                      'Automatisch verlängern',
                       style: TextStyle(
                         color: airmiusTextColor(context),
                         fontWeight: FontWeight.w900,

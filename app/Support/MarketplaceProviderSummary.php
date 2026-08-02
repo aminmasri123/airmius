@@ -163,7 +163,7 @@ class MarketplaceProviderSummary
 
         return match ($profile->provider_type) {
             'club' => 'Verein / Anbieter',
-            'business' => 'Shop / Fachhaendler',
+            'business' => 'Shop / Fachhändler',
             'trainer' => 'Trainer / Coach',
             default => 'Airmius Anbieter',
         };

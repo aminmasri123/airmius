@@ -154,7 +154,7 @@ class _ApiTokenManagerScreenState extends State<ApiTokenManagerScreen> {
                               _SwitchRow(
                                 title: 'Rotation erforderlich',
                                 subtitle:
-                                    'Regelmaessige Token-Rotation für Store- und API-Sicherheit.',
+                                    'Regelmäßige Token-Rotation für Store- und API-Sicherheit.',
                                 value: _rotateRequired,
                                 onChanged: (value) =>
                                     setState(() => _rotateRequired = value),

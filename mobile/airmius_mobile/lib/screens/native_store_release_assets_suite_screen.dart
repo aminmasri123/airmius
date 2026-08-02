@@ -132,7 +132,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState
                     icon: Icons.apps_outlined,
                     title: 'Airmius App-Icon',
                     body:
-                        'Logo in Store-Groessen, Adaptive Icon, runde Vorschau und dunkler Hintergrund passend zur Web-App.',
+                        'Logo in Store-Größen, Adaptive Icon, runde Vorschau und dunkler Hintergrund passend zur Web-App.',
                     value: _iconReady,
                     onChanged: (value) => setState(() => _iconReady = value),
                   ),
@@ -157,7 +157,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState
                     icon: Icons.privacy_tip_outlined,
                     title: 'Datenschutzangaben',
                     body:
-                        'Datenkategorien, Zweckbindung, Konto-Löschung, Minderjaehrige, Standort, Kamera, Dateien und Push.',
+                        'Datenkategorien, Zweckbindung, Konto-Löschung, Minderjährige, Standort, Kamera, Dateien und Push.',
                     value: _privacyReady,
                     onChanged: (value) => setState(() => _privacyReady = value),
                     last: true,

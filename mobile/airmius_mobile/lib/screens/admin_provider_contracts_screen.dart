@@ -34,9 +34,9 @@ class _AdminProviderContractsScreenState
     _ProviderItem(
       title: 'Payment Provider',
       body:
-          'Zahlungsgebuehren, Banktransfer, SEPA-Hinweise und Providerabrechnung.',
+          'Zahlungsgebühren, Banktransfer, SEPA-Hinweise und Providerabrechnung.',
       status: 'Prüfen',
-      amount: '2.9% + Gebuehr',
+      amount: '2.9% + Gebühr',
       icon: Icons.payments_outlined,
       color: AirmiusColors.green,
     ),
@@ -120,15 +120,15 @@ class _AdminProviderContractsScreenState
                               _SwitchRow(
                                 title: 'Providerkosten anzeigen',
                                 subtitle:
-                                    'Monatliche Kosten, Volumen, Gebuehren und Kostenstellen.',
+                                    'Monatliche Kosten, Volumen, Gebühren und Kostenstellen.',
                                 value: _showProviderCosts,
                                 onChanged: (value) =>
                                     setState(() => _showProviderCosts = value),
                               ),
                               _SwitchRow(
-                                title: 'Verlaengerungen anzeigen',
+                                title: 'Verlängerungen anzeigen',
                                 subtitle:
-                                    'Renewals, Fristen und naechste Entscheidung.',
+                                    'Renewals, Fristen und nächste Entscheidung.',
                                 value: _showRenewals,
                                 onChanged: (value) =>
                                     setState(() => _showRenewals = value),

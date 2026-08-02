@@ -1050,7 +1050,7 @@ class AdminCommerceController extends Controller
             'equipment' => 'Sportgeräte & Equipment',
             'apparel' => 'Bekleidung & Schuhe',
             'nutrition' => 'Ernährung & Supplements',
-            'accessories' => 'Zubehoer',
+            'accessories' => 'Zubehör',
             'digital_products' => 'Digitale Produkte',
             'product' => 'Sonstige Produkte',
             'course' => 'Kurse / E-Learning',

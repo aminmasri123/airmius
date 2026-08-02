@@ -139,7 +139,7 @@ class _SavedViewSearchAlertSuiteScreenState
                     icon: Icons.bookmark_outline,
                     title: 'Gespeicherte Ansichten',
                     body:
-                        'Filter, Sortierung, Spalten, Statuschips und Suchbegriff können als persoenliche Ansicht gespeichert werden.',
+                        'Filter, Sortierung, Spalten, Statuschips und Suchbegriff können als persönliche Ansicht gespeichert werden.',
                     enabled: _savedViews,
                     onChanged: (value) => setState(() => _savedViews = value),
                   ),
@@ -147,7 +147,7 @@ class _SavedViewSearchAlertSuiteScreenState
                     icon: Icons.notifications_active_outlined,
                     title: 'Suchalarme',
                     body:
-                        'Neue Treffer für offene Antraege, überfaellige Rechnungen oder passende Vereine loesen Hinweise aus.',
+                        'Neue Treffer für offene Anträge, überfällige Rechnungen oder passende Vereine lösen Hinweise aus.',
                     enabled: _alerts,
                     onChanged: (value) => setState(() => _alerts = value),
                   ),
@@ -259,7 +259,7 @@ const _views = [
   _SavedView(
     area: 'Mitglieder',
     title: 'Offene Mitgliedsanträge',
-    body: 'Neue Antraege, Rückfragen, fehlende Dokumente und Rückzuege.',
+    body: 'Neue Anträge, Rückfragen, fehlende Dokumente und Rückzüge.',
     status: 'Alert',
     icon: Icons.assignment_ind_outlined,
     color: AirmiusColors.green,
@@ -292,7 +292,7 @@ const _views = [
   ),
   _SavedView(
     area: 'Rechnungen',
-    title: 'Überfaellige Rechnungen',
+    title: 'Überfällige Rechnungen',
     body: 'Offene Rechnungen, Beitragszyklen, Banktransfer und Mahnstufe.',
     status: 'Overdue',
     icon: Icons.payments_outlined,
@@ -310,7 +310,7 @@ const _views = [
     area: 'Support',
     title: 'Eskalierte Tickets',
     body:
-        'Supportfaelle mit Vereinsadmin-Hinweis, Plattformstatus und Dateianhaengen.',
+        'Supportfälle mit Vereinsadmin-Hinweis, Plattformstatus und Dateianhängen.',
     status: 'Urgent',
     icon: Icons.support_agent_outlined,
     color: AirmiusColors.amber,

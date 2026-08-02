@@ -151,7 +151,7 @@ class _SystemJobQueueMonitorSuiteScreenState
                     icon: Icons.error_outline,
                     title: 'Dead Letter Queue',
                     body:
-                        'Nicht reparierbare Jobs bleiben sichtbar, auditierbar und können gezielt erneut ausgefuehrt werden.',
+                        'Nicht reparierbare Jobs bleiben sichtbar, auditierbar und können gezielt erneut ausgeführt werden.',
                     enabled: _deadLetter,
                     onChanged: (value) => setState(() => _deadLetter = value),
                   ),
@@ -159,7 +159,7 @@ class _SystemJobQueueMonitorSuiteScreenState
                     icon: Icons.notifications_active_outlined,
                     title: 'Admin Alerts',
                     body:
-                        'Kritische Queue-Probleme loesen In-App, E-Mail oder Push-Hinweise für Admins aus.',
+                        'Kritische Queue-Probleme lösen In-App, E-Mail oder Push-Hinweise für Admins aus.',
                     enabled: _adminAlerts,
                     onChanged: (value) => setState(() => _adminAlerts = value),
                   ),
@@ -191,7 +191,7 @@ class _SystemJobQueueMonitorSuiteScreenState
                   const Eyebrow('ADMIN AKTIONEN'),
                   const SizedBox(height: 8),
                   Text(
-                    'Später können berechtigte Admins Jobs erneut ausfuehren, pausieren, exportieren, als geloest markieren oder an Provider-Logs springen.',
+                    'Später können berechtigte Admins Jobs erneut ausführen, pausieren, exportieren, als gelöst markieren oder an Provider-Logs springen.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.38,
@@ -257,7 +257,7 @@ const _jobs = [
     queue: 'Mail',
     title: 'Mitgliedsanfrage Admin-Mail',
     body:
-        'Benachrichtigt Vereinsadmins über neue Antraege, Rückzuege und Rückfragen.',
+        'Benachrichtigt Vereinsadmins über neue Anträge, Rückzüge und Rückfragen.',
     status: 'Running',
     time: 'vor 2 Min.',
     icon: Icons.mail_outline,
@@ -267,7 +267,7 @@ const _jobs = [
     queue: 'Files',
     title: 'Dokument Upload Scan',
     body:
-        'Prüft Datenschutz, Satzung, Beitragsordnung und Formularanhaenge vor Freigabe.',
+        'Prüft Datenschutz, Satzung, Beitragsordnung und Formularanhänge vor Freigabe.',
     status: 'Queued',
     time: 'vor 4 Min.',
     icon: Icons.document_scanner_outlined,
@@ -297,7 +297,7 @@ const _jobs = [
     queue: 'Imports',
     title: 'Mitglieder CSV Import',
     body:
-        'Fuehrt Mapping, Dublettenprüfung, Einladungen und Audit-Notizen aus.',
+        'Führt Mapping, Dublettenprüfung, Einladungen und Audit-Notizen aus.',
     status: 'Failed',
     time: 'vor 18 Min.',
     icon: Icons.import_export_outlined,

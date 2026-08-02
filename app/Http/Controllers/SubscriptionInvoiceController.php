@@ -199,7 +199,7 @@ class SubscriptionInvoiceController extends Controller
         $pdf->card(396, 632, 150, 54, 'Betrag', $amount, true);
 
         // Recipient and payment summary
-        $pdf->sectionTitle('Leistungsempfaenger', 48, 585);
+        $pdf->sectionTitle('Leistungsempfänger', 48, 585);
         $pdf->text($recipientName, 48, 562, 13, true);
         if ($recipientEmail !== '') {
             $pdf->text($recipientEmail, 48, 544, 10, false, AirmiusPdfDocument::SLATE);

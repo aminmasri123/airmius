@@ -159,7 +159,7 @@ const _baseRelease = {
   'release.analyticsReportingKpi': 'Analytics & Reports',
   'release.learningCourseProgressCertificate': 'Kurse & Zertifikate',
   'release.gamificationBadgeAchievement': 'Badges & Erfolge',
-  'release.healthIncidentReports': 'Gesundheit & Vorfaelle',
+  'release.healthIncidentReports': 'Gesundheit & Vorfälle',
   'release.locationMapFacilities': 'Orte & Karten',
   'release.clubMemberImportExport': 'Import & Export',
   'release.contentPublishingCms': 'Content Publishing',
@@ -184,7 +184,7 @@ const _baseRelease = {
   'release.savedViewsSearchAlerts': 'Saved Views',
   'release.crossModuleApprovalWorkflow': 'Freigaben',
   'release.facilityBookingResourceScheduler': 'Ressourcen buchen',
-  'release.availabilityAbsencePlanning': 'Verfuegbarkeit',
+  'release.availabilityAbsencePlanning': 'Verfügbarkeit',
   'release.volunteerShiftTaskPlanner': 'Helferplanung',
   'release.clubSurveyPollVoting': 'Umfragen',
   'release.meetingMinutesDecisionLog': 'Sitzungen',
@@ -216,7 +216,7 @@ const _baseRelease = {
   'release.clubReports': 'Vereinsberichte',
   'release.requestInbox': 'Anfrage-Eingang',
   'release.membershipFormBuilder': 'Mitgliedsantrag konfigurieren',
-  'release.membershipApplicationForm': 'Mitgliedsantrag ausfuellen',
+  'release.membershipApplicationForm': 'Mitgliedsantrag ausfüllen',
   'release.membershipRequestStatus': 'Meine Mitgliedsanfrage',
   'release.clubRoles': 'Vereinsrollen & Rechte',
   'release.clubCommunication': 'Vereinskommunikation',
@@ -2293,12 +2293,19 @@ const _registrationOnboardingDe = {
   'registrationOnboarding.later': 'Später',
   'registrationOnboarding.laterHint':
       'Du findest die Einrichtung später in deinem Konto.',
-  'registrationOnboarding.specialties': 'Sportarten und Schwerpunkte *',
+  'registrationOnboarding.sports': 'Sportarten *',
+  'registrationOnboarding.sportsPlaceholder': 'Sportarten auswählen',
+  'registrationOnboarding.specialties': 'Schwerpunkte *',
+  'registrationOnboarding.specialtiesPlaceholder': 'Schwerpunkte auswählen',
+  'registrationOnboarding.multipleHint': 'Mehrere Auswahlen sind möglich.',
+  'registrationOnboarding.optionsError':
+      'Sportarten und Schwerpunkte konnten nicht geladen werden.',
+  'registrationOnboarding.optionsSave': 'Auswahl übernehmen',
   'registrationOnboarding.experience': 'Trainererfahrung *',
   'registrationOnboarding.certification': 'Lizenzen und Qualifikationen',
   'registrationOnboarding.message': 'Zusätzliche Nachricht',
   'registrationOnboarding.trainerRequired':
-      'Bitte gib Sportarten und deine Trainererfahrung an.',
+      'Bitte wähle mindestens eine Sportart und einen Schwerpunkt aus und gib deine Trainererfahrung an.',
   'registrationOnboarding.saving': 'Wird eingereicht …',
   'registrationOnboarding.submitTrainer': 'Trainerantrag einreichen',
   'registrationOnboarding.trainerSubmitted':
@@ -2323,12 +2330,19 @@ const _registrationOnboardingEn = {
   'registrationOnboarding.later': 'Later',
   'registrationOnboarding.laterHint':
       'You can find the setup in your account later.',
-  'registrationOnboarding.specialties': 'Sports and specialties *',
+  'registrationOnboarding.sports': 'Sports *',
+  'registrationOnboarding.sportsPlaceholder': 'Select sports',
+  'registrationOnboarding.specialties': 'Specialties *',
+  'registrationOnboarding.specialtiesPlaceholder': 'Select specialties',
+  'registrationOnboarding.multipleHint': 'You can select multiple options.',
+  'registrationOnboarding.optionsError':
+      'Sports and specialties could not be loaded.',
+  'registrationOnboarding.optionsSave': 'Apply selection',
   'registrationOnboarding.experience': 'Coaching experience *',
   'registrationOnboarding.certification': 'Licenses and qualifications',
   'registrationOnboarding.message': 'Additional message',
   'registrationOnboarding.trainerRequired':
-      'Please enter your sports and coaching experience.',
+      'Please select at least one sport and specialty and enter your coaching experience.',
   'registrationOnboarding.saving': 'Submitting …',
   'registrationOnboarding.submitTrainer': 'Submit trainer application',
   'registrationOnboarding.trainerSubmitted':
@@ -2352,12 +2366,21 @@ const _registrationOnboardingFr = {
   'registrationOnboarding.later': 'Plus tard',
   'registrationOnboarding.laterHint':
       'Tu retrouveras la configuration plus tard dans ton compte.',
-  'registrationOnboarding.specialties': 'Sports et spécialités *',
+  'registrationOnboarding.sports': 'Sports *',
+  'registrationOnboarding.sportsPlaceholder': 'Sélectionner des sports',
+  'registrationOnboarding.specialties': 'Spécialités *',
+  'registrationOnboarding.specialtiesPlaceholder':
+      'Sélectionner des spécialités',
+  'registrationOnboarding.multipleHint':
+      'Tu peux sélectionner plusieurs options.',
+  'registrationOnboarding.optionsError':
+      'Les sports et spécialités n’ont pas pu être chargés.',
+  'registrationOnboarding.optionsSave': 'Appliquer la sélection',
   'registrationOnboarding.experience': 'Expérience de coach *',
   'registrationOnboarding.certification': 'Licences et qualifications',
   'registrationOnboarding.message': 'Message complémentaire',
   'registrationOnboarding.trainerRequired':
-      'Indique tes sports et ton expérience de coach.',
+      'Sélectionne au moins un sport et une spécialité, puis indique ton expérience de coach.',
   'registrationOnboarding.saving': 'Envoi …',
   'registrationOnboarding.submitTrainer': 'Envoyer la demande de coach',
   'registrationOnboarding.trainerSubmitted':
@@ -2381,12 +2404,18 @@ const _registrationOnboardingAr = {
   'registrationOnboarding.later': 'لاحقًا',
   'registrationOnboarding.laterHint':
       'يمكنك العثور على الإعداد لاحقًا في حسابك.',
-  'registrationOnboarding.specialties': 'الرياضات والتخصصات *',
+  'registrationOnboarding.sports': 'الرياضات *',
+  'registrationOnboarding.sportsPlaceholder': 'اختر الرياضات',
+  'registrationOnboarding.specialties': 'التخصصات *',
+  'registrationOnboarding.specialtiesPlaceholder': 'اختر التخصصات',
+  'registrationOnboarding.multipleHint': 'يمكنك اختيار عدة خيارات.',
+  'registrationOnboarding.optionsError': 'تعذر تحميل الرياضات والتخصصات.',
+  'registrationOnboarding.optionsSave': 'تطبيق الاختيار',
   'registrationOnboarding.experience': 'خبرة التدريب *',
   'registrationOnboarding.certification': 'التراخيص والمؤهلات',
   'registrationOnboarding.message': 'رسالة إضافية',
   'registrationOnboarding.trainerRequired':
-      'يرجى إدخال الرياضات وخبرة التدريب.',
+      'يرجى اختيار رياضة وتخصص واحد على الأقل وإدخال خبرة التدريب.',
   'registrationOnboarding.saving': 'جارٍ الإرسال …',
   'registrationOnboarding.submitTrainer': 'إرسال طلب المدرب',
   'registrationOnboarding.trainerSubmitted': 'تم إرسال طلب المدرب للمراجعة.',
@@ -19288,18 +19317,18 @@ final _strings = {
     'messages.title': 'Nachrichten',
     'messages.subtitle': 'Chats, Gruppen, Vereinsadmins und Training',
     'training.title': 'Events & Training',
-    'training.subtitle': 'Termine, Teilnahme, Trainingsplaene und Logs',
+    'training.subtitle': 'Termine, Teilnahme, Trainingspläne und Logs',
     'finance.title': 'Mitglieder & Beiträge',
     'finance.subtitle':
         'Mitglieder, externe Kontakte, Rechnungen, Zahlungen, SEPA und DATEV',
     'documents.title': 'Vereinsdateien hochladen',
     'documents.subtitle':
-        'Datenschutz, Regeln, Beitragsdokumente, SEPA, Formulare und Datei-Manager-Verknuepfung.',
+        'Datenschutz, Regeln, Beitragsdokumente, SEPA, Formulare und Datei-Manager-Verknüpfung.',
     'feed.title': 'Feed',
     'feed.subtitle':
         'Beiträge aus deinen Vereinen, Teams und öffentlichen Updates',
     'feed.compose': 'Beitrag erstellen',
-    'feed.placeholder': 'Was moechtest du teilen?',
+    'feed.placeholder': 'Was möchtest du teilen?',
     'feed.publish': 'Veröffentlichen',
     'feed.empty': 'Noch keine Beiträge sichtbar.',
     'feed.emptyBody':
@@ -19331,7 +19360,7 @@ final _strings = {
     'feed.storyUploadError': 'Story konnte nicht erstellt werden:',
     'feed.storyDelete': 'Story löschen',
     'feed.postDelete': 'Beitrag löschen',
-    'feed.postDeleteConfirm': 'Moechtest du diesen Beitrag wirklich löschen?',
+    'feed.postDeleteConfirm': 'Möchtest du diesen Beitrag wirklich löschen?',
     'feed.selectClub': 'Wähle einen Verein für einen Vereinsbeitrag.',
     'feed.selectTeam': 'Wähle ein Team für einen Teambeitrag.',
     'feed.uploadRejected': 'Upload abgelehnt',
@@ -19625,7 +19654,7 @@ final _strings = {
     'notifications.openContext': 'Kontext öffnen',
     'requests.title': 'Anfrage-Eingang',
     'requests.subtitle':
-        'Mitgliedschaftsanfragen, Rückzuege, Dokumente und Adminentscheidungen',
+        'Mitgliedschaftsanfragen, Rückzüge, Dokumente und Adminentscheidungen',
     'requests.empty': 'Keine Mitgliedschaftsanfragen sichtbar.',
     'requests.error': 'Anfragen konnten nicht geladen werden.',
     'requests.retry': 'Anfragen erneut laden',
@@ -19664,7 +19693,7 @@ final _strings = {
     'release.title': 'Release Readiness',
     'release.subtitle':
         'UI, Sprache, Store, API, Safety und Betrieb für die mobile App.',
-    'release.heroTitle': 'Die App wird release-faehig strukturiert.',
+    'release.heroTitle': 'Die App wird release-fähig strukturiert.',
     'release.heroBody':
         'Diese Ansicht zeigt, was für eine echte Flutter-App vorbereitet ist und was später bei API, Build und Store finalisiert wird.',
     'onboarding.title': 'App Onboarding',

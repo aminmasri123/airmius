@@ -138,7 +138,7 @@ class _AdCampaignScreenState extends State<AdCampaignScreen> {
                     initialValue: _placement,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(
-                      labelText: 'Anzeigenflaeche',
+                      labelText: 'Anzeigenfläche',
                     ),
                     items:
                         const [

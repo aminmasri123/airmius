@@ -108,7 +108,7 @@ const shippingAddressLine = (address) => [
 const statusLabel = (status) => ({
     pending_payment: 'Zahlung offen',
     active: 'Aktiv',
-    cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
+    cancels_at_period_end: 'Gekündigt zum Laufzeitende',
     paused: 'Pausiert',
     payment_paused: 'Zahlung pausiert',
     cancelled: 'Abgebrochen',
@@ -121,7 +121,7 @@ const statusLabel = (status) => ({
 const issueTypeLabel = (type) => ({
     exchange: 'Umtausch',
     return: 'Retoure',
-    damaged: 'Beschaedigt',
+    damaged: 'Beschädigt',
     missing_item: 'Artikel fehlt',
     wrong_item: 'Falscher Artikel',
     other: 'Sonstiges',
@@ -133,7 +133,7 @@ const issueStatusLabel = (status) => ({
     approved: 'Freigegeben',
     return_waiting: 'Rücksendung offen',
     replacement_preparing: 'Ersatz wird vorbereitet',
-    resolved: 'Geloest',
+    resolved: 'Gelöst',
     rejected: 'Abgeschlossen',
 })[status] || status || '-'
 

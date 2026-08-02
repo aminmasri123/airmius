@@ -315,7 +315,7 @@ final _groups = <_EndpointGroup>[
   _EndpointGroup(
     title: 'Vereine & Mitgliedschaft',
     body:
-        'Clubprofil, Mitglieder, Antraege, Formularschema, Beitrag, Dokumente und Rückzug.',
+        'Clubprofil, Mitglieder, Anträge, Formularschema, Beitrag, Dokumente und Rückzug.',
     status: 'Verein',
     icon: Icons.groups_2_outlined,
     color: AirmiusColors.green,

@@ -149,7 +149,7 @@ class _ConsentSignatureVersioningSuiteScreenState
                     icon: Icons.family_restroom_outlined,
                     title: 'Guardian-Freigabe',
                     body:
-                        'Bei Minderjaehrigen werden Eltern-/Guardian-Bestätigungen sichtbar getrennt und prüfbar gehalten.',
+                        'Bei Minderjährigen werden Eltern-/Guardian-Bestätigungen sichtbar getrennt und prüfbar gehalten.',
                     enabled: _guardianConsent,
                     onChanged: (value) =>
                         setState(() => _guardianConsent = value),
@@ -185,7 +185,7 @@ class _ConsentSignatureVersioningSuiteScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('USER BESTAETIGUNG'),
+                  const Eyebrow('USER BESTÄTIGUNG'),
                   const SizedBox(height: 8),
                   Text(
                     'Ich habe Datenschutz, Satzung und Beitragsordnung gelesen und akzeptiere die für meine Mitgliedschaft geltenden Regeln.',
@@ -270,7 +270,7 @@ const _consents = [
   _Consent(
     context: 'Mitgliedsantrag',
     title: 'Datenschutz Verein',
-    body: 'Version v4 wurde gelesen, akzeptiert und mit dem Antrag verknuepft.',
+    body: 'Version v4 wurde gelesen, akzeptiert und mit dem Antrag verknüpft.',
     status: 'Pflicht',
     icon: Icons.privacy_tip_outlined,
     color: AirmiusColors.green,
@@ -306,7 +306,7 @@ const _consents = [
     context: 'Guardian',
     title: 'Elternfreigabe',
     body:
-        'Guardian bestätigt Minderjaehrigenprofil, Kontakt, Notfallkontakt und Vereinsregeln.',
+        'Guardian bestätigt Minderjährigenprofil, Kontakt, Notfallkontakt und Vereinsregeln.',
     status: 'Guardian',
     icon: Icons.family_restroom_outlined,
     color: AirmiusColors.green,

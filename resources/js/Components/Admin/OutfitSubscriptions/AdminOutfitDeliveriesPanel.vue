@@ -94,7 +94,7 @@ defineProps({
                                     <option value="approved">Freigegeben</option>
                                     <option value="return_waiting">Rücksendung offen</option>
                                     <option value="replacement_preparing">Ersatz wird vorbereitet</option>
-                                    <option value="resolved">Geloest</option>
+                                    <option value="resolved">Gelöst</option>
                                     <option value="rejected">Abgeschlossen</option>
                                 </select>
                                 <input v-model="formForDelivery(delivery).return_tracking_number" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Retouren-Trackingnummer">
@@ -214,7 +214,7 @@ defineProps({
                                         <option value="approved">Freigegeben</option>
                                         <option value="return_waiting">Rücksendung offen</option>
                                         <option value="replacement_preparing">Ersatz wird vorbereitet</option>
-                                        <option value="resolved">Geloest</option>
+                                        <option value="resolved">Gelöst</option>
                                         <option value="rejected">Abgeschlossen</option>
                                     </select>
                                 </label>

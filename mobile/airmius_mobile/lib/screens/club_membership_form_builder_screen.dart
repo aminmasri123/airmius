@@ -72,8 +72,8 @@ class _ClubMembershipFormBuilderScreenState
     _FieldGroup(
       title: 'Dokumente',
       body:
-          'Datenschutz, Vereinsregeln, Beitragsordnung, SEPA-Mandat und Minderjaehrigenformular.',
-      status: 'Verknuepft',
+          'Datenschutz, Vereinsregeln, Beitragsordnung, SEPA-Mandat und Minderjährigenformular.',
+      status: 'Verknüpft',
       icon: Icons.folder_copy_outlined,
       color: AirmiusColors.blue,
     ),
@@ -113,7 +113,7 @@ class _ClubMembershipFormBuilderScreenState
                               _SwitchRow(
                                 title: 'Personendaten verlangen',
                                 subtitle:
-                                    'Basisdaten für Mitgliedschaft und Identitaet.',
+                                    'Basisdaten für Mitgliedschaft und Identität.',
                                 value: _personalRequired,
                                 onChanged: (value) =>
                                     setState(() => _personalRequired = value),
@@ -136,7 +136,7 @@ class _ClubMembershipFormBuilderScreenState
                               _SwitchRow(
                                 title: 'Erziehungsberechtigte verlangen',
                                 subtitle:
-                                    'Automatisch relevant bei minderjaehrigen Antragstellern.',
+                                    'Automatisch relevant bei minderjährigen Antragstellern.',
                                 value: _guardianRequired,
                                 onChanged: (value) =>
                                     setState(() => _guardianRequired = value),
@@ -160,7 +160,7 @@ class _ClubMembershipFormBuilderScreenState
                               _SwitchRow(
                                 title: 'Pflichtdokumente anzeigen',
                                 subtitle:
-                                    'Datenschutz, Regeln, Beitrag und SEPA mit Antrag verknuepfen.',
+                                    'Datenschutz, Regeln, Beitrag und SEPA mit Antrag verknüpfen.',
                                 value: _documentsRequired,
                                 onChanged: (value) =>
                                     setState(() => _documentsRequired = value),
@@ -359,7 +359,7 @@ class _PaymentRules extends StatelessWidget {
   final ValueChanged<String> onInterval;
   final ValueChanged<String> onPayment;
 
-  static const intervals = ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'];
+  static const intervals = ['Monatlich', '4 Monate', '6 Monate', 'Jährlich'];
   static const payments = ['Überweisung', 'Bar', 'SEPA', 'Keine Zahlung'];
 
   @override

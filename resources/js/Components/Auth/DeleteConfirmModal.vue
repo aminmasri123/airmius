@@ -11,11 +11,11 @@ const props = defineProps({
     },
     title: {
         type: String,
-        default: 'Bestaetigung erforderlich',
+        default: 'Bestätigung erforderlich',
     },
     message: {
         type: String,
-        default: 'Sind Sie sicher, dass Sie diese Aktion ausfuehren moechten?',
+        default: 'Sind Sie sicher, dass Sie diese Aktion ausführen möchten?',
     },
     confirmText: {
         type: String,
@@ -73,7 +73,7 @@ watch(() => props.show, (show) => {
 
             <AppFormField
                 class="mt-4"
-                :label="`Geben Sie &quot;${confirmText}&quot; ein, um zu bestaetigen:`"
+                :label="`Geben Sie &quot;${confirmText}&quot; ein, um zu bestätigen:`"
             >
                 <input
                     v-model="confirmation"

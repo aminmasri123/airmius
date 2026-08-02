@@ -257,7 +257,7 @@ class TeamController extends Controller
 
         AppNotification::send($joinRequest->user_id, 'team.join_request_accepted', [
             'title' => 'Team-Beitrittsanfrage akzeptiert',
-            'body' => 'Deine Anfrage fuer '.$team->name.' wurde akzeptiert.',
+            'body' => 'Deine Anfrage für '.$team->name.' wurde akzeptiert.',
             'team_id' => $team->id,
             'club_id' => $team->club_id,
         ]);
@@ -288,7 +288,7 @@ class TeamController extends Controller
 
         AppNotification::send($joinRequest->user_id, 'team.join_request_declined', [
             'title' => 'Team-Beitrittsanfrage abgelehnt',
-            'body' => 'Deine Anfrage fuer '.$team->name.' wurde abgelehnt.',
+            'body' => 'Deine Anfrage für '.$team->name.' wurde abgelehnt.',
             'team_id' => $team->id,
             'club_id' => $team->club_id,
         ]);
@@ -342,7 +342,7 @@ class TeamController extends Controller
                 ]);
 
                 throw ValidationException::withMessages([
-                    'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+                    'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
                 ]);
             }
 
@@ -374,7 +374,7 @@ class TeamController extends Controller
         AppNotification::send($recipient->id, $data['role'] === 'Coach' ? 'team.trainer_mentioned' : 'team.invite', [
             'title' => $data['role'] === 'Coach' ? 'Trainer-Einladung zu '.$team->name : 'Einladung zu '.$team->name,
             'body' => $data['role'] === 'Coach'
-                ? 'Du wurdest als Trainer fuer '.$team->name.' eingeladen.'
+                ? 'Du wurdest als Trainer für '.$team->name.' eingeladen.'
                 : 'Du wurdest als '.$data['role'].' eingeladen.',
             'url' => '/teams?team_invitation='.$invitation->id,
             'team_id' => $team->id,

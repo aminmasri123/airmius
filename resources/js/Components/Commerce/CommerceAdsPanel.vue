@@ -63,7 +63,7 @@ const copy = {
         sales: 'Sales',
         placement: 'Placement - wo erscheint die Ad?',
         creativeFormat: 'Creative Format und Bildmasse',
-        formatNote: 'Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhaeltnis der Anzeige.',
+        formatNote: 'Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.',
         imageUrlOptional: 'Bild-URL optional',
         uploadImage: 'Bild hochladen',
         uploadHint: 'JPG, PNG oder WebP bis 8 MB. Empfohlen:',

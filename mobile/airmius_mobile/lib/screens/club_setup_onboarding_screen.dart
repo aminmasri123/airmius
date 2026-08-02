@@ -57,7 +57,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
     _SetupStep(
       title: 'Dokumente',
       body:
-          'Datenschutz, Regeln, SEPA, Formulare und Dateimanager-Verknuepfung.',
+          'Datenschutz, Regeln, SEPA, Formulare und Dateimanager-Verknüpfung.',
       status: 'Offen',
       icon: Icons.folder_copy_outlined,
       color: AirmiusColors.red,
@@ -105,7 +105,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                           child: Column(
                             children: [
                               _CheckRow(
-                                title: 'Profil vervollstaendigt',
+                                title: 'Profil vervollständigt',
                                 subtitle:
                                     'Vereinsname, Ort, Kontakt und Beschreibung.',
                                 value: _profileDone,
@@ -123,7 +123,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                               _CheckRow(
                                 title: 'Beiträge konfiguriert',
                                 subtitle:
-                                    'Monatlich, quartalsweise, halbjaehrlich, jaehrlich, bar oder Überweisung.',
+                                    'Monatlich, quartalsweise, halbjährlich, jährlich, bar oder Überweisung.',
                                 value: _rulesDone,
                                 onChanged: (value) =>
                                     setState(() => _rulesDone = value),
@@ -137,7 +137,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                     setState(() => _rolesDone = value),
                               ),
                               _CheckRow(
-                                title: 'Dokumente verknuepft',
+                                title: 'Dokumente verknüpft',
                                 subtitle:
                                     'Datenschutz, Regeln und Formulare liegen im Dateimanager.',
                                 value: _documentsDone,
@@ -333,7 +333,7 @@ class _SetupHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Der Verein bekommt eine klare Setup-Strecke, damit Antraege, Dateien, Rechte, Beiträge und Sichtbarkeit vor dem Start sauber eingerichtet sind.',
+            'Der Verein bekommt eine klare Setup-Strecke, damit Anträge, Dateien, Rechte, Beiträge und Sichtbarkeit vor dem Start sauber eingerichtet sind.',
             style: TextStyle(
               color: AirmiusColors.muted,
               height: 1.45,

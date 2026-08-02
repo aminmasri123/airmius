@@ -25,7 +25,7 @@ class _AdminFinanceContractSuiteScreenState
       area: 'Invoices',
       status: 'Offen',
       body:
-          'Plattform-Rechnungen, Vereine, Anbieter, Faelligkeit, Mahnstatus und Zahlungsabgleich.',
+          'Plattform-Rechnungen, Vereine, Anbieter, Fälligkeit, Mahnstatus und Zahlungsabgleich.',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -34,7 +34,7 @@ class _AdminFinanceContractSuiteScreenState
       area: 'Invoices',
       status: 'Abo',
       body:
-          'Abo-Rechnungen für Plaene, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
+          'Abo-Rechnungen für Pläne, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
       icon: Icons.request_quote_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -43,7 +43,7 @@ class _AdminFinanceContractSuiteScreenState
       area: 'Payments',
       status: 'Abgleich',
       body:
-          'Zahlungseingaenge, Banktransfer, Referenzen, Rückfragen und manuelle Zahlungsfreigaben.',
+          'Zahlungseingänge, Banktransfer, Referenzen, Rückfragen und manuelle Zahlungsfreigaben.',
       icon: Icons.payments_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -52,7 +52,7 @@ class _AdminFinanceContractSuiteScreenState
       area: 'Payments',
       status: 'Plan',
       body:
-          'Aktive Plaene, Upgrades, Downgrades, Pausen, Kündigungen und Kulanzentscheidungen.',
+          'Aktive Pläne, Upgrades, Downgrades, Pausen, Kündigungen und Kulanzentscheidungen.',
       icon: Icons.workspace_premium_outlined,
       color: Color(0xFFB084FF),
     ),

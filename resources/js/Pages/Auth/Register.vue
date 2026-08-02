@@ -80,10 +80,10 @@ const goBack = () => {
         <i class="las la-chevron-circle-left la-lg"></i>
     </button>
 
-    <div class="min-h-screen flex bg-bg text-primary">
-        <div class="w-full md:w-1/2 flex items-start justify-center px-4 py-10 sm:px-8 lg:px-10">
-            <div class="surface-card w-full max-w-md px-6 py-5 overflow-hidden">
-                <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
+    <div class="min-h-screen flex flex-col bg-bg text-primary md:flex-row">
+        <div class="flex min-h-screen w-full items-start justify-center overflow-y-auto px-4 py-6 sm:px-8 md:w-1/2 lg:w-[46%] lg:px-8 xl:px-12">
+            <div class="surface-card my-2 w-full max-w-2xl overflow-hidden px-6 py-6 sm:px-8 lg:my-6 lg:px-10 lg:py-7">
+                <div class="mx-auto h-28 w-44 sm:h-32 sm:w-52">
                     <AuthenticationCardLogo />
                 </div>
 
@@ -124,7 +124,7 @@ const goBack = () => {
                     </div>
                 </fieldset>
 
-                <div class="mb-5 grid gap-2">
+                <div class="mb-4 grid gap-2 sm:grid-cols-2">
                     <a
                         :href="route('social-auth.redirect', socialRouteParams('google'))"
                         class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
@@ -142,7 +142,7 @@ const goBack = () => {
                 </div>
 
                 <form @submit.prevent="submit">
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div>
                     <InputLabel for="first_name" :value="$t('Vorname')" />
                     <TextInput
@@ -171,7 +171,7 @@ const goBack = () => {
                 </div>
             </div>
 
-            <div class="mt-4">
+            <div class="mt-3 sm:col-span-2">
                 <InputLabel for="email" :value="$t('Email')" />
                 <TextInput
                     id="email"
@@ -184,7 +184,7 @@ const goBack = () => {
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div class="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div>
                     <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
                     <DateInput
@@ -215,7 +215,7 @@ const goBack = () => {
                 </div>
             </div>
 
-            <div class="mt-4">
+            <div class="mt-3 sm:col-span-2">
                 <div>
                     <InputLabel for="country" :value="$t('Land')" />
                     <select
@@ -314,7 +314,7 @@ const goBack = () => {
                 <InputError class="mt-2" :message="form.errors.state" />
             </div> -->
 
-            <div v-if="requiresGuardianConsent" class="mt-4">
+            <div v-if="requiresGuardianConsent" class="mt-3 sm:col-span-2">
                 <InputLabel for="guardian_email" :value="$t('E-Mail des Erziehungsberechtigten')" />
                 <TextInput
                     id="guardian_email"
@@ -330,33 +330,35 @@ const goBack = () => {
                 <InputError class="mt-2" :message="form.errors.guardian_email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" :value="$t('Password')" />
-                <TextInput
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="new-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password" />
+            <div class="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:col-span-2">
+                <div>
+                    <InputLabel for="password" :value="$t('Password')" />
+                    <TextInput
+                        id="password"
+                        v-model="form.password"
+                        type="password"
+                        class="mt-1 block w-full"
+                        required
+                        autocomplete="new-password"
+                    />
+                    <InputError class="mt-2" :message="form.errors.password" />
+                </div>
+
+                <div>
+                    <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
+                    <TextInput
+                        id="password_confirmation"
+                        v-model="form.password_confirmation"
+                        type="password"
+                        class="mt-1 block w-full"
+                        required
+                        autocomplete="new-password"
+                    />
+                    <InputError class="mt-2" :message="form.errors.password_confirmation" />
+                </div>
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
-                <TextInput
-                    id="password_confirmation"
-                    v-model="form.password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="new-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password_confirmation" />
-            </div>
-
-            <div class="mt-4">
+            <div class="mt-3 sm:col-span-2">
                 <InputLabel for="terms">
                     <div class="flex items-center">
                         <Checkbox id="terms" v-model:checked="form.terms" name="terms" required />
@@ -382,7 +384,7 @@ const goBack = () => {
                 </InputLabel>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div class="mt-4 flex items-center justify-end sm:col-span-2">
                 <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                     {{ $t('Registrieren') }}
                 </PrimaryButton>
@@ -395,6 +397,6 @@ const goBack = () => {
             </div>
         </div>
 
-        <AuthVisualSlider :slides="loginImages" title="Airmius starten" subtitle="Teams - Events - Marketplace" />
+        <AuthVisualSlider class="lg:w-[54%]" :slides="loginImages" title="Airmius starten" subtitle="Teams - Events - Marketplace" />
     </div>
 </template>

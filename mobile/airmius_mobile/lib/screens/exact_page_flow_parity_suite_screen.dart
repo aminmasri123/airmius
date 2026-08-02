@@ -120,7 +120,7 @@ class _ExactPageFlowParitySuiteScreenState
       title: 'Training Log Create / Show',
       route: 'Training/LogCreate, LogShow',
       body:
-          'Training erfassen, Werte prüfen, Medien, Coach-Feedback, Sichtbarkeit und nachtraegliche Detailansicht.',
+          'Training erfassen, Werte prüfen, Medien, Coach-Feedback, Sichtbarkeit und nachträgliche Detailansicht.',
       status: 'Log',
       icon: Icons.edit_calendar_outlined,
       primary: 'Log erstellen',
@@ -131,7 +131,7 @@ class _ExactPageFlowParitySuiteScreenState
       title: 'Training Plan Item Show',
       route: 'Training/PlanItemShow',
       body:
-          'Planpunkt, Tagesziel, Uebungen, Satz-/Wiederholungswerte, Notizen, Abhaken und Coach-Kommentar.',
+          'Planpunkt, Tagesziel, Übungen, Satz-/Wiederholungswerte, Notizen, Abhaken und Coach-Kommentar.',
       status: 'Plan',
       icon: Icons.checklist_outlined,
       primary: 'Planpunkt',
@@ -209,7 +209,7 @@ class _ExactPageFlowParitySuiteScreenState
       body: SafeArea(
         child: PageFrame(
           title: 'Exact Page Flow Parity',
-          subtitle: 'Feine Web-Seitenzustaende als native mobile Flow-Karten.',
+          subtitle: 'Feine Web-Seitenzustände als native mobile Flow-Karten.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -581,14 +581,14 @@ class _ParityNote extends StatelessWidget {
           'Create/Edit-Seiten brauchen Formularzustand, Fehler, Pflichtfelder und Speichern-CTA.',
         ),
         const _NoteLine(
-          'BankTransfer/Checkout/OrderStatus brauchen klare Zahlungs- und Rückkehrzustaende.',
+          'BankTransfer/Checkout/OrderStatus brauchen klare Zahlungs- und Rückkehrzustände.',
         ),
         const _NoteLine(
           'Admin- und Public-Detailseiten bleiben getrennt, aber im gleichen Airmius-Designsystem.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Paritaet markieren',
+          label: 'Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

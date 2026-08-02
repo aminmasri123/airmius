@@ -29,7 +29,7 @@ defineProps({
                         <th class="px-5 py-3">Kunde</th>
                         <th class="px-5 py-3">Plan</th>
                         <th class="px-5 py-3">Betrag</th>
-                        <th class="px-5 py-3">Faellig</th>
+                        <th class="px-5 py-3">Fällig</th>
                         <th class="px-5 py-3 text-right">Aktion</th>
                     </tr>
                 </thead>

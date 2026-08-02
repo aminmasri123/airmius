@@ -126,8 +126,8 @@ const maxWidthClass = computed(() => {
                         size="sm"
                         icon-only
                         class="absolute right-3 top-3 z-10"
-                        aria-label="Dialog schliessen"
-                        title="Dialog schliessen"
+                        aria-label="Dialog schließen"
+                        title="Dialog schließen"
                         @click="close"
                     >
                         <i class="las la-times text-lg" aria-hidden="true"></i>

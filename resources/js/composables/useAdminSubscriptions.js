@@ -37,8 +37,8 @@ export function useAdminSubscriptions(props) {
         trialing: 'Testphase',
         active: 'Aktiv',
         past_due: 'Zahlung offen',
-        cancelled: 'Gekuendigt',
-        cancels_at_period_end: 'Gekuendigt zum Periodenende',
+        cancelled: 'Gekündigt',
+        cancels_at_period_end: 'Gekündigt zum Periodenende',
     }
 
     const actors = computed(() => [

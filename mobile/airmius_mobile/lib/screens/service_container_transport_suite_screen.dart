@@ -19,7 +19,7 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
       _LayerItem(
         'Service Container',
         'App Core',
-        'AuthState, TokenStore, ClientFactory und RepositoryBundle werden zusammengefuehrt.',
+        'AuthState, TokenStore, ClientFactory und RepositoryBundle werden zusammengeführt.',
         AirmiusColors.green,
         Icons.hub_outlined,
       ),
@@ -45,7 +45,7 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
         'Package/http oder Dio anschließen, ohne die Repository-Schicht neu zu schreiben.',
       ),
       _GateItem(
-        'Secure Storage haerten',
+        'Secure Storage härten',
         'Persistenten TokenStore später durch Flutter Secure Storage, Keychain oder Android Keystore absichern.',
       ),
       _GateItem(
@@ -203,7 +203,7 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('NAECHSTE VERDRAHTUNG'),
+                  const Eyebrow('NÄCHSTE VERDRAHTUNG'),
                   const SizedBox(height: 12),
                   for (final gate in gates) ...[
                     _GateRow(item: gate),

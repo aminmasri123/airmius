@@ -501,7 +501,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/membership-applications/{membershipRequest}/withdraw', function (Request $request, ClubMembershipRequest $membershipRequest) {
             $membershipRequest->loadMissing(['club', 'user', 'membershipType']);
             abort_unless((int) $membershipRequest->user_id === (int) $request->user()->id, 403);
-            abort_unless($membershipRequest->type === 'membership', 422, 'Nur Mitgliedschaftsanfragen koennen hier zurueckgezogen werden.');
+            abort_unless($membershipRequest->type === 'membership', 422, 'Nur Mitgliedschaftsanfragen können hier zurückgezogen werden.');
             abort_unless($membershipRequest->status === 'pending', 422, 'Diese Anfrage ist nicht mehr offen.');
 
             $membershipRequest->update([

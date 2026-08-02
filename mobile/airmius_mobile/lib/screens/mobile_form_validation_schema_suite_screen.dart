@@ -136,7 +136,7 @@ class _MobileFormValidationSchemaSuiteScreenState
                     icon: Icons.account_tree_outlined,
                     title: 'Bedingte Felder',
                     body:
-                        'Guardian-Daten nur bei Minderjaehrigen, SEPA nur bei Lastschrift, Lizenznummer nur bei Sportpflicht.',
+                        'Guardian-Daten nur bei Minderjährigen, SEPA nur bei Lastschrift, Lizenznummer nur bei Sportpflicht.',
                     enabled: _conditionalRules,
                     onChanged: (value) =>
                         setState(() => _conditionalRules = value),
@@ -153,7 +153,7 @@ class _MobileFormValidationSchemaSuiteScreenState
                     icon: Icons.history_outlined,
                     title: 'Schema-Versionen',
                     body:
-                        'Jede Vereinskonfiguration wird versioniert, damit alte Antraege nachvollziehbar bleiben.',
+                        'Jede Vereinskonfiguration wird versioniert, damit alte Anträge nachvollziehbar bleiben.',
                     enabled: _schemaVersioning,
                     onChanged: (value) =>
                         setState(() => _schemaVersioning = value),
@@ -216,14 +216,14 @@ class _MobileFormValidationSchemaSuiteScreenState
                         'Bitte wähle eine Option oder markiere das Feld im Vereins-Builder als optional.',
                   ),
                   const _ErrorCard(
-                    title: 'SEPA unvollstaendig',
+                    title: 'SEPA unvollständig',
                     body:
                         'IBAN und SEPA-Mandat sind erforderlich, wenn Lastschrift aktiv ist.',
                   ),
                   const _ErrorCard(
                     title: 'Dokument fehlt',
                     body:
-                        'Bitte lade das Pflichtdokument hoch oder bestätige die verknuepfte Vereinsregel.',
+                        'Bitte lade das Pflichtdokument hoch oder bestätige die verknüpfte Vereinsregel.',
                   ),
                   const SizedBox(height: 4),
                   AirmiusButton(

@@ -113,7 +113,7 @@ const quickDrinkAmounts = [150, 250, 500, 750]
 const popularDrinkOptions = [
     { label: 'Wasser', category: 'Wasser', amount: 250, aliases: ['still', 'leitungswasser', 'tap water'] },
     { label: 'Mineralwasser', category: 'Wasser', amount: 250, aliases: ['mineral water'] },
-    { label: 'Sprudelwasser', category: 'Wasser', amount: 250, aliases: ['sparkling water', 'wasser mit kohlensaeure'] },
+    { label: 'Sprudelwasser', category: 'Wasser', amount: 250, aliases: ['sparkling water', 'wasser mit Kohlensäure'] },
     { label: 'Infused Water', category: 'Wasser', amount: 250, aliases: ['zitrone', 'gurke', 'mint water'] },
     { label: 'Kokoswasser', category: 'Wasser', amount: 250, aliases: ['coconut water'] },
     { label: 'Kräutertee', category: 'Tee', amount: 250, aliases: ['tee', 'herbal tea'] },

@@ -28,12 +28,12 @@ class _ClubCommunicationCenterScreenState
   final List<_MessagePlan> _plans = const [
     _MessagePlan(
       channel: 'Push',
-      title: 'Training faellt aus',
+      title: 'Training fällt aus',
       target: 'Team U16 Jugend',
       body:
           'Sofortige Push-Info mit Ersatztermin, Trainerhinweis und Lesestatus.',
       status: 'Entwurf',
-      metric: '18 Empfaenger',
+      metric: '18 Empfänger',
       icon: Icons.notifications_active_outlined,
       color: AirmiusColors.blue,
     ),
@@ -54,7 +54,7 @@ class _ClubCommunicationCenterScreenState
       body:
           'Vorlage für Beitrag, Intervall, Zahlmethode, Datenschutz und Vereinsregeln.',
       status: 'Freigabe',
-      metric: '31 Empfaenger',
+      metric: '31 Empfänger',
       icon: Icons.alternate_email_outlined,
       color: AirmiusColors.amber,
     ),
@@ -172,7 +172,7 @@ class _ClubCommunicationCenterScreenState
                           ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Verknuepfte Bereiche',
+                          title: 'Verknüpfte Bereiche',
                           child: Wrap(
                             spacing: 10,
                             runSpacing: 10,
@@ -319,7 +319,7 @@ class _CommunicationHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Vereine brauchen unterschiedliche Kanaele: schnelle Pushes, sichere Rückfragen, formelle E-Mails und sichtbare Vereinsbeiträge.',
+            'Vereine brauchen unterschiedliche Kanäle: schnelle Pushes, sichere Rückfragen, formelle E-Mails und sichtbare Vereinsbeiträge.',
             style: TextStyle(
               color: AirmiusColors.muted,
               height: 1.45,
@@ -330,11 +330,11 @@ class _CommunicationHero extends StatelessWidget {
           const Row(
             children: [
               Expanded(
-                child: MetricCard(value: '5', label: 'Kanaele'),
+                child: MetricCard(value: '5', label: 'Kanäle'),
               ),
               SizedBox(width: 10),
               Expanded(
-                child: MetricCard(value: '31', label: 'Empfaenger'),
+                child: MetricCard(value: '31', label: 'Empfänger'),
               ),
               SizedBox(width: 10),
               Expanded(

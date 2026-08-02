@@ -114,7 +114,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Native Nutzer-Admin-Detail-UI mit Profilfortschritt, Rollenwechsel, Verifizierung, 2FA, Sperre, DSGVO-Export, Moderationsnotiz und Audit
 - Native Einstellungscenter-UI mit Profil, Sprache, Datenschutz, Push, Sicherheit, Zahlungen und Kontoaktionen
 - Native Plattformbetrieb-UI fuer API-Status, CSRF/Session, Stripe/PayPal-Webhooks, Gast-Checkout, SEO, RSS, Legal-Status, Testmails, Wartung und Audit-Export
-- Native Einstellungsdetail-UI mit Profil/Sportprofil, Sprache, Sichtbarkeit, DSGVO-Export, Push, E-Mail, 2FA, Biometrie und Kontoloeschung
+- Native Einstellungsdetail-UI mit Profil/Sportprofil, Sprache, Sichtbarkeit, DSGVO-Export, Push, E-Mail, 2FA, Biometrie und Kontolöschung
 - Native Community-Center-UI mit Freunden, Einladungen, Empfehlungen, gemeinsamen Vereinen und Einladungslink
 - Native Safety-/Community-Operations-UI fuer Freundschaftstoken, Freund entfernen, Mitfahranfragen, Kontaktfreigabe, Guardian Consent, Elternlogin-Code, Kinderkonto, Widerruf, Maturity-Gates, Safety Check, Reports und Blockieren
 - Community-Aktionen fuer Einladungslink, Freundschaft annehmen und Freundschaft ablehnen fuehren in native UI-Aktionsflows
@@ -247,7 +247,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Native Legal/Support-Operations-UI fuer Impressum, Datenschutz, AGB, Jugendschutz, Widerruf, Kontakt, Meldungen, Moderation und Cookie-Hinweise ergaenzt.
 
 
-- Native Account-Operations-UI fuer Login, Registrierung, OAuth, Passwort-Reset, Passwortbestaetigung, 2FA, E-Mail-Verifizierung, Profil, Datenexport, Logout und Kontoloeschung ergaenzt.
+- Native Account-Operations-UI fuer Login, Registrierung, OAuth, Passwort-Reset, Passwortbestaetigung, 2FA, E-Mail-Verifizierung, Profil, Datenexport, Logout und Kontolöschung ergaenzt.
 
 
 - Native Learning-Operations-UI fuer Kurse, Enrollment, Kursabschluss, Lektionen, Quizversuche, Aufgaben, Zertifikate, Public-Katalog, Public-Course-Detail und Learning-Quality ergaenzt.

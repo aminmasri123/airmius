@@ -44,8 +44,8 @@ export function useEventShowPage(props) {
 
     const recurrenceOptions = [
         { value: '', label: 'Keine' },
-        { value: 'daily', label: 'Taeglich' },
-        { value: 'weekly', label: 'Woechentlich' },
+        { value: 'daily', label: 'Täglich' },
+        { value: 'weekly', label: 'Wöchentlich' },
         { value: 'biweekly', label: 'Alle zwei Wochen' },
         { value: 'monthly', label: 'Monatlich' },
     ]
@@ -177,7 +177,7 @@ export function useEventShowPage(props) {
         && yesCount.value >= Number(props.event.max_participants)
         && props.currentParticipantStatus !== 'yes')
     const capacityLabel = computed(() => hasParticipantLimit.value
-        ? `${yesCount.value}/${props.event.max_participants} Plaetze belegt`
+        ? `${yesCount.value}/${props.event.max_participants} Plätze belegt`
         : `${yesCount.value} Zusagen, unbegrenzt`)
 
     const setStatus = (status) => {

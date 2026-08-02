@@ -33,14 +33,14 @@ class _AvailabilityAbsencePlanningSuiteScreenState
             airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          'Verfuegbarkeit',
+          'Verfügbarkeit',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
         title: 'Availability Absence Planning',
         subtitle:
-            'Mobile UI für Verfuegbarkeit, Abwesenheit, Trainerübersicht, Guardian-Meldungen, Gesundheitsnotizen und Anwesenheits-Sync.',
+            'Mobile UI für Verfügbarkeit, Abwesenheit, Trainerübersicht, Guardian-Meldungen, Gesundheitsnotizen und Anwesenheits-Sync.',
         trailing: StatusPill(
           'Planning',
           color: Theme.of(context).colorScheme.secondary,
@@ -56,7 +56,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                   const Eyebrow('TEAM AVAILABILITY'),
                   const SizedBox(height: 8),
                   Text(
-                    'Trainer sehen frueh, wer wirklich kommt.',
+                    'Trainer sehen früh, wer wirklich kommt.',
                     style: TextStyle(
                       color: airmiusTextColor(context),
                       fontSize: 24,
@@ -66,7 +66,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Die App bereitet Verfuegbarkeiten, Absagen, Guardian-Meldungen, Verletzungshinweise und Teamplanung für Training, Events und Spiele vor.',
+                    'Die App bereitet Verfügbarkeiten, Absagen, Guardian-Meldungen, Verletzungshinweise und Teamplanung für Training, Events und Spiele vor.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -151,7 +151,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                     icon: Icons.family_restroom_outlined,
                     title: 'Guardian-Meldung',
                     body:
-                        'Eltern oder Guardians können Minderjaehrige abmelden und kurze Hinweise für Trainer hinterlegen.',
+                        'Eltern oder Guardians können Minderjährige abmelden und kurze Hinweise für Trainer hinterlegen.',
                     enabled: _guardianReport,
                     onChanged: (value) =>
                         setState(() => _guardianReport = value),
@@ -160,7 +160,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                     icon: Icons.groups_2_outlined,
                     title: 'Trainerübersicht',
                     body:
-                        'Trainer sehen Teamstatus, offene Antworten, Konflikte, Mindeststaerke und Anwesenheitsprognose.',
+                        'Trainer sehen Teamstatus, offene Antworten, Konflikte, Mindeststärke und Anwesenheitsprognose.',
                     enabled: _coachOverview,
                     onChanged: (value) =>
                         setState(() => _coachOverview = value),
@@ -192,7 +192,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                   const Eyebrow('TRAINER SNAPSHOT'),
                   const SizedBox(height: 8),
                   Text(
-                    'U16 Training ist planbar: 18 Zusagen, 4 Absagen, 2 offen. Mindeststaerke erreicht, aber Torwart fehlt.',
+                    'U16 Training ist planbar: 18 Zusagen, 4 Absagen, 2 offen. Mindeststärke erreicht, aber Torwart fehlt.',
                     style: TextStyle(
                       color: airmiusTextColor(context),
                       fontWeight: FontWeight.w900,
@@ -205,7 +205,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState
                     runSpacing: 8,
                     children: [
                       StatusPill(
-                        'Mindeststaerke OK',
+                        'Mindeststärke OK',
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                       StatusPill(
@@ -301,16 +301,16 @@ const _entries = [
     scope: 'Event',
     title: 'Sommerfest Helferplan',
     body:
-        'Helfer, Aufbau, Kasse und Abbau können als Verfuegbarkeits-Slots geplant werden.',
+        'Helfer, Aufbau, Kasse und Abbau können als Verfügbarkeits-Slots geplant werden.',
     status: 'Slots',
     icon: Icons.celebration_outlined,
     color: AirmiusColors.blue,
   ),
   _AvailabilityEntry(
     scope: 'Spiel',
-    title: 'Auswaertsspiel Samstag',
+    title: 'Auswärtsspiel Samstag',
     body:
-        'Fahrgemeinschaft, Treffpunkt, Kader, Guardian-Freigabe und Abwesenheiten verknuepft.',
+        'Fahrgemeinschaft, Treffpunkt, Kader, Guardian-Freigabe und Abwesenheiten verknüpft.',
     status: 'Kader',
     icon: Icons.emoji_events_outlined,
     color: AirmiusColors.green,
@@ -328,7 +328,7 @@ const _entries = [
     scope: 'Guardian',
     title: 'Elternmeldung Krankheit',
     body:
-        'Guardian meldet Abwesenheit und optionale Rückkehrprognose für Minderjaehrigen.',
+        'Guardian meldet Abwesenheit und optionale Rückkehrprognose für Minderjährigen.',
     status: 'Privat',
     icon: Icons.family_restroom_outlined,
     color: AirmiusColors.amber,

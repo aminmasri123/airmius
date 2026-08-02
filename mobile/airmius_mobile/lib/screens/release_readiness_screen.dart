@@ -1785,7 +1785,7 @@ const _items = <_ReadinessItem>[
     area: 'UI',
     title: 'Exact Page Flow Parity',
     body:
-        'Show-, Create-, Edit-, Detail-, Checkout-, BankTransfer- und Statusseiten sind als mobile Flow-Karten für die Web-App-Paritaet vorbereitet.',
+        'Show-, Create-, Edit-, Detail-, Checkout-, BankTransfer- und Statusseiten sind als mobile Flow-Karten für die Web-App-Parität vorbereitet.',
     status: 'Neu',
     owner: 'Page UX',
     progress: .78,
@@ -1818,7 +1818,7 @@ const _items = <_ReadinessItem>[
     area: 'UI',
     title: 'Media Upload Attachments',
     body:
-        'Dateien, Bilder, Scans, Chat-Anhaenge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile Upload-Flows vorbereitet.',
+        'Dateien, Bilder, Scans, Chat-Anhänge, Vereinsdokumente, Produktbilder, Blogmedien und Trainingsnachweise sind als mobile Upload-Flows vorbereitet.',
     status: 'Neu',
     owner: 'Media UX',
     progress: .78,
@@ -1851,7 +1851,7 @@ const _items = <_ReadinessItem>[
     area: 'UI',
     title: 'Analytics Dashboards',
     body:
-        'Web-Reports, KPI-Karten, Mini-Charts, Trends, Exporte und Loading/Empty/Error-Zustaende sind als mobile Dashboard-UI vorbereitet.',
+        'Web-Reports, KPI-Karten, Mini-Charts, Trends, Exporte und Loading/Empty/Error-Zustände sind als mobile Dashboard-UI vorbereitet.',
     status: 'Neu',
     owner: 'Analytics UX',
     progress: .78,
@@ -1873,7 +1873,7 @@ const _items = <_ReadinessItem>[
     area: 'API',
     title: 'Push Notification Deep Links',
     body:
-        'Push, In-App, E-Mail, Chat, App-Badges, Ruhezeiten, Notification-Routing und Deep Links sind als mobile UI- und API-Zustaende vorbereitet.',
+        'Push, In-App, E-Mail, Chat, App-Badges, Ruhezeiten, Notification-Routing und Deep Links sind als mobile UI- und API-Zustände vorbereitet.',
     status: 'Neu',
     owner: 'Notify UX',
     progress: .76,
@@ -1906,7 +1906,7 @@ const _items = <_ReadinessItem>[
     area: 'UI',
     title: 'Brand Theme Tokens',
     body:
-        'Airmius-Logo, Header, Farben, Panels, Cards, Buttons, Inputs, Status-Pills, Overlays und Bottom Navigation sind als Design-Token-Paritaet vorbereitet.',
+        'Airmius-Logo, Header, Farben, Panels, Cards, Buttons, Inputs, Status-Pills, Overlays und Bottom Navigation sind als Design-Token-Parität vorbereitet.',
     status: 'Neu',
     owner: 'Brand UX',
     progress: .88,
@@ -2038,7 +2038,7 @@ const _items = <_ReadinessItem>[
     area: 'API',
     title: 'Beitragsregeln',
     body:
-        'Mitgliedschaftstypen, Beitragshoehen, Zahlungsrhythmus, Barzahlung, Überweisung, SEPA, Rechnungen, Mahnungen und Rabatte sind als Club-Regel-UI vorbereitet.',
+        'Mitgliedschaftstypen, Beitragshöhen, Zahlungsrhythmus, Barzahlung, Überweisung, SEPA, Rechnungen, Mahnungen und Rabatte sind als Club-Regel-UI vorbereitet.',
     status: 'Neu',
     owner: 'Club Billing',
     progress: .76,
@@ -2060,7 +2060,7 @@ const _items = <_ReadinessItem>[
     area: 'API',
     title: 'Anfrage-Eingang',
     body:
-        'Vereine haben eine mobile Inbox für neue Mitgliedschaftsanfragen, Rückzuege, Dokumentstatus, Adminentscheidungen und Benachrichtigungen.',
+        'Vereine haben eine mobile Inbox für neue Mitgliedschaftsanfragen, Rückzüge, Dokumentstatus, Adminentscheidungen und Benachrichtigungen.',
     status: 'Neu',
     owner: 'Club Admin',
     progress: .8,
@@ -2094,7 +2094,7 @@ const _items = <_ReadinessItem>[
     title: 'Offline/Loading/Error',
     body:
         'UI-Aktionen zeigen Ergebnis- und Kontextseiten; echte Loading-, Retry- und Errorstates werden beim API-Client finalisiert.',
-    status: 'Naechster Schritt',
+    status: 'Nächster Schritt',
     owner: 'Client',
     progress: .54,
     icon: Icons.sync_problem_outlined,
@@ -2104,7 +2104,7 @@ const _items = <_ReadinessItem>[
     area: 'Safety',
     title: 'Guardian & Maturity',
     body:
-        'Elternfreigabe, Minderjaehrigen-Schutz, Maturity-Gates, Reports und Safety-Ops sind mobil vorbereitet.',
+        'Elternfreigabe, Minderjährigen-Schutz, Maturity-Gates, Reports und Safety-Ops sind mobil vorbereitet.',
     status: 'Stark',
     owner: 'Safety',
     progress: .84,
@@ -2115,7 +2115,7 @@ const _items = <_ReadinessItem>[
     area: 'Safety',
     title: 'Vereinsdokumente & Regeln',
     body:
-        'Datenschutz, Satzung, Beitragsordnung, SEPA, Uploadpflicht, Sichtbarkeit, Guardian Consent und Dateimanager-Verknuepfung sind mobil modelliert.',
+        'Datenschutz, Satzung, Beitragsordnung, SEPA, Uploadpflicht, Sichtbarkeit, Guardian Consent und Dateimanager-Verknüpfung sind mobil modelliert.',
     status: 'Neu',
     owner: 'Club',
     progress: .78,
@@ -2148,7 +2148,7 @@ const _items = <_ReadinessItem>[
     area: 'Safety',
     title: 'Application Inbox',
     body:
-        'Vereinsadmins sehen neue Anfragen, Rückzuege, Dokumente, Rückfragen, Entscheidungen und Benachrichtigungen als mobile Inbox.',
+        'Vereinsadmins sehen neue Anfragen, Rückzüge, Dokumente, Rückfragen, Entscheidungen und Benachrichtigungen als mobile Inbox.',
     status: 'Neu',
     owner: 'Club Admin',
     progress: .86,
@@ -2181,7 +2181,7 @@ const _items = <_ReadinessItem>[
     area: 'Safety',
     title: 'Document Consent File Manager',
     body:
-        'Vereinsdokumente können als Upload, Dateimanager-Eintrag, Version, Consent-Pflicht und Mitgliedsantrags-Verknuepfung mobil modelliert werden.',
+        'Vereinsdokumente können als Upload, Dateimanager-Eintrag, Version, Consent-Pflicht und Mitgliedsantrags-Verknüpfung mobil modelliert werden.',
     status: 'Neu',
     owner: 'Club Docs',
     progress: .86,
@@ -2280,7 +2280,7 @@ const _items = <_ReadinessItem>[
     area: 'Messages',
     title: 'Messaging Conversation Center',
     body:
-        'Private Chats, Vereinsadmin-Kanal, Teamchat, Support-Konversationen, Dateianhaenge, Lesestatus und Meldungen sind als UI vorbereitet.',
+        'Private Chats, Vereinsadmin-Kanal, Teamchat, Support-Konversationen, Dateianhänge, Lesestatus und Meldungen sind als UI vorbereitet.',
     status: 'Neu',
     owner: 'Messages',
     progress: .84,
@@ -2379,7 +2379,7 @@ const _items = <_ReadinessItem>[
     area: 'Locations',
     title: 'Location Map Facilities',
     body:
-        'Vereinsorte, Trainingsstaetten, Treffpunkte, Routen, Fahrgemeinschaften, Abholung und Standort-Sichtbarkeit sind als UI vorbereitet.',
+        'Vereinsorte, Trainingsstätten, Treffpunkte, Routen, Fahrgemeinschaften, Abholung und Standort-Sichtbarkeit sind als UI vorbereitet.',
     status: 'Neu',
     owner: 'Locations',
     progress: .84,
@@ -2467,7 +2467,7 @@ const _items = <_ReadinessItem>[
     area: 'UI',
     title: 'Club Public Profile Preview',
     body:
-        'Öffentliche Vereinsprofile mit Hero, Sichtbarkeitsregeln, Kontakt, Dokumenten, Teams, Admins und Mitgliedschafts-CTA sind als mobile Web-App-Paritaet vorbereitet.',
+        'Öffentliche Vereinsprofile mit Hero, Sichtbarkeitsregeln, Kontakt, Dokumenten, Teams, Admins und Mitgliedschafts-CTA sind als mobile Web-App-Parität vorbereitet.',
     status: 'Neu',
     owner: 'Club Public',
     progress: .88,
@@ -2500,7 +2500,7 @@ const _items = <_ReadinessItem>[
     area: 'Betrieb',
     title: 'Audit Activity Timeline',
     body:
-        'Aktivitaeten, Vereinsaktionen, Mitgliedsanträge, Zahlungsereignisse, Rollenwechsel, Security-Events, Exporte und Aufbewahrung sind als mobile Timeline vorbereitet.',
+        'Aktivitäten, Vereinsaktionen, Mitgliedsanträge, Zahlungsereignisse, Rollenwechsel, Security-Events, Exporte und Aufbewahrung sind als mobile Timeline vorbereitet.',
     status: 'Neu',
     owner: 'Audit Ops',
     progress: .84,
@@ -2632,7 +2632,7 @@ const _items = <_ReadinessItem>[
     area: 'Events',
     title: 'Facility Booking Resource Scheduler',
     body:
-        'Plaetze, Hallen, Raeume, Geräte, Buchungen, Konfliktprüfung, Wartungszeiten, Rollenrechte, Zahlpflicht und Serientermine sind vorbereitet.',
+        'Plätze, Hallen, Räume, Geräte, Buchungen, Konfliktprüfung, Wartungszeiten, Rollenrechte, Zahlpflicht und Serientermine sind vorbereitet.',
     status: 'Neu',
     owner: 'Facility UX',
     progress: .84,
@@ -2643,7 +2643,7 @@ const _items = <_ReadinessItem>[
     area: 'Events',
     title: 'Availability Absence Planning',
     body:
-        'Verfuegbarkeit, Abwesenheiten, Guardian-Meldungen, Trainerübersicht, Gesundheitsnotizen, Erinnerungen und Anwesenheits-Sync sind vorbereitet.',
+        'Verfügbarkeit, Abwesenheiten, Guardian-Meldungen, Trainerübersicht, Gesundheitsnotizen, Erinnerungen und Anwesenheits-Sync sind vorbereitet.',
     status: 'Neu',
     owner: 'Team Planning',
     progress: .84,
@@ -2665,7 +2665,7 @@ const _items = <_ReadinessItem>[
     area: 'Verein',
     title: 'Club Survey Poll Voting',
     body:
-        'Umfragen, Abstimmungen, Feedback, Zielgruppen, Anonymitaet, Quorum, Auswertung, Export, Aufgaben und Audit sind als mobile Vereins-UI vorbereitet.',
+        'Umfragen, Abstimmungen, Feedback, Zielgruppen, Anonymität, Quorum, Auswertung, Export, Aufgaben und Audit sind als mobile Vereins-UI vorbereitet.',
     status: 'Neu',
     owner: 'Club Feedback',
     progress: .84,
@@ -2676,7 +2676,7 @@ const _items = <_ReadinessItem>[
     area: 'Verein',
     title: 'Meeting Minutes Decision Log',
     body:
-        'Sitzungen, Agenda, Protokolle, Beschluesse, Aufgaben, Dateiverknuepfungen, Abstimmungsbezug und Audit sind als mobile Vereinsadmin-UI vorbereitet.',
+        'Sitzungen, Agenda, Protokolle, Beschlüsse, Aufgaben, Dateiverknüpfungen, Abstimmungsbezug und Audit sind als mobile Vereinsadmin-UI vorbereitet.',
     status: 'Neu',
     owner: 'Club Governance',
     progress: .84,
@@ -2687,7 +2687,7 @@ const _items = <_ReadinessItem>[
     area: 'Verein',
     title: 'Club Asset Inventory Checkout',
     body:
-        'Vereinsmaterial, Schluessel, Trikots, Geräte, QR-Codes, Ausleihe, Rückgabe, Wartung, Fotos, Kaution und Audit sind vorbereitet.',
+        'Vereinsmaterial, Schlüssel, Trikots, Geräte, QR-Codes, Ausleihe, Rückgabe, Wartung, Fotos, Kaution und Audit sind vorbereitet.',
     status: 'Neu',
     owner: 'Club Material',
     progress: .84,
@@ -2720,7 +2720,7 @@ const _items = <_ReadinessItem>[
     area: 'Member',
     title: 'Member Feedback Satisfaction',
     body:
-        'Mitgliederfeedback, Zufriedenheit, Beschwerden, Ideen, Trainerfeedback, Follow-ups, Trends, Supportverknuepfung und Audit sind vorbereitet.',
+        'Mitgliederfeedback, Zufriedenheit, Beschwerden, Ideen, Trainerfeedback, Follow-ups, Trends, Supportverknüpfung und Audit sind vorbereitet.',
     status: 'Neu',
     owner: 'Member Success',
     progress: .84,
@@ -2742,7 +2742,7 @@ const _items = <_ReadinessItem>[
     area: 'Core',
     title: 'Mobile Visual Parity Progress Audit',
     body:
-        'Rest-Prozente, mobile Web-App-Paritaet, UI-Qualitaet, API-Gaps, Store-Reife und naechste Release-Gates sind als Audit-UI sichtbar.',
+        'Rest-Prozente, mobile Web-App-Parität, UI-Qualität, API-Gaps, Store-Reife und nächste Release-Gates sind als Audit-UI sichtbar.',
     status: 'Neu',
     owner: 'Product Audit',
     progress: .82,
@@ -2819,7 +2819,7 @@ const _items = <_ReadinessItem>[
     area: 'Store',
     title: 'Store Release Configuration',
     body:
-        'App-Metadaten, Bundle ID, Store-Texte, Permission-Begruendungen, Datenschutzlink, Supportkontakt und Release-Gates sind zentral vorbereitet.',
+        'App-Metadaten, Bundle ID, Store-Texte, Permission-Begründungen, Datenschutzlink, Supportkontakt und Release-Gates sind zentral vorbereitet.',
     status: 'Neu',
     owner: 'Store QA',
     progress: .58,
@@ -2841,7 +2841,7 @@ const _items = <_ReadinessItem>[
     area: 'Safety',
     title: 'Audit & Trust',
     body:
-        'Verifizierung, Reports, Moderation, Inaktivitaet und Adminentscheidungen haben eigene mobile Trust-Ops.',
+        'Verifizierung, Reports, Moderation, Inaktivität und Adminentscheidungen haben eigene mobile Trust-Ops.',
     status: 'Stark',
     owner: 'Admin',
     progress: .82,

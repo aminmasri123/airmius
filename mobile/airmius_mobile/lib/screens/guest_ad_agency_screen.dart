@@ -32,7 +32,7 @@ class _GuestAdAgencyScreenState extends State<GuestAdAgencyScreen> {
     _AdPackage(
       title: 'Sponsor Paket',
       body:
-          'Sponsorenflaechen, Landingpages, Sichtbarkeit und Reporting für Partner.',
+          'Sponsorenflächen, Landingpages, Sichtbarkeit und Reporting für Partner.',
       status: 'Sponsor',
       price: 'ab 499 EUR',
       icon: Icons.handshake_outlined,

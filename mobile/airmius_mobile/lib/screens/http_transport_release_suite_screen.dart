@@ -26,14 +26,14 @@ class HttpTransportReleaseSuiteScreen extends StatelessWidget {
       _TransportItem(
         'Stub Transport',
         'Fallback',
-        'Nicht unterstuetzte Plattformen bekommen klare 501-Response statt stiller Fehler.',
+        'Nicht unterstützte Plattformen bekommen klare 501-Response statt stiller Fehler.',
         AirmiusColors.amber,
         Icons.warning_amber_outlined,
       ),
       _TransportItem(
         'Static Transport',
         'Demo/Test',
-        'Lokale Demo-Flows bleiben ohne Backend nutzbar und können später Contract-Tests stuetzen.',
+        'Lokale Demo-Flows bleiben ohne Backend nutzbar und können später Contract-Tests stützen.',
         AirmiusColors.pink,
         Icons.science_outlined,
       ),
@@ -203,7 +203,7 @@ class HttpTransportReleaseSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('NAECHSTE RELEASE-GATES'),
+                  const Eyebrow('NÄCHSTE RELEASE-GATES'),
                   const SizedBox(height: 12),
                   for (final gate in gates) ...[
                     _GateRow(item: gate),

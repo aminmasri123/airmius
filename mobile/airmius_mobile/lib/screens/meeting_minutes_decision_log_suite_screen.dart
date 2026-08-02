@@ -24,7 +24,7 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
       _AgendaItem(
         'Mitgliederversammlung',
         '20:00',
-        'Antraege, Abstimmungen, Satzung, Beschluesse',
+        'Anträge, Abstimmungen, Satzung, Beschlüsse',
         AirmiusColors.amber,
       ),
     ];
@@ -33,7 +33,7 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
       _DecisionItem(
         'Beitragsordnung aktualisieren',
         'Beschlossen',
-        'Dokumentversion 2026-06 verknuepfen und Mitglieder informieren.',
+        'Dokumentversion 2026-06 verknüpfen und Mitglieder informieren.',
         AirmiusColors.green,
       ),
       _DecisionItem(
@@ -58,12 +58,12 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
             airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          'Sitzungen & Beschluesse',
+          'Sitzungen & Beschlüsse',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       body: PageFrame(
-        title: 'Sitzungen & Beschluesse',
+        title: 'Sitzungen & Beschlüsse',
         subtitle:
             'Agenda, Protokolle, Abstimmungen, Aufgaben, Dokumente und Beschlusslog als mobile Vereinsverwaltung.',
         trailing: StatusPill(
@@ -91,7 +91,7 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Diese mobile UI fuehrt Sitzungen, Protokolle, Beschluesse, Aufgaben und verknuepfte Dateien zusammen, damit später alles revisionssicher über Laravel gespeichert werden kann.',
+                    'Diese mobile UI führt Sitzungen, Protokolle, Beschlüsse, Aufgaben und verknüpfte Dateien zusammen, damit später alles revisionssicher über Laravel gespeichert werden kann.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -178,7 +178,7 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
                                   item.color,
                                 ),
                               ),
-                              const StatusPill('Dokument verknuepft'),
+                              const StatusPill('Dokument verknüpft'),
                             ],
                           ),
                         ],
@@ -193,19 +193,19 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const [
-                  Eyebrow('VERKNUEPFUNGEN'),
+                  Eyebrow('VERKNÜPFUNGEN'),
                   SizedBox(height: 10),
                   _LinkLine(
                     icon: Icons.folder_copy_outlined,
                     title: 'Dateimanager',
                     body:
-                        'Protokolle, Satzung, Beitragsordnung und Anhaenge direkt mit Vereinsdateien verbinden.',
+                        'Protokolle, Satzung, Beitragsordnung und Anhänge direkt mit Vereinsdateien verbinden.',
                   ),
                   _LinkLine(
                     icon: Icons.how_to_vote_outlined,
                     title: 'Abstimmungen',
                     body:
-                        'Beschluesse können aus Umfragen oder Live-Abstimmungen entstehen.',
+                        'Beschlüsse können aus Umfragen oder Live-Abstimmungen entstehen.',
                   ),
                   _LinkLine(
                     icon: Icons.task_alt_outlined,

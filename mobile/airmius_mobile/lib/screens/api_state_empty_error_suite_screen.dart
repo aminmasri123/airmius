@@ -26,7 +26,7 @@ class _ApiStateEmptyErrorSuiteScreenState
         title: 'Loading',
         status: 'Skeleton',
         body:
-            'Listen, Karten, Clubprofile und Formulare zeigen während API-Ladevorgaengen ruhige Skeleton-Zustaende.',
+            'Listen, Karten, Clubprofile und Formulare zeigen während API-Ladevorgängen ruhige Skeleton-Zustände.',
         icon: Icons.hourglass_empty_outlined,
         color: AirmiusColors.blue,
       ),
@@ -34,7 +34,7 @@ class _ApiStateEmptyErrorSuiteScreenState
         title: 'Empty',
         status: 'Leer',
         body:
-            'Keine Vereine, keine Teams, keine Tickets oder keine Rechnungen bekommen klare Hilfetexte und naechste Aktionen.',
+            'Keine Vereine, keine Teams, keine Tickets oder keine Rechnungen bekommen klare Hilfetexte und nächste Aktionen.',
         icon: Icons.inbox_outlined,
         color: AirmiusColors.green,
       ),
@@ -50,7 +50,7 @@ class _ApiStateEmptyErrorSuiteScreenState
         title: 'Offline',
         status: 'Cache',
         body:
-            'Offline-Zustaende zeigen lokale Daten, Synchronisationsstatus und sichere Aktionen ohne Datenverlust.',
+            'Offline-Zustände zeigen lokale Daten, Synchronisationsstatus und sichere Aktionen ohne Datenverlust.',
         icon: Icons.cloud_off_outlined,
         color: AirmiusColors.pink,
       ),
@@ -72,7 +72,7 @@ class _ApiStateEmptyErrorSuiteScreenState
                 const SectionLabel('API UX'),
                 const SizedBox(height: 8),
                 Text(
-                  'Wenn Laravel später angebunden wird, braucht jede mobile Seite klare Zustaende: Laden, leer, Fehler, Retry, Offline, Cache und Synchronisation.',
+                  'Wenn Laravel später angebunden wird, braucht jede mobile Seite klare Zustände: Laden, leer, Fehler, Retry, Offline, Cache und Synchronisation.',
                   style: TextStyle(
                     color: airmiusTextColor(context),
                     height: 1.45,
@@ -174,7 +174,7 @@ class _ApiStateEmptyErrorSuiteScreenState
                     context,
                     title: 'API-State testen',
                     body:
-                        'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustaende für die spätere Laravel-API vor.',
+                        'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustände für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.sync_problem_outlined,
                   ),

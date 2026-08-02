@@ -52,7 +52,7 @@ defineProps({
                         <td class="px-5 py-4">
                             <p class="font-black text-primary">{{ invoice.number || ('#' + invoice.id) }}</p>
                             <p class="mt-1 text-xs text-secondary">{{ invoice.title || '-' }}</p>
-                            <p class="text-xs text-secondary">Faellig {{ invoice.due_date || '-' }}</p>
+                            <p class="text-xs text-secondary">Fällig {{ invoice.due_date || '-' }}</p>
                         </td>
                         <td class="px-5 py-4">
                             <p class="font-bold text-primary">{{ recipientLabel(invoice) }}</p>

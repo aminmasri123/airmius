@@ -211,7 +211,7 @@ onMounted(() => {
                     {{ tAuto('Du wurdest zu einem Team eingeladen') }}
                 </h2>
                 <p class="text-sm text-secondary">
-                    {{ tAuto('Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.') }}
+                    {{ tAuto('Nimm die Einladung an, um dem Team und dem zugehörigen Verein beizutreten.') }}
                 </p>
             </div>
 
@@ -1030,7 +1030,7 @@ onMounted(() => {
                     v-if="!club.teams?.length"
                     class="md:col-span-2 xl:col-span-3"
                     :title="tAuto('Noch keine Teams')"
-                    :description="tAuto('Lege das erste Team fuer diesen Verein an, damit Mitglieder, Trainings und Events sauber zugeordnet werden koennen.')"
+                    :description="tAuto('Lege das erste Team für diesen Verein an, damit Mitglieder, Trainings und Events sauber zugeordnet werden können.')"
                     compact
                 >
                     <template #icon>

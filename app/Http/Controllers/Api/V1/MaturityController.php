@@ -517,10 +517,10 @@ class MaturityController extends Controller
                 $recommendations['text'][] = 'Deine Strecke war diese Woche deutlich niedriger als letzte Woche. Ergänze 1 zusatzliche kurze Einheit.';
             }
             if ($durationTrend >= 15) {
-                $recommendations['text'][] = 'Sehr gute Steigerung der Trainingszeit - erhoehe die Erholung zwischen intensiven Einheiten.';
+                $recommendations['text'][] = 'Sehr gute Steigerung der Trainingszeit - erhöhe die Erholung zwischen intensiven Einheiten.';
             }
             if (($intensities['high'] ?? 0) > (($intensities['low'] ?? 0) + ($intensities['medium'] ?? 0))) {
-                $recommendations['text'][] = 'Zu viele harte Einheiten in Folge: plane einen lockeren Tag ein, damit die Qualitaet steigt.';
+                $recommendations['text'][] = 'Zu viele harte Einheiten in Folge: plane einen lockeren Tag ein, damit die Qualität steigt.';
             }
         }
 
@@ -732,7 +732,7 @@ class MaturityController extends Controller
     private function onboardingChecklist(User $user): array
     {
         $items = [
-            ['key' => 'name', 'label' => 'Name vervollstaendigt', 'done' => (bool) ($user->first_name && $user->last_name)],
+            ['key' => 'name', 'label' => 'Name vervollständigt', 'done' => (bool) ($user->first_name && $user->last_name)],
             ['key' => 'email_verified', 'label' => 'E-Mail verifiziert', 'done' => (bool) $user->email_verified_at],
             ['key' => 'photo', 'label' => 'Profilbild gesetzt', 'done' => (bool) $user->profile_photo_path],
             ['key' => 'bio', 'label' => 'Bio gesetzt', 'done' => (bool) $user->bio],

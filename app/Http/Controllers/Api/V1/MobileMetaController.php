@@ -234,7 +234,7 @@ class MobileMetaController extends Controller
                                 'label' => 'Open Food Facts',
                                 'read_only' => true,
                                 'requires_api_key' => false,
-                                'rate_limit_note' => 'Search nur gezielt ausloesen, nicht bei jedem Tastendruck.',
+                                'rate_limit_note' => 'Search nur gezielt auslösen, nicht bei jedem Tastendruck.',
                             ],
                         ],
                     ],

@@ -20,7 +20,7 @@ class _MobileTableActionParitySuiteScreenState
   bool _showDangerActions = false;
 
   static const _areas = ['Verein', 'Admin', 'Commerce', 'Content', 'Sport'];
-  static const _sorts = ['Neueste', 'Status', 'Name', 'Faelligkeit'];
+  static const _sorts = ['Neueste', 'Status', 'Name', 'Fälligkeit'];
 
   static const _rows = <_MobileRow>[
     _MobileRow(
@@ -111,12 +111,12 @@ class _MobileTableActionParitySuiteScreenState
       area: 'Content',
       title: 'Datei Datenschutzordnung.pdf',
       meta: 'Files/Index + ClubPolicyDocuments',
-      status: 'Verknuepft',
+      status: 'Verknüpft',
       body:
           'Upload, Zweck, Sichtbarkeit, Link, Pflichtdokument, Version und Dateimanager-Zuordnung als mobile Zeile.',
       icon: Icons.folder_outlined,
       primary: 'Öffnen',
-      secondary: 'Verknuepfen',
+      secondary: 'Verknüpfen',
       color: AirmiusColors.amber,
     ),
     _MobileRow(
@@ -313,7 +313,7 @@ class _FilterPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Filter und Sortierung',
       subtitle:
-          'Desktop-Tabellenfilter werden zu horizontalen Chips und klaren mobilen Suchzustaenden.',
+          'Desktop-Tabellenfilter werden zu horizontalen Chips und klaren mobilen Suchzuständen.',
       children: [
         const Eyebrow('Bereich'),
         const SizedBox(height: 8),
@@ -387,7 +387,7 @@ class _ModePanel extends StatelessWidget {
           onChanged: onExports,
         ),
         _SwitchLine(
-          title: 'Gefaehrliche Aktionen sichtbar',
+          title: 'Gefährliche Aktionen sichtbar',
           value: showDangerActions,
           onChanged: onDanger,
         ),
@@ -557,7 +557,7 @@ class _MobileRowCard extends StatelessWidget {
                   danger: true,
                   onPressed: () => openUiAction(
                     context,
-                    title: 'Gefaehrliche Aktion',
+                    title: 'Gefährliche Aktion',
                     body:
                         'Danger-Aktion für ${row.title}: Bestätigung, Grund, Audit und Rückmeldung erforderlich.',
                     status: 'Danger',
@@ -580,24 +580,24 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Tabellen-Paritaet',
+      title: 'Tabellen-Parität',
       subtitle: 'Was aus Desktop-Listen mobil übersetzt wird.',
       children: [
         const _CheckLine(
           'Jede Tabellenzeile wird eine lesbare Karte mit Status, Kontext und CTA.',
         ),
         const _CheckLine(
-          'Filter, Suche und Sortierung werden als Chips und kompakte Panels gefuehrt.',
+          'Filter, Suche und Sortierung werden als Chips und kompakte Panels geführt.',
         ),
         const _CheckLine(
           'Bulk-Auswahl, Export und Benachrichtigungen bleiben mobil bedienbar.',
         ),
         const _CheckLine(
-          'Gefaehrliche Aktionen bleiben hinter expliziten Action-Sheets und Audit-Hinweisen.',
+          'Gefährliche Aktionen bleiben hinter expliziten Action-Sheets und Audit-Hinweisen.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Tabellen-Paritaet markieren',
+          label: 'Tabellen-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

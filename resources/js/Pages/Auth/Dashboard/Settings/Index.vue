@@ -14,6 +14,7 @@ import SectionBorder from '@/Components/SectionBorder.vue'
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue'
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
+import MultiSelectDropdown from '@/Components/Settings/MultiSelectDropdown.vue'
 
 defineOptions({ layout: AppLayout })
 const { t, te, locale } = useI18n()
@@ -124,15 +125,112 @@ const roleApplicationForm = useForm({
     type: 'trainer',
     message: '',
     application_data: {
+        sports: '',
+        sport_ids: [],
+        sport_skill_ids: [],
         specialties: '',
         experience: '',
         certification: '',
     },
 })
+const trainerSportIds = ref([])
+const trainerSkillIds = ref([])
+const trainerApplicationSkillOptions = computed(() => {
+    const selectedSportIds = new Set(trainerSportIds.value.map((id) => String(id)))
+    const options = new Map()
+
+    props.sports
+        .filter((sport) => !selectedSportIds.size || selectedSportIds.has(String(sport.id)))
+        .flatMap((sport) => (sport.skills || []).map((skill) => ({
+            ...skill,
+            sport_name: sport.name,
+        })))
+        .forEach((skill) => {
+            const key = String(skill.name || skill.key || skill.id).toLowerCase()
+            if (!options.has(key)) options.set(key, skill)
+        })
+
+    return Array.from(options.values())
+})
+const allTrainerApplicationSkillOptions = computed(() => {
+    const selectedSportIds = new Set()
+    const options = new Map()
+
+    props.sports
+        .flatMap((sport) => (sport.skills || []).map((skill) => ({
+            ...skill,
+            sport_name: sport.name,
+        })))
+        .forEach((skill) => {
+            const key = String(skill.name || skill.key || skill.id).toLowerCase()
+            if (!options.has(key)) options.set(key, skill)
+        })
+
+    return Array.from(options.values())
+})
+const trainerSelectedSportsLabel = computed(() => props.sports
+    .filter((sport) => trainerSportIds.value.map(String).includes(String(sport.id)))
+    .map((sport) => sport.name)
+    .join(', '))
+const trainerSelectedSkillsLabel = computed(() => allTrainerApplicationSkillOptions.value
+    .filter((skill) => trainerSkillIds.value.map(String).includes(String(skill.id)))
+    .map((skill) => skill.name)
+    .join(', '))
+const trainerApplicationNames = (value) => Array.isArray(value)
+    ? value.map((item) => String(item).trim()).filter(Boolean)
+    : String(value || '').split(',').map((item) => item.trim()).filter(Boolean)
+const trainerApplicationIds = (value) => Array.isArray(value)
+    ? value.map(Number).filter((value) => Number.isInteger(value) && value > 0)
+    : []
+const syncTrainerApplicationSelections = () => {
+    roleApplicationForm.application_data.sport_ids = [...trainerSportIds.value]
+    roleApplicationForm.application_data.sport_skill_ids = [...trainerSkillIds.value]
+    roleApplicationForm.application_data.sports = trainerSelectedSportsLabel.value
+    roleApplicationForm.application_data.specialties = trainerSelectedSkillsLabel.value
+}
+const initializeTrainerApplicationSelections = (application) => {
+    const data = application?.application_data || {}
+    trainerSportIds.value = trainerApplicationIds(data.sport_ids)
+    trainerSkillIds.value = trainerApplicationIds(data.sport_skill_ids)
+
+    if (!trainerSportIds.value.length) {
+        const legacySports = trainerApplicationNames(data.sports)
+        trainerSportIds.value = props.sports
+            .filter((sport) => legacySports.some((name) => name.toLowerCase() === String(sport.name).toLowerCase()))
+            .map((sport) => Number(sport.id))
+    }
+
+    if (!trainerSkillIds.value.length) {
+        const legacySkills = trainerApplicationNames(data.specialties).map((name) => name.toLowerCase())
+        trainerSkillIds.value = allTrainerApplicationSkillOptions.value
+            .filter((skill) => legacySkills.includes(String(skill.name).toLowerCase()))
+            .map((skill) => Number(skill.id))
+    }
+
+    syncTrainerApplicationSelections()
+}
+watch(() => trainerApplication.value?.application_data, (applicationData) => {
+    initializeTrainerApplicationSelections({ application_data: applicationData })
+}, { immediate: true, deep: true })
+watch([trainerSportIds, trainerSkillIds], () => {
+    if (trainerSportIds.value.length) {
+        const allowed = new Set(trainerApplicationSkillOptions.value.map((skill) => String(skill.id)))
+        const next = trainerSkillIds.value.filter((id) => allowed.has(String(id)))
+        if (next.length !== trainerSkillIds.value.length) {
+            trainerSkillIds.value = next
+            return
+        }
+    }
+
+    syncTrainerApplicationSelections()
+}, { deep: true })
 const submitTrainerApplication = () => {
-    if (!roleApplicationForm.application_data.specialties.trim() || !roleApplicationForm.application_data.experience.trim()) {
-        if (!roleApplicationForm.application_data.specialties.trim()) {
-            roleApplicationForm.setError('application_data.specialties', settingsText('roles.specialties_required', 'Bitte gib deine Schwerpunkte an.'))
+    if (!trainerSportIds.value.length || !trainerSkillIds.value.length || !roleApplicationForm.application_data.experience.trim()) {
+        if (!trainerSportIds.value.length) {
+            roleApplicationForm.setError('application_data.sport_ids', settingsText('roles.sports_required', 'Bitte wähle mindestens eine Sportart aus.'))
+        }
+        if (!trainerSkillIds.value.length) {
+            roleApplicationForm.setError('application_data.sport_skill_ids', settingsText('roles.specialties_required', 'Bitte wähle mindestens einen Schwerpunkt aus.'))
         }
         if (!roleApplicationForm.application_data.experience.trim()) {
             roleApplicationForm.setError('application_data.experience', settingsText('roles.experience_required', 'Bitte gib deine Erfahrung an.'))
@@ -242,7 +340,7 @@ const themeOptions = [
     { key: 'sprint', label: 'Sprint', descriptionKey: 'sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
     { key: 'arena', label: 'Arena', descriptionKey: 'arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
     { key: 'pulse', label: 'Pulse', descriptionKey: 'pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
-    { key: 'trail', label: 'Trail', descriptionKey: 'trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
+    { key: 'trail', label: 'Trail', descriptionKey: 'trail', description: 'Natürlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
     { key: 'bazaar', label: 'Bazaar Rush', descriptionKey: 'bazaar', description: 'Lebendig, verkaufsstark und frisch für Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
 ]
 
@@ -1136,7 +1234,7 @@ const formatProvider = (provider) => settingsText(`integrations.providers.${prov
 const manualActivityTypeLabel = (type) => settingsText(`integrations.manual_activity.types.${type}`, type)
 
 const sportActivityTitle = (activity) => {
-    if (activity.title && activity.title !== 'Google Fit Tagesaktivitaet') {
+    if (activity.title && activity.title !== 'Google Fit Tagesaktivität') {
         return activity.title
     }
 
@@ -1640,19 +1738,39 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                     <div v-if="trainerApplication?.status !== 'pending'" class="grid gap-3 md:grid-cols-2">
                         <div>
-                            <label class="text-sm font-semibold text-primary" for="trainer-specialties">
+                            <label class="text-sm font-semibold text-primary">
+                                {{ settingsText('roles.sports', 'Sportarten') }}
+                            </label>
+                            <MultiSelectDropdown
+                                v-model="trainerSportIds"
+                                class="mt-1"
+                                :options="sports"
+                                :placeholder="settingsText('roles.sports_placeholder', 'Sportarten auswählen')"
+                                :empty-text="settingsText('roles.sports_empty', 'Keine Sportarten verfügbar.')"
+                            />
+                            <p class="mt-1 text-xs text-secondary">
+                                {{ settingsText('roles.multiple_hint', 'Mehrere Auswahlen sind möglich.') }}
+                            </p>
+                            <p v-if="roleApplicationForm.errors['application_data.sport_ids']" class="mt-1 text-sm text-error">
+                                {{ roleApplicationForm.errors['application_data.sport_ids'] }}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-primary">
                                 {{ settingsText('roles.specialties', 'Schwerpunkte') }}
                             </label>
-                            <input
-                                id="trainer-specialties"
-                                v-model="roleApplicationForm.application_data.specialties"
-                                type="text"
-                                required
-                                class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
-                                :placeholder="settingsText('roles.specialties_placeholder', 'z. B. Fußball, Athletik, Jugendtraining')"
+                            <MultiSelectDropdown
+                                v-model="trainerSkillIds"
+                                class="mt-1"
+                                :options="trainerApplicationSkillOptions"
+                                :placeholder="settingsText('roles.specialties_placeholder', 'Schwerpunkte auswählen')"
+                                :empty-text="settingsText('roles.specialties_empty', 'Wähle zuerst eine Sportart aus.')"
                             />
-                            <p v-if="roleApplicationForm.errors['application_data.specialties']" class="mt-1 text-sm text-error">
-                                {{ roleApplicationForm.errors['application_data.specialties'] }}
+                            <p class="mt-1 text-xs text-secondary">
+                                {{ settingsText('roles.multiple_hint', 'Mehrere Auswahlen sind möglich.') }}
+                            </p>
+                            <p v-if="roleApplicationForm.errors['application_data.sport_skill_ids']" class="mt-1 text-sm text-error">
+                                {{ roleApplicationForm.errors['application_data.sport_skill_ids'] }}
                             </p>
                         </div>
                         <div>
@@ -1794,7 +1912,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </button>
         </div>
 
-        <!-- AKTIVITAETEN -->
+        <!-- AKTIVITÄTEN -->
         <div v-if="activeTab === 'activities'" class="surface-card p-5">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -2018,7 +2136,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </form>
         </div>
 
-        <!-- PRIVATSPHAERE -->
+        <!-- PRIVATSPHÄRE -->
         <div v-if="activeTab === 'privacy'" class="surface-card p-5">
             <form class="space-y-5" @submit.prevent="saveAddress">
                 <div>

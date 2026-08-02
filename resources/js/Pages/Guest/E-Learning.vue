@@ -40,7 +40,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(localeCod
 <template>
     <SeoHead
         :title="$t('E-Learning für Sportorganisation')"
-        :description="$t('Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklaert.')"
+        :description="$t('Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklärt.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">

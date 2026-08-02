@@ -136,7 +136,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _size,
                     dropdownColor: airmiusSurfaceSoftColor(context),
-                    decoration: const InputDecoration(labelText: 'Groesse'),
+                    decoration: const InputDecoration(labelText: 'Größe'),
                     items: const ['S', 'M', 'L', 'XL']
                         .map(
                           (item) =>
@@ -205,7 +205,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       builder: (_) => UiActionResultScreen(
                         title: 'In Warenkorb',
                         body:
-                            '${widget.title} mit Groesse $_size und Variante $_variant zum Warenkorb hinzufuegen.',
+                            '${widget.title} mit Größe $_size und Variante $_variant zum Warenkorb hinzufügen.',
                         status: 'Cart',
                         icon: Icons.add_shopping_cart_outlined,
                       ),

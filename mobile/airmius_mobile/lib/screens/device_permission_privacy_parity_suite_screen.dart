@@ -59,8 +59,8 @@ class _DevicePermissionPrivacyParitySuiteScreenState
       permission: 'Dateien',
       title: 'Dateizugriff für Dokumente',
       body:
-          'Vereinsregeln, Datenschutz, SEPA, Chat-Anhaenge, Kursmaterial und Belege brauchen sicheren Dateiimport.',
-      purpose: 'Dokumente hochladen und verknuepfen',
+          'Vereinsregeln, Datenschutz, SEPA, Chat-Anhänge, Kursmaterial und Belege brauchen sicheren Dateiimport.',
+      purpose: 'Dokumente hochladen und verknüpfen',
       fallback: 'Link eintragen oder später hochladen.',
       icon: Icons.folder_outlined,
       color: AirmiusColors.amber,
@@ -69,7 +69,7 @@ class _DevicePermissionPrivacyParitySuiteScreenState
       permission: 'Fotos',
       title: 'Fotos für Medien und Profil',
       body:
-          'Profilbild, Club-Logo, Blogmedien, Marketplace-Galerie und Trainingsbilder werden mit Vorschau und Datenschutzstatus gefuehrt.',
+          'Profilbild, Club-Logo, Blogmedien, Marketplace-Galerie und Trainingsbilder werden mit Vorschau und Datenschutzstatus geführt.',
       purpose: 'Medien aus Galerie auswählen',
       fallback: 'Standardavatar oder bestehendes Bild behalten.',
       icon: Icons.photo_library_outlined,
@@ -79,7 +79,7 @@ class _DevicePermissionPrivacyParitySuiteScreenState
       permission: 'Push',
       title: 'Push für wichtige Updates',
       body:
-          'Mitgliedschaftsanfragen, Rückzuege, Chat, Events, Zahlungen, Moderation und Guardian-Freigaben werden direkt zugestellt.',
+          'Mitgliedschaftsanfragen, Rückzüge, Chat, Events, Zahlungen, Moderation und Guardian-Freigaben werden direkt zugestellt.',
       purpose: 'Benachrichtigungen und Deep Links',
       fallback: 'In-App Inbox und E-Mail-Fallback verwenden.',
       icon: Icons.notifications_none_outlined,
@@ -89,7 +89,7 @@ class _DevicePermissionPrivacyParitySuiteScreenState
       permission: 'Biometrie',
       title: 'Biometrie für sensible Aktionen',
       body:
-          'Zahlungen, API-Token, Kontoaktionen, Adminentscheidungen und Datenschutzexport können später extra geschuetzt werden.',
+          'Zahlungen, API-Token, Kontoaktionen, Adminentscheidungen und Datenschutzexport können später extra geschützt werden.',
       purpose: 'Sensible Aktionen sicher bestätigen',
       fallback: 'Passwort oder 2FA-Code verwenden.',
       icon: Icons.fingerprint,
@@ -218,7 +218,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Flutter bereitet native Permission-Flows mit Zweck, Datenschutz, Fallback und Store-ready Begruendung vor, bevor Android oder iOS fragt.',
+            'Flutter bereitet native Permission-Flows mit Zweck, Datenschutz, Fallback und Store-ready Begründung vor, bevor Android oder iOS fragt.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -313,7 +313,7 @@ class _RulesPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Permission-Regeln',
       subtitle:
-          'Diese Regeln sorgen dafür, dass Berechtigungen transparent und app-store-tauglich erklaert werden.',
+          'Diese Regeln sorgen dafür, dass Berechtigungen transparent und app-store-tauglich erklärt werden.',
       children: [
         _SwitchLine(
           title: 'Zweckbindung anzeigen',
@@ -326,7 +326,7 @@ class _RulesPanel extends StatelessWidget {
           onChanged: onFallback,
         ),
         _SwitchLine(
-          title: 'Store-ready Begruendung verwenden',
+          title: 'Store-ready Begründung verwenden',
           value: storeReadyCopy,
           onChanged: onStoreCopy,
         ),
@@ -563,24 +563,24 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Permission-/Privacy-Paritaet',
-      subtitle: 'Was native Berechtigungen in Flutter erklaeren sollen.',
+      title: 'Permission-/Privacy-Parität',
+      subtitle: 'Was native Berechtigungen in Flutter erklären sollen.',
       children: [
         const _CheckLine(
           'Jede Berechtigung hat Zweckbindung, Datenschutztext, Status und Fallback.',
         ),
         const _CheckLine(
-          'Standort, Kamera, Dateien, Fotos, Push und Biometrie werden getrennt erklaert.',
+          'Standort, Kamera, Dateien, Fotos, Push und Biometrie werden getrennt erklärt.',
         ),
         const _CheckLine(
-          'Verweigert, einmalig erlaubt und noch nicht gefragt sind eigene mobile Zustaende.',
+          'Verweigert, einmalig erlaubt und noch nicht gefragt sind eigene mobile Zustände.',
         ),
         const _CheckLine(
-          'Store-ready Begruendungen helfen später bei Android/iOS Review und User-Vertrauen.',
+          'Store-ready Begründungen helfen später bei Android/iOS Review und User-Vertrauen.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Permission-Paritaet markieren',
+          label: 'Permission-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

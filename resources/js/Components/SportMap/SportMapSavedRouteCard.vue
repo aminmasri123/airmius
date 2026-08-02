@@ -35,7 +35,7 @@ const copy = {
         risk: 'Nicht bereit',
         offline: 'Offline',
         warnings: 'Warnungen',
-        elevation: 'Hoehenprofil',
+        elevation: 'Höhenprofil',
     },
     en: {
         ready: 'Navigation ready',

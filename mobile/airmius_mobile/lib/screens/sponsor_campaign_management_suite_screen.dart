@@ -43,7 +43,7 @@ class _SponsorCampaignManagementSuiteScreenState
         status: 'Geplant',
         budget: 'Code',
         body:
-            'Digitales Sponsorangebot mit Einloesecode, Gültigkeit, Tracking und Benachrichtigung.',
+            'Digitales Sponsorangebot mit Einlösecode, Gültigkeit, Tracking und Benachrichtigung.',
         color: AirmiusColors.blue,
       ),
     ];

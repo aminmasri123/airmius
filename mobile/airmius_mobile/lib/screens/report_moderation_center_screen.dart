@@ -22,7 +22,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
   bool _notifyResult = true;
 
   final _details = TextEditingController(
-    text: 'Bitte prüfen, ob dieser Inhalt gegen Regeln verstoesst.',
+    text: 'Bitte prüfen, ob dieser Inhalt gegen Regeln verstößt.',
   );
 
   final List<_ModerationCase> _cases = const [
@@ -45,7 +45,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
     _ModerationCase(
       title: 'Verein melden',
       body:
-          'Falsche Vereinsdaten, Missbrauch, unerwuenschte Kontaktaufnahme oder Regelverstoss melden.',
+          'Falsche Vereinsdaten, Missbrauch, unerwünschte Kontaktaufnahme oder Regelverstoss melden.',
       status: 'Club',
       icon: Icons.apartment_outlined,
       color: AirmiusColors.amber,
@@ -85,13 +85,13 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                         const PageTitle(
                           title: 'Melden & Moderation',
                           subtitle:
-                              'Beiträge, Nutzer, Vereine, Chats, Beweise, Anonymitaet und Ergebnisbenachrichtigung.',
+                              'Beiträge, Nutzer, Vereine, Chats, Beweise, Anonymität und Ergebnisbenachrichtigung.',
                         ),
                         const SizedBox(height: 16),
                         _ModerationHero(onSubmit: _submit),
                         const SizedBox(height: 16),
                         _ChoicePanel(
-                          title: 'Was moechtest du melden?',
+                          title: 'Was möchtest du melden?',
                           value: _target,
                           values: const [
                             'Beitrag',
@@ -129,7 +129,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                           child: Column(
                             children: [
                               _SwitchRow(
-                                title: 'Beweise anhaengen',
+                                title: 'Beweise anhängen',
                                 subtitle:
                                     'Screenshots, Datei, Chatkontext oder Link für Moderation vormerken.',
                                 value: _includeEvidence,
@@ -139,7 +139,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                               _SwitchRow(
                                 title: 'Anonym melden',
                                 subtitle:
-                                    'Identitaet gegenüber gemeldeter Person oder Verein verbergen.',
+                                    'Identität gegenüber gemeldeter Person oder Verein verbergen.',
                                 value: _anonymous,
                                 onChanged: (value) =>
                                     setState(() => _anonymous = value),
@@ -290,7 +290,7 @@ class _ModerationHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Meldungen brauchen Kontext, Prioritaet und Transparenz. Die UI bereitet Moderationsfaelle für Inhalte, Profile, Vereine und Chats vor.',
+            'Meldungen brauchen Kontext, Priorität und Transparenz. Die UI bereitet Moderationsfälle für Inhalte, Profile, Vereine und Chats vor.',
             style: TextStyle(
               color: AirmiusColors.muted,
               height: 1.45,
@@ -305,7 +305,7 @@ class _ModerationHero extends StatelessWidget {
               ),
               SizedBox(width: 10),
               Expanded(
-                child: MetricCard(value: '5', label: 'Gruende'),
+                child: MetricCard(value: '5', label: 'Gründe'),
               ),
               SizedBox(width: 10),
               Expanded(

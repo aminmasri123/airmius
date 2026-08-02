@@ -396,7 +396,7 @@ class ChatController extends Controller
     {
         $this->authorizeMessageAccess($message, $request);
         abort_unless($message->sender_id === $request->user()->id || $request->user()->can('user.manage'), 403);
-        abort_if($message->receipts()->whereNotNull('read_at')->exists(), 422, 'Diese Nachricht wurde bereits gelesen und kann nicht mehr geloescht werden.');
+        abort_if($message->receipts()->whereNotNull('read_at')->exists(), 422, 'Diese Nachricht wurde bereits gelesen und kann nicht mehr gelöscht werden.');
 
         $message->load('attachments.file');
 
@@ -583,13 +583,13 @@ class ChatController extends Controller
             ->get()
             ->keyBy('id');
 
-        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewaehlte Person wurde nicht gefunden.');
+        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewählte Person wurde nicht gefunden.');
 
         foreach ($participants as $participant) {
             abort_unless(
                 $request->user()->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($request->user()),
                 403,
-                'Gruppenchats koennen nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+                'Gruppenchats können nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
             );
         }
     }

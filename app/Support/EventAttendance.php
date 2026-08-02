@@ -57,7 +57,7 @@ class EventAttendance
 
         if ($invalidIds->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'attendance' => 'Anwesenheit kann nur fuer Mitglieder dieses Teams oder Vereins erfasst werden.',
+                'attendance' => 'Anwesenheit kann nur für Mitglieder dieses Teams oder Vereins erfasst werden.',
             ]);
         }
     }

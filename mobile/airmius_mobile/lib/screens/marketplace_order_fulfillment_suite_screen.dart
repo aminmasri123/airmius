@@ -41,7 +41,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState
         title: 'Sponsor Gutschein',
         status: 'Aktiv',
         price: 'Code',
-        body: 'Sponsorangebot mit Gültigkeit, Clubbezug und Einloesehinweis.',
+        body: 'Sponsorangebot mit Gültigkeit, Clubbezug und Einlösehinweis.',
         color: AirmiusColors.amber,
       ),
     ];
@@ -86,7 +86,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionLabel('ERFUELLUNG'),
+                const SectionLabel('ERFÜLLUNG'),
                 const SizedBox(height: 12),
                 SegmentedButton<String>(
                   segments: const [
@@ -148,7 +148,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktuelle Erfuellung: $fulfillment. Später verbindet die API Produkte, Warenkorb, Zahlung, Rechnung, Bestellstatus, Abholung, Versand und Support.',
+                  'Aktuelle Erfüllung: $fulfillment. Später verbindet die API Produkte, Warenkorb, Zahlung, Rechnung, Bestellstatus, Abholung, Versand und Support.',
                   style: TextStyle(
                     color: airmiusMutedColor(context),
                     height: 1.45,

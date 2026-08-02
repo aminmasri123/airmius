@@ -265,7 +265,7 @@ class GuardianController extends Controller
 
         AppNotification::send($managedChild, 'guardian.consent_revoked', [
             'title' => 'Zustimmung widerrufen',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte klaere das mit deinem Erziehungsberechtigten.',
+            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte kläre das mit deinem Erziehungsberechtigten.',
             'minor_id' => $managedChild->id,
             'guardian_email' => $guardianEmail,
             'url' => route('guardian-consent.pending'),

@@ -23,7 +23,7 @@ Diese Datei beschreibt die technische Umsetzung der Betroffenenrechte im MVP. Si
 - Web: `POST /user/deletion-code`, danach `DELETE /user`
 - API: `POST /api/v1/account/deletion-code`, danach `DELETE /api/v1/account`
 - Schutz: Passwort oder Social-Login-E-Mail plus E-Mail-Code.
-- Aktuelles Verhalten: manuelle Kontoloeschung loescht den User-Datensatz nach Code-Bestaetigung.
+- Aktuelles Verhalten: manuelle Kontolöschung loescht den User-Datensatz nach Code-Bestaetigung.
 - Retention-Prozess fuer inaktive Konten: `UserPrivacyRetentionService` anonymisiert Profile, Inhalte, Tokens, Verknuepfungen und Medien.
 
 ## Einwilligungswiderruf

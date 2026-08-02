@@ -20,7 +20,7 @@ class AccountDeletionController extends Controller
         $request->validate([
             'password' => ['required', 'string'],
         ], [
-            'password.required' => 'Bitte bestaetige zuerst deine Identitaet.',
+            'password.required' => 'Bitte bestätige zuerst deine Identität.',
         ]);
 
         $user = $request->user();
@@ -33,7 +33,7 @@ class AccountDeletionController extends Controller
         if (! $confirmed) {
             throw ValidationException::withMessages([
                 'password' => $usesSocialLogin
-                    ? 'Die eingegebene E-Mail-Adresse stimmt nicht mit deinem Konto ueberein.'
+                    ? 'Die eingegebene E-Mail-Adresse stimmt nicht mit deinem Konto überein.'
                     : 'Das eingegebene Passwort ist nicht korrekt.',
             ]);
         }
@@ -50,7 +50,7 @@ class AccountDeletionController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Wir haben dir einen Bestaetigungscode per E-Mail gesendet.',
+                'message' => 'Wir haben dir einen Bestätigungscode per E-Mail gesendet.',
                 'expires_in_minutes' => 15,
             ],
         ]);
@@ -72,7 +72,7 @@ class AccountDeletionController extends Controller
             || ! Hash::check((string) $request->code, (string) ($confirmation['code_hash'] ?? ''))
         ) {
             throw ValidationException::withMessages([
-                'code' => 'Der Code ist ungueltig oder abgelaufen. Bitte fordere einen neuen Code an.',
+                'code' => 'Der Code ist ungültig oder abgelaufen. Bitte fordere einen neuen Code an.',
             ]);
         }
 
@@ -96,7 +96,7 @@ class AccountDeletionController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Dein Konto wurde geloescht.',
+                'message' => 'Dein Konto wurde gelöscht.',
             ],
         ]);
     }

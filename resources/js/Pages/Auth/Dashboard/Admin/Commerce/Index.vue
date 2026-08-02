@@ -672,7 +672,7 @@ const {
 
                     <div class="rounded-lg border border-border bg-card p-4 md:col-span-2">
                         <span class="text-xs font-semibold uppercase tracking-wide text-secondary">Placement Caps</span>
-                        <span class="mt-1 block text-sm font-semibold text-primary">Unterschiedliche Limits je Flaeche</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Unterschiedliche Limits je Fläche</span>
                         <div class="mt-3 grid gap-3 sm:grid-cols-2">
                             <label class="text-xs font-semibold uppercase text-secondary">
                                 Feed

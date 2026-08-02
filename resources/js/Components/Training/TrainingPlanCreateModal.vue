@@ -103,7 +103,7 @@ const copy = {
         high: 'Hoch',
         test: 'Test',
         focus: 'Fokus',
-        focusPlaceholder: 'z. B. Technik, Zone 2, Explosivitaet',
+        focusPlaceholder: 'z. B. Technik, Zone 2, Explosivität',
         mediaTasks: 'Medien und Aufgaben',
         todoList: 'Todo-Liste',
         todoPlaceholder: 'Eine Aufgabe pro Zeile',

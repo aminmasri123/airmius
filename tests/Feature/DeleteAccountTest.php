@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Setting;
+use App\Support\EmailTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -59,5 +61,30 @@ class DeleteAccountTest extends TestCase
             ]);
 
         $this->assertNotNull($user->fresh());
+    }
+
+    public function test_legacy_account_deletion_email_template_is_repaired_with_german_umlauts(): void
+    {
+        $templates = EmailTemplate::defaultsForValidation();
+        $templates['account_deletion_code'] = [
+            'subject' => 'Bestaetigungscode zur Kontoloeschung',
+            'greeting' => 'Hallo,',
+            'body' => 'Du kannst dein Konto loeschen. Dein Bestaetigungscode ist 778503 und 15 Minuten gueltig.',
+            'action_label' => '',
+        ];
+
+        Setting::setValue(EmailTemplate::SETTINGS_KEY, json_encode($templates));
+
+        $migration = require base_path('database/migrations/2026_08_02_000004_fix_legacy_german_account_deletion_email_template.php');
+        $migration->up();
+
+        $content = EmailTemplate::content('account_deletion_code', ['code' => '778503']);
+
+        $this->assertSame('Bestätigungscode zur Kontolöschung', $content['subject']);
+        $this->assertStringContainsString('Bestätigungscode lautet: 778503', $content['body']);
+        $this->assertStringContainsString('15 Minuten gültig', $content['body']);
+        $this->assertStringNotContainsString('Bestaetigung', $content['subject'].$content['body']);
+        $this->assertStringNotContainsString('loesch', $content['body']);
+        $this->assertStringNotContainsString('guelt', $content['body']);
     }
 }

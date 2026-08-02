@@ -151,14 +151,14 @@ const recipientModeModel = computed({
                                 </label>
 
                                 <label class="block">
-                                    <span class="text-sm font-semibold text-primary">Faellig am</span>
+                                    <span class="text-sm font-semibold text-primary">Fällig am</span>
                                     <input v-model="form.due_date" class="mt-1 w-full rounded-xl border-border bg-inputBg text-primary" type="date" required>
                                     <p v-if="form.errors.due_date" class="mt-1 text-xs text-error">{{ form.errors.due_date }}</p>
                                 </label>
 
                                 <label class="block md:col-span-2">
                                     <span class="text-sm font-semibold text-primary">Beschreibung / Leistungsdetails</span>
-                                    <textarea v-model="form.description" class="mt-1 min-h-28 w-full rounded-xl border-border bg-inputBg text-primary" placeholder="z.B. Website-Konzept, Logo-Entwurf, Kursgebuehr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ..."></textarea>
+                                    <textarea v-model="form.description" class="mt-1 min-h-28 w-full rounded-xl border-border bg-inputBg text-primary" placeholder="z.B. Website-Konzept, Logo-Entwurf, Kursgebühr, Sponsoring-Paket, Outfit-Abo, Marketplace-Kauf ..."></textarea>
                                     <p v-if="form.errors.description" class="mt-1 text-xs text-error">{{ form.errors.description }}</p>
                                 </label>
                             </section>

@@ -17,7 +17,7 @@ class AuditLegalReadiness extends Command
             'privacy_email', 'legal_email', 'phone', 'representative', 'register',
             'vat_id', 'supervisory_authority', 'content_responsible',
         ];
-        $placeholders = ['offen', 'airmius', 'telefon auf anfrage', 'kein registereintrag angegeben.', 'keine umsatzsteuer-id angegeben.', 'keine besondere aufsichtsbehoerde angegeben.'];
+        $placeholders = ['offen', 'airmius', 'telefon auf anfrage', 'kein registereintrag angegeben.', 'keine umsatzsteuer-id angegeben.', 'keine besondere aufsichtsbehörde angegeben.'];
         $failures = [];
 
         foreach ($required as $key) {

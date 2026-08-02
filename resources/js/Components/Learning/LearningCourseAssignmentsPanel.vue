@@ -55,7 +55,7 @@ defineEmits(['createAssignment', 'gradeSubmission'])
                 <textarea v-model="assignmentForm.instructions" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Aufgabenstellung"></textarea>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <input v-model="assignmentForm.points" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Punkte">
-                    <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Faellig nach Tagen">
+                            <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Fällig nach Tagen">
                 </div>
                 <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary">
                     <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg">

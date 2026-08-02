@@ -33,7 +33,7 @@ class _MemberSelfServiceCenterSuiteScreenState
         club: 'Airmius Running Club',
         status: 'Anfrage offen',
         body:
-            'Antrag wurde gesendet. User kann Status sehen, Dokumente ergaenzen oder Anfrage zurückziehen.',
+            'Antrag wurde gesendet. User kann Status sehen, Dokumente ergänzen oder Anfrage zurückziehen.',
         meta: 'Laufgruppe',
         color: AirmiusColors.blue,
       ),
@@ -41,7 +41,7 @@ class _MemberSelfServiceCenterSuiteScreenState
         club: 'Tennis Zentrum West',
         status: 'Rückfrage',
         body:
-            'Verein benoetigt eine Dokumentfreigabe. Aufgabe wird in der mobilen Mitgliedszentrale angezeigt.',
+            'Verein benötigt eine Dokumentfreigabe. Aufgabe wird in der mobilen Mitgliedszentrale angezeigt.',
         meta: 'Sportdaten prüfen',
         color: AirmiusColors.amber,
       ),
@@ -128,7 +128,7 @@ class _MemberSelfServiceCenterSuiteScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionLabel('NAECHSTE AUFGABEN'),
+                const SectionLabel('NÄCHSTE AUFGABEN'),
                 const SizedBox(height: 8),
                 Text(
                   'Die spätere API kann hier offene Dokumente, Rückfragen, Zahlungsinformationen, Vereinsnachrichten, Event-Einladungen und Support-Tickets pro Mitgliedschaft anzeigen.',

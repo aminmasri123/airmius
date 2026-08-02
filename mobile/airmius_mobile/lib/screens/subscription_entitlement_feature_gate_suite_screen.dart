@@ -103,7 +103,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState
             Row(
               children: const [
                 Expanded(
-                  child: MetricCard(value: '4', label: 'Plaene'),
+                  child: MetricCard(value: '4', label: 'Pläne'),
                 ),
                 SizedBox(width: 10),
                 Expanded(
@@ -157,7 +157,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState
                         ? '25 GB'
                         : '100 GB+',
                     body:
-                        'Dateimanager, Uploads, Dokumente und Medienanhaenge nutzen dieses Limit.',
+                        'Dateimanager, Uploads, Dokumente und Medienanhänge nutzen dieses Limit.',
                   ),
                 ],
               ),

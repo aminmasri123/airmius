@@ -19,6 +19,6 @@ Ablehnen
 Falls die Buttons nicht funktionieren, können Sie die Anfrage hier prüfen:
 [Anfrage anzeigen]({{ $reviewUrl }})
 
-Regards,<br>
+Viele Grüße,<br>
 Airmius
 </x-mail::message>

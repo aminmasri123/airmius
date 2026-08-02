@@ -1238,7 +1238,7 @@ const {
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <p class="text-xs uppercase text-secondary">Bereits angefordert</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ formatMoney(payoutSummary.requested_cents) }}</p>
-                        <p class="mt-1 text-xs text-secondary">{{ payoutSummary.requested_count || 0 }} offene Auszahlungsantraege</p>
+                        <p class="mt-1 text-xs text-secondary">{{ payoutSummary.requested_count || 0 }} offene Auszahlungsanträge</p>
                     </div>
                 </div>
             </aside>
@@ -1283,7 +1283,7 @@ const {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedAdFormat.size }} · {{ selectedAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="campaignForm.creative_image_url" type="url" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
@@ -1870,13 +1870,13 @@ const {
                             </div>
                             <p v-if="adGroupForm.errors.sports" class="mt-2 text-sm text-error">{{ adGroupForm.errors.sports }}</p>
                         </div>
-                        <input v-model="adGroupForm.interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fitness, Ausruestung">
+                        <input v-model="adGroupForm.interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fitness, Ausrüstung">
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <select v-model="adGroupForm.gender" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="all">Alle Geschlechter</option>
                             <option value="female">Frauen</option>
-                            <option value="male">Maenner</option>
+                            <option value="male">Männer</option>
                             <option value="diverse">Divers</option>
                         </select>
                         <input v-model="adGroupForm.age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
@@ -2033,7 +2033,7 @@ const {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedEditAdFormat.size }} - {{ selectedEditAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedEditAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
@@ -2106,7 +2106,7 @@ const {
                         <input v-model="editCampaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <input v-model="editCampaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     </div>
-                    <p v-if="editCampaignModal.campaign?.payment_completed" class="text-xs text-secondary">Das bezahlte Gesamtbudget kann hier nicht nachtraeglich geändert werden.</p>
+                    <p v-if="editCampaignModal.campaign?.payment_completed" class="text-xs text-secondary">Das bezahlte Gesamtbudget kann hier nicht nachträglich geändert werden.</p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="editCampaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
                         <input v-model="editCampaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
@@ -2181,8 +2181,8 @@ const {
                         size="sm"
                         icon-only
                         :disabled="checkoutProcessing"
-                        aria-label="Checkout schliessen"
-                        title="Checkout schliessen"
+                        aria-label="Checkout schließen"
+                        title="Checkout schließen"
                         @click="closeCheckoutConfirmation"
                     >
                         <i class="las la-times text-xl"></i>

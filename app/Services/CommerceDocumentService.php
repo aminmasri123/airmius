@@ -33,7 +33,7 @@ class CommerceDocumentService
         $pdf->card(222, 632, 150, 54, 'Bestellung', '#'.$order->id);
         $pdf->card(396, 632, 150, 54, $type === 'credit_note' ? 'Erstattung' : 'Betrag', $this->money($type === 'credit_note' ? ($order->refunded_cents ?: $order->amount_cents) : $order->amount_cents, $order->currency), true);
 
-        $pdf->sectionTitle('Leistungsempfaenger', 48, 585);
+        $pdf->sectionTitle('Leistungsempfänger', 48, 585);
         $pdf->text($customerName, 48, 562, 13, true);
         $pdf->text($customerEmail, 48, 544, 10, false, AirmiusPdfDocument::SLATE, 80);
         if (filled($order->customer_vat_id)) {

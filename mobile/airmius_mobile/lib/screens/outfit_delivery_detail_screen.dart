@@ -25,7 +25,7 @@ class OutfitDeliveryDetailScreen extends StatefulWidget {
 
 class _OutfitDeliveryDetailScreenState
     extends State<OutfitDeliveryDetailScreen> {
-  String _issue = 'Groesse';
+  String _issue = 'Größe';
   bool _pauseNext = false;
 
   @override
@@ -89,7 +89,7 @@ class _OutfitDeliveryDetailScreenState
             Row(
               children: const [
                 Expanded(
-                  child: MetricCard(value: 'M', label: 'Groesse'),
+                  child: MetricCard(value: 'M', label: 'Größe'),
                 ),
                 SizedBox(width: 10),
                 Expanded(
@@ -112,7 +112,7 @@ class _OutfitDeliveryDetailScreenState
                     icon: Icons.inventory_2_outlined,
                     title: 'Paket vorbereitet',
                     body:
-                        'Artikel, Groesse, Stil und Vereinsfarben zusammengestellt.',
+                        'Artikel, Größe, Stil und Vereinsfarben zusammengestellt.',
                     status: 'Done',
                   ),
                   _OutfitLine(
@@ -145,8 +145,8 @@ class _OutfitDeliveryDetailScreenState
                     decoration: const InputDecoration(labelText: 'Problemtyp'),
                     items:
                         const [
-                              'Groesse',
-                              'Qualitaet',
+                              'Größe',
+                              'Qualität',
                               'Versand',
                               'Rückgabe',
                               'Sonstiges',
@@ -173,14 +173,14 @@ class _OutfitDeliveryDetailScreenState
                     activeThumbColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text(
-                      'Naechste Lieferung pausieren',
+                      'Nächste Lieferung pausieren',
                       style: TextStyle(
                         color: AirmiusColors.text,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     subtitle: const Text(
-                      'Abo bleibt aktiv, naechste Box wird ausgesetzt.',
+                      'Abo bleibt aktiv, nächste Box wird ausgesetzt.',
                       style: TextStyle(color: AirmiusColors.muted),
                     ),
                   ),
@@ -223,7 +223,7 @@ class _OutfitDeliveryDetailScreenState
                       builder: (_) => UiActionResultScreen(
                         title: 'Adresse bearbeiten',
                         body:
-                            'Lieferadresse, Kontakt und naechste Lieferung aktualisieren.',
+                            'Lieferadresse, Kontakt und nächste Lieferung aktualisieren.',
                         status: 'Adresse',
                         icon: Icons.edit_location_alt_outlined,
                       ),

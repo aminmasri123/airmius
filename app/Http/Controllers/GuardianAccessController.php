@@ -297,7 +297,7 @@ class GuardianAccessController extends Controller
 
         if ($birthDate->age < self::MIN_GUARDIAN_AGE) {
             throw ValidationException::withMessages([
-                'birth_date' => 'Das Elternkonto muss einem volljaehrigen Erwachsenen zugeordnet werden.',
+                'birth_date' => 'Das Elternkonto muss einem volljährigen Erwachsenen zugeordnet werden.',
             ]);
         }
 
@@ -364,7 +364,7 @@ class GuardianAccessController extends Controller
 
         AppNotification::send($child, 'guardian.consent_revoked', [
             'title' => 'Zustimmung widerrufen',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte klaere das mit deinem Erziehungsberechtigten.',
+            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte kläre das mit deinem Erziehungsberechtigten.',
             'minor_id' => $child->id,
             'guardian_email' => $email,
             'url' => route('guardian-consent.pending'),
@@ -443,7 +443,7 @@ class GuardianAccessController extends Controller
             self::DESTROY_RATE_LIMIT,
             self::DESTROY_RATE_LIMIT_SECONDS,
             'email',
-            'Du hast dich zu haeufig ausgeloggt. Bitte warte {:seconds} Sekunden, bevor du es erneut versuchst.',
+            'Du hast dich zu häufig ausgeloggt. Bitte warte {:seconds} Sekunden, bevor du es erneut versuchst.',
         );
 
         $request->session()->forget([

@@ -147,7 +147,7 @@ class _DraftAutosaveRecoverySuiteScreenState
                     icon: Icons.save_outlined,
                     title: 'Automatisches Speichern',
                     body:
-                        'Formulare speichern sichere Zwischenstaende, ohne dass User manuell klicken müssen.',
+                        'Formulare speichern sichere Zwischenstände, ohne dass User manuell klicken müssen.',
                     enabled: _autosave,
                     onChanged: (value) => setState(() => _autosave = value),
                   ),
@@ -297,7 +297,7 @@ const _drafts = [
   ),
   _Draft(
     type: 'Mitgliedsantrag',
-    title: 'SEPA Mandat unvollstaendig',
+    title: 'SEPA Mandat unvollständig',
     body: 'IBAN wurde begonnen, Mandatsbestätigung fehlt noch.',
     status: 'Needs input',
     time: 'vor 18 Min.',
@@ -318,7 +318,7 @@ const _drafts = [
     type: 'Beitrag',
     title: 'Community Post',
     body:
-        'Text, Zielgruppe, Bildanhaenge und Moderationshinweis sind als Entwurf vorhanden.',
+        'Text, Zielgruppe, Bildanhänge und Moderationshinweis sind als Entwurf vorhanden.',
     status: 'Draft',
     time: 'Gestern',
     icon: Icons.forum_outlined,

@@ -24,12 +24,12 @@ class _MaturityMediaGuidelinesScreenState
 
   final List<_GuidelineItem> _items = const [
     _GuidelineItem(
-      title: 'Minderjaehrige & Guardian',
+      title: 'Minderjährige & Guardian',
       area: 'Jugend',
       status: 'Pflicht',
       meta: 'Consent',
       description:
-          'Altersstufen, Erziehungsberechtigte, Einwilligungen und geschuetzte Funktionen für Jugendliche.',
+          'Altersstufen, Erziehungsberechtigte, Einwilligungen und geschützte Funktionen für Jugendliche.',
       icon: Icons.family_restroom_outlined,
       color: Color(0xFF5BA7FF),
       details: ['Alter prüfen', 'Guardian-Daten', 'Freigaben', 'Sichtbarkeit'],
@@ -51,7 +51,7 @@ class _MaturityMediaGuidelinesScreenState
       status: 'Regeln',
       meta: 'Safety',
       description:
-          'Verhaltenskodex, Meldefunktionen, Moderationswege und klare Hinweise für sichere Vereinsraeume.',
+          'Verhaltenskodex, Meldefunktionen, Moderationswege und klare Hinweise für sichere Vereinsräume.',
       icon: Icons.shield_outlined,
       color: Color(0xFFF8B84E),
       details: ['Kodex', 'Melden', 'Moderation', 'Sanktionen'],

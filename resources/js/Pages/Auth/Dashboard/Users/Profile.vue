@@ -802,7 +802,7 @@ const rejectRecommendation = (recommendation) => {
                                                     <option value="confirmed">Kann ich bestätigen</option>
                                                     <option value="good">Gut</option>
                                                     <option value="strong">Stark</option>
-                                                    <option value="exceptional">Aussergewoehnlich</option>
+                                                    <option value="exceptional">Außergewöhnlich</option>
                                                 </select>
                                                 <input v-model="skillFormFor(skill).comment" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Kommentar, optional" />
                                             </form>

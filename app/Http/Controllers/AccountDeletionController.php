@@ -24,7 +24,7 @@ class AccountDeletionController extends Controller
         $request->validate([
             'password' => ['required', 'string'],
         ], [
-            'password.required' => 'Bitte bestätige zuerst deine Identitaet.',
+            'password.required' => 'Bitte bestätige zuerst deine Identität.',
         ]);
 
         $user = $request->user();

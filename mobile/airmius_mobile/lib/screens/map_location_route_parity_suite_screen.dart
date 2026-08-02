@@ -70,7 +70,7 @@ class _MapLocationRouteParitySuiteScreenState
       title: 'Fahrgemeinschaft Treffpunkt',
       route: 'Rides/Index',
       body:
-          'Mitfahrt, Treffpunkt, Fahrer, freie Plaetze, Kontaktfreigabe, Guardian-Schutz und sichere Standortanzeige.',
+          'Mitfahrt, Treffpunkt, Fahrer, freie Plätze, Kontaktfreigabe, Guardian-Schutz und sichere Standortanzeige.',
       status: 'Ride',
       icon: Icons.directions_car_outlined,
       primary: 'Mitfahrt',
@@ -234,7 +234,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('MAPS & LOCATION'),
           const SizedBox(height: 8),
           Text(
-            'Standort muss nuetzlich sein, ohne sich unsicher anzufuehlen.',
+            'Standort muss nützlich sein, ohne sich unsicher anzufühlen.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -243,7 +243,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Flutter bereitet Sportkarte, Routen, Treffpunkte, Vereinsadressen, Standortvorschläge, Berechtigungen, Datenschutz und Offline-Zustaende als native mobile UI vor.',
+            'Flutter bereitet Sportkarte, Routen, Treffpunkte, Vereinsadressen, Standortvorschläge, Berechtigungen, Datenschutz und Offline-Zustände als native mobile UI vor.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -661,24 +661,24 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Karten-/Location-Paritaet',
+      title: 'Karten-/Location-Parität',
       subtitle: 'Was aus Web-Orten mobil übernommen wird.',
       children: [
         const _CheckLine(
-          'Sportkarte, Routen, Events, Fahrgemeinschaften und Public-Orte haben eigene mobile Kartenzustaende.',
+          'Sportkarte, Routen, Events, Fahrgemeinschaften und Public-Orte haben eigene mobile Kartenzustände.',
         ),
         const _CheckLine(
           'Standortfreigabe zeigt Zweck, Genauigkeit, Datenschutz, Guardian-Regeln und Widerruf.',
         ),
         const _CheckLine(
-          'Treffpunkte, Navigation, Offline-Karten und Live-Tracking werden als UI-Zustaende vorbereitet.',
+          'Treffpunkte, Navigation, Offline-Karten und Live-Tracking werden als UI-Zustände vorbereitet.',
         ),
         const _CheckLine(
           'Vereinsadresse und Standortvorschläge bleiben mit Sichtbarkeit und Moderation verbunden.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Location-Paritaet markieren',
+          label: 'Location-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

@@ -196,7 +196,7 @@ class MailCenterController extends Controller
             : null;
 
         if (! $recipient?->email) {
-            return back()->with('error', 'Empfaenger konnte nicht gefunden werden.');
+            return back()->with('error', 'Empfänger konnte nicht gefunden werden.');
         }
 
         $notification = $this->notificationFor($mailDelivery);

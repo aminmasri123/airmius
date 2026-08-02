@@ -304,7 +304,7 @@ const _invites = [
   _Invite(
     target: 'Guardian',
     title: 'Elternfreigabe',
-    body: 'Guardian-Link für Minderjaehrigenprofil und Consent-Prüfung.',
+    body: 'Guardian-Link für Minderjährigenprofil und Consent-Prüfung.',
     status: 'Wartet',
     icon: Icons.family_restroom_outlined,
     color: AirmiusColors.amber,

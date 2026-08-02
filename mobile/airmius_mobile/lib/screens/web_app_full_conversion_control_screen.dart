@@ -45,7 +45,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
         title: 'Sport, Training & Lernen',
         status: 'UI bereit',
         body:
-            'Trainingsplaene, Events, Anwesenheit, Wohlbefinden, Kurse, Zertifikate, Badges und Gamification.',
+            'Trainingspläne, Events, Anwesenheit, Wohlbefinden, Kurse, Zertifikate, Badges und Gamification.',
         icon: Icons.fitness_center_outlined,
         color: AirmiusColors.blue,
       ),
@@ -58,7 +58,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
         color: AirmiusColors.amber,
       ),
       const _ConversionSection(
-        title: 'Mobile Qualitaet',
+        title: 'Mobile Qualität',
         status: 'Vorbereitet',
         body:
             'Navigation, Tabellenaktionen, Modals, Uploads, Offline Cache, Push, Maps, RTL, Accessibility und Store-QA.',
@@ -81,7 +81,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                 const SectionLabel('ZIELBILD'),
                 SizedBox(height: 8),
                 Text(
-                  'Die Flutter-App soll sich wie die mobile Web-App anfuehlen: gleiche Bereiche, gleiche Sprache, gleiche dunkle Airmius-Optik, aber mit nativen mobilen Interaktionen.',
+                  'Die Flutter-App soll sich wie die mobile Web-App anfühlen: gleiche Bereiche, gleiche Sprache, gleiche dunkle Airmius-Optik, aber mit nativen mobilen Interaktionen.',
                   style: TextStyle(
                     color: AirmiusColors.text,
                     height: 1.45,
@@ -97,7 +97,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
               const Metric(value: '7', label: 'Bereiche'),
               const Metric(value: '123', label: 'Ops'),
               const Metric(value: '4', label: 'Sprachen'),
-              const Metric(value: 'API', label: 'naechster Schritt'),
+              const Metric(value: 'API', label: 'nächster Schritt'),
             ],
           ),
           const SizedBox(height: 14),
@@ -109,10 +109,10 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionLabel('NAECHSTER TECHNISCHER SCHRITT'),
+                const SectionLabel('NÄCHSTER TECHNISCHER SCHRITT'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Nach der UI-Paritaet wird die App an Laravel angebunden: Auth, User, Clubs, Mitgliedsanträge, Dateien, Zahlungen und Benachrichtigungen laufen dann über echte API-Endpunkte.',
+                  'Nach der UI-Parität wird die App an Laravel angebunden: Auth, User, Clubs, Mitgliedsanträge, Dateien, Zahlungen und Benachrichtigungen laufen dann über echte API-Endpunkte.',
                   style: TextStyle(
                     color: AirmiusColors.muted,
                     height: 1.45,
@@ -127,7 +127,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                     context,
                     title: 'API-Anbindung',
                     body:
-                        'Als naechstes werden Laravel-Endpunkte, Auth-Tokens, DTOs, Fehlerzustaende und Ladezustaende systematisch mit der Flutter-App verbunden.',
+                        'Als nächstes werden Laravel-Endpunkte, Auth-Tokens, DTOs, Fehlerzustände und Ladezustände systematisch mit der Flutter-App verbunden.',
                     status: 'Plan bereit',
                     icon: Icons.api_outlined,
                   ),

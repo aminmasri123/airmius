@@ -12,7 +12,7 @@ class ProcessInactiveAccounts extends Command
 {
     protected $signature = 'airmius:process-inactive-accounts {--dry-run : Nur anzeigen, keine änderungen speichern}';
 
-    protected $description = 'Sendet Inaktivitaetswarnungen und anonymisiert dauerhaft inaktive Konten DSGVO-konform.';
+    protected $description = 'Sendet Inaktivitätswarnungen und anonymisiert dauerhaft inaktive Konten DSGVO-konform.';
 
     public function handle(UserPrivacyRetentionService $retentionService, TransactionalMail $mail): int
     {
@@ -76,7 +76,7 @@ class ProcessInactiveAccounts extends Command
         $this->sendWarning($mail, 'second', 18, 'inactivity_second_warning_sent_at', $dryRun, $stats);
         $this->sendWarning($mail, 'first', 12, 'inactivity_first_warning_sent_at', $dryRun, $stats, 18);
 
-        $this->info('Inaktivitaetslauf abgeschlossen.');
+        $this->info('Inaktivitätslauf abgeschlossen.');
         $this->line('Erste Warnungen: '.$stats['first']);
         $this->line('Zweite Warnungen: '.$stats['second']);
         $this->line('Profile eingeschraenkt und zur Anonymisierung vorgemerkt: '.$stats['restricted']);

@@ -28,7 +28,7 @@ class _WorkspaceCollaborationScreenState
       status: 'Aktiv',
       meta: 'ZBB',
       description:
-          'Zentrale Arbeitsflaeche für Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
+          'Zentrale Arbeitsfläche für Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
       icon: Icons.apartment_outlined,
       color: Color(0xFF5BA7FF),
       points: [
@@ -65,13 +65,13 @@ class _WorkspaceCollaborationScreenState
       color: Color(0xFFF8B84E),
       points: [
         'Checklisten',
-        'Zustaendigkeiten',
+        'Zuständigkeiten',
         'Budgetnotizen',
-        'Dateianhaenge',
+        'Dateianhänge',
       ],
     ),
     _WorkspaceItem(
-      title: 'Geschuetzter Bereich',
+      title: 'Geschützter Bereich',
       area: 'Rechte',
       status: 'Rollen',
       meta: 'Admin',

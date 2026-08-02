@@ -213,8 +213,8 @@ class ModerationService
 
         $suspendedUntil = now()->addDays($highCount >= 2 ? 14 : 7);
         $reason = $highCount >= 2
-            ? 'Automatische Sperre nach zwei schweren Moderationsverstoessen.'
-            : 'Automatische Sperre nach wiederholten Moderationsverstoessen.';
+            ? 'Automatische Sperre nach zwei schweren Moderationsverstößen.'
+            : 'Automatische Sperre nach wiederholten Moderationsverstößen.';
 
         $user->forceFill([
             'account_status' => 'suspended',

@@ -609,7 +609,7 @@ class LearningStudioController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        return back()->with('success', 'Kurs-Qualitaetsstatus wurde gespeichert.');
+        return back()->with('success', 'Kurs-Qualitätsstatus wurde gespeichert.');
     }
 
     private function courseData(Request $request, ?LearningCourse $course = null): array
@@ -883,7 +883,7 @@ class LearningStudioController extends Controller
             ['key' => 'completion', 'label' => 'Abschlusslogik vorhanden', 'done' => $course->quizzes->isNotEmpty() || $course->assignments->where('is_required', true)->isNotEmpty()],
             ['key' => 'sales', 'label' => 'Verkaufsargumente gepflegt', 'done' => ! empty($course->sales_points)],
             ['key' => 'faq', 'label' => 'FAQ für Einwände', 'done' => ! empty($course->faq_items)],
-            ['key' => 'price', 'label' => 'Preislogik geklaert', 'done' => $course->is_free || $course->price_cents > 0],
+            ['key' => 'price', 'label' => 'Preislogik geklärt', 'done' => $course->is_free || $course->price_cents > 0],
             ['key' => 'public', 'label' => 'öffentlich sichtbar', 'done' => (bool) $course->is_public],
         ];
         $doneCount = collect($checks)->where('done', true)->count();

@@ -120,6 +120,15 @@ const submit = (application, action) => {
                                 <dt class="text-secondary">{{ tAuto('Nachricht') }}</dt>
                                 <dd class="whitespace-pre-wrap text-primary">{{ application.message || '-' }}</dd>
                             </div>
+                            <div class="sm:col-span-2">
+                                <dt class="text-secondary">{{ tAuto('Sportarten & Schwerpunkte') }}</dt>
+                                <dd class="whitespace-pre-wrap text-primary">
+                                    {{ application.application_data?.sports || '-' }}
+                                    <span v-if="application.application_data?.specialties">
+                                        · {{ application.application_data.specialties }}
+                                    </span>
+                                </dd>
+                            </div>
                         </dl>
                     </div>
 

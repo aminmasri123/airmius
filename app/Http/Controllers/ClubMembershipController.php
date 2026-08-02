@@ -470,7 +470,7 @@ class ClubMembershipController extends Controller
 
         if ($ruleType === 'special' && ($data['billing_interval'] ?? null) !== 'once') {
             throw ValidationException::withMessages([
-                'billing_interval' => 'Sonderbeitraege muessen einmalig abgerechnet werden.',
+                'billing_interval' => 'Sonderbeiträge müssen einmalig abgerechnet werden.',
             ]);
         }
 
@@ -615,12 +615,12 @@ class ClubMembershipController extends Controller
 
         AppNotification::send($user, 'club.member_removed', [
             'title' => 'Vereinsmitgliedschaft beendet',
-            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das für falsch haeltst, kannst du widersprechen.',
+            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das für falsch hältst, kannst du widersprechen.',
             'url' => route('auth.notifications.index'),
             'club_id' => $club->id,
         ]);
 
-        return back()->with('success', 'Mitglied wurde aus Verein und zugehoerigen Teams entfernt.');
+        return back()->with('success', 'Mitglied wurde aus Verein und zugehörigen Teams entfernt.');
     }
 
     public function leaveClub(Request $request, Club $club)
@@ -836,7 +836,7 @@ class ClubMembershipController extends Controller
             $isAccepted = in_array((string) $document['id'], $acceptedDocumentIds, true);
 
             if (($document['is_required'] ?? false) && ! $isAccepted) {
-                $missingDocuments['accepted_documents.'.$document['id']] = $document['title'].' muss bestaetigt werden.';
+                $missingDocuments['accepted_documents.'.$document['id']] = $document['title'].' muss bestätigt werden.';
             }
 
             if ($isAccepted) {
@@ -914,7 +914,7 @@ class ClubMembershipController extends Controller
         $membershipRequest->update([
             'status' => 'withdrawn',
             'reviewed_at' => now(),
-            'review_note' => 'Vom Nutzer zurueckgezogen.',
+            'review_note' => 'Vom Nutzer zurückgezogen.',
         ]);
 
         $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
@@ -1157,7 +1157,7 @@ class ClubMembershipController extends Controller
                 $importErrors[] = [
                     'row' => $rowNumber,
                     'email' => $email,
-                    'reason' => 'Ungueltige oder fehlende E-Mail-Adresse.',
+                    'reason' => 'Ungültige oder fehlende E-Mail-Adresse.',
                 ];
                 continue;
             }
@@ -1302,7 +1302,7 @@ class ClubMembershipController extends Controller
                 $errors[] = [
                     'row' => $rowNumber,
                     'email' => $email,
-                    'reason' => 'Ungueltige oder fehlende E-Mail-Adresse.',
+                    'reason' => 'Ungültige oder fehlende E-Mail-Adresse.',
                 ];
                 continue;
             }
@@ -1394,7 +1394,7 @@ class ClubMembershipController extends Controller
         $this->authorize('update', $club);
         $this->planFeatures->ensureAllows($club, 'sepa_export');
 
-        abort_if(blank($club->sepa_creditor_id) || blank($club->sepa_iban), 422, 'Bitte zuerst SEPA-Glaeubiger-ID und Vereins-IBAN speichern.');
+        abort_if(blank($club->sepa_creditor_id) || blank($club->sepa_iban), 422, 'Bitte zuerst SEPA-Gläubiger-ID und Vereins-IBAN speichern.');
 
         $invoices = Invoice::query()
             ->where('club_id', $club->id)
@@ -1853,7 +1853,7 @@ class ClubMembershipController extends Controller
 
         return back()->with(
             'success',
-            "Bankabgleich fertig: {$stats['auto_matched']} automatisch bezahlt, {$stats['suggested']} Vorschlaege, {$stats['unmatched']} offen, {$stats['duplicates']} Duplikate."
+            "Bankabgleich fertig: {$stats['auto_matched']} automatisch bezahlt, {$stats['suggested']} Vorschläge, {$stats['unmatched']} offen, {$stats['duplicates']} Duplikate."
         );
     }
 
@@ -1941,8 +1941,8 @@ class ClubMembershipController extends Controller
                 'Soll/Haben-Kennzeichen',
                 'WKZ Umsatz',
                 'Konto',
-                'Gegenkonto (ohne BU-Schluessel)',
-                'BU-Schluessel',
+                'Gegenkonto (ohne BU-Schlüssel)',
+                'BU-Schlüssel',
                 'Belegdatum',
                 'Belegfeld 1',
                 'Belegfeld 2',
@@ -2681,7 +2681,7 @@ XML);
 
         $sheetRows = [
             ['Airmius Mitgliederimport'],
-            ['Fuellen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Gleicher Familiengruppen-Schluessel verbindet aktive Mitglieder fuer automatische Familienbeitraege. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
+            ['Füllen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Gleicher Familiengruppen-Schlüssel verbindet aktive Mitglieder für automatische Familienbeiträge. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
             ['Name', 'E-Mail', 'Familiengruppe', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
             ['Max Mustermann', 'max@example.org', 'family-7', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],

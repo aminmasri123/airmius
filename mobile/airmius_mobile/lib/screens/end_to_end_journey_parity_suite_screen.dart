@@ -279,7 +279,7 @@ class _Hero extends StatelessWidget {
             children: [
               _Metric(value: journey, label: 'Journey'),
               _Metric(value: role, label: 'Rolle'),
-              _Metric(value: showApiStates ? 'API' : 'UI', label: 'Zustaende'),
+              _Metric(value: showApiStates ? 'API' : 'UI', label: 'Zustände'),
               _Metric(
                 value: showNotifications ? 'Notify' : 'Still',
                 label: 'Updates',
@@ -365,7 +365,7 @@ class _RulesPanel extends StatelessWidget {
       subtitle: 'Diese Regeln machen aus Web-Modulen echte mobile Prozesse.',
       children: [
         _SwitchLine(
-          title: 'API-Zustaende pro Schritt zeigen',
+          title: 'API-Zustände pro Schritt zeigen',
           value: showApiStates,
           onChanged: onApiStates,
         ),
@@ -504,7 +504,7 @@ class _JourneyCard extends StatelessWidget {
                   context,
                   title: '${flow.title} prüfen',
                   body:
-                      'API-Zustaende, Notifications, Permissions, Fehler, Rückwege und naechster Screen für ${flow.title}.',
+                      'API-Zustände, Notifications, Permissions, Fehler, Rückwege und nächster Screen für ${flow.title}.',
                   status: 'Flow Check',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -559,8 +559,8 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Journey-Paritaet',
-      subtitle: 'Was zusammenhaengend funktionieren muss.',
+      title: 'Journey-Parität',
+      subtitle: 'Was zusammenhängend funktionieren muss.',
       children: [
         const _CheckLine(
           'User-Journeys verbinden Suche, Profile, Formulare, Uploads, Zahlungen und Statusseiten.',
@@ -576,7 +576,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Journey-Paritaet markieren',
+          label: 'Journey-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

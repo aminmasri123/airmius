@@ -448,16 +448,16 @@ class UploadController extends Controller
 
         foreach ($dispositionParts as $part) {
             if (in_array($part, self::DISALLOWED_FILE_EXTENSIONS, true)) {
-                throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+                throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
             }
         }
 
         if ($extension !== '' && in_array($extension, self::DISALLOWED_FILE_EXTENSIONS, true)) {
-            throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+            throw ValidationException::withMessages(['file_name' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
         }
 
         if (in_array(strtolower($mimeType), self::DISALLOWED_MIME_TYPES, true)) {
-            throw ValidationException::withMessages(['mime_type' => 'Dieser Dateityp ist aus SicherheitsGruenden nicht erlaubt.']);
+            throw ValidationException::withMessages(['mime_type' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
         }
     }
     private function assertSafeUpload(UploadedFile $file): void

@@ -141,7 +141,7 @@ class _GuardianConsentDetailScreenState
                       ),
                     ),
                     subtitle: Text(
-                      'Fotos/Videos gemaess Richtlinien erlauben.',
+                      'Fotos/Videos gemäß Richtlinien erlauben.',
                       style: TextStyle(color: airmiusMutedColor(context)),
                     ),
                   ),

@@ -139,7 +139,7 @@ class PlanFeatureService
     public function ensureCanStoreUserFile(User $user, ?UploadedFile $file = null): void
     {
         if (! $this->canStoreUserFile($user, $file)) {
-            $this->fail('Dein Speicher ist ausgeschoepft. Bitte lösche Dateien oder führe ein Upgrade durch.');
+            $this->fail('Dein Speicher ist ausgeschöpft. Bitte lösche Dateien oder führe ein Upgrade durch.');
         }
     }
 

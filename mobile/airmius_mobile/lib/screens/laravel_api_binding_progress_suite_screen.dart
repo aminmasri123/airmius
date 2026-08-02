@@ -99,7 +99,7 @@ class LaravelApiBindingProgressSuiteScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Der Client-Kontrakt definiert die wichtigsten Laravel-v1-Endpunkte. Danach können Screens Schritt für Schritt echte Daten statt vorbereiteter UI-Zustaende verwenden.',
+                    'Der Client-Kontrakt definiert die wichtigsten Laravel-v1-Endpunkte. Danach können Screens Schritt für Schritt echte Daten statt vorbereiteter UI-Zustände verwenden.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -220,7 +220,7 @@ class LaravelApiBindingProgressSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('NAECHSTE API-GATES'),
+                  const Eyebrow('NÄCHSTE API-GATES'),
                   const SizedBox(height: 12),
                   for (final step in nextSteps) ...[
                     _NextStepRow(item: step),

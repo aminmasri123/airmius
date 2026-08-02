@@ -87,7 +87,7 @@ class _ClubRolePermissionsScreenState extends State<ClubRolePermissionsScreen> {
     _PermissionRow(
       area: 'Beitragsregeln',
       owner: 'Inhaber + Finanzen',
-      rule: 'Preis, Intervall, Zahlmethode und Dokumentverknuepfung',
+      rule: 'Preis, Intervall, Zahlmethode und Dokumentverknüpfung',
       risk: 'Hoch',
     ),
     _PermissionRow(

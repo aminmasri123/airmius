@@ -253,7 +253,7 @@ class _ProfileHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Die Profil-Partial-Webseiten werden als mobile UI gebuendelt: Profilinfo, Passwort, 2FA, andere Sessions und Konto löschen.',
+            'Die Profil-Partial-Webseiten werden als mobile UI gebündelt: Profilinfo, Passwort, 2FA, andere Sessions und Konto löschen.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,

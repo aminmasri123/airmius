@@ -850,7 +850,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     const manualActivityTypeLabel = (type) => settingsText(`integrations.manual_activity.types.${type}`, type)
     
     const sportActivityTitle = (activity) => {
-        if (activity.title && activity.title !== 'Google Fit Tagesaktivitaet') {
+        if (activity.title && activity.title !== 'Google Fit Tagesaktivität') {
             return activity.title
         }
     

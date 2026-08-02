@@ -381,7 +381,7 @@ const confirmDeleteRide = () => {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-primary">{{ tx('Fahrgemeinschaften', 'Fahrgemeinschaften') }}</h1>
-                <p class="mt-1 text-sm text-secondary">{{ tx('Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitaeten.', 'Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitäten.') }}</p>
+                <p class="mt-1 text-sm text-secondary">{{ tx('Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitäten.', 'Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitäten.') }}</p>
             </div>
 
             <div class="flex flex-col gap-2 sm:flex-row sm:items-start">

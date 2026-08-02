@@ -43,7 +43,7 @@ class _DashboardActionFlowsScreenState
       area: 'CRUD',
       status: 'Log',
       body:
-          'Trainingsprotokoll mit Sportart, Datum, Intensitaet, Notizen, Dauer und Fortschritt.',
+          'Trainingsprotokoll mit Sportart, Datum, Intensität, Notizen, Dauer und Fortschritt.',
       icon: Icons.post_add_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -79,7 +79,7 @@ class _DashboardActionFlowsScreenState
       area: 'Details',
       status: 'Plan',
       body:
-          'Planpositionen, Uebungen, Saetze, Dauer, Hinweise und Trainerfeedback als mobile Detailseite.',
+          'Planpositionen, Übungen, Sätze, Dauer, Hinweise und Trainerfeedback als mobile Detailseite.',
       icon: Icons.fitness_center_outlined,
       color: Color(0xFF2EE59D),
     ),

@@ -70,6 +70,10 @@ class UserSettingsController extends Controller
             ],
             'sports' => Sport::query()
                 ->where('is_active', true)
+                ->with(['skills' => fn ($query) => $query
+                    ->select('id', 'sport_id', 'key', 'name')
+                    ->orderBy('sort_order')
+                    ->orderBy('name')])
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),

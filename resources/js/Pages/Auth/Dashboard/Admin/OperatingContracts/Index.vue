@@ -688,7 +688,7 @@ const paginationLabel = (label) => {
                                         <input v-model="form.auto_renews" type="checkbox" class="rounded border-border bg-inputBg text-air-blue">
                                         <span>
                                             <span class="block text-sm font-semibold text-primary">{{ tAuto('Automatische Verlängerung') }}</span>
-                                            <span class="block text-xs text-secondary">{{ tAuto('Bei aktiven Abos und Leasingvertraegen eingeschaltet lassen.') }}</span>
+                                            <span class="block text-xs text-secondary">{{ tAuto('Bei aktiven Abos und Leasingverträgen eingeschaltet lassen.') }}</span>
                                         </span>
                                     </label>
                                 </section>

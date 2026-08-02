@@ -33,7 +33,7 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
       _PollType(
         'Team-Check',
         'Trainer',
-        'Belastung, Verfuegbarkeit, Stimmung, Rückmeldung',
+        'Belastung, Verfügbarkeit, Stimmung, Rückmeldung',
         AirmiusColors.pink,
         Icons.groups_2_outlined,
       ),
@@ -53,7 +53,7 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
       _WorkflowStep(
         '3',
         'Regeln setzen',
-        'Anonymitaet, Laufzeit, Quorum, Mehrfachantworten, Guardian-Freigabe und Sichtbarkeit.',
+        'Anonymität, Laufzeit, Quorum, Mehrfachantworten, Guardian-Freigabe und Sichtbarkeit.',
       ),
       _WorkflowStep(
         '4',

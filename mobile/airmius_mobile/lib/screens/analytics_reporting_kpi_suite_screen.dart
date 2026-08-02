@@ -26,7 +26,7 @@ class _AnalyticsReportingKpiSuiteScreenState
         title: 'Mitgliederentwicklung',
         status: '+12%',
         body:
-            'Neue Anfragen, angenommene Mitglieder, Rückzuege, offene Rückfragen und Teamzuweisungen.',
+            'Neue Anfragen, angenommene Mitglieder, Rückzüge, offene Rückfragen und Teamzuweisungen.',
         icon: Icons.groups_2_outlined,
         color: AirmiusColors.green,
       ),
@@ -42,7 +42,7 @@ class _AnalyticsReportingKpiSuiteScreenState
         title: 'Community & Events',
         status: '84%',
         body:
-            'Feed-Aktivitaet, Kommentare, Event-RSVPs, Trainingsteilnahme und Benachrichtigungsrate.',
+            'Feed-Aktivität, Kommentare, Event-RSVPs, Trainingsteilnahme und Benachrichtigungsrate.',
         icon: Icons.insights_outlined,
         color: AirmiusColors.blue,
       ),
@@ -50,7 +50,7 @@ class _AnalyticsReportingKpiSuiteScreenState
         title: 'Support & Moderation',
         status: 'SLA',
         body:
-            'Tickets, Eskalationen, gemeldete Inhalte, Audit-Faelle und Bearbeitungszeiten.',
+            'Tickets, Eskalationen, gemeldete Inhalte, Audit-Fälle und Bearbeitungszeiten.',
         icon: Icons.admin_panel_settings_outlined,
         color: AirmiusColors.pink,
       ),

@@ -11,11 +11,11 @@ class ClubAuditLog
 {
     public const LABELS = [
         'club.invoice.created' => 'Rechnung erstellt',
-        'club.invoice.status_updated' => 'Rechnungsstatus geaendert',
+        'club.invoice.status_updated' => 'Rechnungsstatus geändert',
         'club.payment.recorded' => 'Zahlung erfasst',
         'club.member.invited' => 'Mitglied eingeladen',
         'club.member.updated' => 'Mitglied aktualisiert',
-        'club.member.role_updated' => 'Rolle geaendert',
+        'club.member.role_updated' => 'Rolle geändert',
         'club.contribution_rule.created' => 'Beitragsregel erstellt',
         'club.contribution_rule.updated' => 'Beitragsregel aktualisiert',
         'club.membership_request.approved' => 'Mitgliedsantrag angenommen',

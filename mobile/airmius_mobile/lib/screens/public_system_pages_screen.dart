@@ -129,7 +129,7 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
                         context,
                         title: 'Public Preview',
                         message:
-                            'Diese Systemseiten sind als native UI vorbereitet und werden später mit CMS/API-Inhalten gefuellt.',
+                            'Diese Systemseiten sind als native UI vorbereitet und werden später mit CMS/API-Inhalten gefüllt.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),

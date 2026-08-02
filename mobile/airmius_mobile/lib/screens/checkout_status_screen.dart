@@ -141,7 +141,7 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
                     SizedBox(height: 10),
                     _StatusLine(
                       icon: Icons.account_balance_outlined,
-                      title: 'Empfaenger',
+                      title: 'Empfänger',
                       body: 'Airmius Payments / Vereinsanbieter',
                       status: 'Bank',
                     ),
@@ -166,7 +166,7 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Eyebrow('Naechste Schritte'),
+                    const Eyebrow('Nächste Schritte'),
                     const SizedBox(height: 10),
                     _StatusLine(
                       icon: _success

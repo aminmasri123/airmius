@@ -13,7 +13,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
         'Mobile Web-App Optik',
         '88%',
         '12% Rest',
-        'Shell, Farben, Panels, Buttons, Modals, Listen, Formulare, Deep-Link-QA sowie Light/Dark-Logo-Prinzip mit Theme-Umschalter, Persistenz und brightness-aware Fallbacks sind stark angenaehert.',
+        'Shell, Farben, Panels, Buttons, Modals, Listen, Formulare, Deep-Link-QA sowie Light/Dark-Logo-Prinzip mit Theme-Umschalter, Persistenz und brightness-aware Fallbacks sind stark angenähert.',
         AirmiusColors.green,
         Icons.palette_outlined,
       ),
@@ -37,7 +37,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
         'Store/Test/Release',
         '92%',
         '8% Rest',
-        'Store-Metadaten, Store-Listing-Texte, Datenschutzlabel-Drafts, Review-Notizen, Permission-Texte, Android Manifest, Android Application ID, Android/iOS App-Icons, Android Adaptive/Round Icons, Android Release-Signing-Struktur, Build- und Signing-Runbook, Android/iOS Evidence-CI, Evidence-Template, Evidence-Center, RC-Check-Script, Lokalisierungs-Matrix, Deep-Link-Struktur, Deep-Link-Resolver, Android/iOS Native Deep-Link Bridges, Deep-Link-Screen-Navigation mit direktem Clubdetail und Ziel-Ankunftsseiten, Domain-Verifikations-Templates, Domain-Verification-Runbook, Screenshot-Capture-Plan, Release-Review-Runbook, Final-Release-Candidate-Gate-Register und App-Screen, Android Splash/Marke, Light/Dark-Branding mit persistenter Theme-/Sprachwahl, persistente Session-Schicht, iOS Bundle ID, iOS LaunchScreen, iOS ExportOptions-Beispiel, GitHub Actions CI, Info.plist und Release-Gates sind vorbereitet; Ausfuehrung der Evidence-Gates fehlt noch.',
+        'Store-Metadaten, Store-Listing-Texte, Datenschutzlabel-Drafts, Review-Notizen, Permission-Texte, Android Manifest, Android Application ID, Android/iOS App-Icons, Android Adaptive/Round Icons, Android Release-Signing-Struktur, Build- und Signing-Runbook, Android/iOS Evidence-CI, Evidence-Template, Evidence-Center, RC-Check-Script, Lokalisierungs-Matrix, Deep-Link-Struktur, Deep-Link-Resolver, Android/iOS Native Deep-Link Bridges, Deep-Link-Screen-Navigation mit direktem Clubdetail und Ziel-Ankunftsseiten, Domain-Verifikations-Templates, Domain-Verification-Runbook, Screenshot-Capture-Plan, Release-Review-Runbook, Final-Release-Candidate-Gate-Register und App-Screen, Android Splash/Marke, Light/Dark-Branding mit persistenter Theme-/Sprachwahl, persistente Session-Schicht, iOS Bundle ID, iOS LaunchScreen, iOS ExportOptions-Beispiel, GitHub Actions CI, Info.plist und Release-Gates sind vorbereitet; Ausführung der Evidence-Gates fehlt noch.',
         AirmiusColors.red,
         Icons.store_outlined,
       ),
@@ -53,7 +53,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
         'Laravel Auth, Vereine, Mitglieder, Dateien, Zahlungen, Chat, Feed, Events und Admin-Endpunkte verbinden.',
       ),
       _GateItem(
-        'Native Funktionen ergaenzen',
+        'Native Funktionen ergänzen',
         'Push, Kamera, Dateiupload, Deep Links, Offline Queue, Secure Storage und Permissions integrieren.',
       ),
       _GateItem(
@@ -77,7 +77,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
       body: PageFrame(
         title: 'Produktfortschritt',
         subtitle:
-            'Rest-Prozente, Web-App-Paritaet, API-Gaps, Store-Reife und naechste Gates für das fertige Produkt.',
+            'Rest-Prozente, Web-App-Parität, API-Gaps, Store-Reife und nächste Gates für das fertige Produkt.',
         trailing: StatusPill(
           '1% Rest',
           color: Theme.of(context).colorScheme.tertiary,
@@ -103,7 +103,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Diese Ansicht zeigt ehrlich, wie viel bis zur fertigen App bleibt: UI-Paritaet ist weit, echte API-Anbindung und Store-Reife sind die groessten Restbloecke.',
+                    'Diese Ansicht zeigt ehrlich, wie viel bis zur fertigen App bleibt: UI-Parität ist weit, echte API-Anbindung und Store-Reife sind die größten Restblöcke.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,

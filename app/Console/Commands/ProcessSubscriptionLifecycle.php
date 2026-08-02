@@ -15,9 +15,9 @@ use Illuminate\Support\Carbon;
 class ProcessSubscriptionLifecycle extends Command
 {
     protected $signature = 'airmius:process-subscription-lifecycle
-        {--grace-days=9 : Tage bis zur Zugriffseinschraenkung nach Fälligkeit}
+        {--grace-days=9 : Tage bis zur Zugriffseinschränkung nach Fälligkeit}
         {--reminder-days=3 : Abstand zwischen Mahnungen}
-        {--dry-run : Nur zaehlen, nichts speichern oder senden}';
+        {--dry-run : Nur zählen, nichts speichern oder senden}';
 
     protected $description = 'Erzeugt wiederkehrende Abo-Rechnungen, mahnt offene Zahlungen und finalisiert Kündigungen.';
 

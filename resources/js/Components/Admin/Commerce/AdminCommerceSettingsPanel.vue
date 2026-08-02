@@ -29,7 +29,7 @@ defineProps({
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Export</p>
                         <h2 class="mt-1 text-lg font-semibold text-primary">Steuerberater / DATEV-CSV</h2>
-                        <p class="mt-1 text-sm text-secondary">Bestellungen, Steuerland, Rechnungsnummern, Versandstatus und Betraege als CSV.</p>
+                        <p class="mt-1 text-sm text-secondary">Bestellungen, Steuerland, Rechnungsnummern, Versandstatus und Beträge als CSV.</p>
                     </div>
                     <a :href="route('admin.commerce.export.csv')" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">CSV</a>
                 </div>
@@ -52,7 +52,7 @@ defineProps({
         <section class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">EU-Konformitaet</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">EU-Konformität</p>
                     <h2 class="text-lg font-semibold text-primary">Commerce-Steuerlogik</h2>
                     <p class="text-sm text-secondary">Diese Einstellungen steuern Firmenland, OSS-Verhalten, Export und Reverse-Charge.</p>
                 </div>
@@ -60,7 +60,7 @@ defineProps({
                     <input v-model="commerceSettingsForm.company_country" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Firmensitz, z. B. DE">
                     <input v-model="commerceSettingsForm.company_currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
                     <select v-model="commerceSettingsForm.export_vat_mode" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="zero">Export ausserhalb EU: 0%</option>
+                        <option value="zero">Export außerhalb EU: 0%</option>
                         <option value="domestic">Export: Inlandssatz</option>
                     </select>
                     <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
@@ -136,7 +136,7 @@ defineProps({
                     <input v-model="taxRateForm.region" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Region optional">
                     <select v-model="taxRateForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="standard">Standard</option>
-                        <option value="reduced">Ermaessigt</option>
+                        <option value="reduced">Ermäßigt</option>
                         <option value="zero">Nullsatz</option>
                     </select>
                     <input v-model="taxRateForm.tax_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="MwSt.">
@@ -162,7 +162,7 @@ defineProps({
                         <input v-model="rate.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary">
                         <select v-model="rate.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="standard">Standard</option>
-                            <option value="reduced">Ermaessigt</option>
+                            <option value="reduced">Ermäßigt</option>
                             <option value="zero">Nullsatz</option>
                         </select>
                         <input v-model="rate.tax_label" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -218,7 +218,6 @@ defineProps({
         </section>
     </div>
 </template>
-
 
 
 

@@ -149,7 +149,7 @@ class SportIntegrationSyncService
         $bucketCount = count($response->json('bucket', []));
 
         $message = $imported > 0
-            ? $imported.' Google Fit Tagesaktivitaeten importiert oder aktualisiert.'
+            ? $imported.' Google Fit Tagesaktivitäten importiert oder aktualisiert.'
             : ($bucketCount > 0
                 ? 'Google Fit hat '.$bucketCount.' Tagesbereiche geliefert, aber ohne Aktivitätswerte.'
                 : 'Google Fit hat für diesen Zeitraum keine Tagesbereiche geliefert.');
@@ -366,7 +366,7 @@ class SportIntegrationSyncService
             'activity_code' => $activityCode,
             'activity_codes' => $activityCodes,
             'activity_type' => $activityType,
-            'title' => $activityType === 'Aktivität' ? 'Google Fit Tagesaktivitaet' : $activityType,
+            'title' => $activityType === 'Aktivität' ? 'Google Fit Tagesaktivität' : $activityType,
             'source_kind' => 'daily_summary',
             'earliest_start_time' => $earliestStartNanos
                 ? Carbon::createFromTimestampMs((int) floor($earliestStartNanos / 1000000))->format('H:i')

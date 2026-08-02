@@ -27,7 +27,7 @@ class _TeamRosterRoleAssignmentSuiteScreenState
         meta: '12 Mitglieder - 2 Trainer',
         status: 'Aktiv',
         body:
-            'Kader, Trainer, Captain, Termine, Dateien und Chatrechte werden mobil gebuendelt.',
+            'Kader, Trainer, Captain, Termine, Dateien und Chatrechte werden mobil gebündelt.',
         color: AirmiusColors.blue,
       ),
       const _TeamRow(

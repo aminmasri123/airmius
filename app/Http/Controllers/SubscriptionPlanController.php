@@ -250,7 +250,7 @@ class SubscriptionPlanController extends Controller
 
         $this->renewSubscription($subscription, (int) $data['months']);
 
-        return back()->with('success', 'Vereins-Abo wurde verlaengert.');
+        return back()->with('success', 'Vereins-Abo wurde verlängert.');
     }
 
     public function cancelUser(Request $request, UserSubscription $subscription)
@@ -272,7 +272,7 @@ class SubscriptionPlanController extends Controller
 
         $this->renewSubscription($subscription, (int) $data['months']);
 
-        return back()->with('success', 'Nutzer-Abo wurde verlaengert.');
+        return back()->with('success', 'Nutzer-Abo wurde verlängert.');
     }
 
     public function cancelOwnUserSubscription(Request $request, UserSubscription $subscription)
@@ -280,7 +280,7 @@ class SubscriptionPlanController extends Controller
         $this->authorize('cancel', $subscription);
 
         if (! $this->isUserSubscriptionCancellable($subscription)) {
-            return back()->with('error', 'Das Abo wurde bereits gekuendigt.');
+            return back()->with('error', 'Das Abo wurde bereits gekündigt.');
         }
 
         $this->cancelSubscription($subscription, 'period_end');
@@ -545,4 +545,3 @@ class SubscriptionPlanController extends Controller
         ];
     }
 }
-

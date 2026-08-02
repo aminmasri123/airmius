@@ -59,7 +59,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   Eyebrow('Warenkorb'),
                   SizedBox(height: 8),
                   Text(
-                    'Airmius Teamshirt - Groesse M - Blau',
+                    'Airmius Teamshirt - Größe M - Blau',
                     style: TextStyle(
                       color: airmiusTextColor(context),
                       fontSize: 21,

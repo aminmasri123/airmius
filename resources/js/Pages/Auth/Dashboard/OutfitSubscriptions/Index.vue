@@ -850,7 +850,7 @@ const submitIssue = () => {
                         <select v-model="issueForm.issue_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                             <option value="exchange">{{ tx('auto.Umtausch / andere Grüße', 'Umtausch / andere Grüße') }}</option>
                             <option value="return">{{ tx('auto.Retoure', 'Retoure') }}</option>
-                            <option value="damaged">{{ tx('auto.Beschaedigt', 'Beschädigt') }}</option>
+                            <option value="damaged">{{ tx('auto.Beschädigt', 'Beschädigt') }}</option>
                             <option value="missing_item">{{ tx('auto.Artikel fehlt', 'Artikel fehlt') }}</option>
                             <option value="wrong_item">{{ tx('auto.Falscher Artikel', 'Falscher Artikel') }}</option>
                             <option value="other">{{ tx('auto.Sonstiges', 'Sonstiges') }}</option>
@@ -864,7 +864,7 @@ const submitIssue = () => {
                     </label>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Wunschloesung', 'Wunschlösung') }}</span>
+                        <span class="text-sm font-semibold text-primary">{{ tx('auto.Wunschlösung', 'Wunschlösung') }}</span>
                         <input v-model="issueForm.issue_requested_resolution" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="tx('auto.z.B. Ersatz, Retoure, Gutschrift', 'z.B. Ersatz, Retoure, Gutschrift')">
                     </label>
 

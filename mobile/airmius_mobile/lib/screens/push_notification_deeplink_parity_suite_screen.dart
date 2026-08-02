@@ -35,7 +35,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState
       title: 'Neue Mitgliedschaftsanfrage',
       source: 'ClubRequestInbox',
       body:
-          'Verein wird informiert, wenn ein User eine Anfrage sendet, Dokumente hochlaedt oder die Anfrage zurückzieht.',
+          'Verein wird informiert, wenn ein User eine Anfrage sendet, Dokumente hochlädt oder die Anfrage zurückzieht.',
       status: 'Club Admin',
       icon: Icons.assignment_ind_outlined,
       primary: 'Zur Inbox',
@@ -47,7 +47,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState
       title: 'Neue Chat-Nachricht',
       source: 'Chat/Index',
       body:
-          'Deep Link fuehrt direkt zur Konversation, zeigt Lesestatus, Mute-Regel, Teilnehmer und Attachment-Hinweis.',
+          'Deep Link führt direkt zur Konversation, zeigt Lesestatus, Mute-Regel, Teilnehmer und Attachment-Hinweis.',
       status: 'Message',
       icon: Icons.forum_outlined,
       primary: 'Chat öffnen',
@@ -71,7 +71,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState
       title: 'Zahlung offen',
       source: 'Billing / Membership Payments',
       body:
-          'Beitrag, Rechnung, Banktransfer, Mahnung, Beleg und Zahlungsstatus werden als sichere Deep-Link-Karte gefuehrt.',
+          'Beitrag, Rechnung, Banktransfer, Mahnung, Beleg und Zahlungsstatus werden als sichere Deep-Link-Karte geführt.',
       status: 'Payment',
       icon: Icons.payments_outlined,
       primary: 'Zahlung',
@@ -95,7 +95,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState
       title: 'Elternfreigabe erforderlich',
       source: 'GuardianConsent/Pending',
       body:
-          'Guardian oder minderjaehriger User wird zu Freigabe, Ablehnung, Kinderdaten, Ablaufdatum und Kontakt gefuehrt.',
+          'Guardian oder minderjähriger User wird zu Freigabe, Ablehnung, Kinderdaten, Ablaufdatum und Kontakt geführt.',
       status: 'Consent',
       icon: Icons.verified_user_outlined,
       primary: 'Freigabe',
@@ -226,7 +226,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('PUSH & DEEP LINKS'),
           const SizedBox(height: 8),
           Text(
-            'Benachrichtigungen müssen direkt zur richtigen Aktion fuehren.',
+            'Benachrichtigungen müssen direkt zur richtigen Aktion führen.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -546,24 +546,24 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Notification-Paritaet',
+      title: 'Notification-Parität',
       subtitle: 'Was aus Web-Notifications mobil erweitert wird.',
       children: [
         const _CheckLine(
           'Push, In-App, E-Mail und Chat nutzen ein gemeinsames Routing-Muster.',
         ),
         const _CheckLine(
-          'Jede Notification fuehrt direkt zum passenden Screen und zeigt Fallbacks.',
+          'Jede Notification führt direkt zum passenden Screen und zeigt Fallbacks.',
         ),
         const _CheckLine(
           'Ruhezeiten, Mute, App-Badges und Permission-Status bleiben sichtbar.',
         ),
         const _CheckLine(
-          'Vereine werden über Antraege, Rückzuege und Dokumente informiert.',
+          'Vereine werden über Anträge, Rückzüge und Dokumente informiert.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Notification-Paritaet markieren',
+          label: 'Notification-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

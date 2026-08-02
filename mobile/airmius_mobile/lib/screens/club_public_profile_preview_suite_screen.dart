@@ -78,7 +78,7 @@ class _ClubPublicProfilePreviewSuiteScreenState
                   _VisibilityToggle(
                     title: 'Teams anzeigen',
                     body:
-                        'Teamlisten bleiben optional, damit Vereine Jugend-, Trainer- oder interne Teams schuetzen können.',
+                        'Teamlisten bleiben optional, damit Vereine Jugend-, Trainer- oder interne Teams schützen können.',
                     value: _showTeams,
                     onChanged: (value) => setState(() => _showTeams = value),
                   ),
@@ -92,7 +92,7 @@ class _ClubPublicProfilePreviewSuiteScreenState
                   _VisibilityToggle(
                     title: 'Dokumente anzeigen',
                     body:
-                        'Datenschutz, Satzung, Beitragsordnung und Regeln können sichtbar oder nur im Antrag verknuepft sein.',
+                        'Datenschutz, Satzung, Beitragsordnung und Regeln können sichtbar oder nur im Antrag verknüpft sein.',
                     value: _showDocuments,
                     onChanged: (value) =>
                         setState(() => _showDocuments = value),
@@ -178,7 +178,7 @@ class _ClubPublicProfilePreviewSuiteScreenState
                   Text(
                     _requestSent
                         ? 'Der User sieht den Status und kann die Anfrage direkt zurückziehen, solange der Verein noch nicht entschieden hat.'
-                        : 'Der CTA fuehrt zum dynamischen Formular mit Vereinsfeldern, Dokumenten, Zahlungsdaten und Datenschutzbestätigung.',
+                        : 'Der CTA führt zum dynamischen Formular mit Vereinsfeldern, Dokumenten, Zahlungsdaten und Datenschutzbestätigung.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.38,

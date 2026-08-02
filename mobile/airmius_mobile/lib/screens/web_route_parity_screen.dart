@@ -429,7 +429,7 @@ const _groups = <_ParityGroup>[
       _RouteMap(
         webRoute: '/clubs/{club}/membership-form-schema, /membership-documents',
         flutterUi:
-            'Formularschema, Uploadpflicht, Vereinsdokumente und Dateimanager-Verknuepfung',
+            'Formularschema, Uploadpflicht, Vereinsdokumente und Dateimanager-Verknüpfung',
         status: 'Native UI',
         icon: Icons.description_outlined,
       ),
@@ -477,7 +477,7 @@ const _groups = <_ParityGroup>[
     area: 'Sport',
     title: 'Training, Sportprofil & Wellbeing',
     body:
-        'Events, Trainingsplaene, Logs, Coach, Ernährung, Wasser, Sportkarte, Routen und Tracks.',
+        'Events, Trainingspläne, Logs, Coach, Ernährung, Wasser, Sportkarte, Routen und Tracks.',
     icon: Icons.sports_outlined,
     color: AirmiusColors.green,
     routes: [
@@ -555,7 +555,7 @@ const _groups = <_ParityGroup>[
         webRoute:
             '/admin/moderation, /admin/club-verifications, /admin/operating-contracts',
         flutterUi:
-            'Trust Operations mit Reports, Flags, Inaktivitaet und Verifizierung',
+            'Trust Operations mit Reports, Flags, Inaktivität und Verifizierung',
         status: 'Native UI',
         icon: Icons.shield_outlined,
       ),

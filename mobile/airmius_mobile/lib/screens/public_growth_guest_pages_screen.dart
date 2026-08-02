@@ -32,7 +32,7 @@ class _PublicGrowthGuestPagesScreenState
     _GuestPage(
       title: 'Pricing',
       area: 'Business',
-      status: 'Plaene',
+      status: 'Pläne',
       body:
           'Mobile Preisübersicht für Vereine, Anbieter und Nutzer mit Leistungsumfang und CTA.',
       icon: Icons.sell_outlined,
@@ -88,7 +88,7 @@ class _PublicGrowthGuestPagesScreenState
       area: 'Content',
       status: 'Badges',
       body:
-          'Öffentliche Gamification-Erklaerung mit Badges, Punkten, Challenges und Vereinsmotivation.',
+          'Öffentliche Gamification-Erklärung mit Badges, Punkten, Challenges und Vereinsmotivation.',
       icon: Icons.emoji_events_outlined,
       color: Color(0xFFF8B84E),
     ),

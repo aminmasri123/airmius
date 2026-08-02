@@ -35,10 +35,10 @@ class _ModalSheetOverlayParitySuiteScreenState
       color: AirmiusColors.red,
     ),
     _OverlayPattern(
-      title: 'Mitgliedsantrag ausfuellen',
+      title: 'Mitgliedsantrag ausfüllen',
       source: 'Membership Application Form',
       body:
-          'Langes Formular wird mobil als Fullscreen-Modal mit eigenem Scrollbereich, Sticky Footer und Abschnittsnavigation gefuehrt.',
+          'Langes Formular wird mobil als Fullscreen-Modal mit eigenem Scrollbereich, Sticky Footer und Abschnittsnavigation geführt.',
       status: 'Fullscreen',
       icon: Icons.assignment_add,
       primary: 'Formularmodal',
@@ -49,7 +49,7 @@ class _ModalSheetOverlayParitySuiteScreenState
       title: 'Tabellenfilter',
       source: 'Admin, Club, Commerce, Files',
       body:
-          'Filterspalten aus der Web-App werden als Bottom-Sheet mit Chips, Suche, Reset, Anwenden und aktivem Filterzaehler abgebildet.',
+          'Filterspalten aus der Web-App werden als Bottom-Sheet mit Chips, Suche, Reset, Anwenden und aktivem Filterzähler abgebildet.',
       status: 'Filter Sheet',
       icon: Icons.filter_alt_outlined,
       primary: 'Filter öffnen',
@@ -60,11 +60,11 @@ class _ModalSheetOverlayParitySuiteScreenState
       title: 'Datei-Vorschau',
       source: 'Files / Club Documents / Chat Attachments',
       body:
-          'PDF, Bild oder Dokument wird in einem Preview-Sheet mit Download, Teilen, Verknuepfen, Version und Datenschutzstatus gezeigt.',
+          'PDF, Bild oder Dokument wird in einem Preview-Sheet mit Download, Teilen, Verknüpfen, Version und Datenschutzstatus gezeigt.',
       status: 'Preview',
       icon: Icons.visibility_outlined,
       primary: 'Preview',
-      secondary: 'Verknuepfen',
+      secondary: 'Verknüpfen',
       color: AirmiusColors.amber,
     ),
     _OverlayPattern(
@@ -104,7 +104,7 @@ class _ModalSheetOverlayParitySuiteScreenState
       title: 'Success / Error Overlay',
       source: 'Forms / API Actions',
       body:
-          'Nach Speichern, Ablehnen, Upload, Checkout oder API-Fehler zeigt Flutter ein klares Ergebnis mit naechster Aktion.',
+          'Nach Speichern, Ablehnen, Upload, Checkout oder API-Fehler zeigt Flutter ein klares Ergebnis mit nächster Aktion.',
       status: 'Feedback',
       icon: Icons.task_alt_outlined,
       primary: 'Success',
@@ -570,14 +570,14 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Overlay-Paritaet',
+      title: 'Overlay-Parität',
       subtitle: 'Was aus Web-Modals mobil übernommen wird.',
       children: [
         const _CheckLine(
           'Lange Modals werden mobil fullscreen und bekommen eigenen Scrollbereich.',
         ),
         const _CheckLine(
-          'Buttons bleiben sichtbar und werden bei langen Formularen sticky unten gefuehrt.',
+          'Buttons bleiben sichtbar und werden bei langen Formularen sticky unten geführt.',
         ),
         const _CheckLine(
           'Danger-Aktionen brauchen klare Warnung, Grund, Bestätigung und Audit-Hinweis.',
@@ -587,7 +587,7 @@ class _Checklist extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Overlay-Paritaet markieren',
+          label: 'Overlay-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

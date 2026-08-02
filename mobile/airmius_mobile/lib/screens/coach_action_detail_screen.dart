@@ -93,7 +93,7 @@ class _CoachActionDetailScreenState extends State<CoachActionDetailScreen> {
                   DropdownButtonFormField<String>(
                     initialValue: _priority,
                     dropdownColor: AirmiusColors.card,
-                    decoration: _fieldDecoration('Prioritaet'),
+                    decoration: _fieldDecoration('Priorität'),
                     items: const ['Niedrig', 'Normal', 'Hoch', 'Kritisch']
                         .map(
                           (item) =>

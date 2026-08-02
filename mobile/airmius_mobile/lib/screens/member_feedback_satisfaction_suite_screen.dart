@@ -24,7 +24,7 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
         Icons.report_problem_outlined,
       ),
       _SignalItem(
-        'Ideen & Wuensche',
+        'Ideen & Wünsche',
         '24',
         'Verbesserungen, neue Teams, Events, Kurse, Ausstattung und Services.',
         AirmiusColors.blue,
@@ -42,7 +42,7 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
     final workflow = [
       _WorkflowItem(
         'Feedback erfassen',
-        'Kurzes Formular, Skala, Freitext, Kategorie, Anonymitaet und Datei.',
+        'Kurzes Formular, Skala, Freitext, Kategorie, Anonymität und Datei.',
       ),
       _WorkflowItem(
         'Einordnen',
@@ -96,7 +96,7 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen überfuehrt.',
+                    'Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen überführt.',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.42,
@@ -214,12 +214,12 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const [
-                  Eyebrow('VERKNUEPFUNGEN'),
+                  Eyebrow('VERKNÜPFUNGEN'),
                   SizedBox(height: 10),
                   _LinkLine(
                     label: 'Support',
                     value:
-                        'Kritisches Feedback wird als Ticket oder Eskalation fortgefuehrt.',
+                        'Kritisches Feedback wird als Ticket oder Eskalation fortgeführt.',
                   ),
                   _LinkLine(
                     label: 'Umfragen',

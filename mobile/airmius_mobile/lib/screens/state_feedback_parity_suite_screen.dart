@@ -52,7 +52,7 @@ class _StateFeedbackParitySuiteScreenState
       state: 'Empty',
       title: 'Leerer Zustand',
       body:
-          'Keine Daten wird immer mit Erklaerung, passender Illustration, Hauptaktion und optionalem Filter-Reset angezeigt.',
+          'Keine Daten wird immer mit Erklärung, passender Illustration, Hauptaktion und optionalem Filter-Reset angezeigt.',
       status: 'Empty',
       icon: Icons.inbox_outlined,
       primary: 'Erste Aktion',
@@ -74,7 +74,7 @@ class _StateFeedbackParitySuiteScreenState
       state: 'Success',
       title: 'Erfolgreiche Aktion',
       body:
-          'Speichern, Senden, Upload, Checkout oder Entscheidung bestätigt die Aktion und zeigt die naechste sinnvolle Route.',
+          'Speichern, Senden, Upload, Checkout oder Entscheidung bestätigt die Aktion und zeigt die nächste sinnvolle Route.',
       status: 'Success',
       icon: Icons.task_alt_outlined,
       primary: 'Weiter',
@@ -85,7 +85,7 @@ class _StateFeedbackParitySuiteScreenState
       state: 'Unauthorized',
       title: 'Kein Zugriff',
       body:
-          'Fehlende Rolle, falscher Workspace, Guardian-Sperre oder Club-Kontext werden klar und ohne Schuldgefuehl erklaert.',
+          'Fehlende Rolle, falscher Workspace, Guardian-Sperre oder Club-Kontext werden klar und ohne Schuldgefühl erklärt.',
       status: '403',
       icon: Icons.lock_outline,
       primary: 'Zugriff anfragen',
@@ -222,7 +222,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('STATE FEEDBACK'),
           const SizedBox(height: 8),
           Text(
-            'Gute Mobile-UI erklaert immer, was gerade passiert.',
+            'Gute Mobile-UI erklärt immer, was gerade passiert.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -326,7 +326,7 @@ class _RulesPanel extends StatelessWidget {
     return AirmiusPanel(
       title: 'Feedback-Regeln',
       subtitle:
-          'Diese Regeln halten API- und UI-Zustaende in allen Modulen konsistent.',
+          'Diese Regeln halten API- und UI-Zustände in allen Modulen konsistent.',
       children: [
         _SwitchLine(
           title: 'Retry-CTA anzeigen',
@@ -334,7 +334,7 @@ class _RulesPanel extends StatelessWidget {
           onChanged: onRetry,
         ),
         _SwitchLine(
-          title: 'Naechste Aktion erklaeren',
+          title: 'Nächste Aktion erklären',
           value: showActionHint,
           onChanged: onActionHint,
         ),
@@ -452,7 +452,7 @@ class _StatePreview extends StatelessWidget {
                   context,
                   title: '$module Details',
                   body:
-                      'Zustand $state, API-Code ${_apiCodeForState(state)}, Cache, Permission, Validation und naechste Aktion.',
+                      'Zustand $state, API-Code ${_apiCodeForState(state)}, Cache, Permission, Validation und nächste Aktion.',
                   status: 'Details',
                   icon: Icons.info_outline,
                 ),
@@ -597,7 +597,7 @@ class _FeedbackPatternCard extends StatelessWidget {
                     context,
                     title: pattern.secondary,
                     body:
-                        'Retry, Support, Cache, API-Code und naechste Aktion für ${pattern.title} in $module.',
+                        'Retry, Support, Cache, API-Code und nächste Aktion für ${pattern.title} in $module.',
                     status: 'Feedback',
                     icon: Icons.refresh_outlined,
                   ),
@@ -618,24 +618,24 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'State-Paritaet',
+      title: 'State-Parität',
       subtitle: 'Was für jeden mobilen Screen gelten soll.',
       children: [
         const _CheckLine(
           'Jede Liste, jedes Formular und jedes Detail hat Loading, Empty, Error und Success.',
         ),
         const _CheckLine(
-          'API-Fehler werden lesbar erklaert und behalten optional technischen Code.',
+          'API-Fehler werden lesbar erklärt und behalten optional technischen Code.',
         ),
         const _CheckLine(
-          'Unauthorized, Guardian-Gates und Rate Limits haben klare naechste Aktionen.',
+          'Unauthorized, Guardian-Gates und Rate Limits haben klare nächste Aktionen.',
         ),
         const _CheckLine(
           'Skeleton, Retry, Cache-Hinweis und Supportweg bleiben im Airmius-Design konsistent.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'State-Paritaet markieren',
+          label: 'State-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),
@@ -810,7 +810,7 @@ String _apiCodeForState(String state) {
 
 String _messageForState(String state) {
   if (state == 'Success') {
-    return 'Die Aktion wurde erfolgreich vorbereitet und die naechste sinnvolle Route ist sichtbar.';
+    return 'Die Aktion wurde erfolgreich vorbereitet und die nächste sinnvolle Route ist sichtbar.';
   }
   if (state == 'Error') {
     return 'Etwas hat nicht funktioniert. Die App zeigt Ursache, Retry, Supportweg und sicheren Rückweg.';
@@ -819,29 +819,29 @@ String _messageForState(String state) {
     return 'Du hast für diesen Bereich aktuell keine Berechtigung oder brauchst eine Freigabe.';
   }
   if (state == 'Rate Limit') {
-    return 'Diese Aktion wurde zu oft ausgefuehrt. Die App zeigt Cooldown und Alternative.';
+    return 'Diese Aktion wurde zu oft ausgeführt. Die App zeigt Cooldown und Alternative.';
   }
   if (state == 'Empty') {
-    return 'Hier gibt es noch keine Eintraege. Die App erklaert den Zustand und bietet eine erste Aktion.';
+    return 'Hier gibt es noch keine Einträge. Die App erklärt den Zustand und bietet eine erste Aktion.';
   }
   return 'Die Daten werden geladen.';
 }
 
 String _hintForState(String state) {
   if (state == 'Success') {
-    return 'Naechster Schritt: Detail öffnen, Liste aktualisieren oder weiterarbeiten.';
+    return 'Nächster Schritt: Detail öffnen, Liste aktualisieren oder weiterarbeiten.';
   }
   if (state == 'Error') {
-    return 'Naechster Schritt: Retry, Cache nutzen oder Support kontaktieren.';
+    return 'Nächster Schritt: Retry, Cache nutzen oder Support kontaktieren.';
   }
   if (state == 'Unauthorized') {
-    return 'Naechster Schritt: Rolle wechseln, Zugriff anfragen oder Guardian-Freigabe prüfen.';
+    return 'Nächster Schritt: Rolle wechseln, Zugriff anfragen oder Guardian-Freigabe prüfen.';
   }
   if (state == 'Rate Limit') {
-    return 'Naechster Schritt: warten, Entwurf speichern oder später erneut senden.';
+    return 'Nächster Schritt: warten, Entwurf speichern oder später erneut senden.';
   }
   if (state == 'Empty') {
-    return 'Naechster Schritt: erstellen, Filter zurücksetzen oder Einladung senden.';
+    return 'Nächster Schritt: erstellen, Filter zurücksetzen oder Einladung senden.';
   }
-  return 'Naechster Schritt: Skeleton bleibt stabil, bis API-Daten da sind.';
+  return 'Nächster Schritt: Skeleton bleibt stabil, bis API-Daten da sind.';
 }

@@ -25,7 +25,7 @@ class _AdminFinanceBillingCenterScreenState
   final List<_FinanceItem> _items = const [
     _FinanceItem(
       title: 'Plattform-Rechnung',
-      body: 'Abo-Rechnung für Verein, Providerkosten und Plattformgebuehren.',
+      body: 'Abo-Rechnung für Verein, Providerkosten und Plattformgebühren.',
       status: 'Offen',
       amount: '129 EUR',
       icon: Icons.receipt_long_outlined,
@@ -35,7 +35,7 @@ class _AdminFinanceBillingCenterScreenState
       title: 'Subscription Invoice',
       body:
           'Wiederkehrende Rechnung für Airmius-Mitgliedschaft oder Vereinsabo.',
-      status: 'Faellig',
+      status: 'Fällig',
       amount: '49 EUR',
       icon: Icons.autorenew_outlined,
       color: AirmiusColors.amber,
@@ -123,7 +123,7 @@ class _AdminFinanceBillingCenterScreenState
                               _SwitchRow(
                                 title: 'Payments anzeigen',
                                 subtitle:
-                                    'Zahlungseingaenge, Providerstatus und manuelle Buchungen.',
+                                    'Zahlungseingänge, Providerstatus und manuelle Buchungen.',
                                 value: _showPayments,
                                 onChanged: (value) =>
                                     setState(() => _showPayments = value),
@@ -275,7 +275,7 @@ class _FinanceHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Admin-UI für Invoices, Payments, Subscriptions, SubscriptionInvoices und Commerce-Abrechnung als mobile Plattform-Finanzflaeche.',
+            'Admin-UI für Invoices, Payments, Subscriptions, SubscriptionInvoices und Commerce-Abrechnung als mobile Plattform-Finanzfläche.',
             style: TextStyle(
               color: AirmiusColors.muted,
               height: 1.45,

@@ -180,7 +180,7 @@ class _AdminCommerceCenterScreenState extends State<AdminCommerceCenterScreen> {
                         ],
                         if (items.isEmpty)
                           const EmptyPanel(
-                            'Keine Commerce-Eintraege für diesen Bereich gefunden.',
+                            'Keine Commerce-Einträge für diesen Bereich gefunden.',
                           ),
                         const SizedBox(height: 16),
                         AirmiusPanel(

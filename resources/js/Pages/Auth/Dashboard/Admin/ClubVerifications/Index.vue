@@ -93,7 +93,7 @@ const submit = (club, action) => {
                 <div>
                     <h1 class="text-xl font-semibold text-primary">{{ tAuto('Vereinsprüfung') }}</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        {{ tAuto('Neue Vereinsantraege freigeben, ablehnen und Vereinsnummern prüfen.') }}
+                        {{ tAuto('Neue Vereinsanträge freigeben, ablehnen und Vereinsnummern prüfen.') }}
                     </p>
                 </div>
                 <span class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary">
@@ -197,7 +197,7 @@ const submit = (club, action) => {
         </section>
 
         <section v-else class="surface-card p-8 text-center text-sm text-secondary">
-            {{ tAuto('Keine Vereinsantraege vorhanden.') }}
+            {{ tAuto('Keine Vereinsanträge vorhanden.') }}
         </section>
     </div>
 </template>

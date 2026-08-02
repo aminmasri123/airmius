@@ -49,7 +49,7 @@ class _BrandThemeTokenParitySuiteScreenState
       title: 'Panels und Karten',
       source: 'AirmiusPanel / MetricCard / StatusPill',
       body:
-          'Cards haben dunkle Flaechen, feine Border, runde Ecken, Glow-Akzente und klare Inhaltsstruktur.',
+          'Cards haben dunkle Flächen, feine Border, runde Ecken, Glow-Akzente und klare Inhaltsstruktur.',
       status: 'Surface',
       icon: Icons.dashboard_customize_outlined,
       primary: 'Karten',
@@ -60,7 +60,7 @@ class _BrandThemeTokenParitySuiteScreenState
       title: 'Formular-Stil',
       source: 'InputDecorationTheme',
       body:
-          'Eingaben bleiben dunkel, kontrastreich, gut beruehrbar und mit Airmius-Border/Focus-Zustand.',
+          'Eingaben bleiben dunkel, kontrastreich, gut berührbar und mit Airmius-Border/Focus-Zustand.',
       status: 'Input',
       icon: Icons.keyboard_outlined,
       primary: 'Form',
@@ -71,7 +71,7 @@ class _BrandThemeTokenParitySuiteScreenState
       title: 'Buttons und CTAs',
       source: 'AirmiusButton',
       body:
-          'Primaer, sekundar und Danger-Aktionen unterscheiden sich klar und bleiben auf Mobile gut bedienbar.',
+          'Primär, sekundar und Danger-Aktionen unterscheiden sich klar und bleiben auf Mobile gut bedienbar.',
       status: 'Action',
       icon: Icons.touch_app_outlined,
       primary: 'Buttons',
@@ -133,7 +133,7 @@ class _BrandThemeTokenParitySuiteScreenState
         child: PageFrame(
           title: 'Brand Theme Token Parity',
           subtitle:
-              'Airmius-Designsystem, Logo, Farben und mobile Web-App-Atmosphaere.',
+              'Airmius-Designsystem, Logo, Farben und mobile Web-App-Atmosphäre.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -145,7 +145,7 @@ class _BrandThemeTokenParitySuiteScreenState
               ),
               const SizedBox(height: 16),
               _ChoicePanel(
-                title: 'UI-Oberflaeche',
+                title: 'UI-Oberfläche',
                 items: _surfaces,
                 active: _surface,
                 color: airmiusAccentColor(context),
@@ -221,7 +221,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('BRAND & THEME'),
           const SizedBox(height: 8),
           Text(
-            'Flutter soll sich wie Airmius anfuehlen, nicht nur Airmius heissen.',
+            'Flutter soll sich wie Airmius anfühlen, nicht nur Airmius heißen.',
             style: TextStyle(
               color: airmiusTextColor(context),
               fontSize: 24,
@@ -230,7 +230,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Diese Suite sammelt die visuellen Regeln der mobilen Web-App: Logo, dunkle Flaechen, blaue/gruene Akzente, Panels, Status, Formulare, Overlays und Navigation.',
+            'Diese Suite sammelt die visuellen Regeln der mobilen Web-App: Logo, dunkle Flächen, blaue/grüne Akzente, Panels, Status, Formulare, Overlays und Navigation.',
             style: TextStyle(
               color: airmiusMutedColor(context),
               height: 1.45,
@@ -433,7 +433,7 @@ class _VisualPreview extends StatelessWidget {
                   context,
                   title: 'Design Preview',
                   body:
-                      'Surface $surface, Dichte $density, Header $webLikeHeader und Airmius-Theme als visuelle Paritaet prüfen.',
+                      'Surface $surface, Dichte $density, Header $webLikeHeader und Airmius-Theme als visuelle Parität prüfen.',
                   status: 'Design',
                   icon: Icons.palette_outlined,
                 ),
@@ -558,7 +558,7 @@ class _Checklist extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Brand-Paritaet',
+      title: 'Brand-Parität',
       subtitle: 'Was visuell immer Airmius bleiben soll.',
       children: [
         const _CheckLine(
@@ -568,14 +568,14 @@ class _Checklist extends StatelessWidget {
           'Panels, Cards, Inputs, Buttons und Status-Pills nutzen gemeinsame Tokens.',
         ),
         const _CheckLine(
-          'Dunkle Flaechen, blaue/gruene Akzente und klare Borders bleiben konsistent.',
+          'Dunkle Flächen, blaue/grüne Akzente und klare Borders bleiben konsistent.',
         ),
         const _CheckLine(
           'Overlays, Formulare, Listen und Dashboards wirken wie mobile Web-App, nicht wie fremde App.',
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: 'Brand-Paritaet markieren',
+          label: 'Brand-Parität markieren',
           icon: Icons.fact_check_outlined,
           onPressed: onOpen,
         ),

@@ -31,7 +31,7 @@ defineEmits(['close', 'submit'])
                     <select v-model="issueForm.issue_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                         <option value="exchange">Umtausch / andere Größe</option>
                         <option value="return">Retoure</option>
-                        <option value="damaged">Beschaedigt</option>
+                        <option value="damaged">Beschädigt</option>
                         <option value="missing_item">Artikel fehlt</option>
                         <option value="wrong_item">Falscher Artikel</option>
                         <option value="other">Sonstiges</option>
@@ -45,7 +45,7 @@ defineEmits(['close', 'submit'])
                 </label>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Wunschloesung</span>
+                    <span class="text-sm font-semibold text-primary">Wunschlösung</span>
                     <input v-model="issueForm.issue_requested_resolution" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z.B. Ersatz, Retoure, Gutschrift">
                 </label>
 

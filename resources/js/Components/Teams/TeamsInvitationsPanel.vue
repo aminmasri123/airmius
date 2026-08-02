@@ -21,7 +21,7 @@ const emit = defineEmits(['accept', 'decline'])
                 Du wurdest zu einem Team eingeladen
             </h2>
             <p class="text-sm text-secondary">
-                Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.
+                Nimm die Einladung an, um dem Team und dem zugehörigen Verein beizutreten.
             </p>
         </div>
 

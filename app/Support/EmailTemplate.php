@@ -102,7 +102,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Willkommen bei Airmius',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "willkommen bei Airmius. Dein Konto wurde erfolgreich erstellt.\nDu kannst dich jetzt anmelden, dein Profil vervollstaendigen und Airmius fuer Training, Vereine, Teams, Events und deinen Sportalltag nutzen.\nWenn du dieses Konto nicht selbst erstellt hast, kontaktiere bitte den Airmius-Support.",
+                    'body' => "willkommen bei Airmius. Dein Konto wurde erfolgreich erstellt.\nDu kannst dich jetzt anmelden, dein Profil vervollständigen und Airmius für Training, Vereine, Teams, Events und deinen Sportalltag nutzen.\nWenn du dieses Konto nicht selbst erstellt hast, kontaktiere bitte den Airmius-Support.",
                     'action_label' => 'Airmius öffnen',
                 ],
             ],
@@ -228,8 +228,8 @@ class EmailTemplate
                 ],
             ],
             'inactive_account_first' => [
-                'label' => 'Inaktivitaet: Erste Erinnerung',
-                'description' => 'Erste Datenschutz-Erinnerung bei Inaktivitaet.',
+                'label' => 'Inaktivität: Erste Erinnerung',
+                'description' => 'Erste Datenschutz-Erinnerung bei Inaktivität.',
                 'variables' => ['name'],
                 'template' => [
                     'subject' => 'Dein Airmius Konto war lange nicht aktiv',
@@ -239,8 +239,8 @@ class EmailTemplate
                 ],
             ],
             'inactive_account_second' => [
-                'label' => 'Inaktivitaet: Zweite Erinnerung',
-                'description' => 'Zweite Erinnerung bei Inaktivitaet.',
+                'label' => 'Inaktivität: Zweite Erinnerung',
+                'description' => 'Zweite Erinnerung bei Inaktivität.',
                 'variables' => ['name'],
                 'template' => [
                     'subject' => 'Erinnerung: Dein Airmius Konto ist weiterhin inaktiv',
@@ -250,7 +250,7 @@ class EmailTemplate
                 ],
             ],
             'inactive_account_scheduled' => [
-                'label' => 'Inaktivitaet: Anonymisierung',
+                'label' => 'Inaktivität: Anonymisierung',
                 'description' => 'Hinweis auf geplante Anonymisierung.',
                 'variables' => ['name', 'scheduled_date'],
                 'template' => [
@@ -261,13 +261,13 @@ class EmailTemplate
                 ],
             ],
             'subscription_renewed' => [
-                'label' => 'Abo verlaengert',
-                'description' => 'Bestätigung nach Abo-Verlaengerung.',
+                'label' => 'Abo verlängert',
+                'description' => 'Bestätigung nach Abo-Verlängerung.',
                 'variables' => ['name', 'plan_name', 'end_date'],
                 'template' => [
-                    'subject' => 'Airmius Abo wurde verlaengert',
+                    'subject' => 'Airmius Abo wurde verlängert',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "dein Airmius Abo wurde verlaengert.\nPlan: {{ plan_name }}\nNeue Laufzeit bis: {{ end_date }}\nDanke, dass du Airmius nutzt.",
+                    'body' => "dein Airmius Abo wurde verlängert.\nPlan: {{ plan_name }}\nNeue Laufzeit bis: {{ end_date }}\nDanke, dass du Airmius nutzt.",
                     'action_label' => 'Pläne ansehen',
                 ],
             ],
@@ -279,7 +279,7 @@ class EmailTemplate
                     'subject' => 'Zahlung für dein Airmius Abo ist offen',
                     'greeting' => 'Hallo {{ name }},',
                     'body' => "für dein Airmius Abo ist eine Zahlung offen oder deine Testphase ist abgelaufen.\nPlan: {{ plan_name }}\nStatus: Zahlung offen\nBitte aktualisiere die Zahlung, damit alle gebuchten Funktionen aktiv bleiben.",
-                    'action_label' => 'Plan verlaengern',
+                    'action_label' => 'Plan verlängern',
                 ],
             ],
             'subscription_ending_soon' => [

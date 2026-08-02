@@ -42,7 +42,7 @@ defineProps({
                     <p class="text-xs text-secondary">{{ entry.user?.email || 'System' }} - {{ entry.created_at }}</p>
                     <p v-if="entry.note" class="mt-1 text-xs text-secondary">{{ entry.note }}</p>
                 </div>
-                <p v-if="!auditLogs.length" class="p-5 text-sm text-secondary">Noch keine Audit-Eintraege.</p>
+                <p v-if="!auditLogs.length" class="p-5 text-sm text-secondary">Noch keine Audit-Einträge.</p>
             </div>
         </article>
     </section>

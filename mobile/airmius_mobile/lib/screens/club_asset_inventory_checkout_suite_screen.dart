@@ -17,7 +17,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
         Icons.checkroom_outlined,
       ),
       _AssetItem(
-        'Hallen-Schluessel',
+        'Hallen-Schlüssel',
         'Kritisch',
         'Trainer Max, Signatur erforderlich',
         AirmiusColors.red,
@@ -25,8 +25,8 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
       ),
       _AssetItem(
         'Erste-Hilfe-Koffer',
-        'Verfuegbar',
-        'Sporthalle West, Prüfung faellig',
+        'Verfügbar',
+        'Sporthalle West, Prüfung fällig',
         AirmiusColors.green,
         Icons.medical_services_outlined,
       ),
@@ -46,7 +46,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
       ),
       _ActionItem(
         'Rückgabe prüfen',
-        'Zustand, Schaden, Foto, Gebuehr, Kommentar und Verantwortliche dokumentieren.',
+        'Zustand, Schaden, Foto, Gebühr, Kommentar und Verantwortliche dokumentieren.',
       ),
       _ActionItem(
         'QR-Code scannen',
@@ -73,7 +73,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
       body: PageFrame(
         title: 'Inventar & Ausleihe',
         subtitle:
-            'Vereinsmaterial, Schluessel, Trikots, Geräte, QR-Codes, Rückgabe und Audit als mobile Vereins-UI.',
+            'Vereinsmaterial, Schlüssel, Trikots, Geräte, QR-Codes, Rückgabe und Audit als mobile Vereins-UI.',
         trailing: StatusPill(
           'Material',
           color: Theme.of(context).colorScheme.secondary,

@@ -29,7 +29,7 @@ export function useAdminInvoices(props) {
         account_subscription: 'Konto-Abo / Upgrade',
         outfit_subscription_manual: 'Outfit-Abo Rechnung',
         marketplace_purchase: 'Marketplace Kauf',
-        elearning: 'E-Learning Kursgebuehr',
+        elearning: 'E-Learning Kursgebühr',
         ads: 'Werbekampagne / ADS',
         agency_website: 'Website-Projekt',
         agency_logo: 'Logo-Design',

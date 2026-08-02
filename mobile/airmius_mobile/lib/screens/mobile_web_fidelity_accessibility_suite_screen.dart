@@ -72,7 +72,7 @@ class _MobileWebFidelityAccessibilitySuiteScreenState
       'Accessibility Contrast',
       'Access',
       'A11y',
-      'Kontrast, Textgroesse, Fokus, Semantik, Screenreader-Labels und Fehlermeldungen ohne Farbzwang.',
+      'Kontrast, Textgröße, Fokus, Semantik, Screenreader-Labels und Fehlermeldungen ohne Farbzwang.',
       Icons.accessibility_new_outlined,
       Color(0xFF2EE59D),
     ),

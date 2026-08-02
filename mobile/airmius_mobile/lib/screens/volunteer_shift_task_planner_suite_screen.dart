@@ -301,16 +301,16 @@ const _tasks = [
     scope: 'Training',
     title: 'Material vorbereiten',
     body:
-        'Baelle, Leibchen, Timing-System und Check-in-Liste vor Training bereitstellen.',
+        'Bälle, Leibchen, Timing-System und Check-in-Liste vor Training bereitstellen.',
     status: 'Offen',
     icon: Icons.inventory_2_outlined,
     color: AirmiusColors.blue,
   ),
   _VolunteerTask(
     scope: 'Fahrdienst',
-    title: 'Rückfahrt Auswaertsspiel',
+    title: 'Rückfahrt Auswärtsspiel',
     body: 'Fahrgemeinschaft für drei Mitglieder mit Guardian-Freigabe.',
-    status: '2 Plaetze',
+    status: '2 Plätze',
     icon: Icons.directions_car_outlined,
     color: AirmiusColors.green,
   ),
@@ -326,7 +326,7 @@ const _tasks = [
   _VolunteerTask(
     scope: 'Aufbau',
     title: 'Zelte & Tische',
-    body: 'Aufbau ab 12:00, mindestens vier Helfer, keine Altersbeschraenkung.',
+    body: 'Aufbau ab 12:00, mindestens vier Helfer, keine Altersbeschränkung.',
     status: '3/4',
     icon: Icons.handyman_outlined,
     color: AirmiusColors.blue,

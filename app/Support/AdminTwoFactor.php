@@ -7,7 +7,7 @@ use App\Models\User;
 class AdminTwoFactor
 {
     public const ERROR_CODE = 'admin_two_factor_required';
-    public const MESSAGE = 'Fuer Plattform-Admins ist Zwei-Faktor-Authentifizierung Pflicht. Bitte aktiviere 2FA in den Einstellungen.';
+    public const MESSAGE = 'Für Plattform-Admins ist Zwei-Faktor-Authentifizierung Pflicht. Bitte aktiviere 2FA in den Einstellungen.';
 
     public static function requiredFor(?User $user): bool
     {

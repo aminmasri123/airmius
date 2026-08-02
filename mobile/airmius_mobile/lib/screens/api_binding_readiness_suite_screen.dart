@@ -64,7 +64,7 @@ class _ApiBindingReadinessSuiteScreenState
       'File Upload Contract',
       'Contracts',
       'Files',
-      'Dateimanager, Vereinsdokumente, Uploads, Preview, Shared Access und Datenschutzverknuepfung.',
+      'Dateimanager, Vereinsdokumente, Uploads, Preview, Shared Access und Datenschutzverknüpfung.',
       Icons.upload_file_outlined,
       Color(0xFFFF6B6B),
     ),
@@ -184,7 +184,7 @@ class _ApiBindingReadinessSuiteScreenState
                         context,
                         title: 'Error Mapping',
                         body:
-                            'Laravel-Fehlercodes und UI-Zustaende sind als Mapping vorbereitet.',
+                            'Laravel-Fehlercodes und UI-Zustände sind als Mapping vorbereitet.',
                         status: 'UI bereit',
                         icon: Icons.info_outline,
                       ),
