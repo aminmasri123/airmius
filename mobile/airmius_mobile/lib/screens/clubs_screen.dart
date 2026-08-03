@@ -12,7 +12,6 @@ import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
-import 'club_announcement_screen.dart';
 import 'club_survey_screen.dart';
 import 'global_search_screen.dart';
 import 'membership_application_form_screen.dart';
@@ -2995,6 +2994,8 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
   String _activeTab = 'struktur';
   Future<ClubSummary>? _clubDetailFuture;
   bool? _requestStatusOverride;
+  bool? _followingOverride;
+  bool? _blockedOverride;
   bool _uploadingCover = false;
   bool _busyProfileAction = false;
 
@@ -3040,6 +3041,11 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                 final isOwner =
                     profileClub.ownerId != null &&
                     profileClub.ownerId == currentUserId;
+                final following = _following(profileClub);
+                final blocked = _blocked(profileClub);
+                final canMessage =
+                    profileClub.social['can_send_message'] == true;
+                final canFollow = profileClub.social['can_follow'] == true;
                 return _ClubProfileHero(
                   club: profileClub,
                   requested: requested,
@@ -3058,9 +3064,25 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   uploadingCover: _uploadingCover,
                   onMessage:
                       !_busyProfileAction &&
+                          !blocked &&
+                          canMessage &&
                           profileClub.ownerId != null &&
                           !isOwner
                       ? () => _startOwnerConversation(profileClub)
+                      : null,
+                  onFollow:
+                      !_busyProfileAction && !blocked && canFollow && !isOwner
+                      ? (following
+                            ? () => _setFollowing(profileClub, false)
+                            : () => _setFollowing(profileClub, true))
+                      : null,
+                  isFollowing: following,
+                  isBlocked: blocked,
+                  onBlock: !_busyProfileAction && !isOwner
+                      ? () => _setBlocked(profileClub, true)
+                      : null,
+                  onUnblock: !_busyProfileAction && !isOwner
+                      ? () => _setBlocked(profileClub, false)
                       : null,
                   onReport: !_busyProfileAction && !isOwner
                       ? () => _reportClub(profileClub)
@@ -3308,6 +3330,91 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
     }
   }
 
+  bool _following(ClubSummary selectedClub) =>
+      _followingOverride ?? selectedClub.social['is_following'] == true;
+
+  bool _blocked(ClubSummary selectedClub) =>
+      _blockedOverride ?? selectedClub.social['has_blocked'] == true;
+
+  Future<void> _setFollowing(ClubSummary selectedClub, bool follow) async {
+    final ownerId = selectedClub.ownerId;
+    if (ownerId == null) return;
+    final t = AirmiusScope.of(context).t;
+    setState(() => _busyProfileAction = true);
+    try {
+      final client = AirmiusServicesScope.of(
+        context,
+      ).clientForSession(AirmiusServicesScope.of(context).authState.session);
+      if (follow) {
+        await client.followUser(ownerId);
+      } else {
+        await client.unfollowUser(ownerId);
+      }
+      if (!mounted) return;
+      setState(() => _followingOverride = follow);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            t(follow ? 'clubs.social.followed' : 'clubs.social.unfollowed'),
+          ),
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
+    }
+  }
+
+  Future<void> _setBlocked(ClubSummary selectedClub, bool block) async {
+    final ownerId = selectedClub.ownerId;
+    if (ownerId == null) return;
+    final t = AirmiusScope.of(context).t;
+    if (block) {
+      final confirmed = await confirmDanger(
+        context,
+        t('clubs.social.blockTitle'),
+        '${t('clubs.social.blockQuestion')} ${selectedClub.name}?',
+        t('clubs.social.block'),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+    setState(() => _busyProfileAction = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      if (block) {
+        await client.blockUser(ownerId);
+      } else {
+        await client.unblockUser(ownerId);
+      }
+      if (!mounted) return;
+      setState(() {
+        _blockedOverride = block;
+        if (block) _followingOverride = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            t(block ? 'clubs.social.blocked' : 'clubs.social.unblocked'),
+          ),
+        ),
+      );
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _busyProfileAction = false);
+    }
+  }
+
   Future<void> _reportClub(ClubSummary selectedClub) async {
     final t = AirmiusScope.of(context).t;
     final report = await _showClubReportDialog(context);
@@ -3362,6 +3469,11 @@ class _ClubProfileHero extends StatelessWidget {
     required this.onUpdateCover,
     required this.uploadingCover,
     required this.onMessage,
+    required this.onFollow,
+    required this.isFollowing,
+    required this.isBlocked,
+    required this.onBlock,
+    required this.onUnblock,
     required this.onReport,
   });
 
@@ -3372,6 +3484,11 @@ class _ClubProfileHero extends StatelessWidget {
   final VoidCallback? onUpdateCover;
   final bool uploadingCover;
   final VoidCallback? onMessage;
+  final VoidCallback? onFollow;
+  final bool isFollowing;
+  final bool isBlocked;
+  final VoidCallback? onBlock;
+  final VoidCallback? onUnblock;
   final VoidCallback? onReport;
 
   @override
@@ -3511,6 +3628,33 @@ class _ClubProfileHero extends StatelessWidget {
                     icon: Icons.assignment_outlined,
                     onPressed: onJoin,
                   ),
+                if (onMessage != null || onFollow != null) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      if (onMessage != null)
+                        AirmiusButton(
+                          label: scope.t('clubs.message.send'),
+                          icon: Icons.chat_bubble_outline,
+                          secondary: true,
+                          onPressed: onMessage,
+                        ),
+                      if (onFollow != null)
+                        AirmiusButton(
+                          label: isFollowing
+                              ? scope.t('clubs.social.unfollow')
+                              : scope.t('clubs.social.follow'),
+                          icon: isFollowing
+                              ? Icons.person_remove_alt_1_outlined
+                              : Icons.person_add_alt_1_outlined,
+                          secondary: true,
+                          onPressed: onFollow,
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -3564,6 +3708,24 @@ class _ClubProfileHero extends StatelessWidget {
                     onReport?.call();
                   },
                 ),
+              if (onBlock != null || onUnblock != null) ...[
+                if (onMessage != null || onReport != null)
+                  const SizedBox(height: 10),
+                AirmiusButton(
+                  label: isBlocked
+                      ? AirmiusScope.of(context).t('clubs.social.unblock')
+                      : AirmiusScope.of(context).t('clubs.social.block'),
+                  icon: isBlocked
+                      ? Icons.lock_open_outlined
+                      : Icons.block_outlined,
+                  danger: !isBlocked,
+                  secondary: isBlocked,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    (isBlocked ? onUnblock : onBlock)?.call();
+                  },
+                ),
+              ],
             ],
           ),
         ),
@@ -3829,7 +3991,7 @@ class _ClubTabBody extends StatelessWidget {
         onJoin: onJoin,
         onWithdraw: onWithdraw,
       ),
-      'beiträge' => ClubAnnouncementScreen(club: club),
+      'beiträge' => _ClubPostsPanel(club: club),
       'umfragen' => ClubSurveyScreen(club: club),
       'dokumente' => const _DocumentsPanel(),
       _ => _StructurePanel(club: club),
@@ -3848,6 +4010,25 @@ class _StructurePanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (club.description?.trim().isNotEmpty == true) ...[
+          AirmiusPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Eyebrow(t('clubs.about')),
+                const SizedBox(height: 8),
+                Text(
+                  club.description!,
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         AirmiusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3877,17 +4058,115 @@ class _StructurePanel extends StatelessWidget {
         const SizedBox(height: 14),
         _InfoPanel(
           title: t('clubs.admins'),
-          rows: [
-            _InfoRowData(
-              'VA',
-              club.name,
-              club.verified ? t('clubs.role.admin') : t('clubs.profileOwner'),
-            ),
-          ],
+          rows: club.admins.isEmpty
+              ? [
+                  _InfoRowData(
+                    'VA',
+                    club.name,
+                    club.verified
+                        ? t('clubs.role.admin')
+                        : t('clubs.profileOwner'),
+                  ),
+                ]
+              : club.admins
+                    .map(
+                      (admin) => _InfoRowData(
+                        _initials('${admin['name'] ?? club.name}'),
+                        '${admin['name'] ?? club.name}',
+                        t('clubs.role.admin'),
+                      ),
+                    )
+                    .toList(),
         ),
         const SizedBox(height: 14),
+        if (club.gamification != null)
+          _ClubProgressPanel(gamification: club.gamification!),
+        if (club.gamification != null) const SizedBox(height: 14),
+        if (club.badges.isNotEmpty) _ClubBadgesPanel(badges: club.badges),
+        if (club.badges.isNotEmpty) const SizedBox(height: 14),
         _TeamsPanel(club: club),
       ],
+    );
+  }
+
+  static String _initials(String value) => value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .take(2)
+      .map((part) => part[0].toUpperCase())
+      .join();
+}
+
+class _ClubProgressPanel extends StatelessWidget {
+  const _ClubProgressPanel({required this.gamification});
+
+  final JsonMap gamification;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final level = gamification['level'] ?? 1;
+    final xp = gamification['xp'] ?? 0;
+    final next = gamification['next_level_xp'] ?? 0;
+    final progress =
+        ((gamification['progress'] as num?)?.toDouble() ?? 0).clamp(0, 100) /
+        100;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('clubs.progress')),
+          const SizedBox(height: 8),
+          Text(
+            '${t('clubs.level')} $level',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            '$xp XP / $next XP',
+            style: TextStyle(color: airmiusMutedColor(context)),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(value: progress),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClubBadgesPanel extends StatelessWidget {
+  const _ClubBadgesPanel({required this.badges});
+
+  final List<JsonMap> badges;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Eyebrow(t('clubs.badges')),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final badge in badges.take(6))
+                Chip(
+                  avatar: const Icon(Icons.emoji_events_outlined, size: 16),
+                  label: Text(
+                    '${badge['name'] ?? badge['key'] ?? t('clubs.badge')}',
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -4298,6 +4577,79 @@ class _DocumentsPanel extends StatelessWidget {
           _DocumentLine(title: t('clubs.clubRules'), requiredDoc: false),
         ],
       ),
+    );
+  }
+}
+
+class _ClubPostsPanel extends StatelessWidget {
+  const _ClubPostsPanel({required this.club});
+
+  final ClubSummary club;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (club.postItems.isEmpty)
+          AirmiusPanel(
+            child: Text(
+              t('clubs.noPosts'),
+              style: TextStyle(color: airmiusMutedColor(context)),
+            ),
+          )
+        else
+          for (final post in club.postItems) ...[
+            AirmiusPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.forum_outlined,
+                        color: airmiusAccentColor(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${post['user'] is JsonMap ? (post['user'] as JsonMap)['name'] : club.name}',
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      if (post['created_at'] != null)
+                        Text(
+                          '${post['created_at']}'.split('T').first,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${post['content'] ?? ''}',
+                    style: TextStyle(
+                      color: airmiusTextColor(context),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${post['likes_count'] ?? 0} ${t('likes')} · ${post['comments_count'] ?? 0} ${t('comments')}',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+      ],
     );
   }
 }

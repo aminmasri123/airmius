@@ -1,4 +1,8 @@
-New in 1.0.31:
+New in 1.0.32:
+
+- Start membership applications directly from club profiles on web and mobile.
+- Mobile club profiles now expose core web information such as description, admins, progress, badges and posts.
+- Mobile club profiles now support messaging, following and blocking.
 
 - Private profiles are no longer shown to unrelated people in global search.
 - Clear, focused account registration without internal account-management options.

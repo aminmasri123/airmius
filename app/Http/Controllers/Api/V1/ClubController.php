@@ -24,6 +24,7 @@ use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
+use App\Services\ClubProfilePayloadService;
 use App\Services\ClubContributionCalculator;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
@@ -58,6 +59,7 @@ class ClubController extends Controller
         private readonly PlanFeatureService $planFeatures,
         private readonly ClubService $clubService,
         private readonly MediaOptimizer $mediaOptimizer,
+        private readonly ClubProfilePayloadService $clubProfiles,
     ) {}
 
     public function index(Request $request)
@@ -122,11 +124,16 @@ class ClubController extends Controller
                 ->withCount(['users', 'events'])
                 ->orderBy('name'),
         ])
-            ->loadCount(['users', 'teams']);
+            ->loadCount(['users', 'teams', 'posts']);
+
+        $profilePayload = $this->clubProfiles->forViewer($club, $request->user());
 
         return response()->json([
             'data' => [
                 ...((new ClubResource($club))->resolve($request)),
+                'profile' => $profilePayload['clubProfile'],
+                'posts' => $profilePayload['posts']->values(),
+                'viewer' => $profilePayload['viewer'],
                 'teams' => TeamResource::collection($club->teams)->resolve($request),
                 'capabilities' => $this->planFeatures->capabilities($club),
                 'subscription' => [

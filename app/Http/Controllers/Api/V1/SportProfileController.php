@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserSportSkill;
 use App\Services\SportProfileScoutService;
 use App\Services\Training\AthleteSportProfileService;
+use App\Services\UserSocialProfileService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -27,10 +28,15 @@ class SportProfileController extends Controller
         ]);
     }
 
-    public function show(Request $request, User $user, SportProfileScoutService $profiles)
+    public function show(Request $request, User $user, SportProfileScoutService $profiles, UserSocialProfileService $social)
     {
+        $cv = $profiles->sportCv($user, $request->user());
+
         return response()->json([
-            'data' => $profiles->sportCv($user, $request->user()),
+            'data' => [
+                ...$cv,
+                'social' => $social->state($user, $request->user()),
+            ],
         ]);
     }
 

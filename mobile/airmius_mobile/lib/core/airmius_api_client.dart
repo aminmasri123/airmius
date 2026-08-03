@@ -1711,6 +1711,18 @@ class AirmiusApiClient {
   Future<AirmiusJson> sportCvForUser(int userId) =>
       _json('GET', '/api/v1/users/$userId/sport-cv');
 
+  Future<AirmiusJson> followUser(int userId) =>
+      _json('POST', '/api/v1/users/$userId/follow');
+
+  Future<AirmiusJson> unfollowUser(int userId) =>
+      _json('DELETE', '/api/v1/users/$userId/follow');
+
+  Future<AirmiusJson> blockUser(int userId) =>
+      _json('POST', '/api/v1/users/$userId/block');
+
+  Future<AirmiusJson> unblockUser(int userId) =>
+      _json('DELETE', '/api/v1/users/$userId/block');
+
   Future<AirmiusJson> updateSportProfile(int sportId, AirmiusJson body) =>
       _json('PUT', '/api/v1/sport-profiles/$sportId', body: body);
 

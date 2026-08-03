@@ -696,6 +696,7 @@ class AirmiusClub {
     required this.city,
     required this.membersCount,
     required this.teamsCount,
+    this.postsCount = 0,
     required this.acceptsMembershipApplications,
     required this.hasPendingMembershipRequest,
     required this.isMember,
@@ -718,6 +719,13 @@ class AirmiusClub {
     this.pausedFrom,
     this.pausedUntil,
     this.memberPauseRequestsEnabled = false,
+    this.verified = false,
+    this.description,
+    this.admins = const [],
+    this.posts = const [],
+    this.gamification,
+    this.badges = const [],
+    this.social = const {},
   });
 
   final int id;
@@ -726,6 +734,7 @@ class AirmiusClub {
   final String city;
   final int membersCount;
   final int teamsCount;
+  final int postsCount;
   final bool acceptsMembershipApplications;
   final bool hasPendingMembershipRequest;
   final bool isMember;
@@ -748,14 +757,30 @@ class AirmiusClub {
   final String? pausedFrom;
   final String? pausedUntil;
   final bool memberPauseRequestsEnabled;
+  final bool verified;
+  final String? description;
+  final List<JsonMap> admins;
+  final List<JsonMap> posts;
+  final JsonMap? gamification;
+  final List<JsonMap> badges;
+  final JsonMap social;
 
   factory AirmiusClub.fromJson(JsonMap json) {
+    final profile = json['profile'] is JsonMap
+        ? json['profile'] as JsonMap
+        : const <String, dynamic>{};
+    final viewer = json['viewer'] is JsonMap
+        ? json['viewer'] as JsonMap
+        : const <String, dynamic>{};
+    final source = <String, dynamic>{...json, ...profile};
     final membership = json['membership'] is JsonMap
         ? json['membership'] as JsonMap
         : const <String, dynamic>{};
     return AirmiusClub(
       id: _int(json['id']),
-      ownerId: json['owner_id'] == null ? null : _int(json['owner_id']),
+      ownerId: (json['owner_id'] ?? profile['owner_id']) == null
+          ? null
+          : _int(json['owner_id'] ?? profile['owner_id']),
       name: _string(json['name'] ?? json['title'], fallback: 'Verein'),
       city: _string(json['city'] ?? json['subtitle'] ?? json['description']),
       membersCount: _int(
@@ -765,6 +790,10 @@ class AirmiusClub {
       teamsCount: _int(
         json['teams_count'],
         fallback: _clubTeams(json['teams']).length,
+      ),
+      postsCount: _int(
+        json['posts_count'],
+        fallback: _int(profile['posts_count']),
       ),
       acceptsMembershipApplications:
           _bool(json['accepts_membership_applications']) ||
@@ -799,6 +828,21 @@ class AirmiusClub {
       pausedFrom: _nullableString(membership['paused_from']),
       pausedUntil: _nullableString(membership['paused_until']),
       memberPauseRequestsEnabled: _bool(json['member_pause_requests_enabled']),
+      verified:
+          _string(json['verification_status']) == 'verified' ||
+          _bool(json['is_official']),
+      description: _nullableString(source['description']),
+      admins: _jsonList(source['admins']),
+      posts: _jsonList(json['posts']),
+      gamification: source['gamification'] is JsonMap
+          ? source['gamification'] as JsonMap
+          : null,
+      badges: _jsonList(source['badges']),
+      social: viewer['social'] is JsonMap
+          ? viewer['social'] as JsonMap
+          : json['social'] is JsonMap
+          ? json['social'] as JsonMap
+          : const <String, dynamic>{},
     );
   }
 }

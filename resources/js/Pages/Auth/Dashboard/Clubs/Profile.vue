@@ -184,6 +184,46 @@ const leaveClub = async () => {
     })
 }
 
+const followClubOwner = () => {
+    if (!clubProfile.owner_id || viewer.social?.is_blocked) return
+
+    if (viewer.social?.is_following) {
+        router.delete(route('auth.users.unfollow', clubProfile.owner_id), { preserveScroll: true })
+    } else {
+        router.post(route('auth.users.follow', clubProfile.owner_id), {}, { preserveScroll: true })
+    }
+}
+
+const messageClubOwner = () => {
+    if (!clubProfile.owner_id || !viewer.social?.can_send_message) return
+
+    router.post(route('auth.conversations.store'), {
+        type: 'direct',
+        participant_ids: [clubProfile.owner_id],
+        club_id: clubProfile.id,
+    })
+}
+
+const toggleClubOwnerBlock = async () => {
+    if (!clubProfile.owner_id) return
+
+    const blocked = viewer.social?.has_blocked
+    const confirmed = blocked || await confirmDialog({
+        title: tAuto('Verein blockieren'),
+        message: tAuto('Möchtest du diesen Verein blockieren?'),
+        confirmLabel: tAuto('Blockieren'),
+        danger: true,
+    })
+
+    if (!confirmed) return
+
+    if (blocked) {
+        router.delete(route('auth.users.unblock', clubProfile.owner_id), { preserveScroll: true })
+    } else {
+        router.post(route('auth.users.block', clubProfile.owner_id), {}, { preserveScroll: true })
+    }
+}
+
 const intervalLabel = (interval) => ({
     monthly: tAuto('Monat'),
     quarterly: tAuto('Quartal'),
@@ -269,6 +309,32 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         </div>
 
                         <div class="flex flex-wrap gap-2">
+                            <button
+                                v-if="clubProfile.owner_id && viewer.social?.can_send_message"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                @click="messageClubOwner"
+                            >
+                                <i class="las la-comment"></i> {{ tAuto('Nachricht') }}
+                            </button>
+                            <button
+                                v-if="clubProfile.owner_id && viewer.social?.can_follow"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg"
+                                @click="followClubOwner"
+                            >
+                                <i :class="viewer.social.is_following ? 'las la-user-minus' : 'las la-plus'"></i>
+                                {{ viewer.social.is_following ? tAuto('Entfolgen') : tAuto('Folgen') }}
+                            </button>
+                            <button
+                                v-if="clubProfile.owner_id && (viewer.social?.has_blocked || !viewer.social?.is_blocked)"
+                                type="button"
+                                class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                @click="toggleClubOwnerBlock"
+                            >
+                                <i :class="viewer.social?.has_blocked ? 'las la-unlock' : 'las la-ban'"></i>
+                                {{ viewer.social?.has_blocked ? tAuto('Entblockieren') : tAuto('Blockieren') }}
+                            </button>
                             <button
                                 v-if="!viewer.is_member && !viewer.can_manage && clubProfile.membership_requests_enabled && !viewer.has_pending_membership_request"
                                 type="button"

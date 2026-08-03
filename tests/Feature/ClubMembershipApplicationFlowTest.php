@@ -230,6 +230,9 @@ class ClubMembershipApplicationFlowTest extends TestCase
 
         $this->getJson("/api/v1/clubs/{$club->id}")
             ->assertOk()
+            ->assertJsonPath('data.profile.id', $club->id)
+            ->assertJsonPath('data.profile.owner_id', $owner->id)
+            ->assertJsonPath('data.viewer.social.profile_user_id', $owner->id)
             ->assertJsonPath('data.management.settings.membership_requests_enabled', true)
             ->assertJsonPath('data.management.settings.membership_application_documents.0.id', 'privacy-doc')
             ->assertJsonPath('data.management.settings.membership_payment_methods.0', 'cash')

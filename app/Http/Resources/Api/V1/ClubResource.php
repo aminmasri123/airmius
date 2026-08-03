@@ -73,6 +73,7 @@ class ClubResource extends JsonResource
             ] : null,
             'users_count' => $this->whenCounted('users'),
             'teams_count' => $this->whenCounted('teams'),
+            'posts_count' => $this->whenCounted('posts'),
             'teams' => TeamResource::collection($this->whenLoaded('teams')),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),

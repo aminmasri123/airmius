@@ -60,6 +60,7 @@ use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
+use App\Http\Controllers\Api\V1\UserSocialProfileController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\FolderController;
@@ -295,6 +296,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->middleware('throttle:20,1')
             ->name('sport-integrations.activities.import');
         Route::get('/users/{user}/sport-cv', [SportProfileController::class, 'show'])->name('users.sport-cv.show');
+        Route::post('/users/{user}/follow', [UserSocialProfileController::class, 'follow'])->name('users.follow');
+        Route::delete('/users/{user}/follow', [UserSocialProfileController::class, 'unfollow'])->name('users.unfollow');
+        Route::post('/users/{user}/block', [UserSocialProfileController::class, 'block'])->name('users.block');
+        Route::delete('/users/{user}/block', [UserSocialProfileController::class, 'unblock'])->name('users.unblock');
         Route::get('/sport-profiles/scout-search', [SportProfileController::class, 'scoutSearch'])->name('sport-profiles.scout-search');
         Route::get('/sport-profiles', [SportProfileController::class, 'index'])->name('sport-profiles.index');
         Route::put('/sport-profiles/{sport}', [SportProfileController::class, 'update'])->name('sport-profiles.update');

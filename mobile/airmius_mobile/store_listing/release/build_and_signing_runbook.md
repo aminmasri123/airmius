@@ -13,7 +13,7 @@ This runbook defines the Android and iOS release build path for Airmius Mobile.
 - iOS bundle ID:
   - `com.airmius.app`
 - App version:
-  - `1.0.11+12` for the current release candidate.
+  - `1.0.32+51` for the current release candidate.
 
 ## Android prerequisites
 

@@ -101,21 +101,37 @@ class _MembershipApplicationFormScreenState
     final services = AirmiusServicesScope.of(context);
     final page = await services.repositories.clubs.searchClubs();
     final clubs = <AirmiusClub>[];
+    final loadedIds = <int>{};
     for (final summary in page.items) {
       if (!summary.acceptsMembershipApplications ||
           summary.isMember ||
           summary.hasPendingMembershipRequest) {
         continue;
       }
-      clubs.add(await services.repositories.clubs.club(summary.id));
+      final club = await services.repositories.clubs.club(summary.id);
+      if (loadedIds.add(club.id)) clubs.add(club);
     }
+
+    // A profile can be opened directly even when the club is not part of the
+    // first paginated search response. Always resolve that exact club so the
+    // application flow does not incorrectly show an empty club selector.
     if (widget.clubId != null) {
+      AirmiusClub? target;
       for (final club in clubs) {
-        if (club.id == widget.clubId) {
-          _selectedClub = club;
-          _syncClubSettings(club);
-          break;
+        if (club.id == widget.clubId) target = club;
+      }
+      if (target == null) {
+        final direct = await services.repositories.clubs.club(widget.clubId!);
+        if (direct.acceptsMembershipApplications &&
+            !direct.isMember &&
+            !direct.hasPendingMembershipRequest) {
+          target = direct;
+          if (loadedIds.add(direct.id)) clubs.add(direct);
         }
+      }
+      if (target != null) {
+        _selectedClub = target;
+        _syncClubSettings(target);
       }
     }
     return clubs;

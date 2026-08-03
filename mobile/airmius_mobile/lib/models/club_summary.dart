@@ -29,6 +29,12 @@ class ClubSummary {
     this.pausedFrom,
     this.pausedUntil,
     this.memberPauseRequestsEnabled = false,
+    this.description,
+    this.admins = const [],
+    this.postItems = const [],
+    this.gamification,
+    this.badges = const [],
+    this.social = const {},
   });
 
   final int id;
@@ -38,6 +44,12 @@ class ClubSummary {
   final int members;
   final int teams;
   final int posts;
+  final String? description;
+  final List<JsonMap> admins;
+  final List<JsonMap> postItems;
+  final JsonMap? gamification;
+  final List<JsonMap> badges;
+  final JsonMap social;
   final bool acceptsMemberships;
   final bool hasPendingMembershipRequest;
   final bool isMember;
@@ -78,6 +90,12 @@ class ClubSummary {
     members: members,
     teams: teams,
     posts: posts,
+    description: description,
+    admins: admins,
+    postItems: postItems,
+    gamification: gamification,
+    badges: badges,
+    social: social,
     acceptsMemberships: acceptsMemberships,
     hasPendingMembershipRequest: hasPendingMembershipRequest,
     isMember: isMember,
@@ -107,11 +125,11 @@ class ClubSummary {
     city: club.city,
     members: club.membersCount,
     teams: club.teamsCount,
-    posts: 0,
+    posts: club.postsCount,
     acceptsMemberships: club.acceptsMembershipApplications,
     hasPendingMembershipRequest: club.hasPendingMembershipRequest,
     isMember: club.isMember,
-    verified: false,
+    verified: club.verified,
     teamList: club.teams.map(TeamSummary.fromAirmiusTeam).toList(),
     logoUrl: club.logoUrl,
     bannerUrl: club.bannerUrl,
@@ -128,6 +146,12 @@ class ClubSummary {
     pausedFrom: club.pausedFrom,
     pausedUntil: club.pausedUntil,
     memberPauseRequestsEnabled: club.memberPauseRequestsEnabled,
+    description: club.description,
+    admins: club.admins,
+    postItems: club.posts,
+    gamification: club.gamification,
+    badges: club.badges,
+    social: club.social,
   );
 }
 

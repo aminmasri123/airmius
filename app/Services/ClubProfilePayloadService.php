@@ -14,7 +14,10 @@ use App\Support\ClubRoles;
 
 class ClubProfilePayloadService
 {
-    public function __construct(private GamificationService $gamification) {}
+    public function __construct(
+        private GamificationService $gamification,
+        private UserSocialProfileService $social,
+    ) {}
 
     public function forViewer(Club $club, User $viewer): array
     {
@@ -29,6 +32,7 @@ class ClubProfilePayloadService
 
         $club->loadCount(['users', 'teams', 'posts']);
         $club->load([
+            'owner:id,name,email,profile_photo_path',
             'admins:id,name,profile_photo_path',
             'users' => fn ($query) => $query
                 ->select('users.id', 'name', 'profile_photo_path')
@@ -57,6 +61,9 @@ class ClubProfilePayloadService
                 'can_manage' => $canManage,
                 'has_pending_membership_request' => $hasPendingMembershipRequest,
                 'application_prefill' => ClubMembershipApplication::prefillFor($viewer),
+                'social' => $club->owner
+                    ? $this->social->state($club->owner, $viewer)
+                    : null,
             ],
         ];
     }
@@ -65,6 +72,8 @@ class ClubProfilePayloadService
     {
         return [
             'id' => $club->id,
+            'owner_id' => $club->owner_id,
+            'owner' => $club->owner,
             'name' => $club->name,
             'sport_type' => $club->sport_type,
             'is_official' => (bool) $club->is_official,

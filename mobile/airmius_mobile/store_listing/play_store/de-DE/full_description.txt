@@ -6,7 +6,9 @@ Vereine können ihre Kommunikation, Mitgliedschaftsanfragen, Beitragsinformation
 
 Wichtige Funktionen:
 - Vereine und Teams suchen
-- Mitgliedschaftsanfragen vorbereiten
+- Mitgliedschaftsanträge direkt aus dem Vereinsprofil starten
+- Vereinsprofile mit denselben Kerninformationen wie im Web ansehen
+- Vereine folgen, eine Nachricht schreiben und Vereine blockieren
 - Vereinsnachrichten und Benachrichtigungen anzeigen
 - Trainings- und Eventübersicht nutzen
 - Rechnungen und Zahlungsstatus einsehen

@@ -1,4 +1,8 @@
-Neu in 1.0.31:
+Neu in 1.0.32:
+
+- Mitgliedsanträge können direkt aus einem Vereinsprofil in Web und App erstellt werden.
+- Vereinsprofile in der App zeigen jetzt zentrale Web-Informationen wie Beschreibung, Admins, Fortschritt, Badges und Beiträge.
+- Vereinsprofile bieten in der App jetzt Nachricht, Folgen und Blockieren.
 
 - Private Profile erscheinen für fremde Personen nicht mehr in der globalen Suche.
 - Klare Registrierung ohne interne Konto-Verwaltungsoptionen.

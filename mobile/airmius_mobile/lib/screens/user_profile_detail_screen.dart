@@ -38,6 +38,11 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
   Future<_ProfileData>? _dataFuture;
   String _relationship = 'unknown';
   int? _invitationId;
+  bool _isFollowing = false;
+  bool _canFollow = false;
+  bool _canSendMessage = false;
+  bool _hasBlocked = false;
+  bool _isBlocked = false;
   bool _busy = false;
   bool _reported = false;
 
@@ -59,11 +64,15 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     final client = services.clientForSession(services.authState.session);
     JsonMap? sportCv = widget.initialSportCv;
     var profileError = false;
+    JsonMap social = const {};
     if (sportCv == null) {
       try {
         final response = await client.sportCvForUser(userId);
         final data = response['data'];
         sportCv = data is JsonMap ? data : response;
+        if (sportCv['social'] is JsonMap) {
+          social = sportCv['social'] as JsonMap;
+        }
       } catch (_) {
         profileError = true;
       }
@@ -109,6 +118,11 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     setState(() {
       _relationship = relationship;
       _invitationId = invitationId;
+      _isFollowing = social['is_following'] == true;
+      _canFollow = social['can_follow'] == true;
+      _canSendMessage = social['can_send_message'] == true;
+      _hasBlocked = social['has_blocked'] == true;
+      _isBlocked = social['is_blocked'] == true;
     });
     return _ProfileData(sportCv: sportCv, error: profileError);
   }
@@ -162,6 +176,42 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     });
   }
 
+  Future<void> _withdrawFriendRequest() async {
+    final invitationId = _invitationId;
+    if (invitationId == null || _busy) return;
+    final t = AirmiusScope.of(context).t;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(context),
+        title: Text(t('friends.withdrawTitle')),
+        content: Text(t('friends.withdrawQuestion')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('friends.withdraw')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _runAction(() async {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      await client.withdrawFriendInvitation(invitationId);
+      if (!mounted) return;
+      setState(() {
+        _relationship = 'none';
+        _invitationId = null;
+      });
+      _notify(t('friends.withdrawn'));
+    });
+  }
+
   Future<void> _removeFriend() async {
     final userId = widget.userId;
     if (userId == null || _busy) return;
@@ -172,6 +222,92 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
       if (!mounted) return;
       setState(() => _relationship = 'none');
       _notify(_t('profile.detail.removed'));
+    });
+  }
+
+  Future<void> _followUser() async {
+    final userId = widget.userId;
+    if (userId == null || _busy) return;
+    await _runAction(() async {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .followUser(userId);
+      if (!mounted) return;
+      setState(() => _isFollowing = true);
+      _notify(_t('profile.detail.followed'));
+    });
+  }
+
+  Future<void> _unfollowUser() async {
+    final userId = widget.userId;
+    if (userId == null || _busy) return;
+    await _runAction(() async {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .unfollowUser(userId);
+      if (!mounted) return;
+      setState(() => _isFollowing = false);
+      _notify(_t('profile.detail.unfollowed'));
+    });
+  }
+
+  Future<void> _blockUser() async {
+    final userId = widget.userId;
+    if (userId == null || _busy) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(context),
+        title: Text(_t('profile.detail.blockTitle')),
+        content: Text(_t('profile.detail.blockQuestion')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_t('profile.detail.block')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _runAction(() async {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .blockUser(userId);
+      if (!mounted) return;
+      setState(() {
+        _hasBlocked = true;
+        _isFollowing = false;
+        _canSendMessage = false;
+      });
+      _notify(_t('profile.detail.blocked'));
+    });
+  }
+
+  Future<void> _unblockUser() async {
+    final userId = widget.userId;
+    if (userId == null || _busy) return;
+    await _runAction(() async {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .unblockUser(userId);
+      final data = response['data'];
+      if (!mounted) return;
+      setState(() {
+        _hasBlocked = false;
+        if (data is JsonMap) {
+          _canFollow = data['can_follow'] == true;
+          _canSendMessage = data['can_send_message'] == true;
+        }
+      });
+      _notify(_t('profile.detail.unblocked'));
     });
   }
 
@@ -249,6 +385,8 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
           future: _dataFuture,
           builder: (context, snapshot) {
             final data = snapshot.data ?? const _ProfileData();
+            final profileLoading =
+                snapshot.connectionState != ConnectionState.done;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -279,7 +417,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                 ],
                 if (!widget.ownProfile) _relationshipPanel(t),
                 if (!widget.ownProfile) const SizedBox(height: 14),
-                _actions(t),
+                _actions(t, disabled: profileLoading),
               ],
             );
           },
@@ -487,32 +625,17 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     );
   }
 
-  Widget _actions(String Function(String) t) {
+  Widget _actions(String Function(String) t, {bool disabled = false}) {
     if (widget.ownProfile) return const SizedBox.shrink();
     final userId = widget.userId;
+    final actionDisabled = disabled || _busy;
     final buttons = <Widget>[];
-    if (_relationship == 'received' && _invitationId != null) {
-      buttons.add(
-        AirmiusButton(
-          label: t('profile.detail.accept'),
-          icon: Icons.check_circle_outline,
-          onPressed: _busy ? null : _acceptInvitation,
-        ),
-      );
-      buttons.add(
-        AirmiusButton(
-          label: t('profile.detail.decline'),
-          icon: Icons.close_outlined,
-          danger: true,
-          onPressed: _busy ? null : _declineInvitation,
-        ),
-      );
-    } else if (_relationship == 'friends') {
+    if (_canSendMessage && !_hasBlocked && !_isBlocked) {
       buttons.add(
         AirmiusButton(
           label: t('profile.detail.message'),
           icon: Icons.chat_bubble_outline,
-          onPressed: _busy
+          onPressed: actionDisabled
               ? null
               : () => Navigator.push(
                   context,
@@ -523,21 +646,55 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                 ),
         ),
       );
+    }
+    if (_canFollow && !_isBlocked) {
+      buttons.add(
+        AirmiusButton(
+          label: _isFollowing
+              ? t('profile.detail.unfollow')
+              : t('profile.detail.follow'),
+          icon: _isFollowing
+              ? Icons.person_remove_alt_1_outlined
+              : Icons.person_add_alt_1_outlined,
+          secondary: true,
+          onPressed: actionDisabled
+              ? null
+              : (_isFollowing ? _unfollowUser : _followUser),
+        ),
+      );
+    }
+    if (_relationship == 'received' && _invitationId != null) {
+      buttons.add(
+        AirmiusButton(
+          label: t('profile.detail.accept'),
+          icon: Icons.check_circle_outline,
+          onPressed: actionDisabled ? null : _acceptInvitation,
+        ),
+      );
+      buttons.add(
+        AirmiusButton(
+          label: t('profile.detail.decline'),
+          icon: Icons.close_outlined,
+          danger: true,
+          onPressed: actionDisabled ? null : _declineInvitation,
+        ),
+      );
+    } else if (_relationship == 'friends') {
       buttons.add(
         AirmiusButton(
           label: t('profile.detail.removeFriend'),
           icon: Icons.person_remove_outlined,
           danger: true,
-          onPressed: _busy ? null : _removeFriend,
+          onPressed: actionDisabled ? null : _removeFriend,
         ),
       );
     } else if (_relationship == 'sent') {
       buttons.add(
         AirmiusButton(
-          label: t('profile.detail.requestPending'),
-          icon: Icons.schedule_outlined,
+          label: t('friends.withdraw'),
+          icon: Icons.undo_outlined,
           secondary: true,
-          onPressed: null,
+          onPressed: actionDisabled ? null : _withdrawFriendRequest,
         ),
       );
     } else if (userId != null) {
@@ -545,11 +702,24 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
         AirmiusButton(
           label: t('profile.detail.sendRequest'),
           icon: Icons.person_add_alt_1_outlined,
-          onPressed: _busy ? null : _sendFriendRequest,
+          onPressed: actionDisabled ? null : _sendFriendRequest,
         ),
       );
     }
     if (userId != null) {
+      buttons.add(
+        AirmiusButton(
+          label: _hasBlocked
+              ? t('profile.detail.unblock')
+              : t('profile.detail.block'),
+          icon: _hasBlocked ? Icons.lock_open_outlined : Icons.block_outlined,
+          danger: !_hasBlocked,
+          secondary: _hasBlocked,
+          onPressed: actionDisabled
+              ? null
+              : (_hasBlocked ? _unblockUser : _blockUser),
+        ),
+      );
       buttons.add(
         AirmiusButton(
           label: _reported
@@ -557,7 +727,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
               : t('profile.detail.report'),
           icon: Icons.report_outlined,
           secondary: true,
-          onPressed: _busy || _reported ? null : _reportProfile,
+          onPressed: actionDisabled || _reported ? null : _reportProfile,
         ),
       );
     }

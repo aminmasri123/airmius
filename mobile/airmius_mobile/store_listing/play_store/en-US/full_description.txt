@@ -6,7 +6,9 @@ For clubs, Airmius provides mobile tools for member communication, membership re
 
 Key features:
 - Find clubs and teams
-- Start and manage membership requests
+- Start membership applications directly from a club profile
+- View the same core club information available on the web
+- Follow clubs, send a message and block clubs
 - Receive club news and notifications
 - Keep training and events in view
 - Access invoices and payment status where enabled
