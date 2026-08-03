@@ -65,6 +65,9 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     JsonMap? sportCv = widget.initialSportCv;
     var profileError = false;
     JsonMap social = const {};
+    if (sportCv?['social'] is JsonMap) {
+      social = sportCv!['social'] as JsonMap;
+    }
     if (sportCv == null) {
       try {
         final response = await client.sportCvForUser(userId);
@@ -640,8 +643,10 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
               : () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        NewConversationScreen(initialUserId: userId),
+                    builder: (_) => NewConversationScreen(
+                      initialUserId: userId,
+                      initialUserName: widget.name,
+                    ),
                   ),
                 ),
         ),

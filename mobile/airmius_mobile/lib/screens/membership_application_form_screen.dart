@@ -55,6 +55,7 @@ class _MembershipApplicationFormScreenState
   bool _sepaAccepted = false;
   bool _profilePrefilled = false;
   bool _submitting = false;
+  int _activeTab = 0;
   final Map<String, bool> _acceptedDocuments = {};
   int? _selectedClubId;
   Future<List<AirmiusClub>>? _clubsFuture;
@@ -132,6 +133,7 @@ class _MembershipApplicationFormScreenState
       if (target != null) {
         _selectedClub = target;
         _syncClubSettings(target);
+        if (mounted) setState(() {});
       }
     }
     return clubs;
@@ -333,341 +335,26 @@ class _MembershipApplicationFormScreenState
                         ),
                         const SizedBox(height: 16),
                         _ApplicationHero(
-                          onSubmit: _submit,
                           clubName: _selectedClub?.name,
                         ),
                         const SizedBox(height: 16),
-                        _SelectPanel(
-                          title: t('application.membershipType'),
-                          value: _membershipTypeValues.contains(_membershipType)
-                              ? _membershipType
-                              : _membershipTypeValues.first,
-                          values: _membershipTypeValues,
-                          labels: _membershipTypeLabels(
-                            (key) => t('application.type.$key'),
-                          ),
-                          onChanged: (value) =>
-                              setState(() => _membershipType = value),
-                        ),
-                        const SizedBox(height: 12),
-                        if (_fieldVisible('first_name') ||
-                            _fieldVisible('last_name') ||
-                            _fieldVisible('gender') ||
-                            _fieldVisible('birth_date') ||
-                            _fieldVisible('nationality'))
-                          _FormSection(
-                            title: t('application.personalData'),
-                            children: [
-                              _configuredTextField(
-                                'first_name',
-                                t('application.firstName'),
-                                _firstName,
-                              ),
-                              _configuredTextField(
-                                'last_name',
-                                t('application.lastName'),
-                                _lastName,
-                              ),
-                              DropdownButtonFormField<String>(
-                                initialValue: _gender.isEmpty ? null : _gender,
-                                dropdownColor: airmiusSurfaceSoftColor(context),
-                                decoration: InputDecoration(
-                                  labelText: _label(
-                                    'gender',
-                                    t('application.gender'),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.wc_outlined,
-                                    color: airmiusMutedColor(context),
-                                  ),
-                                ),
-                                style: TextStyle(
-                                  color: airmiusTextColor(context),
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                items: [
-                                  DropdownMenuItem(
-                                    value: 'female',
-                                    child: Text(t('application.gender.female')),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'male',
-                                    child: Text(t('application.gender.male')),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'diverse',
-                                    child: Text(
-                                      t('application.gender.diverse'),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'not_specified',
-                                    child: Text(
-                                      t('application.gender.unspecified'),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (value) =>
-                                    setState(() => _gender = value ?? ''),
-                              ),
-                              _configuredTextField(
-                                'birth_date',
-                                t('application.birthDate'),
-                                _birthday,
-                                hint: t('application.dateHint'),
-                                keyboardType: TextInputType.datetime,
-                                inputFormatters: const [
-                                  AirmiusDateInputFormatter(),
-                                ],
-                              ),
-                              _configuredTextField(
-                                'nationality',
-                                'Staatsangehörigkeit',
-                                _nationality,
-                              ),
-                            ],
-                          ),
-                        if (_fieldVisible('athlete_license_number'))
-                          _FormSection(
-                            title: t('application.sportData'),
-                            children: [
-                              _configuredTextField(
-                                'athlete_license_number',
-                                t('application.licenseNumber'),
-                                _license,
-                              ),
-                            ],
-                          ),
-                        if (_fieldVisible('email') || _fieldVisible('phone'))
-                          _FormSection(
-                            title: t('application.contactData'),
-                            children: [
-                              _configuredTextField(
-                                'email',
-                                t('application.email'),
-                                _email,
-                                keyboardType: TextInputType.emailAddress,
-                              ),
-                              _configuredTextField(
-                                'phone',
-                                t('application.phone'),
-                                _phone,
-                                keyboardType: TextInputType.phone,
-                              ),
-                            ],
-                          ),
-                        if (_fieldVisible('country') ||
-                            _fieldVisible('street') ||
-                            _fieldVisible('house_number') ||
-                            _fieldVisible('postal_code') ||
-                            _fieldVisible('city') ||
-                            _fieldVisible('state'))
-                          _FormSection(
-                            title: t('application.addressData'),
-                            children: [
-                              _configuredTextField('country', 'Land', _country),
-                              _configuredTextField(
-                                'street',
-                                t('application.street'),
-                                _street,
-                              ),
-                              _configuredTextField(
-                                'house_number',
-                                t('application.houseNumber'),
-                                _house,
-                              ),
-                              _configuredTextField(
-                                'postal_code',
-                                t('application.postalCode'),
-                                _zip,
-                              ),
-                              _configuredTextField(
-                                'city',
-                                t('application.city'),
-                                _city,
-                              ),
-                              _configuredTextField(
-                                'state',
-                                t('application.stateRegion'),
-                                _state,
-                              ),
-                            ],
-                          ),
-                        if (_fieldVisible('guardian_name') ||
-                            _fieldVisible('guardian_email') ||
-                            _fieldVisible('guardian_phone'))
-                          _FormSection(
-                            title: t('application.guardian'),
-                            children: [
-                              _configuredTextField(
-                                'guardian_name',
-                                t('application.guardianName'),
-                                _guardianName,
-                              ),
-                              _configuredTextField(
-                                'guardian_email',
-                                t('application.guardianEmail'),
-                                _guardianEmail,
-                                keyboardType: TextInputType.emailAddress,
-                              ),
-                              _configuredTextField(
-                                'guardian_phone',
-                                'Telefon Erziehungsberechtigte/r',
-                                _guardianPhone,
-                                keyboardType: TextInputType.phone,
-                              ),
-                            ],
-                          ),
-                        if (_fieldVisible('emergency_contact_name') ||
-                            _fieldVisible('emergency_contact_phone'))
-                          _FormSection(
-                            title: t('application.emergencyContact'),
-                            children: [
-                              _configuredTextField(
-                                'emergency_contact_name',
-                                t('application.emergencyName'),
-                                _emergencyName,
-                              ),
-                              _configuredTextField(
-                                'emergency_contact_phone',
-                                t('application.emergencyPhone'),
-                                _emergencyPhone,
-                                keyboardType: TextInputType.phone,
-                              ),
-                            ],
-                          ),
-                        _SelectPanel(
-                          title: t('application.paymentMethod'),
-                          value: _effectivePaymentMethod,
-                          values: _allowedPaymentMethods,
-                          labels: {
-                            'bank_transfer': t(
-                              'application.payment.bankTransfer',
-                            ),
-                            'cash': t('application.payment.cash'),
-                            'sepa_debit': t('application.payment.sepa'),
-                          },
-                          onChanged: (value) =>
-                              setState(() => _paymentMethod = value),
-                        ),
-                        const SizedBox(height: 12),
-                        _SelectPanel(
-                          title: t('application.paymentCycle'),
-                          value: _billingInterval,
-                          values: const [
-                            'none',
-                            'monthly',
-                            'quarterly',
-                            'four_monthly',
-                            'semi_yearly',
-                            'yearly',
-                            'once',
-                          ],
-                          labels: {
-                            'none': 'Kein Intervall',
-                            'monthly': t('application.cycle.monthly'),
-                            'quarterly': t('application.cycle.quarterly'),
-                            'four_monthly': t('application.cycle.fourMonthly'),
-                            'semi_yearly': t('application.cycle.halfYearly'),
-                            'yearly': t('application.cycle.yearly'),
-                            'once': 'Einmalig',
-                          },
-                          onChanged: (value) =>
-                              setState(() => _interval = value),
-                        ),
-                        const SizedBox(height: 12),
-                        if (_fieldVisible('sepa_iban') ||
-                            _fieldVisible('sepa_bic'))
-                          _FormSection(
-                            title: t('application.paymentData'),
-                            children: [
-                              _configuredTextField(
-                                'sepa_iban',
-                                t('application.iban'),
-                                _iban,
-                              ),
-                              _configuredTextField(
-                                'sepa_bic',
-                                t('application.bic'),
-                                _bic,
-                              ),
-                            ],
-                          ),
-                        _DocumentAcceptancePanel(
-                          privacyAccepted: _privacyAccepted,
-                          rulesAccepted: _rulesAccepted,
-                          contributionAccepted: _contributionAccepted,
-                          sepaAccepted: _sepaAccepted,
-                          documents: _visibleDocuments,
-                          acceptedDocuments: _acceptedDocuments,
-                          onPrivacy: (value) =>
-                              setState(() => _privacyAccepted = value),
-                          onRules: (value) =>
-                              setState(() => _rulesAccepted = value),
-                          onContribution: (value) =>
-                              setState(() => _contributionAccepted = value),
-                          onSepa: (value) =>
-                              setState(() => _sepaAccepted = value),
-                          onDocument: (id, value) => setState(() {
-                            _acceptedDocuments[id] = value;
-                            final document = _visibleDocuments.where(
-                              (item) => item['id']?.toString() == id,
-                            );
-                            if (document.isEmpty) return;
-                            final type = document.first['type']?.toString();
-                            if (type == 'privacy') {
-                              _privacyAccepted = value;
-                            } else if (type == 'rules' || type == 'statutes') {
-                              _rulesAccepted = value;
-                            } else if (type == 'fees') {
-                              _contributionAccepted = value;
-                            } else if (type == 'sepa') {
-                              _sepaAccepted = value;
-                            }
-                          }),
-                        ),
-                        const SizedBox(height: 12),
-                        AirmiusTextField(
-                          label: t('application.signature'),
-                          hint: t('application.signatureHint'),
-                          controller: _consentSignature,
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
+                        _ApplicationTabs(
                           title: t('application.membershipApplication'),
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              AirmiusButton(
-                                label: t('filesPreview.testLink'),
-                                icon: Icons.policy_outlined,
-                                secondary: true,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ClubPolicyDocumentsScreen(),
-                                  ),
-                                ),
-                              ),
-                              AirmiusButton(
-                                label: t('uiAction.draft'),
-                                icon: Icons.save_outlined,
-                                secondary: true,
-                                onPressed: () =>
-                                    _toast(t('uiAction.draftBody')),
-                              ),
-                              AirmiusButton(
-                                label: _submitting
-                                    ? t('application.sending')
-                                    : t('application.send'),
-                                icon: Icons.send_outlined,
-                                onPressed: _submitting ? null : _submit,
-                              ),
-                            ],
-                          ),
+                          labels: [
+                            t('application.membershipType'),
+                            t('application.personalData'),
+                            t('application.contactData'),
+                            t('application.addressData'),
+                            t('application.guardian'),
+                            t('application.paymentData'),
+                            t('application.documentsRules'),
+                          ],
+                          activeIndex: _activeTab,
+                          onChanged: (index) =>
+                              setState(() => _activeTab = index),
                         ),
+                        const SizedBox(height: 14),
+                        ..._applicationTab(t),
                       ],
                     ),
                   ),
@@ -680,7 +367,287 @@ class _MembershipApplicationFormScreenState
     );
   }
 
+  List<Widget> _applicationTab(String Function(String) t) {
+    switch (_activeTab) {
+      case 1:
+        return _personalTab(t);
+      case 2:
+        return _contactTab(t);
+      case 3:
+        return _addressTab(t);
+      case 4:
+        return _additionalTab(t);
+      case 5:
+        return _paymentTab(t);
+      case 6:
+        return _documentsTab(t);
+      default:
+        return _membershipTab(t);
+    }
+  }
+
+  List<Widget> _membershipTab(String Function(String) t) => [
+    _SelectPanel(
+      title: t('application.membershipType'),
+      value: _membershipTypeValues.contains(_membershipType)
+          ? _membershipType
+          : _membershipTypeValues.first,
+      values: _membershipTypeValues,
+      labels: _membershipTypeLabels((key) => t('application.type.$key')),
+      onChanged: (value) => setState(() => _membershipType = value),
+    ),
+    const SizedBox(height: 12),
+    AirmiusPanel(
+      title: t('application.membershipApplication'),
+      child: Text(
+        t('application.fieldsHint'),
+        style: TextStyle(
+          color: airmiusMutedColor(context),
+          fontWeight: FontWeight.w700,
+          height: 1.45,
+        ),
+      ),
+    ),
+  ];
+
+  List<Widget> _personalTab(String Function(String) t) => [
+    if (_fieldVisible('first_name') ||
+        _fieldVisible('last_name') ||
+        _fieldVisible('gender') ||
+        _fieldVisible('birth_date') ||
+        _fieldVisible('nationality'))
+      _FormSection(
+        title: t('application.personalData'),
+        children: [
+          _configuredTextField('first_name', t('application.firstName'), _firstName),
+          _configuredTextField('last_name', t('application.lastName'), _lastName),
+          DropdownButtonFormField<String>(
+            initialValue: _gender.isEmpty ? null : _gender,
+            dropdownColor: airmiusSurfaceSoftColor(context),
+            decoration: InputDecoration(
+              labelText: _label('gender', t('application.gender')),
+              prefixIcon: Icon(Icons.wc_outlined, color: airmiusMutedColor(context)),
+            ),
+            style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w800),
+            items: [
+              DropdownMenuItem(value: 'female', child: Text(t('application.gender.female'))),
+              DropdownMenuItem(value: 'male', child: Text(t('application.gender.male'))),
+              DropdownMenuItem(value: 'diverse', child: Text(t('application.gender.diverse'))),
+              DropdownMenuItem(value: 'not_specified', child: Text(t('application.gender.unspecified'))),
+            ],
+            onChanged: (value) => setState(() => _gender = value ?? ''),
+          ),
+          _configuredTextField(
+            'birth_date',
+            t('application.birthDate'),
+            _birthday,
+            hint: t('application.dateHint'),
+            keyboardType: TextInputType.datetime,
+            inputFormatters: const [AirmiusDateInputFormatter()],
+          ),
+          _configuredTextField('nationality', 'Staatsangehörigkeit', _nationality),
+        ],
+      ),
+  ];
+
+  List<Widget> _contactTab(String Function(String) t) => [
+    if (_fieldVisible('athlete_license_number'))
+      _FormSection(
+        title: t('application.sportData'),
+        children: [
+          _configuredTextField(
+            'athlete_license_number',
+            t('application.licenseNumber'),
+            _license,
+          ),
+        ],
+      ),
+    if (_fieldVisible('email') || _fieldVisible('phone'))
+      _FormSection(
+        title: t('application.contactData'),
+        children: [
+          _configuredTextField(
+            'email',
+            t('application.email'),
+            _email,
+            keyboardType: TextInputType.emailAddress,
+          ),
+          _configuredTextField(
+            'phone',
+            t('application.phone'),
+            _phone,
+            keyboardType: TextInputType.phone,
+          ),
+        ],
+      ),
+  ];
+
+  List<Widget> _addressTab(String Function(String) t) => [
+    if (_fieldVisible('country') ||
+        _fieldVisible('street') ||
+        _fieldVisible('house_number') ||
+        _fieldVisible('postal_code') ||
+        _fieldVisible('city') ||
+        _fieldVisible('state'))
+      _FormSection(
+        title: t('application.addressData'),
+        children: [
+          _configuredTextField('country', 'Land', _country),
+          _configuredTextField('street', t('application.street'), _street),
+          _configuredTextField('house_number', t('application.houseNumber'), _house),
+          _configuredTextField('postal_code', t('application.postalCode'), _zip),
+          _configuredTextField('city', t('application.city'), _city),
+          _configuredTextField('state', t('application.stateRegion'), _state),
+        ],
+      ),
+  ];
+
+  List<Widget> _additionalTab(String Function(String) t) => [
+    if (_fieldVisible('guardian_name') ||
+        _fieldVisible('guardian_email') ||
+        _fieldVisible('guardian_phone'))
+      _FormSection(
+        title: t('application.guardian'),
+        children: [
+          _configuredTextField('guardian_name', t('application.guardianName'), _guardianName),
+          _configuredTextField(
+            'guardian_email',
+            t('application.guardianEmail'),
+            _guardianEmail,
+            keyboardType: TextInputType.emailAddress,
+          ),
+          _configuredTextField(
+            'guardian_phone',
+            'Telefon Erziehungsberechtigte/r',
+            _guardianPhone,
+            keyboardType: TextInputType.phone,
+          ),
+        ],
+      ),
+    if (_fieldVisible('emergency_contact_name') ||
+        _fieldVisible('emergency_contact_phone'))
+      _FormSection(
+        title: t('application.emergencyContact'),
+        children: [
+          _configuredTextField('emergency_contact_name', t('application.emergencyName'), _emergencyName),
+          _configuredTextField(
+            'emergency_contact_phone',
+            t('application.emergencyPhone'),
+            _emergencyPhone,
+            keyboardType: TextInputType.phone,
+          ),
+        ],
+      ),
+  ];
+
+  List<Widget> _paymentTab(String Function(String) t) => [
+    _SelectPanel(
+      title: t('application.paymentMethod'),
+      value: _effectivePaymentMethod,
+      values: _allowedPaymentMethods,
+      labels: {
+        'bank_transfer': t('application.payment.bankTransfer'),
+        'cash': t('application.payment.cash'),
+        'sepa_debit': t('application.payment.sepa'),
+      },
+      onChanged: (value) => setState(() => _paymentMethod = value),
+    ),
+    const SizedBox(height: 12),
+    _SelectPanel(
+      title: t('application.paymentCycle'),
+      value: _billingInterval,
+      values: const ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'],
+      labels: {
+        'none': 'Kein Intervall',
+        'monthly': t('application.cycle.monthly'),
+        'quarterly': t('application.cycle.quarterly'),
+        'four_monthly': t('application.cycle.fourMonthly'),
+        'semi_yearly': t('application.cycle.halfYearly'),
+        'yearly': t('application.cycle.yearly'),
+        'once': 'Einmalig',
+      },
+      onChanged: (value) => setState(() => _interval = value),
+    ),
+    const SizedBox(height: 12),
+    if (_fieldVisible('sepa_iban') || _fieldVisible('sepa_bic'))
+      _FormSection(
+        title: t('application.paymentData'),
+        children: [
+          _configuredTextField('sepa_iban', t('application.iban'), _iban),
+          _configuredTextField('sepa_bic', t('application.bic'), _bic),
+        ],
+      ),
+  ];
+
+  List<Widget> _documentsTab(String Function(String) t) => [
+    _DocumentAcceptancePanel(
+      privacyAccepted: _privacyAccepted,
+      rulesAccepted: _rulesAccepted,
+      contributionAccepted: _contributionAccepted,
+      sepaAccepted: _sepaAccepted,
+      documents: _visibleDocuments,
+      acceptedDocuments: _acceptedDocuments,
+      onPrivacy: (value) => setState(() => _privacyAccepted = value),
+      onRules: (value) => setState(() => _rulesAccepted = value),
+      onContribution: (value) => setState(() => _contributionAccepted = value),
+      onSepa: (value) => setState(() => _sepaAccepted = value),
+      onDocument: (id, value) => setState(() {
+        _acceptedDocuments[id] = value;
+        final document = _visibleDocuments.where((item) => item['id']?.toString() == id);
+        if (document.isEmpty) return;
+        final type = document.first['type']?.toString();
+        if (type == 'privacy') {
+          _privacyAccepted = value;
+        } else if (type == 'rules' || type == 'statutes') {
+          _rulesAccepted = value;
+        } else if (type == 'fees') {
+          _contributionAccepted = value;
+        } else if (type == 'sepa') {
+          _sepaAccepted = value;
+        }
+      }),
+    ),
+    const SizedBox(height: 12),
+    AirmiusTextField(
+      label: t('application.signature'),
+      hint: t('application.signatureHint'),
+      controller: _consentSignature,
+      textInputAction: TextInputAction.next,
+    ),
+    const SizedBox(height: 16),
+    AirmiusPanel(
+      title: t('application.membershipApplication'),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          AirmiusButton(
+            label: t('filesPreview.testLink'),
+            icon: Icons.policy_outlined,
+            secondary: true,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen()),
+            ),
+          ),
+          AirmiusButton(
+            label: t('uiAction.draft'),
+            icon: Icons.save_outlined,
+            secondary: true,
+            onPressed: () => _toast(t('uiAction.draftBody')),
+          ),
+          AirmiusButton(
+            label: _submitting ? t('application.sending') : t('application.send'),
+            icon: Icons.send_outlined,
+            onPressed: _submitting ? null : _submit,
+          ),
+        ],
+      ),
+    ),
+  ];
+
   Widget _clubPicker() {
+    if (widget.clubId != null) return const SizedBox.shrink();
     final t = AirmiusScope.of(context).t;
     return FutureBuilder<List<AirmiusClub>>(
       future: _clubsFuture,
@@ -988,9 +955,8 @@ class _MembershipApplicationFormScreenState
 }
 
 class _ApplicationHero extends StatelessWidget {
-  const _ApplicationHero({required this.onSubmit, this.clubName});
+  const _ApplicationHero({this.clubName});
 
-  final VoidCallback onSubmit;
   final String? clubName;
 
   @override
@@ -1044,11 +1010,6 @@ class _ApplicationHero extends StatelessWidget {
                   ],
                 ),
               ),
-              AirmiusButton(
-                label: AirmiusScope.of(context).t('application.send'),
-                icon: Icons.send_outlined,
-                onPressed: onSubmit,
-              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1061,6 +1022,55 @@ class _ApplicationHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ApplicationTabs extends StatelessWidget {
+  const _ApplicationTabs({
+    required this.title,
+    required this.labels,
+    required this.activeIndex,
+    required this.onChanged,
+  });
+
+  final String title;
+  final List<String> labels;
+  final int activeIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusPanel(
+      title: title,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < labels.length; index++) ...[
+              if (index > 0) const SizedBox(width: 8),
+              ChoiceChip(
+                label: Text(labels[index]),
+                selected: activeIndex == index,
+                onSelected: (_) => onChanged(index),
+                selectedColor: airmiusAccentColor(context).withValues(alpha: .24),
+                backgroundColor: airmiusSurfaceColor(context),
+                labelStyle: TextStyle(
+                  color: activeIndex == index
+                      ? airmiusTextColor(context)
+                      : airmiusMutedColor(context),
+                  fontWeight: FontWeight.w900,
+                ),
+                side: BorderSide(
+                  color: activeIndex == index
+                      ? airmiusAccentColor(context)
+                      : airmiusBorderColor(context),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

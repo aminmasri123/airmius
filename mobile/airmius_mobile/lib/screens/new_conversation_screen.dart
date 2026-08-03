@@ -9,9 +9,14 @@ import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
 
 class NewConversationScreen extends StatefulWidget {
-  const NewConversationScreen({super.key, this.initialUserId});
+  const NewConversationScreen({
+    super.key,
+    this.initialUserId,
+    this.initialUserName,
+  });
 
   final int? initialUserId;
+  final String? initialUserName;
 
   @override
   State<NewConversationScreen> createState() => _NewConversationScreenState();
@@ -60,12 +65,26 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
     final teams = teamData is List
         ? teamData.whereType<JsonMap>().toList()
         : const <JsonMap>[];
+    final directContacts = [...friends];
     final initialUserId = widget.initialUserId;
     if (initialUserId != null &&
-        friends.any((friend) => _asInt(friend['id']) == initialUserId)) {
+        !directContacts.any(
+          (contact) => _asInt(contact['id']) == initialUserId,
+        )) {
+      directContacts.insert(0, {
+        'id': initialUserId,
+        'name': widget.initialUserName ?? _t('chat.contact'),
+        'email': '',
+      });
+    }
+    if (initialUserId != null) {
       _selectedUserIds.add(initialUserId);
     }
-    return _ConversationChoices(friends: friends, teams: teams);
+    return _ConversationChoices(
+      friends: friends,
+      directContacts: directContacts,
+      teams: teams,
+    );
   }
 
   void _setType(String type) {
@@ -245,32 +264,36 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                             loading:
                                 snapshot.connectionState ==
                                 ConnectionState.waiting,
-                            emptyLabel: t('chat.noFriends'),
-                            children: (snapshot.data?.friends ?? const <JsonMap>[])
-                                .map((friend) {
-                                  final id = _asInt(friend['id']);
-                                  final name =
-                                      '${friend['name'] ?? t('chat.contact')}';
-                                  return _ParticipantCard(
-                                    initials: initialsFromName(
-                                      name,
-                                      fallback: '?',
-                                    ),
-                                    name: name,
-                                    email: '${friend['email'] ?? ''}',
-                                    selected: _selectedUserIds.contains(id),
-                                    onTap: () => setState(() {
-                                      if (_type == 'direct') {
-                                        _selectedUserIds
-                                          ..clear()
-                                          ..add(id);
-                                      } else if (!_selectedUserIds.add(id)) {
-                                        _selectedUserIds.remove(id);
-                                      }
-                                    }),
-                                  );
-                                })
-                                .toList(),
+                            emptyLabel: t('chat.noContacts'),
+                            children:
+                                (snapshot.data?.directContacts ??
+                                        const <JsonMap>[])
+                                    .map((friend) {
+                                      final id = _asInt(friend['id']);
+                                      final name =
+                                          '${friend['name'] ?? t('chat.contact')}';
+                                      return _ParticipantCard(
+                                        initials: initialsFromName(
+                                          name,
+                                          fallback: '?',
+                                        ),
+                                        name: name,
+                                        email: '${friend['email'] ?? ''}',
+                                        selected: _selectedUserIds.contains(id),
+                                        onTap: () => setState(() {
+                                          if (_type == 'direct') {
+                                            _selectedUserIds
+                                              ..clear()
+                                              ..add(id);
+                                          } else if (!_selectedUserIds.add(
+                                            id,
+                                          )) {
+                                            _selectedUserIds.remove(id);
+                                          }
+                                        }),
+                                      );
+                                    })
+                                    .toList(),
                           ),
                         ),
                       ),
@@ -603,9 +626,14 @@ class _TeamSelectCard extends StatelessWidget {
 }
 
 class _ConversationChoices {
-  const _ConversationChoices({required this.friends, required this.teams});
+  const _ConversationChoices({
+    required this.friends,
+    required this.directContacts,
+    required this.teams,
+  });
 
   final List<JsonMap> friends;
+  final List<JsonMap> directContacts;
   final List<JsonMap> teams;
 }
 

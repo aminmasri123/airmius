@@ -12,6 +12,41 @@ class MobileSocialProfileApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mobile_direct_messages_follow_profile_privacy_setting(): void
+    {
+        $viewer = User::factory()->create();
+        $recipient = User::factory()->create([
+            'direct_message_privacy' => 'everyone',
+        ]);
+
+        Sanctum::actingAs($viewer);
+
+        $this->postJson('/api/v1/chat/conversations', [
+            'type' => 'direct',
+            'participant_ids' => [$recipient->id],
+            'message' => 'Hallo aus dem Profil.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', 'direct');
+
+        $recipient->update(['direct_message_privacy' => 'friends']);
+
+        $blockedByPrivacy = User::factory()->create();
+        $this->postJson('/api/v1/chat/conversations', [
+            'type' => 'direct',
+            'participant_ids' => [$blockedByPrivacy->id],
+        ])->assertCreated();
+
+        $blockedByPrivacy->update(['direct_message_privacy' => 'friends']);
+
+        $this->postJson('/api/v1/chat/conversations', [
+            'type' => 'direct',
+            'participant_ids' => [$blockedByPrivacy->id],
+        ])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Diese Person erlaubt keine Nachrichten von dir.');
+    }
+
     public function test_mobile_profile_exposes_and_updates_follow_and_block_state(): void
     {
         $viewer = User::factory()->create();

@@ -85,6 +85,7 @@ class UserSportCvProfileTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/Dashboard/Users/Profile')
+                ->where('viewer.can_send_message', true)
                 ->where('profileUser.sport_cv.headline', 'Laufen')
                 ->where('profileUser.sport_cv.best_metrics.0.key', 'best_10k_time')
                 ->where('profileUser.sport_cv.best_metrics.0.value', '39:20')
@@ -123,6 +124,7 @@ class UserSportCvProfileTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/Dashboard/Users/Profile')
+                ->where('viewer.can_send_message', false)
                 ->where('profileUser.sport_cv.headline', 'Privates Sportprofil')
                 ->where('profileUser.profile_privacy.profile_visible_to_viewer', false)
                 ->where('profileUser.profile_privacy.sections.0.visible_to_viewer', false)

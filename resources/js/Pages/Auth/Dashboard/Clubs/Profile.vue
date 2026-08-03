@@ -51,6 +51,7 @@ const toggleMemberRole = (member, role) => {
 const logoInput = ref(null)
 const coverInput = ref(null)
 const membershipRequestOpen = ref(false)
+const activeMembershipTab = ref(0)
 const imageForm = useForm({
     logo: null,
     cover_image: null,
@@ -121,6 +122,7 @@ const updateClubProfile = () => {
 }
 
 const openMembershipRequest = () => {
+    activeMembershipTab.value = 0
     membershipRequestForm.club_membership_type_id = props.clubProfile.membership_types?.[0]?.id || ''
     membershipRequestForm.application_data = Object.fromEntries(
         (props.clubProfile.membership_application_fields || [])
@@ -238,6 +240,20 @@ const paymentMethodLabel = (value) => props.clubProfile.membership_payment_metho
 
 const visibleMembershipDocuments = computed(() => props.clubProfile.membership_application_documents || [])
 
+const membershipRequestTabs = computed(() => {
+    const english = locale.value !== 'de'
+
+    return [
+        { key: 'membership', label: english ? 'Membership' : 'Mitgliedschaft' },
+        { key: 'personal', label: english ? 'Personal details' : 'Personendaten' },
+        { key: 'contact', label: english ? 'Contact' : 'Kontaktdaten' },
+        { key: 'address', label: english ? 'Address' : 'Wohndaten' },
+        { key: 'additional', label: english ? 'Additional details' : 'Weitere Angaben' },
+        { key: 'payment', label: english ? 'Payment' : 'Zahlung' },
+        { key: 'documents', label: english ? 'Documents & finish' : 'Dokumente & Abschluss' },
+    ]
+})
+
 const applicationFieldSections = computed(() => {
     const sections = []
 
@@ -256,6 +272,30 @@ const applicationFieldSections = computed(() => {
 
     return sections
 })
+
+const applicationSectionsForTab = (tabKey) => {
+    const tabFieldKeys = {
+        personal: ['first_name', 'last_name', 'birth_date', 'gender', 'nationality', 'athlete_license_number'],
+        contact: ['email', 'phone'],
+        address: ['country', 'street', 'house_number', 'postal_code', 'city', 'state'],
+        additional: ['guardian_name', 'guardian_email', 'guardian_phone', 'emergency_contact_name', 'emergency_contact_phone'],
+    }
+    const fieldKeys = [...(tabFieldKeys[tabKey] || [])]
+
+    if (tabKey === 'additional') {
+        const knownKeys = new Set(Object.values(tabFieldKeys).flat())
+        applicationFieldSections.value.forEach((section) => section.fields.forEach((field) => {
+            if (!knownKeys.has(field.key)) fieldKeys.push(field.key)
+        }))
+    }
+
+    return applicationFieldSections.value
+        .map((section) => ({
+            ...section,
+            fields: section.fields.filter((field) => fieldKeys.includes(field.key)),
+        }))
+        .filter((section) => section.fields.length)
+}
 
 const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
     style: 'currency',
@@ -677,7 +717,25 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         </button>
                     </div>
 
+                    <div class="mt-4 flex gap-2 overflow-x-auto border-b border-border pb-2" role="tablist" :aria-label="tAuto('Mitgliedsantrag')">
+                        <button
+                            v-for="(tab, index) in membershipRequestTabs"
+                            :key="tab.key"
+                            type="button"
+                            role="tab"
+                            :aria-selected="activeMembershipTab === index"
+                            class="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition"
+                            :class="activeMembershipTab === index
+                                ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                : 'bg-inputBg text-secondary hover:text-primary'"
+                            @click="activeMembershipTab = index"
+                        >
+                            {{ tab.label }}
+                        </button>
+                    </div>
+
                     <div class="mt-4 space-y-3">
+                        <div v-if="activeMembershipTab === 0" class="space-y-3">
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">{{ tAuto('Mitgliedschaftstyp') }}</span>
                             <select v-model="membershipRequestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
@@ -699,7 +757,10 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </p>
                         </div>
 
-                        <div v-for="section in applicationFieldSections" :key="section.name" class="rounded-lg border border-border bg-bg p-3">
+                        </div>
+
+                        <div v-if="activeMembershipTab >= 1 && activeMembershipTab <= 4" class="space-y-3">
+                        <div v-for="section in applicationSectionsForTab(membershipRequestTabs[activeMembershipTab].key)" :key="section.name" class="rounded-lg border border-border bg-bg p-3">
                             <h3 class="text-sm font-semibold text-primary">{{ section.name }}</h3>
                             <div class="mt-3 grid gap-3 md:grid-cols-2">
                                 <label v-for="field in section.fields" :key="field.key" class="block text-sm">
@@ -735,6 +796,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </div>
                         </div>
 
+                        </div>
+
+                        <div v-if="activeMembershipTab === 5" class="space-y-3">
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="block">
                                 <span class="text-sm font-semibold text-primary">{{ tAuto('Gewünschte Zahlmethode') }}</span>
@@ -759,6 +823,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </label>
                         </div>
 
+                        </div>
+
+                        <div v-if="activeMembershipTab === 6" class="space-y-3">
                         <div v-if="visibleMembershipDocuments.length" class="rounded-lg border border-border bg-bg p-3">
                             <h3 class="text-sm font-semibold text-primary">{{ tAuto('Dokumente des Vereins') }}</h3>
                             <p class="mt-1 text-xs text-secondary">
@@ -806,9 +873,36 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         </label>
                     </div>
 
-                    <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="membershipRequestForm.processing">
-                        {{ tAuto('Anfrage senden') }}
-                    </button>
+                        </div>
+
+                    <div class="mt-5 flex items-center justify-between gap-3">
+                        <button
+                            v-if="activeMembershipTab > 0"
+                            type="button"
+                            class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-inputBg"
+                            @click="activeMembershipTab -= 1"
+                        >
+                            {{ locale === 'de' ? 'Zurück' : 'Back' }}
+                        </button>
+                        <span v-else></span>
+                        <span class="text-xs font-semibold text-secondary">{{ activeMembershipTab + 1 }} / {{ membershipRequestTabs.length }}</span>
+                        <button
+                            v-if="activeMembershipTab < membershipRequestTabs.length - 1"
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary"
+                            @click="activeMembershipTab += 1"
+                        >
+                            {{ locale === 'de' ? 'Weiter' : 'Next' }}
+                        </button>
+                        <button
+                            v-else
+                            type="submit"
+                            class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary"
+                            :disabled="membershipRequestForm.processing"
+                        >
+                            {{ tAuto('Anfrage senden') }}
+                        </button>
+                    </div>
                     </form>
                 </div>
             </Teleport>
