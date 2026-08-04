@@ -149,7 +149,7 @@ class ClubMembershipApplication
     public static function normalizeDocuments(?array $documents, ?array $configuredTypes = null): array
     {
         return collect($documents ?: [])
-            ->map(function (array $document) {
+            ->map(function (array $document) use ($configuredTypes) {
                 $title = trim((string) ($document['title'] ?? ''));
                 $url = trim((string) ($document['url'] ?? ''));
 
