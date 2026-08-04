@@ -5785,6 +5785,11 @@ class _MembershipRulesAdminPanelState
                   Icons.description_outlined,
                 ),
                 _MembershipSectionTabData(
+                  'summary',
+                  'membership.summary',
+                  Icons.fact_check_outlined,
+                ),
+                _MembershipSectionTabData(
                   'types',
                   'membership.rulesTab.types',
                   Icons.badge_outlined,
@@ -5902,6 +5907,37 @@ class _MembershipRulesAdminPanelState
                       onPressed: _saving ? null : () => _saveType(),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ] else if (_rulesTab == 'summary') ...[
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(_tr('membership.summary')),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Prüfe deine Einstellungen ein letztes Mal. Mit „Fertig“ werden die Vereinsregeln gespeichert.',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _AdminMiniStat(icon: Icons.badge_outlined, title: 'Mitgliedschaftstypen', value: '${membershipTypes.length}'),
+                      _AdminMiniStat(icon: Icons.tune_outlined, title: 'Beitragsregeln', value: '$activeRules'),
+                      _AdminMiniStat(icon: Icons.description_outlined, title: 'Dokumente', value: '${_documents.length}'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  AirmiusButton(
+                    label: 'Fertig',
+                    icon: Icons.check_circle_outline,
+                    onPressed: _saving ? null : () => _saveSettings(),
+                  ),
                 ],
               ),
             ),

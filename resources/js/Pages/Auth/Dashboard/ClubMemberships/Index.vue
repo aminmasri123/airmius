@@ -383,8 +383,13 @@ const rulesWizardSteps = computed(() => [
     },
     {
         key: 'documents',
-        label: tx('club_memberships.workspace.documents_confirmations', 'Dokumente & Abschluss'),
-        hint: tx('club_memberships.workspace.wizard_documents_hint', 'Verknüpfe wichtige Dokumente und veröffentliche anschließend deine Regeln.'),
+        label: tx('club_memberships.workspace.documents_confirmations', 'Dokumente'),
+        hint: tx('club_memberships.workspace.wizard_documents_hint', 'Verknüpfe wichtige Dokumente und Bestätigungen.'),
+    },
+    {
+        key: 'summary',
+        label: tx('club_memberships.workspace.summary', 'Zusammenfassung'),
+        hint: tx('club_memberships.workspace.summary_hint', 'Prüfe deine Angaben ein letztes Mal und schließe die Einrichtung ab.'),
     },
 ])
 
@@ -1564,6 +1569,18 @@ const inviteExternalMember = (member) => {
                         </div>
                         <div v-if="membershipTypeMode !== 'choose'" class="mt-4 flex justify-end">
                             <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="storeMembershipType">Typ und Antragsfelder speichern</button>
+                        </div>
+                    </section>
+
+                    <section v-if="rulesWizardStep === 6" class="surface-card p-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Letzter Schritt</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Zusammenfassung</h2>
+                        <p class="mt-1 text-sm text-secondary">Bitte prüfe die wichtigsten Einstellungen. Mit „Fertig“ werden die Vereinsregeln gespeichert.</p>
+                        <div class="mt-5 grid gap-3 md:grid-cols-2">
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Mitgliedschaftstypen</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipTypes.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Beitragsregeln</p><p class="mt-1 text-lg font-bold text-primary">{{ contributionRules.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Antragsfelder</p><p class="mt-1 text-lg font-bold text-primary">{{ applicationFieldDefinitions.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Dokumente</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</p></div>
                         </div>
                     </section>
 
