@@ -366,8 +366,8 @@ const rulesWizardSteps = computed(() => [
     },
     {
         key: 'application',
-        label: tx('club_memberships.workspace.application_fields', 'Antragsfelder für Typ'),
-        hint: tx('club_memberships.workspace.wizard_application_hint', 'Lege fest, welche Felder für den ausgewählten Mitgliedschaftstyp Pflicht, optional oder ausgeblendet sind.'),
+        label: tx('club_memberships.workspace.application_fields', 'Mitgliedsantrag-Felder'),
+        hint: tx('club_memberships.workspace.wizard_application_hint', 'Bestimme, welche Informationen Interessenten im Antrag angeben müssen.'),
     },
     {
         key: 'contributions',
@@ -1704,7 +1704,7 @@ const inviteExternalMember = (member) => {
                         </form>
                     </section>
 
-                    <section v-if="rulesWizardStep === 2" class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 1" class="surface-card p-5">
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Schritt 2</p>
@@ -1824,7 +1824,7 @@ const inviteExternalMember = (member) => {
                         </div>
                     </section>
 
-                    <section v-if="rulesWizardStep === 1" class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 2" class="surface-card p-5">
                         <div class="flex items-center justify-between gap-3">
                             <h2 class="text-lg font-semibold text-primary">{{ editingContributionRuleId ? tx('club_memberships.workspace.edit_rule', 'Beitragsregel bearbeiten') : tx('auto.Neue Beitragsregel', 'Neue Beitragsregel') }}</h2>
                             <button v-if="editingContributionRuleId" type="button" class="text-xs font-semibold text-secondary hover:text-primary" @click="cancelContributionRuleEdit">
