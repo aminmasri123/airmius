@@ -424,7 +424,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                 </div>
                 <div class="relative z-10 px-5 pb-5 pt-4">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div class="-mt-12 flex shrink-0 items-end gap-4">
+                        <div class="-mt-12 flex shrink-0 items-center gap-4">
                             <div
                                 class="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border-4 border-card bg-inputBg text-3xl font-bold text-primary">
                                 <img v-if="clubProfile.logo" :src="storageUrl(clubProfile.logo)" :alt="clubProfile.name"
@@ -438,7 +438,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 <input ref="logoInput" type="file" accept="image/*" class="hidden"
                                     @change="uploadImage('logo', $event)" />
                             </div>
-                            <div class="shrink-0 pb-1">
+                            <div class="shrink-0">
                                 <h1 class="whitespace-nowrap text-2xl font-bold text-primary">{{ clubProfile.name }}</h1>
                                 <p class="text-sm text-secondary">{{ tAuto('Verein') }} · {{ viewer.is_member ? tAuto('Mitglied') : tAuto('Profil') }}</p>
                             </div>
