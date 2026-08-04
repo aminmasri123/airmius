@@ -53,6 +53,9 @@ const sepaSettingsForms = ref({})
 const datevSettingsForms = ref({})
 const datevExportForms = ref({})
 const membershipSettingsForms = ref({})
+const documentSearch = ref('')
+const documentTypeFilter = ref('all')
+const expandedDocumentId = ref(null)
 const processingJoinRequestIds = ref(new Set())
 const createEmailMemberRow = () => ({
     name: '',
@@ -673,11 +676,30 @@ const membershipSettingsFor = (club) => {
 }
 
 const addMembershipDocument = () => {
-    membershipSettingsFor(selectedClub.value).membership_application_documents.push(createMembershipDocumentRow())
+    const document = createMembershipDocumentRow()
+    membershipSettingsFor(selectedClub.value).membership_application_documents.push(document)
+    expandedDocumentId.value = document.id
 }
 
 const removeMembershipDocument = (index) => {
     membershipSettingsFor(selectedClub.value).membership_application_documents.splice(index, 1)
+}
+
+const filteredMembershipDocuments = computed(() => {
+    const documents = membershipSettingsFor(selectedClub.value).membership_application_documents || []
+    const search = documentSearch.value.trim().toLowerCase()
+
+    return documents
+        .map((document, index) => ({ document, index }))
+        .filter(({ document }) => {
+            const matchesType = documentTypeFilter.value === 'all' || document.type === documentTypeFilter.value
+            const haystack = [document.title, document.description, document.file_name].filter(Boolean).join(' ').toLowerCase()
+            return matchesType && (!search || haystack.includes(search))
+        })
+})
+
+const toggleMembershipDocument = (id) => {
+    expandedDocumentId.value = expandedDocumentId.value === id ? null : id
 }
 
 const saveMembershipSettings = () => {
@@ -1470,9 +1492,85 @@ const inviteExternalMember = (member) => {
                                         {{ tx('club_memberships.workspace.add_document', 'Dokument hinzufügen') }}
                                     </button>
                                 </div>
-                                <div class="mt-4 space-y-3">
+                                <div class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto]">
+                                    <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
+                                        <i class="las la-search text-lg text-secondary"></i>
+                                        <input v-model="documentSearch" class="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none" placeholder="Dokumente durchsuchen ...">
+                                    </label>
+                                    <select v-model="documentTypeFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                        <option value="all">Alle Dokumenttypen</option>
+                                        <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                    </select>
+                                    <span class="flex items-center justify-center rounded-lg bg-bg px-3 py-2 text-xs font-semibold text-secondary">{{ filteredMembershipDocuments.length }} / {{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</span>
+                                </div>
+                                <div class="mt-3 space-y-2">
                                     <article
-                                        v-for="(document, index) in membershipSettingsFor(selectedClub).membership_application_documents"
+                                        v-for="item in filteredMembershipDocuments"
+                                        :key="item.document.id || item.index"
+                                        class="overflow-hidden rounded-xl border border-border bg-card"
+                                    >
+                                        <button type="button" class="flex w-full items-center gap-3 p-3 text-left hover:bg-inputBg" @click="toggleMembershipDocument(item.document.id)">
+                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary/10 text-air-blue"><i class="las la-file-alt text-lg"></i></span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block truncate text-sm font-semibold text-primary">{{ item.document.title || 'Dokument ohne Titel' }}</span>
+                                                <span class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-secondary">
+                                                    <span class="rounded-full bg-bg px-2 py-0.5">{{ documentTypeLabel(item.document.type) }}</span>
+                                                    <span class="rounded-full bg-bg px-2 py-0.5">{{ item.document.membership_type_id ? (membershipTypes.find((type) => type.id === item.document.membership_type_id)?.name || 'Typ') : 'Alle Typen' }}</span>
+                                                    <span v-if="item.document.is_required" class="rounded-full bg-warning/15 px-2 py-0.5 text-warning">Bestätigung erforderlich</span>
+                                                    <span v-if="item.document.is_visible" class="rounded-full bg-air-green/15 px-2 py-0.5 text-air-green">Im Antrag sichtbar</span>
+                                                </span>
+                                            </span>
+                                            <i class="las text-lg text-secondary" :class="expandedDocumentId === item.document.id ? 'la-angle-up' : 'la-angle-down'"></i>
+                                        </button>
+                                        <div v-if="expandedDocumentId === item.document.id" class="border-t border-border p-3">
+                                            <div class="grid gap-3 md:grid-cols-2">
+                                                <label class="block text-sm">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.type', 'Typ') }}</span>
+                                                    <select v-model="item.document.type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                                        <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                                    </select>
+                                                </label>
+                                                <label class="block text-sm">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.applies_to_type', 'Gilt für Mitgliedschaftstyp') }}</span>
+                                                    <select v-model="item.document.membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                                        <option :value="null">{{ tx('auto.Alle Typen', 'Alle Typen') }}</option>
+                                                        <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                                    </select>
+                                                </label>
+                                                <label class="block text-sm">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.document_title', 'Titel') }}</span>
+                                                    <input v-model="item.document.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.document_title_placeholder', 'z. B. Datenschutzinformation')">
+                                                </label>
+                                                <label class="block text-sm md:col-span-2">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.file_link', 'Link zur Datei oder Seite') }}</span>
+                                                    <input v-model="item.document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                                                </label>
+                                                <label class="block text-sm md:col-span-2">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.upload_file', 'Oder Datei hochladen') }}</span>
+                                                    <input type="file" class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @change="attachMembershipDocumentFile(item.document, $event)">
+                                                    <span v-if="item.document.file" class="mt-1 block text-xs text-air-blue">{{ tx('club_memberships.workspace.new_file', 'Neue Datei') }}: {{ item.document.file.name }}</span>
+                                                    <a v-else-if="item.document.file_id" :href="item.document.url || '#'" target="_blank" rel="noreferrer" class="mt-1 inline-flex text-xs font-semibold text-air-blue hover:underline">{{ tx('club_memberships.workspace.open_saved_file', 'Gespeicherte Datei öffnen') }}: {{ item.document.file_name || item.document.title }}</a>
+                                                    <span class="mt-1 block text-xs text-secondary">{{ tx('club_memberships.workspace.upload_location', 'Hochgeladene Dateien landen im Vereins-Dateimanager im Ordner „Mitgliedsantrag“.') }}</span>
+                                                </label>
+                                                <label class="block text-sm md:col-span-2">
+                                                    <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.hint_text', 'Hinweistext') }}</span>
+                                                    <textarea v-model="item.document.description" rows="2" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.hint_placeholder', 'Optionaler Hinweis für Interessenten')"></textarea>
+                                                </label>
+                                                <label class="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-primary"><input v-model="item.document.is_visible" type="checkbox" class="mt-1 rounded border-border bg-inputBg"><span><span class="block font-semibold">{{ tx('club_memberships.workspace.show_in_application', 'Im Antrag anzeigen') }}</span><span class="block text-xs text-secondary">{{ tx('club_memberships.workspace.show_in_application_hint', 'User sehen dieses Dokument vor dem Absenden.') }}</span></span></label>
+                                                <label class="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-primary"><input v-model="item.document.is_required" type="checkbox" class="mt-1 rounded border-border bg-inputBg"><span><span class="block font-semibold">{{ tx('club_memberships.workspace.confirmation_required', 'Bestätigung erforderlich') }}</span><span class="block text-xs text-secondary">{{ tx('club_memberships.workspace.confirmation_hint', 'Ohne Häkchen kann der Antrag nicht gesendet werden.') }}</span></span></label>
+                                            </div>
+                                            <div class="mt-3 flex items-center justify-between gap-3"><span class="text-xs text-secondary">{{ documentTypeLabel(item.document.type) }}</span><button type="button" class="rounded-lg border border-error/40 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/10" @click="removeMembershipDocument(item.index)">{{ tx('club_memberships.workspace.remove', 'Entfernen') }}</button></div>
+                                        </div>
+                                    </article>
+                                    <p v-if="!filteredMembershipDocuments.length" class="rounded-lg border border-dashed border-border p-4 text-sm text-secondary">
+                                        {{ documentSearch || documentTypeFilter !== 'all' ? 'Keine Dokumente für diesen Filter gefunden.' : tx('club_memberships.workspace.no_documents', 'Noch keine Dokumente verknüpft.') }}
+                                    </p>
+                                    <!--
+                                        The former always-open editor is intentionally replaced by the compact,
+                                        searchable document list above. Only the selected document is expanded.
+                                    -->
+                                    <!--
+                                    <article
                                         :key="document.id || index"
                                         class="rounded-lg border border-border bg-card p-3"
                                     >
@@ -1547,9 +1645,7 @@ const inviteExternalMember = (member) => {
                                             </button>
                                         </div>
                                     </article>
-                                    <p v-if="!membershipSettingsFor(selectedClub).membership_application_documents.length" class="rounded-lg border border-dashed border-border p-4 text-sm text-secondary">
-                                        {{ tx('club_memberships.workspace.no_documents', 'Noch keine Dokumente verknüpft.') }}
-                                    </p>
+                                    -->
                                 </div>
                             </div>
                             </div>

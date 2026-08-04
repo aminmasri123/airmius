@@ -4397,8 +4397,24 @@ class _MembershipRulesAdminPanelState
   Map<String, String> _fieldModes = {};
   Map<String, String> _typeApplicationFields = {};
   List<JsonMap> _documents = [];
+  String _documentSearch = '';
+  String _documentTypeFilter = 'all';
 
   String _tr(String key) => AirmiusScope.of(context).t(key);
+
+  List<JsonMap> get _filteredDocuments {
+    final query = _documentSearch.trim().toLowerCase();
+    return _documents.where((document) {
+      final typeMatches = _documentTypeFilter == 'all' ||
+          _string(document['type'], fallback: 'other') == _documentTypeFilter;
+      final searchable = [
+        _string(document['title']),
+        _string(document['description']),
+        _string(document['file_name']),
+      ].join(' ').toLowerCase();
+      return typeMatches && (query.isEmpty || searchable.contains(query));
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -5951,8 +5967,8 @@ class _MembershipRulesAdminPanelState
               children: [
                 Expanded(
                   child: Text(
-                    '${_documents.length} ${_tr('membership.documentsAfter')}, '
-                    '$requiredDocs ${_tr('membership.requiredAfter')}',
+                    '${_filteredDocuments.length} / ${_documents.length} '
+                    '${_tr('membership.documentsAfter')}',
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       fontWeight: FontWeight.w800,
@@ -5968,27 +5984,41 @@ class _MembershipRulesAdminPanelState
               ],
             ),
             const SizedBox(height: 10),
-            if (_documents.isEmpty)
+            TextField(
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: 'Dokumente durchsuchen ...',
+              ),
+              onChanged: (value) => setState(() => _documentSearch = value),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _documentTypeFilter,
+              decoration: const InputDecoration(labelText: 'Dokumenttyp'),
+              items: const [
+                DropdownMenuItem(value: 'all', child: Text('Alle Dokumenttypen')),
+                DropdownMenuItem(value: 'privacy', child: Text('Datenschutz')),
+                DropdownMenuItem(value: 'statutes', child: Text('Satzung')),
+                DropdownMenuItem(value: 'rules', child: Text('Regeln')),
+                DropdownMenuItem(value: 'fees', child: Text('Beitragsordnung')),
+                DropdownMenuItem(value: 'sepa', child: Text('SEPA')),
+                DropdownMenuItem(value: 'other', child: Text('Sonstiges')),
+              ],
+              onChanged: (value) => setState(() => _documentTypeFilter = value ?? 'all'),
+            ),
+            const SizedBox(height: 12),
+            if (_filteredDocuments.isEmpty)
               _EmptyAdminHint(text: _tr('membership.noDocuments'))
             else
-              for (final entry in _documents.take(3).indexed)
+              for (final document in _filteredDocuments)
                 _MembershipDocumentLine(
-                  document: entry.$2,
+                  document: document,
                   typeLabel: _documentTypeLabel(
-                    _string(entry.$2['type'], fallback: 'other'),
+                    _string(document['type'], fallback: 'other'),
                   ),
-                  onEdit: () => _openDocumentDialog(index: entry.$1),
-                  onDelete: () => setState(() => _documents.removeAt(entry.$1)),
+                  onEdit: () => _openDocumentDialog(index: _documents.indexOf(document)),
+                  onDelete: () => setState(() => _documents.remove(document)),
                 ),
-            if (_documents.length > 3)
-              Text(
-                '+ ${_documents.length - 3} '
-                '${_tr('membership.moreDocumentsAfter')}',
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
