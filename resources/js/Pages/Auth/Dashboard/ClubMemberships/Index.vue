@@ -367,9 +367,19 @@ const rulesWizardSteps = computed(() => [
         hint: tx('club_memberships.workspace.wizard_contributions_hint', 'Definiere Beitrag, Intervall und optionale Alters- oder Rabattregeln.'),
     },
     {
+        key: 'access',
+        label: tx('club_memberships.workspace.member_requests_enabled', 'Anfragezugang'),
+        hint: tx('club_memberships.workspace.wizard_access_hint', 'Entscheide, ob Interessenten online Anfragen stellen und Pausen beantragen können.'),
+    },
+    {
         key: 'application',
         label: tx('club_memberships.workspace.application_fields', 'Antrag & Felder'),
         hint: tx('club_memberships.workspace.wizard_application_hint', 'Bestimme, welche Informationen Interessenten im Antrag angeben müssen.'),
+    },
+    {
+        key: 'payment',
+        label: tx('club_memberships.workspace.allowed_payment_methods', 'Zahlungsarten'),
+        hint: tx('club_memberships.workspace.wizard_payment_hint', 'Lege fest, wie Beiträge bezahlt werden können.'),
     },
     {
         key: 'documents',
@@ -1360,7 +1370,7 @@ const inviteExternalMember = (member) => {
                                 {{ tx('club_memberships.workspace.wizard_step', 'Schritt') }} {{ rulesWizardStep + 1 }} / {{ rulesWizardSteps.length }}
                             </span>
                         </div>
-                        <div class="mt-5 grid grid-cols-4 gap-2">
+                        <div class="mt-5 grid grid-cols-6 gap-2">
                             <button
                                 v-for="(step, index) in rulesWizardSteps"
                                 :key="step.key"
@@ -1387,22 +1397,22 @@ const inviteExternalMember = (member) => {
                     <section v-if="rulesWizardStep >= 2" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.online_requests', 'Online-Anfragen') }}</h2>
                         <form class="mt-4" @submit.prevent="saveMembershipSettings">
-                            <div v-show="rulesWizardStep === 2" class="grid gap-3 md:grid-cols-3">
-                            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                            <div class="grid gap-3 md:grid-cols-3">
+                            <label v-show="rulesWizardStep === 2" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).membership_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">{{ tx('club_memberships.workspace.member_requests_enabled', 'Mitgliedsanfragen erlauben') }}</span>
                                     <span class="block text-secondary">{{ tx('club_memberships.workspace.member_requests_hint', 'Interessenten sehen die Beitragstypen und können eine Anfrage stellen.') }}</span>
                                 </span>
                             </label>
-                            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                            <label v-show="rulesWizardStep === 2" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).member_pause_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">{{ tx('club_memberships.workspace.pause_requests_enabled', 'Pausen-Anfragen erlauben') }}</span>
                                     <span class="block text-secondary">{{ tx('club_memberships.workspace.pause_requests_hint', 'Mitglieder können eine Pause beantragen; der Verein entscheidet.') }}</span>
                                 </span>
                             </label>
-                            <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                            <div v-show="rulesWizardStep === 4" class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.allowed_payment_methods', 'Erlaubte Zahlmethoden') }}</p>
                                 <div class="mt-3 flex flex-wrap gap-3">
                                     <label
@@ -1415,7 +1425,7 @@ const inviteExternalMember = (member) => {
                                     </label>
                                 </div>
                             </div>
-                            <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                            <div v-show="rulesWizardStep === 3" class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.application_fields', 'Mitgliedsantrag-Felder') }}</p>
                                 <div class="mt-4 space-y-4">
                                     <section v-for="section in membershipFieldSections" :key="section.name">
@@ -1432,7 +1442,7 @@ const inviteExternalMember = (member) => {
                                 </div>
                             </div>
                             </div>
-                            <div v-show="rulesWizardStep === 3" class="space-y-4">
+                            <div v-show="rulesWizardStep === 5" class="space-y-4">
                             <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
