@@ -34,6 +34,7 @@ const tx = (key, fallback = key, values = {}) => {
 }
 const selectedClubId = ref(props.clubs[0]?.id || null)
 const activeTab = ref('members')
+const rulesWizardStep = ref(0)
 const memberSearch = ref('')
 const memberStatusFilter = ref('all')
 const memberEndFilter = ref('all')
@@ -347,6 +348,37 @@ const tabs = computed(() => [
     { key: 'audit', label: tx('club_memberships.workspace.audit_log', 'Audit'), count: auditLogs.value.length, icon: 'las la-history' },
     { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
 ])
+
+const rulesWizardSteps = computed(() => [
+    {
+        key: 'types',
+        label: tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstypen'),
+        hint: tx('club_memberships.workspace.wizard_types_hint', 'Lege fest, welche Arten von Mitgliedschaften Interessenten auswählen können.'),
+    },
+    {
+        key: 'contributions',
+        label: tx('auto.Beitragsregeln', 'Beitragsregeln'),
+        hint: tx('club_memberships.workspace.wizard_contributions_hint', 'Definiere Beitrag, Intervall und optionale Alters- oder Rabattregeln.'),
+    },
+    {
+        key: 'application',
+        label: tx('club_memberships.workspace.application_fields', 'Antrag & Felder'),
+        hint: tx('club_memberships.workspace.wizard_application_hint', 'Bestimme, welche Informationen Interessenten im Antrag angeben müssen.'),
+    },
+    {
+        key: 'documents',
+        label: tx('club_memberships.workspace.documents_confirmations', 'Dokumente & Abschluss'),
+        hint: tx('club_memberships.workspace.wizard_documents_hint', 'Verknüpfe wichtige Dokumente und veröffentliche anschließend deine Regeln.'),
+    },
+])
+
+const rulesWizardNext = () => {
+    if (rulesWizardStep.value < rulesWizardSteps.value.length - 1) rulesWizardStep.value += 1
+}
+
+const rulesWizardBack = () => {
+    if (rulesWizardStep.value > 0) rulesWizardStep.value -= 1
+}
 
 const statusLabel = (status) => ({
     active: 'Vereinsmitglied',
@@ -1237,11 +1269,47 @@ const inviteExternalMember = (member) => {
                 </div>
             </section>
 
-            <section v-if="activeTab === 'rules'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+            <section v-if="activeTab === 'rules'" class="space-y-6">
+                <section class="surface-card overflow-hidden">
+                    <div class="border-b border-border bg-gradient-to-r from-buttonPrimary/10 to-transparent p-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('club_memberships.workspace.wizard_title', 'Beitrittsregeln einrichten') }}</p>
+                                <h2 class="mt-1 text-xl font-bold text-primary">{{ rulesWizardSteps[rulesWizardStep].label }}</h2>
+                                <p class="mt-1 max-w-2xl text-sm leading-6 text-secondary">{{ rulesWizardSteps[rulesWizardStep].hint }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-buttonPrimary/15 px-3 py-1.5 text-xs font-bold text-air-blue">
+                                {{ tx('club_memberships.workspace.wizard_step', 'Schritt') }} {{ rulesWizardStep + 1 }} / {{ rulesWizardSteps.length }}
+                            </span>
+                        </div>
+                        <div class="mt-5 grid grid-cols-4 gap-2">
+                            <button
+                                v-for="(step, index) in rulesWizardSteps"
+                                :key="step.key"
+                                type="button"
+                                class="group text-left"
+                                @click="rulesWizardStep = index"
+                            >
+                                <div class="h-1.5 rounded-full transition" :class="index <= rulesWizardStep ? 'bg-buttonPrimary' : 'bg-inputBg'"></div>
+                                <div class="mt-2 hidden text-xs font-semibold text-secondary sm:block">{{ index + 1 }}. {{ step.label }}</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-4 text-sm text-secondary">
+                        <i class="las la-lightbulb text-lg text-warning"></i>
+                        <span>{{ tx('club_memberships.workspace.wizard_intro', 'Du kannst jederzeit zurückgehen. Deine Eingaben bleiben erhalten, bis du am Ende speicherst.') }}</span>
+                    </div>
+                </section>
+
+                <div
+                    class="grid gap-6"
+                    :class="rulesWizardStep === 1 ? 'xl:grid-cols-[minmax(0,1fr)_24rem]' : 'xl:grid-cols-1'"
+                >
                 <div class="space-y-6">
-                    <section class="surface-card p-5">
+                    <section v-if="rulesWizardStep >= 2" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.online_requests', 'Online-Anfragen') }}</h2>
-                        <form class="mt-4 grid gap-3 md:grid-cols-3" @submit.prevent="saveMembershipSettings">
+                        <form class="mt-4" @submit.prevent="saveMembershipSettings">
+                            <div v-show="rulesWizardStep === 2" class="grid gap-3 md:grid-cols-3">
                             <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).membership_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
@@ -1285,6 +1353,8 @@ const inviteExternalMember = (member) => {
                                     </section>
                                 </div>
                             </div>
+                            </div>
+                            <div v-show="rulesWizardStep === 3" class="space-y-4">
                             <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
@@ -1370,13 +1440,11 @@ const inviteExternalMember = (member) => {
                                     </p>
                                 </div>
                             </div>
-                            <div class="flex items-end md:col-span-3">
-                                <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">{{ tx('club_memberships.workspace.save', 'Speichern') }}</button>
                             </div>
                         </form>
                     </section>
 
-                    <section class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 1" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Historische Beitragsregeln', 'Historische Beitragsregeln') }}</h2>
                         <div class="mt-4 space-y-3">
                             <article v-for="rule in contributionRules" :key="rule.id" class="rounded-lg border border-border bg-bg p-4">
@@ -1410,7 +1478,7 @@ const inviteExternalMember = (member) => {
                 </div>
 
                 <aside class="space-y-6">
-                    <section class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 0" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</h2>
                         <form class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.z. B. Jugendmitglied', 'z. B. Jugendmitglied')" required>
@@ -1424,7 +1492,7 @@ const inviteExternalMember = (member) => {
                         </div>
                     </section>
 
-                    <section class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 1" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Neue Beitragsregel', 'Neue Beitragsregel') }}</h2>
                         <form class="mt-4 grid gap-3" @submit.prevent="storeContributionRule">
                             <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -1459,6 +1527,36 @@ const inviteExternalMember = (member) => {
                         </form>
                     </section>
                 </aside>
+                </div>
+
+                <div class="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                        v-if="rulesWizardStep > 0"
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-primary hover:bg-inputBg"
+                        @click="rulesWizardBack"
+                    >
+                        {{ tx('club_memberships.workspace.wizard_back', 'Zurück') }}
+                    </button>
+                    <span v-else></span>
+                    <p class="text-xs font-semibold text-secondary">{{ rulesWizardSteps[rulesWizardStep].label }}</p>
+                    <button
+                        v-if="rulesWizardStep < rulesWizardSteps.length - 1"
+                        type="button"
+                        class="rounded-lg bg-buttonPrimary px-5 py-2.5 text-sm font-semibold text-buttonTextPrimary"
+                        @click="rulesWizardNext"
+                    >
+                        {{ tx('club_memberships.workspace.wizard_next', 'Weiter') }}
+                    </button>
+                    <button
+                        v-else
+                        type="button"
+                        class="rounded-lg bg-buttonPrimary px-5 py-2.5 text-sm font-semibold text-buttonTextPrimary"
+                        @click="saveMembershipSettings"
+                    >
+                        {{ tx('club_memberships.workspace.wizard_finish', 'Regeln speichern') }}
+                    </button>
+                </div>
             </section>
 
             <section v-if="activeTab === 'members'" class="surface-card overflow-hidden">

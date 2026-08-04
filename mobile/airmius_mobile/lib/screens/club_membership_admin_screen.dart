@@ -104,6 +104,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
   final List<JsonMap> _documents = <JsonMap>[];
   Set<String> _paymentMethods = {'bank_transfer'};
   bool _requestsEnabled = true;
+  int _setupStep = 0;
 
   Future<AirmiusClub>? _clubFuture;
   Future<AirmiusPage<AirmiusClubMembershipRequest>>? _requestsFuture;
@@ -189,6 +190,25 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
     'sepa_debit' => t('membership.payment.sepaDebit'),
     _ => t('membership.payment.bankTransfer'),
   };
+
+  List<String> _setupStepLabels() => [
+    t('membership.allowRequests'),
+    t('membership.applicationFields'),
+    t('membership.payment'),
+    t('membership.linkedDocuments'),
+  ];
+
+  void _nextSetupStep() {
+    if (_setupStep < _setupStepLabels().length - 1) {
+      setState(() => _setupStep += 1);
+    } else {
+      _saveSettings();
+    }
+  }
+
+  void _previousSetupStep() {
+    if (_setupStep > 0) setState(() => _setupStep -= 1);
+  }
 
   Future<void> _saveSettings() async {
     if (_saving) return;
@@ -473,82 +493,101 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Eyebrow(t('membership.applicationFields')),
-                  const SizedBox(height: 8),
-                  Text(
-                    t('membership.applicationFieldsBody'),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Material(
-                    type: MaterialType.transparency,
-                    child: SwitchListTile(
-                      value: _requestsEnabled,
-                      onChanged: (value) =>
-                          setState(() => _requestsEnabled = value),
-                      title: Text(
-                        t('membership.allowRequests'),
-                        style: TextStyle(
-                          color: airmiusTextColor(context),
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      subtitle: Text(
-                        t(
-                          _requestsEnabled
-                              ? 'membership.requestsEnabled'
-                              : 'membership.requestsDisabled',
-                        ),
-                        style: TextStyle(color: airmiusMutedColor(context)),
-                      ),
-                      activeThumbColor: airmiusAccentColor(context),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const Divider(height: 12),
-                  for (final field in _fieldDefinitions)
-                    Material(
-                      type: MaterialType.transparency,
-                      child: SwitchListTile(
-                        value: _fieldModes[field.key] != 'off',
-                        onChanged: (value) => setState(
-                          () => _fieldModes[field.key] = value
-                              ? (_fieldModes[field.key] == 'required'
-                                    ? 'required'
-                                    : 'optional')
-                              : 'off',
-                        ),
-                        title: Text(
-                          t(field.labelKey),
-                          style: TextStyle(
-                            color: airmiusTextColor(context),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${t(field.sectionKey)} · ${_fieldModes[field.key] == 'required'
-                              ? t('membership.field.required')
-                              : _fieldModes[field.key] == 'off'
-                              ? t('membership.field.hidden')
-                              : t('membership.field.optional')}',
-                          style: TextStyle(color: airmiusMutedColor(context)),
-                        ),
-                        activeThumbColor: airmiusAccentColor(context),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                ],
-              ),
+            _MembershipSetupWizard(
+              title: t('membership.setupTitle'),
+              hint: t('membership.setupHint'),
+              labels: _setupStepLabels(),
+              currentStep: _setupStep,
+              onStepSelected: (step) => setState(() => _setupStep = step),
             ),
             const SizedBox(height: 14),
-            AirmiusPanel(
+            if (_setupStep <= 1)
+              AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Eyebrow(
+                      t(
+                        _setupStep == 0
+                            ? 'membership.allowRequests'
+                            : 'membership.applicationFields',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      t('membership.applicationFieldsBody'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_setupStep == 0)
+                      Material(
+                        type: MaterialType.transparency,
+                        child: SwitchListTile(
+                          value: _requestsEnabled,
+                          onChanged: (value) =>
+                              setState(() => _requestsEnabled = value),
+                          title: Text(
+                            t('membership.allowRequests'),
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          subtitle: Text(
+                            t(
+                              _requestsEnabled
+                                  ? 'membership.requestsEnabled'
+                                  : 'membership.requestsDisabled',
+                            ),
+                            style: TextStyle(color: airmiusMutedColor(context)),
+                          ),
+                          activeThumbColor: airmiusAccentColor(context),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      )
+                    else ...[
+                      const Divider(height: 12),
+                      for (final field in _fieldDefinitions)
+                        Material(
+                          type: MaterialType.transparency,
+                          child: SwitchListTile(
+                            value: _fieldModes[field.key] != 'off',
+                            onChanged: (value) => setState(
+                              () => _fieldModes[field.key] = value
+                                  ? (_fieldModes[field.key] == 'required'
+                                        ? 'required'
+                                        : 'optional')
+                                  : 'off',
+                            ),
+                            title: Text(
+                              t(field.labelKey),
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${t(field.sectionKey)} · ${_fieldModes[field.key] == 'required'
+                                  ? t('membership.field.required')
+                                  : _fieldModes[field.key] == 'off'
+                                  ? t('membership.field.hidden')
+                                  : t('membership.field.optional')}',
+                              style: TextStyle(color: airmiusMutedColor(context)),
+                            ),
+                            activeThumbColor: airmiusAccentColor(context),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            const SizedBox(height: 14),
+            if (_setupStep == 2)
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -597,7 +636,8 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            AirmiusPanel(
+            if (_setupStep == 3)
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -622,10 +662,38 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            AirmiusButton(
-              label: _saving ? t('membership.saving') : t('membership.save'),
-              icon: Icons.save_outlined,
-              onPressed: _saving ? null : _saveSettings,
+            AirmiusPanel(
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  if (_setupStep > 0)
+                    AirmiusButton(
+                      label: t('common.back'),
+                      icon: Icons.arrow_back_outlined,
+                      secondary: true,
+                      onPressed: _previousSetupStep,
+                    ),
+                  Text(
+                    '${_setupStep + 1} / ${_setupStepLabels().length} · ${_setupStepLabels()[_setupStep]}',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  AirmiusButton(
+                    label: _setupStep == _setupStepLabels().length - 1
+                        ? (_saving ? t('membership.saving') : t('membership.save'))
+                        : t('membership.next'),
+                    icon: _setupStep == _setupStepLabels().length - 1
+                        ? Icons.save_outlined
+                        : Icons.arrow_forward_outlined,
+                    onPressed: _saving ? null : _nextSetupStep,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             AirmiusButton(
@@ -697,6 +765,75 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
         ),
       );
     }
+  }
+}
+
+class _MembershipSetupWizard extends StatelessWidget {
+  const _MembershipSetupWizard({
+    required this.title,
+    required this.hint,
+    required this.labels,
+    required this.currentStep,
+    required this.onStepSelected,
+  });
+
+  final String title;
+  final String hint;
+  final List<String> labels;
+  final int currentStep;
+  final ValueChanged<int> onStepSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = airmiusAccentColor(context);
+    return AirmiusPanel(
+      gradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(title),
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          LinearProgressIndicator(
+            value: labels.isEmpty ? 0 : (currentStep + 1) / labels.length,
+            minHeight: 6,
+            color: accent,
+            backgroundColor: airmiusSurfaceColor(context),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var index = 0; index < labels.length; index++) ...[
+                  if (index > 0) const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text('${index + 1}. ${labels[index]}'),
+                    selected: currentStep == index,
+                    onSelected: (_) => onStepSelected(index),
+                    selectedColor: accent.withValues(alpha: 0.24),
+                    backgroundColor: airmiusSurfaceColor(context),
+                    labelStyle: TextStyle(
+                      color: currentStep == index
+                          ? airmiusTextColor(context)
+                          : airmiusMutedColor(context),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

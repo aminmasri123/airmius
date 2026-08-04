@@ -8204,6 +8204,10 @@ const _membershipActionsDe = {
   'membership.applicationFields': 'Antrag & Felder',
   'membership.applicationFieldsBody':
       'Online-Anfragen, Zahlarten und sichtbare Felder kompakt bearbeiten.',
+  'membership.next': 'Weiter',
+  'membership.setupTitle': 'Beitrittsregeln einrichten',
+  'membership.setupHint':
+      'Wir führen dich Schritt für Schritt durch die wichtigsten Einstellungen.',
   'membership.appliesTo': 'Gilt für',
   'membership.apply': 'Übernehmen',
   'membership.bankAccount': 'Bankkonto',
@@ -8492,6 +8496,10 @@ final _membershipActionsEn = {
   'membership.applicationFields': 'Application & fields',
   'membership.applicationFieldsBody':
       'Manage online requests, payment methods and visible fields.',
+  'membership.next': 'Next',
+  'membership.setupTitle': 'Set up membership rules',
+  'membership.setupHint':
+      'We will guide you step by step through the key settings.',
   'membership.appliesTo': 'Applies to',
   'membership.apply': 'Apply',
   'membership.bankAccount': 'Bank account',
@@ -8774,6 +8782,10 @@ final _membershipActionsFr = {
   'membership.applicationFields': 'Demande et champs',
   'membership.applicationFieldsBody':
       'Gérez les demandes, moyens de paiement et champs visibles.',
+  'membership.next': 'Suivant',
+  'membership.setupTitle': 'Configurer les règles d’adhésion',
+  'membership.setupHint':
+      'Nous vous guidons étape par étape à travers les réglages essentiels.',
   'membership.appliesTo': 'S’applique à',
   'membership.apply': 'Appliquer',
   'membership.bankAccount': 'Compte bancaire',
@@ -9057,6 +9069,10 @@ final _membershipActionsAr = {
   'membership.applicationFields': 'الطلب والحقول',
   'membership.applicationFieldsBody':
       'إدارة الطلبات وطرق الدفع والحقول الظاهرة.',
+  'membership.next': 'التالي',
+  'membership.setupTitle': 'إعداد قواعد الانضمام',
+  'membership.setupHint':
+      'سنرشدك خطوة بخطوة عبر الإعدادات الأساسية.',
   'membership.appliesTo': 'يسري على',
   'membership.apply': 'تطبيق',
   'membership.bankAccount': 'الحساب البنكي',
