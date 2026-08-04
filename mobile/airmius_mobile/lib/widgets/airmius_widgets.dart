@@ -1248,6 +1248,7 @@ class AirmiusTextField extends StatelessWidget {
     super.key,
     required this.label,
     this.hint,
+    this.errorText,
     this.icon,
     this.maxLines = 1,
     this.controller,
@@ -1267,6 +1268,7 @@ class AirmiusTextField extends StatelessWidget {
 
   final String label;
   final String? hint;
+  final String? errorText;
   final IconData? icon;
   final int maxLines;
   final TextEditingController? controller;
@@ -1305,6 +1307,7 @@ class AirmiusTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        errorText: errorText,
         prefixIcon: icon == null ? null : Icon(icon, color: muted),
         suffixIcon: suffixIcon,
       ),

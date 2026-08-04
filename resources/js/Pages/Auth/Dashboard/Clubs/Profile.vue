@@ -52,6 +52,8 @@ const logoInput = ref(null)
 const coverInput = ref(null)
 const membershipRequestOpen = ref(false)
 const activeMembershipTab = ref(0)
+const membershipRequestValidationVisible = ref(false)
+const membershipRequestLocalErrors = ref({})
 const imageForm = useForm({
     logo: null,
     cover_image: null,
@@ -123,6 +125,8 @@ const updateClubProfile = () => {
 
 const openMembershipRequest = () => {
     activeMembershipTab.value = 0
+    membershipRequestValidationVisible.value = false
+    membershipRequestLocalErrors.value = {}
     membershipRequestForm.club_membership_type_id = props.clubProfile.membership_types?.[0]?.id || ''
     const selectedType = props.clubProfile.membership_types?.find((type) => String(type.id) === String(membershipRequestForm.club_membership_type_id))
     const fieldOverrides = selectedType?.application_fields || {}
@@ -142,6 +146,8 @@ const openMembershipRequest = () => {
 }
 
 const submitMembershipRequest = () => {
+    if (!validateMembershipRequest()) return
+
     membershipRequestForm.post(route('auth.club-membership-requests.store', props.clubProfile.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -305,6 +311,86 @@ const applicationSectionsForTab = (tabKey) => {
             fields: section.fields.filter((field) => fieldKeys.includes(field.key)),
         }))
         .filter((section) => section.fields.length)
+}
+
+const valueIsMissing = (field, value) => {
+    if (field.type === 'checkbox') return value !== true
+    return value === null || value === undefined || String(value).trim() === ''
+}
+
+const missingMembershipRequestKeys = () => {
+    const missing = []
+
+    if (!props.clubProfile.membership_types?.length || !membershipRequestForm.club_membership_type_id) {
+        missing.push('membership_type')
+    }
+
+    membershipRequestTabs.value.forEach((tab, index) => {
+        if (index < 1 || index > 4) return
+        applicationSectionsForTab(tab.key).forEach((section) => section.fields.forEach((field) => {
+            if (field.mode === 'required' && valueIsMissing(field, membershipRequestForm.application_data[field.key])) {
+                missing.push(`application_data.${field.key}`)
+            }
+        }))
+    })
+
+    visibleMembershipDocuments.value.forEach((document) => {
+        if (document.is_required && membershipRequestForm.accepted_documents[document.id] !== true) {
+            missing.push(`accepted_documents.${document.id}`)
+        }
+    })
+
+    return missing
+}
+
+const validateMembershipRequest = () => {
+    membershipRequestValidationVisible.value = true
+    const missing = missingMembershipRequestKeys()
+    membershipRequestLocalErrors.value = Object.fromEntries(missing.map((key) => [key, true]))
+
+    if (missing.length) {
+        const firstMissing = missing[0]
+        if (firstMissing === 'membership_type') {
+            activeMembershipTab.value = 0
+        } else if (firstMissing.startsWith('application_data.')) {
+            const fieldKey = firstMissing.replace('application_data.', '')
+            const tabIndex = membershipRequestTabs.value.findIndex((tab) => applicationSectionsForTab(tab.key).some((section) => section.fields.some((field) => field.key === fieldKey)))
+            if (tabIndex >= 0) activeMembershipTab.value = tabIndex
+        } else if (firstMissing.startsWith('accepted_documents.')) {
+            activeMembershipTab.value = membershipRequestTabs.value.findIndex((tab) => tab.key === 'documents')
+        }
+        return false
+    }
+
+    return true
+}
+
+const membershipRequestFieldHasError = (fieldKey) => membershipRequestValidationVisible.value
+    && valueIsMissing({ type: applicationFieldSections.value.flatMap((section) => section.fields).find((field) => field.key === fieldKey)?.type }, membershipRequestForm.application_data[fieldKey])
+    && Boolean(membershipRequestLocalErrors.value[`application_data.${fieldKey}`])
+
+const membershipRequestTabHasErrors = (index) => {
+    if (!membershipRequestValidationVisible.value) return false
+    const tab = membershipRequestTabs.value[index]
+    if (!tab) return false
+    if (index === 0) return Boolean(membershipRequestLocalErrors.value.membership_type) && (!props.clubProfile.membership_types?.length || !membershipRequestForm.club_membership_type_id)
+    if (tab.key === 'documents') return visibleMembershipDocuments.value.some((document) => document.is_required && membershipRequestForm.accepted_documents[document.id] !== true)
+    return applicationSectionsForTab(tab.key).some((section) => section.fields.some((field) => membershipRequestFieldHasError(field.key)))
+}
+
+const goToMembershipRequestNext = () => {
+    membershipRequestValidationVisible.value = true
+    const missingBeforeTab = missingMembershipRequestKeys()
+    const tab = membershipRequestTabs.value[activeMembershipTab.value]
+    const hasCurrentTabError = tab?.key === 'membership'
+        ? missingBeforeTab.includes('membership_type')
+        : tab?.key === 'documents'
+            ? missingBeforeTab.some((key) => key.startsWith('accepted_documents.'))
+            : applicationSectionsForTab(tab?.key).some((section) => section.fields.some((field) => missingBeforeTab.includes(`application_data.${field.key}`)))
+
+    membershipRequestLocalErrors.value = Object.fromEntries(missingBeforeTab.map((key) => [key, true]))
+    if (hasCurrentTabError) return
+    if (activeMembershipTab.value < membershipRequestTabs.value.length - 1) activeMembershipTab.value += 1
 }
 
 const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
@@ -738,9 +824,17 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             :class="activeMembershipTab === index
                                 ? 'bg-buttonPrimary text-buttonTextPrimary'
                                 : 'bg-inputBg text-secondary hover:text-primary'"
+                            :aria-invalid="membershipRequestTabHasErrors(index)"
                             @click="activeMembershipTab = index"
                         >
                             {{ tab.label }}
+                            <span
+                                v-if="membershipRequestTabHasErrors(index)"
+                                class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-black leading-none text-white"
+                                :aria-label="locale === 'de' ? 'Pflichtangaben fehlen' : 'Required information missing'"
+                            >
+                                !
+                            </span>
                         </button>
                     </div>
 
@@ -748,7 +842,12 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         <div v-if="activeMembershipTab === 0" class="space-y-3">
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">{{ tAuto('Mitgliedschaftstyp') }}</span>
-                            <select v-model="membershipRequestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            <select
+                                v-model="membershipRequestForm.club_membership_type_id"
+                                class="mt-1 w-full rounded-lg border bg-inputBg text-primary"
+                                :class="membershipRequestTabHasErrors(0) ? 'border-red-500 ring-1 ring-red-500/30' : 'border-border'"
+                                :aria-invalid="membershipRequestTabHasErrors(0)"
+                            >
                                 <option value="">{{ tAuto('Allgemeine Anfrage') }}</option>
                                 <option v-for="type in clubProfile.membership_types" :key="type.id" :value="type.id">
                                     {{ type.name }}
@@ -757,6 +856,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                     </template>
                                 </option>
                             </select>
+                            <p v-if="membershipRequestTabHasErrors(0)" class="mt-1 text-xs font-semibold text-red-500">
+                                {{ locale === 'de' ? 'Bitte wähle einen Mitgliedschaftstyp aus.' : 'Please select a membership type.' }}
+                            </p>
                         </label>
 
                         <div v-if="clubProfile.membership_types?.length" class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -781,14 +883,16 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                     <select
                                         v-if="field.type === 'select'"
                                         v-model="membershipRequestForm.application_data[field.key]"
-                                        class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                        class="mt-1 w-full rounded-lg border bg-inputBg text-primary"
+                                        :class="membershipRequestFieldHasError(field.key) ? 'border-red-500 ring-1 ring-red-500/30' : 'border-border'"
+                                        :aria-invalid="membershipRequestFieldHasError(field.key)"
                                         :required="field.mode === 'required'"
                                     >
                                         <option value="">{{ tAuto('Bitte wählen') }}</option>
                                         <option v-for="option in field.options" :key="option.value" :value="option.value">{{ option.label }}</option>
                                     </select>
-                                    <label v-else-if="field.type === 'checkbox'" class="mt-2 flex items-start gap-2 rounded-lg border border-border bg-card p-3 text-secondary">
-                                        <input v-model="membershipRequestForm.application_data[field.key]" type="checkbox" class="mt-1 rounded border-border bg-inputBg" :required="field.mode === 'required'">
+                                    <label v-else-if="field.type === 'checkbox'" class="mt-2 flex items-start gap-2 rounded-lg border bg-card p-3 text-secondary" :class="membershipRequestFieldHasError(field.key) ? 'border-red-500 ring-1 ring-red-500/30' : 'border-border'">
+                                        <input v-model="membershipRequestForm.application_data[field.key]" type="checkbox" class="mt-1 rounded border-border bg-inputBg" :class="membershipRequestFieldHasError(field.key) ? 'accent-red-500' : ''" :required="field.mode === 'required'">
                                         <span>{{ field.label }}</span>
                                     </label>
                                     <input
@@ -796,9 +900,14 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                         v-model="membershipRequestForm.application_data[field.key]"
                                         :type="field.type || 'text'"
                                         :maxlength="field.max || undefined"
-                                        class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                        class="mt-1 w-full rounded-lg border bg-inputBg text-primary"
+                                        :class="membershipRequestFieldHasError(field.key) ? 'border-red-500 ring-1 ring-red-500/30' : 'border-border'"
+                                        :aria-invalid="membershipRequestFieldHasError(field.key)"
                                         :required="field.mode === 'required'"
                                     >
+                                    <p v-if="membershipRequestFieldHasError(field.key)" class="mt-1 text-xs font-semibold text-red-500">
+                                        {{ locale === 'de' ? 'Pflichtfeld fehlt.' : 'Required field is missing.' }}
+                                    </p>
                                     <p v-if="membershipRequestForm.errors[`application_data.${field.key}`]" class="mt-1 text-xs text-error">
                                         {{ membershipRequestForm.errors[`application_data.${field.key}`] }}
                                     </p>
@@ -845,12 +954,14 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                 <label
                                     v-for="document in visibleMembershipDocuments"
                                     :key="document.id"
-                                    class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-secondary"
+                                    class="flex items-start gap-3 rounded-lg border bg-card p-3 text-sm text-secondary"
+                                    :class="membershipRequestTabHasErrors(6) && document.is_required && membershipRequestForm.accepted_documents[document.id] !== true ? 'border-red-500 ring-1 ring-red-500/30' : 'border-border'"
                                 >
                                     <input
                                         v-model="membershipRequestForm.accepted_documents[document.id]"
                                         type="checkbox"
                                         class="mt-1 rounded border-border bg-inputBg"
+                                        :class="membershipRequestTabHasErrors(6) && document.is_required && membershipRequestForm.accepted_documents[document.id] !== true ? 'accent-red-500' : ''"
                                         :required="document.is_required"
                                     >
                                     <span class="min-w-0">
@@ -871,6 +982,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                                         <span v-else class="mt-2 block text-xs text-error">{{ tAuto('Kein Link hinterlegt') }}</span>
                                         <span v-if="membershipRequestForm.errors[`accepted_documents.${document.id}`]" class="mt-1 block text-xs text-error">
                                             {{ membershipRequestForm.errors[`accepted_documents.${document.id}`] }}
+                                        </span>
+                                        <span v-if="membershipRequestTabHasErrors(6) && document.is_required && membershipRequestForm.accepted_documents[document.id] !== true" class="mt-1 block text-xs font-semibold text-red-500">
+                                            {{ locale === 'de' ? 'Bitte bestätigen.' : 'Please confirm this document.' }}
                                         </span>
                                     </span>
                                 </label>
@@ -900,7 +1014,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             v-if="activeMembershipTab < membershipRequestTabs.length - 1"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary"
-                            @click="activeMembershipTab += 1"
+                            @click="goToMembershipRequestNext"
                         >
                             {{ locale === 'de' ? 'Weiter' : 'Next' }}
                         </button>

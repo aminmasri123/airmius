@@ -6209,6 +6209,26 @@ class _MembershipRulesAdminPanelState
                       ),
                     ],
                   ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Beispiele zur Orientierung – werden nicht automatisch gespeichert',
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: const [
+                      Chip(label: Text('Jugendmitglied')),
+                      Chip(label: Text('Aktives Mitglied')),
+                      Chip(label: Text('Probetraining')),
+                      Chip(label: Text('Fördermitglied')),
+                    ],
+                  ),
                 ],
               ),
             ),

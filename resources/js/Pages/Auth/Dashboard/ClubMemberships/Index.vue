@@ -1806,6 +1806,13 @@ const inviteExternalMember = (member) => {
                                     <span v-if="!membershipTypes.length" class="text-xs text-secondary">{{ tx('club_memberships.workspace.no_types_yet', 'Noch keine Typen vorhanden.') }}</span>
                                 </div>
                             </div>
+                            <div class="sm:col-span-2 rounded-xl border border-dashed border-border bg-bg p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Beispiele zur Orientierung</p>
+                                <p class="mt-1 text-xs text-secondary">Diese Beispiele werden nicht als echte Vereinseinstellungen gespeichert.</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span v-for="example in ['Jugendmitglied', 'Aktives Mitglied', 'Probetraining', 'Fördermitglied']" :key="example" class="rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-primary">{{ example }}</span>
+                                </div>
+                            </div>
                         </div>
                         <form v-else class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.z. B. Jugendmitglied', 'z. B. Jugendmitglied')" required>

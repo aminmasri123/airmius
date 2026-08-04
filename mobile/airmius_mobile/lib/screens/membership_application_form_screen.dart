@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_date_input.dart';
+import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
-import 'club_policy_documents_screen.dart';
 import 'membership_request_status_screen.dart';
 
 class MembershipApplicationFormScreen extends StatefulWidget {
@@ -56,6 +58,8 @@ class _MembershipApplicationFormScreenState
   bool _profilePrefilled = false;
   bool _submitting = false;
   int _activeTab = 0;
+  bool _validationVisible = false;
+  Set<String> _validationErrors = <String>{};
   final Map<String, bool> _acceptedDocuments = {};
   int? _selectedClubId;
   Future<List<AirmiusClub>>? _clubsFuture;
@@ -216,6 +220,145 @@ class _MembershipApplicationFormScreenState
   String _label(String key, String fallback) =>
       '${_fieldLabel(key, fallback)}${_fieldRequired(key) ? ' *' : ''}';
 
+  Object? _fieldValue(String key) => switch (key) {
+    'first_name' => _firstName.text,
+    'last_name' => _lastName.text,
+    'birth_date' => _parseBirthDate(_birthday.text),
+    'gender' => _gender,
+    'nationality' => _nationality.text,
+    'athlete_license_number' => _license.text,
+    'email' => _email.text,
+    'phone' => _phone.text,
+    'country' => _country.text,
+    'street' => _street.text,
+    'house_number' => _house.text,
+    'postal_code' => _zip.text,
+    'city' => _city.text,
+    'state' => _state.text,
+    'guardian_name' => _guardianName.text,
+    'guardian_email' => _guardianEmail.text,
+    'guardian_phone' => _guardianPhone.text,
+    'emergency_contact_name' => _emergencyName.text,
+    'emergency_contact_phone' => _emergencyPhone.text,
+    'sepa_iban' => _iban.text,
+    'sepa_bic' => _bic.text,
+    'sepa_mandate_consent' => _sepaAccepted,
+    _ => null,
+  };
+
+  bool _fieldHasMissingValue(String key) {
+    final value = _fieldValue(key);
+    if (value is String) return value.trim().isEmpty;
+    return value == null || value == false;
+  }
+
+  List<String> _missingValidationKeys() {
+    final missing = <String>[];
+    if (_membershipTypes.isEmpty) missing.add('membership_type');
+
+    final fieldKeys = <String>{
+      ..._defaultFieldModes.keys,
+      for (final field in _applicationFields)
+        if (_defaultFieldModes.containsKey(field['key']?.toString()))
+          field['key'].toString(),
+    };
+    for (final key in fieldKeys) {
+      if (!_fieldRequired(key)) continue;
+      if (_fieldHasMissingValue(key)) missing.add(key);
+    }
+
+    if (_visibleDocuments.isEmpty) {
+      if (!_privacyAccepted) missing.add('legacy_privacy');
+      if (!_rulesAccepted) missing.add('legacy_rules');
+      if (!_contributionAccepted) missing.add('legacy_contribution');
+    } else {
+      for (final document in _visibleDocuments) {
+        if (document['is_required'] != true) continue;
+        final id = document['id']?.toString();
+        if (id != null && _acceptedDocuments[id] != true) {
+          missing.add('accepted_documents.$id');
+        }
+      }
+    }
+
+    return missing;
+  }
+
+  int _tabIndexForValidationKey(String key) {
+    if (key == 'membership_type') return 0;
+    if (key.startsWith('accepted_documents.') || key.startsWith('legacy_')) {
+      return 6;
+    }
+    if (const {
+      'first_name',
+      'last_name',
+      'birth_date',
+      'gender',
+      'nationality',
+    }.contains(key)) {
+      return 1;
+    }
+    if (const {'athlete_license_number', 'email', 'phone'}.contains(key)) {
+      return 2;
+    }
+    if (const {
+      'country',
+      'street',
+      'house_number',
+      'postal_code',
+      'city',
+      'state',
+    }.contains(key)) {
+      return 3;
+    }
+    if (const {
+      'guardian_name',
+      'guardian_email',
+      'guardian_phone',
+      'emergency_contact_name',
+      'emergency_contact_phone',
+    }.contains(key)) {
+      return 4;
+    }
+    if (const {'sepa_iban', 'sepa_bic', 'sepa_mandate_consent'}.contains(key)) {
+      return 5;
+    }
+    return 4;
+  }
+
+  Set<int> get _validationErrorTabs => {
+    for (final key in _missingValidationKeys()) _tabIndexForValidationKey(key),
+  };
+
+  bool _fieldHasError(String key) =>
+      _validationVisible &&
+      _validationErrors.contains(key) &&
+      _fieldHasMissingValue(key);
+
+  String? _fieldErrorText(String key) => _fieldHasError(key)
+      ? AirmiusScope.of(context).t('application.requiredField')
+      : null;
+
+  String _membershipAmount(JsonMap type, String Function(String) t) {
+    final raw = type['amount'];
+    final amount = double.tryParse(raw?.toString().replaceAll(',', '.') ?? '');
+    if (amount == null) return t('application.contributionByAgreement');
+    return NumberFormat.simpleCurrency(
+      locale: AirmiusScope.of(context).language.locale.toLanguageTag(),
+      name: 'EUR',
+    ).format(amount);
+  }
+
+  String _membershipInterval(String? interval, String Function(String) t) => switch (interval) {
+    'monthly' => t('application.cycle.monthly'),
+    'quarterly' => t('application.cycle.quarterly'),
+    'four_monthly' => t('application.cycle.fourMonthly'),
+    'semi_yearly' => t('application.cycle.halfYearly'),
+    'yearly' => t('application.cycle.yearly'),
+    'once' => t('application.cycle.once'),
+    _ => t('application.cycle.none'),
+  };
+
   List<String> get _allowedPaymentMethods {
     final raw = _clubSettings['membership_payment_methods'];
     final methods = raw is List
@@ -249,9 +392,6 @@ class _MembershipApplicationFormScreenState
       _selectedClub?.management?.membershipTypes ?? const <JsonMap>[];
 
   List<String> get _membershipTypeValues {
-    if (_membershipTypes.isEmpty) {
-      return const ['general', 'active', 'trial', 'supporting'];
-    }
     return _membershipTypes
         .map((type) => (type['slug'] ?? type['id']).toString())
         .where((value) => value.isNotEmpty)
@@ -259,14 +399,6 @@ class _MembershipApplicationFormScreenState
   }
 
   Map<String, String> _membershipTypeLabels(String Function(String) translate) {
-    if (_membershipTypes.isEmpty) {
-      return {
-        'general': translate('general'),
-        'active': translate('active'),
-        'trial': translate('trial'),
-        'supporting': translate('supporting'),
-      };
-    }
     return {
       for (final type in _membershipTypes)
         (type['slug'] ?? type['id']).toString():
@@ -317,9 +449,13 @@ class _MembershipApplicationFormScreenState
       _paymentMethod = _allowedPaymentMethods.first;
     }
     final values = _membershipTypeValues;
-    if (!values.contains(_membershipType)) {
+    if (values.isNotEmpty && !values.contains(_membershipType)) {
       _membershipType = values.first;
+    } else if (values.isEmpty) {
+      _membershipType = '';
     }
+    _validationVisible = false;
+    _validationErrors = <String>{};
   }
 
   Widget _configuredTextField(
@@ -337,6 +473,7 @@ class _MembershipApplicationFormScreenState
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      errorText: _fieldErrorText(key),
     );
   }
 
@@ -380,11 +517,51 @@ class _MembershipApplicationFormScreenState
                             t('application.documentsRules'),
                           ],
                           activeIndex: _activeTab,
+                          errorIndexes: _validationVisible
+                              ? _validationErrorTabs
+                              : const <int>{},
                           onChanged: (index) =>
                               setState(() => _activeTab = index),
                         ),
                         const SizedBox(height: 14),
                         ..._applicationTab(t),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            if (_activeTab > 0)
+                              AirmiusButton(
+                                label: t('common.back'),
+                                icon: Icons.arrow_back_outlined,
+                                secondary: true,
+                                onPressed: () => setState(() => _activeTab--),
+                              )
+                            else
+                              const SizedBox.shrink(),
+                            const Spacer(),
+                            Text(
+                              '${_activeTab + 1} / 7',
+                              style: TextStyle(
+                                color: airmiusMutedColor(context),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (_activeTab < 6)
+                              AirmiusButton(
+                                label: t('membership.next'),
+                                icon: Icons.arrow_forward_outlined,
+                                onPressed: _nextApplicationTab,
+                              )
+                            else
+                              AirmiusButton(
+                                label: _submitting
+                                    ? t('application.sending')
+                                    : t('application.send'),
+                                icon: Icons.send_outlined,
+                                onPressed: _submitting ? null : _submit,
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -417,15 +594,91 @@ class _MembershipApplicationFormScreenState
   }
 
   List<Widget> _membershipTab(String Function(String) t) => [
-    _SelectPanel(
-      title: t('application.membershipType'),
-      value: _membershipTypeValues.contains(_membershipType)
-          ? _membershipType
-          : _membershipTypeValues.first,
-      values: _membershipTypeValues,
-      labels: _membershipTypeLabels((key) => t('application.type.$key')),
-      onChanged: (value) => setState(() => _membershipType = value),
-    ),
+    if (_membershipTypes.isEmpty)
+      AirmiusPanel(
+        title: t('application.membershipType'),
+        child: Text(
+          t('application.noMembershipTypes'),
+          style: TextStyle(
+            color: airmiusMutedColor(context),
+            fontWeight: FontWeight.w700,
+            height: 1.45,
+          ),
+        ),
+      )
+    else
+      _SelectPanel(
+        title: t('application.membershipType'),
+        value: _membershipTypeValues.contains(_membershipType)
+            ? _membershipType
+            : _membershipTypeValues.first,
+        values: _membershipTypeValues,
+        labels: _membershipTypeLabels((key) => t('application.type.$key')),
+        onChanged: (value) => setState(() => _membershipType = value),
+      ),
+    if (_membershipTypes.isNotEmpty) ...[
+      const SizedBox(height: 12),
+      AirmiusPanel(
+        title: t('application.membershipCosts'),
+        child: Column(
+          children: [
+            for (final type in _membershipTypes) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: airmiusInputColor(context),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: (type['id']?.toString() == _membershipType ||
+                            type['slug']?.toString() == _membershipType)
+                        ? airmiusAccentColor(context)
+                        : airmiusBorderColor(context),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            type['name']?.toString() ?? t('application.membershipType'),
+                            style: TextStyle(
+                              color: airmiusTextColor(context),
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          if (type['description']?.toString().trim().isNotEmpty == true) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              type['description'].toString(),
+                              style: TextStyle(color: airmiusMutedColor(context)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${_membershipAmount(type, t)}\n${_membershipInterval(type['billing_interval']?.toString(), t)}',
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w900,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (type != _membershipTypes.last) const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    ],
     const SizedBox(height: 12),
     AirmiusPanel(
       title: t('application.membershipApplication'),
@@ -457,6 +710,7 @@ class _MembershipApplicationFormScreenState
             decoration: InputDecoration(
               labelText: _label('gender', t('application.gender')),
               prefixIcon: Icon(Icons.wc_outlined, color: airmiusMutedColor(context)),
+              errorText: _fieldErrorText('gender'),
             ),
             style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w800),
             items: [
@@ -617,10 +871,28 @@ class _MembershipApplicationFormScreenState
       sepaAccepted: _sepaAccepted,
       documents: _visibleDocuments,
       acceptedDocuments: _acceptedDocuments,
+      errorDocumentIds: {
+        for (final key in _validationErrors)
+          if (key.startsWith('accepted_documents.'))
+            key.substring('accepted_documents.'.length),
+      },
+      privacyError: _validationVisible &&
+          _validationErrors.contains('legacy_privacy') &&
+          !_privacyAccepted,
+      rulesError: _validationVisible &&
+          _validationErrors.contains('legacy_rules') &&
+          !_rulesAccepted,
+      contributionError: _validationVisible &&
+          _validationErrors.contains('legacy_contribution') &&
+          !_contributionAccepted,
       onPrivacy: (value) => setState(() => _privacyAccepted = value),
       onRules: (value) => setState(() => _rulesAccepted = value),
       onContribution: (value) => setState(() => _contributionAccepted = value),
       onSepa: (value) => setState(() => _sepaAccepted = value),
+      onOpen: (document, preview) => _openMembershipDocument(
+        document,
+        preview: preview,
+      ),
       onDocument: (id, value) => setState(() {
         _acceptedDocuments[id] = value;
         final document = _visibleDocuments.where((item) => item['id']?.toString() == id);
@@ -643,36 +915,6 @@ class _MembershipApplicationFormScreenState
       hint: t('application.signatureHint'),
       controller: _consentSignature,
       textInputAction: TextInputAction.next,
-    ),
-    const SizedBox(height: 16),
-    AirmiusPanel(
-      title: t('application.membershipApplication'),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          AirmiusButton(
-            label: t('filesPreview.testLink'),
-            icon: Icons.policy_outlined,
-            secondary: true,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen()),
-            ),
-          ),
-          AirmiusButton(
-            label: t('uiAction.draft'),
-            icon: Icons.save_outlined,
-            secondary: true,
-            onPressed: () => _toast(t('uiAction.draftBody')),
-          ),
-          AirmiusButton(
-            label: _submitting ? t('application.sending') : t('application.send'),
-            icon: Icons.send_outlined,
-            onPressed: _submitting ? null : _submit,
-          ),
-        ],
-      ),
     ),
   ];
 
@@ -797,54 +1039,39 @@ class _MembershipApplicationFormScreenState
     }
   }
 
+  void _nextApplicationTab() {
+    final currentMissing = _missingValidationKeys()
+        .where((key) => _tabIndexForValidationKey(key) == _activeTab)
+        .toList(growable: false);
+    setState(() {
+      _validationVisible = true;
+      _validationErrors = {
+        ..._validationErrors,
+        ...currentMissing,
+      };
+    });
+    if (currentMissing.isNotEmpty) {
+      _toast(AirmiusScope.of(context).t('membership.requiredFields'));
+      return;
+    }
+    if (_activeTab < 6) setState(() => _activeTab++);
+  }
+
   String? _validateForm() {
     final t = AirmiusScope.of(context).t;
-    final requiredValues = <String, Object?>{
-      'first_name': _firstName.text,
-      'last_name': _lastName.text,
-      'birth_date': _parseBirthDate(_birthday.text),
-      'gender': _gender,
-      'email': _email.text,
-      'phone': _phone.text,
-      'country': _country.text,
-      'street': _street.text,
-      'house_number': _house.text,
-      'postal_code': _zip.text,
-      'city': _city.text,
-      'state': _state.text,
-      'athlete_license_number': _license.text,
-      'guardian_name': _guardianName.text,
-      'guardian_email': _guardianEmail.text,
-      'guardian_phone': _guardianPhone.text,
-      'emergency_contact_name': _emergencyName.text,
-      'emergency_contact_phone': _emergencyPhone.text,
-      'sepa_iban': _iban.text,
-      'sepa_bic': _bic.text,
-      'sepa_mandate_consent': _sepaAccepted,
-    };
-    final missingField = requiredValues.entries.any((entry) {
-      if (!_fieldRequired(entry.key)) return false;
-      final value = entry.value;
-      return value is String
-          ? value.trim().isEmpty
-          : value == null || value == false;
+    final missing = _missingValidationKeys();
+    setState(() {
+      _validationVisible = true;
+      _validationErrors = missing.toSet();
+      if (missing.isNotEmpty) {
+        _activeTab = _tabIndexForValidationKey(missing.first);
+      }
     });
-    if (missingField) {
-      return t('membership.requiredFields');
-    }
-    final missingDocument = _visibleDocuments.any((document) {
-      if (document['is_required'] != true) return false;
-      final id = document['id']?.toString();
-      return id == null || _acceptedDocuments[id] != true;
-    });
-    if (missingDocument) {
+    if (_membershipTypes.isEmpty) return t('application.noMembershipTypes');
+    if (missing.any((key) => key.startsWith('accepted_documents.') || key.startsWith('legacy_'))) {
       return t('membership.acceptRequired');
     }
-    if (_effectivePaymentMethod == 'sepa_debit' &&
-        _fieldRequired('sepa_mandate_consent') &&
-        !_sepaAccepted) {
-      return t('membership.sepaRequired');
-    }
+    if (missing.isNotEmpty) return t('membership.requiredFields');
     return null;
   }
 
@@ -977,6 +1204,25 @@ class _MembershipApplicationFormScreenState
 
   DateTime? _parseBirthDate(String value) => parseAirmiusDate(value);
 
+  Future<void> _openMembershipDocument(
+    JsonMap document, {
+    required bool preview,
+  }) async {
+    var rawUrl = document['url']?.toString().trim() ?? '';
+    if (preview && document['file_id'] != null) {
+      rawUrl = rawUrl.replaceFirst(RegExp(r'/download/?$'), '/preview');
+    }
+    final uri = safeExternalHttpUrl(rawUrl, httpsOnly: false);
+    if (uri == null) {
+      _toast('Dokument-Link ist nicht verfügbar.');
+      return;
+    }
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      _toast('Dokument konnte nicht geöffnet werden.');
+    }
+  }
+
   void _toast(String message) {
     ScaffoldMessenger.of(
       context,
@@ -1062,12 +1308,14 @@ class _ApplicationTabs extends StatelessWidget {
     required this.title,
     required this.labels,
     required this.activeIndex,
+    required this.errorIndexes,
     required this.onChanged,
   });
 
   final String title;
   final List<String> labels;
   final int activeIndex;
+  final Set<int> errorIndexes;
   final ValueChanged<int> onChanged;
 
   @override
@@ -1081,7 +1329,32 @@ class _ApplicationTabs extends StatelessWidget {
             for (var index = 0; index < labels.length; index++) ...[
               if (index > 0) const SizedBox(width: 8),
               ChoiceChip(
-                label: Text(labels[index]),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(labels[index]),
+                    if (errorIndexes.contains(index)) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 17,
+                        height: 17,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: AirmiusColors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Text(
+                          '!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
                 selected: activeIndex == index,
                 onSelected: (_) => onChanged(index),
                 selectedColor: airmiusAccentColor(context).withValues(alpha: .24),
@@ -1093,7 +1366,9 @@ class _ApplicationTabs extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                 ),
                 side: BorderSide(
-                  color: activeIndex == index
+                  color: errorIndexes.contains(index)
+                      ? AirmiusColors.red
+                      : activeIndex == index
                       ? airmiusAccentColor(context)
                       : airmiusBorderColor(context),
                 ),
@@ -1191,7 +1466,12 @@ class _DocumentAcceptancePanel extends StatelessWidget {
     required this.onSepa,
     this.documents = const [],
     this.acceptedDocuments = const {},
+    this.errorDocumentIds = const {},
+    this.privacyError = false,
+    this.rulesError = false,
+    this.contributionError = false,
     this.onDocument,
+    this.onOpen,
   });
 
   final bool privacyAccepted;
@@ -1204,7 +1484,12 @@ class _DocumentAcceptancePanel extends StatelessWidget {
   final ValueChanged<bool> onSepa;
   final List<JsonMap> documents;
   final Map<String, bool> acceptedDocuments;
+  final Set<String> errorDocumentIds;
+  final bool privacyError;
+  final bool rulesError;
+  final bool contributionError;
   final void Function(String id, bool value)? onDocument;
+  final Future<void> Function(JsonMap document, bool preview)? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -1217,16 +1502,19 @@ class _DocumentAcceptancePanel extends StatelessWidget {
             _CheckRow(
               title: '${t('application.acceptPrivacy')} *',
               value: privacyAccepted,
+              hasError: privacyError,
               onChanged: onPrivacy,
             ),
             _CheckRow(
               title: '${t('application.acceptRules')} *',
               value: rulesAccepted,
+              hasError: rulesError,
               onChanged: onRules,
             ),
             _CheckRow(
               title: '${t('membership.document.fees')} *',
               value: contributionAccepted,
+              hasError: contributionError,
               onChanged: onContribution,
             ),
             _CheckRow(
@@ -1239,6 +1527,8 @@ class _DocumentAcceptancePanel extends StatelessWidget {
               _MembershipDocumentRow(
                 document: document,
                 value: acceptedDocuments[document['id']?.toString()] ?? false,
+                hasError: errorDocumentIds.contains(document['id']?.toString()),
+                onOpen: onOpen,
                 onChanged: onDocument == null || document['id'] == null
                     ? null
                     : (value) => onDocument!(document['id'].toString(), value),
@@ -1266,11 +1556,15 @@ class _MembershipDocumentRow extends StatelessWidget {
     required this.document,
     required this.value,
     required this.onChanged,
+    this.hasError = false,
+    this.onOpen,
   });
 
   final JsonMap document;
   final bool value;
   final ValueChanged<bool>? onChanged;
+  final bool hasError;
+  final Future<void> Function(JsonMap document, bool preview)? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -1280,10 +1574,34 @@ class _MembershipDocumentRow extends StatelessWidget {
     final displayTitle = title == null || title.isEmpty
         ? (type == null || type.isEmpty ? 'Dokument' : type)
         : title;
-    return _CheckRow(
-      title: '$displayTitle$requiredMark',
-      value: value,
-      onChanged: onChanged ?? (_) {},
+    return Column(
+      children: [
+        _CheckRow(
+          title: '$displayTitle$requiredMark',
+          value: value,
+          hasError: hasError,
+          onChanged: onChanged ?? (_) {},
+        ),
+        if (onOpen != null && document['url']?.toString().trim().isNotEmpty == true)
+          Padding(
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+            child: Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => onOpen!(document, true),
+                  icon: const Icon(Icons.visibility_outlined, size: 17),
+                  label: Text(AirmiusScope.of(context).t('application.readDocument')),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => onOpen!(document, false),
+                  icon: const Icon(Icons.download_outlined, size: 17),
+                  label: Text(AirmiusScope.of(context).t('application.downloadDocument')),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -1293,11 +1611,13 @@ class _CheckRow extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
+    this.hasError = false,
   });
 
   final String title;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) {
@@ -1308,7 +1628,9 @@ class _CheckRow extends StatelessWidget {
         color: airmiusInputColor(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: value
+          color: hasError
+              ? AirmiusColors.red
+              : value
               ? airmiusAccentColor(context)
               : airmiusBorderColor(context),
         ),
