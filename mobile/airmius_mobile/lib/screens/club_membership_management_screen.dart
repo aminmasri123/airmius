@@ -4392,7 +4392,7 @@ class _MembershipRulesAdminPanelState
   String _ruleInterval = 'monthly';
   String _ruleFactorKey = 'standard';
   String _ruleFactorOperator = 'percent';
-  String _rulesTab = 'application';
+  String _rulesTab = 'types';
   Set<String> _paymentMethods = {'bank_transfer', 'cash'};
   Map<String, String> _fieldModes = {};
   Map<String, String> _typeApplicationFields = {};
@@ -5936,6 +5936,41 @@ class _MembershipRulesAdminPanelState
               ],
             ),
           ] else if (_rulesTab == 'types') ...[
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(_tr('membership.typeSetupFirst')),
+                  const SizedBox(height: 6),
+                  Text(
+                    _tr('membership.typeSetupHint'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      AirmiusButton(
+                        label: _tr('membership.createType'),
+                        icon: Icons.add_circle_outline,
+                        onPressed: () => _openTypeSheet(),
+                      ),
+                      AirmiusButton(
+                        label: _tr('membership.editMembershipType'),
+                        icon: Icons.edit_outlined,
+                        secondary: true,
+                        onPressed: membershipTypes.isEmpty
+                            ? null
+                            : () => _openTypeSheet(type: membershipTypes.first),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 10,

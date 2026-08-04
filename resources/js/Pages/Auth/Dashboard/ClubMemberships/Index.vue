@@ -35,6 +35,7 @@ const tx = (key, fallback = key, values = {}) => {
 const selectedClubId = ref(props.clubs[0]?.id || null)
 const activeTab = ref('members')
 const rulesWizardStep = ref(0)
+const membershipTypeMode = ref('choose')
 const memberSearch = ref('')
 const memberStatusFilter = ref('all')
 const memberEndFilter = ref('all')
@@ -756,6 +757,7 @@ const storeContributionRule = () => {
 }
 
 const editMembershipType = (type) => {
+    membershipTypeMode.value = 'edit'
     editingMembershipTypeId.value = type.id
     membershipTypeForm.name = type.name || ''
     membershipTypeForm.slug = type.slug || ''
@@ -788,11 +790,17 @@ const editContributionRule = (rule) => {
 
 const cancelMembershipTypeEdit = () => {
     editingMembershipTypeId.value = null
+    membershipTypeMode.value = 'choose'
     membershipTypeForm.reset('name', 'slug', 'description')
     membershipTypeForm.is_public = true
     membershipTypeForm.is_active = true
     membershipTypeForm.sort_order = 0
     membershipTypeForm.application_fields = Object.fromEntries(applicationFieldDefinitions.value.map((field) => [field.key, field.mode || 'off']))
+}
+
+const startNewMembershipType = () => {
+    cancelMembershipTypeEdit()
+    membershipTypeMode.value = 'new'
 }
 
 const cancelContributionRuleEdit = () => {
@@ -1567,7 +1575,24 @@ const inviteExternalMember = (member) => {
                                 {{ tx('club_memberships.workspace.cancel_edit', 'Abbrechen') }}
                             </button>
                         </div>
-                        <form class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
+                        <div v-if="membershipTypeMode === 'choose'" class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <button type="button" class="group rounded-xl border-2 border-dashed border-buttonPrimary/50 bg-buttonPrimary/5 p-4 text-left transition hover:border-buttonPrimary hover:bg-buttonPrimary/10" @click="startNewMembershipType">
+                                <span class="flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-xl text-buttonTextPrimary">+</span>
+                                <span class="mt-3 block font-semibold text-primary">{{ tx('club_memberships.workspace.create_type_choice', 'Neuen Typ erstellen') }}</span>
+                                <span class="mt-1 block text-xs leading-5 text-secondary">{{ tx('club_memberships.workspace.create_type_choice_hint', 'Starte mit einem neuen Mitgliedschaftsmodell.') }}</span>
+                            </button>
+                            <div class="rounded-xl border border-border bg-bg p-4">
+                                <p class="font-semibold text-primary">{{ tx('club_memberships.workspace.edit_type_choice', 'Bestehenden Typ bearbeiten') }}</p>
+                                <p class="mt-1 text-xs leading-5 text-secondary">{{ tx('club_memberships.workspace.edit_type_choice_hint', 'Wähle unten einen Typ aus, um ihn zu ändern.') }}</p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button v-for="type in membershipTypes" :key="type.id" type="button" class="rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold text-primary hover:border-buttonPrimary" @click="editMembershipType(type)">
+                                        {{ type.name }}
+                                    </button>
+                                    <span v-if="!membershipTypes.length" class="text-xs text-secondary">{{ tx('club_memberships.workspace.no_types_yet', 'Noch keine Typen vorhanden.') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <form v-else class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.z. B. Jugendmitglied', 'z. B. Jugendmitglied')" required>
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.slug optional', 'slug optional')">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Beschreibung', 'Beschreibung')"></textarea>

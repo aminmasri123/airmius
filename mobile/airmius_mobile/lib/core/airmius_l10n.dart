@@ -8202,6 +8202,8 @@ const _membershipActionsDe = {
   'membership.amountEur': 'Betrag in EUR',
   'membership.applicationFieldList': 'Felder im Mitgliedsantrag',
   'membership.applicationFields': 'Antrag & Felder',
+  'membership.typeSetupFirst': 'Zuerst Mitgliedschaftstyp wählen',
+  'membership.typeSetupHint': 'Erstelle einen neuen Typ oder bearbeite einen bestehenden Typ.',
   'membership.appliesToType': 'Gilt für Mitgliedschaftstyp',
   'membership.typeFieldsHint': 'Der Vereinsstandard wird für diesen Typ übernommen und kann angepasst werden.',
   'membership.applicationFieldsBody':
@@ -8496,6 +8498,8 @@ final _membershipActionsEn = {
   'membership.amountEur': 'Amount in EUR',
   'membership.applicationFieldList': 'Membership application fields',
   'membership.applicationFields': 'Application & fields',
+  'membership.typeSetupFirst': 'Choose a membership type first',
+  'membership.typeSetupHint': 'Create a new type or edit an existing one.',
   'membership.appliesToType': 'Applies to membership type',
   'membership.typeFieldsHint': 'The club default is used for this type and can be customized.',
   'membership.applicationFieldsBody':
@@ -8784,6 +8788,8 @@ final _membershipActionsFr = {
   'membership.amountEur': 'Montant en EUR',
   'membership.applicationFieldList': 'Champs de la demande d’adhésion',
   'membership.applicationFields': 'Demande et champs',
+  'membership.typeSetupFirst': 'Choisissez d’abord un type d’adhésion',
+  'membership.typeSetupHint': 'Créez un nouveau type ou modifiez un type existant.',
   'membership.appliesToType': 'S’applique au type d’adhésion',
   'membership.typeFieldsHint': 'Le réglage standard du club est utilisé et peut être personnalisé.',
   'membership.applicationFieldsBody':
@@ -9073,6 +9079,8 @@ final _membershipActionsAr = {
   'membership.amountEur': 'المبلغ باليورو',
   'membership.applicationFieldList': 'حقول طلب العضوية',
   'membership.applicationFields': 'الطلب والحقول',
+  'membership.typeSetupFirst': 'اختر نوع العضوية أولاً',
+  'membership.typeSetupHint': 'أنشئ نوعاً جديداً أو عدّل نوعاً موجوداً.',
   'membership.appliesToType': 'ينطبق على نوع العضوية',
   'membership.typeFieldsHint': 'يتم استخدام الإعداد الافتراضي للنادي ويمكن تخصيصه لهذا النوع.',
   'membership.applicationFieldsBody':
