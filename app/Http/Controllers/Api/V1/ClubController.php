@@ -486,6 +486,11 @@ class ClubController extends Controller
         $this->authorizeVisible($request, $club);
         abort_unless($this->canManageMembership($request, $club), 403);
 
+        $configuredDocumentTypes = $request->has('membership_application_document_types')
+            ? $request->input('membership_application_document_types')
+            : $club->membership_application_document_types;
+        $documentTypeValues = ClubMembershipApplication::documentTypeValues($configuredDocumentTypes);
+
         $data = $request->validate([
             'membership_requests_enabled' => ['boolean'],
             'member_pause_requests_enabled' => ['boolean'],
@@ -493,10 +498,17 @@ class ClubController extends Controller
             'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
             'membership_payment_methods' => ['nullable', 'array'],
             'membership_payment_methods.*' => ['string', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
+            'membership_application_document_types' => ['nullable', 'array'],
+            'membership_application_document_types.*.value' => ['required', 'string', 'max:80', 'regex:/^[a-z0-9_-]+$/'],
+            'membership_application_document_types.*.labels' => ['required', 'array'],
+            'membership_application_document_types.*.labels.de' => ['required', 'string', 'max:255'],
+            'membership_application_document_types.*.labels.en' => ['nullable', 'string', 'max:255'],
+            'membership_application_document_types.*.labels.fr' => ['nullable', 'string', 'max:255'],
+            'membership_application_document_types.*.labels.ar' => ['nullable', 'string', 'max:255'],
             'membership_application_documents' => ['nullable', 'array'],
             'membership_application_documents.*.id' => ['nullable', 'string', 'max:80'],
             'membership_application_documents.*.membership_type_id' => ['nullable', 'integer', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
-            'membership_application_documents.*.type' => ['nullable', Rule::in(ClubMembershipApplication::DOCUMENT_TYPES)],
+            'membership_application_documents.*.type' => ['nullable', Rule::in($documentTypeValues)],
             'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
             'membership_application_documents.*.file_id' => ['nullable', 'integer', 'exists:files,id'],
@@ -511,7 +523,8 @@ class ClubController extends Controller
             'member_pause_requests_enabled' => $request->has('member_pause_requests_enabled') ? (bool) $data['member_pause_requests_enabled'] : $club->member_pause_requests_enabled,
             'membership_application_fields' => $request->has('membership_application_fields') ? ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null) : $club->membership_application_fields,
             'membership_payment_methods' => $request->has('membership_payment_methods') ? ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null) : $club->membership_payment_methods,
-            'membership_application_documents' => $request->has('membership_application_documents') ? ClubMembershipApplication::normalizeDocuments($data['membership_application_documents'] ?? []) : $club->membership_application_documents,
+            'membership_application_document_types' => $request->has('membership_application_document_types') ? ClubMembershipApplication::normalizeDocumentTypes($data['membership_application_document_types'] ?? null) : $club->membership_application_document_types,
+            'membership_application_documents' => $request->has('membership_application_documents') ? ClubMembershipApplication::normalizeDocuments($data['membership_application_documents'] ?? [], $data['membership_application_document_types'] ?? $club->membership_application_document_types) : $club->membership_application_documents,
         ]);
 
         return response()->json([
@@ -1493,7 +1506,7 @@ class ClubController extends Controller
 
     private function validatedMembershipApplicationDocuments(Club $club, array $acceptedInput): array
     {
-        $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+        $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types))
             ->filter(fn (array $document) => empty($document['membership_type_id']) || (int) $document['membership_type_id'] === (int) $request->input('club_membership_type_id'))
             ->where('is_visible', true)
             ->values();
@@ -1747,7 +1760,7 @@ class ClubController extends Controller
                     'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
                     'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
                     'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
-                    'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+                    'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types))
                         ->where('is_visible', true)
                         ->values()
                         ->all(),
@@ -1890,8 +1903,8 @@ class ClubController extends Controller
                 'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
                 'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
                 'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
-                'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($club->membership_application_documents),
-                'membership_application_document_types' => ClubMembershipApplication::documentTypes(),
+                'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types),
+                    'membership_application_document_types' => ClubMembershipApplication::documentTypes($club->membership_application_document_types),
             ],
             'members' => ClubMemberResource::collection($club->users)->resolve($request),
             'external_members' => $club->externalMembers->map(fn (ClubExternalMember $externalMember) => [

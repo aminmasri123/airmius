@@ -494,7 +494,17 @@ const requestDataValue = (key, value) => {
     return value
 }
 
-const documentTypeLabel = (type) => selectedClub.value?.membership_application_document_types?.find((option) => option.value === type)?.label || type
+const membershipDocumentTypes = computed(() => {
+    if (!selectedClub.value) return []
+    const types = membershipSettingsFor(selectedClub.value).membership_application_document_types || selectedClub.value.membership_application_document_types || []
+    const language = ['de', 'en', 'fr', 'ar'].includes(locale.value) ? locale.value : 'de'
+
+    return types.map((type) => ({
+        ...type,
+        label: type.labels?.[language] || type.labels?.de || type.value,
+    }))
+})
+const documentTypeLabel = (type) => membershipDocumentTypes.value.find((option) => option.value === type)?.label || type
 
 const membershipFieldSections = computed(() => {
     const sections = []
@@ -669,6 +679,10 @@ const membershipSettingsFor = (club) => {
         member_pause_requests_enabled: Boolean(club.member_pause_requests_enabled),
         membership_application_fields: Object.fromEntries((club.membership_application_fields || []).map((field) => [field.key, field.mode || 'off'])),
         membership_payment_methods: [...(club.membership_payment_methods || [])],
+        membership_application_document_types: (club.membership_application_document_types || []).map((type) => ({
+            value: type.value,
+            labels: { ...(type.labels || {}) },
+        })),
         membership_application_documents: (club.membership_application_documents || []).map((document) => ({ ...document, file: null })),
     }
 
@@ -700,6 +714,19 @@ const filteredMembershipDocuments = computed(() => {
 
 const toggleMembershipDocument = (id) => {
     expandedDocumentId.value = expandedDocumentId.value === id ? null : id
+}
+
+const addMembershipDocumentType = () => {
+    membershipSettingsFor(selectedClub.value).membership_application_document_types.push({
+        value: `custom_${Date.now()}`,
+        labels: { de: '', en: '', fr: '', ar: '' },
+    })
+}
+
+const removeMembershipDocumentType = (index) => {
+    const types = membershipSettingsFor(selectedClub.value).membership_application_document_types
+    if (types[index]?.value && ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].includes(types[index].value)) return
+    types.splice(index, 1)
 }
 
 const saveMembershipSettings = () => {
@@ -1488,9 +1515,34 @@ const inviteExternalMember = (member) => {
                                         <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.documents_confirmations', 'Dokumente & Bestätigungen') }}</p>
                                         <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.documents_hint', 'Verknüpfe Datenschutz, Satzung, Regeln oder Beitragsordnung. Pflichtdokumente müssen Interessenten vor dem Absenden bestätigen.') }}</p>
                                     </div>
-                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocument">
-                                        {{ tx('club_memberships.workspace.add_document', 'Dokument hinzufügen') }}
-                                    </button>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">
+                                            Dokumenttypen verwalten
+                                        </button>
+                                        <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="addMembershipDocument">
+                                            {{ tx('club_memberships.workspace.add_document', 'Dokument hinzufügen') }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-3 rounded-xl border border-border bg-bg p-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-semibold text-primary">Dokumenttypen in allen Sprachen</p>
+                                            <p class="mt-1 text-xs text-secondary">Bearbeite Standardtypen oder füge vereinseigene Typen hinzu. Der Schlüssel wird für bestehende Dokumente verwendet.</p>
+                                        </div>
+                                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">+ Typ</button>
+                                    </div>
+                                    <div class="mt-3 space-y-2">
+                                        <div v-for="(type, index) in membershipDocumentTypes" :key="type.value" class="rounded-lg border border-border bg-card p-3">
+                                            <div class="mb-2 flex items-center justify-between gap-3">
+                                                <span class="text-xs font-semibold text-secondary">{{ type.value }}</span>
+                                                <button v-if="!['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].includes(type.value)" type="button" class="text-xs font-semibold text-error hover:underline" @click="removeMembershipDocumentType(index)">Entfernen</button>
+                                            </div>
+                                            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                                <label v-for="language in [{key:'de',label:'Deutsch'},{key:'en',label:'English'},{key:'fr',label:'Français'},{key:'ar',label:'العربية'}]" :key="language.key" class="text-xs font-semibold text-primary">{{ language.label }}<input v-model="type.labels[language.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm font-normal text-primary" :placeholder="language.label"></label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto]">
                                     <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
@@ -1499,7 +1551,7 @@ const inviteExternalMember = (member) => {
                                     </label>
                                     <select v-model="documentTypeFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                         <option value="all">Alle Dokumenttypen</option>
-                                        <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                        <option v-for="type in membershipDocumentTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                     </select>
                                     <span class="flex items-center justify-center rounded-lg bg-bg px-3 py-2 text-xs font-semibold text-secondary">{{ filteredMembershipDocuments.length }} / {{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</span>
                                 </div>
@@ -1527,7 +1579,7 @@ const inviteExternalMember = (member) => {
                                                 <label class="block text-sm">
                                                     <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.type', 'Typ') }}</span>
                                                     <select v-model="item.document.type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                                                        <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                                        <option v-for="type in membershipDocumentTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                                     </select>
                                                 </label>
                                                 <label class="block text-sm">
@@ -1578,7 +1630,7 @@ const inviteExternalMember = (member) => {
                                             <label class="block text-sm">
                                                 <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.type', 'Typ') }}</span>
                                                 <select v-model="document.type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                                                    <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                                    <option v-for="type in membershipDocumentTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                                 </select>
                                             </label>
                                             <label class="block text-sm">

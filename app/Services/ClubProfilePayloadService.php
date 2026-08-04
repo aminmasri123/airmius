@@ -97,7 +97,8 @@ class ClubProfilePayloadService
             'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
             'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
             'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
-            'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+            'membership_application_document_types' => ClubMembershipApplication::documentTypes($club->membership_application_document_types),
+            'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents, $club->membership_application_document_types))
                 ->where('is_visible', true)
                 ->values(),
             'is_listed' => (bool) $club->is_listed,

@@ -1,6 +1,5 @@
 // ignore_for_file: unused_element
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -4397,6 +4396,7 @@ class _MembershipRulesAdminPanelState
   Map<String, String> _fieldModes = {};
   Map<String, String> _typeApplicationFields = {};
   List<JsonMap> _documents = [];
+  List<JsonMap> _documentTypes = [];
   String _documentSearch = '';
   String _documentTypeFilter = 'all';
 
@@ -4471,6 +4471,13 @@ class _MembershipRulesAdminPanelState
     final documents = settings['membership_application_documents'];
     _documents = documents is List
         ? documents
+              .whereType<JsonMap>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList()
+        : [];
+    final documentTypes = settings['membership_application_document_types'];
+    _documentTypes = documentTypes is List
+        ? documentTypes
               .whereType<JsonMap>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList()
@@ -4576,6 +4583,7 @@ class _MembershipRulesAdminPanelState
         'member_pause_requests_enabled': _pauseRequestsEnabled,
         'membership_payment_methods': _paymentMethods.toList(),
         'membership_application_fields': _fieldModes,
+        'membership_application_document_types': _documentTypes,
         'membership_application_documents': _documents,
       });
       if (mounted) widget.onChanged();
@@ -4754,6 +4762,24 @@ class _MembershipRulesAdminPanelState
   }
 
   String _documentTypeLabel(String value) {
+    JsonMap? configured;
+    for (final type in _documentTypes) {
+      if (_string(type['value']) == value) {
+        configured = type;
+        break;
+      }
+    }
+    if (configured != null && configured['labels'] is JsonMap) {
+      final labels = configured['labels'] as JsonMap;
+      final language = switch (AirmiusScope.of(context).language) {
+        AirmiusLanguage.en => 'en',
+        AirmiusLanguage.fr => 'fr',
+        AirmiusLanguage.ar => 'ar',
+        AirmiusLanguage.de => 'de',
+      };
+      final label = _string(labels[language], fallback: _string(labels['de']));
+      if (label.isNotEmpty) return label;
+    }
     return switch (value) {
       'privacy' => _tr('membership.document.privacy'),
       'statutes' => _tr('membership.document.statutes'),
@@ -4763,6 +4789,72 @@ class _MembershipRulesAdminPanelState
       'other' => _tr('membership.document.other'),
       _ => value,
     };
+  }
+
+  Future<void> _openDocumentTypeDialog({int? index}) async {
+    final existing = index == null ? const <String, dynamic>{} : _documentTypes[index];
+    final labels = existing['labels'] is JsonMap ? existing['labels'] as JsonMap : const <String, dynamic>{};
+    final value = TextEditingController(
+      text: _string(existing['value'], fallback: 'custom_${DateTime.now().millisecondsSinceEpoch}'),
+    );
+    final german = TextEditingController(text: _string(labels['de']));
+    final english = TextEditingController(text: _string(labels['en']));
+    final french = TextEditingController(text: _string(labels['fr']));
+    final arabic = TextEditingController(text: _string(labels['ar']));
+
+    final saved = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: airmiusSurfaceColor(context),
+        title: Text(index == null ? 'Dokumenttyp hinzufügen' : 'Dokumenttyp bearbeiten'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AirmiusTextField(label: 'Schlüssel', hint: 'z. B. vereinsordnung', controller: value),
+              const SizedBox(height: 10),
+              AirmiusTextField(label: 'Deutsch *', hint: 'Bezeichnung auf Deutsch', controller: german),
+              const SizedBox(height: 10),
+              AirmiusTextField(label: 'English', hint: 'Label in English', controller: english),
+              const SizedBox(height: 10),
+              AirmiusTextField(label: 'Français', hint: 'Libellé en français', controller: french),
+              const SizedBox(height: 10),
+              AirmiusTextField(label: 'العربية', hint: 'الاسم بالعربية', controller: arabic),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_tr('membership.cancel'))),
+          FilledButton(
+            onPressed: () {
+              if (german.text.trim().isEmpty || value.text.trim().isEmpty) return;
+              Navigator.pop(dialogContext, {
+                'value': value.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]+'), '_'),
+                'labels': {
+                  'de': german.text.trim(),
+                  'en': english.text.trim().isEmpty ? german.text.trim() : english.text.trim(),
+                  'fr': french.text.trim().isEmpty ? german.text.trim() : french.text.trim(),
+                  'ar': arabic.text.trim().isEmpty ? (english.text.trim().isEmpty ? german.text.trim() : english.text.trim()) : arabic.text.trim(),
+                },
+              });
+            },
+            child: Text(_tr('membership.save')),
+          ),
+        ],
+      ),
+    );
+
+    for (final controller in [value, german, english, french, arabic]) {
+      controller.dispose();
+    }
+    if (saved == null || !mounted) return;
+    setState(() {
+      if (index == null) {
+        _documentTypes.add(saved);
+      } else {
+        _documentTypes[index] = saved;
+      }
+    });
   }
 
   Future<void> _openDocumentDialog({int? index}) async {
@@ -4814,22 +4906,16 @@ class _MembershipRulesAdminPanelState
                     decoration: InputDecoration(
                       labelText: _tr('membership.documentType'),
                     ),
-                    items:
-                        const [
-                              'privacy',
-                              'statutes',
-                              'rules',
-                              'fees',
-                              'sepa',
-                              'other',
-                            ]
-                            .map(
-                              (item) => DropdownMenuItem(
-                                value: item,
-                                child: Text(_documentTypeLabel(item)),
-                              ),
-                            )
-                            .toList(),
+                    items: (_documentTypes.isEmpty
+                            ? const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other']
+                            : _documentTypes.map((item) => _string(item['value'])).toList())
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item,
+                            child: Text(_documentTypeLabel(item)),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) =>
                         setDialogState(() => type = value ?? type),
                   ),
@@ -5764,9 +5850,6 @@ class _MembershipRulesAdminPanelState
     final activeRules = contributionRules
         .where((rule) => _bool(rule['is_active']))
         .length;
-    final requiredDocs = _documents
-        .where((document) => _bool(document['is_required']))
-        .length;
 
     return AirmiusPanel(
       child: Column(
@@ -5804,6 +5887,11 @@ class _MembershipRulesAdminPanelState
                   'documents',
                   'membership.rulesTab.documents',
                   Icons.description_outlined,
+                ),
+                _MembershipSectionTabData(
+                  'documentTypes',
+                  'membership.documentTypes',
+                  Icons.category_outlined,
                 ),
                 _MembershipSectionTabData(
                   'summary',
@@ -5928,6 +6016,54 @@ class _MembershipRulesAdminPanelState
                       onPressed: _saving ? null : () => _saveType(),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ] else if (_rulesTab == 'documentTypes') ...[
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(_tr('membership.documentTypes')),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Bearbeite Standardtypen oder füge eigene Dokumenttypen mit Bezeichnungen in allen Sprachen hinzu.',
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final entry in _documentTypes.indexed)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: airmiusSurfaceSoftColor(context),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: airmiusBorderColor(context)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(_documentTypeLabel(_string(entry.$2['value'])), style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w900)),
+                                const SizedBox(height: 3),
+                                Text(_string(entry.$2['value']), style: TextStyle(color: airmiusMutedColor(context), fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          IconButton(onPressed: () => _openDocumentTypeDialog(index: entry.$1), icon: const Icon(Icons.edit_outlined)),
+                          if (!const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].contains(entry.$2['value']))
+                            IconButton(onPressed: () => setState(() => _documentTypes.removeAt(entry.$1)), icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+                        ],
+                      ),
+                    ),
+                  if (_documentTypes.isEmpty) _EmptyAdminHint(text: 'Noch keine Dokumenttypen vorhanden.'),
+                  const SizedBox(height: 4),
+                  AirmiusButton(label: 'Dokumenttyp hinzufügen', icon: Icons.add, onPressed: () => _openDocumentTypeDialog()),
+                  const SizedBox(height: 8),
+                  AirmiusButton(label: _tr('membership.save'), icon: Icons.save_outlined, onPressed: _saving ? null : () => _saveSettings()),
                 ],
               ),
             ),

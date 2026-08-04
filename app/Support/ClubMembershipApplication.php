@@ -35,6 +35,8 @@ class ClubMembershipApplication
 
     public const DOCUMENT_TYPES = ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'];
 
+    public const DOCUMENT_TYPE_LOCALES = ['de', 'en', 'fr', 'ar'];
+
     public static function fields(): array
     {
         return [
@@ -77,19 +79,74 @@ class ClubMembershipApplication
         ];
     }
 
-    public static function documentTypes(): array
+    public static function documentTypes(?array $configured = null, ?string $locale = null): array
     {
-        return [
-            ['value' => 'privacy', 'label' => 'Datenschutz'],
-            ['value' => 'statutes', 'label' => 'Satzung'],
-            ['value' => 'rules', 'label' => 'Vereinsregeln'],
-            ['value' => 'fees', 'label' => 'Beitragsordnung'],
-            ['value' => 'sepa', 'label' => 'SEPA-Mandat'],
-            ['value' => 'other', 'label' => 'Sonstiges'],
+        $defaults = [
+            'privacy' => ['de' => 'Datenschutz', 'en' => 'Privacy', 'fr' => 'Confidentialité', 'ar' => 'الخصوصية'],
+            'statutes' => ['de' => 'Satzung', 'en' => 'Statutes', 'fr' => 'Statuts', 'ar' => 'النظام الأساسي'],
+            'rules' => ['de' => 'Vereinsregeln', 'en' => 'Club rules', 'fr' => 'Règles de l’association', 'ar' => 'قواعد النادي'],
+            'fees' => ['de' => 'Beitragsordnung', 'en' => 'Fee schedule', 'fr' => 'Barème des cotisations', 'ar' => 'جدول الرسوم'],
+            'sepa' => ['de' => 'SEPA-Mandat', 'en' => 'SEPA mandate', 'fr' => 'Mandat SEPA', 'ar' => 'تفويض SEPA'],
+            'other' => ['de' => 'Sonstiges', 'en' => 'Other', 'fr' => 'Autre', 'ar' => 'أخرى'],
         ];
+
+        $configuredByValue = collect($configured ?: [])->keyBy('value');
+        $values = array_values(array_unique([
+            ...self::DOCUMENT_TYPES,
+            ...$configuredByValue->keys()->all(),
+        ]));
+        $currentLocale = in_array($locale ?: app()->getLocale(), self::DOCUMENT_TYPE_LOCALES, true)
+            ? ($locale ?: app()->getLocale())
+            : 'de';
+
+        return collect($values)->map(function (string $value) use ($defaults, $configuredByValue, $currentLocale) {
+            $configuredLabels = data_get($configuredByValue->get($value), 'labels', []);
+            $labels = array_merge($defaults[$value] ?? [], is_array($configuredLabels) ? $configuredLabels : []);
+            $fallback = $defaults[$value][$currentLocale] ?? $labels['de'] ?? $value;
+
+            return [
+                'value' => $value,
+                'label' => trim((string) ($labels[$currentLocale] ?? '')) ?: $fallback,
+                'labels' => array_merge(array_fill_keys(self::DOCUMENT_TYPE_LOCALES, ''), $labels),
+                'is_standard' => in_array($value, self::DOCUMENT_TYPES, true),
+            ];
+        })->all();
     }
 
-    public static function normalizeDocuments(?array $documents): array
+    public static function normalizeDocumentTypes(?array $types): array
+    {
+        return collect($types ?: [])
+            ->filter(fn ($type) => is_array($type))
+            ->map(function (array $type) {
+                $value = strtolower(trim((string) ($type['value'] ?? '')));
+                $value = preg_replace('/[^a-z0-9_-]+/', '_', $value) ?: '';
+                $labels = is_array($type['labels'] ?? null) ? $type['labels'] : [];
+                $labels = collect(self::DOCUMENT_TYPE_LOCALES)->mapWithKeys(function (string $locale) use ($labels) {
+                    return [$locale => trim((string) ($labels[$locale] ?? ''))];
+                })->all();
+
+                if ($value === '' || $labels['de'] === '') {
+                    return null;
+                }
+
+                $labels['en'] = $labels['en'] ?: $labels['de'];
+                $labels['fr'] = $labels['fr'] ?: $labels['de'];
+                $labels['ar'] = $labels['ar'] ?: $labels['en'];
+
+                return ['value' => $value, 'labels' => $labels];
+            })
+            ->filter()
+            ->unique('value')
+            ->values()
+            ->all();
+    }
+
+    public static function documentTypeValues(?array $configured = null): array
+    {
+        return collect(self::documentTypes($configured))->pluck('value')->all();
+    }
+
+    public static function normalizeDocuments(?array $documents, ?array $configuredTypes = null): array
     {
         return collect($documents ?: [])
             ->map(function (array $document) {
@@ -105,7 +162,7 @@ class ClubMembershipApplication
                 return [
                     'id' => (string) ($document['id'] ?? (string) \Illuminate\Support\Str::uuid()),
                     'membership_type_id' => $document['membership_type_id'] ?? null,
-                    'type' => in_array($type, self::DOCUMENT_TYPES, true) ? $type : 'other',
+                    'type' => in_array($type, self::documentTypeValues($configuredTypes), true) ? $type : 'other',
                     'title' => $title !== '' ? $title : 'Dokument',
                     'url' => $url,
                     'file_id' => $document['file_id'] ?? null,
