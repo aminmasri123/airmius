@@ -422,7 +422,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     <input ref="coverInput" type="file" accept="image/*" class="hidden"
                         @change="uploadImage('cover_image', $event)" />
                 </div>
-                <div class="px-5 pb-5">
+                <div class="px-5 pb-5 pt-4">
                     <div class="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div class="flex items-end gap-4">
                             <div

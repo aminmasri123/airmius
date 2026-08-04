@@ -1623,6 +1623,38 @@ class ClubController extends Controller
         ];
     }
 
+    private function publicMembershipTypesWithContributions(Club $club): array
+    {
+        $types = $club->membershipTypes()
+            ->where('is_public', true)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'description', 'is_public', 'is_active', 'sort_order']);
+        $rules = $club->contributionRules()
+            ->effectiveOn(now()->toDateString())
+            ->orderByDesc('valid_from')
+            ->get(['club_membership_type_id', 'amount', 'billing_interval']);
+
+        return $types->map(function (ClubMembershipType $type) use ($rules) {
+            $rule = $rules->first(fn (ClubContributionRule $rule) =>
+                (int) $rule->club_membership_type_id === (int) $type->id
+            ) ?: $rules->first(fn (ClubContributionRule $rule) => $rule->club_membership_type_id === null);
+
+            return [
+                'id' => $type->id,
+                'name' => $type->name,
+                'slug' => $type->slug,
+                'description' => $type->description,
+                'amount' => $rule?->amount,
+                'billing_interval' => $rule?->billing_interval,
+                'is_public' => (bool) $type->is_public,
+                'is_active' => (bool) $type->is_active,
+                'sort_order' => $type->sort_order,
+            ];
+        })->values()->all();
+    }
+
     private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
     {
         $club->users()
@@ -1765,23 +1797,7 @@ class ClubController extends Controller
                         ->values()
                         ->all(),
                 ],
-                'membership_types' => $club->membershipTypes()
-                    ->where('is_public', true)
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'slug', 'description', 'is_public', 'is_active', 'sort_order'])
-                    ->map(fn (ClubMembershipType $type) => [
-                        'id' => $type->id,
-                        'name' => $type->name,
-                        'slug' => $type->slug,
-                        'description' => $type->description,
-                        'is_public' => (bool) $type->is_public,
-                        'is_active' => (bool) $type->is_active,
-                        'sort_order' => $type->sort_order,
-                    ])
-                    ->values()
-                    ->all(),
+                'membership_types' => $this->publicMembershipTypesWithContributions($club),
                 'membership_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
                 'club_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
             ];
