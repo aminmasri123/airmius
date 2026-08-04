@@ -271,7 +271,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/clubs/{club}/membership/sepa-settings', [ClubMembershipController::class, 'updateSepaSettings'])->name('auth.club-memberships.sepa-settings.update');
     Route::put('/clubs/{club}/membership/settings', [ClubMembershipController::class, 'updateMembershipSettings'])->name('auth.club-memberships.settings.update');
     Route::post('/clubs/{club}/membership/types', [ClubMembershipController::class, 'storeMembershipType'])->name('auth.club-memberships.types.store');
+    Route::put('/clubs/{club}/membership/types/{membershipType}', [ClubMembershipController::class, 'updateMembershipType'])->name('auth.club-memberships.types.update');
     Route::post('/clubs/{club}/membership/contribution-rules', [ClubMembershipController::class, 'storeContributionRule'])->name('auth.club-memberships.contribution-rules.store');
+    Route::put('/clubs/{club}/membership/contribution-rules/{contributionRule}', [ClubMembershipController::class, 'updateContributionRule'])->name('auth.club-memberships.contribution-rules.update');
     Route::post('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'storeMembershipRequest'])->name('auth.club-membership-requests.store');
     Route::delete('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'withdrawMembershipRequest'])->name('auth.club-membership-requests.destroy');
     Route::post('/clubs/{club}/membership-pause-requests', [ClubMembershipController::class, 'storePauseRequest'])->name('auth.club-membership-pause-requests.store');

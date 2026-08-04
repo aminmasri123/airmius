@@ -754,6 +754,30 @@ class ClubMembershipController extends Controller
         return back()->with('success', 'Mitgliedschaftstyp gespeichert.');
     }
 
+    public function updateMembershipType(Request $request, Club $club, ClubMembershipType $membershipType)
+    {
+        $this->authorize('update', $club);
+        abort_unless($membershipType->club_id === $club->id, 404);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'is_public' => ['boolean'],
+            'is_active' => ['boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+        ]);
+
+        $membershipType->update([
+            ...$data,
+            'is_public' => (bool) ($data['is_public'] ?? false),
+            'is_active' => (bool) ($data['is_active'] ?? false),
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+        ]);
+
+        return back()->with('success', 'Mitgliedschaftstyp aktualisiert.');
+    }
+
     public function storeContributionRule(Request $request, Club $club)
     {
         $this->authorize('update', $club);
@@ -761,6 +785,16 @@ class ClubMembershipController extends Controller
         $club->contributionRules()->create($this->validatedContributionRuleData($request, $club));
 
         return back()->with('success', 'Beitragsregel gespeichert.');
+    }
+
+    public function updateContributionRule(Request $request, Club $club, ClubContributionRule $contributionRule)
+    {
+        $this->authorize('update', $club);
+        abort_unless($contributionRule->club_id === $club->id, 404);
+
+        $contributionRule->update($this->validatedContributionRuleData($request, $club));
+
+        return back()->with('success', 'Beitragsregel aktualisiert.');
     }
 
     public function storeMembershipRequest(Request $request, Club $club)

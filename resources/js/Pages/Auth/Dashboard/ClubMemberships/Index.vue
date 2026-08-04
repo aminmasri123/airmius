@@ -90,6 +90,7 @@ const membershipTypeForm = useForm({
     is_active: true,
     sort_order: 0,
 })
+const editingMembershipTypeId = ref(null)
 const contributionRuleForm = useForm({
     club_membership_type_id: '',
     name: '',
@@ -105,6 +106,7 @@ const contributionRuleForm = useForm({
     is_active: true,
     notes: '',
 })
+const editingContributionRuleId = ref(null)
 const financeEntryForm = useForm({
     type: 'expense',
     account: 'cash',
@@ -718,20 +720,80 @@ const declineClubRequest = (request) => {
 }
 
 const storeMembershipType = () => {
-    membershipTypeForm.post(route('auth.club-memberships.types.store', selectedClub.value.id), {
+    const options = {
         preserveScroll: true,
-        onSuccess: () => membershipTypeForm.reset('name', 'slug', 'description'),
-    })
+        onSuccess: () => {
+            editingMembershipTypeId.value = null
+            membershipTypeForm.reset('name', 'slug', 'description')
+        },
+    }
+
+    if (editingMembershipTypeId.value) {
+        membershipTypeForm.put(route('auth.club-memberships.types.update', [selectedClub.value.id, editingMembershipTypeId.value]), options)
+    } else {
+        membershipTypeForm.post(route('auth.club-memberships.types.store', selectedClub.value.id), options)
+    }
 }
 
 const storeContributionRule = () => {
-    contributionRuleForm.post(route('auth.club-memberships.contribution-rules.store', selectedClub.value.id), {
+    const options = {
         preserveScroll: true,
         onSuccess: () => {
+            editingContributionRuleId.value = null
             contributionRuleForm.reset('name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_operator', 'factor_value', 'notes')
             contributionRuleForm.factor_key = 'standard'
         },
-    })
+    }
+
+    if (editingContributionRuleId.value) {
+        contributionRuleForm.put(route('auth.club-memberships.contribution-rules.update', [selectedClub.value.id, editingContributionRuleId.value]), options)
+    } else {
+        contributionRuleForm.post(route('auth.club-memberships.contribution-rules.store', selectedClub.value.id), options)
+    }
+}
+
+const editMembershipType = (type) => {
+    editingMembershipTypeId.value = type.id
+    membershipTypeForm.name = type.name || ''
+    membershipTypeForm.slug = type.slug || ''
+    membershipTypeForm.description = type.description || ''
+    membershipTypeForm.is_public = type.is_public !== false
+    membershipTypeForm.is_active = type.is_active !== false
+    membershipTypeForm.sort_order = type.sort_order || 0
+}
+
+const editContributionRule = (rule) => {
+    editingContributionRuleId.value = rule.id
+    contributionRuleForm.club_membership_type_id = rule.club_membership_type_id || ''
+    contributionRuleForm.name = rule.name || ''
+    contributionRuleForm.valid_from = rule.valid_from || new Date().toISOString().slice(0, 10)
+    contributionRuleForm.valid_until = rule.valid_until || ''
+    contributionRuleForm.billing_interval = rule.billing_interval || 'monthly'
+    contributionRuleForm.amount = rule.amount ?? ''
+    contributionRuleForm.age_min = rule.age_min ?? ''
+    contributionRuleForm.age_max = rule.age_max ?? ''
+    contributionRuleForm.factor_key = rule.factor_key || 'standard'
+    contributionRuleForm.factor_operator = rule.factor_operator || ''
+    contributionRuleForm.factor_value = rule.factor_value ?? ''
+    contributionRuleForm.is_active = rule.is_active !== false
+    contributionRuleForm.notes = rule.notes || ''
+}
+
+const cancelMembershipTypeEdit = () => {
+    editingMembershipTypeId.value = null
+    membershipTypeForm.reset('name', 'slug', 'description')
+    membershipTypeForm.is_public = true
+    membershipTypeForm.is_active = true
+    membershipTypeForm.sort_order = 0
+}
+
+const cancelContributionRuleEdit = () => {
+    editingContributionRuleId.value = null
+    contributionRuleForm.reset()
+    contributionRuleForm.valid_from = new Date().toISOString().slice(0, 10)
+    contributionRuleForm.billing_interval = 'monthly'
+    contributionRuleForm.factor_key = 'standard'
+    contributionRuleForm.is_active = true
 }
 
 const contributionRuleTypeLabel = (value) => props.contributionRuleTypes.find((type) => type.value === value)?.label || value || 'Standardbeitrag'
@@ -1467,9 +1529,14 @@ const inviteExternalMember = (member) => {
 	                                            </span>
 	                                        </p>
 	                                    </div>
-	                                    <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
-                                                {{ rule.is_active ? tx('auto.aktiv', 'aktiv') : tx('club_memberships.workspace.inactive', 'inaktiv') }}
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
+                                            {{ rule.is_active ? tx('auto.aktiv', 'aktiv') : tx('club_memberships.workspace.inactive', 'inaktiv') }}
+                                        </span>
+                                        <button type="button" class="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-inputBg" @click="editContributionRule(rule)">
+                                            {{ tx('club_memberships.workspace.edit', 'Bearbeiten') }}
+                                        </button>
+                                    </div>
                                 </div>
                             </article>
                             <p v-if="!contributionRules.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">{{ tx('auto.Noch keine Beitragsregeln.', 'Noch keine Beitragsregeln.') }}</p>
@@ -1479,21 +1546,36 @@ const inviteExternalMember = (member) => {
 
                 <aside class="space-y-6">
                     <section v-if="rulesWizardStep === 0" class="surface-card p-5">
-                        <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</h2>
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="text-lg font-semibold text-primary">{{ editingMembershipTypeId ? tx('club_memberships.workspace.edit_type', 'Mitgliedschaftstyp bearbeiten') : tx('auto.Mitgliedschaftstyp', 'Mitgliedschaftstyp') }}</h2>
+                            <button v-if="editingMembershipTypeId" type="button" class="text-xs font-semibold text-secondary hover:text-primary" @click="cancelMembershipTypeEdit">
+                                {{ tx('club_memberships.workspace.cancel_edit', 'Abbrechen') }}
+                            </button>
+                        </div>
                         <form class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.z. B. Jugendmitglied', 'z. B. Jugendmitglied')" required>
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.slug optional', 'slug optional')">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Beschreibung', 'Beschreibung')"></textarea>
                             <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> {{ tx('auto.Öffentlich sichtbar', 'Öffentlich sichtbar') }}</label>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('auto.Typ speichern', 'Typ speichern') }}</button>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ editingMembershipTypeId ? tx('club_memberships.workspace.update_type', 'Typ aktualisieren') : tx('auto.Typ speichern', 'Typ speichern') }}</button>
                         </form>
                         <div class="mt-4 flex flex-wrap gap-2">
-                            <span v-for="type in membershipTypes" :key="type.id" class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ type.name }}</span>
+                            <div v-for="type in membershipTypes" :key="type.id" class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2">
+                                <span class="text-xs font-semibold text-secondary">{{ type.name }}</span>
+                                <button type="button" class="text-xs font-semibold text-air-blue hover:underline" @click="editMembershipType(type)">
+                                    {{ tx('club_memberships.workspace.edit', 'Bearbeiten') }}
+                                </button>
+                            </div>
                         </div>
                     </section>
 
                     <section v-if="rulesWizardStep === 1" class="surface-card p-5">
-                        <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Neue Beitragsregel', 'Neue Beitragsregel') }}</h2>
+                        <div class="flex items-center justify-between gap-3">
+                            <h2 class="text-lg font-semibold text-primary">{{ editingContributionRuleId ? tx('club_memberships.workspace.edit_rule', 'Beitragsregel bearbeiten') : tx('auto.Neue Beitragsregel', 'Neue Beitragsregel') }}</h2>
+                            <button v-if="editingContributionRuleId" type="button" class="text-xs font-semibold text-secondary hover:text-primary" @click="cancelContributionRuleEdit">
+                                {{ tx('club_memberships.workspace.cancel_edit', 'Abbrechen') }}
+                            </button>
+                        </div>
                         <form class="mt-4 grid gap-3" @submit.prevent="storeContributionRule">
                             <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="">{{ tx('auto.Alle Typen', 'Alle Typen') }}</option>
@@ -1523,7 +1605,7 @@ const inviteExternalMember = (member) => {
                                 <input v-model="contributionRuleForm.age_max" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Alter bis', 'Alter bis')">
                             </div>
                             <textarea v-model="contributionRuleForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.Notiz', 'Notiz')"></textarea>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('auto.Regel speichern', 'Regel speichern') }}</button>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ editingContributionRuleId ? tx('club_memberships.workspace.update_rule', 'Regel aktualisieren') : tx('auto.Regel speichern', 'Regel speichern') }}</button>
                         </form>
                     </section>
                 </aside>
