@@ -401,6 +401,13 @@ const rulesWizardBack = () => {
     if (rulesWizardStep.value > 0) rulesWizardStep.value -= 1
 }
 
+const cancelRulesWizard = () => {
+    cancelMembershipTypeEdit()
+    cancelContributionRuleEdit()
+    rulesWizardStep.value = 0
+    activeTab.value = 'overview'
+}
+
 const statusLabel = (status) => ({
     active: 'Vereinsmitglied',
     non_member: 'Kein Vereinsmitglied',
@@ -1371,9 +1378,14 @@ const inviteExternalMember = (member) => {
                                 <h2 class="mt-1 text-xl font-bold text-primary">{{ rulesWizardSteps[rulesWizardStep].label }}</h2>
                                 <p class="mt-1 max-w-2xl text-sm leading-6 text-secondary">{{ rulesWizardSteps[rulesWizardStep].hint }}</p>
                             </div>
-                            <span class="shrink-0 rounded-full bg-buttonPrimary/15 px-3 py-1.5 text-xs font-bold text-air-blue">
-                                {{ tx('club_memberships.workspace.wizard_step', 'Schritt') }} {{ rulesWizardStep + 1 }} / {{ rulesWizardSteps.length }}
-                            </span>
+                            <div class="flex shrink-0 items-center gap-3">
+                                <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-inputBg" @click="cancelRulesWizard">
+                                    {{ tx('club_memberships.workspace.wizard_cancel', 'Abbrechen') }}
+                                </button>
+                                <span class="rounded-full bg-buttonPrimary/15 px-3 py-1.5 text-xs font-bold text-air-blue">
+                                    {{ tx('club_memberships.workspace.wizard_step', 'Schritt') }} {{ rulesWizardStep + 1 }} / {{ rulesWizardSteps.length }}
+                                </span>
+                            </div>
                         </div>
                         <div class="mt-5 grid grid-cols-6 gap-2">
                             <button

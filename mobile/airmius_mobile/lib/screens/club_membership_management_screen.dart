@@ -5759,6 +5759,11 @@ class _MembershipRulesAdminPanelState
           Row(
             children: [
               Expanded(child: Eyebrow(_tr('membership.contributionRules'))),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Abbrechen'),
+              ),
               StatusPill('$activeRules ${_tr('membership.activeAfter')}'),
             ],
           ),
