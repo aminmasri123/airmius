@@ -5,6 +5,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
+import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_detail_screen.dart';
 import 'notification_preferences_screen.dart';
@@ -434,6 +435,13 @@ class _NotificationLineState extends State<_NotificationLine> {
         return;
       }
 
+      if (_isMembershipRequestNotification(notification) &&
+          notification.actionUrl != null &&
+          notification.actionUrl!.isNotEmpty) {
+        AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);
+        return;
+      }
+
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -648,6 +656,11 @@ String _typeKey(String rawType) {
 
 String _labelForType(AirmiusScope scope, String rawType) {
   return _filters(scope)[_typeKey(rawType)] ?? scope.t('notifications.system');
+}
+
+bool _isMembershipRequestNotification(AirmiusNotification notification) {
+  return notification.type == 'club.membership_request_created' ||
+      notification.type == 'club.membership_request_withdrawn';
 }
 
 int? _teamInvitationId(AirmiusNotification notification) {

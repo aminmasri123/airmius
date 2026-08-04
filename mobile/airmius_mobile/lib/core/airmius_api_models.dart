@@ -2153,9 +2153,10 @@ class AirmiusNotification {
   factory AirmiusNotification.fromJson(JsonMap json) {
     final data = json['data'];
     final dataMap = data is JsonMap ? data : const <String, dynamic>{};
+    final type = '${json['type'] ?? json['category'] ?? 'System'}';
     return AirmiusNotification(
       id: json['id'] as int? ?? int.tryParse('${json['id'] ?? 0}') ?? 0,
-      type: '${json['type'] ?? json['category'] ?? 'System'}',
+      type: type,
       title:
           '${json['title'] ?? dataMap['title'] ?? json['subject'] ?? 'Benachrichtigung'}',
       body:
@@ -2167,6 +2168,7 @@ class AirmiusNotification {
           !(json['read'] as bool? ?? json['read_at'] != null),
       data: dataMap,
       actionUrl:
+          _mobileNotificationActionUrl(type, dataMap) ??
           json['action_url'] as String? ??
           json['url'] as String? ??
           dataMap['url'] as String?,
@@ -2192,6 +2194,21 @@ class AirmiusNotification {
     data: data,
     actionUrl: actionUrl,
   );
+}
+
+String? _mobileNotificationActionUrl(String type, JsonMap data) {
+  final explicit = data['mobile_url']?.toString().trim();
+  if (explicit != null && explicit.isNotEmpty) return explicit;
+
+  if (type == 'club.membership_request_created' ||
+      type == 'club.membership_request_withdrawn') {
+    final clubId = int.tryParse('${data['club_id'] ?? ''}');
+    if (clubId != null && clubId > 0) {
+      return 'airmius://clubs/$clubId/membership-requests';
+    }
+  }
+
+  return null;
 }
 
 class AirmiusConversation {

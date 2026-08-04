@@ -422,9 +422,9 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                     <input ref="coverInput" type="file" accept="image/*" class="hidden"
                         @change="uploadImage('cover_image', $event)" />
                 </div>
-                <div class="px-5 pb-5 pt-4">
-                    <div class="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div class="flex items-end gap-4">
+                <div class="relative z-10 px-5 pb-5 pt-4">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div class="-mt-12 flex min-w-0 items-end gap-4">
                             <div
                                 class="group relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border-4 border-card bg-inputBg text-3xl font-bold text-primary">
                                 <img v-if="clubProfile.logo" :src="storageUrl(clubProfile.logo)" :alt="clubProfile.name"
@@ -444,7 +444,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex min-w-0 flex-wrap gap-2 sm:justify-end">
                             <button
                                 v-if="clubProfile.owner_id && viewer.social?.can_send_message"
                                 type="button"

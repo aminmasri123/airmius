@@ -22,9 +22,14 @@ String _inboxTabKey(String value) {
 }
 
 class ClubRequestInboxScreen extends StatefulWidget {
-  const ClubRequestInboxScreen({super.key, this.initialTab = 'Neu'});
+  const ClubRequestInboxScreen({
+    super.key,
+    this.initialTab = 'Neu',
+    this.initialClubId,
+  });
 
   final String initialTab;
+  final int? initialClubId;
 
   @override
   State<ClubRequestInboxScreen> createState() => _ClubRequestInboxScreenState();
@@ -57,7 +62,10 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
       final managed = clubs.items
           .where((club) => club.canManage || club.ownerId == userId)
           .toList();
-      if (managed.isEmpty) {
+      final scopedManaged = widget.initialClubId == null
+          ? managed
+          : managed.where((club) => club.id == widget.initialClubId).toList();
+      if (scopedManaged.isEmpty) {
         if (!mounted) return;
         setState(() {
           _loading = false;
@@ -65,9 +73,9 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
         });
         return;
       }
-      _clubId = managed.first.id;
+      _clubId = scopedManaged.first.id;
       final pages = await Future.wait(
-        managed.map(
+        scopedManaged.map(
           (club) => services.repositories.memberships.clubRequests(club.id),
         ),
       );

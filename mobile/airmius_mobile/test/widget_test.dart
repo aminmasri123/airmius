@@ -5847,6 +5847,9 @@ void main() {
     const resolver = AirmiusDeepLinkResolver();
 
     final club = resolver.resolve('airmius://clubs/7');
+    final membershipRequests = resolver.resolve(
+      'airmius://clubs/7/membership-requests',
+    );
     final team = resolver.resolve('https://app.airmius.com/teams/12');
     final event = resolver.resolve('airmius://events/31');
     final post = resolver.resolve('airmius://feed/44');
@@ -5871,6 +5874,10 @@ void main() {
 
     expect(club.type, AirmiusDeepLinkTargetType.club);
     expect(club.id, 7);
+    expect(membershipRequests.type, AirmiusDeepLinkTargetType.club);
+    expect(membershipRequests.id, 7);
+    expect(membershipRequests.section, 'membership-requests');
+    expect(membershipRequests.requiresAuth, isTrue);
     expect(team.type, AirmiusDeepLinkTargetType.team);
     expect(team.id, 12);
     expect(event.type, AirmiusDeepLinkTargetType.event);

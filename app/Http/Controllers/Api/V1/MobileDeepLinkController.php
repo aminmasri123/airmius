@@ -49,7 +49,9 @@ class MobileDeepLinkController extends Controller
             'commerce' => $this->commerceTarget($segments),
             'clubs' => $third === 'billing'
                 ? $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($second ?? '{club}').'/billing', '/club-cockpit', ['club' => $second])
-                : $this->target('club_show', 'ClubShow', '/api/v1/clubs/'.($second ?? '{club}'), '/clubs/'.($second ?? ''), ['club' => $second]),
+                : ($third === 'membership-requests'
+                    ? $this->target('club_membership_requests', 'ClubMembershipRequests', '/api/v1/clubs/'.($second ?? '{club}').'/membership-requests', '/club-memberships?tab=requests&club_id='.($second ?? ''), ['club' => $second])
+                    : $this->target('club_show', 'ClubShow', '/api/v1/clubs/'.($second ?? '{club}'), '/clubs/'.($second ?? ''), ['club' => $second])),
             default => $this->target('unknown', 'Dashboard', '/api/v1/mobile/sync', '/dashboard', [], false),
         };
     }

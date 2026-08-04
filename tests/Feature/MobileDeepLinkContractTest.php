@@ -17,6 +17,7 @@ class MobileDeepLinkContractTest extends TestCase
 
         $cases = [
             ['airmius://clubs/7', 'club_show', 'ClubShow', 'club', '7'],
+            ['airmius://clubs/7/membership-requests', 'club_membership_requests', 'ClubMembershipRequests', 'club', '7'],
             ['airmius://teams/12', 'team_show', 'TeamShow', 'team', '12'],
             ['airmius://events/31', 'event_show', 'EventShow', 'event', '31'],
             ['airmius://feed/44', 'feed_post', 'FeedPost', 'post', '44'],

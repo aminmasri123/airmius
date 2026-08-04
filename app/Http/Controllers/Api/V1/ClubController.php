@@ -966,7 +966,8 @@ class ClubController extends Controller
         $this->notifyClubManagers($club, 'club.membership_termination_requested', [
             'title' => 'Austrittsantrag eingegangen',
             'body' => $user->name.' beantragt den Austritt aus '.$club->name.'.',
-            'url' => '/club-memberships',
+            'url' => '/club-memberships?tab=requests&club_id='.$club->id,
+            'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
             'club_id' => $club->id,
             'membership_request_id' => $membershipRequest->id,
         ], $user->id);
@@ -1099,7 +1100,8 @@ class ClubController extends Controller
         $this->notifyClubManagers($club, 'club.membership_request_created', [
             'title' => 'Neue Mitgliedschaftsanfrage',
             'body' => $request->user()->name.' möchte Mitglied bei '.$club->name.' werden.',
-            'url' => '/club-memberships',
+            'url' => '/club-memberships?tab=requests&club_id='.$club->id,
+            'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
             'club_id' => $club->id,
             'membership_request_id' => $membershipRequest->id,
         ], $request->user()->id);
@@ -1130,7 +1132,8 @@ class ClubController extends Controller
         $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
             'title' => 'Mitgliedschaftsanfrage zurückgezogen',
             'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurückgezogen.',
-            'url' => '/club-memberships',
+            'url' => '/club-memberships?tab=requests&club_id='.$club->id,
+            'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
             'club_id' => $club->id,
             'membership_request_id' => $membershipRequest->id,
         ], $request->user()->id);

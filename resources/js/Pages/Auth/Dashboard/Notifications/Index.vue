@@ -102,7 +102,16 @@ const objectToRemoval = (notification) => {
 
 const notificationTitle = (notification) => notification.title || notification.data?.title || tx('Neue Benachrichtigung')
 const notificationBody = (notification) => notification.body || notification.data?.body || notification.data?.message || null
-const notificationActionUrl = (notification) => notification.action_url || notification.url || notification.data?.action_url || notification.data?.url || null
+const notificationActionUrl = (notification) => {
+    const membershipRequestTypes = ['club.membership_request_created', 'club.membership_request_withdrawn']
+    const clubId = notification.data?.club_id
+
+    if (membershipRequestTypes.includes(notification.type) && clubId) {
+        return `/club-memberships?tab=requests&club_id=${encodeURIComponent(clubId)}`
+    }
+
+    return notification.action_url || notification.url || notification.data?.action_url || notification.data?.url || null
+}
 
 const visitPage = (url) => {
     if (!url) return

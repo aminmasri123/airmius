@@ -242,6 +242,19 @@ class MobilePushDeliveryService
         $data = $notification->data ?? [];
         $channelContract = collect(MobileSyncContract::pushChannels())
             ->firstWhere('key', $channel) ?? [];
+        $deepLink = $this->replacePlaceholders((string) Arr::get($channelContract, 'deep_link', 'airmius://dashboard'), $data);
+        $fallbackUrl = $this->replacePlaceholders((string) Arr::get($channelContract, 'fallback_url', '/dashboard'), $data);
+
+        // Membership requests are club notifications, but they must open the
+        // request inbox instead of the club billing area. This also repairs
+        // deliveries created before the dedicated mobile URL was stored.
+        if ($this->isMembershipRequestNotification($notification)) {
+            $clubId = $data['club_id'] ?? null;
+            if (is_int($clubId) || (is_string($clubId) && ctype_digit($clubId))) {
+                $deepLink = 'airmius://clubs/'.$clubId.'/membership-requests';
+                $fallbackUrl = '/club-memberships';
+            }
+        }
 
         return [
             'contract_version' => self::CONTRACT_VERSION,
@@ -250,11 +263,19 @@ class MobilePushDeliveryService
             'channel' => $channel,
             'title' => (string) ($data['title'] ?? $this->titleForType($notification->type)),
             'body' => (string) ($data['body'] ?? $data['message'] ?? $data['description'] ?? ''),
-            'deep_link' => $this->replacePlaceholders((string) Arr::get($channelContract, 'deep_link', 'airmius://dashboard'), $data),
-            'fallback_url' => $this->replacePlaceholders((string) Arr::get($channelContract, 'fallback_url', '/dashboard'), $data),
+            'deep_link' => $deepLink,
+            'fallback_url' => $fallbackUrl,
             'importance' => Arr::get($channelContract, 'importance', 'default'),
             'data' => Arr::except($data, ['token', 'password']),
         ];
+    }
+
+    protected function isMembershipRequestNotification(Notification $notification): bool
+    {
+        return in_array($notification->type, [
+            'club.membership_request_created',
+            'club.membership_request_withdrawn',
+        ], true);
     }
 
     protected function replacePlaceholders(string $template, array $data): string

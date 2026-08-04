@@ -191,6 +191,38 @@ class MobilePushDeliveryServiceTest extends TestCase
         $this->assertDatabaseCount('mobile_push_deliveries', 0);
     }
 
+    public function test_membership_request_push_opens_the_club_request_inbox(): void
+    {
+        $user = User::factory()->create();
+        MobileDeviceToken::create([
+            'user_id' => $user->id,
+            'device_id' => 'membership-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'membership-device-token',
+            'token_hash' => hash('sha256', 'membership-device-token'),
+            'channels' => ['club_billing'],
+            'permissions' => ['notifications' => true],
+        ]);
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'type' => 'club.membership_request_created',
+            'data' => [
+                'title' => 'Neue Mitgliedschaftsanfrage',
+                'body' => 'Eine Person möchte Mitglied werden.',
+                'club_id' => 42,
+                'membership_request_id' => 99,
+            ],
+        ]);
+
+        app(MobilePushDeliveryService::class)->queueForNotification($notification);
+
+        $this->assertSame(
+            'airmius://clubs/42/membership-requests',
+            MobilePushDelivery::firstOrFail()->payload['deep_link'],
+        );
+    }
+
     private function notificationAndDevice(): array
     {
         $user = User::factory()->create();

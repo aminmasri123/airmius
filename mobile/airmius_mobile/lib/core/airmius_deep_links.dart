@@ -32,7 +32,7 @@ class AirmiusDeepLinkTarget {
   final Map<String, String> query;
 
   bool get requiresAuth => switch (type) {
-    AirmiusDeepLinkTargetType.club => false,
+    AirmiusDeepLinkTargetType.club => section == 'membership-requests',
     AirmiusDeepLinkTargetType.invitation => true,
     AirmiusDeepLinkTargetType.passwordReset => false,
     AirmiusDeepLinkTargetType.emailVerification => false,

@@ -11,6 +11,7 @@ import '../screens/chat_detail_screen.dart';
 import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
+import '../screens/club_request_inbox_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
 import '../screens/notification_detail_screen.dart';
@@ -49,9 +50,9 @@ class AirmiusDeepLinkNavigator {
 
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
-      AirmiusDeepLinkTargetType.club => AirmiusDeepLinkedClubProfileScreen(
-        clubId: target.id ?? 0,
-      ),
+      AirmiusDeepLinkTargetType.club => target.section == 'membership-requests'
+          ? ClubRequestInboxScreen(initialClubId: target.id)
+          : AirmiusDeepLinkedClubProfileScreen(clubId: target.id ?? 0),
       AirmiusDeepLinkTargetType.team => TeamDetailScreen(
         title: 'Team',
         mode: target.section ?? 'overview',

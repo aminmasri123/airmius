@@ -32,8 +32,11 @@ const tx = (key, fallback = key, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
 }
-const selectedClubId = ref(props.clubs[0]?.id || null)
-const activeTab = ref('members')
+const initialQuery = new URLSearchParams(String(page.url || '').split('?')[1] || '')
+const requestedClubId = Number(initialQuery.get('club_id') || 0) || null
+const requestedTab = initialQuery.get('tab')
+const selectedClubId = ref(props.clubs.some((club) => club.id === requestedClubId) ? requestedClubId : (props.clubs[0]?.id || null))
+const activeTab = ref(['members', 'requests', 'rules', 'invoices', 'payments', 'audit', 'exports'].includes(requestedTab) ? requestedTab : 'members')
 const rulesWizardStep = ref(0)
 const membershipTypeMode = ref('choose')
 const memberSearch = ref('')
