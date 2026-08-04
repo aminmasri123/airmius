@@ -15,6 +15,7 @@ class ClubMembershipType extends Model
         'is_public',
         'is_active',
         'sort_order',
+        'application_fields',
     ];
 
     protected function casts(): array
@@ -22,6 +23,7 @@ class ClubMembershipType extends Model
         return [
             'is_public' => 'boolean',
             'is_active' => 'boolean',
+            'application_fields' => 'array',
         ];
     }
 

@@ -124,8 +124,10 @@ const updateClubProfile = () => {
 const openMembershipRequest = () => {
     activeMembershipTab.value = 0
     membershipRequestForm.club_membership_type_id = props.clubProfile.membership_types?.[0]?.id || ''
+    const selectedType = props.clubProfile.membership_types?.find((type) => String(type.id) === String(membershipRequestForm.club_membership_type_id))
+    const fieldOverrides = selectedType?.application_fields || {}
     membershipRequestForm.application_data = Object.fromEntries(
-        (props.clubProfile.membership_application_fields || [])
+        (props.clubProfile.membership_application_fields || []).map((field) => ({ ...field, mode: fieldOverrides[field.key] || field.mode }))
             .filter((field) => field.mode !== 'off')
             .map((field) => [field.key, props.viewer.application_prefill?.[field.key] || (field.type === 'checkbox' ? false : '')])
     )
@@ -238,7 +240,12 @@ const intervalLabel = (interval) => ({
 
 const paymentMethodLabel = (value) => props.clubProfile.membership_payment_method_options?.find((method) => method.value === value)?.label || value
 
-const visibleMembershipDocuments = computed(() => props.clubProfile.membership_application_documents || [])
+const visibleMembershipDocuments = computed(() => {
+    const selectedTypeId = membershipRequestForm.club_membership_type_id
+    return (props.clubProfile.membership_application_documents || []).filter((document) => {
+        return !document.membership_type_id || String(document.membership_type_id) === String(selectedTypeId)
+    })
+})
 
 const membershipRequestTabs = computed(() => {
     const english = locale.value !== 'de'
@@ -257,7 +264,10 @@ const membershipRequestTabs = computed(() => {
 const applicationFieldSections = computed(() => {
     const sections = []
 
-    ;(props.clubProfile.membership_application_fields || [])
+    const selectedType = props.clubProfile.membership_types?.find((type) => String(type.id) === String(membershipRequestForm.club_membership_type_id))
+    const fieldOverrides = selectedType?.application_fields || {}
+
+    ;(props.clubProfile.membership_application_fields || []).map((field) => ({ ...field, mode: fieldOverrides[field.key] || field.mode }))
         .filter((field) => field.mode !== 'off')
         .forEach((field) => {
             let section = sections.find((candidate) => candidate.name === field.section)

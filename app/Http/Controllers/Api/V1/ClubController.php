@@ -495,6 +495,7 @@ class ClubController extends Controller
             'membership_payment_methods.*' => ['string', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
             'membership_application_documents' => ['nullable', 'array'],
             'membership_application_documents.*.id' => ['nullable', 'string', 'max:80'],
+            'membership_application_documents.*.membership_type_id' => ['nullable', 'integer', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
             'membership_application_documents.*.type' => ['nullable', Rule::in(ClubMembershipApplication::DOCUMENT_TYPES)],
             'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
             'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
@@ -1447,7 +1448,10 @@ class ClubController extends Controller
 
     private function validatedMembershipApplicationData(Request $request, Club $club, array $input): array
     {
-        $applicationFields = ClubMembershipApplication::fieldsForClub($club->membership_application_fields);
+        $selectedTypeFields = $request->input('club_membership_type_id')
+            ? $club->membershipTypes()->whereKey($request->input('club_membership_type_id'))->first()?->application_fields
+            : null;
+        $applicationFields = ClubMembershipApplication::fieldsForClub($club->membership_application_fields, $selectedTypeFields);
         $enabledApplicationFields = collect($applicationFields)->where('mode', '!=', 'off')->values();
         $inputApplicationData = array_merge(
             ClubMembershipApplication::prefillFor($request->user()),
@@ -1490,6 +1494,7 @@ class ClubController extends Controller
     private function validatedMembershipApplicationDocuments(Club $club, array $acceptedInput): array
     {
         $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+            ->filter(fn (array $document) => empty($document['membership_type_id']) || (int) $document['membership_type_id'] === (int) $request->input('club_membership_type_id'))
             ->where('is_visible', true)
             ->values();
         $acceptedDocumentIds = collect($acceptedInput)
@@ -1928,6 +1933,7 @@ class ClubController extends Controller
                 'is_public' => $type->is_public,
                 'is_active' => $type->is_active,
                 'sort_order' => $type->sort_order,
+                'application_fields' => $type->application_fields,
             ])->values(),
             'contribution_rules' => $club->contributionRules->map(fn (ClubContributionRule $rule) => [
                 'id' => $rule->id,
@@ -2025,6 +2031,8 @@ class ClubController extends Controller
             'is_public' => ['boolean'],
             'is_active' => ['boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+            'application_fields' => ['nullable', 'array'],
+            'application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
         ]);
 
         return [
@@ -2032,6 +2040,9 @@ class ClubController extends Controller
             'is_public' => (bool) ($data['is_public'] ?? true),
             'is_active' => (bool) ($data['is_active'] ?? true),
             'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'application_fields' => array_key_exists('application_fields', $data)
+                ? ClubMembershipApplication::normalizeFieldModes($data['application_fields'])
+                : null,
         ];
     }
 

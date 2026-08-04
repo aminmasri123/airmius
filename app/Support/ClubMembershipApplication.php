@@ -104,6 +104,7 @@ class ClubMembershipApplication
 
                 return [
                     'id' => (string) ($document['id'] ?? (string) \Illuminate\Support\Str::uuid()),
+                    'membership_type_id' => $document['membership_type_id'] ?? null,
                     'type' => in_array($type, self::DOCUMENT_TYPES, true) ? $type : 'other',
                     'title' => $title !== '' ? $title : 'Dokument',
                     'url' => $url,
@@ -150,9 +151,16 @@ class ClubMembershipApplication
             ->all();
     }
 
-    public static function fieldsForClub(?array $settings): array
+    public static function fieldsForClub(?array $settings, ?array $overrides = null): array
     {
         $modes = self::normalizeFieldModes($settings);
+        if ($overrides) {
+            foreach ($overrides as $key => $mode) {
+                if (array_key_exists($key, $modes) && in_array($mode, self::FIELD_MODES, true)) {
+                    $modes[$key] = $mode;
+                }
+            }
+        }
 
         return collect(self::fields())
             ->map(fn (array $field) => $field + [

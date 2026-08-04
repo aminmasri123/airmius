@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -4301,6 +4302,52 @@ class _SelectedClubLine extends StatelessWidget {
   }
 }
 
+String _membershipDateDisplay(Object? value) {
+  final raw = '$value'.trim();
+  if (raw.isEmpty || raw == 'null') return '';
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return raw;
+  final day = parsed.day.toString().padLeft(2, '0');
+  final month = parsed.month.toString().padLeft(2, '0');
+  return '$day.$month.${parsed.year}';
+}
+
+String _membershipDateApi(String value) {
+  final raw = value.trim();
+  final match = RegExp(r'^(\d{2})\.(\d{2})\.(\d{4})$').firstMatch(raw);
+  if (match == null) return raw;
+  return '${match.group(3)}-${match.group(2)}-${match.group(1)}';
+}
+
+class _MembershipDateInputFormatter extends TextInputFormatter {
+  const _MembershipDateInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final rawDigits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final digits = rawDigits.length > 8
+        ? rawDigits.substring(0, 8)
+        : rawDigits;
+    final buffer = StringBuffer();
+    for (var index = 0; index < digits.length; index++) {
+      if (index == 2 || index == 4) buffer.write('.');
+      buffer.write(digits[index]);
+    }
+    final text = buffer.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+const _membershipDateInputFormatters = <TextInputFormatter>[
+  _MembershipDateInputFormatter(),
+];
+
 class _MembershipRulesAdminPanel extends StatefulWidget {
   const _MembershipRulesAdminPanel({
     required this.club,
@@ -4325,7 +4372,7 @@ class _MembershipRulesAdminPanelState
   final _ruleName = TextEditingController();
   final _ruleAmount = TextEditingController();
   final _ruleValidFrom = TextEditingController(
-    text: DateTime.now().toIso8601String().substring(0, 10),
+    text: _membershipDateDisplay(DateTime.now()),
   );
   final _ruleValidUntil = TextEditingController();
   final _ruleAgeMin = TextEditingController();
@@ -4348,6 +4395,7 @@ class _MembershipRulesAdminPanelState
   String _rulesTab = 'application';
   Set<String> _paymentMethods = {'bank_transfer', 'cash'};
   Map<String, String> _fieldModes = {};
+  Map<String, String> _typeApplicationFields = {};
   List<JsonMap> _documents = [];
 
   String _tr(String key) => AirmiusScope.of(context).t(key);
@@ -4422,7 +4470,7 @@ class _MembershipRulesAdminPanelState
     _typeDescription.clear();
     _ruleName.clear();
     _ruleAmount.clear();
-    _ruleValidFrom.text = DateTime.now().toIso8601String().substring(0, 10);
+    _ruleValidFrom.text = _membershipDateDisplay(DateTime.now());
     _ruleValidUntil.clear();
     _ruleAgeMin.clear();
     _ruleAgeMax.clear();
@@ -4434,6 +4482,7 @@ class _MembershipRulesAdminPanelState
     _ruleInterval = 'monthly';
     _ruleFactorKey = 'standard';
     _ruleFactorOperator = 'percent';
+    _typeApplicationFields = {..._fieldModes};
   }
 
   bool _bool(Object? value) =>
@@ -4461,6 +4510,7 @@ class _MembershipRulesAdminPanelState
         : _typeDescription.text.trim(),
     'is_public': _typePublic,
     'is_active': _typeActive,
+    'application_fields': _typeApplicationFields,
   };
 
   JsonMap _rulePayload() => {
@@ -4468,10 +4518,10 @@ class _MembershipRulesAdminPanelState
     'name': _ruleName.text.trim(),
     'amount': _ruleAmount.text.trim().replaceAll(',', '.'),
     'billing_interval': _ruleInterval,
-    'valid_from': _ruleValidFrom.text.trim(),
+    'valid_from': _membershipDateApi(_ruleValidFrom.text),
     'valid_until': _ruleValidUntil.text.trim().isEmpty
         ? null
-        : _ruleValidUntil.text.trim(),
+        : _membershipDateApi(_ruleValidUntil.text),
     'age_min': _ruleAgeMin.text.trim().isEmpty
         ? null
         : int.tryParse(_ruleAgeMin.text.trim()),
@@ -4588,6 +4638,13 @@ class _MembershipRulesAdminPanelState
       _typeDescription.text = _string(type['description']);
       _typePublic = _bool(type['is_public']);
       _typeActive = _bool(type['is_active']);
+      _typeApplicationFields = {
+        ..._fieldModes,
+        if (type['application_fields'] is JsonMap)
+          ...(type['application_fields'] as JsonMap).map(
+            (key, value) => MapEntry(key, '$value'),
+          ),
+      };
     });
   }
 
@@ -4598,11 +4655,13 @@ class _MembershipRulesAdminPanelState
       _ruleName.text = _string(rule['name']);
       _ruleAmount.text = _string(rule['amount']);
       _ruleInterval = _string(rule['billing_interval'], fallback: 'monthly');
-      _ruleValidFrom.text = _string(
+      _ruleValidFrom.text = _membershipDateDisplay(
         rule['valid_from'],
-        fallback: DateTime.now().toIso8601String().substring(0, 10),
       );
-      _ruleValidUntil.text = _string(rule['valid_until']);
+      if (_ruleValidFrom.text.isEmpty) {
+        _ruleValidFrom.text = _membershipDateDisplay(DateTime.now());
+      }
+      _ruleValidUntil.text = _membershipDateDisplay(rule['valid_until']);
       _ruleAgeMin.text = _string(rule['age_min']);
       _ruleAgeMax.text = _string(rule['age_max']);
       _ruleFactorKey = _string(rule['factor_key'], fallback: 'standard');
@@ -4624,6 +4683,7 @@ class _MembershipRulesAdminPanelState
       _typeDescription.clear();
       _typePublic = true;
       _typeActive = true;
+      _typeApplicationFields = {..._fieldModes};
     });
   }
 
@@ -4637,7 +4697,7 @@ class _MembershipRulesAdminPanelState
       _ruleFactorOperator = 'percent';
       _ruleFactorValue.clear();
       _ruleInterval = 'monthly';
-      _ruleValidFrom.text = DateTime.now().toIso8601String().substring(0, 10);
+      _ruleValidFrom.text = _membershipDateDisplay(DateTime.now());
       _ruleValidUntil.clear();
       _ruleAgeMin.clear();
       _ruleAgeMax.clear();
@@ -4699,6 +4759,7 @@ class _MembershipRulesAdminPanelState
       text: _string(existing['description']),
     );
     var type = _string(existing['type'], fallback: 'privacy');
+    var membershipTypeId = _intOrNull(existing['membership_type_id']);
     var source = _string(existing['file_id']).isNotEmpty ? 'file' : 'link';
     var visible = existing.isEmpty ? true : _bool(existing['is_visible']);
     var isRequired = _bool(existing['is_required']);
@@ -4755,6 +4816,28 @@ class _MembershipRulesAdminPanelState
                             .toList(),
                     onChanged: (value) =>
                         setDialogState(() => type = value ?? type),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int?>(
+                    initialValue: membershipTypeId,
+                    dropdownColor: airmiusSurfaceSoftColor(context),
+                    decoration: InputDecoration(
+                      labelText: _tr('membership.appliesToType'),
+                    ),
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(_tr('membership.allTypes')),
+                      ),
+                      for (final membershipType
+                          in widget.management.membershipTypes)
+                        DropdownMenuItem<int?>(
+                          value: _intOrNull(membershipType['id']),
+                          child: Text(_string(membershipType['name'])),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setDialogState(() => membershipTypeId = value),
                   ),
                   const SizedBox(height: 10),
                   SegmentedButton<String>(
@@ -4874,6 +4957,7 @@ class _MembershipRulesAdminPanelState
                       fallback: 'doc-${DateTime.now().millisecondsSinceEpoch}',
                     ),
                     'type': type,
+                    'membership_type_id': membershipTypeId,
                     'title': title.text.trim(),
                     'url': source == 'file' && uploadedFile != null
                         ? _string(uploadedFile!['url'])
@@ -5306,6 +5390,39 @@ class _MembershipRulesAdminPanelState
                           ),
                         ],
                       ),
+                      if (_fieldModes.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Eyebrow(_tr('membership.applicationFields')),
+                        const SizedBox(height: 6),
+                        Text(
+                          _tr('membership.typeFieldsHint'),
+                          style: TextStyle(color: airmiusMutedColor(context)),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final entry in _fieldModes.entries)
+                          DropdownButtonFormField<String>(
+                            initialValue: const ['required', 'optional', 'off']
+                                    .contains(_typeApplicationFields[entry.key])
+                                ? _typeApplicationFields[entry.key]
+                                : 'off',
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                            ),
+                            items: const ['required', 'optional', 'off']
+                                .map(
+                                  (mode) => DropdownMenuItem(
+                                    value: mode,
+                                    child: Text(mode),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                update(() => _typeApplicationFields[entry.key] = value);
+                              }
+                            },
+                          ),
+                      ],
                       const SizedBox(height: 18),
                       Row(
                         children: [
@@ -5541,6 +5658,7 @@ class _MembershipRulesAdminPanelState
                                   label: _tr('membership.validFrom'),
                                   hint: _tr('membership.isoDateHint'),
                                   controller: _ruleValidFrom,
+                                  inputFormatters: _membershipDateInputFormatters,
                                 ),
                               ),
                               SizedBox(
@@ -5549,6 +5667,7 @@ class _MembershipRulesAdminPanelState
                                   label: _tr('membership.validUntil'),
                                   hint: _tr('membership.optional'),
                                   controller: _ruleValidUntil,
+                                  inputFormatters: _membershipDateInputFormatters,
                                 ),
                               ),
                               SizedBox(
@@ -6291,11 +6410,8 @@ class _ContributionRuleLine extends StatelessWidget {
     final interval = intervalLabel(
       _text(rule['billing_interval'], fallback: 'monthly'),
     );
-    final validFrom = _text(rule['valid_from'], fallback: '-');
-    final validUntil = _text(
-      rule['valid_until'],
-      fallback: t('membership.open'),
-    );
+    final validFrom = _membershipDateDisplay(rule['valid_from']);
+    final validUntil = _membershipDateDisplay(rule['valid_until']);
     final factorKey = _text(rule['factor_key'], fallback: 'standard');
     final factorLabel = t('membership.ruleFactor.$factorKey');
     final factorValue = _text(rule['factor_value']);
@@ -6353,8 +6469,8 @@ class _ContributionRuleLine extends StatelessWidget {
                 ],
                 const SizedBox(height: 2),
                 Text(
-                  '${t('membership.validFrom')} $validFrom '
-                  '${t('membership.to')} $validUntil',
+                  '${t('membership.validFrom')} ${validFrom.isEmpty ? '-' : validFrom} '
+                  '${t('membership.to')} ${validUntil.isEmpty ? t('membership.open') : validUntil}',
                   style: TextStyle(
                     color: airmiusMutedColor(context),
                     fontSize: 12,

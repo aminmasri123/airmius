@@ -170,10 +170,25 @@ class _MembershipApplicationFormScreenState
 
   List<JsonMap> get _applicationFields {
     final raw = _clubSettings['membership_application_fields'];
-    if (raw is List) {
-      return raw.whereType<JsonMap>().toList(growable: false);
-    }
-    return const <JsonMap>[];
+    final base = raw is List
+        ? raw.whereType<JsonMap>().toList(growable: false)
+        : const <JsonMap>[];
+    final selectedType = _membershipTypes.cast<JsonMap?>().firstWhere(
+      (type) =>
+          type?['id']?.toString() == _membershipType ||
+          type?['slug']?.toString() == _membershipType,
+      orElse: () => null,
+    );
+    final overrides = selectedType?['application_fields'];
+    if (overrides is! JsonMap) return base;
+    return base
+        .map(
+          (field) => {
+            ...field,
+            'mode': overrides[field['key']] ?? field['mode'],
+          },
+        )
+        .toList(growable: false);
   }
 
   JsonMap? _field(String key) {
@@ -261,7 +276,22 @@ class _MembershipApplicationFormScreenState
 
   List<JsonMap> get _visibleDocuments {
     final raw = _clubSettings['membership_application_documents'];
-    if (raw is List) return raw.whereType<JsonMap>().toList(growable: false);
+    if (raw is List) {
+      final selectedType = _membershipTypes.cast<JsonMap?>().firstWhere(
+        (type) =>
+            type?['id']?.toString() == _membershipType ||
+            type?['slug']?.toString() == _membershipType,
+        orElse: () => null,
+      );
+      final selectedTypeId = selectedType?['id']?.toString();
+      return raw
+          .whereType<JsonMap>()
+          .where((document) {
+            final typeId = document['membership_type_id']?.toString();
+            return typeId == null || typeId.isEmpty || typeId == selectedTypeId;
+          })
+          .toList(growable: false);
+    }
     return const <JsonMap>[];
   }
 

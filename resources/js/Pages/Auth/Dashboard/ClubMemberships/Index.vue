@@ -89,6 +89,7 @@ const membershipTypeForm = useForm({
     is_public: true,
     is_active: true,
     sort_order: 0,
+    application_fields: {},
 })
 const editingMembershipTypeId = ref(null)
 const contributionRuleForm = useForm({
@@ -167,6 +168,7 @@ const fieldModeOptions = [
 
 const createMembershipDocumentRow = () => ({
     id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    membership_type_id: null,
     type: 'privacy',
     title: '',
     url: '',
@@ -189,6 +191,7 @@ const pendingRequests = computed(() => selectedClub.value?.pending_requests || [
 const clubRequests = computed(() => selectedClub.value?.club_requests || [])
 const membershipTypes = computed(() => selectedClub.value?.membership_types || [])
 const contributionRules = computed(() => selectedClub.value?.contribution_rules || [])
+const applicationFieldDefinitions = computed(() => selectedClub.value?.membership_application_fields || [])
 const capabilities = computed(() => selectedClub.value?.capabilities || {})
 const canOpenEmailMembers = computed(() => capabilities.value.external_members !== false || capabilities.value.member_invitations !== false)
 const members = computed(() => selectedClub.value?.members || [])
@@ -760,6 +763,10 @@ const editMembershipType = (type) => {
     membershipTypeForm.is_public = type.is_public !== false
     membershipTypeForm.is_active = type.is_active !== false
     membershipTypeForm.sort_order = type.sort_order || 0
+    membershipTypeForm.application_fields = {
+        ...Object.fromEntries(applicationFieldDefinitions.value.map((field) => [field.key, field.mode || 'off'])),
+        ...(type.application_fields || {}),
+    }
 }
 
 const editContributionRule = (rule) => {
@@ -785,6 +792,7 @@ const cancelMembershipTypeEdit = () => {
     membershipTypeForm.is_public = true
     membershipTypeForm.is_active = true
     membershipTypeForm.sort_order = 0
+    membershipTypeForm.application_fields = Object.fromEntries(applicationFieldDefinitions.value.map((field) => [field.key, field.mode || 'off']))
 }
 
 const cancelContributionRuleEdit = () => {
@@ -1441,6 +1449,13 @@ const inviteExternalMember = (member) => {
                                                 </select>
                                             </label>
                                             <label class="block text-sm">
+                                                <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.applies_to_type', 'Gilt für Mitgliedschaftstyp') }}</span>
+                                                <select v-model="document.membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                                    <option :value="null">{{ tx('auto.Alle Typen', 'Alle Typen') }}</option>
+                                                    <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                                </select>
+                                            </label>
+                                            <label class="block text-sm">
                                                 <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.document_title', 'Titel') }}</span>
                                                 <input v-model="document.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('club_memberships.workspace.document_title_placeholder', 'z. B. Datenschutzinformation')">
                                             </label>
@@ -1557,6 +1572,22 @@ const inviteExternalMember = (member) => {
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.slug optional', 'slug optional')">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Beschreibung', 'Beschreibung')"></textarea>
                             <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> {{ tx('auto.Öffentlich sichtbar', 'Öffentlich sichtbar') }}</label>
+                            <div v-if="applicationFieldDefinitions.length" class="rounded-xl border border-border bg-bg p-3">
+                                <div class="mb-2">
+                                    <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.type_fields_title', 'Antragsfelder für diesen Typ') }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.type_fields_hint', 'Der Vereinsstandard wird übernommen und kann hier angepasst werden.') }}</p>
+                                </div>
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    <label v-for="field in applicationFieldDefinitions" :key="field.key" class="rounded-lg border border-border bg-card p-2 text-xs text-primary">
+                                        <span class="font-semibold">{{ field.label }}</span>
+                                        <select v-model="membershipTypeForm.application_fields[field.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-xs text-primary">
+                                            <option value="required">{{ tx('club_memberships.workspace.required', 'Pflichtfeld') }}</option>
+                                            <option value="optional">{{ tx('club_memberships.workspace.optional', 'Optional') }}</option>
+                                            <option value="off">{{ tx('club_memberships.workspace.hidden', 'Ausgeblendet') }}</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
                             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ editingMembershipTypeId ? tx('club_memberships.workspace.update_type', 'Typ aktualisieren') : tx('auto.Typ speichern', 'Typ speichern') }}</button>
                         </form>
                         <div class="mt-4 flex flex-wrap gap-2">
