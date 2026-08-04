@@ -362,6 +362,11 @@ const rulesWizardSteps = computed(() => [
         hint: tx('club_memberships.workspace.wizard_types_hint', 'Lege fest, welche Arten von Mitgliedschaften Interessenten auswählen können.'),
     },
     {
+        key: 'application',
+        label: tx('club_memberships.workspace.application_fields', 'Antragsfelder für Typ'),
+        hint: tx('club_memberships.workspace.wizard_application_hint', 'Lege fest, welche Felder für den ausgewählten Mitgliedschaftstyp Pflicht, optional oder ausgeblendet sind.'),
+    },
+    {
         key: 'contributions',
         label: tx('auto.Beitragsregeln', 'Beitragsregeln'),
         hint: tx('club_memberships.workspace.wizard_contributions_hint', 'Definiere Beitrag, Intervall und optionale Alters- oder Rabattregeln.'),
@@ -370,11 +375,6 @@ const rulesWizardSteps = computed(() => [
         key: 'access',
         label: tx('club_memberships.workspace.member_requests_enabled', 'Anfragezugang'),
         hint: tx('club_memberships.workspace.wizard_access_hint', 'Entscheide, ob Interessenten online Anfragen stellen und Pausen beantragen können.'),
-    },
-    {
-        key: 'application',
-        label: tx('club_memberships.workspace.application_fields', 'Antrag & Felder'),
-        hint: tx('club_memberships.workspace.wizard_application_hint', 'Bestimme, welche Informationen Interessenten im Antrag angeben müssen.'),
     },
     {
         key: 'payment',
@@ -1391,21 +1391,21 @@ const inviteExternalMember = (member) => {
 
                 <div
                     class="grid gap-6"
-                    :class="rulesWizardStep === 1 ? 'xl:grid-cols-[minmax(0,1fr)_24rem]' : 'xl:grid-cols-1'"
+                    :class="rulesWizardStep === 2 ? 'xl:grid-cols-[minmax(0,1fr)_24rem]' : 'xl:grid-cols-1'"
                 >
                 <div class="space-y-6">
-                    <section v-if="rulesWizardStep >= 2" class="surface-card p-5">
+                    <section v-if="rulesWizardStep >= 3" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.online_requests', 'Online-Anfragen') }}</h2>
                         <form class="mt-4" @submit.prevent="saveMembershipSettings">
                             <div class="grid gap-3 md:grid-cols-3">
-                            <label v-show="rulesWizardStep === 2" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                            <label v-show="rulesWizardStep === 3" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).membership_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">{{ tx('club_memberships.workspace.member_requests_enabled', 'Mitgliedsanfragen erlauben') }}</span>
                                     <span class="block text-secondary">{{ tx('club_memberships.workspace.member_requests_hint', 'Interessenten sehen die Beitragstypen und können eine Anfrage stellen.') }}</span>
                                 </span>
                             </label>
-                            <label v-show="rulesWizardStep === 2" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                            <label v-show="rulesWizardStep === 3" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).member_pause_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">{{ tx('club_memberships.workspace.pause_requests_enabled', 'Pausen-Anfragen erlauben') }}</span>
@@ -1425,7 +1425,7 @@ const inviteExternalMember = (member) => {
                                     </label>
                                 </div>
                             </div>
-                            <div v-show="rulesWizardStep === 3" class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                            <div v-show="false" class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
                                 <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.application_fields', 'Mitgliedsantrag-Felder') }}</p>
                                 <div class="mt-4 space-y-4">
                                     <section v-for="section in membershipFieldSections" :key="section.name">
@@ -1539,7 +1539,35 @@ const inviteExternalMember = (member) => {
                         </form>
                     </section>
 
-                    <section v-if="rulesWizardStep === 1" class="surface-card p-5">
+                    <section v-if="rulesWizardStep === 2" class="surface-card p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Schritt 2</p>
+                                <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.application_fields', 'Antragsfelder für diesen Typ') }}</h2>
+                                <p class="mt-1 text-sm text-secondary">Der Vereinsstandard wird nur für den ausgewählten Typ angepasst. Der Mitgliedschaftstyp selbst wird im vorherigen Schritt bearbeitet.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="rulesWizardStep = 0">Typ auswählen</button>
+                        </div>
+                        <div v-if="membershipTypeMode === 'choose'" class="mt-4 rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
+                            Bitte zuerst im Schritt „Mitgliedschaftstyp“ einen neuen Typ erstellen oder einen bestehenden Typ bearbeiten.
+                        </div>
+                        <div v-else class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <label v-for="field in applicationFieldDefinitions" :key="field.key" class="rounded-xl border border-border bg-bg p-3 text-sm text-primary">
+                                <span class="font-semibold">{{ field.label }}</span>
+                                <select v-model="membershipTypeForm.application_fields[field.key]" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option value="required">{{ tx('club_memberships.workspace.required', 'Pflichtfeld') }}</option>
+                                    <option value="optional">{{ tx('club_memberships.workspace.optional', 'Optional') }}</option>
+                                    <option value="off">{{ tx('club_memberships.workspace.hidden', 'Ausgeblendet') }}</option>
+                                </select>
+                            </label>
+                            <p v-if="!applicationFieldDefinitions.length" class="sm:col-span-2 rounded-lg border border-dashed border-border p-4 text-sm text-secondary">Keine Vereinsstandardfelder konfiguriert.</p>
+                        </div>
+                        <div v-if="membershipTypeMode !== 'choose'" class="mt-4 flex justify-end">
+                            <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="storeMembershipType">Typ und Antragsfelder speichern</button>
+                        </div>
+                    </section>
+
+                    <section v-if="rulesWizardStep === 2" class="surface-card p-5">
                         <h2 class="text-lg font-semibold text-primary">{{ tx('auto.Historische Beitragsregeln', 'Historische Beitragsregeln') }}</h2>
                         <div class="mt-4 space-y-3">
                             <article v-for="rule in contributionRules" :key="rule.id" class="rounded-lg border border-border bg-bg p-4">
@@ -1607,22 +1635,6 @@ const inviteExternalMember = (member) => {
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('auto.slug optional', 'slug optional')">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Beschreibung', 'Beschreibung')"></textarea>
                             <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> {{ tx('auto.Öffentlich sichtbar', 'Öffentlich sichtbar') }}</label>
-                            <div v-if="applicationFieldDefinitions.length" class="rounded-xl border border-border bg-bg p-3">
-                                <div class="mb-2">
-                                    <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.type_fields_title', 'Antragsfelder für diesen Typ') }}</p>
-                                    <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.type_fields_hint', 'Der Vereinsstandard wird übernommen und kann hier angepasst werden.') }}</p>
-                                </div>
-                                <div class="grid gap-2 sm:grid-cols-2">
-                                    <label v-for="field in applicationFieldDefinitions" :key="field.key" class="rounded-lg border border-border bg-card p-2 text-xs text-primary">
-                                        <span class="font-semibold">{{ field.label }}</span>
-                                        <select v-model="membershipTypeForm.application_fields[field.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-xs text-primary">
-                                            <option value="required">{{ tx('club_memberships.workspace.required', 'Pflichtfeld') }}</option>
-                                            <option value="optional">{{ tx('club_memberships.workspace.optional', 'Optional') }}</option>
-                                            <option value="off">{{ tx('club_memberships.workspace.hidden', 'Ausgeblendet') }}</option>
-                                        </select>
-                                    </label>
-                                </div>
-                            </div>
                             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ editingMembershipTypeId ? tx('club_memberships.workspace.update_type', 'Typ aktualisieren') : tx('auto.Typ speichern', 'Typ speichern') }}</button>
                         </form>
                         <div class="mt-4 flex flex-wrap gap-2">

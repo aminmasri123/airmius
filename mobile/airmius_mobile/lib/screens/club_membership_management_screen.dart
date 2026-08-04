@@ -5390,39 +5390,6 @@ class _MembershipRulesAdminPanelState
                           ),
                         ],
                       ),
-                      if (_fieldModes.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Eyebrow(_tr('membership.applicationFields')),
-                        const SizedBox(height: 6),
-                        Text(
-                          _tr('membership.typeFieldsHint'),
-                          style: TextStyle(color: airmiusMutedColor(context)),
-                        ),
-                        const SizedBox(height: 8),
-                        for (final entry in _fieldModes.entries)
-                          DropdownButtonFormField<String>(
-                            initialValue: const ['required', 'optional', 'off']
-                                    .contains(_typeApplicationFields[entry.key])
-                                ? _typeApplicationFields[entry.key]
-                                : 'off',
-                            decoration: InputDecoration(
-                              labelText: entry.key,
-                            ),
-                            items: const ['required', 'optional', 'off']
-                                .map(
-                                  (mode) => DropdownMenuItem(
-                                    value: mode,
-                                    child: Text(mode),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                update(() => _typeApplicationFields[entry.key] = value);
-                              }
-                            },
-                          ),
-                      ],
                       const SizedBox(height: 18),
                       Row(
                         children: [
@@ -5808,6 +5775,11 @@ class _MembershipRulesAdminPanelState
                   Icons.assignment_outlined,
                 ),
                 _MembershipSectionTabData(
+                  'fields',
+                  'membership.applicationFields',
+                  Icons.fact_check_outlined,
+                ),
+                _MembershipSectionTabData(
                   'documents',
                   'membership.rulesTab.documents',
                   Icons.description_outlined,
@@ -5869,6 +5841,69 @@ class _MembershipRulesAdminPanelState
               label: _tr('membership.editApplicationFields'),
               icon: Icons.edit_note_outlined,
               onPressed: () => _openApplicationSettingsSheet(applicationFields),
+            ),
+          ] else if (_rulesTab == 'fields') ...[
+            AirmiusPanel(
+              gradient: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Eyebrow(_tr('membership.applicationFields')),
+                  const SizedBox(height: 6),
+                  Text(
+                    _tr('membership.typeFieldsHint'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final type in membershipTypes)
+                        ChoiceChip(
+                          label: Text(_string(type['name'])),
+                          selected: _editingTypeId == _intOrNull(type['id']),
+                          onSelected: (_) => _editType(type),
+                        ),
+                    ],
+                  ),
+                  if (_editingTypeId == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: Text(
+                        'Wähle zuerst einen Mitgliedschaftstyp aus, dessen Antragsfelder du konfigurieren möchtest.',
+                        style: TextStyle(color: airmiusMutedColor(context)),
+                      ),
+                    )
+                  else ...[
+                    const SizedBox(height: 14),
+                    for (final entry in _fieldModes.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: const ['required', 'optional', 'off']
+                                  .contains(_typeApplicationFields[entry.key])
+                              ? _typeApplicationFields[entry.key]
+                              : 'off',
+                          decoration: InputDecoration(labelText: entry.key),
+                          items: const ['required', 'optional', 'off']
+                              .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _typeApplicationFields[entry.key] = value);
+                            }
+                          },
+                        ),
+                      ),
+                    AirmiusButton(
+                      label: _tr('membership.save'),
+                      icon: Icons.save_outlined,
+                      onPressed: _saving ? null : () => _saveType(),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ] else if (_rulesTab == 'documents') ...[
             Row(
