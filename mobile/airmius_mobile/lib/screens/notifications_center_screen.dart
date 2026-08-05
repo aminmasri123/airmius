@@ -660,7 +660,9 @@ String _labelForType(AirmiusScope scope, String rawType) {
 
 bool _isMembershipRequestNotification(AirmiusNotification notification) {
   return notification.type == 'club.membership_request_created' ||
-      notification.type == 'club.membership_request_withdrawn';
+      notification.type == 'club.membership_request_withdrawn' ||
+      notification.type == 'club.membership_request_approved' ||
+      notification.type == 'club.membership_request_declined';
 }
 
 int? _teamInvitationId(AirmiusNotification notification) {

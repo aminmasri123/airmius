@@ -14,6 +14,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
+import 'club_request_inbox_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
   const ClubMembershipManagementScreen({super.key, this.initialClubId});
@@ -3364,7 +3365,19 @@ class _ClubMembershipManagementScreenState
                   hasRules: management?.canManageMembers ?? false,
                   canManageMembers: management?.canManageMembers ?? false,
                   canManageFinance: management?.canManageFinance ?? false,
-                  onSelect: (value) => setState(() => _section = value),
+                  onSelect: (value) {
+                    if (value == 'requests') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ClubRequestInboxScreen(
+                            initialClubId: club.id,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    setState(() => _section = value);
+                  },
                 ),
                 const SizedBox(height: 14),
                 if (_section == 'rules' && management != null) ...[
@@ -3990,6 +4003,12 @@ class _MembershipSectionTabs extends StatelessWidget {
           'rules',
           'membership.tab.rules',
           Icons.tune_outlined,
+        ),
+      if (canManageMembers)
+        const _MembershipSectionTabData(
+          'requests',
+          'clubHub.requests',
+          Icons.inbox_outlined,
         ),
       const _MembershipSectionTabData(
         'members',

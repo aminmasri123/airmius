@@ -2208,6 +2208,16 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
     }
   }
 
+  if (type == 'club.membership_request_approved' ||
+      type == 'club.membership_request_declined') {
+    final requestId = int.tryParse(
+      '${data['membership_request_id'] ?? data['request_id'] ?? ''}',
+    );
+    if (requestId != null && requestId > 0) {
+      return 'airmius://membership-applications/$requestId';
+    }
+  }
+
   return null;
 }
 

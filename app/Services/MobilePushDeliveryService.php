@@ -245,14 +245,25 @@ class MobilePushDeliveryService
         $deepLink = $this->replacePlaceholders((string) Arr::get($channelContract, 'deep_link', 'airmius://dashboard'), $data);
         $fallbackUrl = $this->replacePlaceholders((string) Arr::get($channelContract, 'fallback_url', '/dashboard'), $data);
 
-        // Membership requests are club notifications, but they must open the
-        // request inbox instead of the club billing area. This also repairs
-        // deliveries created before the dedicated mobile URL was stored.
-        if ($this->isMembershipRequestNotification($notification)) {
+        // New/withdrawn requests belong in the club inbox instead of the
+        // billing area. This also repairs deliveries created before the
+        // dedicated mobile URL was stored.
+        if ($this->isMembershipRequestInboxNotification($notification)) {
             $clubId = $data['club_id'] ?? null;
             if (is_int($clubId) || (is_string($clubId) && ctype_digit($clubId))) {
                 $deepLink = 'airmius://clubs/'.$clubId.'/membership-requests';
-                $fallbackUrl = '/club-memberships';
+                $fallbackUrl = '/club-memberships?tab=requests&club_id='.$clubId;
+            }
+        }
+
+        // Approval/decline notifications belong to the applicant and must
+        // open the concrete request status. This also repairs older
+        // notifications that only contained request_id.
+        if ($this->isMembershipRequestStatusNotification($notification)) {
+            $requestId = $data['membership_request_id'] ?? $data['request_id'] ?? null;
+            if (is_int($requestId) || (is_string($requestId) && ctype_digit($requestId))) {
+                $deepLink = 'airmius://membership-applications/'.$requestId;
+                $fallbackUrl = '/notifications';
             }
         }
 
@@ -270,11 +281,19 @@ class MobilePushDeliveryService
         ];
     }
 
-    protected function isMembershipRequestNotification(Notification $notification): bool
+    protected function isMembershipRequestInboxNotification(Notification $notification): bool
     {
         return in_array($notification->type, [
             'club.membership_request_created',
             'club.membership_request_withdrawn',
+        ], true);
+    }
+
+    protected function isMembershipRequestStatusNotification(Notification $notification): bool
+    {
+        return in_array($notification->type, [
+            'club.membership_request_approved',
+            'club.membership_request_declined',
         ], true);
     }
 

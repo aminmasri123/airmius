@@ -223,6 +223,38 @@ class MobilePushDeliveryServiceTest extends TestCase
         );
     }
 
+    public function test_membership_decision_push_opens_the_applicant_request_status(): void
+    {
+        $user = User::factory()->create();
+        MobileDeviceToken::create([
+            'user_id' => $user->id,
+            'device_id' => 'membership-status-device',
+            'platform' => 'android',
+            'provider' => 'fcm',
+            'token' => 'membership-status-device-token',
+            'token_hash' => hash('sha256', 'membership-status-device-token'),
+            'channels' => ['club_billing'],
+            'permissions' => ['notifications' => true],
+        ]);
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'type' => 'club.membership_request_declined',
+            'data' => [
+                'title' => 'Anfrage abgelehnt',
+                'body' => 'Der Verein hat die Anfrage abgelehnt.',
+                'club_id' => 42,
+                'request_id' => 99,
+            ],
+        ]);
+
+        app(MobilePushDeliveryService::class)->queueForNotification($notification);
+
+        $this->assertSame(
+            'airmius://membership-applications/99',
+            MobilePushDelivery::firstOrFail()->payload['deep_link'],
+        );
+    }
+
     private function notificationAndDevice(): array
     {
         $user = User::factory()->create();

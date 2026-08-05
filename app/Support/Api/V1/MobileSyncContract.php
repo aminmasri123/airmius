@@ -140,6 +140,7 @@ class MobileSyncContract
                 'airmius://clubs/{club}',
                 'airmius://clubs/{club}/billing',
                 'airmius://clubs/{club}/membership-requests',
+                'airmius://membership-applications/{application}',
                 'airmius://teams/{team}',
                 'airmius://feed/{post}',
                 'airmius://posts/{post}',

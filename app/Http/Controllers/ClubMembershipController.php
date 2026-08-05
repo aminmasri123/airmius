@@ -1069,6 +1069,7 @@ class ClubMembershipController extends Controller
             'title' => 'Anfrage angenommen',
             'body' => $club->name.' hat deine Anfrage angenommen.',
             'url' => route('auth.clubs.show', $club),
+            'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
             'club_id' => $club->id,
             'request_id' => $membershipRequest->id,
         ]);
@@ -1092,6 +1093,7 @@ class ClubMembershipController extends Controller
             'title' => 'Anfrage abgelehnt',
             'body' => $membershipRequest->club->name.' hat deine Anfrage abgelehnt.',
             'url' => route('auth.notifications.index'),
+            'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
             'club_id' => $membershipRequest->club_id,
             'request_id' => $membershipRequest->id,
         ]);
