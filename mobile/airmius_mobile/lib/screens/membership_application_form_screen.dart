@@ -56,6 +56,7 @@ class _MembershipApplicationFormScreenState
   bool _contributionAccepted = true;
   bool _sepaAccepted = false;
   bool _profilePrefilled = false;
+  bool _profileAddressWasComplete = false;
   bool _submitting = false;
   int _activeTab = 0;
   bool _validationVisible = false;
@@ -98,47 +99,51 @@ class _MembershipApplicationFormScreenState
     _selectedClubId = widget.clubId;
     _clubsFuture = _loadEligibleClubs();
     if (authUser != null) {
+      _profileAddressWasComplete = _hasCompleteProfileAddress(authUser);
       _prefillFromUser(authUser);
     }
   }
 
   Future<List<AirmiusClub>> _loadEligibleClubs() async {
     final services = AirmiusServicesScope.of(context);
-    final page = await services.repositories.clubs.searchClubs();
-    final clubs = <AirmiusClub>[];
-    final loadedIds = <int>{};
-    for (final summary in page.items) {
-      if (!summary.acceptsMembershipApplications ||
-          summary.isMember ||
-          summary.hasPendingMembershipRequest) {
-        continue;
+
+    // When the form was opened from a club profile, loading the whole club
+    // directory first only delays the data needed for the first tab.
+    if (widget.clubId != null) {
+      final direct = await services.repositories.clubs.club(widget.clubId!);
+      if (!direct.acceptsMembershipApplications ||
+          direct.isMember ||
+          direct.hasPendingMembershipRequest) {
+        return const <AirmiusClub>[];
       }
-      final club = await services.repositories.clubs.club(summary.id);
-      if (loadedIds.add(club.id)) clubs.add(club);
+
+      _selectedClub = direct;
+      _syncClubSettings(direct);
+      if (mounted) setState(() {});
+      return [direct];
     }
 
-    // A profile can be opened directly even when the club is not part of the
-    // first paginated search response. Always resolve that exact club so the
-    // application flow does not incorrectly show an empty club selector.
-    if (widget.clubId != null) {
-      AirmiusClub? target;
-      for (final club in clubs) {
-        if (club.id == widget.clubId) target = club;
-      }
-      if (target == null) {
-        final direct = await services.repositories.clubs.club(widget.clubId!);
-        if (direct.acceptsMembershipApplications &&
-            !direct.isMember &&
-            !direct.hasPendingMembershipRequest) {
-          target = direct;
-          if (loadedIds.add(direct.id)) clubs.add(direct);
-        }
-      }
-      if (target != null) {
-        _selectedClub = target;
-        _syncClubSettings(target);
-        if (mounted) setState(() {});
-      }
+    final page = await services.repositories.clubs.searchClubs();
+    final eligibleSummaries = page.items
+        .where(
+          (summary) =>
+              summary.acceptsMembershipApplications &&
+              !summary.isMember &&
+              !summary.hasPendingMembershipRequest,
+        )
+        .toList(growable: false);
+
+    // Keep the directory flow fast as well: detail requests are independent
+    // and can be resolved concurrently instead of one after another.
+    final loaded = await Future.wait(
+      eligibleSummaries.map(
+        (summary) => services.repositories.clubs.club(summary.id),
+      ),
+    );
+    final clubs = <AirmiusClub>[];
+    final loadedIds = <int>{};
+    for (final club in loaded) {
+      if (loadedIds.add(club.id)) clubs.add(club);
     }
     return clubs;
   }
@@ -252,6 +257,27 @@ class _MembershipApplicationFormScreenState
     return value == null || value == false;
   }
 
+  bool _hasCompleteProfileAddress(AirmiusUser user) {
+    return [
+      user.street,
+      user.houseNumber,
+      user.postalCode,
+      user.city,
+    ].every((value) => value?.trim().isNotEmpty == true);
+  }
+
+  bool _hasEnteredAddress() {
+    const addressKeys = ['street', 'house_number', 'postal_code', 'city'];
+    final visibleKeys = addressKeys
+        .where(_fieldVisible)
+        .toList(growable: false);
+    if (visibleKeys.isEmpty) return false;
+    return visibleKeys.every((key) => !_fieldHasMissingValue(key));
+  }
+
+  bool get _shouldAskToSaveAddress =>
+      !_profileAddressWasComplete && _hasEnteredAddress();
+
   List<String> _missingValidationKeys() {
     final missing = <String>[];
     if (_membershipTypes.isEmpty) missing.add('membership_type');
@@ -349,15 +375,16 @@ class _MembershipApplicationFormScreenState
     ).format(amount);
   }
 
-  String _membershipInterval(String? interval, String Function(String) t) => switch (interval) {
-    'monthly' => t('application.cycle.monthly'),
-    'quarterly' => t('application.cycle.quarterly'),
-    'four_monthly' => t('application.cycle.fourMonthly'),
-    'semi_yearly' => t('application.cycle.halfYearly'),
-    'yearly' => t('application.cycle.yearly'),
-    'once' => t('application.cycle.once'),
-    _ => t('application.cycle.none'),
-  };
+  String _membershipInterval(String? interval, String Function(String) t) =>
+      switch (interval) {
+        'monthly' => t('application.cycle.monthly'),
+        'quarterly' => t('application.cycle.quarterly'),
+        'four_monthly' => t('application.cycle.fourMonthly'),
+        'semi_yearly' => t('application.cycle.halfYearly'),
+        'yearly' => t('application.cycle.yearly'),
+        'once' => t('application.cycle.once'),
+        _ => t('application.cycle.none'),
+      };
 
   List<String> get _allowedPaymentMethods {
     final raw = _clubSettings['membership_payment_methods'];
@@ -396,14 +423,6 @@ class _MembershipApplicationFormScreenState
         .map((type) => (type['slug'] ?? type['id']).toString())
         .where((value) => value.isNotEmpty)
         .toList(growable: false);
-  }
-
-  Map<String, String> _membershipTypeLabels(String Function(String) translate) {
-    return {
-      for (final type in _membershipTypes)
-        (type['slug'] ?? type['id']).toString():
-            type['name']?.toString() ?? (type['slug'] ?? type['id']).toString(),
-    };
   }
 
   List<JsonMap> get _visibleDocuments {
@@ -501,9 +520,7 @@ class _MembershipApplicationFormScreenState
                           subtitle: t('application.fieldsHint'),
                         ),
                         const SizedBox(height: 16),
-                        _ApplicationHero(
-                          clubName: _selectedClub?.name,
-                        ),
+                        _ApplicationHero(clubName: _selectedClub?.name),
                         const SizedBox(height: 16),
                         _ApplicationTabs(
                           title: t('application.membershipApplication'),
@@ -605,16 +622,6 @@ class _MembershipApplicationFormScreenState
             height: 1.45,
           ),
         ),
-      )
-    else
-      _SelectPanel(
-        title: t('application.membershipType'),
-        value: _membershipTypeValues.contains(_membershipType)
-            ? _membershipType
-            : _membershipTypeValues.first,
-        values: _membershipTypeValues,
-        labels: _membershipTypeLabels((key) => t('application.type.$key')),
-        onChanged: (value) => setState(() => _membershipType = value),
       ),
     if (_membershipTypes.isNotEmpty) ...[
       const SizedBox(height: 12),
@@ -623,54 +630,73 @@ class _MembershipApplicationFormScreenState
         child: Column(
           children: [
             for (final type in _membershipTypes) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: airmiusInputColor(context),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: (type['id']?.toString() == _membershipType ||
-                            type['slug']?.toString() == _membershipType)
-                        ? airmiusAccentColor(context)
-                        : airmiusBorderColor(context),
-                  ),
+              GestureDetector(
+                onTap: () => setState(
+                  () =>
+                      _membershipType = (type['slug'] ?? type['id']).toString(),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            type['name']?.toString() ?? t('application.membershipType'),
-                            style: TextStyle(
-                              color: airmiusTextColor(context),
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          if (type['description']?.toString().trim().isNotEmpty == true) ...[
-                            const SizedBox(height: 4),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: airmiusInputColor(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color:
+                          (type['id']?.toString() == _membershipType ||
+                              type['slug']?.toString() == _membershipType)
+                          ? airmiusAccentColor(context)
+                          : airmiusBorderColor(context),
+                      width:
+                          (type['id']?.toString() == _membershipType ||
+                              type['slug']?.toString() == _membershipType)
+                          ? 2
+                          : 1,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              type['description'].toString(),
-                              style: TextStyle(color: airmiusMutedColor(context)),
+                              type['name']?.toString() ??
+                                  t('application.membershipType'),
+                              style: TextStyle(
+                                color: airmiusTextColor(context),
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
+                            if (type['description']
+                                    ?.toString()
+                                    .trim()
+                                    .isNotEmpty ==
+                                true) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                type['description'].toString(),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${_membershipAmount(type, t)}\n${_membershipInterval(type['billing_interval']?.toString(), t)}',
-                      textAlign: TextAlign.end,
-                      style: TextStyle(
-                        color: airmiusAccentColor(context),
-                        fontWeight: FontWeight.w900,
-                        height: 1.35,
+                      const SizedBox(width: 12),
+                      Text(
+                        '${_membershipAmount(type, t)}\n${_membershipInterval(type['billing_interval']?.toString(), t)}',
+                        textAlign: TextAlign.end,
+                        style: TextStyle(
+                          color: airmiusAccentColor(context),
+                          fontWeight: FontWeight.w900,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (type != _membershipTypes.last) const SizedBox(height: 8),
@@ -702,22 +728,48 @@ class _MembershipApplicationFormScreenState
       _FormSection(
         title: t('application.personalData'),
         children: [
-          _configuredTextField('first_name', t('application.firstName'), _firstName),
-          _configuredTextField('last_name', t('application.lastName'), _lastName),
+          _configuredTextField(
+            'first_name',
+            t('application.firstName'),
+            _firstName,
+          ),
+          _configuredTextField(
+            'last_name',
+            t('application.lastName'),
+            _lastName,
+          ),
           DropdownButtonFormField<String>(
             initialValue: _gender.isEmpty ? null : _gender,
             dropdownColor: airmiusSurfaceSoftColor(context),
             decoration: InputDecoration(
               labelText: _label('gender', t('application.gender')),
-              prefixIcon: Icon(Icons.wc_outlined, color: airmiusMutedColor(context)),
+              prefixIcon: Icon(
+                Icons.wc_outlined,
+                color: airmiusMutedColor(context),
+              ),
               errorText: _fieldErrorText('gender'),
             ),
-            style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontWeight: FontWeight.w800,
+            ),
             items: [
-              DropdownMenuItem(value: 'female', child: Text(t('application.gender.female'))),
-              DropdownMenuItem(value: 'male', child: Text(t('application.gender.male'))),
-              DropdownMenuItem(value: 'diverse', child: Text(t('application.gender.diverse'))),
-              DropdownMenuItem(value: 'not_specified', child: Text(t('application.gender.unspecified'))),
+              DropdownMenuItem(
+                value: 'female',
+                child: Text(t('application.gender.female')),
+              ),
+              DropdownMenuItem(
+                value: 'male',
+                child: Text(t('application.gender.male')),
+              ),
+              DropdownMenuItem(
+                value: 'diverse',
+                child: Text(t('application.gender.diverse')),
+              ),
+              DropdownMenuItem(
+                value: 'not_specified',
+                child: Text(t('application.gender.unspecified')),
+              ),
             ],
             onChanged: (value) => setState(() => _gender = value ?? ''),
           ),
@@ -729,7 +781,11 @@ class _MembershipApplicationFormScreenState
             keyboardType: TextInputType.datetime,
             inputFormatters: const [AirmiusDateInputFormatter()],
           ),
-          _configuredTextField('nationality', 'Staatsangehörigkeit', _nationality),
+          _configuredTextField(
+            'nationality',
+            'Staatsangehörigkeit',
+            _nationality,
+          ),
         ],
       ),
   ];
@@ -778,8 +834,16 @@ class _MembershipApplicationFormScreenState
         children: [
           _configuredTextField('country', 'Land', _country),
           _configuredTextField('street', t('application.street'), _street),
-          _configuredTextField('house_number', t('application.houseNumber'), _house),
-          _configuredTextField('postal_code', t('application.postalCode'), _zip),
+          _configuredTextField(
+            'house_number',
+            t('application.houseNumber'),
+            _house,
+          ),
+          _configuredTextField(
+            'postal_code',
+            t('application.postalCode'),
+            _zip,
+          ),
           _configuredTextField('city', t('application.city'), _city),
           _configuredTextField('state', t('application.stateRegion'), _state),
         ],
@@ -793,7 +857,11 @@ class _MembershipApplicationFormScreenState
       _FormSection(
         title: t('application.guardian'),
         children: [
-          _configuredTextField('guardian_name', t('application.guardianName'), _guardianName),
+          _configuredTextField(
+            'guardian_name',
+            t('application.guardianName'),
+            _guardianName,
+          ),
           _configuredTextField(
             'guardian_email',
             t('application.guardianEmail'),
@@ -813,7 +881,11 @@ class _MembershipApplicationFormScreenState
       _FormSection(
         title: t('application.emergencyContact'),
         children: [
-          _configuredTextField('emergency_contact_name', t('application.emergencyName'), _emergencyName),
+          _configuredTextField(
+            'emergency_contact_name',
+            t('application.emergencyName'),
+            _emergencyName,
+          ),
           _configuredTextField(
             'emergency_contact_phone',
             t('application.emergencyPhone'),
@@ -840,7 +912,15 @@ class _MembershipApplicationFormScreenState
     _SelectPanel(
       title: t('application.paymentCycle'),
       value: _billingInterval,
-      values: const ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'],
+      values: const [
+        'none',
+        'monthly',
+        'quarterly',
+        'four_monthly',
+        'semi_yearly',
+        'yearly',
+        'once',
+      ],
       labels: {
         'none': 'Kein Intervall',
         'monthly': t('application.cycle.monthly'),
@@ -876,26 +956,29 @@ class _MembershipApplicationFormScreenState
           if (key.startsWith('accepted_documents.'))
             key.substring('accepted_documents.'.length),
       },
-      privacyError: _validationVisible &&
+      privacyError:
+          _validationVisible &&
           _validationErrors.contains('legacy_privacy') &&
           !_privacyAccepted,
-      rulesError: _validationVisible &&
+      rulesError:
+          _validationVisible &&
           _validationErrors.contains('legacy_rules') &&
           !_rulesAccepted,
-      contributionError: _validationVisible &&
+      contributionError:
+          _validationVisible &&
           _validationErrors.contains('legacy_contribution') &&
           !_contributionAccepted,
       onPrivacy: (value) => setState(() => _privacyAccepted = value),
       onRules: (value) => setState(() => _rulesAccepted = value),
       onContribution: (value) => setState(() => _contributionAccepted = value),
       onSepa: (value) => setState(() => _sepaAccepted = value),
-      onOpen: (document, preview) => _openMembershipDocument(
-        document,
-        preview: preview,
-      ),
+      onOpen: (document, preview) =>
+          _openMembershipDocument(document, preview: preview),
       onDocument: (id, value) => setState(() {
         _acceptedDocuments[id] = value;
-        final document = _visibleDocuments.where((item) => item['id']?.toString() == id);
+        final document = _visibleDocuments.where(
+          (item) => item['id']?.toString() == id,
+        );
         if (document.isEmpty) return;
         final type = document.first['type']?.toString();
         if (type == 'privacy') {
@@ -1000,6 +1083,7 @@ class _MembershipApplicationFormScreenState
 
   Future<void> _submit() async {
     final clubId = _selectedClubId;
+    final services = AirmiusServicesScope.of(context);
     if (clubId == null) {
       _toast(AirmiusScope.of(context).t('membership.selectClubFirst'));
       return;
@@ -1010,9 +1094,25 @@ class _MembershipApplicationFormScreenState
       return;
     }
 
+    var saveAddress = false;
+    if (_shouldAskToSaveAddress) {
+      final choice = await _askToSaveAddress();
+      if (!mounted || choice == null) return;
+      saveAddress = choice;
+    }
+
     setState(() => _submitting = true);
+    if (saveAddress) {
+      try {
+        await _saveAddressToProfile();
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _submitting = false);
+        _toast(AirmiusScope.of(context).t('application.addressSaveFailed'));
+        return;
+      }
+    }
     try {
-      final services = AirmiusServicesScope.of(context);
       final application = await services.repositories.memberships.applyToClub(
         clubId,
         _applicationPayload(),
@@ -1039,16 +1139,55 @@ class _MembershipApplicationFormScreenState
     }
   }
 
+  Future<bool?> _askToSaveAddress() {
+    final t = AirmiusScope.of(context).t;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('application.saveAddressTitle')),
+        content: Text(t('application.saveAddressBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('application.addressOnly')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('application.saveAddress')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveAddressToProfile() async {
+    final services = AirmiusServicesScope.of(context);
+    final user = services.authState.user;
+    final country = _country.text.trim().isNotEmpty
+        ? _country.text.trim().toUpperCase()
+        : (user?.country?.trim().isNotEmpty == true
+              ? user!.country!.trim().toUpperCase()
+              : 'DE');
+    final client = services.clientForSession(services.authState.session);
+    await client.updateSettings({
+      'country': country,
+      'street': _street.text.trim(),
+      'house_number': _house.text.trim(),
+      'postal_code': _zip.text.trim(),
+      'city': _city.text.trim(),
+      'state': _state.text.trim(),
+    });
+    _profileAddressWasComplete = true;
+    await services.authState.refreshUser();
+  }
+
   void _nextApplicationTab() {
     final currentMissing = _missingValidationKeys()
         .where((key) => _tabIndexForValidationKey(key) == _activeTab)
         .toList(growable: false);
     setState(() {
       _validationVisible = true;
-      _validationErrors = {
-        ..._validationErrors,
-        ...currentMissing,
-      };
+      _validationErrors = {..._validationErrors, ...currentMissing};
     });
     if (currentMissing.isNotEmpty) {
       _toast(AirmiusScope.of(context).t('membership.requiredFields'));
@@ -1068,7 +1207,10 @@ class _MembershipApplicationFormScreenState
       }
     });
     if (_membershipTypes.isEmpty) return t('application.noMembershipTypes');
-    if (missing.any((key) => key.startsWith('accepted_documents.') || key.startsWith('legacy_'))) {
+    if (missing.any(
+      (key) =>
+          key.startsWith('accepted_documents.') || key.startsWith('legacy_'),
+    )) {
       return t('membership.acceptRequired');
     }
     if (missing.isNotEmpty) return t('membership.requiredFields');
@@ -1357,7 +1499,9 @@ class _ApplicationTabs extends StatelessWidget {
                 ),
                 selected: activeIndex == index,
                 onSelected: (_) => onChanged(index),
-                selectedColor: airmiusAccentColor(context).withValues(alpha: .24),
+                selectedColor: airmiusAccentColor(
+                  context,
+                ).withValues(alpha: .24),
                 backgroundColor: airmiusSurfaceColor(context),
                 labelStyle: TextStyle(
                   color: activeIndex == index
@@ -1582,7 +1726,8 @@ class _MembershipDocumentRow extends StatelessWidget {
           hasError: hasError,
           onChanged: onChanged ?? (_) {},
         ),
-        if (onOpen != null && document['url']?.toString().trim().isNotEmpty == true)
+        if (onOpen != null &&
+            document['url']?.toString().trim().isNotEmpty == true)
           Padding(
             padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
             child: Row(
@@ -1590,13 +1735,17 @@ class _MembershipDocumentRow extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: () => onOpen!(document, true),
                   icon: const Icon(Icons.visibility_outlined, size: 17),
-                  label: Text(AirmiusScope.of(context).t('application.readDocument')),
+                  label: Text(
+                    AirmiusScope.of(context).t('application.readDocument'),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => onOpen!(document, false),
                   icon: const Icon(Icons.download_outlined, size: 17),
-                  label: Text(AirmiusScope.of(context).t('application.downloadDocument')),
+                  label: Text(
+                    AirmiusScope.of(context).t('application.downloadDocument'),
+                  ),
                 ),
               ],
             ),

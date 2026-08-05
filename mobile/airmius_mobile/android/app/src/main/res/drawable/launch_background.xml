@@ -10,6 +10,6 @@
         </shape>
     </item>
     <item
-        android:drawable="@drawable/airmius_launcher_mark"
+        android:drawable="@drawable/airmius_splash_mark"
         android:gravity="center" />
 </layer-list>

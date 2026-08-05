@@ -459,10 +459,12 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> removeClubExternalMember(
     int clubId,
-    int externalMemberId,
-  ) => _json(
+    int externalMemberId, {
+    required String reason,
+  }) => _json(
     'DELETE',
     '/api/v1/clubs/$clubId/external-members/$externalMemberId',
+    body: {'reason': reason.trim()},
   );
 
   Future<AirmiusJson?> _sendClubMemberInviteForm(
@@ -530,8 +532,15 @@ class AirmiusApiClient {
     body: payload,
   );
 
-  Future<AirmiusJson> removeClubMember(int clubId, int userId) =>
-      _json('DELETE', '/api/v1/clubs/$clubId/members/$userId');
+  Future<AirmiusJson> removeClubMember(
+    int clubId,
+    int userId, {
+    required String reason,
+  }) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/members/$userId',
+    body: {'reason': reason.trim()},
+  );
 
   Future<AirmiusJson> generateClubMemberNumber(int clubId, int userId) =>
       _json('POST', '/api/v1/clubs/$clubId/members/$userId/member-number');
@@ -2975,6 +2984,30 @@ class AirmiusApiClient {
     'POST',
     '/api/v1/privacy/withdraw-consents',
     body: {'consents': consents},
+  );
+
+  Future<AirmiusJson> requestDataErasureCode({
+    required String identity,
+    required List<String> categories,
+  }) => _json(
+    'POST',
+    '/api/v1/privacy/data-erasure-code',
+    body: {
+      'identity': identity.trim(),
+      'categories': categories,
+    },
+  );
+
+  Future<AirmiusJson> erasePersonalData({
+    required String code,
+    required List<String> categories,
+  }) => _json(
+    'POST',
+    '/api/v1/privacy/data-erasure',
+    body: {
+      'code': code.trim(),
+      'categories': categories,
+    },
   );
 
   Future<AirmiusJson> subscriptionPlans({String? targetActor}) => _json(

@@ -57,6 +57,7 @@ Route::get('/sitemap.xml', function () {
         ['loc' => route('guest.marketplace'), 'priority' => '0.7', 'changefreq' => 'daily'],
         ['loc' => route('legal.imprint'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('policy.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+        ['loc' => route('legal.data-erasure'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('terms.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('legal.community'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('legal.minors'), 'priority' => '0.3', 'changefreq' => 'yearly'],
@@ -398,6 +399,7 @@ Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->
 
 Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');
 Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('policy.show');
+Route::get('/daten-loeschen', [LegalPageController::class, 'dataErasure'])->name('legal.data-erasure');
 Route::get('/agb', [LegalPageController::class, 'terms'])->name('terms.show');
 Route::get('/community-richtlinien', [LegalPageController::class, 'community'])->name('legal.community');
 Route::get('/jugendschutz', [LegalPageController::class, 'minors'])->name('legal.minors');

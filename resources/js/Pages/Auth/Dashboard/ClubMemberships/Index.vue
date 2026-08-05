@@ -5,7 +5,7 @@ import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
-import { confirmDialog } from '@/services/dialogService'
+import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
@@ -920,7 +920,21 @@ const removeMember = async (member) => {
 
     if (!confirmed) return
 
+    const reason = await promptDialog({
+        title: 'Grund für die Entfernung',
+        message: 'Bitte gib an, warum dieses Mitglied aus dem Verein entfernt wird. Die Begründung wird gespeichert und der Person mitgeteilt.',
+        inputLabel: 'Begründung',
+        placeholder: 'Begründung eingeben',
+        multiline: true,
+        required: true,
+        confirmLabel: 'Entfernen',
+        danger: true,
+    })
+
+    if (!reason?.trim()) return
+
     router.delete(route('auth.club-memberships.members.destroy', [selectedClub.value.id, member.id]), {
+        data: { reason: reason.trim() },
         preserveScroll: true,
         only: ['clubs', 'flash'],
     })

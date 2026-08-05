@@ -92,7 +92,7 @@ class ClubAuditLogTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/Dashboard/ClubMemberships/Index')
                 ->where('clubs.0.audit_logs.0.type', 'club.invoice.status_updated')
-                ->where('clubs.0.audit_logs.0.label', 'Rechnungsstatus geaendert')
+                ->where('clubs.0.audit_logs.0.label', 'Rechnungsstatus geändert')
                 ->where('clubs.0.audit_logs.0.actor.name', 'Audit Owner')
                 ->where('clubs.0.audit_logs.0.data.old_status', 'open')
                 ->where('clubs.0.audit_logs.0.data.new_status', 'paid')
@@ -138,5 +138,82 @@ class ClubAuditLogTest extends TestCase
             ->assertJsonPath('data.audit_logs.0.type', 'club.member.role_updated')
             ->assertJsonPath('data.audit_logs.0.data.from_role', 'member')
             ->assertJsonPath('data.audit_logs.0.data.to_role', 'trainer');
+    }
+
+    public function test_member_removal_requires_a_reason_in_web_and_api_and_is_audited(): void
+    {
+        $owner = User::factory()->create();
+        $webMember = User::factory()->create();
+        $apiMember = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        $club->users()->attach([$webMember->id, $apiMember->id], [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => 'active',
+        ]);
+
+        $this->actingAs($owner)
+            ->delete(route('auth.club-memberships.members.destroy', [$club, $webMember]))
+            ->assertSessionHasErrors('reason');
+
+        $this->assertDatabaseHas('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $webMember->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->delete(route('auth.club-memberships.members.destroy', [$club, $webMember]), [
+                'reason' => 'Mitgliedschaft wurde wegen wiederholter Regelverstöße beendet.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $webMember->id,
+        ]);
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'type' => 'club.member.removed',
+            'subject_type' => User::class,
+            'subject_id' => $webMember->id,
+        ]);
+        $removalNotification = \App\Models\Notification::query()
+            ->where('user_id', $webMember->id)
+            ->where('type', 'club.member_removed')
+            ->firstOrFail();
+        $this->assertSame('airmius://notifications', $removalNotification->data['mobile_url']);
+
+        $activity = Activity::query()
+            ->where('type', 'club.member.removed')
+            ->where('subject_id', $webMember->id)
+            ->firstOrFail();
+        $this->assertSame(
+            'Mitgliedschaft wurde wegen wiederholter Regelverstöße beendet.',
+            $activity->data['reason'],
+        );
+
+        Sanctum::actingAs($owner);
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$apiMember->id}")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reason');
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$apiMember->id}", [
+            'reason' => 'Mitgliedschaft auf Wunsch des Vereins beendet.',
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('club_user', [
+            'club_id' => $club->id,
+            'user_id' => $apiMember->id,
+        ]);
+        $this->assertDatabaseHas('activities', [
+            'club_id' => $club->id,
+            'user_id' => $owner->id,
+            'type' => 'club.member.removed',
+            'subject_type' => User::class,
+            'subject_id' => $apiMember->id,
+        ]);
     }
 }

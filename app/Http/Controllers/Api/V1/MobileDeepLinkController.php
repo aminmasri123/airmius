@@ -47,6 +47,7 @@ class MobileDeepLinkController extends Controller
             'sport-routes' => $this->target('sport_route', 'SportRouteNavigation', '/api/v1/sport-routes/'.($second ?? '{sportRoute}'), '/sport-map', ['sportRoute' => $second]),
             'sport-tracks' => $this->target('sport_track', 'SportTrackReplay', '/api/v1/sport-tracks', '/sport-map', ['sportTrack' => $second]),
             'membership-applications' => $this->target('membership_application', 'MembershipRequestStatus', '/api/v1/membership-applications/'.($second ?? '{application}'), '/notifications', ['application' => $second]),
+            'notifications' => $this->target('notifications', 'NotificationsCenter', '/api/v1/notifications', '/notifications'),
             'commerce' => $this->commerceTarget($segments),
             'clubs' => $third === 'billing'
                 ? $this->target('club_billing', 'ClubBilling', '/api/v1/clubs/'.($second ?? '{club}').'/billing', '/club-cockpit', ['club' => $second])

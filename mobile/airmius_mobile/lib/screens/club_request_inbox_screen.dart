@@ -41,6 +41,7 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
   bool _notifyApplicant = true;
   bool _autoTask = true;
   bool _showWithdrawn = true;
+  bool _showSettings = false;
   bool _loading = true;
   String? _loadError;
   int? _clubId;
@@ -341,16 +342,42 @@ class _ClubRequestInboxScreenState extends State<ClubRequestInboxScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _InboxSettingsPanel(
-              notifyAdmins: _notifyAdmins,
-              notifyApplicant: _notifyApplicant,
-              autoTask: _autoTask,
-              showWithdrawn: _showWithdrawn,
-              onAdmins: (value) => setState(() => _notifyAdmins = value),
-              onApplicant: (value) => setState(() => _notifyApplicant = value),
-              onTask: (value) => setState(() => _autoTask = value),
-              onWithdrawn: (value) => setState(() => _showWithdrawn = value),
+            AirmiusPanel(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t('membership.inbox.settingsTitle'),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: t('membership.inbox.settingsTitle'),
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () =>
+                        setState(() => _showSettings = !_showSettings),
+                  ),
+                ],
+              ),
             ),
+            if (_showSettings) ...[
+              const SizedBox(height: 10),
+              _InboxSettingsPanel(
+                notifyAdmins: _notifyAdmins,
+                notifyApplicant: _notifyApplicant,
+                autoTask: _autoTask,
+                showWithdrawn: _showWithdrawn,
+                onAdmins: (value) => setState(() => _notifyAdmins = value),
+                onApplicant: (value) =>
+                    setState(() => _notifyApplicant = value),
+                onTask: (value) => setState(() => _autoTask = value),
+                onWithdrawn: (value) => setState(() => _showWithdrawn = value),
+              ),
+            ],
             const SizedBox(height: 16),
             if (_loading)
               const AirmiusPanel(

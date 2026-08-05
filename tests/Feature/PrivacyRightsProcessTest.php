@@ -62,6 +62,7 @@ class PrivacyRightsProcessTest extends TestCase
         $this->assertSame('Intervalltraining erfolgreich beendet.', $payload['content']['posts'][0]['content']);
         $this->assertSame('auth.settings.privacy.export', $payload['rights']['export']['web_route']);
         $this->assertContains('current-user.destroy', $payload['rights']['deletion']['web_routes']);
+        $this->assertSame('legal.data-erasure', $payload['rights']['partial_data_erasure']['public_information_route']);
     }
 
     public function test_user_can_correct_personal_data_from_web_privacy_process(): void

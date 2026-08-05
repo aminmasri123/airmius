@@ -10,6 +10,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'privacy_data_erasure_sheet.dart';
 
 class PrivacyConsentCenterScreen extends StatefulWidget {
   const PrivacyConsentCenterScreen({super.key});
@@ -291,6 +292,13 @@ class _PrivacyConsentCenterScreenState
                 body: t('privacy.correctionHint'),
                 onTap: _busy ? null : () => _correctData(bundle),
               ),
+              const SizedBox(height: 10),
+              _PrivacyAction(
+                icon: Icons.delete_sweep_outlined,
+                title: t('privacy.eraseData'),
+                body: t('privacy.eraseDataHint'),
+                onTap: _busy ? null : _openDataErasure,
+              ),
             ],
           ),
         ),
@@ -453,6 +461,15 @@ class _PrivacyConsentCenterScreenState
       await _client.correctPrivacy(payload);
       await authState.refreshUser();
     }, success: t('privacy.corrected'));
+  }
+
+  Future<void> _openDataErasure() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => DataErasureSheet(client: _client),
+    );
   }
 
   Future<JsonMap?> _showCorrectionDialog(_PrivacyBundle bundle) async {

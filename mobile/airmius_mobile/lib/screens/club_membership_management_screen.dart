@@ -1479,14 +1479,74 @@ class _ClubMembershipManagementScreenState
         ),
       );
       if (confirmed == true && mounted) {
+        final reason = await _askRemovalReason();
+        if (!mounted || reason == null) return;
+
         await _runManagementAction(
           () => member.isExternal && member.externalId != null
-              ? repo.removeClubExternalMember(club.id, member.externalId!)
-              : repo.removeClubMember(club.id, member.id),
+              ? repo.removeClubExternalMember(
+                  club.id,
+                  member.externalId!,
+                  reason: reason,
+                )
+              : repo.removeClubMember(club.id, member.id, reason: reason),
           success: _tr('membership.memberRemoved'),
         );
       }
     }
+  }
+
+  Future<String?> _askRemovalReason() async {
+    final controller = TextEditingController();
+    String? errorText;
+
+    final reason = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(_tr('membership.removeReasonTitle')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_tr('membership.removeReasonBody')),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: _tr('membership.removeReason'),
+                  errorText: errorText,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                if (value.isEmpty) {
+                  setDialogState(
+                    () => errorText = _tr('membership.removeReasonRequired'),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, value);
+              },
+              child: Text(_tr('membership.remove')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    controller.dispose();
+    return reason;
   }
 
   Future<void> _editMemberPermissions(
@@ -3369,9 +3429,8 @@ class _ClubMembershipManagementScreenState
                     if (value == 'requests') {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => ClubRequestInboxScreen(
-                            initialClubId: club.id,
-                          ),
+                          builder: (_) =>
+                              ClubRequestInboxScreen(initialClubId: club.id),
                         ),
                       );
                       return;
@@ -4346,9 +4405,7 @@ class _MembershipDateInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final rawDigits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final digits = rawDigits.length > 8
-        ? rawDigits.substring(0, 8)
-        : rawDigits;
+    final digits = rawDigits.length > 8 ? rawDigits.substring(0, 8) : rawDigits;
     final buffer = StringBuffer();
     for (var index = 0; index < digits.length; index++) {
       if (index == 2 || index == 4) buffer.write('.');
@@ -4424,7 +4481,8 @@ class _MembershipRulesAdminPanelState
   List<JsonMap> get _filteredDocuments {
     final query = _documentSearch.trim().toLowerCase();
     return _documents.where((document) {
-      final typeMatches = _documentTypeFilter == 'all' ||
+      final typeMatches =
+          _documentTypeFilter == 'all' ||
           _string(document['type'], fallback: 'other') == _documentTypeFilter;
       final searchable = [
         _string(document['title']),
@@ -4698,9 +4756,7 @@ class _MembershipRulesAdminPanelState
       _ruleName.text = _string(rule['name']);
       _ruleAmount.text = _string(rule['amount']);
       _ruleInterval = _string(rule['billing_interval'], fallback: 'monthly');
-      _ruleValidFrom.text = _membershipDateDisplay(
-        rule['valid_from'],
-      );
+      _ruleValidFrom.text = _membershipDateDisplay(rule['valid_from']);
       if (_ruleValidFrom.text.isEmpty) {
         _ruleValidFrom.text = _membershipDateDisplay(DateTime.now());
       }
@@ -4811,10 +4867,17 @@ class _MembershipRulesAdminPanelState
   }
 
   Future<void> _openDocumentTypeDialog({int? index}) async {
-    final existing = index == null ? const <String, dynamic>{} : _documentTypes[index];
-    final labels = existing['labels'] is JsonMap ? existing['labels'] as JsonMap : const <String, dynamic>{};
+    final existing = index == null
+        ? const <String, dynamic>{}
+        : _documentTypes[index];
+    final labels = existing['labels'] is JsonMap
+        ? existing['labels'] as JsonMap
+        : const <String, dynamic>{};
     final value = TextEditingController(
-      text: _string(existing['value'], fallback: 'custom_${DateTime.now().millisecondsSinceEpoch}'),
+      text: _string(
+        existing['value'],
+        fallback: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+      ),
     );
     final german = TextEditingController(text: _string(labels['de']));
     final english = TextEditingController(text: _string(labels['en']));
@@ -4825,35 +4888,73 @@ class _MembershipRulesAdminPanelState
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: airmiusSurfaceColor(context),
-        title: Text(index == null ? 'Dokumenttyp hinzufügen' : 'Dokumenttyp bearbeiten'),
+        title: Text(
+          index == null ? 'Dokumenttyp hinzufügen' : 'Dokumenttyp bearbeiten',
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AirmiusTextField(label: 'Schlüssel', hint: 'z. B. vereinsordnung', controller: value),
+              AirmiusTextField(
+                label: 'Schlüssel',
+                hint: 'z. B. vereinsordnung',
+                controller: value,
+              ),
               const SizedBox(height: 10),
-              AirmiusTextField(label: 'Deutsch *', hint: 'Bezeichnung auf Deutsch', controller: german),
+              AirmiusTextField(
+                label: 'Deutsch *',
+                hint: 'Bezeichnung auf Deutsch',
+                controller: german,
+              ),
               const SizedBox(height: 10),
-              AirmiusTextField(label: 'English', hint: 'Label in English', controller: english),
+              AirmiusTextField(
+                label: 'English',
+                hint: 'Label in English',
+                controller: english,
+              ),
               const SizedBox(height: 10),
-              AirmiusTextField(label: 'Français', hint: 'Libellé en français', controller: french),
+              AirmiusTextField(
+                label: 'Français',
+                hint: 'Libellé en français',
+                controller: french,
+              ),
               const SizedBox(height: 10),
-              AirmiusTextField(label: 'العربية', hint: 'الاسم بالعربية', controller: arabic),
+              AirmiusTextField(
+                label: 'العربية',
+                hint: 'الاسم بالعربية',
+                controller: arabic,
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_tr('membership.cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_tr('membership.cancel')),
+          ),
           FilledButton(
             onPressed: () {
-              if (german.text.trim().isEmpty || value.text.trim().isEmpty) return;
+              if (german.text.trim().isEmpty || value.text.trim().isEmpty) {
+                return;
+              }
               Navigator.pop(dialogContext, {
-                'value': value.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_-]+'), '_'),
+                'value': value.text.trim().toLowerCase().replaceAll(
+                  RegExp(r'[^a-z0-9_-]+'),
+                  '_',
+                ),
                 'labels': {
                   'de': german.text.trim(),
-                  'en': english.text.trim().isEmpty ? german.text.trim() : english.text.trim(),
-                  'fr': french.text.trim().isEmpty ? german.text.trim() : french.text.trim(),
-                  'ar': arabic.text.trim().isEmpty ? (english.text.trim().isEmpty ? german.text.trim() : english.text.trim()) : arabic.text.trim(),
+                  'en': english.text.trim().isEmpty
+                      ? german.text.trim()
+                      : english.text.trim(),
+                  'fr': french.text.trim().isEmpty
+                      ? german.text.trim()
+                      : french.text.trim(),
+                  'ar': arabic.text.trim().isEmpty
+                      ? (english.text.trim().isEmpty
+                            ? german.text.trim()
+                            : english.text.trim())
+                      : arabic.text.trim(),
                 },
               });
             },
@@ -4925,16 +5026,26 @@ class _MembershipRulesAdminPanelState
                     decoration: InputDecoration(
                       labelText: _tr('membership.documentType'),
                     ),
-                    items: (_documentTypes.isEmpty
-                            ? const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other']
-                            : _documentTypes.map((item) => _string(item['value'])).toList())
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item,
-                            child: Text(_documentTypeLabel(item)),
-                          ),
-                        )
-                        .toList(),
+                    items:
+                        (_documentTypes.isEmpty
+                                ? const [
+                                    'privacy',
+                                    'statutes',
+                                    'rules',
+                                    'fees',
+                                    'sepa',
+                                    'other',
+                                  ]
+                                : _documentTypes
+                                      .map((item) => _string(item['value']))
+                                      .toList())
+                            .map(
+                              (item) => DropdownMenuItem(
+                                value: item,
+                                child: Text(_documentTypeLabel(item)),
+                              ),
+                            )
+                            .toList(),
                     onChanged: (value) =>
                         setDialogState(() => type = value ?? type),
                   ),
@@ -5746,7 +5857,8 @@ class _MembershipRulesAdminPanelState
                                   label: _tr('membership.validFrom'),
                                   hint: _tr('membership.isoDateHint'),
                                   controller: _ruleValidFrom,
-                                  inputFormatters: _membershipDateInputFormatters,
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
                                 ),
                               ),
                               SizedBox(
@@ -5755,7 +5867,8 @@ class _MembershipRulesAdminPanelState
                                   label: _tr('membership.validUntil'),
                                   hint: _tr('membership.optional'),
                                   controller: _ruleValidUntil,
-                                  inputFormatters: _membershipDateInputFormatters,
+                                  inputFormatters:
+                                      _membershipDateInputFormatters,
                                 ),
                               ),
                               SizedBox(
@@ -6014,17 +6127,28 @@ class _MembershipRulesAdminPanelState
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: DropdownButtonFormField<String>(
-                          initialValue: const ['required', 'optional', 'off']
-                                  .contains(_typeApplicationFields[entry.key])
+                          initialValue:
+                              const [
+                                'required',
+                                'optional',
+                                'off',
+                              ].contains(_typeApplicationFields[entry.key])
                               ? _typeApplicationFields[entry.key]
                               : 'off',
                           decoration: InputDecoration(labelText: entry.key),
                           items: const ['required', 'optional', 'off']
-                              .map((mode) => DropdownMenuItem(value: mode, child: Text(mode)))
+                              .map(
+                                (mode) => DropdownMenuItem(
+                                  value: mode,
+                                  child: Text(mode),
+                                ),
+                              )
                               .toList(),
                           onChanged: (value) {
                             if (value != null) {
-                              setState(() => _typeApplicationFields[entry.key] = value);
+                              setState(
+                                () => _typeApplicationFields[entry.key] = value,
+                              );
                             }
                           },
                         ),
@@ -6066,23 +6190,67 @@ class _MembershipRulesAdminPanelState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(_documentTypeLabel(_string(entry.$2['value'])), style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w900)),
+                                Text(
+                                  _documentTypeLabel(
+                                    _string(entry.$2['value']),
+                                  ),
+                                  style: TextStyle(
+                                    color: airmiusTextColor(context),
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
                                 const SizedBox(height: 3),
-                                Text(_string(entry.$2['value']), style: TextStyle(color: airmiusMutedColor(context), fontSize: 12)),
+                                Text(
+                                  _string(entry.$2['value']),
+                                  style: TextStyle(
+                                    color: airmiusMutedColor(context),
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          IconButton(onPressed: () => _openDocumentTypeDialog(index: entry.$1), icon: const Icon(Icons.edit_outlined)),
-                          if (!const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].contains(entry.$2['value']))
-                            IconButton(onPressed: () => setState(() => _documentTypes.removeAt(entry.$1)), icon: const Icon(Icons.delete_outline, color: Colors.redAccent)),
+                          IconButton(
+                            onPressed: () =>
+                                _openDocumentTypeDialog(index: entry.$1),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          if (!const [
+                            'privacy',
+                            'statutes',
+                            'rules',
+                            'fees',
+                            'sepa',
+                            'other',
+                          ].contains(entry.$2['value']))
+                            IconButton(
+                              onPressed: () => setState(
+                                () => _documentTypes.removeAt(entry.$1),
+                              ),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  if (_documentTypes.isEmpty) _EmptyAdminHint(text: 'Noch keine Dokumenttypen vorhanden.'),
+                  if (_documentTypes.isEmpty)
+                    _EmptyAdminHint(
+                      text: 'Noch keine Dokumenttypen vorhanden.',
+                    ),
                   const SizedBox(height: 4),
-                  AirmiusButton(label: 'Dokumenttyp hinzufügen', icon: Icons.add, onPressed: () => _openDocumentTypeDialog()),
+                  AirmiusButton(
+                    label: 'Dokumenttyp hinzufügen',
+                    icon: Icons.add,
+                    onPressed: () => _openDocumentTypeDialog(),
+                  ),
                   const SizedBox(height: 8),
-                  AirmiusButton(label: _tr('membership.save'), icon: Icons.save_outlined, onPressed: _saving ? null : () => _saveSettings()),
+                  AirmiusButton(
+                    label: _tr('membership.save'),
+                    icon: Icons.save_outlined,
+                    onPressed: _saving ? null : () => _saveSettings(),
+                  ),
                 ],
               ),
             ),
@@ -6103,9 +6271,21 @@ class _MembershipRulesAdminPanelState
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      _AdminMiniStat(icon: Icons.badge_outlined, title: 'Mitgliedschaftstypen', value: '${membershipTypes.length}'),
-                      _AdminMiniStat(icon: Icons.tune_outlined, title: 'Beitragsregeln', value: '$activeRules'),
-                      _AdminMiniStat(icon: Icons.description_outlined, title: 'Dokumente', value: '${_documents.length}'),
+                      _AdminMiniStat(
+                        icon: Icons.badge_outlined,
+                        title: 'Mitgliedschaftstypen',
+                        value: '${membershipTypes.length}',
+                      ),
+                      _AdminMiniStat(
+                        icon: Icons.tune_outlined,
+                        title: 'Beitragsregeln',
+                        value: '$activeRules',
+                      ),
+                      _AdminMiniStat(
+                        icon: Icons.description_outlined,
+                        title: 'Dokumente',
+                        value: '${_documents.length}',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -6151,7 +6331,10 @@ class _MembershipRulesAdminPanelState
               initialValue: _documentTypeFilter,
               decoration: const InputDecoration(labelText: 'Dokumenttyp'),
               items: const [
-                DropdownMenuItem(value: 'all', child: Text('Alle Dokumenttypen')),
+                DropdownMenuItem(
+                  value: 'all',
+                  child: Text('Alle Dokumenttypen'),
+                ),
                 DropdownMenuItem(value: 'privacy', child: Text('Datenschutz')),
                 DropdownMenuItem(value: 'statutes', child: Text('Satzung')),
                 DropdownMenuItem(value: 'rules', child: Text('Regeln')),
@@ -6159,7 +6342,8 @@ class _MembershipRulesAdminPanelState
                 DropdownMenuItem(value: 'sepa', child: Text('SEPA')),
                 DropdownMenuItem(value: 'other', child: Text('Sonstiges')),
               ],
-              onChanged: (value) => setState(() => _documentTypeFilter = value ?? 'all'),
+              onChanged: (value) =>
+                  setState(() => _documentTypeFilter = value ?? 'all'),
             ),
             const SizedBox(height: 12),
             if (_filteredDocuments.isEmpty)
@@ -6171,7 +6355,8 @@ class _MembershipRulesAdminPanelState
                   typeLabel: _documentTypeLabel(
                     _string(document['type'], fallback: 'other'),
                   ),
-                  onEdit: () => _openDocumentDialog(index: _documents.indexOf(document)),
+                  onEdit: () =>
+                      _openDocumentDialog(index: _documents.indexOf(document)),
                   onDelete: () => setState(() => _documents.remove(document)),
                 ),
             const SizedBox(height: 12),

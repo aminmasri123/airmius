@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Keep the original PNG unchanged, but display it at a restrained size
+         while Android is showing the startup window. -->
+    <item
+        android:drawable="@drawable/airmius_mark"
+        android:gravity="center"
+        android:width="160dp"
+        android:height="160dp" />
+</layer-list>

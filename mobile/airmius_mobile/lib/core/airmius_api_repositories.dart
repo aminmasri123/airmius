@@ -295,10 +295,15 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   @override
   Future<AirmiusClubManagement> removeClubExternalMember(
     int clubId,
-    int externalMemberId,
-  ) async {
+    int externalMemberId, {
+    required String reason,
+  }) async {
     return _managementFromJson(
-      await client.removeClubExternalMember(clubId, externalMemberId),
+      await client.removeClubExternalMember(
+        clubId,
+        externalMemberId,
+        reason: reason,
+      ),
     );
   }
 
@@ -365,8 +370,14 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
-  Future<AirmiusClubManagement> removeClubMember(int clubId, int userId) async {
-    return _managementFromJson(await client.removeClubMember(clubId, userId));
+  Future<AirmiusClubManagement> removeClubMember(
+    int clubId,
+    int userId, {
+    required String reason,
+  }) async {
+    return _managementFromJson(
+      await client.removeClubMember(clubId, userId, reason: reason),
+    );
   }
 
   @override

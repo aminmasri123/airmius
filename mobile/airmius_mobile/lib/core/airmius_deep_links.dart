@@ -7,6 +7,7 @@ enum AirmiusDeepLinkTargetType {
   chat,
   invitation,
   message,
+  notifications,
   notification,
   profile,
   passwordReset,
@@ -49,6 +50,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.chat => 'chat',
     AirmiusDeepLinkTargetType.invitation => 'invitation',
     AirmiusDeepLinkTargetType.message => 'message',
+    AirmiusDeepLinkTargetType.notifications => 'notifications',
     AirmiusDeepLinkTargetType.notification => 'notification',
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
@@ -175,6 +177,13 @@ class AirmiusDeepLinkResolver {
         type: AirmiusDeepLinkTargetType.notification,
         path: path,
         id: id,
+        query: query,
+      );
+    }
+    if (root == 'notifications') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.notifications,
+        path: path,
         query: query,
       );
     }

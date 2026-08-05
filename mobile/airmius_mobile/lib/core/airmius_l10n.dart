@@ -6306,6 +6306,13 @@ const _dashboardMoreDe = {
   'application.email': 'E-Mail',
   'application.phone': 'Telefon',
   'application.addressData': 'Wohndaten',
+  'application.saveAddressTitle': 'Adresse speichern?',
+  'application.saveAddressBody':
+      'Möchtest du diese Adresse in deinem Profil speichern? Dann wird sie bei zukünftigen Anträgen automatisch vorausgefüllt.',
+  'application.saveAddress': 'Adresse speichern',
+  'application.addressOnly': 'Nur für diesen Antrag',
+  'application.addressSaveFailed':
+      'Die Adresse konnte nicht gespeichert werden. Bitte versuche es erneut.',
   'application.sportData': 'Sportdaten',
   'application.street': 'Straße',
   'application.houseNumber': 'Hausnummer',
@@ -6338,7 +6345,8 @@ const _dashboardMoreDe = {
   'application.cycle.none': 'Kein Beitrag',
   'application.sepaOnly': 'Nur falls SEPA aktiv ist',
   'application.documentsRules': 'Dokumente & Regeln',
-  'application.noMembershipTypes': 'Dieser Verein hat noch keine Mitgliedschaftstypen eingerichtet.',
+  'application.noMembershipTypes':
+      'Dieser Verein hat noch keine Mitgliedschaftstypen eingerichtet.',
   'application.readDocument': 'Lesen',
   'application.downloadDocument': 'Herunterladen',
   'application.documentsHint':
@@ -6508,6 +6516,13 @@ const _dashboardMoreEn = {
   'application.email': 'Email',
   'application.phone': 'Phone',
   'application.addressData': 'Address',
+  'application.saveAddressTitle': 'Save address?',
+  'application.saveAddressBody':
+      'Would you like to save this address to your profile? It will be filled in automatically for future applications.',
+  'application.saveAddress': 'Save address',
+  'application.addressOnly': 'Only for this application',
+  'application.addressSaveFailed':
+      'The address could not be saved. Please try again.',
   'application.sportData': 'Sports details',
   'application.street': 'Street',
   'application.houseNumber': 'House number',
@@ -6540,7 +6555,8 @@ const _dashboardMoreEn = {
   'application.cycle.none': 'No fee',
   'application.sepaOnly': 'Only if SEPA is active',
   'application.documentsRules': 'Documents & rules',
-  'application.noMembershipTypes': 'This club has not configured any membership types yet.',
+  'application.noMembershipTypes':
+      'This club has not configured any membership types yet.',
   'application.readDocument': 'Read',
   'application.downloadDocument': 'Download',
   'application.documentsHint': 'The club’s required documents appear here.',
@@ -6690,7 +6706,8 @@ const _dashboardMoreFr = {
       'Le club définit les champs visibles pour chaque type d’adhésion.',
   'application.requiredField': 'Champ obligatoire manquant.',
   'application.membershipCosts': 'Cotisations par type d’adhésion',
-  'application.contributionByAgreement': 'Cotisation à convenir avec l’association',
+  'application.contributionByAgreement':
+      'Cotisation à convenir avec l’association',
   'application.personalData': 'Données personnelles',
   'application.firstName': 'Prénom',
   'application.lastName': 'Nom',
@@ -6707,6 +6724,13 @@ const _dashboardMoreFr = {
   'application.email': 'E-mail',
   'application.phone': 'Téléphone',
   'application.addressData': 'Adresse',
+  'application.saveAddressTitle': 'Enregistrer l’adresse ?',
+  'application.saveAddressBody':
+      'Voulez-vous enregistrer cette adresse dans votre profil ? Elle sera automatiquement préremplie pour vos prochaines demandes.',
+  'application.saveAddress': 'Enregistrer l’adresse',
+  'application.addressOnly': 'Uniquement pour cette demande',
+  'application.addressSaveFailed':
+      'L’adresse n’a pas pu être enregistrée. Veuillez réessayer.',
   'application.sportData': 'Données sportives',
   'application.street': 'Rue',
   'application.houseNumber': 'Numéro',
@@ -6739,7 +6763,8 @@ const _dashboardMoreFr = {
   'application.cycle.none': 'Aucune cotisation',
   'application.sepaOnly': 'Uniquement si SEPA est actif',
   'application.documentsRules': 'Documents et règlement',
-  'application.noMembershipTypes': 'Cette association n’a pas encore configuré de types d’adhésion.',
+  'application.noMembershipTypes':
+      'Cette association n’a pas encore configuré de types d’adhésion.',
   'application.readDocument': 'Lire',
   'application.downloadDocument': 'Télécharger',
   'application.documentsHint':
@@ -6909,6 +6934,12 @@ const _dashboardMoreAr = {
   'application.email': 'البريد الإلكتروني',
   'application.phone': 'الهاتف',
   'application.addressData': 'العنوان',
+  'application.saveAddressTitle': 'حفظ العنوان؟',
+  'application.saveAddressBody':
+      'هل تريد حفظ هذا العنوان في ملفك الشخصي؟ سيتم تعبئته تلقائياً في الطلبات المستقبلية.',
+  'application.saveAddress': 'حفظ العنوان',
+  'application.addressOnly': 'لهذا الطلب فقط',
+  'application.addressSaveFailed': 'تعذر حفظ العنوان. يرجى المحاولة مرة أخرى.',
   'application.sportData': 'البيانات الرياضية',
   'application.street': 'الشارع',
   'application.houseNumber': 'رقم المنزل',
@@ -6941,7 +6972,8 @@ const _dashboardMoreAr = {
   'application.cycle.none': 'بدون رسوم',
   'application.sepaOnly': 'فقط عند تفعيل SEPA',
   'application.documentsRules': 'المستندات والقواعد',
-  'application.noMembershipTypes': 'لم يقم هذا النادي بإعداد أنواع العضوية بعد.',
+  'application.noMembershipTypes':
+      'لم يقم هذا النادي بإعداد أنواع العضوية بعد.',
   'application.readDocument': 'قراءة',
   'application.downloadDocument': 'تنزيل',
   'application.documentsHint': 'تظهر مستندات النادي المطلوبة هنا.',
@@ -8239,9 +8271,11 @@ const _membershipActionsDe = {
   'membership.applicationFieldList': 'Felder im Mitgliedsantrag',
   'membership.applicationFields': 'Antrag & Felder',
   'membership.typeSetupFirst': 'Zuerst Mitgliedschaftstyp wählen',
-  'membership.typeSetupHint': 'Erstelle einen neuen Typ oder bearbeite einen bestehenden Typ.',
+  'membership.typeSetupHint':
+      'Erstelle einen neuen Typ oder bearbeite einen bestehenden Typ.',
   'membership.appliesToType': 'Gilt für Mitgliedschaftstyp',
-  'membership.typeFieldsHint': 'Der Vereinsstandard wird für diesen Typ übernommen und kann angepasst werden.',
+  'membership.typeFieldsHint':
+      'Der Vereinsstandard wird für diesen Typ übernommen und kann angepasst werden.',
   'membership.applicationFieldsBody':
       'Online-Anfragen, Zahlarten und sichtbare Felder kompakt bearbeiten.',
   'membership.next': 'Weiter',
@@ -8479,6 +8513,11 @@ const _membershipActionsDe = {
   'membership.removeMemberBodyAfter':
       'wird auch aus den zugehörigen Teams entfernt.',
   'membership.removeMemberQuestion': 'Mitglied entfernen?',
+  'membership.removeReasonTitle': 'Grund für die Entfernung',
+  'membership.removeReasonBody':
+      'Bitte gib an, warum dieses Mitglied aus dem Verein entfernt wird. Die Begründung wird gespeichert und der Person mitgeteilt.',
+  'membership.removeReason': 'Begründung',
+  'membership.removeReasonRequired': 'Bitte gib eine Begründung ein.',
   'membership.requests': 'Anfragen',
   'membership.requiredAfter': 'Pflicht',
   'membership.requiredFields': 'Pflichtfelder',
@@ -8538,7 +8577,8 @@ final _membershipActionsEn = {
   'membership.typeSetupFirst': 'Choose a membership type first',
   'membership.typeSetupHint': 'Create a new type or edit an existing one.',
   'membership.appliesToType': 'Applies to membership type',
-  'membership.typeFieldsHint': 'The club default is used for this type and can be customized.',
+  'membership.typeFieldsHint':
+      'The club default is used for this type and can be customized.',
   'membership.applicationFieldsBody':
       'Manage online requests, payment methods and visible fields.',
   'membership.next': 'Next',
@@ -8770,6 +8810,11 @@ final _membershipActionsEn = {
   'membership.removeMemberBodyAfter':
       'will also be removed from the associated teams.',
   'membership.removeMemberQuestion': 'Remove member?',
+  'membership.removeReasonTitle': 'Reason for removal',
+  'membership.removeReasonBody':
+      'Please explain why this member is being removed from the club. The reason will be stored and shared with the person.',
+  'membership.removeReason': 'Reason',
+  'membership.removeReasonRequired': 'Please enter a reason.',
   'membership.requests': 'Requests',
   'membership.requiredAfter': 'required',
   'membership.requiredFields': 'Required fields',
@@ -8827,9 +8872,11 @@ final _membershipActionsFr = {
   'membership.applicationFieldList': 'Champs de la demande d’adhésion',
   'membership.applicationFields': 'Demande et champs',
   'membership.typeSetupFirst': 'Choisissez d’abord un type d’adhésion',
-  'membership.typeSetupHint': 'Créez un nouveau type ou modifiez un type existant.',
+  'membership.typeSetupHint':
+      'Créez un nouveau type ou modifiez un type existant.',
   'membership.appliesToType': 'S’applique au type d’adhésion',
-  'membership.typeFieldsHint': 'Le réglage standard du club est utilisé et peut être personnalisé.',
+  'membership.typeFieldsHint':
+      'Le réglage standard du club est utilisé et peut être personnalisé.',
   'membership.applicationFieldsBody':
       'Gérez les demandes, moyens de paiement et champs visibles.',
   'membership.next': 'Suivant',
@@ -9062,6 +9109,11 @@ final _membershipActionsFr = {
   'membership.removeMemberBodyAfter':
       'sera aussi retiré des équipes associées.',
   'membership.removeMemberQuestion': 'Retirer le membre ?',
+  'membership.removeReasonTitle': 'Motif du retrait',
+  'membership.removeReasonBody':
+      'Indiquez pourquoi ce membre est retiré du club. Le motif sera enregistré et communiqué à la personne.',
+  'membership.removeReason': 'Motif',
+  'membership.removeReasonRequired': 'Veuillez saisir un motif.',
   'membership.requests': 'Demandes',
   'membership.requiredAfter': 'obligatoires',
   'membership.requiredFields': 'Champs obligatoires',
@@ -9121,13 +9173,13 @@ final _membershipActionsAr = {
   'membership.typeSetupFirst': 'اختر نوع العضوية أولاً',
   'membership.typeSetupHint': 'أنشئ نوعاً جديداً أو عدّل نوعاً موجوداً.',
   'membership.appliesToType': 'ينطبق على نوع العضوية',
-  'membership.typeFieldsHint': 'يتم استخدام الإعداد الافتراضي للنادي ويمكن تخصيصه لهذا النوع.',
+  'membership.typeFieldsHint':
+      'يتم استخدام الإعداد الافتراضي للنادي ويمكن تخصيصه لهذا النوع.',
   'membership.applicationFieldsBody':
       'إدارة الطلبات وطرق الدفع والحقول الظاهرة.',
   'membership.next': 'التالي',
   'membership.setupTitle': 'إعداد قواعد الانضمام',
-  'membership.setupHint':
-      'سنرشدك خطوة بخطوة عبر الإعدادات الأساسية.',
+  'membership.setupHint': 'سنرشدك خطوة بخطوة عبر الإعدادات الأساسية.',
   'membership.appliesTo': 'يسري على',
   'membership.apply': 'تطبيق',
   'membership.bankAccount': 'الحساب البنكي',
@@ -9351,6 +9403,11 @@ final _membershipActionsAr = {
   'membership.removeFromClub': 'إزالة من النادي',
   'membership.removeMemberBodyAfter': 'ستتم إزالته أيضًا من الفرق المرتبطة.',
   'membership.removeMemberQuestion': 'إزالة العضو؟',
+  'membership.removeReasonTitle': 'سبب الإزالة',
+  'membership.removeReasonBody':
+      'يرجى توضيح سبب إزالة هذا العضو من النادي. سيتم حفظ السبب وإبلاغ الشخص به.',
+  'membership.removeReason': 'السبب',
+  'membership.removeReasonRequired': 'يرجى إدخال السبب.',
   'membership.requests': 'الطلبات',
   'membership.requiredAfter': 'مطلوبة',
   'membership.requiredFields': 'الحقول المطلوبة',
@@ -14987,6 +15044,7 @@ const _membershipFormLabelsDe = {
   'membership.status.signedAt': 'Bestätigt am',
   'membership.status.timeline': 'Statusverlauf',
   'membership.status.actions': 'Aktionen',
+  'membership.status.finish': 'Fertig / Startseite',
   'membership.status.sendQuestion': 'Rückfrage senden',
   'membership.status.addData': 'Daten nachreichen',
   'membership.status.otherClubs': 'Andere Vereine',
@@ -15141,6 +15199,7 @@ final _membershipFormLabelsEn = {
   'membership.status.signedAt': 'Confirmed on',
   'membership.status.timeline': 'Status history',
   'membership.status.actions': 'Actions',
+  'membership.status.finish': 'Done / Home',
   'membership.status.sendQuestion': 'Send a question',
   'membership.status.addData': 'Add missing data',
   'membership.status.otherClubs': 'Other clubs',
@@ -19337,6 +19396,42 @@ final _strings = {
     'privacy.correctionInvalid':
         'Bitte Name, gültige E-Mail und zweistelligen Ländercode prüfen.',
     'privacy.saveCorrection': 'Korrektur speichern',
+    'privacy.eraseData': 'Daten löschen, Konto behalten',
+    'privacy.eraseDataHint':
+        'Persönliche Daten gezielt entfernen, ohne das Konto zu löschen.',
+    'privacy.eraseWarning':
+        'Gelöschte Daten und Medien können nicht wiederhergestellt werden. Konto, Zugangsdaten und gesetzlich erforderliche Nachweise bleiben erhalten.',
+    'privacy.eraseSelectAreas': 'Datenbereiche auswählen',
+    'privacy.eraseSelectAll': 'Alle auswählen',
+    'privacy.eraseClearAll': 'Auswahl aufheben',
+    'privacy.eraseCategory.profile': 'Profil- und Kontaktdaten',
+    'privacy.eraseCategory.content': 'Beiträge, Kommentare und Storys',
+    'privacy.eraseCategory.messages': 'Eigene Chat-Nachrichten',
+    'privacy.eraseCategory.files': 'Dateien und Ordner',
+    'privacy.eraseCategory.sport_and_health':
+        'Sport-, Standort- und Gesundheitsdaten',
+    'privacy.eraseCategory.social_and_integrations':
+        'Soziale Verbindungen und Integrationen',
+    'privacy.eraseCategory.commerce': 'Shop- und Bestelldaten',
+    'privacy.eraseConfirmIdentity': 'Anfrage bestätigen',
+    'privacy.eraseIdentityHint':
+        'Gib dein aktuelles Passwort ein. Bei Google- oder Microsoft-Anmeldung aktiviere die Option und gib die Konto-E-Mail ein.',
+    'privacy.eraseUseEmail': 'Ich melde mich mit Google oder Microsoft an',
+    'privacy.eraseRequestCode': 'Bestätigungscode senden',
+    'privacy.eraseNewCode': 'Neuen Code senden',
+    'privacy.eraseFinalStep': 'Löschung ausführen',
+    'privacy.eraseCodeHint':
+        'Gib den Code aus deiner E-Mail ein. Er gilt 15 Minuten und nur für die aktuelle Auswahl.',
+    'privacy.eraseCode': 'Bestätigungscode',
+    'privacy.eraseConfirm': 'Ausgewählte Daten endgültig löschen',
+    'privacy.eraseSelectionRequired': 'Wähle mindestens einen Datenbereich aus.',
+    'privacy.eraseIdentityRequired': 'Gib zuerst Passwort oder Konto-E-Mail ein.',
+    'privacy.eraseCodeSent': 'Der Bestätigungscode wurde per E-Mail gesendet.',
+    'privacy.eraseCodeRequired': 'Gib den Bestätigungscode aus der E-Mail ein.',
+    'privacy.eraseFinalWarning':
+        'Die ausgewählten Daten werden sofort gelöscht oder, soweit erforderlich, anonymisiert. Diese Aktion kann nicht rückgängig gemacht werden.',
+    'privacy.eraseCompleted':
+        'Die ausgewählten Daten wurden gelöscht oder anonymisiert. Dein Konto bleibt bestehen.',
     'privacy.loadError':
         'Die Datenschutzeinstellungen konnten nicht geladen werden.',
     'subscriptions.title': 'Abos & Rechnungen',
@@ -21501,6 +21596,41 @@ final _strings = {
     'privacy.correctionInvalid':
         'Check your name, a valid email and the two-letter country code.',
     'privacy.saveCorrection': 'Save correction',
+    'privacy.eraseData': 'Delete data, keep account',
+    'privacy.eraseDataHint':
+        'Remove personal data selectively without deleting the account.',
+    'privacy.eraseWarning':
+        'Deleted data and media cannot be restored. Your account, credentials and legally required records remain.',
+    'privacy.eraseSelectAreas': 'Choose data areas',
+    'privacy.eraseSelectAll': 'Select all',
+    'privacy.eraseClearAll': 'Clear selection',
+    'privacy.eraseCategory.profile': 'Profile and contact data',
+    'privacy.eraseCategory.content': 'Posts, comments and stories',
+    'privacy.eraseCategory.messages': 'Your chat messages',
+    'privacy.eraseCategory.files': 'Files and folders',
+    'privacy.eraseCategory.sport_and_health': 'Sport, location and health data',
+    'privacy.eraseCategory.social_and_integrations':
+        'Social connections and integrations',
+    'privacy.eraseCategory.commerce': 'Shop and order data',
+    'privacy.eraseConfirmIdentity': 'Confirm request',
+    'privacy.eraseIdentityHint':
+        'Enter your current password. For Google or Microsoft sign-in, enable the option and enter your account email.',
+    'privacy.eraseUseEmail': 'I sign in with Google or Microsoft',
+    'privacy.eraseRequestCode': 'Send confirmation code',
+    'privacy.eraseNewCode': 'Send a new code',
+    'privacy.eraseFinalStep': 'Delete selected data',
+    'privacy.eraseCodeHint':
+        'Enter the code from your email. It is valid for 15 minutes and only for the current selection.',
+    'privacy.eraseCode': 'Confirmation code',
+    'privacy.eraseConfirm': 'Permanently delete selected data',
+    'privacy.eraseSelectionRequired': 'Select at least one data area.',
+    'privacy.eraseIdentityRequired': 'Enter your password or account email first.',
+    'privacy.eraseCodeSent': 'The confirmation code was sent by email.',
+    'privacy.eraseCodeRequired': 'Enter the confirmation code from the email.',
+    'privacy.eraseFinalWarning':
+        'The selected data will be deleted or, where required, anonymized immediately. This cannot be undone.',
+    'privacy.eraseCompleted':
+        'The selected data was deleted or anonymized. Your account remains active.',
     'privacy.loadError': 'Privacy settings could not be loaded.',
     'subscriptions.title': 'Subscriptions & invoices',
     'subscriptions.subtitle': 'Plans, secure checkouts, payments and invoices',

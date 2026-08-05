@@ -16,6 +16,7 @@ class ClubAuditLog
         'club.member.invited' => 'Mitglied eingeladen',
         'club.member.updated' => 'Mitglied aktualisiert',
         'club.member.role_updated' => 'Rolle geändert',
+        'club.member.removed' => 'Mitglied entfernt',
         'club.contribution_rule.created' => 'Beitragsregel erstellt',
         'club.contribution_rule.updated' => 'Beitragsregel aktualisiert',
         'club.membership_request.approved' => 'Mitgliedsantrag angenommen',

@@ -1325,16 +1325,32 @@ class ClubController extends Controller
 
     public function removeExternalMember(Request $request, Club $club, ClubExternalMember $externalMember)
     {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+        $reason = trim((string) $data['reason']);
+        abort_if($reason === '', 422, 'Eine Begründung ist erforderlich.');
+
         $this->authorizeVisible($request, $club);
         abort_unless($this->canManageMembership($request, $club), 403);
         abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
 
         $familyGroupKey = $this->normalizeFamilyGroupKey($externalMember->family_group_key);
+        $memberName = $externalMember->name;
+        $memberEmail = $externalMember->email;
+        $externalMemberId = $externalMember->id;
         $externalMember->delete();
 
         if ($familyGroupKey !== null) {
             app(WebClubMembershipController::class)->recalculateFamilyGroupContributions($club, $familyGroupKey);
         }
+
+        ClubAuditLog::record($club, $request->user(), 'club.member.removed', $externalMember, [
+            'external_member_id' => $externalMemberId,
+            'member_name' => $memberName,
+            'member_email' => $memberEmail,
+            'reason' => $reason,
+        ]);
 
         return $this->membershipManagementResponse($request, $club, 'Externes Mitglied entfernt.');
     }

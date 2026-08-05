@@ -165,6 +165,7 @@ class LegalPageController extends Controller
                 'body' => [
                     'Daten werden gelöscht oder anonymisiert, sobald sie für die genannten Zwecke nicht mehr erforderlich sind.',
                     'Accountdaten werden grundsätzlich bis zur Löschung des Kontos gespeichert, soweit keine gesetzlichen Aufbewahrungspflichten oder berechtigten Interessen entgegenstehen.',
+                    'Du kannst ausgewählte Daten auch ohne Kontolöschung in Einstellungen > Datenschutz > Daten löschen entfernen. Die öffentliche Anleitung ist unter /daten-loeschen erreichbar.',
                     'Bei längerer Inaktivität nutzt Airmius ein gestuftes Verfahren: Nach etwa 12 Monaten ohne Nutzung kann eine erste Erinnerung versendet werden, nach etwa 18 Monaten eine zweite Erinnerung und nach etwa 24 Monaten kann das Konto zur Anonymisierung vorgemerkt werden.',
                     'Vor der Anonymisierung wird grundsätzlich eine letzte Benachrichtigung mit einer Reaktionsfrist von etwa 30 Tagen versendet. Eine erneute Anmeldung setzt die Inaktivitätsprüfung zurück.',
                     'Bei der Anonymisierung werden personenbezogene Profilangaben, Social-Login-Verknüpfungen, Sport-App-Verknüpfungen, Tokens, Profilbilder, private Medien und persönliche Inhalte soweit möglich entfernt oder anonymisiert.',
@@ -207,6 +208,48 @@ class LegalPageController extends Controller
                 ],
             ],
         ], 'Stand: 25.05.2026. KI-, Karten-, Routing-, Ernährungs- und Trackingfunktionen sind ergänzt. Bitte lege die aktuellen AVV/DPA-Unterlagen der tatsächlich genutzten Anbieter intern ab und lasse die Texte vor Livegang rechtlich final prüfen.');
+    }
+
+    public function dataErasure(): Response
+    {
+        $legal = $this->legalProfile();
+
+        return $this->render('Daten löschen', [
+            [
+                'title' => 'Daten löschen, Konto behalten',
+                'body' => [
+                    'Airmius ermöglicht dir, ausgewählte personenbezogene Daten zu löschen, ohne dein Konto zu löschen. Die Funktion steht sowohl in der Web-Version als auch in der Airmius-App im Bereich Datenschutz zur Verfügung.',
+                    'Melde dich an, öffne Einstellungen > Datenschutz > Daten löschen, wähle die gewünschten Datenbereiche aus und bestätige die Anfrage mit einem Code, den wir an deine Konto-E-Mail-Adresse senden.',
+                ],
+            ],
+            [
+                'title' => 'Welche Daten du entfernen kannst',
+                'body' => [
+                    'Du kannst unter anderem Profil- und Kontaktdaten, Beiträge, Kommentare, Storys, eigene Chat-Inhalte, Dateien, Sport-, Standort-, Trainings- und Ernährungsdaten, soziale Verbindungen, Gerätekennungen sowie gespeicherte Shop-Daten auswählen.',
+                    'Eigene Beiträge, Kommentare, Storys, Dateien und persönliche Medien werden dauerhaft entfernt. Chat-Inhalte werden in bestehenden Unterhaltungen durch einen neutralen Löschhinweis ersetzt.',
+                    'Lieferadressen, Warenkörbe, Merklisten und Bewertungen werden entfernt. Abgeschlossene Bestellungen ohne Rechnungs-, Zahlungs-, Liefer- oder offenen Klärungsbezug können anonymisiert werden.',
+                ],
+            ],
+            [
+                'title' => 'Was erhalten bleiben kann',
+                'body' => [
+                    'Dein Konto, deine E-Mail-Adresse und deine Zugangsdaten bleiben erhalten, damit du Airmius weiter nutzen kannst.',
+                    'Wenn du stattdessen dein gesamtes Konto löschen möchtest, melde dich an und öffne Profil > Konto löschen. Bestätige dort dein Passwort – oder bei Google-/Microsoft-Anmeldung deine Konto-E-Mail-Adresse – sowie den per E-Mail gesendeten Code. Das Konto und die zugehörigen Daten werden dann nach dem Kontolöschprozess entfernt oder, soweit erforderlich, anonymisiert.',
+                    'Rechnungen, Zahlungen, Abonnements, offene Bestellungen, Liefer- und Rückgabevorgänge sowie andere Nachweise können aufgrund gesetzlicher Aufbewahrungspflichten, Vertragserfüllung, Missbrauchsprävention oder berechtigter Interessen länger gespeichert bleiben.',
+                    'Vereins-, Team- und Berechtigungszuordnungen werden durch die partielle Datenlöschung nicht automatisch entfernt, damit keine Daten anderer Personen oder Organisationen verloren gehen.',
+                ],
+            ],
+            [
+                'title' => 'Kein Zugriff auf dein Konto?',
+                'body' => [
+                    'Wenn du dich nicht mehr anmelden kannst, nutze zuerst die Passwort-zurücksetzen-Funktion. Falls das nicht möglich ist, sende deine Löschanfrage mit der E-Mail-Adresse des betroffenen Kontos an '.$legal['privacy_email'].'.',
+                    'Bitte nenne nur die Datenbereiche, die gelöscht werden sollen. Wir können zur Sicherheit eine Identitätsprüfung verlangen, bevor wir die Anfrage bearbeiten.',
+                ],
+            ],
+        ], 'Diese Seite beschreibt die Datenlöschung ohne Kontolöschung. Sie wird im Google-Play-Store als öffentliche Löschseite verlinkt.', [
+            'label' => 'Anmelden und Daten löschen',
+            'href' => route('login', ['redirect' => '/settings/daten-loeschen']),
+        ]);
     }
 
     public function terms(): Response
@@ -561,12 +604,13 @@ class LegalPageController extends Controller
         ]);
     }
 
-    private function render(string $title, array $sections, ?string $note = null): Response
+    private function render(string $title, array $sections, ?string $note = null, ?array $action = null): Response
     {
         return Inertia::render('Legal/Show', [
             'title' => $title,
             'sections' => $sections,
             'note' => $note,
+            'action' => $action,
         ]);
     }
 

@@ -2218,6 +2218,10 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
     }
   }
 
+  if (type == 'club.member_removed') {
+    return 'airmius://notifications';
+  }
+
   return null;
 }
 
@@ -2987,8 +2991,9 @@ abstract class AirmiusClubRepository {
   );
   Future<AirmiusClubManagement> removeClubExternalMember(
     int clubId,
-    int externalMemberId,
-  );
+    int externalMemberId, {
+    required String reason,
+  });
   Future<JsonMap> clubExternalInvitationByToken(String token);
   Future<JsonMap> acceptClubExternalInvitation(String token);
   Future<JsonMap> declineClubExternalInvitation(String token);
@@ -3008,7 +3013,11 @@ abstract class AirmiusClubRepository {
     int userId,
     JsonMap payload,
   );
-  Future<AirmiusClubManagement> removeClubMember(int clubId, int userId);
+  Future<AirmiusClubManagement> removeClubMember(
+    int clubId,
+    int userId, {
+    required String reason,
+  });
   Future<AirmiusClubManagement> generateClubMemberNumber(
     int clubId,
     int userId,

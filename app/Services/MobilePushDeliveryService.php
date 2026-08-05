@@ -43,7 +43,12 @@ class MobilePushDeliveryService
             ->where('user_id', $notification->user_id)
             ->whereNull('disabled_at')
             ->get()
-            ->filter(fn (MobileDeviceToken $device) => $this->deviceAcceptsChannel($device, $channel));
+            ->filter(fn (MobileDeviceToken $device) => $this->deviceAcceptsChannel($device, $channel))
+            // A device can be registered more than once after reinstall or
+            // token refresh. Queue one push per unique provider token so a
+            // single status change cannot notify the same phone repeatedly.
+            ->unique(fn (MobileDeviceToken $device) => $device->provider.'|'.$device->token)
+            ->values();
 
         $payload = $this->payloadFor($notification, $channel);
         $queued = 0;

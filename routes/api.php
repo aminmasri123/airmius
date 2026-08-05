@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\ClubSurveyController;
 use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
 use App\Http\Controllers\Api\V1\CommerceController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DataErasureController;
 use App\Http\Controllers\Api\V1\EditorialController;
 use App\Http\Controllers\Api\V1\EventCompetitivenessController;
 use App\Http\Controllers\Api\V1\EventController;
@@ -252,6 +253,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/privacy/export', [PrivacyController::class, 'export'])->name('privacy.export');
         Route::patch('/privacy/correction', [PrivacyController::class, 'correct'])->name('privacy.correct');
         Route::post('/privacy/withdraw-consents', [PrivacyController::class, 'withdrawConsents'])->name('privacy.withdraw-consents');
+        Route::post('/privacy/data-erasure-code', [DataErasureController::class, 'sendCode'])
+            ->middleware('throttle:5,1')
+            ->name('privacy.data-erasure.code');
+        Route::post('/privacy/data-erasure', [DataErasureController::class, 'destroy'])
+            ->middleware('throttle:3,1')
+            ->name('privacy.data-erasure.destroy');
         Route::get('/billing/invoices', [SettingsController::class, 'invoices'])->name('billing.invoices.index');
         Route::get('/billing/invoices/{invoice}', [SettingsController::class, 'invoice'])->whereNumber('invoice')->name('billing.invoices.show');
         Route::get('/dashboard/daily-flow', [DashboardController::class, 'dailyFlow'])->name('dashboard.daily-flow');

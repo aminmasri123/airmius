@@ -43,6 +43,7 @@ use App\Http\Controllers\TrainerCockpitController;
 use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UserBadgeController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserDataErasureController;
 use App\Http\Controllers\UserPrivacyController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
@@ -148,6 +149,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/settings/privacy/export', [UserPrivacyController::class, 'export'])->name('auth.settings.privacy.export');
     Route::patch('/settings/privacy/correction', [UserPrivacyController::class, 'correct'])->name('auth.settings.privacy.correct');
     Route::post('/settings/privacy/withdraw-consents', [UserPrivacyController::class, 'withdrawConsents'])->name('auth.settings.privacy.withdraw-consents');
+    Route::get('/settings/daten-loeschen', [UserDataErasureController::class, 'edit'])->name('auth.settings.privacy.erasure');
+    Route::post('/settings/daten-loeschen/code', [UserDataErasureController::class, 'sendCode'])
+        ->middleware('throttle:5,1')
+        ->name('auth.settings.privacy.erasure.code');
+    Route::post('/settings/daten-loeschen', [UserDataErasureController::class, 'destroy'])
+        ->middleware('throttle:3,1')
+        ->name('auth.settings.privacy.erasure.destroy');
     Route::put('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'updateSportProfile'])->name('auth.settings.sport-profiles.update');
     Route::delete('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'destroySportProfile'])->name('auth.settings.sport-profiles.destroy');
     Route::post('/settings/subscription-invoices/{subscriptionInvoice}/cancel-open-payment', [UserSettingsController::class, 'cancelOpenPayment'])->name('auth.settings.subscription-invoices.cancel-open-payment');

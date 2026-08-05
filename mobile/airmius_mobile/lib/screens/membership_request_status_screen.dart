@@ -27,14 +27,15 @@ class MembershipRequestStatusScreen extends StatefulWidget {
 
 class _MembershipRequestStatusScreenState
     extends State<MembershipRequestStatusScreen> {
-  bool _showPersonalData = true;
-  bool _showPaymentData = true;
-  bool _showDocuments = true;
   bool _withdrawing = false;
   bool _withdrawn = false;
   bool _requestLoadStarted = false;
   AirmiusClubMembershipRequest? _request;
   String? _requestLoadError;
+
+  void _finishToHome() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
 
   List<_TimelineItem> _timeline(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -127,181 +128,156 @@ class _MembershipRequestStatusScreenState
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        PageTitle(
-                          title: AirmiusScope.of(
-                            context,
-                          ).t('membership.statusTitle'),
-                          subtitle: AirmiusScope.of(
-                            context,
-                          ).t('membership.statusSubtitle'),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_requestLoadError != null)
-                          AirmiusPanel(
-                            borderColor: airmiusSemanticColor(
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _finishToHome();
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          PageTitle(
+                            title: AirmiusScope.of(
                               context,
-                              AirmiusColors.red,
-                            ).withValues(alpha: .45),
-                            child: Text(_requestLoadError!),
+                            ).t('membership.statusTitle'),
+                            subtitle: AirmiusScope.of(
+                              context,
+                            ).t('membership.statusSubtitle'),
                           ),
-                        if (_requestLoadError != null)
-                          const SizedBox(height: 12),
-                        _StatusHero(
-                          onWithdraw: _confirmWithdraw,
-                          disabled: _withdrawing || _withdrawn,
-                          clubName: _request?.clubName,
-                          requestStatus: _request?.status,
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: t('membership.status.submittedData'),
-                          child: Column(
-                            children: [
-                              _SwitchRow(
-                                title: t('membership.status.personalData'),
-                                subtitle: t(
-                                  'membership.status.personalDataHint',
-                                ),
-                                value: _showPersonalData,
-                                onChanged: (value) =>
-                                    setState(() => _showPersonalData = value),
-                              ),
-                              _SwitchRow(
-                                title: t('membership.status.paymentData'),
-                                subtitle: t(
-                                  'membership.status.paymentDataHint',
-                                ),
-                                value: _showPaymentData,
-                                onChanged: (value) =>
-                                    setState(() => _showPaymentData = value),
-                              ),
-                              _SwitchRow(
-                                title: t('membership.status.documents'),
-                                subtitle: t('membership.status.documentsHint'),
-                                value: _showDocuments,
-                                onChanged: (value) =>
-                                    setState(() => _showDocuments = value),
-                              ),
-                            ],
+                          const SizedBox(height: 16),
+                          if (_requestLoadError != null)
+                            AirmiusPanel(
+                              borderColor: airmiusSemanticColor(
+                                context,
+                                AirmiusColors.red,
+                              ).withValues(alpha: .45),
+                              child: Text(_requestLoadError!),
+                            ),
+                          if (_requestLoadError != null)
+                            const SizedBox(height: 12),
+                          _StatusHero(
+                            onWithdraw: _confirmWithdraw,
+                            disabled: _withdrawing || _withdrawn,
+                            clubName: _request?.clubName,
+                            requestStatus: _request?.status,
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (_showPersonalData)
+                          const SizedBox(height: 16),
                           _DataPanel(
                             title: t('membership.status.personalData'),
                             rows: _personalRows(context),
                           ),
-                        if (_showPaymentData)
                           _DataPanel(
                             title: t('membership.status.paymentData'),
                             rows: _paymentRows(context),
                           ),
-                        if (_showDocuments)
                           _DataPanel(
                             title: t('membership.status.documents'),
                             rows: _documentRows(context),
                           ),
-                        if (_request?.consent != null)
-                          _DataPanel(
-                            title: t('membership.status.consent'),
-                            rows: _consentRows(context),
+                          if (_request?.consent != null)
+                            _DataPanel(
+                              title: t('membership.status.consent'),
+                              rows: _consentRows(context),
+                            ),
+                          const SizedBox(height: 16),
+                          AirmiusPanel(
+                            title: t('membership.status.timeline'),
+                            child: Column(
+                              children: [
+                                for (final item in _timeline(context))
+                                  _TimelineRow(item: item),
+                              ],
+                            ),
                           ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: t('membership.status.timeline'),
-                          child: Column(
-                            children: [
-                              for (final item in _timeline(context))
-                                _TimelineRow(item: item),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        AirmiusPanel(
-                          title: t('membership.status.actions'),
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              AirmiusButton(
-                                label: t('membership.status.sendQuestion'),
-                                icon: Icons.forum_outlined,
-                                secondary: true,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        NotificationChatOperationsScreen(
-                                          initialTab: 'Chat',
-                                        ),
-                                  ),
+                          const SizedBox(height: 16),
+                          AirmiusPanel(
+                            title: t('membership.status.actions'),
+                            child: Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                AirmiusButton(
+                                  label: t('membership.status.finish'),
+                                  icon: Icons.home_outlined,
+                                  onPressed: _finishToHome,
                                 ),
-                              ),
-                              AirmiusButton(
-                                label: t('membership.status.addData'),
-                                icon: Icons.edit_document,
-                                secondary: true,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        MembershipApplicationFormScreen(
-                                          clubId: widget.clubId,
-                                        ),
-                                  ),
-                                ),
-                              ),
-                              AirmiusButton(
-                                label: t('membership.status.otherClubs'),
-                                icon: Icons.groups_2_outlined,
-                                secondary: true,
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ClubsScreen(
-                                      requestedClubIds: const {},
-                                      onRequestClub: (_) {},
-                                      onWithdrawClub: (_) {},
+                                AirmiusButton(
+                                  label: t('membership.status.sendQuestion'),
+                                  icon: Icons.forum_outlined,
+                                  secondary: true,
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          NotificationChatOperationsScreen(
+                                            initialTab: 'Chat',
+                                          ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              AirmiusButton(
-                                label: _withdrawn
-                                    ? t('membership.status.withdrawn')
-                                    : (_withdrawing
-                                          ? t('membership.status.withdrawing')
-                                          : t('membership.status.withdraw')),
-                                icon: Icons.undo_outlined,
-                                secondary: true,
-                                onPressed: _withdrawing || _withdrawn
-                                    ? null
-                                    : _confirmWithdraw,
-                              ),
-                            ],
+                                AirmiusButton(
+                                  label: t('membership.status.addData'),
+                                  icon: Icons.edit_document,
+                                  secondary: true,
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          MembershipApplicationFormScreen(
+                                            clubId: widget.clubId,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                AirmiusButton(
+                                  label: t('membership.status.otherClubs'),
+                                  icon: Icons.groups_2_outlined,
+                                  secondary: true,
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ClubsScreen(
+                                        requestedClubIds: const {},
+                                        onRequestClub: (_) {},
+                                        onWithdrawClub: (_) {},
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                AirmiusButton(
+                                  label: _withdrawn
+                                      ? t('membership.status.withdrawn')
+                                      : (_withdrawing
+                                            ? t('membership.status.withdrawing')
+                                            : t('membership.status.withdraw')),
+                                  icon: Icons.undo_outlined,
+                                  secondary: true,
+                                  onPressed: _withdrawing || _withdrawn
+                                      ? null
+                                      : _confirmWithdraw,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -603,66 +579,6 @@ class _StatusHero extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: airmiusInputColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: airmiusBorderColor(context)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    fontSize: 12,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: airmiusAccentColor(context),
           ),
         ],
       ),

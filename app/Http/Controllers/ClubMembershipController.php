@@ -597,6 +597,12 @@ class ClubMembershipController extends Controller
 
     public function removeMember(Request $request, Club $club, User $user)
     {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+        $reason = trim((string) $data['reason']);
+        abort_if($reason === '', 422, 'Eine Begründung ist erforderlich.');
+
         $this->authorize('update', $club);
 
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
@@ -614,11 +620,19 @@ class ClubMembershipController extends Controller
             $this->clubService->refreshClubOwnerRole($user);
         });
 
+        ClubAuditLog::record($club, $request->user(), 'club.member.removed', $user, [
+            'user_id' => $user->id,
+            'member_name' => $user->name,
+            'reason' => $reason,
+        ]);
+
         AppNotification::send($user, 'club.member_removed', [
             'title' => 'Vereinsmitgliedschaft beendet',
-            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das für falsch hältst, kannst du widersprechen.',
+            'body' => 'Du wurdest aus '.$club->name.' entfernt. Begründung: '.$reason.' Wenn du das für falsch hältst, kannst du widersprechen.',
             'url' => route('auth.notifications.index'),
+            'mobile_url' => 'airmius://notifications',
             'club_id' => $club->id,
+            'reason' => $reason,
         ]);
 
         return back()->with('success', 'Mitglied wurde aus Verein und zugehörigen Teams entfernt.');

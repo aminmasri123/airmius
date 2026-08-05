@@ -2226,6 +2226,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         >
                             {{ settingsText('privacy.withdraw_button', 'Einwilligungen widerrufen') }}
                         </button>
+                        <Link :href="route('auth.settings.privacy.erasure')" class="btn-secondary">
+                            {{ settingsText('privacy.erase_data_button', 'Daten löschen, Konto behalten') }}
+                        </Link>
                     </div>
                 </div>
 

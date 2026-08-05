@@ -245,6 +245,13 @@ class UserPrivacyExportService
                     'manual_account_deletion' => 'hard_delete_after_email_code',
                     'inactive_account_retention' => 'anonymize_via_UserPrivacyRetentionService',
                 ],
+                'partial_data_erasure' => [
+                    'web_routes' => ['auth.settings.privacy.erasure', 'auth.settings.privacy.erasure.code', 'auth.settings.privacy.erasure.destroy'],
+                    'api_routes' => ['api.v1.privacy.data-erasure.code', 'api.v1.privacy.data-erasure.destroy'],
+                    'public_information_route' => 'legal.data-erasure',
+                    'confirmation' => 'email_code_bound_to_selected_categories',
+                    'retained_data' => ['account_credentials', 'legal_and_contractual_records', 'club_team_and_permission_assignments'],
+                ],
                 'consent_withdrawal' => [
                     'web_route' => 'auth.settings.privacy.withdraw-consents',
                     'api_route' => 'api.v1.privacy.withdraw-consents',

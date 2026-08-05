@@ -18,6 +18,10 @@ defineProps({
         type: String,
         default: null,
     },
+    action: {
+        type: Object,
+        default: null,
+    },
 })
 
 const { t } = useI18n()
@@ -26,6 +30,7 @@ const tx = (value, params = {}) => t(value, params)
 const legalLinks = [
     { label: 'Impressum', route: 'legal.imprint' },
     { label: 'Datenschutz', route: 'policy.show' },
+    { label: 'Daten löschen', route: 'legal.data-erasure' },
     { label: 'AGB', route: 'terms.show' },
     { label: 'Community', route: 'legal.community' },
     { label: 'Jugendschutz', route: 'legal.minors' },
@@ -77,6 +82,9 @@ const legalLinks = [
                     <p v-if="note" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
                         {{ note }}
                     </p>
+                    <Link v-if="action" :href="action.href" class="btn-primary mt-4">
+                        {{ action.label }}
+                    </Link>
                 </div>
 
                 <div class="space-y-8 p-5 sm:p-8">

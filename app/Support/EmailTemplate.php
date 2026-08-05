@@ -139,6 +139,28 @@ class EmailTemplate
                     'action_label' => '',
                 ],
             ],
+            'data_erasure_code' => [
+                'label' => 'Datenlöschung: Code',
+                'description' => 'Wird gesendet, bevor ausgewählte Daten aus einem bestehenden Konto entfernt werden.',
+                'variables' => ['code'],
+                'template' => [
+                    'subject' => 'Bestätigungscode zur Datenlöschung',
+                    'greeting' => 'Hallo,',
+                    'body' => "du hast angefordert, ausgewählte personenbezogene Daten aus deinem Airmius-Konto zu löschen, ohne dein Konto zu löschen.\nDein Bestätigungscode lautet: {{ code }}\nDer Code ist 15 Minuten gültig.\nWenn du diese Anfrage nicht selbst ausgelöst hast, kannst du diese E-Mail ignorieren und solltest dein Konto absichern.",
+                    'action_label' => '',
+                ],
+            ],
+            'data_erasure_completed' => [
+                'label' => 'Datenlöschung: Bestätigung',
+                'description' => 'Wird nach erfolgreicher Löschung oder Anonymisierung ausgewählter Daten gesendet.',
+                'variables' => ['name'],
+                'template' => [
+                    'subject' => 'Deine angeforderten Daten wurden bearbeitet',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "deine ausgewählten Daten wurden gelöscht oder – soweit erforderlich – anonymisiert. Dein Airmius-Konto bleibt bestehen.\nRechnungs-, Zahlungs-, Vertrags- und andere gesetzlich aufzubewahrende Nachweise können weiterhin gespeichert bleiben.\nFalls du diese Anfrage nicht selbst ausgelöst hast, kontaktiere bitte den Airmius-Support.",
+                    'action_label' => '',
+                ],
+            ],
             'guardian_access_code' => [
                 'label' => 'Elternbereich: Zugangscode',
                 'description' => 'Code für den Eltern-Zugang.',
@@ -425,6 +447,7 @@ class EmailTemplate
             str_starts_with($key, 'commerce_') => 'marketplace',
             str_starts_with($key, 'login_'),
             str_starts_with($key, 'account_'),
+            str_starts_with($key, 'data_erasure_'),
             str_starts_with($key, 'guardian_'),
             $key === 'password_reset' => 'security',
             str_starts_with($key, 'external_') => 'support',

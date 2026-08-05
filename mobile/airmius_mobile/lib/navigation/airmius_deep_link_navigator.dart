@@ -15,6 +15,7 @@ import '../screens/club_request_inbox_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
 import '../screens/notification_detail_screen.dart';
+import '../screens/notifications_center_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/user_profile_detail_screen.dart';
 import '../screens/password_recovery_screen.dart';
@@ -50,9 +51,10 @@ class AirmiusDeepLinkNavigator {
 
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
-      AirmiusDeepLinkTargetType.club => target.section == 'membership-requests'
-          ? ClubRequestInboxScreen(initialClubId: target.id)
-          : AirmiusDeepLinkedClubProfileScreen(clubId: target.id ?? 0),
+      AirmiusDeepLinkTargetType.club =>
+        target.section == 'membership-requests'
+            ? ClubRequestInboxScreen(initialClubId: target.id)
+            : AirmiusDeepLinkedClubProfileScreen(clubId: target.id ?? 0),
       AirmiusDeepLinkTargetType.team => TeamDetailScreen(
         title: 'Team',
         mode: target.section ?? 'overview',
@@ -72,6 +74,8 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.message => AirmiusDeepLinkedMessageScreen(
         target: target,
       ),
+      AirmiusDeepLinkTargetType.notifications =>
+        const NotificationsCenterScreen(),
       AirmiusDeepLinkTargetType.invitation =>
         target.path.startsWith('/team-invitations/')
             ? TeamInvitationResponseScreen(token: target.token)
@@ -131,6 +135,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.chat => 'Nachrichten',
       AirmiusDeepLinkTargetType.invitation => 'Einladung',
       AirmiusDeepLinkTargetType.message => 'Nachrichten',
+      AirmiusDeepLinkTargetType.notifications => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.notification => 'Benachrichtigungen',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
