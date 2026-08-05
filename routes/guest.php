@@ -399,6 +399,7 @@ Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->
 
 Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');
 Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('policy.show');
+Route::get('/konto-loeschen', [LegalPageController::class, 'accountDeletion'])->name('legal.account-deletion');
 Route::get('/daten-loeschen', [LegalPageController::class, 'dataErasure'])->name('legal.data-erasure');
 Route::get('/agb', [LegalPageController::class, 'terms'])->name('terms.show');
 Route::get('/community-richtlinien', [LegalPageController::class, 'community'])->name('legal.community');

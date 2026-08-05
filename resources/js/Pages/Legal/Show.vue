@@ -30,6 +30,7 @@ const tx = (value, params = {}) => t(value, params)
 const legalLinks = [
     { label: 'Impressum', route: 'legal.imprint' },
     { label: 'Datenschutz', route: 'policy.show' },
+    { label: 'Konto löschen', route: 'legal.account-deletion' },
     { label: 'Daten löschen', route: 'legal.data-erasure' },
     { label: 'AGB', route: 'terms.show' },
     { label: 'Community', route: 'legal.community' },

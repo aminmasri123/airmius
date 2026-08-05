@@ -20,6 +20,11 @@ class UserDataErasureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_public_account_deletion_page_explains_the_process(): void
+    {
+        $this->get(route('legal.account-deletion'))->assertOk();
+    }
+
     public function test_public_data_erasure_page_explains_the_process(): void
     {
         $this->get(route('legal.data-erasure'))->assertOk();

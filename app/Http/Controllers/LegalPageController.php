@@ -210,6 +210,55 @@ class LegalPageController extends Controller
         ], 'Stand: 25.05.2026. KI-, Karten-, Routing-, Ernährungs- und Trackingfunktionen sind ergänzt. Bitte lege die aktuellen AVV/DPA-Unterlagen der tatsächlich genutzten Anbieter intern ab und lasse die Texte vor Livegang rechtlich final prüfen.');
     }
 
+    public function accountDeletion(): Response
+    {
+        $legal = $this->legalProfile();
+
+        return $this->render('Airmius-Konto löschen', [
+            [
+                'title' => 'Kontolöschung anfordern',
+                'body' => [
+                    'Auf dieser Seite erfährst du, wie du dein Airmius-Konto und die damit verknüpften personenbezogenen Daten dauerhaft löschen kannst. Die Kontolöschung steht in der Web-Version und in der Airmius-App zur Verfügung.',
+                    'Die Löschung wird erst ausgeführt, nachdem du dich angemeldet, deine Identität bestätigt und den per E-Mail gesendeten Bestätigungscode eingegeben hast. Das bloße Öffnen dieser Seite löscht noch keine Daten.',
+                ],
+            ],
+            [
+                'title' => 'Kontolöschung in der Web-Version',
+                'body' => [
+                    'Melde dich bei Airmius an und öffne Profil > Konto löschen.',
+                    'Bestätige deine Identität mit deinem Passwort. Wenn du Google oder Microsoft zur Anmeldung verwendest, bestätige stattdessen deine Konto-E-Mail-Adresse.',
+                    'Fordere den Bestätigungscode an, gib den per E-Mail erhaltenen Code ein und bestätige anschließend „Konto endgültig löschen“.',
+                ],
+            ],
+            [
+                'title' => 'Kontolöschung in der Airmius-App',
+                'body' => [
+                    'Öffne in der App Einstellungen > Konto und Sicherheit > Konto löschen.',
+                    'Bestätige deine Identität, fordere den Bestätigungscode an und gib den per E-Mail erhaltenen Code ein.',
+                    'Bestätige anschließend die endgültige Kontolöschung. Nach erfolgreicher Löschung wirst du abgemeldet.',
+                ],
+            ],
+            [
+                'title' => 'Welche Daten gelöscht oder anonymisiert werden',
+                'body' => [
+                    'Das Nutzerkonto, Profil- und Kontaktdaten, Zugangsdaten, Social-Login-Verknüpfungen, persönliche Inhalte, private Medien, Gerätekennungen und weitere direkt mit dem Konto verbundene personenbezogene Daten werden gelöscht oder anonymisiert.',
+                    'Beiträge, Kommentare, Storys, Dateien, Sport-, Standort-, Trainings- und Ernährungsdaten werden entfernt, soweit keine Rechte anderer Personen oder zwingenden Aufbewahrungsgründe entgegenstehen.',
+                    'Bestellungen, Rechnungen, Zahlungen, Abonnements, Liefer- und Rückgabevorgänge sowie Sicherheits- oder Missbrauchsnachweise können anonymisiert oder für die gesetzlich beziehungsweise vertraglich erforderliche Dauer aufbewahrt werden. Danach werden sie gelöscht oder anonymisiert.',
+                ],
+            ],
+            [
+                'title' => 'Kein Zugriff auf dein Konto?',
+                'body' => [
+                    'Nutze zuerst die Passwort-zurücksetzen-Funktion. Wenn du dich weiterhin nicht anmelden kannst, sende deine Kontolöschanfrage von der E-Mail-Adresse des betroffenen Kontos an '.$legal['privacy_email'].'.',
+                    'Zum Schutz des Kontos können wir vor der Löschung einen Identitätsnachweis verlangen.',
+                ],
+            ],
+        ], 'Diese öffentliche Seite beschreibt die Kontolöschung für Airmius und kann in der Google Play Console als Kontolösch-URL hinterlegt werden.', [
+            'label' => 'Anmelden und Konto löschen',
+            'href' => route('login', ['redirect' => '/user/profile']),
+        ]);
+    }
+
     public function dataErasure(): Response
     {
         $legal = $this->legalProfile();
