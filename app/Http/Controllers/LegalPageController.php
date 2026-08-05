@@ -256,6 +256,8 @@ class LegalPageController extends Controller
         ], 'Diese öffentliche Seite beschreibt die Kontolöschung für Airmius und kann in der Google Play Console als Kontolösch-URL hinterlegt werden.', [
             'label' => 'Anmelden und Konto löschen',
             'href' => route('login', ['redirect' => '/user/profile']),
+            'authenticated_label' => 'Konto jetzt löschen',
+            'authenticated_href' => route('profile.show'),
         ]);
     }
 
@@ -298,6 +300,8 @@ class LegalPageController extends Controller
         ], 'Diese Seite beschreibt die Datenlöschung ohne Kontolöschung. Sie wird im Google-Play-Store als öffentliche Löschseite verlinkt.', [
             'label' => 'Anmelden und Daten löschen',
             'href' => route('login', ['redirect' => '/settings/daten-loeschen']),
+            'authenticated_label' => 'Daten jetzt löschen',
+            'authenticated_href' => route('auth.settings.privacy.erasure'),
         ]);
     }
 

@@ -1,11 +1,12 @@
 ﻿<script setup>
-import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
 
-defineProps({
+const props = defineProps({
     title: {
         type: String,
         required: true,
@@ -26,6 +27,14 @@ defineProps({
 
 const { t } = useI18n()
 const tx = (value, params = {}) => t(value, params)
+const page = usePage()
+const currentUser = computed(() => page.props.auth?.user || null)
+const actionHref = computed(() => currentUser.value && props.action?.authenticated_href
+    ? props.action.authenticated_href
+    : props.action?.href)
+const actionLabel = computed(() => currentUser.value && props.action?.authenticated_label
+    ? props.action.authenticated_label
+    : props.action?.label)
 
 const legalLinks = [
     { label: 'Impressum', route: 'legal.imprint' },
@@ -54,7 +63,11 @@ const legalLinks = [
                     <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
                 </Link>
 
-                <div class="flex items-center gap-2">
+                <div v-if="currentUser" class="flex items-center gap-2">
+                    <Link :href="route('profile.show')" class="btn">{{ tx('Mein Konto') }}</Link>
+                    <Link :href="route('auth.dashboard')" class="btn-primary">{{ tx('Dashboard') }}</Link>
+                </div>
+                <div v-else class="flex items-center gap-2">
                     <Link :href="route('login')" class="btn">{{ tx('Anmelden') }}</Link>
                     <Link :href="route('register')" class="btn-primary">{{ tx('Registrieren') }}</Link>
                 </div>
@@ -83,8 +96,8 @@ const legalLinks = [
                     <p v-if="note" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
                         {{ note }}
                     </p>
-                    <Link v-if="action" :href="action.href" class="btn-primary mt-4">
-                        {{ action.label }}
+                    <Link v-if="action" :href="actionHref" class="btn-primary mt-4">
+                        {{ actionLabel }}
                     </Link>
                 </div>
 
