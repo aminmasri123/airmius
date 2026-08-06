@@ -484,8 +484,53 @@ const paymentMethodLabel = (method) => selectedClub.value?.membership_payment_me
 
 const requestDataLabel = (key) => {
     const field = selectedClub.value?.membership_application_fields?.find((candidate) => candidate.key === key)
+    const fieldLabelByKey = {
+        first_name: 'first_name',
+        last_name: 'last_name',
+        birth_date: 'Geburtsdatum',
+        gender: 'Geschlecht',
+        email: 'Email',
+        phone: 'Telefon',
+        country: 'country',
+        street: 'street',
+        house_number: 'house_number',
+        postal_code: 'postal_code',
+        city: 'city',
+        state: 'state',
+        guardian_name: 'Erziehungsberechtigte',
+        guardian_email: 'E-Mail des Erziehungsberechtigten',
+        guardian_phone: 'Telefon',
+        emergency_contact_name: 'Name',
+        emergency_contact_phone: 'Telefon',
+        athlete_license_number: 'license_number',
+        sepa_iban: 'sepa_iban',
+        sepa_bic: 'sepa_bic',
+    }[key]
 
-    return field?.label || key
+    if (fieldLabelByKey) {
+        return tx(fieldLabelByKey, key)
+    }
+
+    if (field?.label) {
+        const label = String(field.label).trim()
+        if (label && /^[a-z0-9_]+$/.test(label)) {
+            return tx(label, label) || label
+        }
+
+        const normalizedLabel = label
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .replace(/_+/g, '_')
+
+        if (normalizedLabel && /^[a-z0-9_]+$/.test(normalizedLabel)) {
+            return tx(normalizedLabel, label)
+        }
+
+        return label
+    }
+
+    return tx(key, key)
 }
 
 const requestDataValue = (key, value) => {

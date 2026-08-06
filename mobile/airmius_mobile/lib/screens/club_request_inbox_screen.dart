@@ -677,10 +677,8 @@ class _RequestReviewContent extends StatelessWidget {
         )
         .map(
           (entry) => _DataLine(
-            label: entry.key,
-            value: entry.value is bool
-                ? (entry.value == true ? 'Ja' : 'Nein')
-                : entry.value.toString(),
+            label: _membershipRequestFieldLabel(entry.key, t),
+            value: _membershipRequestFieldValue(entry.value, t),
           ),
         )
         .toList();
@@ -719,6 +717,79 @@ class _RequestReviewContent extends StatelessWidget {
       ),
     );
   }
+}
+
+const Map<String, String> _membershipRequestFieldLabelKeys = {
+  'first_name': 'membership.field.firstName',
+  'last_name': 'membership.field.lastName',
+  'birth_date': 'membership.field.birthDate',
+  'gender': 'membership.field.gender',
+  'email': 'membership.field.email',
+  'phone': 'membership.field.phone',
+  'country': 'clubs.wizard.country',
+  'city': 'membership.field.city',
+  'street': 'membership.field.street',
+  'house_number': 'membership.field.houseNumber',
+  'postal_code': 'membership.field.postalCode',
+  'state': 'clubs.wizard.region',
+  'guardian_name': 'application.guardianName',
+  'guardian_email': 'membership.field.guardianEmail',
+  'guardian_phone': 'application.guardianPhone',
+  'emergency_contact_name': 'application.emergencyName',
+  'emergency_contact_phone': 'membership.field.emergencyPhone',
+  'athlete_license_number': 'membership.field.licenseNumber',
+  'sepa_iban': 'membership.field.iban',
+  'sepa_bic': 'membership.field.bic',
+};
+
+String _membershipRequestFieldLabel(
+  String key,
+  String Function(String) t,
+) {
+  final translationKey = _membershipRequestFieldLabelKeys[key];
+  if (translationKey != null) {
+    return t(translationKey);
+  }
+
+  final translatedKey = t(key);
+  if (translatedKey != key) {
+    return translatedKey;
+  }
+
+  return _humanizeMembershipRequestFieldKey(key);
+}
+
+String _membershipRequestFieldValue(Object? value, String Function(String) t) {
+  if (value is bool) {
+    return value ? 'Ja' : 'Nein';
+  }
+
+  if (value is List) {
+    return value.whereType<String>().join(', ');
+  }
+
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) return value;
+    return switch (normalized) {
+      'male' => t('application.gender.male'),
+      'female' => t('application.gender.female'),
+      'diverse' => t('application.gender.diverse'),
+      'not_specified' => t('application.gender.unspecified'),
+      _ => value,
+    };
+  }
+
+  return '$value';
+}
+
+String _humanizeMembershipRequestFieldKey(String key) {
+  if (key.trim().isEmpty) return '';
+  return key
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
 
 class _DataLine extends StatelessWidget {

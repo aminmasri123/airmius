@@ -63,6 +63,8 @@ const teamMemberForms = ref({})
 const inviteNotices = ref({})
 const joinRequestNotices = ref({})
 const teamForms = ref({})
+const teamEditForms = ref({})
+const editingTeamIds = ref(new Set())
 const clubEditForms = ref({})
 const clubEditTabs = ref({})
 const sponsorForms = ref({})
@@ -186,6 +188,50 @@ const teamFormFor = (club) => {
     }
 
     return teamForms.value[club.id]
+}
+
+const teamEditFormFor = (team) => {
+    if (!team?.id) {
+        return {
+            name: '',
+            sport_type: '',
+        }
+    }
+
+    teamEditForms.value[team.id] ??= {
+        name: team.name || '',
+        sport_type: team.sport_type || '',
+    }
+
+    return teamEditForms.value[team.id]
+}
+
+const editTeam = (team) => {
+    if (!team?.id) return
+
+    teamEditFormFor(team)
+    editingTeamIds.value.add(team.id)
+}
+
+const cancelTeamEdit = (team) => {
+    if (!team?.id) return
+
+    editingTeamIds.value.delete(team.id)
+}
+
+const updateTeam = (team) => {
+    if (!team?.id) return
+
+    actionNotice.value = null
+
+    router.put(route('auth.teams.update', team.id), teamEditFormFor(team), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingTeamIds.value.delete(team.id)
+            setActionNotice('success', tx('messages.team_saved', 'Team wurde gespeichert.'))
+        },
+        onError: () => setActionNotice('error', tx('messages.team_save_error', 'Team konnte nicht gespeichert werden. Bitte prüfe die Eingaben.')),
+    })
 }
 
 const inviteFormFor = (team) => {
@@ -727,7 +773,13 @@ const deleteTeam = (team) => {
         teamMemberForms,
         inviteNotices,
         joinRequestNotices,
+        editingTeamIds,
         teamForms,
+        teamEditForms,
+        teamEditFormFor,
+        editTeam,
+        cancelTeamEdit,
+        updateTeam,
         clubEditForms,
         clubEditTabs,
         sponsorForms,
@@ -753,6 +805,11 @@ const deleteTeam = (team) => {
         openTeamModal,
         closeTeamModal,
         teamFormFor,
+        teamEditFormFor,
+        editTeam,
+        cancelTeamEdit,
+        updateTeam,
+        editingTeamIds,
         inviteFormFor,
         teamMemberFormFor,
         availableTeamMemberOptions,
