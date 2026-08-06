@@ -570,9 +570,31 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
+        $previousRole = $team->users()
+            ->where('users.id', $user->id)
+            ->first()?->pivot?->role;
+
         $team->users()->updateExistingPivot($user->id, [
             'role' => $data['role'],
         ]);
+
+        if ($previousRole !== $data['role']) {
+            $previousRoleLabel = filled($previousRole)
+                ? TeamRoles::definition($previousRole)['label']
+                : 'Unbekannt';
+            $newRoleLabel = TeamRoles::definition($data['role'])['label'] ?? $data['role'];
+
+            AppNotification::send($user, 'team.role_updated', [
+                'title' => 'Teamrolle geändert',
+                'body' => 'Deine Rolle in '.$team->name.' wurde von '.$previousRoleLabel.' auf '.$newRoleLabel.' geändert.',
+                'url' => '/notifications',
+                'mobile_url' => 'airmius://teams/'.$team->id,
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+                'previous_role' => $previousRole,
+                'role' => $data['role'],
+            ]);
+        }
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }

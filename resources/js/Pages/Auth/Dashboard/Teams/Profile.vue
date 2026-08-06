@@ -349,9 +349,12 @@ const uploadImage = (field, event) => {
                             </div>
                             <div class="pb-1">
                                 <h1 class="text-2xl font-bold text-primary">{{ teamProfile.name }}</h1>
-                                <Link :href="route('auth.clubs.show', teamProfile.club.id)" class="text-sm text-secondary hover:text-primary">
-                                    {{ teamProfile.club.name }}
-                                </Link>
+                                <p class="text-sm text-secondary">
+                                    <span class="text-xs uppercase tracking-wide text-muted">Verein:</span>
+                                    <Link :href="route('auth.clubs.show', teamProfile.club.id)" class="ml-1 text-secondary hover:text-primary">
+                                        {{ teamProfile.club.name }}
+                                    </Link>
+                                </p>
                                 <p class="mt-1 text-sm text-secondary">{{ sportLabel(teamProfile.sport_type) }}</p>
                             </div>
                         </div>

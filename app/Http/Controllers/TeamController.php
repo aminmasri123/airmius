@@ -864,17 +864,26 @@ class TeamController extends Controller
             ->where('users.id', $user->id)
             ->first()?->pivot?->role;
 
+        $newRole = $data['role'];
+
         $team->users()->updateExistingPivot($user->id, [
-            'role' => $data['role'],
+            'role' => $newRole,
         ]);
 
-        if ($data['role'] === 'Coach' && $previousRole !== 'Coach') {
-            AppNotification::send($user, 'team.trainer_mentioned', [
-                'title' => 'Als Trainer eingetragen',
-                'body' => 'Du wurdest in '.$team->name.' als Trainer eingetragen.',
-                'url' => route('auth.teams.index'),
+        if ($previousRole !== $newRole) {
+            $previousRoleLabel = filled($previousRole)
+                ? TeamRoles::definition($previousRole)['label']
+                : 'Unbekannt';
+            $newRoleLabel = TeamRoles::definition($newRole)['label'] ?? $newRole;
+
+            AppNotification::send($user, 'team.role_updated', [
+                'title' => 'Teamrolle geändert',
+                'body' => 'Deine Rolle in '.$team->name.' wurde von '.$previousRoleLabel.' auf '.$newRoleLabel.' geändert.',
+                'url' => route('auth.teams.show', $team),
                 'team_id' => $team->id,
                 'club_id' => $team->club_id,
+                'previous_role' => $previousRole,
+                'role' => $newRole,
             ]);
         }
 

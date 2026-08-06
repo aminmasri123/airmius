@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -48,6 +50,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _requestingJoin = false;
   bool _reviewingJoinRequest = false;
   int? _updatingRoleUserId;
+  bool _uploadingLogo = false;
 
   String _tr(String key) => AirmiusScope.of(context).t(key);
 
@@ -59,7 +62,8 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     'Profil' => _tr('teamDetail.tab.profile'),
     'Kader' => _tr('teamDetail.tab.roster'),
     'Rollen' => _tr('teamDetail.tab.roles'),
-    'Einladungen' => _tr('teamDetail.tab.invitations'),
+    'Einladungen' => _tr('teamDetail.tab.invites'),
+    'Einladen' => _tr('teamDetail.tab.invites'),
     'Kalender' => _tr('teamDetail.tab.calendar'),
     'Dateien' => _tr('teamDetail.tab.files'),
     'Chat' => _tr('teamDetail.tab.chat'),
@@ -182,7 +186,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       if (!mounted) return;
       setState(() {
         _teamFuture = Future.value(updatedTeam);
-        _section = 'Einladungen';
+        _section = 'Einladen';
         _reviewingJoinRequest = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -269,13 +273,16 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   }) {
     final title = team?.name ?? widget.title;
     final subtitle = _teamSubtitle(team);
+    if (_section == 'Einladungen') {
+      _section = 'Einladen';
+    }
     final canManageTeam =
         team?.canManage == true || (team == null && widget.teamId == null);
     final sections = [
       'Profil',
       'Kader',
       if (canManageTeam) 'Rollen',
-      if (canManageTeam) 'Einladungen',
+      if (canManageTeam) 'Einladen',
       'Kalender',
       'Dateien',
       'Chat',
@@ -287,7 +294,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     if (canManageTeam &&
         (team?.pendingJoinRequests.isNotEmpty ?? false) &&
         _section == 'Kader') {
-      _section = 'Einladungen';
+      _section = 'Einladen';
     }
     return Scaffold(
       appBar: AppBar(
@@ -313,8 +320,43 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    children: [
-                      AirmiusAvatar(title, imageUrl: team?.logoUrl),
+                children: [
+                      Stack(
+                        children: [
+                          AirmiusAvatar(title, imageUrl: team?.logoUrl),
+                          if (team != null && canManageTeam && !_uploadingLogo)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: InkWell(
+                                onTap: () => _pickAndUploadTeamLogo(team),
+                                child: Container(
+                                  height: 28,
+                                  width: 28,
+                                  decoration: BoxDecoration(
+                                    color: airmiusAccentColor(context),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Icon(
+                                    Icons.camera_alt_outlined,
+                                    color: airmiusTextColor(context),
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (team != null && canManageTeam && _uploadingLogo)
+                            const Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                        ],
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -391,28 +433,29 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Row(
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                Expanded(
-                  child: MetricCard(
-                    value: '${team?.usersCount ?? '-'}',
-                    label: _tr('teamDetail.roster'),
-                  ),
+                MetricCard(
+                  value: '${team?.usersCount ?? '-'}',
+                  label: _tr('teamDetail.roster'),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    value: '${team?.eventsCount ?? '-'}',
-                    label: _tr('teamDetail.events'),
-                  ),
+                MetricCard(
+                  value: '${team?.eventsCount ?? '-'}',
+                  label: _tr('teamDetail.events'),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    value: '${team?.attendanceStats?.trainingsTotal ?? '-'}',
-                    label: _tr('teamDetail.trainings'),
-                  ),
+                MetricCard(
+                  value: '${team?.attendanceStats?.trainingsTotal ?? '-'}',
+                  label: _tr('teamDetail.trainings'),
                 ),
+                if (team?.memberInvitationRemainingToday != null &&
+                    team?.memberInvitationDailyLimit != null)
+                  MetricCard(
+                    value:
+                        '${team!.memberInvitationRemainingToday} / ${team.memberInvitationDailyLimit}',
+                    label: _tr('teamDetail.invitesRemaining'),
+                  ),
               ],
             ),
             const SizedBox(height: 14),
@@ -424,6 +467,8 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                 joinRequests: _joinRequests,
                 teamChat: _teamChat,
                 guardianGate: _guardianGate,
+                onSectionSelected: (section) =>
+                    setState(() => _section = section),
                 onJoin: (value) => setState(() => _joinRequests = value),
                 onChat: (value) => setState(() => _teamChat = value),
                 onGuardian: (value) => setState(() => _guardianGate = value),
@@ -441,7 +486,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                     : (user, role) => _updateTeamMemberRole(team, user, role),
               ),
             if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
-            if (_section == 'Einladungen' && canManageTeam)
+            if (_section == 'Einladen' && canManageTeam)
               _InvitePanel(
                 team: team,
                 isReviewing: _reviewingJoinRequest,
@@ -523,6 +568,89 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       team.description,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
     return parts.isEmpty ? _tr('teamDetail.subtitle') : parts.join(' - ');
+  }
+
+  Future<void> _pickAndUploadTeamLogo(AirmiusTeam team) async {
+    if (_uploadingLogo) return;
+
+    final selection = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = selection?.files.single;
+    if (file == null || !mounted) return;
+
+    setState(() => _uploadingLogo = true);
+
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final session = services.authState.session;
+      if (session == null) {
+        throw StateError('Keine Session vorhanden.');
+      }
+
+      final base = Uri.parse(services.clientForSession(session).baseUrl);
+      final rootPath = base.path.endsWith('/') ? base.path : '${base.path}/';
+      final path = '${rootPath}api/v1/teams/${team.id}/images';
+
+      final request = http.MultipartRequest(
+        'POST',
+        base.replace(path: path, query: null, fragment: null),
+      )
+        ..headers['Authorization'] = 'Bearer ${session.token}'
+        ..headers['Accept'] = 'application/json'
+        ..headers['Accept-Language'] = AirmiusScope.of(context)
+            .language
+            .locale
+            .languageCode;
+
+      if (file.bytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'logo',
+            file.bytes!,
+            filename: file.name,
+          ),
+        );
+      } else if (file.path != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('logo', file.path!, filename: file.name),
+        );
+      } else {
+        throw StateError('Datei konnte nicht gelesen werden.');
+      }
+
+      final response = await http.Response.fromStream(await request.send());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: '/api/v1/teams/${team.id}/images',
+        );
+      }
+
+      if (!mounted) return;
+      _reloadTeam();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Teamlogo gespeichert.')),
+      );
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.userMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${_tr('common.errorDetails')}: ${_errorMessage(error)}',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
   }
 }
 
@@ -1243,6 +1371,7 @@ class _ProfilePanel extends StatelessWidget {
     required this.joinRequests,
     required this.teamChat,
     required this.guardianGate,
+    required this.onSectionSelected,
     required this.onJoin,
     required this.onChat,
     required this.onGuardian,
@@ -1255,6 +1384,7 @@ class _ProfilePanel extends StatelessWidget {
   final bool joinRequests;
   final bool teamChat;
   final bool guardianGate;
+  final ValueChanged<String> onSectionSelected;
   final ValueChanged<bool> onJoin;
   final ValueChanged<bool> onChat;
   final ValueChanged<bool> onGuardian;
@@ -1313,6 +1443,43 @@ class _ProfilePanel extends StatelessWidget {
             const SizedBox(height: 12),
           ],
           if (canManageTeam) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AirmiusButton(
+                  label: t('teamDetail.tab.invites'),
+                  icon: Icons.mail_outline,
+                  secondary: true,
+                  onPressed: () => onSectionSelected('Einladen'),
+                ),
+                AirmiusButton(
+                  label: t('teamDetail.tab.penalties'),
+                  icon: Icons.gavel_outlined,
+                  secondary: true,
+                  onPressed: () => onSectionSelected('Strafen'),
+                ),
+                AirmiusButton(
+                  label: t('teamDetail.tab.chat'),
+                  icon: Icons.chat_outlined,
+                  secondary: true,
+                  onPressed: () => onSectionSelected('Chat'),
+                ),
+                AirmiusButton(
+                  label: t('teamDetail.settings'),
+                  icon: Icons.settings_outlined,
+                  secondary: true,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TeamOperationsScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
             Eyebrow(t('teamDetail.mobileFunctions')),
             const SizedBox(height: 8),
             Material(
@@ -1984,6 +2151,7 @@ class _InvitePanelState extends State<_InvitePanel> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final team = widget.team;
     final requests =
         widget.team?.pendingJoinRequests
             .where((request) => request.status == 'pending')
@@ -2026,10 +2194,19 @@ class _InvitePanelState extends State<_InvitePanel> {
                     : () => widget.onDecline!(request),
               ),
               const SizedBox(height: 10),
-            ],
+          ],
           const SizedBox(height: 10),
           Divider(color: airmiusBorderColor(context)),
           const SizedBox(height: 10),
+          if (team?.memberInvitationRemainingToday != null &&
+              team?.memberInvitationDailyLimit != null) ...[
+            StatusPill(
+              '${t('teamDetail.invitesRemaining')}: ${team!.memberInvitationRemainingToday} / ${team.memberInvitationDailyLimit}',
+              color: AirmiusColors.accent,
+              textColor: airmiusTextColor(context),
+            ),
+            const SizedBox(height: 10),
+          ],
           Eyebrow(t('teamDetail.sendInvitation')),
           const SizedBox(height: 12),
           TextField(

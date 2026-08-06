@@ -6,6 +6,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'account_management_screen.dart';
+import 'clubs_screen.dart';
 import 'guardian_center_screen.dart';
 import 'sport_integrations_screen.dart';
 import 'legal_status_center_screen.dart';
@@ -97,98 +98,126 @@ class SettingsCenterScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            _SettingsAction(
-              icon: Icons.palette_outlined,
-              title: t('accessibility.design'),
-              body: t('accessibility.designDescription'),
-              status: t('settings.open'),
-              color: accent,
-              onTap: () => _open(context, const SettingsAppearanceScreen()),
+            _SettingsSection(
+              title: t('settings.sectionAccount'),
+              children: [
+                _SettingsAction(
+                  icon: Icons.palette_outlined,
+                  title: t('accessibility.design'),
+                  body: t('accessibility.designDescription'),
+                  status: t('settings.open'),
+                  color: accent,
+                  onTap: () => _open(context, const SettingsAppearanceScreen()),
+                ),
+                _SettingsAction(
+                  icon: Icons.language_outlined,
+                  title: t('settings.language'),
+                  body: t('settings.languageBody'),
+                  status: scope.language.code.toUpperCase(),
+                  color: accent,
+                  onTap: () => _open(context, const SettingsLanguageScreen()),
+                ),
+                _SettingsAction(
+                  icon: Icons.view_week_outlined,
+                  title: t('footerNav.settingsTitle'),
+                  body: t('footerNav.settingsBody'),
+                  status: t('footerNav.itemRange'),
+                  color: accent,
+                  onTap: () => _openFooterNavigation(context),
+                ),
+                _SettingsAction(
+                  icon: Icons.manage_accounts_outlined,
+                  title: t('settings.account'),
+                  body: t('settings.accountBody'),
+                  status: t('settings.protected'),
+                  color: accent,
+                  onTap: () => _open(context, const AccountManagementScreen()),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
-            _SettingsAction(
-              icon: Icons.language_outlined,
-              title: t('settings.language'),
-              body: t('settings.languageBody'),
-              status: scope.language.code.toUpperCase(),
-              color: accent,
-              onTap: () => _open(context, const SettingsLanguageScreen()),
+            _SettingsSection(
+              title: t('settings.sectionTools'),
+              children: [
+                _SettingsAction(
+                  icon: Icons.notifications_active_outlined,
+                  title: t('settings.notifications'),
+                  body: t('settings.notificationsBody'),
+                  status: t('settings.notificationStatus'),
+                  color: accent,
+                  onTap: () =>
+                      _open(context, const NotificationPreferencesScreen()),
+                ),
+                _SettingsAction(
+                  icon: Icons.watch_outlined,
+                  title: t('fitness.title'),
+                  body: t('fitness.subtitle'),
+                  status: t('fitness.importSupport'),
+                  color: accent,
+                  onTap: () => _open(context, const SportIntegrationsScreen()),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
-            _SettingsAction(
-              icon: Icons.view_week_outlined,
-              title: t('footerNav.settingsTitle'),
-              body: t('footerNav.settingsBody'),
-              status: t('footerNav.itemRange'),
-              color: accent,
-              onTap: () => _openFooterNavigation(context),
+            _SettingsSection(
+              title: t('settings.sectionClubs'),
+              children: [
+                _SettingsAction(
+                  icon: Icons.groups_2_outlined,
+                  title: t('settings.clubs'),
+                  body: t('settings.clubsBody'),
+                  status: t('settings.public'),
+                  color: accent,
+                  onTap: () => _openClubs(context),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.notifications_active_outlined,
-              title: t('settings.notifications'),
-              body: t('settings.notificationsBody'),
-              status: t('settings.notificationStatus'),
-              color: accent,
-              onTap: () =>
-                  _open(context, const NotificationPreferencesScreen()),
+            const SizedBox(height: 14),
+            _SettingsSection(
+              title: t('settings.sectionPrivacy'),
+              children: [
+                _SettingsAction(
+                  icon: Icons.privacy_tip_outlined,
+                  title: t('settings.privacy'),
+                  body: t('settings.privacyBody'),
+                  status: t('settings.dataRights'),
+                  color: Theme.of(context).colorScheme.secondary,
+                  onTap: () =>
+                      _open(context, const PrivacyConsentCenterScreen()),
+                ),
+                if (canOpenGuardianCenter)
+                  _SettingsAction(
+                    icon: Icons.family_restroom_outlined,
+                    title: t('guardian.title'),
+                    body: t('settings.guardianBody'),
+                    status: t('settings.family'),
+                    color: accent,
+                    onTap: () => _open(context, const GuardianCenterScreen()),
+                  ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.watch_outlined,
-              title: t('fitness.title'),
-              body: t('fitness.subtitle'),
-              status: t('fitness.importSupport'),
-              color: accent,
-              onTap: () => _open(context, const SportIntegrationsScreen()),
+            const SizedBox(height: 14),
+            _SettingsSection(
+              title: t('settings.sectionSupport'),
+              children: [
+                _SettingsAction(
+                  icon: Icons.support_agent_outlined,
+                  title: t('settings.support'),
+                  body: t('settings.supportBody'),
+                  status: t('settings.contact'),
+                  color: Theme.of(context).colorScheme.tertiary,
+                  onTap: () => _open(context, const SupportHelpdeskScreen()),
+                ),
+                _SettingsAction(
+                  icon: Icons.gavel_outlined,
+                  title: t('settings.legal'),
+                  body: t('settings.legalBody'),
+                  status: t('settings.public'),
+                  color: accent,
+                  onTap: () => _open(context, const LegalStatusCenterScreen()),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.manage_accounts_outlined,
-              title: t('settings.account'),
-              body: t('settings.accountBody'),
-              status: t('settings.protected'),
-              color: accent,
-              onTap: () => _open(context, const AccountManagementScreen()),
-            ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.privacy_tip_outlined,
-              title: t('settings.privacy'),
-              body: t('settings.privacyBody'),
-              status: t('settings.dataRights'),
-              color: Theme.of(context).colorScheme.secondary,
-              onTap: () => _open(context, const PrivacyConsentCenterScreen()),
-            ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.support_agent_outlined,
-              title: t('settings.support'),
-              body: t('settings.supportBody'),
-              status: t('settings.contact'),
-              color: Theme.of(context).colorScheme.tertiary,
-              onTap: () => _open(context, const SupportHelpdeskScreen()),
-            ),
-            const SizedBox(height: 12),
-            _SettingsAction(
-              icon: Icons.gavel_outlined,
-              title: t('settings.legal'),
-              body: t('settings.legalBody'),
-              status: t('settings.public'),
-              color: accent,
-              onTap: () => _open(context, const LegalStatusCenterScreen()),
-            ),
-            if (canOpenGuardianCenter) ...[
-              const SizedBox(height: 12),
-              _SettingsAction(
-                icon: Icons.family_restroom_outlined,
-                title: t('guardian.title'),
-                body: t('settings.guardianBody'),
-                status: t('settings.family'),
-                color: accent,
-                onTap: () => _open(context, const GuardianCenterScreen()),
-              ),
-            ],
             const SizedBox(height: 14),
             AirmiusPanel(
               child: Row(
@@ -223,6 +252,39 @@ class SettingsCenterScreen extends StatelessWidget {
       ),
     );
     if (changed == true) onFooterNavigationChanged?.call();
+  }
+
+  void _openClubs(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ClubsScreen(
+          requestedClubIds: const {},
+          onRequestClub: (_) {},
+          onWithdrawClub: (_) {},
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Eyebrow(title),
+        const SizedBox(height: 8),
+        ...children
+            .expand<Widget>((widget) => [widget, const SizedBox(height: 12)])
+            .take(children.isEmpty ? 0 : children.length * 2 - 1),
+      ],
+    );
   }
 }
 

@@ -206,6 +206,7 @@ class ClubController extends Controller
         abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_ROLES), 403);
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
         $previousRole = $club->users()->where('users.id', $user->id)->first()?->pivot?->role;
+        $previousPrimaryRole = ClubRoles::primary(ClubRoles::normalize($previousRole, [$previousRole]));
 
         $data = $request->validate([
             'role' => ['required', Rule::in(ClubRoles::ALL)],
@@ -237,10 +238,28 @@ class ClubController extends Controller
             ]);
         });
 
+        $nextRole = ClubRoles::primary($roles);
+        if ($previousPrimaryRole !== $nextRole) {
+            $previousRoleLabel = filled($previousRole)
+                ? (ClubRoles::LABELS[$previousRole] ?? $previousRole)
+                : 'Unbekannt';
+
+            AppNotification::send($user, 'club.member.role_updated', [
+                'title' => 'Vereinsrolle geändert',
+                'body' => 'Deine Rolle in '.$club->name.' wurde von '.$previousRoleLabel.' auf '.(ClubRoles::LABELS[$nextRole] ?? $nextRole).' geändert.',
+                'url' => '/notifications',
+                'mobile_url' => 'airmius://clubs/'.$club->id.'/members',
+                'club_id' => $club->id,
+                'previous_role' => $previousPrimaryRole,
+                'role' => $nextRole,
+                'roles' => $roles,
+            ]);
+        }
+
         ClubAuditLog::record($club, $request->user(), 'club.member.role_updated', $user, [
             'user_id' => $user->id,
-            'from_role' => $previousRole,
-            'to_role' => ClubRoles::primary($roles),
+            'from_role' => $previousPrimaryRole,
+            'to_role' => $nextRole,
         ]);
 
         return response()->json([

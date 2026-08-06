@@ -5,18 +5,19 @@ Use this file to prepare release notes for Play Console, App Store Connect, Test
 ## Release candidate
 
 - App: Airmius Mobile
-- Version: `1.0.15+16` (working-tree release candidate; pragmatic navigation, drink quick entry and camera-based meal photo estimates)
+- Version: `1.0.33+76` (release candidate; team invitation management refinements and settings/permission UX)
 - Android application ID: `com.airmius.app`
 - iOS bundle ID: `com.airmius.app`
 - API environment: `https://airmius.com`
-- New in 1.0.15+16: Main navigation now focuses on Training, Teams, Feed, Nutrition and Profile. Nutrition asks whether to open Nutrition or Drink tracking, Drink tracking supports quick water entries, and meal photo estimates can use either the camera or gallery.
-- Fresh release build is available for Play Console upload; artifact details below match the freshly built 1.0.15+16 AAB.
+- New in 1.0.33+76: The team detail now shows remaining invitation quota, uses consistent “Einladen” action labeling, and the team settings center is grouped by user categories with direct access to “Vereine verwalten”.
+- Fresh release build is available for Play Console upload; artifact details below match the freshly built 1.0.33+76 AAB.
 - Release owner:
 - Release date:
-- Previous local release AAB (before the final UI-polish patch; do not upload as the final build): `build/app/outputs/bundle/release/app-release.aab` (25.07.2026 16:56, 70.2 MiB / 73,650,123 bytes)
-- Previous AAB SHA-256: `2ff66fff6496fe46d2cee30f5c771a2ee8312beccf6a714898d2887715f92af5`
-- Fresh final AAB: `build/app/outputs/bundle/release/app-release.aab` (27.07.2026 14:24 CEST, 84,938,241 bytes; Version 1.0.15+16).
-- Fresh AAB SHA-256: `e0d5b421ccab683e252d4ac022d9aad7f676ff2b8cd6481336b9bc4be82398b5`.
+- Previous local release AAB (before the final patch; do not upload as the final build): `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code75.aab` (2026-08-05 21:50 CEST, 82.3 MiB / 86,286,112 bytes)
+- Previous AAB SHA-256: `1dd8a1f57381f7ac4e6b5c8e826bb9500bd043f4a9437f2f143ef5401b6482b8`
+- Fresh final AAB: `build/app/outputs/bundle/release/airmius-play-console-v1.0.33-code76.aab` (2026-08-06 19:56 CEST, 86,316,875 bytes; Version 1.0.33+76; SHA-256 `0e5a9085586552d438c4ff7e4bc3d1337cf33910ca2bc36ae842c1cb2acc543a`).
+- Fresh AAB SHA-256: `c13a361746bec0436d635b293baa7d30f42507b1635d046dae48d97a3ae2437f`.
+- Fresh web release build: `build/web`.
 - Source verification: `flutter analyze` (no issues).
 - Fresh artifact verification: `jarsigner -verify` exited successfully (`jar verified`); the self-signed upload-key and JarInputStream warnings are informational for this Android App Bundle.
 - Backend verification: `php artisan test --filter=MobileAuthSecurityTest` (5 passed, 45 assertions); `composer validate --strict` passed. Composer's online vulnerability audit remains an external-network gate.
@@ -374,13 +375,13 @@ English summary:
 German:
 
 ```text
-Sammel-Update für Airmius Mobile: responsives Design mit Hell-/Dunkelmodus, großen Texten und RTL-Unterstützung, sichere Konto- und 2FA-Flows, API-basierte Dashboard-, Tagesflow- und Workspace-Daten sowie lokalisierte Feed- und Nachrichtenfunktionen. Datei- und Ordnerfreigaben, Chat-Dateien, Team-, Freundschafts- und Vereins-Einladungen sowie Feed-Medien lassen sich jetzt direkt und berechtigungsgeprüft verwalten; Modulstartseiten und Detailbereiche passen Aktionen, Kontraste, Speicheranzeigen und Fehlermeldungen an Sprache und Theme an.
+Sammel-Update für Airmius Mobile: Teamverwaltung und Einstellungen wurden klarer strukturiert. In Teamdetails siehst du jetzt direkt die verbleibenden Einladungen, die Team-Aktionen sind mit dem Label „Einladen“ vereinheitlicht, und der Schnellzugriff enthält Einladen/Strafen/Chat/Einstellungen. Zusätzlich gibt es im Einstellungsbereich eine neue, kategorisierte Struktur inkl. „Vereine verwalten“ sowie API-basierte Quotenanzeige für die Einladungslimits.
 ```
 
 English:
 
 ```text
-Major Airmius Mobile update: responsive light/dark UI with large text and RTL support, secure account and two-factor flows, API-backed dashboard, Today Flow and workspaces, plus localized feed and messaging features. File and folder sharing, chat files, team, friend and club invitations, and feed media can now be managed directly with permission checks; module launchers and detail surfaces adapt actions, contrast, storage status and error feedback to the selected language and theme.
+Major Airmius Mobile update: Team and settings workflows were refined for faster management. Team detail now shows remaining invitation quota, team actions use the unified “Invite” naming, and the profile quick actions include Invite, Penalties, Chat and Settings. Settings were reorganized into clear sections with a new “Manage clubs” entry, while invite and membership flows now display server-backed limits with clearer localized UI text.
 ```
 
 French:

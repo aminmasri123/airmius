@@ -20,6 +20,8 @@ class ClubResource extends JsonResource
                 ->first()?->pivot;
         }
 
+        $planFeatureService = app(PlanFeatureService::class);
+
         return [
             'id' => $this->id,
             'owner_id' => $this->owner_id,
@@ -75,6 +77,7 @@ class ClubResource extends JsonResource
             'teams_count' => $this->whenCounted('teams'),
             'posts_count' => $this->whenCounted('posts'),
             'teams' => TeamResource::collection($this->whenLoaded('teams')),
+            'subscription_capabilities' => $planFeatureService->capabilities($this->resource),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

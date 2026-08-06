@@ -1673,6 +1673,11 @@ const _settingsDe = {
   'settings.subtitle':
       'Darstellung, Sprache, Konto, Datenschutz und Hilfe an einem sicheren Ort',
   'settings.accountEyebrow': 'Dein Konto',
+  'settings.sectionAccount': 'Konten & Sprache',
+  'settings.sectionPrivacy': 'Datenschutz',
+  'settings.sectionTools': 'App & Funktionen',
+  'settings.sectionClubs': 'Vereine & Teams',
+  'settings.sectionSupport': 'Recht & Hilfe',
   'settings.headline': 'Einfach einstellen, sicher verwenden',
   'settings.body':
       'Alle sichtbaren Aktionen arbeiten mit deinem angemeldeten Konto. Interne Test- und Verwaltungswerkzeuge bleiben ausgeblendet.',
@@ -1686,6 +1691,9 @@ const _settingsDe = {
   'settings.open': 'Öffnen',
   'settings.languageBody':
       'Die App wechselt sofort zwischen Deutsch, Englisch, Französisch und Arabisch.',
+  'settings.clubs': 'Vereine verwalten',
+  'settings.clubsBody':
+      'Eigene Vereine öffnen, beitreten, bearbeiten und Rollen verwalten.',
   'settings.notifications': 'Benachrichtigungen',
   'settings.notificationsBody':
       'Push, E-Mail, Chat, Zahlungen und Ruhezeiten übersichtlich steuern.',
@@ -1747,6 +1755,11 @@ final _settingsEn = {
   'settings.subtitle':
       'Appearance, language, account, privacy and help in one secure place',
   'settings.accountEyebrow': 'Your account',
+  'settings.sectionAccount': 'Account & language',
+  'settings.sectionPrivacy': 'Privacy',
+  'settings.sectionTools': 'App & tools',
+  'settings.sectionClubs': 'Clubs & teams',
+  'settings.sectionSupport': 'Legal & support',
   'settings.headline': 'Easy to configure, safe to use',
   'settings.body':
       'Every visible action uses your signed-in account. Internal testing and administration tools stay hidden.',
@@ -1760,6 +1773,9 @@ final _settingsEn = {
   'settings.open': 'Open',
   'settings.languageBody':
       'Switch the app instantly between German, English, French and Arabic.',
+  'settings.clubs': 'Manage clubs',
+  'settings.clubsBody':
+      'Open your clubs, manage memberships, club roles and applications.',
   'settings.notifications': 'Notifications',
   'settings.notificationsBody':
       'Control push, email, chat, payments and quiet hours in one place.',
@@ -1820,6 +1836,11 @@ final _settingsFr = {
   'settings.subtitle':
       'Apparence, langue, compte, confidentialité et aide au même endroit',
   'settings.accountEyebrow': 'Votre compte',
+  'settings.sectionAccount': 'Compte et langue',
+  'settings.sectionPrivacy': 'Confidentialité',
+  'settings.sectionTools': 'Application et fonctionnalités',
+  'settings.sectionClubs': 'Clubs et équipes',
+  'settings.sectionSupport': 'Droit et assistance',
   'settings.headline': 'Simple à configurer, sûr à utiliser',
   'settings.body':
       'Toutes les actions visibles utilisent votre compte connecté. Les outils internes de test et d’administration restent masqués.',
@@ -1833,6 +1854,9 @@ final _settingsFr = {
   'settings.open': 'Ouvrir',
   'settings.languageBody':
       'Passez immédiatement de l’allemand à l’anglais, au français ou à l’arabe.',
+  'settings.clubs': 'Gérer les clubs',
+  'settings.clubsBody':
+      'Ouvrez vos clubs, gérez les membres, les rôles et les demandes.',
   'settings.notifications': 'Notifications',
   'settings.notificationsBody':
       'Gérez les notifications push, e-mail, chat, paiements et heures calmes.',
@@ -1892,6 +1916,11 @@ final _settingsAr = {
   'settings.title': 'الإعدادات',
   'settings.subtitle': 'المظهر واللغة والحساب والخصوصية والمساعدة في مكان آمن',
   'settings.accountEyebrow': 'حسابك',
+  'settings.sectionAccount': 'الحساب واللغة',
+  'settings.sectionPrivacy': 'الخصوصية',
+  'settings.sectionTools': 'التطبيق والأدوات',
+  'settings.sectionClubs': 'الأندية والفرق',
+  'settings.sectionSupport': 'الدعم والقانون',
   'settings.headline': 'إعداد سهل واستخدام آمن',
   'settings.body':
       'تستخدم جميع الإجراءات الظاهرة حسابك المسجل. تبقى أدوات الاختبار والإدارة الداخلية مخفية.',
@@ -1905,6 +1934,9 @@ final _settingsAr = {
   'settings.open': 'فتح',
   'settings.languageBody':
       'بدّل التطبيق فورًا بين الألمانية والإنجليزية والفرنسية والعربية.',
+  'settings.clubs': 'إدارة الأندية',
+  'settings.clubsBody':
+      'افتح أندتك الخاصة وأدر العضوية والأدوار وطلبات الانضمام.',
   'settings.notifications': 'الإشعارات',
   'settings.notificationsBody':
       'تحكم في إشعارات الدفع والبريد والدردشة والمدفوعات وفترة الهدوء.',
@@ -5232,11 +5264,14 @@ const _teamDetailDe = {
   'teamDetail.tab.roster': 'Kader',
   'teamDetail.tab.roles': 'Rollen',
   'teamDetail.tab.invitations': 'Einladungen',
+  'teamDetail.tab.invites': 'Einladen',
   'teamDetail.tab.calendar': 'Kalender',
   'teamDetail.tab.files': 'Dateien',
   'teamDetail.tab.chat': 'Chat',
   'teamDetail.tab.penalties': 'Strafen',
   'teamDetail.penalties': 'Team-Strafkasse',
+  'teamDetail.invitesRemaining': 'Einladungen noch übrig',
+  'teamDetail.settings': 'Einstellungen',
   'teamDetail.penaltiesBody':
       'Strafregeln und Gebühren transparent verwalten – mit serverseitiger Berechtigung.',
   'teamDetail.penaltyRules': 'Strafregeln',
@@ -5332,11 +5367,14 @@ final _teamDetailEn = {
   'teamDetail.tab.roster': 'Roster',
   'teamDetail.tab.roles': 'Roles',
   'teamDetail.tab.invitations': 'Invitations',
+  'teamDetail.tab.invites': 'Invite',
   'teamDetail.tab.calendar': 'Calendar',
   'teamDetail.tab.files': 'Files',
   'teamDetail.tab.chat': 'Chat',
   'teamDetail.tab.penalties': 'Penalties',
   'teamDetail.penalties': 'Team cashbox',
+  'teamDetail.invitesRemaining': 'Invites remaining',
+  'teamDetail.settings': 'Settings',
   'teamDetail.penaltiesBody':
       'Manage penalty rules and fees transparently with server-side permissions.',
   'teamDetail.penaltyRules': 'Penalty rules',
@@ -5433,11 +5471,14 @@ final _teamDetailFr = {
   'teamDetail.tab.roster': 'Effectif',
   'teamDetail.tab.roles': 'Rôles',
   'teamDetail.tab.invitations': 'Invitations',
+  'teamDetail.tab.invites': 'Inviter',
   'teamDetail.tab.calendar': 'Calendrier',
   'teamDetail.tab.files': 'Fichiers',
   'teamDetail.tab.chat': 'Chat',
   'teamDetail.tab.penalties': 'Pénalités',
   'teamDetail.penalties': 'Caisse de l’équipe',
+  'teamDetail.invitesRemaining': 'Invitations restantes',
+  'teamDetail.settings': 'Paramètres',
   'teamDetail.penaltiesBody':
       'Gérez les règles et les frais avec des droits validés par le serveur.',
   'teamDetail.penaltyRules': 'Règles de pénalité',
@@ -5531,11 +5572,14 @@ final _teamDetailAr = {
   'teamDetail.tab.roster': 'القائمة',
   'teamDetail.tab.roles': 'الأدوار',
   'teamDetail.tab.invitations': 'الدعوات',
+  'teamDetail.tab.invites': 'دعوة',
   'teamDetail.tab.calendar': 'التقويم',
   'teamDetail.tab.files': 'الملفات',
   'teamDetail.tab.chat': 'الدردشة',
   'teamDetail.tab.penalties': 'الغرامات',
   'teamDetail.penalties': 'صندوق الفريق',
+  'teamDetail.invitesRemaining': 'الدعوات المتبقية',
+  'teamDetail.settings': 'الإعدادات',
   'teamDetail.penaltiesBody':
       'إدارة قواعد الغرامات والرسوم بشفافية مع صلاحيات يتحقق منها الخادم.',
   'teamDetail.penaltyRules': 'قواعد الغرامات',
@@ -19428,8 +19472,10 @@ final _strings = {
         'Gib den Code aus deiner E-Mail ein. Er gilt 15 Minuten und nur für die aktuelle Auswahl.',
     'privacy.eraseCode': 'Bestätigungscode',
     'privacy.eraseConfirm': 'Ausgewählte Daten endgültig löschen',
-    'privacy.eraseSelectionRequired': 'Wähle mindestens einen Datenbereich aus.',
-    'privacy.eraseIdentityRequired': 'Gib zuerst Passwort oder Konto-E-Mail ein.',
+    'privacy.eraseSelectionRequired':
+        'Wähle mindestens einen Datenbereich aus.',
+    'privacy.eraseIdentityRequired':
+        'Gib zuerst Passwort oder Konto-E-Mail ein.',
     'privacy.eraseCodeSent': 'Der Bestätigungscode wurde per E-Mail gesendet.',
     'privacy.eraseCodeRequired': 'Gib den Bestätigungscode aus der E-Mail ein.',
     'privacy.eraseFinalWarning':
@@ -21628,7 +21674,8 @@ final _strings = {
     'privacy.eraseCode': 'Confirmation code',
     'privacy.eraseConfirm': 'Permanently delete selected data',
     'privacy.eraseSelectionRequired': 'Select at least one data area.',
-    'privacy.eraseIdentityRequired': 'Enter your password or account email first.',
+    'privacy.eraseIdentityRequired':
+        'Enter your password or account email first.',
     'privacy.eraseCodeSent': 'The confirmation code was sent by email.',
     'privacy.eraseCodeRequired': 'Enter the confirmation code from the email.',
     'privacy.eraseFinalWarning':

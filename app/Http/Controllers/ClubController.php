@@ -10,6 +10,7 @@ use App\Services\ClubProfilePayloadService;
 use App\Services\ClubService;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
+use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use App\Support\Validation\ClubProfileRules;
@@ -165,6 +166,11 @@ class ClubController extends Controller
             'roles.*' => [Rule::in(self::MEMBER_ROLES)],
         ]);
 
+        $currentMembership = $club->users()->where('users.id', $user->id)->first()?->pivot;
+        $previousRole = $currentMembership
+            ? ClubRoles::primary(ClubRoles::normalize($currentMembership->role, $currentMembership->roles ?? []))
+            : null;
+
         $roles = ClubRoles::normalize($data['role'] ?? null, $data['roles'] ?? []);
         $primaryRole = ClubRoles::primary($roles);
 
@@ -204,6 +210,22 @@ class ClubController extends Controller
                 }
             }
         });
+
+        if ($previousRole !== $primaryRole) {
+            $previousRoleLabel = filled($previousRole)
+                ? (ClubRoles::LABELS[$previousRole] ?? $previousRole)
+                : 'Unbekannt';
+
+            AppNotification::send($user, 'club.member.role_updated', [
+                'title' => 'Vereinsrolle geändert',
+                'body' => 'Deine Rolle in '.$club->name.' wurde von '.$previousRoleLabel.' auf '.(ClubRoles::LABELS[$primaryRole] ?? $primaryRole).' geändert.',
+                'url' => route('auth.club-memberships.index'),
+                'club_id' => $club->id,
+                'previous_role' => $previousRole,
+                'role' => $primaryRole,
+                'roles' => $roles,
+            ]);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([

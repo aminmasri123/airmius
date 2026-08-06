@@ -517,6 +517,8 @@ class ClubMembershipController extends Controller
         $previousFamilyGroupKey = $this->normalizeFamilyGroupKey($currentMembership?->family_group_key);
         $nextFamilyGroupKey = $this->normalizeFamilyGroupKey($data['family_group_key'] ?? null);
 
+        $previousRole = $currentMembership ? ClubRoles::primary(ClubRoles::normalize($currentMembership->role, $currentMembership->roles ?? [])) : null;
+
         $roles = ClubRoles::normalize($data['role'] ?? null, $data['roles'] ?? []);
         $primaryRole = ClubRoles::primary($roles);
 
@@ -583,6 +585,22 @@ class ClubMembershipController extends Controller
                 }
             }
         });
+
+        if ($previousRole !== $primaryRole) {
+            $previousRoleLabel = ClubRoles::LABELS[$previousRole] ?? $previousRole;
+            $newRoleLabel = ClubRoles::LABELS[$primaryRole] ?? $primaryRole;
+
+            AppNotification::send($user, 'club.member.role_updated', [
+                'title' => 'Vereinsrolle geändert',
+                'body' => 'Deine Rolle in '.$club->name.' wurde von '.($previousRoleLabel ?? 'Unbekannt').' auf '.$newRoleLabel.' geändert.',
+                'url' => '/notifications',
+                'mobile_url' => 'airmius://clubs/'.$club->id.'/members',
+                'club_id' => $club->id,
+                'previous_role' => $previousRole,
+                'role' => $primaryRole,
+                'roles' => $roles,
+            ]);
+        }
 
         foreach (array_unique(array_filter([$previousFamilyGroupKey, $nextFamilyGroupKey])) as $familyGroupKey) {
             $this->recalculateFamilyGroupContributions($club, $familyGroupKey);

@@ -62,9 +62,11 @@ const coachRoles = ['coach', 'assistant_coach', 'performance_coach', 'fitness_co
 const clubRoles = ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller', 'media_manager']
 const sponsorRoles = ['sponsor', 'sponsor_manager']
 const platformRoles = ['super_admin', 'admin', 'system_admin']
+const enabledNavigationModules = computed(() => page.props.auth?.user?.navigation_modules?.enabled)
+const moduleEnabled = (module) => Array.isArray(enabledNavigationModules.value) && enabledNavigationModules.value.includes(module)
 const isPlatformAdmin = computed(() => hasAnyRole(platformRoles))
-const isCoach = computed(() => !isPlatformAdmin.value && (hasAnyRole(coachRoles) || can('trainer-cockpit.view')))
-const isClub = computed(() => !isPlatformAdmin.value && (hasAnyRole(clubRoles) || can('club-cockpit.view')))
+const isCoach = computed(() => !isPlatformAdmin.value && (moduleEnabled('coach') || hasAnyRole(coachRoles) || can('trainer-cockpit.view')))
+const isClub = computed(() => !isPlatformAdmin.value && (moduleEnabled('club') || hasAnyRole(clubRoles) || can('club-cockpit.view')))
 const isSponsor = computed(() => !isPlatformAdmin.value && (hasAnyRole(sponsorRoles) || can('sponsor.workspace.view')))
 const operationalCount = computed(() => [isCoach.value, isClub.value, isSponsor.value].filter(Boolean).length)
 

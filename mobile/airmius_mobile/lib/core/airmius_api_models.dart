@@ -1288,6 +1288,8 @@ class AirmiusTeam {
     this.pendingJoinRequests = const [],
     this.usersCount,
     this.eventsCount,
+    this.memberInvitationRemainingToday,
+    this.memberInvitationDailyLimit,
   });
 
   final int id;
@@ -1309,9 +1311,16 @@ class AirmiusTeam {
   final List<AirmiusTeamJoinRequest> pendingJoinRequests;
   final int? usersCount;
   final int? eventsCount;
+  final int? memberInvitationRemainingToday;
+  final int? memberInvitationDailyLimit;
 
   factory AirmiusTeam.fromJson(JsonMap json) {
     final club = json['club'];
+    final clubCapabilities = club is JsonMap
+        ? club['subscription_capabilities'] is JsonMap
+              ? club['subscription_capabilities'] as JsonMap
+              : const {}
+        : const {};
     return AirmiusTeam(
       id: _int(json['id']),
       clubId: _int(json['club_id']),
@@ -1348,8 +1357,21 @@ class AirmiusTeam {
       eventsCount: json.containsKey('events_count')
           ? _int(json['events_count'])
           : null,
+      memberInvitationRemainingToday: _nullableIntFromJson(
+        clubCapabilities['member_invitation_remaining_today'],
+      ),
+      memberInvitationDailyLimit: _nullableIntFromJson(
+        clubCapabilities['member_invitation_daily_limit'],
+      ),
     );
   }
+}
+
+int? _nullableIntFromJson(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }
 
 class AirmiusTeamJoinRequest {
