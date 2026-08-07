@@ -42,6 +42,28 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         AirmiusLanguage.ar => ar,
       };
 
+  String _matchingLocationLabel(JsonMap matching) {
+    String value(dynamic raw) => raw == null ? '' : '$raw'.trim();
+
+    final locationName = value(matching['location_name']);
+    final address = value(matching['address']);
+    final locality = [value(matching['postal_code']), value(matching['city'])]
+        .where((part) => part.isNotEmpty)
+        .join(' ');
+    final country = value(matching['country_code']);
+    final cityAndCountry = [locality, country]
+        .where((part) => part.isNotEmpty)
+        .join(', ');
+
+    final parts = [locationName, address, cityAndCountry]
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    return parts.isEmpty
+        ? _c('Ort offen', 'Location open', 'Lieu à définir', 'المكان مفتوح')
+        : parts.join(' · ');
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -539,7 +561,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               ),
               _swipeDetail(
                 Icons.location_on_outlined,
-                '${matching['location_name'] ?? matching['city'] ?? ''}, ${matching['country_code'] ?? ''}',
+                _matchingLocationLabel(matching),
               ),
               _swipeDetail(
                 Icons.groups_outlined,
@@ -793,7 +815,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                '${matching['address'] ?? matching['location_name'] ?? matching['city'] ?? ''}',
+                _matchingLocationLabel(matching),
               ),
               if (ownerId > 0) ...[
                 const SizedBox(height: 16),
@@ -956,11 +978,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           Text('${matching['description']}'),
         ],
         const SizedBox(height: 10),
-        Text('📍 ${matching['city']}, ${matching['country_code']}'),
-        if ('${matching['location_name'] ?? ''}'.trim().isNotEmpty)
-          Text('🏟️ ${matching['location_name']}'),
-        if ('${matching['address'] ?? ''}'.trim().isNotEmpty)
-          Text('Adresse: ${matching['address']}'),
+        Text('📍 ${_matchingLocationLabel(matching)}'),
         Text(
           '🗓 ${startsAt == null ? '' : _formatMatchingDateTime(context, startsAt.toLocal())}',
         ),
@@ -1538,7 +1556,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           onPressed: _busy ? null : _openCreate,
           icon: const Icon(Icons.add),
           label: Text(
-            _c('Suche erstellen', 'Create search', 'Créer', 'إنشاء بحث'),
+            _c('Erstellen', 'Create', 'Créer', 'إنشاء'),
           ),
         ),
       ),

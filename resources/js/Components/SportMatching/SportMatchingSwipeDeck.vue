@@ -55,7 +55,20 @@ const formatDate = (value) => {
         dateStyle: 'medium',
         timeStyle: 'short',
         hour12: false,
-    }).format(new Date(value))
+}).format(new Date(value))
+}
+
+const formatLocation = (matching) => {
+    const locationName = String(matching?.location_name || '').trim()
+    const address = String(matching?.address || '').trim()
+    const locality = [matching?.postal_code, matching?.city]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .join(' ')
+    const country = String(matching?.country_code || '').trim()
+    const cityAndCountry = [locality, country].filter(Boolean).join(', ')
+
+    return [locationName, address, cityAndCountry].filter(Boolean).join(' · ') || 'Ort offen'
 }
 
 const ownerInitials = (name) => (name || '?')
@@ -265,7 +278,7 @@ const blockCurrent = () => {
 
                         <div class="mt-5 grid gap-3 text-sm text-secondary">
                             <div class="flex items-center gap-3"><i class="las la-calendar text-xl text-air-blue"></i><span>{{ formatDate(currentCard.starts_at) }}</span></div>
-                            <div class="flex items-center gap-3"><i class="las la-map-marker text-xl text-air-blue"></i><span>{{ currentCard.location_name ? `${currentCard.location_name} · ${currentCard.city}` : `${currentCard.city}, ${currentCard.country_code}` }}</span></div>
+                            <div class="flex items-start gap-3"><i class="las la-map-marker mt-0.5 text-xl text-air-blue"></i><span class="min-w-0 break-words">{{ formatLocation(currentCard) }}</span></div>
                             <div class="flex items-center gap-3"><i class="las la-users text-xl text-air-blue"></i><span>{{ currentCard.mode === 'team' ? `${currentCard.team_size} gegen ${currentCard.team_size}` : `${currentCard.participants_needed} ${currentCard.participants_needed === 1 ? 'Person gesucht' : 'Personen gesucht'}` }}</span></div>
                         </div>
 
