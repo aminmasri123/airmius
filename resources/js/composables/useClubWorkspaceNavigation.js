@@ -32,6 +32,15 @@ export const useClubWorkspaceNavigation = () => {
                 activePaths: ['/club-memberships'],
             }
             : null,
+        can('file.index')
+            ? {
+                key: 'files',
+                label: 'Dateien',
+                href: route('auth.files.index'),
+                icon: 'las la-folder-open',
+                activePaths: ['/files'],
+            }
+            : null,
     ].filter(Boolean))
 
     const hasItems = computed(() => items.value.length > 0)

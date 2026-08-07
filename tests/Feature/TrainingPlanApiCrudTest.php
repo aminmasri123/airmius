@@ -42,6 +42,12 @@ class TrainingPlanApiCrudTest extends TestCase
             'share_permission' => 'write',
             'team_id' => $team->id,
             'user_ids' => [$athlete->id],
+            'item_title' => 'Grundlagenlauf',
+            'item_sport_type' => 'laufen',
+            'item_duration_minutes' => 45,
+            'item_distance_km' => 7.5,
+            'item_load' => 'medium',
+            'item_focus' => 'Zone 2',
         ])
             ->assertCreated()
             ->assertJsonPath('data.title', '10k Aufbau')
@@ -51,7 +57,9 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.assignments_count', 2)
             ->assertJsonPath('data.settings.goal', '10 km stabil laufen')
             ->assertJsonPath('data.settings.macrocycle', 'Herbstaufbau')
-            ->assertJsonPath('data.settings.deload_week', 4);
+            ->assertJsonPath('data.settings.deload_week', 4)
+            ->assertJsonPath('data.items.0.title', 'Grundlagenlauf')
+            ->assertJsonPath('data.items.0.sport_type', 'laufen');
 
         $planId = $response->json('data.id');
 

@@ -169,13 +169,17 @@ const closeSidebar = () => {
             <!-- Feed is the common area and is never disabled by a role module preference. -->
             <NavItem @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
 
-            <!-- Athlete functions are intentionally flat for athlete accounts. -->
-            <template v-if="isAthlete">
+            <NavGroup
+                v-if="isAthlete"
+                label="Mein Sport"
+                icon="las la-running"
+                :initial-open="true"
+            >
                 <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events" icon="las la-calendar" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Training" icon="las la-clipboard-list" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
-                <NavItem @navigate="closeSidebar" :href="route('auth.sport-matching.index')" label="Sport-Matching" icon="las la-people-arrows" />
+                <NavItem @navigate="closeSidebar" :href="route('auth.sport-matching.index')" label="Sport-Matching" icon="las la-random" />
                 <NavItem
                     v-if="can('friends.view')"
                     @navigate="closeSidebar"
@@ -187,7 +191,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('rides.view')" @navigate="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
                 <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
-            </template>
+            </NavGroup>
 
             <NavGroup
                 v-if="isCoach"

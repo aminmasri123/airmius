@@ -62,6 +62,17 @@ class TrainingController extends Controller
             $plan = TrainingPlan::query()->create($this->planPayload($request, $data));
             $this->syncPlanAssignments($plan, $data);
 
+            if (filled($data['item_title'] ?? null)) {
+                $plan->items()->create($this->planItemPayload([
+                    'title' => $data['item_title'],
+                    'sport_type' => $data['item_sport_type'] ?? null,
+                    'duration_minutes' => $data['item_duration_minutes'] ?? null,
+                    'distance_km' => $data['item_distance_km'] ?? null,
+                    'load' => $data['item_load'] ?? null,
+                    'focus' => $data['item_focus'] ?? null,
+                ]));
+            }
+
             return $plan;
         });
 
@@ -369,6 +380,12 @@ class TrainingController extends Controller
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+            'item_title' => ['nullable', 'string', 'max:160'],
+            'item_sport_type' => ['nullable', 'string', 'max:80'],
+            'item_duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
+            'item_distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            'item_load' => ['nullable', Rule::in(['low', 'medium', 'high', 'test'])],
+            'item_focus' => ['nullable', 'string', 'max:160'],
         ]);
     }
 
