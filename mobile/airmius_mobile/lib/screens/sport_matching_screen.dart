@@ -119,63 +119,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _modeSelector(),
-                const SizedBox(height: 12),
-                _viewSelector(),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _cityController,
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _reload(),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.location_on_outlined),
-                          hintText: _c(
-                            'Ort, z. B. Kenitra',
-                            'City, e.g. Kenitra',
-                            'Ville, ex. Kénitra',
-                            'المدينة، مثال القنيطرة',
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      onPressed: _reload,
-                      icon: const Icon(Icons.search),
-                    ),
-                  ],
-                ),
-                if (sports.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _MatchingSportAutocomplete(
-                    controller: _sportController,
-                    sports: sports,
-                    hintText: _c(
-                      'Wunschsport suchen, z. B. Laufen',
-                      'Search for a sport, e.g. running',
-                      'Rechercher un sport, ex. course',
-                      'ابحث عن الرياضة المطلوبة، مثل الجري',
-                    ),
-                    allSportsLabel: _c(
-                      'Alle Sportarten',
-                      'All sports',
-                      'Tous les sports',
-                      'كل الرياضات',
-                    ),
-                    onTextChanged: () => _sportId = null,
-                    onSelected: (sport) {
-                      _sportId = sport == null ? null : _int(sport['id']);
-                      _reload();
-                    },
-                  ),
-                ],
-                const SizedBox(height: 10),
-                _radiusFilter(),
                 const SizedBox(height: 16),
-                _skillFilterWidget(),
+                _configurationButton(sports),
                 const SizedBox(height: 16),
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const Center(child: CircularProgressIndicator())
@@ -191,119 +136,6 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Widget _modeSelector() => SegmentedButton<String>(
-    segments: [
-      ButtonSegment(
-        value: 'partner',
-        icon: const Icon(Icons.directions_run),
-        label: Text(_c('Sportpartner', 'Partners', 'Partenaires', 'شركاء')),
-      ),
-      ButtonSegment(
-        value: 'team',
-        icon: const Icon(Icons.groups_2_outlined),
-        label: Text(_c('Teamgegner', 'Teams', 'Équipes', 'فرق')),
-      ),
-    ],
-    selected: {_mode},
-    onSelectionChanged: (values) {
-      setState(() {
-        _mode = values.first;
-        _future = _load();
-      });
-    },
-  );
-
-  Widget _viewSelector() => SegmentedButton<bool>(
-    segments: [
-      ButtonSegment(
-        value: true,
-        icon: const Icon(Icons.bolt_outlined),
-        label: Text(_c('Entdecken', 'Discover', 'Découvrir', 'اكتشف')),
-      ),
-      ButtonSegment(
-        value: false,
-        icon: const Icon(Icons.view_list_outlined),
-        label: Text(_c('Liste', 'List', 'Liste', 'القائمة')),
-      ),
-    ],
-    selected: {_swipeView},
-    onSelectionChanged: (values) => setState(() {
-      _swipeView = values.first;
-      _swipeOffset = 0;
-    }),
-  );
-
-  Widget _radiusFilter() => AirmiusPanel(
-    children: [
-      Row(
-        children: [
-          Icon(Icons.radar_outlined, color: airmiusAccentColor(context)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _c('Umkreis für Angebote', 'Offer radius', 'Rayon des offres', 'نطاق العروض'),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text(
-            '$_radiusKm km',
-            style: TextStyle(
-              color: airmiusAccentColor(context),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-      Slider(
-        value: _radiusKm.toDouble(),
-        min: 5,
-        max: 500,
-        divisions: 99,
-        label: '$_radiusKm km',
-        onChanged: (value) => setState(() => _radiusKm = value.round()),
-        onChangeEnd: (_) => _reload(),
-      ),
-      Text(
-        _c(
-          'Zeige Angebote bis zu diesem Radius.',
-          'Show offers up to this radius.',
-          'Afficher les offres jusqu’à ce rayon.',
-          'اعرض العروض حتى هذا النطاق.',
-        ),
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-    ],
-  );
-
-  Widget _skillFilterWidget() => DropdownButtonFormField<String>(
-    initialValue: _skillFilter,
-    isExpanded: true,
-    decoration: InputDecoration(
-      prefixIcon: const Icon(Icons.speed_outlined),
-      labelText: _c(
-        'Niveau filtern',
-        'Filter level',
-        'Filtrer le niveau',
-        'تصفية المستوى',
-      ),
-    ),
-    items: [
-      for (final level in const [
-        'all',
-        'beginner',
-        'recreational',
-        'advanced',
-        'competitive',
-      ])
-        DropdownMenuItem(value: level, child: Text(_skillLabel(level))),
-    ],
-    onChanged: (value) {
-      if (value == null) return;
-      setState(() => _skillFilter = value);
-      _reload();
-    },
-  );
-
   String _skillLabel(String level) => switch (level) {
     'beginner' => _c('Anfänger', 'Beginner', 'Débutant', 'مبتدئ'),
     'recreational' => _c('Freizeit', 'Recreational', 'Loisir', 'ترفيهي'),
@@ -313,9 +145,24 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   };
 
   String _applicationStatusLabel(Object? status) => switch ('$status') {
-    'pending' => _c('Anfrage ausstehend', 'Request pending', 'Demande en attente', 'الطلب قيد الانتظار'),
-    'accepted' => _c('Anfrage angenommen', 'Request accepted', 'Demande acceptée', 'تم قبول الطلب'),
-    'declined' => _c('Anfrage abgelehnt', 'Request declined', 'Demande refusée', 'تم رفض الطلب'),
+    'pending' => _c(
+      'Anfrage ausstehend',
+      'Request pending',
+      'Demande en attente',
+      'الطلب قيد الانتظار',
+    ),
+    'accepted' => _c(
+      'Anfrage angenommen',
+      'Request accepted',
+      'Demande acceptée',
+      'تم قبول الطلب',
+    ),
+    'declined' => _c(
+      'Anfrage abgelehnt',
+      'Request declined',
+      'Demande refusée',
+      'تم رفض الطلب',
+    ),
     _ => '$status',
   };
 
@@ -355,7 +202,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               child: _card(matching, teams),
             ),
           )
-      .toList(),
+          .toList(),
     );
   }
 
@@ -469,7 +316,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                             top: 24,
                             left: 20,
                             child: _swipeStamp(
-                              _c('INTERESSE', 'INTERESTED', 'INTÉRESSÉ', 'مهتم'),
+                              _c(
+                                'INTERESSE',
+                                'INTERESTED',
+                                'INTÉRESSÉ',
+                                'مهتم',
+                              ),
                               Colors.green,
                               -0.12,
                             ),
@@ -479,7 +331,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                             top: 24,
                             right: 20,
                             child: _swipeStamp(
-                              _c('NICHT JETZT', 'NOT NOW', 'PAS MAINTENANT', 'ليس الآن'),
+                              _c(
+                                'NICHT JETZT',
+                                'NOT NOW',
+                                'PAS MAINTENANT',
+                                'ليس الآن',
+                              ),
                               Colors.red,
                               0.12,
                             ),
@@ -512,7 +369,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               onPressed: _busy
                   ? null
                   : () => _resolveSwipe(current, teams, false),
-              tooltip: _c('Nicht jetzt', 'Not now', 'Pas maintenant', 'ليس الآن'),
+              tooltip: _c(
+                'Nicht jetzt',
+                'Not now',
+                'Pas maintenant',
+                'ليس الآن',
+              ),
               size: 64,
             ),
             const SizedBox(width: 12),
@@ -522,7 +384,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               onPressed: _busy
                   ? null
                   : () => _resolveSwipe(current, teams, true),
-              tooltip: _c('Interesse senden', 'Send interest', 'Envoyer un intérêt', 'إرسال اهتمام'),
+              tooltip: _c(
+                'Interesse senden',
+                'Send interest',
+                'Envoyer un intérêt',
+                'إرسال اهتمام',
+              ),
               size: 72,
             ),
             const SizedBox(width: 12),
@@ -581,7 +448,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                   height: 150,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      width: 18,
+                    ),
                   ),
                 ),
               ),
@@ -597,14 +467,26 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 top: 16,
                 child: _swipeBadge(
                   matching['mode'] == 'team'
-                      ? _c('Team-Herausforderung', 'Team challenge', 'Défi d’équipe', 'تحدي فريق')
-                      : _c('Sportpartner', 'Sport partner', 'Partenaire sportif', 'شريك رياضي'),
+                      ? _c(
+                          'Team-Herausforderung',
+                          'Team challenge',
+                          'Défi d’équipe',
+                          'تحدي فريق',
+                        )
+                      : _c(
+                          'Sportpartner',
+                          'Sport partner',
+                          'Partenaire sportif',
+                          'شريك رياضي',
+                        ),
                 ),
               ),
               Positioned(
                 right: 16,
                 top: 16,
-                child: _swipeBadge('${sport['name'] ?? _c('Sport', 'Sport', 'Sport', 'رياضة')}'),
+                child: _swipeBadge(
+                  '${sport['name'] ?? _c('Sport', 'Sport', 'Sport', 'رياضة')}',
+                ),
               ),
             ],
           ),
@@ -618,7 +500,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 '${matching['title'] ?? ''}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               if ('${matching['description'] ?? ''}'.trim().isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -629,25 +514,51 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 ),
               ],
               const SizedBox(height: 12),
-              _swipeDetail(Icons.calendar_today_outlined, startsAt == null ? _c('Termin offen', 'Date open', 'Date à définir', 'الموعد مفتوح') : _formatMatchingDateTime(context, startsAt.toLocal())),
-              _swipeDetail(Icons.location_on_outlined, '${matching['location_name'] ?? matching['city'] ?? ''}, ${matching['country_code'] ?? ''}'),
-              _swipeDetail(Icons.groups_outlined, matching['mode'] == 'team' ? '${matching['team_size']} vs. ${matching['team_size']}' : '${matching['participants_needed']} ${_c('gesucht', 'wanted', 'recherchés', 'مطلوب')}'),
-              _swipeDetail(Icons.speed_outlined, '${matching['skill_level'] ?? 'all'} · ${matching['radius_km'] ?? 25} km'),
+              _swipeDetail(
+                Icons.calendar_today_outlined,
+                startsAt == null
+                    ? _c(
+                        'Termin offen',
+                        'Date open',
+                        'Date à définir',
+                        'الموعد مفتوح',
+                      )
+                    : _formatMatchingDateTime(context, startsAt.toLocal()),
+              ),
+              _swipeDetail(
+                Icons.location_on_outlined,
+                '${matching['location_name'] ?? matching['city'] ?? ''}, ${matching['country_code'] ?? ''}',
+              ),
+              _swipeDetail(
+                Icons.groups_outlined,
+                matching['mode'] == 'team'
+                    ? '${matching['team_size']} vs. ${matching['team_size']}'
+                    : '${matching['participants_needed']} ${_c('gesucht', 'wanted', 'recherchés', 'مطلوب')}',
+              ),
+              _swipeDetail(
+                Icons.speed_outlined,
+                '${matching['skill_level'] ?? 'all'} · ${matching['radius_km'] ?? 25} km',
+              ),
               const Divider(height: 22),
               Row(
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: airmiusAccentColor(context).withValues(alpha: 0.14),
+                    backgroundColor: airmiusAccentColor(
+                      context,
+                    ).withValues(alpha: 0.14),
                     child: Text(
                       _initials('${owner['name'] ?? ''}'),
-                      style: TextStyle(color: airmiusAccentColor(context), fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        color: airmiusAccentColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${owner['name'] ?? _c('Sport-Community', 'Sports community', 'Communauté sportive', 'مجتمع الرياضة')}${team == null ? '' : ' · ${team['name']}' }',
+                      '${owner['name'] ?? _c('Sport-Community', 'Sports community', 'Communauté sportive', 'مجتمع الرياضة')}${team == null ? '' : ' · ${team['name']}'}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w800),
@@ -658,7 +569,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               if (!isBackground && matching['mode'] == 'team') ...[
                 const SizedBox(height: 8),
                 Text(
-                  _c('Dein Team wählst du beim Annehmen.', 'Choose your team when accepting.', 'Choisissez votre équipe en acceptant.', 'اختر فريقك عند القبول.'),
+                  _c(
+                    'Dein Team wählst du beim Annehmen.',
+                    'Choose your team when accepting.',
+                    'Choisissez votre équipe en acceptant.',
+                    'اختر فريقك عند القبول.',
+                  ),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -675,7 +591,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       children: [
         Icon(icon, size: 18, color: airmiusAccentColor(context)),
         const SizedBox(width: 8),
-        Expanded(child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Expanded(
+          child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ],
     ),
   );
@@ -689,23 +607,31 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       child: Text(
         label,
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     ),
   );
 
-  Widget _swipeStamp(String label, Color color, double angle) => Transform.rotate(
-    angle: angle,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: color, width: 2),
-        borderRadius: BorderRadius.circular(8),
-        color: color.withValues(alpha: 0.12),
-      ),
-      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900)),
-    ),
-  );
+  Widget _swipeStamp(String label, Color color, double angle) =>
+      Transform.rotate(
+        angle: angle,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: color, width: 2),
+            borderRadius: BorderRadius.circular(8),
+            color: color.withValues(alpha: 0.12),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+        ),
+      );
 
   Widget _swipeActionButton({
     required IconData icon,
@@ -759,7 +685,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _c('Angebot übersprungen.', 'Offer skipped.', 'Offre ignorée.', 'تم تخطي العرض.'),
+            _c(
+              'Angebot übersprungen.',
+              'Offer skipped.',
+              'Offre ignorée.',
+              'تم تخطي العرض.',
+            ),
           ),
         ),
       );
@@ -770,7 +701,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     if (_busy || _swipedMatchingIds.isEmpty) return;
     final matchingId = _swipedMatchingIds.last;
     setState(() => _swipedMatchingIds.remove(matchingId));
-    await _run(() => _client.dismissSportMatching(matchingId, dismissed: false));
+    await _run(
+      () => _client.dismissSportMatching(matchingId, dismissed: false),
+    );
   }
 
   Future<int?> _chooseTeam(List<JsonMap> teams) => showModalBottomSheet<int>(
@@ -781,7 +714,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           ? Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                _c('Du bist keinem Team zugeordnet.', 'You are not assigned to a team.', 'Vous n’êtes affecté à aucune équipe.', 'لست منضمًا إلى أي فريق.'),
+                _c(
+                  'Du bist keinem Team zugeordnet.',
+                  'You are not assigned to a team.',
+                  'Vous n’êtes affecté à aucune équipe.',
+                  'لست منضمًا إلى أي فريق.',
+                ),
                 textAlign: TextAlign.center,
               ),
             )
@@ -791,8 +729,16 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
                   child: Text(
-                    _c('Team auswählen', 'Choose a team', 'Choisir une équipe', 'اختر فريقًا'),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                    _c(
+                      'Team auswählen',
+                      'Choose a team',
+                      'Choisir une équipe',
+                      'اختر فريقًا',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 ...teams.map(
@@ -822,11 +768,21 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('${matching['title'] ?? ''}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              Text(
+                '${matching['title'] ?? ''}',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text('${matching['description'] ?? _c('Keine zusätzliche Beschreibung.', 'No additional description.', 'Aucune description supplémentaire.', 'لا يوجد وصف إضافي.')}'),
+              Text(
+                '${matching['description'] ?? _c('Keine zusätzliche Beschreibung.', 'No additional description.', 'Aucune description supplémentaire.', 'لا يوجد وصف إضافي.')}',
+              ),
               const SizedBox(height: 12),
-              Text('${matching['address'] ?? matching['location_name'] ?? matching['city'] ?? ''}'),
+              Text(
+                '${matching['address'] ?? matching['location_name'] ?? matching['city'] ?? ''}',
+              ),
               if (ownerId > 0) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
@@ -835,7 +791,14 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                     _reportMatchingOwner(ownerId);
                   },
                   icon: const Icon(Icons.flag_outlined),
-                  label: Text(_c('Angebot melden', 'Report offer', 'Signaler l’offre', 'الإبلاغ عن العرض')),
+                  label: Text(
+                    _c(
+                      'Angebot melden',
+                      'Report offer',
+                      'Signaler l’offre',
+                      'الإبلاغ عن العرض',
+                    ),
+                  ),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
@@ -843,7 +806,14 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                     _blockMatchingOwner(ownerId);
                   },
                   icon: const Icon(Icons.block_outlined),
-                  label: Text(_c('Person blockieren', 'Block person', 'Bloquer la personne', 'حظر الشخص')),
+                  label: Text(
+                    _c(
+                      'Person blockieren',
+                      'Block person',
+                      'Bloquer la personne',
+                      'حظر الشخص',
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -856,7 +826,12 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
   Future<void> _reportMatchingOwner(int ownerId) async {
     final report = await showContentReportDialog(
       context,
-      title: _c('Sport-Angebot melden', 'Report sport offer', 'Signaler l’offre sportive', 'الإبلاغ عن العرض الرياضي'),
+      title: _c(
+        'Sport-Angebot melden',
+        'Report sport offer',
+        'Signaler l’offre sportive',
+        'الإبلاغ عن العرض الرياضي',
+      ),
     );
     if (report == null || !mounted) return;
     await _run(
@@ -873,11 +848,31 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(_c('Person blockieren?', 'Block this person?', 'Bloquer cette personne ?', 'حظر هذا الشخص؟')),
-        content: Text(_c('Weitere Angebote dieser Person werden ausgeblendet.', 'Further offers from this person will be hidden.', 'Les prochaines offres de cette personne seront masquées.', 'سيتم إخفاء العروض القادمة من هذا الشخص.')),
+        title: Text(
+          _c(
+            'Person blockieren?',
+            'Block this person?',
+            'Bloquer cette personne ?',
+            'حظر هذا الشخص؟',
+          ),
+        ),
+        content: Text(
+          _c(
+            'Weitere Angebote dieser Person werden ausgeblendet.',
+            'Further offers from this person will be hidden.',
+            'Les prochaines offres de cette personne seront masquées.',
+            'سيتم إخفاء العروض القادمة من هذا الشخص.',
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(_c('Abbrechen', 'Cancel', 'Annuler', 'إلغاء'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(_c('Blockieren', 'Block', 'Bloquer', 'حظر'))),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_c('Abbrechen', 'Cancel', 'Annuler', 'إلغاء')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_c('Blockieren', 'Block', 'Bloquer', 'حظر')),
+          ),
         ],
       ),
     );
@@ -895,12 +890,21 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
   IconData _sportIcon(JsonMap sport) {
     final value = '${sport['slug'] ?? ''} ${sport['name'] ?? ''}'.toLowerCase();
-    if (value.contains('football') || value.contains('fußball') || value.contains('soccer')) return Icons.sports_soccer;
+    if (value.contains('football') ||
+        value.contains('fußball') ||
+        value.contains('soccer'))
+      return Icons.sports_soccer;
     if (value.contains('basket')) return Icons.sports_basketball;
-    if (value.contains('tennis') || value.contains('padel')) return Icons.sports_tennis;
-    if (value.contains('swim') || value.contains('schwimm')) return Icons.pool_outlined;
-    if (value.contains('bike') || value.contains('rad') || value.contains('cycling')) return Icons.directions_bike;
-    if (value.contains('hike') || value.contains('wandern')) return Icons.hiking;
+    if (value.contains('tennis') || value.contains('padel'))
+      return Icons.sports_tennis;
+    if (value.contains('swim') || value.contains('schwimm'))
+      return Icons.pool_outlined;
+    if (value.contains('bike') ||
+        value.contains('rad') ||
+        value.contains('cycling'))
+      return Icons.directions_bike;
+    if (value.contains('hike') || value.contains('wandern'))
+      return Icons.hiking;
     return Icons.directions_run;
   }
 
@@ -1162,6 +1166,470 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     }
   }
 
+  Future<void> _openConfiguration(List<JsonMap> sports) async {
+    final cityController = TextEditingController(text: _cityController.text);
+    final sportController = TextEditingController(text: _sportController.text);
+    var mode = _mode;
+    var swipeView = _swipeView;
+    var sportId = _sportId;
+    var radiusKm = _radiusKm;
+    var skillFilter = _skillFilter;
+
+    final filters = await showModalBottomSheet<_SportMatchingFilters>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return FractionallySizedBox(
+            heightFactor: 0.9,
+            child: Material(
+              color: airmiusSurfaceColor(context),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  4,
+                  20,
+                  20 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _c(
+                              'Suche konfigurieren',
+                              'Configure search',
+                              'Configurer la recherche',
+                              'تهيئة البحث',
+                            ),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: _c('Schließen', 'Close', 'Fermer', 'إغلاق'),
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _c(
+                        'Verfeinere deine Ergebnisse. Die Suche wird erst nach dem Übernehmen aktualisiert.',
+                        'Refine your results. The search updates only after you apply the changes.',
+                        'Affinez vos résultats. La recherche est mise à jour après validation.',
+                        'حسّن نتائجك. يتم تحديث البحث بعد تطبيق التغييرات فقط.',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 18),
+                    Expanded(
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        children: [
+                          _configurationSectionLabel(
+                            context,
+                            _c(
+                              'Suchmodus',
+                              'Search mode',
+                              'Mode de recherche',
+                              'وضع البحث',
+                            ),
+                            Icons.swap_horiz,
+                          ),
+                          SegmentedButton<String>(
+                            segments: [
+                              ButtonSegment(
+                                value: 'partner',
+                                icon: const Icon(Icons.directions_run),
+                                label: Text(
+                                  _c(
+                                    'Sportpartner',
+                                    'Partners',
+                                    'Partenaires',
+                                    'شركاء',
+                                  ),
+                                ),
+                              ),
+                              ButtonSegment(
+                                value: 'team',
+                                icon: const Icon(Icons.groups_2_outlined),
+                                label: Text(
+                                  _c('Teamgegner', 'Teams', 'Équipes', 'فرق'),
+                                ),
+                              ),
+                            ],
+                            selected: {mode},
+                            onSelectionChanged: (values) =>
+                                setSheetState(() => mode = values.first),
+                          ),
+                          const SizedBox(height: 18),
+                          _configurationSectionLabel(
+                            context,
+                            _c('Ansicht', 'View', 'Affichage', 'العرض'),
+                            Icons.dashboard_outlined,
+                          ),
+                          SegmentedButton<bool>(
+                            segments: [
+                              ButtonSegment(
+                                value: true,
+                                icon: const Icon(Icons.bolt_outlined),
+                                label: Text(
+                                  _c(
+                                    'Entdecken',
+                                    'Discover',
+                                    'Découvrir',
+                                    'اكتشف',
+                                  ),
+                                ),
+                              ),
+                              ButtonSegment(
+                                value: false,
+                                icon: const Icon(Icons.view_list_outlined),
+                                label: Text(
+                                  _c('Liste', 'List', 'Liste', 'القائمة'),
+                                ),
+                              ),
+                            ],
+                            selected: {swipeView},
+                            onSelectionChanged: (values) =>
+                                setSheetState(() => swipeView = values.first),
+                          ),
+                          const SizedBox(height: 18),
+                          TextField(
+                            controller: cityController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(
+                                Icons.location_on_outlined,
+                              ),
+                              labelText: _c(
+                                'Ort',
+                                'Location',
+                                'Lieu',
+                                'الموقع',
+                              ),
+                              hintText: _c(
+                                'z. B. Kenitra',
+                                'e.g. Kenitra',
+                                'ex. Kénitra',
+                                'مثال: القنيطرة',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          if (sports.isNotEmpty)
+                            _MatchingSportAutocomplete(
+                              controller: sportController,
+                              sports: sports,
+                              hintText: _c(
+                                'Sportart',
+                                'Sport',
+                                'Sport',
+                                'الرياضة',
+                              ),
+                              allSportsLabel: _c(
+                                'Alle Sportarten',
+                                'All sports',
+                                'Tous les sports',
+                                'كل الرياضات',
+                              ),
+                              onTextChanged: () => setSheetState(() {
+                                sportId = null;
+                              }),
+                              onSelected: (sport) => setSheetState(() {
+                                sportId = sport == null
+                                    ? null
+                                    : _int(sport['id']);
+                              }),
+                            ),
+                          const SizedBox(height: 18),
+                          _configurationSectionLabel(
+                            context,
+                            _c('Umkreis', 'Radius', 'Rayon', 'النطاق'),
+                            Icons.radar_outlined,
+                          ),
+                          AirmiusPanel(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _c(
+                                        'Angebote in deiner Nähe',
+                                        'Offers near you',
+                                        'Offres près de vous',
+                                        'العروض القريبة منك',
+                                      ),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '$radiusKm km',
+                                    style: TextStyle(
+                                      color: airmiusAccentColor(context),
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Slider(
+                                value: radiusKm.toDouble(),
+                                min: 5,
+                                max: 500,
+                                divisions: 99,
+                                label: '$radiusKm km',
+                                onChanged: (value) => setSheetState(
+                                  () => radiusKm = value.round(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          _configurationSectionLabel(
+                            context,
+                            _c(
+                              'Leistungsniveau',
+                              'Skill level',
+                              'Niveau',
+                              'المستوى',
+                            ),
+                            Icons.speed_outlined,
+                          ),
+                          DropdownButtonFormField<String>(
+                            initialValue: skillFilter,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.speed_outlined),
+                              labelText: _c(
+                                'Niveau auswählen',
+                                'Choose level',
+                                'Choisir le niveau',
+                                'اختر المستوى',
+                              ),
+                            ),
+                            items: [
+                              for (final level in const [
+                                'all',
+                                'beginner',
+                                'recreational',
+                                'advanced',
+                                'competitive',
+                              ])
+                                DropdownMenuItem(
+                                  value: level,
+                                  child: Text(_skillLabel(level)),
+                                ),
+                            ],
+                            onChanged: (value) => setSheetState(() {
+                              if (value != null) skillFilter = value;
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              cityController.clear();
+                              sportController.clear();
+                              setSheetState(() {
+                                sportId = null;
+                                radiusKm = 25;
+                                skillFilter = 'all';
+                              });
+                            },
+                            child: Text(
+                              _c(
+                                'Zurücksetzen',
+                                'Reset',
+                                'Réinitialiser',
+                                'إعادة ضبط',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton.icon(
+                            onPressed: () => Navigator.pop(
+                              sheetContext,
+                              _SportMatchingFilters(
+                                mode: mode,
+                                swipeView: swipeView,
+                                city: cityController.text.trim(),
+                                sportName: sportController.text.trim(),
+                                sportId: sportId,
+                                radiusKm: radiusKm,
+                                skillLevel: skillFilter,
+                              ),
+                            ),
+                            icon: const Icon(Icons.check),
+                            label: Text(
+                              _c('Übernehmen', 'Apply', 'Appliquer', 'تطبيق'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    cityController.dispose();
+    sportController.dispose();
+    if (filters == null || !mounted) return;
+    setState(() {
+      _mode = filters.mode;
+      _swipeView = filters.swipeView;
+      _swipeOffset = 0;
+      _cityController.text = filters.city;
+      _sportController.text = filters.sportName;
+      _sportId = filters.sportId;
+      _radiusKm = filters.radiusKm;
+      _skillFilter = filters.skillLevel;
+    });
+    _reload();
+  }
+
+  Widget _configurationButton(List<JsonMap> sports) {
+    final city = _cityController.text.trim();
+    final sport = _sportController.text.trim();
+    final locationLabel = city.isEmpty
+        ? _c('Alle Orte', 'All locations', 'Tous les lieux', 'كل المواقع')
+        : city;
+    final sportLabel = sport.isEmpty
+        ? _c('Alle Sportarten', 'All sports', 'Tous les sports', 'كل الرياضات')
+        : sport;
+
+    return AirmiusPanel(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: airmiusAccentColor(context).withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.tune, color: airmiusAccentColor(context)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _c(
+                      'Suche konfigurieren',
+                      'Configure search',
+                      'Configurer la recherche',
+                      'تهيئة البحث',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _c(
+                      'Ort, Sportart, Umkreis und Niveau an einem Ort.',
+                      'Location, sport, radius and level in one place.',
+                      'Lieu, sport, rayon et niveau au même endroit.',
+                      'الموقع والرياضة والنطاق والمستوى في مكان واحد.',
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _configurationChip(
+              _mode == 'team' ? Icons.groups_2_outlined : Icons.directions_run,
+              _mode == 'team'
+                  ? _c(
+                      'Teamgegner',
+                      'Team opponents',
+                      'Équipes adverses',
+                      'فرق منافسة',
+                    )
+                  : _c(
+                      'Sportpartner',
+                      'Sport partners',
+                      'Partenaires sportifs',
+                      'شركاء رياضيون',
+                    ),
+            ),
+            _configurationChip(
+              _swipeView ? Icons.bolt_outlined : Icons.view_list_outlined,
+              _swipeView
+                  ? _c('Entdecken', 'Discover', 'Découvrir', 'اكتشف')
+                  : _c('Liste', 'List', 'Liste', 'القائمة'),
+            ),
+            _configurationChip(Icons.location_on_outlined, locationLabel),
+            _configurationChip(Icons.sports_outlined, sportLabel),
+            _configurationChip(Icons.radar_outlined, '$_radiusKm km'),
+            _configurationChip(Icons.speed_outlined, _skillLabel(_skillFilter)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: _busy ? null : () => _openConfiguration(sports),
+          icon: const Icon(Icons.tune),
+          label: Text(_c('Konfigurieren', 'Configure', 'Configurer', 'تهيئة')),
+        ),
+      ],
+    );
+  }
+
+  Widget _configurationChip(IconData icon, String label) => Chip(
+    avatar: Icon(icon, size: 17, color: airmiusAccentColor(context)),
+    label: Text(label),
+    visualDensity: VisualDensity.compact,
+  );
+
+  Widget _configurationSectionLabel(
+    BuildContext context,
+    String label,
+    IconData icon,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Icon(icon, size: 19, color: airmiusAccentColor(context)),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
+      ],
+    ),
+  );
+
   static List<JsonMap> _maps(Object? value) =>
       value is List ? value.whereType<JsonMap>().toList() : const [];
 
@@ -1270,7 +1738,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
                     value: int.tryParse('${team['id']}') ?? 0,
                     child: Text('${team['name']}'),
                   ),
-            )
+                )
                 .toList(),
             onChanged: (value) => _teamId = value,
           ),
@@ -1285,12 +1753,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
           controller: _location,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            labelText: _copy(
-              'Stadt / Ort',
-              'City',
-              'Ville',
-              'المدينة',
-            ),
+            labelText: _copy('Stadt / Ort', 'City', 'Ville', 'المدينة'),
             hintText: _copy(
               'z. B. Kenitra',
               'e.g. Kenitra',
@@ -1364,9 +1827,7 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Datum und Uhrzeit'),
-          subtitle: Text(
-            _formatMatchingDateTime(context, _startsAt),
-          ),
+          subtitle: Text(_formatMatchingDateTime(context, _startsAt)),
           trailing: const Icon(Icons.schedule),
           onTap: () async {
             final date = await showDatePicker(
@@ -1397,10 +1858,22 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
         const SizedBox(height: 4),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(_copy('Ende (optional)', 'End (optional)', 'Fin (facultatif)', 'النهاية (اختياري)')),
+          title: Text(
+            _copy(
+              'Ende (optional)',
+              'End (optional)',
+              'Fin (facultatif)',
+              'النهاية (اختياري)',
+            ),
+          ),
           subtitle: Text(
             _endsAt == null
-                ? _copy('Keine Endzeit', 'No end time', 'Aucune heure de fin', 'لا يوجد وقت نهاية')
+                ? _copy(
+                    'Keine Endzeit',
+                    'No end time',
+                    'Aucune heure de fin',
+                    'لا يوجد وقت نهاية',
+                  )
                 : _formatMatchingDateTime(context, _endsAt!),
           ),
           trailing: const Icon(Icons.event_available_outlined),
@@ -1417,11 +1890,26 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
               initialTime: TimeOfDay.fromDateTime(_endsAt ?? _startsAt),
             );
             if (time == null) return;
-            final value = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+            final value = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              time.hour,
+              time.minute,
+            );
             if (!value.isAfter(_startsAt)) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(_copy('Das Ende muss nach dem Beginn liegen.', 'The end must be after the start.', 'La fin doit être après le début.', 'يجب أن تكون النهاية بعد البداية.'))),
+                  SnackBar(
+                    content: Text(
+                      _copy(
+                        'Das Ende muss nach dem Beginn liegen.',
+                        'The end must be after the start.',
+                        'La fin doit être après le début.',
+                        'يجب أن تكون النهاية بعد البداية.',
+                      ),
+                    ),
+                  ),
                 );
               }
               return;
@@ -1466,11 +1954,14 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
             prefixIcon: const Icon(Icons.speed_outlined),
           ),
           items: [
-            for (final level in const ['all', 'beginner', 'recreational', 'advanced', 'competitive'])
-              DropdownMenuItem(
-                value: level,
-                child: Text(_skillLabel(level)),
-              ),
+            for (final level in const [
+              'all',
+              'beginner',
+              'recreational',
+              'advanced',
+              'competitive',
+            ])
+              DropdownMenuItem(value: level, child: Text(_skillLabel(level))),
           ],
           onChanged: (value) {
             if (value != null) setState(() => _skillLevel = value);
@@ -1533,7 +2024,12 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
     'recreational' => _copy('Freizeit', 'Recreational', 'Loisir', 'ترفيهي'),
     'advanced' => _copy('Fortgeschritten', 'Advanced', 'Avancé', 'متقدم'),
     'competitive' => _copy('Wettkampf', 'Competitive', 'Compétition', 'تنافسي'),
-    _ => _copy('Alle Niveaus', 'All levels', 'Tous les niveaux', 'كل المستويات'),
+    _ => _copy(
+      'Alle Niveaus',
+      'All levels',
+      'Tous les niveaux',
+      'كل المستويات',
+    ),
   };
 
   static int _int(Object? value) => int.tryParse('$value') ?? 0;
@@ -1542,6 +2038,26 @@ class _CreateMatchingSheetState extends State<_CreateMatchingSheet> {
 String _formatMatchingDateTime(BuildContext context, DateTime value) {
   final localizations = MaterialLocalizations.of(context);
   return '${localizations.formatMediumDate(value)} · ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(value), alwaysUse24HourFormat: true)} Uhr';
+}
+
+class _SportMatchingFilters {
+  const _SportMatchingFilters({
+    required this.mode,
+    required this.swipeView,
+    required this.city,
+    required this.sportName,
+    required this.sportId,
+    required this.radiusKm,
+    required this.skillLevel,
+  });
+
+  final String mode;
+  final bool swipeView;
+  final String city;
+  final String sportName;
+  final int? sportId;
+  final int radiusKm;
+  final String skillLevel;
 }
 
 class _MatchingSportAutocomplete extends StatelessWidget {

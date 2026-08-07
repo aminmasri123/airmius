@@ -1908,10 +1908,16 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Sportpartner'), findsOneWidget);
-    expect(find.text('Teamgegner'), findsOneWidget);
+    expect(find.text('Sportpartner'), findsWidgets);
+    expect(find.text('Teamgegner'), findsNothing);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);
+
+    await tester.tap(find.text('Konfigurieren'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sportpartner'), findsWidgets);
+    expect(find.text('Teamgegner'), findsOneWidget);
 
     final sportSearch = find.byWidgetPredicate(
       (widget) =>
@@ -1919,17 +1925,25 @@ void main() {
           widget.decoration?.labelText?.startsWith('Wunschsport suchen') ==
               true,
     );
-    expect(sportSearch, findsOneWidget);
-    await tester.enterText(sportSearch, 'Lauf');
+    expect(sportSearch, findsNothing);
+
+    final sportConfigurationSearch = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.labelText == 'Sportart',
+    );
+    expect(sportConfigurationSearch, findsOneWidget);
+    await tester.enterText(sportConfigurationSearch, 'Lauf');
     await tester.pump();
     expect(find.text('Laufen'), findsWidgets);
     await tester.tap(find.widgetWithText(ListTile, 'Laufen'));
     await tester.pump();
+    await tester.tap(find.text('Übernehmen'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Suche erstellen'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ort oder Adresse'), findsOneWidget);
+    expect(find.text('Stadt / Ort'), findsOneWidget);
     expect(find.text('Land'), findsOneWidget);
     expect(find.text('Land (ISO)'), findsNothing);
     expect(find.text('Deutschland'), findsOneWidget);
@@ -7728,8 +7742,7 @@ void main() {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 201,
-        body:
-            '{"data":{"file_id":42,"shared":true,"target_user_id":99}}',
+        body: '{"data":{"file_id":42,"shared":true,"target_user_id":99}}',
       ),
     );
     final client = AirmiusApiClient(
