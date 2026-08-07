@@ -1908,7 +1908,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Sportpartner'), findsWidgets);
+    expect(find.text('Sportpartner'), findsOneWidget);
     expect(find.text('Teamgegner'), findsNothing);
     expect(find.text('Lauf in Kenitra'), findsOneWidget);
     expect(find.textContaining('Kenitra'), findsWidgets);

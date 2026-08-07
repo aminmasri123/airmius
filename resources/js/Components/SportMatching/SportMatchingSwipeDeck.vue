@@ -199,7 +199,7 @@ const blockCurrent = () => {
 </script>
 
 <template>
-    <section class="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#081526] p-4 shadow-[0_22px_70px_rgba(8,21,38,0.2)] sm:p-7">
+    <section class="relative overflow-hidden rounded-[30px] border border-border bg-gradient-to-br from-card via-muted/45 to-card p-4 text-primary shadow-[0_22px_70px_rgba(15,23,42,0.10)] sm:p-7">
         <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-air-blue/15 blur-3xl"></div>
         <div class="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-air-green/10 blur-3xl"></div>
 
@@ -208,8 +208,8 @@ const blockCurrent = () => {
                 <i class="las la-bolt"></i>
                 Sport entdecken
             </div>
-            <h2 class="mt-3 text-2xl font-black tracking-[-0.03em] text-white sm:text-3xl">Finde deinen nächsten Sport-Moment</h2>
-            <p class="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-300">Wische nach links, wenn es nicht passt, oder nach rechts, um Interesse zu senden. Fotos sind nicht erforderlich – hier zählen Sportart, Ort und gemeinsamer Termin.</p>
+            <h2 class="mt-3 text-2xl font-black tracking-[-0.03em] text-primary sm:text-3xl">Finde deinen nächsten Sport-Moment</h2>
+            <p class="mx-auto mt-2 max-w-lg text-sm leading-6 text-secondary">Wische nach links, wenn es nicht passt, oder nach rechts, um Interesse zu senden. Fotos sind nicht erforderlich – hier zählen Sportart, Ort und gemeinsamer Termin.</p>
         </div>
 
         <div v-if="feedback" class="relative z-30 mx-auto mt-4 max-w-xl rounded-xl border px-4 py-3 text-center text-sm font-bold" :class="{
@@ -223,10 +223,10 @@ const blockCurrent = () => {
 
         <div v-if="currentCard" class="relative z-10 mx-auto mt-7 max-w-xl">
             <div class="relative h-[560px] sm:h-[590px]">
-                <div v-if="nextCard" class="absolute inset-x-2 top-2 h-full rounded-[1.75rem] border border-white/10 bg-white/10 shadow-lg" :style="cardStyle(nextCard, 1)"></div>
+                <div v-if="nextCard" class="absolute inset-x-2 top-2 h-full rounded-[1.75rem] border border-border bg-muted shadow-lg" :style="cardStyle(nextCard, 1)"></div>
 
                 <article
-                    class="absolute inset-0 flex touch-none select-none flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-card shadow-2xl"
+                    class="absolute inset-0 flex touch-none select-none flex-col overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-2xl"
                     :class="{ 'cursor-grabbing': isDragging, 'cursor-grab': !isDragging }"
                     :style="cardTransform"
                     @pointerdown="startDrag"
@@ -293,7 +293,7 @@ const blockCurrent = () => {
                 </article>
             </div>
 
-            <div class="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-slate-400">
+            <div class="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-secondary">
                 <span class="flex items-center gap-1"><i class="las la-arrow-left text-air-blue"></i> Nicht jetzt</span>
                 <span class="h-1 w-1 rounded-full bg-secondary/50"></span>
                 <span>{{ actionHint }}</span>
@@ -302,7 +302,7 @@ const blockCurrent = () => {
             </div>
 
             <div class="mt-5 flex items-center justify-center gap-4">
-                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-white" :disabled="!hiddenIds.length || isAnimating" aria-label="Letztes Angebot zurück" @click="undo">
+                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-inputBg text-secondary shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-primary" :disabled="!hiddenIds.length || isAnimating" aria-label="Letztes Angebot zurück" @click="undo">
                     <i class="las la-undo text-xl"></i>
                 </button>
                 <button type="button" class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-400/50 bg-red-400/10 text-red-300 shadow-lg transition hover:-translate-y-1 hover:bg-red-400/20" :disabled="isAnimating" aria-label="Angebot überspringen" @click="commitSwipe('left')">
@@ -311,23 +311,23 @@ const blockCurrent = () => {
                 <button type="button" class="flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/60 bg-emerald-400/15 text-emerald-300 shadow-lg transition hover:-translate-y-1 hover:bg-emerald-400/25" :disabled="isAnimating" aria-label="Interesse senden" @click="commitSwipe('right')">
                     <i class="las la-check text-3xl"></i>
                 </button>
-                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-white" aria-label="Angebotsdetails" @click="showFeedback('neutral', 'Alle Details stehen direkt auf der Karte.')">
+                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-inputBg text-secondary shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-primary" aria-label="Angebotsdetails" @click="showFeedback('neutral', 'Alle Details stehen direkt auf der Karte.')">
                     <i class="las la-info text-xl"></i>
                 </button>
             </div>
-            <div class="mt-4 flex justify-center gap-4 text-xs font-bold text-slate-400">
-                <button type="button" class="hover:text-white" @click="reportCurrent"><i class="las la-flag me-1"></i>Melden</button>
-                <button type="button" class="hover:text-white" @click="blockCurrent"><i class="las la-ban me-1"></i>Blockieren</button>
+            <div class="mt-4 flex justify-center gap-4 text-xs font-bold text-secondary">
+                <button type="button" class="hover:text-primary" @click="reportCurrent"><i class="las la-flag me-1"></i>Melden</button>
+                <button type="button" class="hover:text-primary" @click="blockCurrent"><i class="las la-ban me-1"></i>Blockieren</button>
             </div>
         </div>
 
-        <div v-else class="relative z-10 mx-auto mt-8 max-w-lg rounded-3xl border border-dashed border-air-blue/30 bg-white/5 p-8 text-center">
+        <div v-else class="relative z-10 mx-auto mt-8 max-w-lg rounded-3xl border border-dashed border-border bg-muted p-8 text-center">
             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-air-blue/10 text-3xl text-air-blue"><i class="las la-check-double"></i></div>
-            <h3 class="mt-4 text-xl font-black text-white">Du bist auf dem neuesten Stand</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-300">Keine weiteren passenden Sportangebote in diesem Feed. Ändere den Ort oder die Sportart im Filter, um neue Karten zu entdecken.</p>
+            <h3 class="mt-4 text-xl font-black text-primary">Du bist auf dem neuesten Stand</h3>
+            <p class="mt-2 text-sm leading-6 text-secondary">Keine weiteren passenden Sportangebote in diesem Feed. Ändere den Ort oder die Sportart im Filter, um neue Karten zu entdecken.</p>
             <button v-if="hiddenIds.length" type="button" class="mt-5 rounded-xl border border-air-blue px-5 py-3 text-sm font-bold text-air-blue transition hover:bg-air-blue/10" @click="hiddenIds = []">Übersprungene Karten wieder anzeigen</button>
         </div>
 
-        <p class="relative z-10 mt-6 text-center text-xs text-slate-400">Deine Entscheidung ist privat. Erst bei gegenseitigem Interesse oder einer Bestätigung werden weitere Schritte sichtbar.</p>
+        <p class="relative z-10 mt-6 text-center text-xs text-secondary">Deine Entscheidung ist privat. Erst bei gegenseitigem Interesse oder einer Bestätigung werden weitere Schritte sichtbar.</p>
     </section>
 </template>

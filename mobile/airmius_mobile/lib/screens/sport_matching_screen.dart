@@ -1523,108 +1523,26 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     _reload();
   }
 
-  Widget _configurationButton(List<JsonMap> sports) {
-    final city = _cityController.text.trim();
-    final sport = _sportController.text.trim();
-    final locationLabel = city.isEmpty
-        ? _c('Alle Orte', 'All locations', 'Tous les lieux', 'كل المواقع')
-        : city;
-    final sportLabel = sport.isEmpty
-        ? _c('Alle Sportarten', 'All sports', 'Tous les sports', 'كل الرياضات')
-        : sport;
-
-    return AirmiusPanel(
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: airmiusAccentColor(context).withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(Icons.tune, color: airmiusAccentColor(context)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _c(
-                      'Suche konfigurieren',
-                      'Configure search',
-                      'Configurer la recherche',
-                      'تهيئة البحث',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    _c(
-                      'Ort, Sportart, Umkreis und Niveau an einem Ort.',
-                      'Location, sport, radius and level in one place.',
-                      'Lieu, sport, rayon et niveau au même endroit.',
-                      'الموقع والرياضة والنطاق والمستوى في مكان واحد.',
-                    ),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _configurationChip(
-              _mode == 'team' ? Icons.groups_2_outlined : Icons.directions_run,
-              _mode == 'team'
-                  ? _c(
-                      'Teamgegner',
-                      'Team opponents',
-                      'Équipes adverses',
-                      'فرق منافسة',
-                    )
-                  : _c(
-                      'Sportpartner',
-                      'Sport partners',
-                      'Partenaires sportifs',
-                      'شركاء رياضيون',
-                    ),
-            ),
-            _configurationChip(
-              _swipeView ? Icons.bolt_outlined : Icons.view_list_outlined,
-              _swipeView
-                  ? _c('Entdecken', 'Discover', 'Découvrir', 'اكتشف')
-                  : _c('Liste', 'List', 'Liste', 'القائمة'),
-            ),
-            _configurationChip(Icons.location_on_outlined, locationLabel),
-            _configurationChip(Icons.sports_outlined, sportLabel),
-            _configurationChip(Icons.radar_outlined, '$_radiusKm km'),
-            _configurationChip(Icons.speed_outlined, _skillLabel(_skillFilter)),
-          ],
-        ),
-        const SizedBox(height: 14),
-        FilledButton.icon(
+  Widget _topActions(List<JsonMap> sports) => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton.icon(
           onPressed: _busy ? null : () => _openConfiguration(sports),
           icon: const Icon(Icons.tune),
           label: Text(_c('Konfigurieren', 'Configure', 'Configurer', 'تهيئة')),
         ),
-      ],
-    );
-  }
-
-  Widget _configurationChip(IconData icon, String label) => Chip(
-    avatar: Icon(icon, size: 17, color: airmiusAccentColor(context)),
-    label: Text(label),
-    visualDensity: VisualDensity.compact,
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: FilledButton.icon(
+          onPressed: _busy ? null : _openCreate,
+          icon: const Icon(Icons.add),
+          label: Text(
+            _c('Suche erstellen', 'Create search', 'Créer', 'إنشاء بحث'),
+          ),
+        ),
+      ),
+    ],
   );
 
   Widget _configurationSectionLabel(
