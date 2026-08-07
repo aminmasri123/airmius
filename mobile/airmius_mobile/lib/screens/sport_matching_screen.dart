@@ -5,6 +5,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/content_report_dialog.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -73,65 +74,83 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _c(
-            'Sport-Matching',
-            'Sport matching',
-            'Matching sportif',
-            'مطابقة رياضية',
+    final globalThemeScope = AirmiusThemeModeScope.of(context);
+    final isDark =
+        globalThemeScope.mode == ThemeMode.dark ||
+        (globalThemeScope.mode == ThemeMode.system &&
+            Theme.of(context).brightness == Brightness.dark);
+    final matchingTheme = isDark
+        ? AirmiusTheme.dark(AirmiusThemePalette.air)
+        : AirmiusTheme.light(AirmiusThemePalette.air);
+
+    return Theme(
+      data: matchingTheme,
+      child: AirmiusThemeModeScope(
+        mode: globalThemeScope.mode,
+        setMode: globalThemeScope.setMode,
+        palette: AirmiusThemePalette.air,
+        setPalette: globalThemeScope.setPalette,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              _c(
+                'Sport-Matching',
+                'Sport matching',
+                'Matching sportif',
+                'مطابقة رياضية',
+              ),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            actions: [
+              IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
+            ],
           ),
-          style: const TextStyle(fontWeight: FontWeight.w900),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _busy ? null : () => _openCreate(),
+            icon: const Icon(Icons.add),
+            label: Text(
+              _c('Suche erstellen', 'Create search', 'Créer', 'إنشاء بحث'),
+            ),
+          ),
+          body: FutureBuilder<JsonMap>(
+            future: _future,
+            builder: (context, snapshot) {
+              final data = snapshot.data;
+              final meta = data?['meta'] is JsonMap
+                  ? data!['meta'] as JsonMap
+                  : const <String, dynamic>{};
+              final sports = _maps(meta['sports']);
+              return PageFrame(
+                title: _c(
+                  'Gemeinsam Sport machen',
+                  'Play sports together',
+                  'Faire du sport ensemble',
+                  'مارس الرياضة مع الآخرين',
+                ),
+                subtitle: _c(
+                  'Finde Personen oder ein gegnerisches Team – unabhängig von der Sportart.',
+                  'Find people or an opposing team, for any sport.',
+                  'Trouvez des partenaires ou une équipe adverse, pour tous les sports.',
+                  'ابحث عن شركاء أو فريق منافس لأي رياضة.',
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 16),
+                    _configurationButton(sports),
+                    const SizedBox(height: 16),
+                    if (snapshot.connectionState == ConnectionState.waiting)
+                      const Center(child: CircularProgressIndicator())
+                    else if (snapshot.hasError)
+                      _error(snapshot.error)
+                    else
+                      _matchingList(data ?? const {}, meta),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-        actions: [
-          IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _busy ? null : () => _openCreate(),
-        icon: const Icon(Icons.add),
-        label: Text(
-          _c('Suche erstellen', 'Create search', 'Créer', 'إنشاء بحث'),
-        ),
-      ),
-      body: FutureBuilder<JsonMap>(
-        future: _future,
-        builder: (context, snapshot) {
-          final data = snapshot.data;
-          final meta = data?['meta'] is JsonMap
-              ? data!['meta'] as JsonMap
-              : const <String, dynamic>{};
-          final sports = _maps(meta['sports']);
-          return PageFrame(
-            title: _c(
-              'Gemeinsam Sport machen',
-              'Play sports together',
-              'Faire du sport ensemble',
-              'مارس الرياضة مع الآخرين',
-            ),
-            subtitle: _c(
-              'Finde Personen oder ein gegnerisches Team – unabhängig von der Sportart.',
-              'Find people or an opposing team, for any sport.',
-              'Trouvez des partenaires ou une équipe adverse, pour tous les sports.',
-              'ابحث عن شركاء أو فريق منافس لأي رياضة.',
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 16),
-                _configurationButton(sports),
-                const SizedBox(height: 16),
-                if (snapshot.connectionState == ConnectionState.waiting)
-                  const Center(child: CircularProgressIndicator())
-                else if (snapshot.hasError)
-                  _error(snapshot.error)
-                else
-                  _matchingList(data ?? const {}, meta),
-              ],
-            ),
-          );
-        },
       ),
     );
   }
