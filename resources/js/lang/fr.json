@@ -7753,6 +7753,29 @@
     "uploaded_at": "Téléversé",
     "location": "Espace",
     "unknown": "Inconnu",
+    "rights": {
+      "title": "Accès et droits",
+      "subtitle": "Qui peut utiliser ce fichier ?",
+      "read": "Lire",
+      "edit": "Modifier",
+      "share": "Partager",
+      "delete": "Supprimer",
+      "allowed": "Vous pouvez le faire",
+      "not_allowed": "Non autorisé",
+      "audience": {
+        "owner": "Propriétaire uniquement",
+        "club_members": "Tous les membres du club",
+        "team_members": "Tous les membres de l’équipe",
+        "event_members": "Participants et membres de l’équipe ou du club",
+        "club_file_managers": "Membres du club avec gestion des fichiers",
+        "team_file_managers": "Membres de l’équipe avec gestion des fichiers",
+        "event_file_managers": "Utilisateurs autorisés dans l’événement, l’équipe ou le club",
+        "club_file_managers_with_delete": "Membres du club avec droit de suppression",
+        "team_file_managers_with_delete": "Membres de l’équipe avec droit de suppression",
+        "event_file_managers_with_delete": "Utilisateurs autorisés avec droit de suppression",
+        "readers_with_friendship": "Lecteurs qui sont aussi amis"
+      }
+    },
     "storage": "Espace de stockage",
     "free": "libres",
     "used": "utilisés",
@@ -7777,7 +7800,6 @@
     "folder": "Dossier",
     "file": "Fichier",
     "friend": "Ami",
-    "external_email": "E-mail externe",
     "friend_search": "Rechercher un ami",
     "scope": {
       "user": "Mes fichiers",

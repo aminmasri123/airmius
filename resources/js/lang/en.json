@@ -7774,6 +7774,29 @@
     "uploaded_at": "Uploaded",
     "location": "Area",
     "unknown": "Unknown",
+    "rights": {
+      "title": "Access & permissions",
+      "subtitle": "Who can use this file?",
+      "read": "Read",
+      "edit": "Edit",
+      "share": "Share",
+      "delete": "Delete",
+      "allowed": "You can do this",
+      "not_allowed": "Not allowed",
+      "audience": {
+        "owner": "Owner only",
+        "club_members": "All club members",
+        "team_members": "All team members",
+        "event_members": "Participants and team or club members",
+        "club_file_managers": "Club members with file management access",
+        "team_file_managers": "Team members with file management access",
+        "event_file_managers": "Authorized users in the event, team or club area",
+        "club_file_managers_with_delete": "Club members with delete permission",
+        "team_file_managers_with_delete": "Team members with delete permission",
+        "event_file_managers_with_delete": "Authorized users with delete permission",
+        "readers_with_friendship": "Readers who are also friends"
+      }
+    },
     "storage": "Storage",
     "free": "free",
     "used": "used",
@@ -7798,7 +7821,6 @@
     "folder": "Folder",
     "file": "File",
     "friend": "Friend",
-    "external_email": "External email",
     "friend_search": "Search friends",
     "scope": {
       "user": "My files",

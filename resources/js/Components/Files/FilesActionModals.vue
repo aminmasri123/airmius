@@ -33,7 +33,6 @@ defineProps({
     setRenameFolderInputElement: { type: Function, required: true },
     setRenameFileInputElement: { type: Function, required: true },
     setShareTargetSelectElement: { type: Function, required: true },
-    setShareEmailInputElement: { type: Function, required: true },
 })
 </script>
 
@@ -114,39 +113,26 @@ defineProps({
     <Modal :show="showShareModal" max-width="md" @close="setShowShareModal(false)">
         <div class="space-y-4 text-primary">
             <h2 class="text-lg font-bold">{{ shareType === 'folder' ? tx('files.share_folder') : tx('files.share_file') }}</h2>
-            <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="resetShareTarget">
-                <option value="user">{{ tx('files.friend') }}</option>
-                <option v-if="shareType === 'file'" value="email">{{ tx('files.external_email') }}</option>
-            </select>
+            <p class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-secondary">{{ tx('files.internal_share_only') }}</p>
             <input
-                v-if="shareForm.target_type === 'user'"
                 :value="friendSearch"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                 :placeholder="tx('files.friend_search')"
                 @input="setFriendSearch($event.target.value)"
             >
             <select
-                v-if="shareForm.target_type === 'user'"
                 :ref="setShareTargetSelectElement"
                 v-model="shareForm.target_id"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
             >
                 <option value="">{{ tx('files.select') }}</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
-                    {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
+                    {{ target.name }}
                 </option>
             </select>
-            <input
-                v-else
-                :ref="setShareEmailInputElement"
-                v-model="shareForm.email"
-                type="email"
-                class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="name@example.com"
-            >
             <button
                 type="button"
-                :disabled="shareForm.processing || (shareForm.target_type === 'user' ? !shareForm.target_id : !shareForm.email)"
+                :disabled="shareForm.processing || !shareForm.target_id"
                 class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 @click="shareItem"
             >
@@ -155,4 +141,3 @@ defineProps({
         </div>
     </Modal>
 </template>
-

@@ -3198,6 +3198,51 @@ class AirmiusFolder {
   );
 }
 
+class AirmiusFileAccessRight {
+  const AirmiusFileAccessRight({required this.audience, required this.allowed});
+
+  final String audience;
+  final bool allowed;
+
+  factory AirmiusFileAccessRight.fromJson(JsonMap json) =>
+      AirmiusFileAccessRight(
+        audience: _string(json['audience'], fallback: 'owner'),
+        allowed: _bool(json['allowed']),
+      );
+}
+
+class AirmiusFileAccessRights {
+  const AirmiusFileAccessRights({required this.scope, required this.rights});
+
+  final String scope;
+  final Map<String, AirmiusFileAccessRight> rights;
+
+  AirmiusFileAccessRight? operator [](String key) => rights[key];
+
+  factory AirmiusFileAccessRights.fromJson(JsonMap json) {
+    final rightsJson = json['rights'] is JsonMap
+        ? json['rights'] as JsonMap
+        : const <String, dynamic>{};
+
+    return AirmiusFileAccessRights(
+      scope: _string(json['scope'], fallback: 'personal'),
+      rights: Map<String, AirmiusFileAccessRight>.fromEntries(
+        rightsJson.entries.map(
+          (entry) => MapEntry(
+            entry.key.toString(),
+            entry.value is JsonMap
+                ? AirmiusFileAccessRight.fromJson(entry.value as JsonMap)
+                : const AirmiusFileAccessRight(
+                    audience: 'owner',
+                    allowed: false,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AirmiusManagedFile {
   const AirmiusManagedFile({
     required this.id,
@@ -3209,6 +3254,7 @@ class AirmiusManagedFile {
     this.previewUrl,
     this.createdAt,
     this.folderId,
+    this.accessRights,
   });
 
   final int id;
@@ -3220,6 +3266,7 @@ class AirmiusManagedFile {
   final String? previewUrl;
   final DateTime? createdAt;
   final int? folderId;
+  final AirmiusFileAccessRights? accessRights;
 
   factory AirmiusManagedFile.fromJson(JsonMap json) => AirmiusManagedFile(
     id: _int(json['id']),
@@ -3231,6 +3278,9 @@ class AirmiusManagedFile {
     previewUrl: _nullableString(json['preview_url']),
     createdAt: _optionalDate(json['created_at']),
     folderId: _nullableInt(json['folder_id']),
+    accessRights: json['access_rights'] is JsonMap
+        ? AirmiusFileAccessRights.fromJson(json['access_rights'] as JsonMap)
+        : null,
   );
 }
 
@@ -3311,7 +3361,7 @@ abstract class AirmiusFileRepository {
   Future<JsonMap> shareFolder(int folderId, int targetUserId);
   Future<AirmiusManagedFile> renameFile(int fileId, String name);
   Future<void> deleteFile(int fileId);
-  Future<JsonMap> createFileShare(int fileId, {int expiresInDays = 14});
+  Future<JsonMap> shareFile(int fileId, int targetUserId);
 }
 
 abstract class AirmiusEventRepository {

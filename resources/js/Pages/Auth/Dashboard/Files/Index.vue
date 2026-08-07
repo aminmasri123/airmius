@@ -63,6 +63,13 @@ const uploadTeamId = ref(null)
 const SEARCH_DEBOUNCE_MS = 350
 let searchDebounceTimer = null
 
+const rightsRows = [
+    { key: 'read', label: 'files.rights.read', icon: 'la-eye' },
+    { key: 'edit', label: 'files.rights.edit', icon: 'la-pen' },
+    { key: 'share', label: 'files.rights.share', icon: 'la-share-alt' },
+    { key: 'delete', label: 'files.rights.delete', icon: 'la-trash' },
+]
+
 const scopeForm = useForm({
     scope: props.scope.type || 'user',
     club_id: props.scope.club_id,
@@ -92,7 +99,6 @@ const folderForm = useForm({
 const shareForm = useForm({
     target_type: 'user',
     target_id: '',
-    email: '',
 })
 
 const renameForm = useForm({
@@ -103,7 +109,6 @@ const deleteConfirmationInputRef = ref(null)
 const renameFolderInputRef = ref(null)
 const renameFileInputRef = ref(null)
 const shareTargetSelectRef = ref(null)
-const shareEmailInputRef = ref(null)
 
 const scopeOptions = [
     { value: 'user', label: tx('files.scope.user') },
@@ -146,7 +151,7 @@ const shareTargets = computed(() => {
 
     if (!query) return props.users
 
-    return props.users.filter((user) => `${user.name || ''} ${user.email || ''}`.toLowerCase().includes(query))
+    return props.users.filter((user) => `${user.name || ''}`.toLowerCase().includes(query))
 })
 const fileItems = computed(() => {
     if (Array.isArray(props.files)) return props.files
@@ -466,7 +471,6 @@ const openShare = (item, type = 'file') => {
     shareType.value = type
     shareForm.target_type = 'user'
     shareForm.target_id = props.users[0]?.id || ''
-    shareForm.email = ''
     friendSearch.value = ''
     showShareModal.value = true
 }
@@ -482,7 +486,7 @@ const shareItem = () => {
         preserveScroll: true,
         onSuccess: () => {
             showShareModal.value = false
-            shareForm.reset('email')
+            shareForm.reset('target_id')
         },
     })
 }
@@ -506,6 +510,13 @@ const formatStorage = (size) => {
 
 const fileName = (file) => file.display_name || file.path.split('/').pop()
 const contextLabel = (file) => file.event?.title || file.team?.name || file.club?.name || 'Privat'
+const fileRight = (file, action) => file?.access_rights?.rights?.[action] || null
+const fileRightAllowed = (file, action) => fileRight(file, action)?.allowed === true
+const fileRightAudience = (file, action) => {
+    const audience = fileRight(file, action)?.audience
+
+    return audience ? tx(`files.rights.audience.${audience}`) : tx('files.unknown')
+}
 
 const clearSearch = () => {
     fileSearch.value = ''
@@ -608,12 +619,7 @@ watch(showShareModal, async (show) => {
 
     await nextTick()
 
-    if (shareForm.target_type === 'user') {
-        shareTargetSelectRef.value?.focus()
-        return
-    }
-
-    shareEmailInputRef.value?.focus()
+    shareTargetSelectRef.value?.focus()
 })
 </script>
 
@@ -869,6 +875,7 @@ watch(showShareModal, async (show) => {
                                     <i class="las la-ellipsis-v"></i>
                                 </button>
                                 <button
+                                    v-if="fileRightAllowed(file, 'share')"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
@@ -879,6 +886,7 @@ watch(showShareModal, async (show) => {
                                     <i class="las la-share-alt"></i>
                                 </button>
                                 <button
+                                    v-if="fileRightAllowed(file, 'edit')"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
@@ -888,10 +896,11 @@ watch(showShareModal, async (show) => {
                                 >
                                     <i class="las la-pen"></i>
                                 </button>
-                                <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" :title="tx('files.download')" :aria-label="tx('files.download_file')">
+                                <a v-if="fileRightAllowed(file, 'read')" :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" :title="tx('files.download')" :aria-label="tx('files.download_file')">
                                     <i class="las la-download"></i>
                                 </a>
                                 <button
+                                    v-if="fileRightAllowed(file, 'delete')"
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
                                     :disabled="isFiltering"
@@ -1208,33 +1217,21 @@ watch(showShareModal, async (show) => {
     <Modal :show="showShareModal" max-width="md" @close="showShareModal = false">
         <div class="space-y-4 text-primary">
             <h2 class="text-lg font-bold">{{ shareType === 'folder' ? tx('files.folder') : tx('files.file') }} {{ tx('files.share') }}</h2>
-            <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="shareForm.target_id = shareTargets[0]?.id || ''; shareForm.email = ''">
-                <option value="user">{{ tx('files.friend') }}</option>
-                <option v-if="shareType === 'file'" value="email">{{ tx('files.external_email') }}</option>
-            </select>
-            <input v-if="shareForm.target_type === 'user'" v-model="friendSearch" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('files.friend_search')">
+            <p class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-secondary">{{ tx('files.internal_share_only') }}</p>
+            <input v-model="friendSearch" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" :placeholder="tx('files.friend_search')">
             <select
-                v-if="shareForm.target_type === 'user'"
                 v-model="shareForm.target_id"
                 ref="shareTargetSelectRef"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
             >
                 <option value="">{{ tx('files.select') }}</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
-                    {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
+                    {{ target.name }}
                 </option>
             </select>
-            <input
-                v-else
-                ref="shareEmailInputRef"
-                v-model="shareForm.email"
-                type="email"
-                class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                placeholder="name@example.com"
-            >
             <button
                 type="button"
-                :disabled="shareForm.processing || (shareForm.target_type === 'user' ? !shareForm.target_id : !shareForm.email)"
+                :disabled="shareForm.processing || !shareForm.target_id"
                 class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
                 @click="shareItem"
             >
@@ -1324,6 +1321,34 @@ watch(showShareModal, async (show) => {
                     <dd class="text-right text-sm font-semibold text-primary">{{ contextLabel(selectedFile) }}</dd>
                 </div>
             </dl>
+
+            <section v-if="selectedFile.access_rights" class="space-y-3 rounded-2xl border border-border bg-inputBg/30 p-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-primary">{{ tx('files.rights.title') }}</h3>
+                    <p class="mt-1 text-xs text-secondary">{{ tx('files.rights.subtitle') }}</p>
+                </div>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <div
+                        v-for="right in rightsRows"
+                        :key="right.key"
+                        class="rounded-xl border border-border bg-card/70 p-3"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2 text-sm font-semibold text-primary">
+                                <i :class="['las', right.icon, 'text-buttonPrimary']"></i>
+                                {{ tx(right.label) }}
+                            </span>
+                            <span
+                                :class="fileRightAllowed(selectedFile, right.key) ? 'bg-emerald-500/15 text-emerald-600' : 'bg-red-500/15 text-red-600'"
+                                class="rounded-full px-2 py-1 text-[11px] font-semibold"
+                            >
+                                {{ fileRightAllowed(selectedFile, right.key) ? tx('files.rights.allowed') : tx('files.rights.not_allowed') }}
+                            </span>
+                        </div>
+                        <p class="mt-2 text-xs leading-5 text-secondary">{{ fileRightAudience(selectedFile, right.key) }}</p>
+                    </div>
+                </div>
+            </section>
 
             <div class="flex gap-3">
                 <button type="button" class="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-primary hover:bg-inputBg" @click="closeFileInfo">{{ tx('files.cancel') }}</button>

@@ -8,6 +8,7 @@ use App\Models\Sport;
 use App\Models\SportMatching;
 use App\Models\SportMatchingApplication;
 use App\Models\Team;
+use App\Models\UserBlock;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,8 @@ class SportMatchingController extends Controller
             'sport_id' => ['nullable', 'integer', 'exists:sports,id'],
             'city' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:120'],
+            'radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'skill_level' => ['nullable', Rule::in(SportMatching::SKILL_LEVELS)],
             'status' => ['nullable', Rule::in(SportMatching::STATUSES)],
         ]);
 
@@ -37,6 +40,9 @@ class SportMatchingController extends Controller
                     ->where('user_id', $request->user()->id)
                     ->limit(1),
             ])
+            ->whereDoesntHave('dismissals', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->whereNotIn('user_id', UserBlock::query()->select('blocked_user_id')->where('user_id', $request->user()->id))
+            ->whereNotIn('user_id', UserBlock::query()->select('user_id')->where('blocked_user_id', $request->user()->id))
             ->when($filters['mode'] ?? null, fn ($q, $value) => $q->where('mode', $value))
             ->when($filters['sport_id'] ?? null, fn ($q, $value) => $q->where('sport_id', $value))
             ->when($filters['location'] ?? $filters['city'] ?? null, function ($q, $value) {
@@ -46,6 +52,8 @@ class SportMatchingController extends Controller
                         ->orWhere('location_name', 'like', '%'.$value.'%');
                 });
             })
+            ->when($filters['radius_km'] ?? null, fn ($q, $value) => $q->where('radius_km', '<=', $value))
+            ->when($filters['skill_level'] ?? null, fn ($q, $value) => $q->whereIn('skill_level', [$value, 'all']))
             ->when($filters['status'] ?? 'open', fn ($q, $value) => $q->where('status', $value))
             ->where('starts_at', '>=', now()->subHours(3))
             ->orderBy('starts_at');
@@ -97,6 +105,23 @@ class SportMatchingController extends Controller
         ]);
 
         return response()->json(['data' => $application->load(['user', 'team'])]);
+    }
+
+    public function dismiss(Request $request, SportMatching $sportMatching)
+    {
+        abort_if($sportMatching->user_id === $request->user()->id, 422);
+
+        $data = $request->validate([
+            'dismissed' => ['sometimes', 'boolean'],
+        ]);
+
+        if (($data['dismissed'] ?? true) === false) {
+            $sportMatching->dismissals()->where('user_id', $request->user()->id)->delete();
+        } else {
+            $sportMatching->dismissals()->firstOrCreate(['user_id' => $request->user()->id]);
+        }
+
+        return response()->json(['data' => ['matching_id' => $sportMatching->id, 'dismissed' => ($data['dismissed'] ?? true)]]);
     }
 
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application)

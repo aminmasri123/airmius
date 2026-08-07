@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
-    modelValue: { type: String, default: '' },
+    modelValue: { type: [String, Number], default: '' },
     options: { type: Array, default: () => [] },
     placeholder: { type: String, default: 'Suchen' },
     labelKey: { type: String, default: 'name' },
@@ -45,11 +45,11 @@ const optionCategory = (option) => {
 const selectedLabel = (value) => {
     if (!value) return ''
 
-    const option = props.options.find((option) =>
-        option[props.valueKey] === value
-        || option.slug === value
-        || option[props.labelKey] === value
-    )
+    const option = props.options.find((option) => [
+        option[props.valueKey],
+        option.slug,
+        option[props.labelKey],
+    ].some((candidate) => candidate != null && String(candidate) === String(value)))
 
     if (option) {
         return optionLabel(option)

@@ -12,18 +12,17 @@ use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\FileAccessSummary;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Throwable;
 
 class FileController extends Controller
 {
@@ -157,6 +156,13 @@ class FileController extends Controller
             ->paginate($filesPerPage, ['*'], 'files_page', $filesPage)
             ->withQueryString();
 
+        $files->getCollection()->transform(
+            fn (File $file) => $file->setAttribute(
+                'access_rights',
+                FileAccessSummary::for($file, $request->user()),
+            )
+        );
+
         $folders = $folderQuery
             ->paginate($foldersPerPage, ['*'], 'folders_page', $foldersPage)
             ->withQueryString();
@@ -190,12 +196,11 @@ class FileController extends Controller
                 ->get(),
             'users' => $request->user()
                 ->friendships()
-                ->with('friend:id,name,email')
+                ->with('friend:id,name')
                 ->get()
                 ->map(fn ($friendship) => [
                     'id' => $friendship->friend->id,
                     'name' => $friendship->friend->name,
-                    'email' => $friendship->friend->email,
                 ])
                 ->sortBy('name')
                 ->values(),
@@ -321,14 +326,9 @@ class FileController extends Controller
         $this->authorize('view', $file);
 
         $data = $request->validate([
-            'target_type' => ['required', Rule::in(['user', 'email'])],
-            'target_id' => ['nullable', 'required_if:target_type,user', 'integer', 'exists:users,id'],
-            'email' => ['nullable', 'required_if:target_type,email', 'email', 'max:255'],
+            'target_type' => ['required', Rule::in(['user'])],
+            'target_id' => ['required', 'integer', 'exists:users,id'],
         ]);
-
-        if ($data['target_type'] === 'email') {
-            return $this->shareWithExternalEmail($request, $file, $data['email']);
-        }
 
         $targetUser = User::findOrFail((int) $data['target_id']);
 
@@ -551,40 +551,6 @@ class FileController extends Controller
             'team_id' => null,
             'event_id' => null,
         ];
-    }
-
-    private function shareWithExternalEmail(Request $request, File $file, string $email)
-    {
-        $token = Str::random(64);
-        $expiresAt = now()->addDays(14);
-
-        $share = FileShare::create([
-            'file_id' => $file->id,
-            'shared_by_user_id' => $request->user()->id,
-            'email' => strtolower($email),
-            'token_hash' => hash('sha256', $token),
-            'expires_at' => $expiresAt,
-        ]);
-
-        $downloadUrl = route('files.shared-download', ['token' => $token]);
-        $senderName = $request->user()->name;
-        $fileName = $file->display_name;
-
-        try {
-            Mail::raw(
-                "Hallo,\n\n{$senderName} hat die Datei \"{$fileName}\" mit dir geteilt.\n\nDownload-Link: {$downloadUrl}\n\nDer Link ist bis {$expiresAt->format('d.m.Y H:i')} gültig.\n\nViele Grüße\nAirmius",
-                function ($message) use ($email, $senderName, $fileName) {
-                    $message->to($email)
-                        ->subject("{$senderName} hat eine Datei mit dir geteilt: {$fileName}");
-                }
-            );
-        } catch (Throwable) {
-            $share->delete();
-
-            return back()->with('error', 'Die E-Mail konnte nicht gesendet werden. Bitte prüfe die Mail-Konfiguration.');
-        }
-
-        return back()->with('success', 'Externe Freigabe per E-Mail gesendet.');
     }
 
     private function assertSafeUpload(UploadedFile $file): void

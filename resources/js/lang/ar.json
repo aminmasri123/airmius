@@ -7753,6 +7753,29 @@
     "uploaded_at": "تاريخ الرفع",
     "location": "النطاق",
     "unknown": "غير معروف",
+    "rights": {
+      "title": "الوصول والصلاحيات",
+      "subtitle": "من يمكنه استخدام هذا الملف؟",
+      "read": "قراءة",
+      "edit": "تعديل",
+      "share": "مشاركة",
+      "delete": "حذف",
+      "allowed": "يمكنك تنفيذ ذلك",
+      "not_allowed": "غير مسموح",
+      "audience": {
+        "owner": "المالك فقط",
+        "club_members": "جميع أعضاء النادي",
+        "team_members": "جميع أعضاء الفريق",
+        "event_members": "المشاركون وأعضاء الفريق أو النادي",
+        "club_file_managers": "أعضاء النادي ذوو صلاحية إدارة الملفات",
+        "team_file_managers": "أعضاء الفريق ذوو صلاحية إدارة الملفات",
+        "event_file_managers": "المستخدمون المصرح لهم في الفعالية أو الفريق أو النادي",
+        "club_file_managers_with_delete": "أعضاء النادي ذوو صلاحية الحذف",
+        "team_file_managers_with_delete": "أعضاء الفريق ذوو صلاحية الحذف",
+        "event_file_managers_with_delete": "المستخدمون المصرح لهم ذوو صلاحية الحذف",
+        "readers_with_friendship": "المستخدمون ذوو صلاحية القراءة من الأصدقاء"
+      }
+    },
     "storage": "التخزين",
     "free": "متاح",
     "used": "مستخدم",
@@ -7777,7 +7800,6 @@
     "folder": "مجلد",
     "file": "ملف",
     "friend": "صديق",
-    "external_email": "بريد إلكتروني خارجي",
     "friend_search": "البحث عن صديق",
     "scope": {
       "user": "ملفاتي",

@@ -67,11 +67,10 @@ const invite = () => {
     })
 }
 
-const acceptForm = useForm({})
 const declineForm = useForm({})
 const openFriendMenuId = ref(null)
 
-const accept = (invitation) => {
+const accept = async (invitation) => {
     const previousInvitations = [...receivedInvitationList.value]
     const previousFriends = [...friendsList.value]
 
@@ -89,23 +88,28 @@ const accept = (invitation) => {
         ...friendsList.value.filter((friend) => friend.id !== invitation.sender.id),
     ]
 
-    acceptForm.post(route('auth.friends.invitations.accept', invitation.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            acceptNotice.value = { type: 'success', message: tx('friends.accepted', 'Freundschaft angenommen.') }
-        },
-        onError: (errors) => {
-            receivedInvitationList.value = previousInvitations
-            friendsList.value = previousFriends
-            acceptNotice.value = {
-                type: 'error',
-                message: errors.invitation || errors.message || tx('friends.accept_failed', 'Anfrage konnte nicht angenommen werden.'),
-            }
-        },
-        onFinish: () => {
-            acceptingInvitationIds.value = acceptingInvitationIds.value.filter((id) => id !== invitation.id)
-        },
-    })
+    try {
+        await window.axios.post(
+            route('auth.friends.invitations.accept', invitation.id),
+            {},
+            { headers: { Accept: 'application/json' } },
+        )
+
+        acceptNotice.value = { type: 'success', message: tx('friends.accepted', 'Freundschaft angenommen.') }
+    } catch (error) {
+        const errors = error.response?.data?.errors || {}
+
+        receivedInvitationList.value = previousInvitations
+        friendsList.value = previousFriends
+        acceptNotice.value = {
+            type: 'error',
+            message: errors.invitation?.[0]
+                || error.response?.data?.message
+                || tx('friends.accept_failed', 'Anfrage konnte nicht angenommen werden.'),
+        }
+    } finally {
+        acceptingInvitationIds.value = acceptingInvitationIds.value.filter((id) => id !== invitation.id)
+    }
 }
 
 const decline = (invitation) => {

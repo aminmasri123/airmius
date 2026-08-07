@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -30,17 +29,6 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
         !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) _showMessage(t('filesPreview.unavailable'));
     }
-  }
-
-  Future<void> _copyLink() async {
-    final t = AirmiusScope.of(context).t;
-    final uri = safeExternalHttpUrl(_link, httpsOnly: false);
-    if (uri == null) {
-      _showMessage(t('filesPreview.unavailable'));
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: uri.toString()));
-    if (mounted) _showMessage(t('filesPreview.copied'));
   }
 
   void _showMessage(String message) {
@@ -155,12 +143,6 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
                   icon: Icons.download_outlined,
                   secondary: true,
                   onPressed: hasLink ? _openLink : null,
-                ),
-                AirmiusButton(
-                  label: t('shared.copy'),
-                  icon: Icons.copy_outlined,
-                  secondary: true,
-                  onPressed: hasLink ? _copyLink : null,
                 ),
               ],
             ),

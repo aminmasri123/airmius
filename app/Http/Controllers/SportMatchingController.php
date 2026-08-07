@@ -8,6 +8,7 @@ use App\Models\Sport;
 use App\Models\SportMatching;
 use App\Models\SportMatchingApplication;
 use App\Models\Team;
+use App\Models\UserBlock;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,6 +22,9 @@ class SportMatchingController extends Controller
                 'applications',
                 'applications as accepted_count' => fn ($q) => $q->where('status', 'accepted'),
             ])
+            ->whereDoesntHave('dismissals', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->whereNotIn('user_id', UserBlock::query()->select('blocked_user_id')->where('user_id', $request->user()->id))
+            ->whereNotIn('user_id', UserBlock::query()->select('user_id')->where('blocked_user_id', $request->user()->id))
             ->addSelect([
                 'my_application' => SportMatchingApplication::query()
                     ->select('status')
@@ -38,9 +42,11 @@ class SportMatchingController extends Controller
                         ->orWhere('location_name', 'like', '%'.$value.'%');
                 });
             })
+            ->when($request->integer('radius_km'), fn ($q, $value) => $q->where('radius_km', '<=', $value))
+            ->when($request->input('skill_level'), fn ($q, $value) => $q->whereIn('skill_level', [$value, 'all']))
             ->where('status', $request->input('status', 'open'))
             ->orderBy('starts_at')
-            ->paginate(24)
+            ->paginate(min(max($request->integer('per_page', 24), 1), 50))
             ->withQueryString();
 
         return Inertia::render('Auth/Dashboard/SportMatching/Index', [
@@ -48,7 +54,7 @@ class SportMatchingController extends Controller
             'sports' => Sport::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name', 'slug']),
             'teams' => Team::query()->whereHas('users', fn ($q) => $q->where('users.id', $request->user()->id))
                 ->orderBy('name')->get(['id', 'name', 'sport_type']),
-            'filters' => $request->only(['mode', 'sport_id', 'location', 'city', 'status']),
+            'filters' => $request->only(['mode', 'sport_id', 'location', 'city', 'radius_km', 'skill_level', 'status', 'view']),
             'skillLevels' => SportMatching::SKILL_LEVELS,
         ]);
     }
@@ -63,6 +69,13 @@ class SportMatchingController extends Controller
     {
         $api->apply($request, $sportMatching);
         return back()->with('success', 'Anfrage wurde gesendet.');
+    }
+
+    public function dismiss(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
+    {
+        $api->dismiss($request, $sportMatching);
+
+        return back()->with('success', 'Angebot wurde ausgeblendet.');
     }
 
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application, ApiSportMatchingController $api)

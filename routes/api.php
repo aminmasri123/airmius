@@ -602,6 +602,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/sport-matching', [SportMatchingController::class, 'index'])->name('sport-matching.index');
         Route::post('/sport-matching', [SportMatchingController::class, 'store'])->name('sport-matching.store');
         Route::post('/sport-matching/{sportMatching}/apply', [SportMatchingController::class, 'apply'])->name('sport-matching.apply');
+        Route::post('/sport-matching/{sportMatching}/dismiss', [SportMatchingController::class, 'dismiss'])->name('sport-matching.dismiss');
         Route::put('/sport-matching/{sportMatching}/applications/{application}', [SportMatchingController::class, 'decide'])->name('sport-matching.applications.update');
         Route::post('/sport-matching/{sportMatching}/cancel', [SportMatchingController::class, 'cancel'])->name('sport-matching.cancel');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');

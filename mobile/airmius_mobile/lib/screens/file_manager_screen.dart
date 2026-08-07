@@ -1,6 +1,5 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:intl/intl.dart';
@@ -119,7 +118,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         actions: [
           IconButton(
             tooltip: t('files.shareLink'),
-            icon: const Icon(Icons.link_outlined),
+            icon: const Icon(Icons.person_add_alt_1_outlined),
             onPressed: _openSharePicker,
           ),
           IconButton(
@@ -205,6 +204,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                         thumbnailUrl: file.thumbnailUrl,
                         isImage: file.isImage,
                         uploadedAt: file.uploadedAt,
+                        accessRights: file.accessRights,
+                        onShare: () => _shareFile(file),
                       ),
                     ),
                   ),
@@ -540,18 +541,48 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       return;
     }
 
-    await _runAction(() async {
-      final data = await AirmiusServicesScope.of(
-        context,
-      ).repositories.files.createFileShare(file.id!);
-      final link = '${data['url'] ?? ''}'.trim();
-      if (link.isEmpty) {
-        _showMessage(t('files.shareUnavailable'));
+    try {
+      final friends = await _loadShareFriends();
+      if (!mounted) return;
+      if (friends.isEmpty) {
+        _showMessage(t('files.noFriendsToShare'));
         return;
       }
-      await Clipboard.setData(ClipboardData(text: link));
-      _success = t('files.shareCreated');
-    });
+      final selected = await _chooseShareFriend(friends, folder: false);
+      if (selected == null || !mounted) return;
+
+      await _runAction(() async {
+        await AirmiusServicesScope.of(
+          context,
+        ).repositories.files.shareFile(file.id!, selected.id);
+        _success = t('files.fileShareCreated');
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = _messageFor(error));
+    }
+  }
+
+  Future<List<_ShareFriend>> _loadShareFriends() async {
+    final services = AirmiusServicesScope.of(context);
+    final response = await services
+        .clientForSession(services.authState.session)
+        .friends();
+    final payload = response['data'];
+    final rawFriends = payload is Map ? payload['friends'] : null;
+
+    return rawFriends is List
+        ? rawFriends
+              .whereType<Map>()
+              .map((friend) {
+                final id = int.tryParse('${friend['id'] ?? ''}');
+                final name = '${friend['name'] ?? ''}'.trim();
+                return id == null || name.isEmpty
+                    ? null
+                    : _ShareFriend(id: id, name: name);
+              })
+              .whereType<_ShareFriend>()
+              .toList()
+        : const <_ShareFriend>[];
   }
 
   Future<void> _openSharePicker() async {
@@ -601,25 +632,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
 
     try {
-      final services = AirmiusServicesScope.of(context);
-      final response = await services
-          .clientForSession(services.authState.session)
-          .friends();
-      final payload = response['data'];
-      final rawFriends = payload is Map ? payload['friends'] : null;
-      final friends = rawFriends is List
-          ? rawFriends
-                .whereType<Map>()
-                .map((friend) {
-                  final id = int.tryParse('${friend['id'] ?? ''}');
-                  final name = '${friend['name'] ?? ''}'.trim();
-                  return id == null || name.isEmpty
-                      ? null
-                      : _ShareFriend(id: id, name: name);
-                })
-                .whereType<_ShareFriend>()
-                .toList()
-          : const <_ShareFriend>[];
+      final friends = await _loadShareFriends();
 
       if (!mounted) return;
       if (friends.isEmpty) {
@@ -627,7 +640,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         return;
       }
 
-      final selected = await _chooseShareFriend(friends);
+      final selected = await _chooseShareFriend(friends, folder: true);
       if (selected == null || !mounted) return;
 
       await _runAction(() async {
@@ -641,14 +654,17 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     }
   }
 
-  Future<_ShareFriend?> _chooseShareFriend(List<_ShareFriend> friends) {
+  Future<_ShareFriend?> _chooseShareFriend(
+    List<_ShareFriend> friends, {
+    required bool folder,
+  }) {
     final t = AirmiusScope.of(context).t;
     return showDialog<_ShareFriend>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: airmiusSurfaceColor(dialogContext),
         title: Text(
-          t('files.shareFolderTitle'),
+          t(folder ? 'files.shareFolderTitle' : 'files.shareFileTitle'),
           style: TextStyle(
             color: airmiusTextColor(dialogContext),
             fontWeight: FontWeight.w900,
@@ -1389,26 +1405,30 @@ class _FileRow extends StatelessWidget {
                   icon: Icons.info_outline,
                   label: t('files.info'),
                 ),
-                _fileMenuItem(
-                  value: 'share',
-                  icon: Icons.share_outlined,
-                  label: t('files.fileShare'),
-                ),
-                _fileMenuItem(
-                  value: 'rename',
-                  icon: Icons.edit_outlined,
-                  label: t('files.fileRename'),
-                ),
-                _fileMenuItem(
-                  value: 'download',
-                  icon: Icons.download_outlined,
-                  label: t('files.fileDownload'),
-                ),
-                _fileMenuItem(
-                  value: 'delete',
-                  icon: Icons.delete_outline,
-                  label: t('files.fileDelete'),
-                ),
+                if (file.canShare)
+                  _fileMenuItem(
+                    value: 'share',
+                    icon: Icons.share_outlined,
+                    label: t('files.fileShare'),
+                  ),
+                if (file.canEdit)
+                  _fileMenuItem(
+                    value: 'rename',
+                    icon: Icons.edit_outlined,
+                    label: t('files.fileRename'),
+                  ),
+                if (file.canRead)
+                  _fileMenuItem(
+                    value: 'download',
+                    icon: Icons.download_outlined,
+                    label: t('files.fileDownload'),
+                  ),
+                if (file.canDelete)
+                  _fileMenuItem(
+                    value: 'delete',
+                    icon: Icons.delete_outline,
+                    label: t('files.fileDelete'),
+                  ),
               ],
             ),
           ),
@@ -1480,6 +1500,10 @@ class _FileInfoSheet extends StatelessWidget {
               label: t('files.uploadedAt'),
               value: _formatFileDate(context, file.uploadedAt, t),
             ),
+            if (file.accessRights != null) ...[
+              const SizedBox(height: 12),
+              AirmiusFileRightsPanel(rights: file.accessRights!),
+            ],
           ],
         ),
       ),
@@ -2178,6 +2202,7 @@ class _ManagedFile {
     this.type = 'Datei',
     this.size = 0,
     this.uploadedAt,
+    this.accessRights,
   });
 
   factory _ManagedFile.fromApi(
@@ -2198,6 +2223,7 @@ class _ManagedFile {
       type: type,
       size: file.size,
       uploadedAt: file.createdAt,
+      accessRights: file.accessRights,
     );
   }
 
@@ -2213,6 +2239,7 @@ class _ManagedFile {
   final String type;
   final int size;
   final DateTime? uploadedAt;
+  final AirmiusFileAccessRights? accessRights;
 
   String get previewUrl => previewEndpoint?.trim().isNotEmpty == true
       ? previewEndpoint!.trim()
@@ -2221,6 +2248,13 @@ class _ManagedFile {
       : url?.trim() ?? '';
 
   String get sizeLabel => _formatSize(size);
+
+  bool _can(String action) => accessRights?[action]?.allowed ?? true;
+
+  bool get canRead => _can('read');
+  bool get canEdit => _can('edit');
+  bool get canShare => _can('share');
+  bool get canDelete => _can('delete');
 
   bool get isImage => type.toLowerCase().startsWith('image/');
 

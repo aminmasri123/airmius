@@ -983,12 +983,11 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteFile(int fileId) =>
       _json('DELETE', '/api/v1/uploads/$fileId');
 
-  Future<AirmiusJson> createFileShare(int fileId, {int expiresInDays = 14}) =>
-      _json(
-        'POST',
-        '/api/v1/uploads/$fileId/share',
-        body: {'expires_in_days': expiresInDays},
-      );
+  Future<AirmiusJson> shareFile(int fileId, int targetUserId) => _json(
+    'POST',
+    '/api/v1/uploads/$fileId/share',
+    body: {'target_user_id': targetUserId},
+  );
 
   Future<AirmiusJson> notifications({int page = 1, bool unreadOnly = false}) =>
       _json(
@@ -1022,13 +1021,19 @@ class AirmiusApiClient {
     String mode = 'partner',
     String? city,
     int? sportId,
+    int? radiusKm,
+    String? skillLevel,
   }) => _json(
     'GET',
     '/api/v1/sport-matching',
     query: {
       'mode': mode,
+      'per_page': '50',
       if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
       if (sportId != null) 'sport_id': '$sportId',
+      if (radiusKm != null) 'radius_km': '$radiusKm',
+      if (skillLevel != null && skillLevel.trim().isNotEmpty && skillLevel != 'all')
+        'skill_level': skillLevel.trim(),
     },
   );
 
@@ -1048,6 +1053,16 @@ class AirmiusApiClient {
         'message': message.trim(),
     },
   );
+
+  Future<AirmiusJson> dismissSportMatching(
+    int matchingId, {
+    bool dismissed = true,
+  }) =>
+      _json(
+        'POST',
+        '/api/v1/sport-matching/$matchingId/dismiss',
+        body: {'dismissed': dismissed},
+      );
 
   Future<AirmiusJson> decideSportMatchingApplication(
     int matchingId,

@@ -796,11 +796,8 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
   }
 
   @override
-  Future<JsonMap> createFileShare(int fileId, {int expiresInDays = 14}) async {
-    final json = await client.createFileShare(
-      fileId,
-      expiresInDays: expiresInDays,
-    );
+  Future<JsonMap> shareFile(int fileId, int targetUserId) async {
+    final json = await client.shareFile(fileId, targetUserId);
     final data = json['data'];
     return data is JsonMap ? data : json;
   }

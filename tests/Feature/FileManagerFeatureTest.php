@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Club;
 use App\Models\File;
-use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Friendship;
 use App\Models\Team;
@@ -85,6 +84,87 @@ class FileManagerFeatureTest extends TestCase
                 ->where('files.total', 15)
                 ->where('files.data.0.display_name', 'file-13.txt')
             );
+    }
+
+    public function test_file_access_rights_summary_matches_effective_policy_on_web_and_api(): void
+    {
+        $owner = User::factory()->create();
+        $this->grantUserPermissions($owner, ['file.view']);
+
+        $personalFile = File::create([
+            'user_id' => $owner->id,
+            'path' => 'private/rights.txt',
+            'display_name' => 'rights.txt',
+            'type' => 'text/plain',
+            'size' => 64,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('auth.files.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('files.data.0.id', $personalFile->id)
+                ->where('files.data.0.access_rights.scope', 'personal')
+                ->where('files.data.0.access_rights.rights.read.allowed', true)
+                ->where('files.data.0.access_rights.rights.edit.allowed', true)
+                ->where('files.data.0.access_rights.rights.share.allowed', true)
+                ->where('files.data.0.access_rights.rights.delete.allowed', true)
+                ->where('files.data.0.access_rights.rights.read.audience', 'owner')
+            );
+
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/v1/files?scope=user')
+            ->assertOk()
+            ->assertJsonPath('data.files.0.access_rights.scope', 'personal')
+            ->assertJsonPath('data.files.0.access_rights.rights.read.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', true);
+    }
+
+    public function test_scoped_file_access_rights_show_audience_and_current_user_actions(): void
+    {
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => User::factory()->create()->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $member->id => [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ],
+        ]);
+        $team->users()->attach($member->id, ['role' => 'player']);
+
+        $file = File::create([
+            'user_id' => $member->id,
+            'club_id' => $club->id,
+            'team_id' => $team->id,
+            'path' => 'private/team-rights.txt',
+            'display_name' => 'team-rights.txt',
+            'type' => 'text/plain',
+            'size' => 64,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()
+            ->assertJsonPath('data.files.0.id', $file->id)
+            ->assertJsonPath('data.files.0.access_rights.scope', 'team')
+            ->assertJsonPath('data.files.0.access_rights.rights.read.audience', 'team_members')
+            ->assertJsonPath('data.files.0.access_rights.rights.read.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', false)
+            ->assertJsonPath('data.files.0.access_rights.rights.share.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', false);
+
+        $this->grantUserPermissions($member, ['file.upload', 'file.delete']);
+
+        $this->getJson("/api/v1/files?scope=team&team_id={$team->id}")
+            ->assertOk()
+            ->assertJsonPath('data.files.0.access_rights.rights.edit.allowed', true)
+            ->assertJsonPath('data.files.0.access_rights.rights.delete.allowed', true);
     }
 
     public function test_unified_sort_and_page_size_control_files_and_folders(): void
@@ -445,11 +525,11 @@ class FileManagerFeatureTest extends TestCase
         $this->assertDatabaseMissing('folders', ['id' => $folderId]);
     }
 
-    public function test_api_file_share_creates_an_expiring_hashed_download_link(): void
+    public function test_api_file_share_copies_file_only_to_a_friend(): void
     {
-        Storage::fake(UploadStorage::disk());
-
         $user = User::factory()->create();
+        $friend = User::factory()->create();
+        $outsider = User::factory()->create();
         $file = File::create([
             'user_id' => $user->id,
             'path' => 'private/shareable.pdf',
@@ -457,30 +537,27 @@ class FileManagerFeatureTest extends TestCase
             'type' => 'application/pdf',
             'size' => 128,
         ]);
+        Friendship::create(['user_id' => $user->id, 'friend_id' => $friend->id]);
 
         Sanctum::actingAs($user);
 
         $response = $this->postJson("/api/v1/uploads/{$file->id}/share", [
-            'expires_in_days' => 7,
+            'target_user_id' => $friend->id,
         ])
             ->assertCreated()
             ->assertJsonPath('data.file_id', $file->id)
-            ->assertJsonPath('data.expires_at', fn ($value) => is_string($value));
+            ->assertJsonPath('data.shared', true)
+            ->assertJsonPath('data.target_user_id', $friend->id);
 
-        $token = $response->json('data.token');
-        $this->assertIsString($token);
-        $this->assertNotSame('', $token);
-        $this->assertStringContainsString('/shared-files/'.$token, $response->json('data.url'));
-        $this->assertDatabaseHas('file_shares', [
-            'file_id' => $file->id,
-            'shared_by_user_id' => $user->id,
-            'email' => strtolower($user->email),
-            'token_hash' => hash('sha256', $token),
+        $this->assertDatabaseHas('files', [
+            'user_id' => $friend->id,
+            'path' => $file->path,
+            'display_name' => $file->display_name,
         ]);
 
         $this->postJson("/api/v1/uploads/{$file->id}/share", [
-            'expires_in_days' => 31,
-        ])->assertUnprocessable();
+            'target_user_id' => $outsider->id,
+        ])->assertForbidden();
     }
 
     public function test_api_folder_share_copies_the_tree_only_to_a_friend(): void

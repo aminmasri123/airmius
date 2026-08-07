@@ -61,7 +61,6 @@ export const useFilesWorkspace = (props) => {
     const shareForm = useForm({
         target_type: 'user',
         target_id: '',
-        email: '',
     })
     
     const renameForm = useForm({
@@ -72,7 +71,6 @@ export const useFilesWorkspace = (props) => {
     const renameFolderInputRef = ref(null)
     const renameFileInputRef = ref(null)
     const shareTargetSelectRef = ref(null)
-    const shareEmailInputRef = ref(null)
     
     const scopeOptions = [
         { value: 'user', label: 'Meine Dateien' },
@@ -117,7 +115,7 @@ export const useFilesWorkspace = (props) => {
     
         if (!query) return props.users
     
-        return props.users.filter((user) => `${user.name || ''} ${user.email || ''}`.toLowerCase().includes(query))
+        return props.users.filter((user) => `${user.name || ''}`.toLowerCase().includes(query))
     })
     const fileItems = computed(() => {
         if (Array.isArray(props.files)) return props.files
@@ -302,7 +300,6 @@ export const useFilesWorkspace = (props) => {
 
     const resetShareTarget = () => {
         shareForm.target_id = shareTargets.value[0]?.id || ''
-        shareForm.email = ''
     }
 
     const setFileInputElement = (element) => {
@@ -323,10 +320,6 @@ export const useFilesWorkspace = (props) => {
 
     const setShareTargetSelectElement = (element) => {
         shareTargetSelectRef.value = element
-    }
-
-    const setShareEmailInputElement = (element) => {
-        shareEmailInputRef.value = element
     }
 
     const createFolder = () => {
@@ -406,7 +399,6 @@ export const useFilesWorkspace = (props) => {
         shareType.value = type
         shareForm.target_type = 'user'
         shareForm.target_id = props.users[0]?.id || ''
-        shareForm.email = ''
         friendSearch.value = ''
         showShareModal.value = true
     }
@@ -422,7 +414,7 @@ export const useFilesWorkspace = (props) => {
             preserveScroll: true,
             onSuccess: () => {
                 showShareModal.value = false
-                shareForm.reset('email')
+                shareForm.reset('target_id')
             },
         })
     }
@@ -558,12 +550,7 @@ export const useFilesWorkspace = (props) => {
 
         await nextTick()
 
-        if (shareForm.target_type === 'user') {
-            shareTargetSelectRef.value?.focus()
-            return
-        }
-
-        shareEmailInputRef.value?.focus()
+        shareTargetSelectRef.value?.focus()
     })
 
     return {
@@ -600,7 +587,6 @@ export const useFilesWorkspace = (props) => {
         renameFolderInputRef,
         renameFileInputRef,
         shareTargetSelectRef,
-        shareEmailInputRef,
         scopeOptions,
         fileSortOptions,
         folderSortOptions,
@@ -648,7 +634,6 @@ export const useFilesWorkspace = (props) => {
         setRenameFolderInputElement,
         setRenameFileInputElement,
         setShareTargetSelectElement,
-        setShareEmailInputElement,
         createFolder,
         openDeleteModal,
         closeDeleteModal,
@@ -670,4 +655,3 @@ export const useFilesWorkspace = (props) => {
         goToFoldersPage,
     }
 }
-

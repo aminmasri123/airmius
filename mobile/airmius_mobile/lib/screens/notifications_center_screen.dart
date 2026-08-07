@@ -9,6 +9,7 @@ import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_detail_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'friends_social_graph_screen.dart';
 import 'team_invitation_response_screen.dart';
 
 class NotificationsCenterScreen extends StatefulWidget {
@@ -435,6 +436,18 @@ class _NotificationLineState extends State<_NotificationLine> {
         return;
       }
 
+      if (_isFriendInvitationNotification(notification)) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                const FriendsSocialGraphScreen(initialSection: 'received'),
+          ),
+        );
+        widget.onChanged();
+        return;
+      }
+
       if (_isMembershipRequestNotification(notification) &&
           notification.actionUrl != null &&
           notification.actionUrl!.isNotEmpty) {
@@ -671,12 +684,12 @@ int? _teamInvitationId(AirmiusNotification notification) {
     notification.data['invitation_id'] ??
         notification.data['team_invitation_id'],
   );
-  if (explicitId != null &&
-      (type.contains('team.invite') ||
-          type.contains('team.invitation') ||
-          type.contains('trainer') ||
-          type.contains('invite') ||
-          type.contains('invitation'))) {
+  final isTeamInvitation =
+      type.startsWith('team.') &&
+      (type.contains('invite') ||
+          type.contains('invitation') ||
+          type.contains('trainer'));
+  if (explicitId != null && isTeamInvitation) {
     return explicitId;
   }
 
@@ -684,9 +697,17 @@ int? _teamInvitationId(AirmiusNotification notification) {
   if (actionUrl == null || actionUrl.isEmpty) return null;
 
   final match = RegExp(
-    r'(?:team_invitation|invitation_id)=([0-9]+)',
+    r'(?:team_invitation(?:_id)?|team-invitations)[=/]([0-9]+)',
   ).firstMatch(actionUrl);
   return match == null ? null : int.tryParse(match.group(1) ?? '');
+}
+
+bool _isFriendInvitationNotification(AirmiusNotification notification) {
+  final type = notification.type.toLowerCase();
+  return (type == 'friend.invite' ||
+          type == 'friend.request' ||
+          type == 'friend.requested') &&
+      _intFromDynamic(notification.data['invitation_id']) != null;
 }
 
 int? _intFromDynamic(Object? value) {

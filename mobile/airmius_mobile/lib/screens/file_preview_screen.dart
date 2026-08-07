@@ -1,12 +1,10 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/airmius_api_client.dart';
 import '../core/airmius_external_url.dart';
+import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
-import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -24,6 +22,8 @@ class FilePreviewScreen extends StatefulWidget {
     this.thumbnailUrl,
     this.isImage,
     this.uploadedAt,
+    this.accessRights,
+    this.onShare,
   });
 
   final String title;
@@ -37,6 +37,8 @@ class FilePreviewScreen extends StatefulWidget {
   final String? thumbnailUrl;
   final bool? isImage;
   final DateTime? uploadedAt;
+  final AirmiusFileAccessRights? accessRights;
+  final Future<void> Function()? onShare;
 
   @override
   State<FilePreviewScreen> createState() => _FilePreviewScreenState();
@@ -50,42 +52,6 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
         !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) _showMessage(t('filesPreview.unavailable'));
     }
-  }
-
-  Future<void> _copyFileLink() async {
-    final t = AirmiusScope.of(context).t;
-    final fileId = widget.fileId;
-    if (fileId != null) {
-      try {
-        final data = await AirmiusServicesScope.of(
-          context,
-        ).repositories.files.createFileShare(fileId);
-        final sharedUrl = '${data['url'] ?? ''}'.trim();
-        final uri = safeExternalHttpUrl(sharedUrl, httpsOnly: false);
-        if (uri == null) {
-          _showMessage(t('filesPreview.unavailable'));
-          return;
-        }
-        await Clipboard.setData(ClipboardData(text: uri.toString()));
-        if (mounted) _showMessage(t('filesPreview.copied'));
-      } catch (error) {
-        if (!mounted) return;
-        _showMessage(
-          error is AirmiusApiException
-              ? error.userMessage
-              : t('filesPreview.unavailable'),
-        );
-      }
-      return;
-    }
-    final value = widget.fileUrl?.trim() ?? '';
-    final uri = safeExternalHttpUrl(value, httpsOnly: false);
-    if (uri == null) {
-      _showMessage(t('filesPreview.unavailable'));
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: uri.toString()));
-    if (mounted) _showMessage(t('filesPreview.copied'));
   }
 
   void _showMessage(String message) {
@@ -178,6 +144,10 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
               ),
             ),
             const SizedBox(height: 14),
+            if (widget.accessRights != null) ...[
+              AirmiusFileRightsPanel(rights: widget.accessRights!),
+              const SizedBox(height: 14),
+            ],
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -191,7 +161,7 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
                   label: t('filesPreview.shareAction'),
                   icon: Icons.share_outlined,
                   secondary: true,
-                  onPressed: _copyFileLink,
+                  onPressed: widget.onShare,
                 ),
               ],
             ),
@@ -266,6 +236,82 @@ class _FileDetailRow extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class AirmiusFileRightsPanel extends StatelessWidget {
+  const AirmiusFileRightsPanel({required this.rights, super.key});
+
+  final AirmiusFileAccessRights rights;
+
+  static const _rows = [
+    (key: 'read', label: 'files.rights.read', icon: Icons.visibility_outlined),
+    (key: 'edit', label: 'files.rights.edit', icon: Icons.edit_outlined),
+    (key: 'share', label: 'files.rights.share', icon: Icons.share_outlined),
+    (key: 'delete', label: 'files.rights.delete', icon: Icons.delete_outline),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(t('files.rights.title')),
+          const SizedBox(height: 4),
+          Text(
+            t('files.rights.subtitle'),
+            style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          ..._rows.map((row) {
+            final right = rights[row.key];
+            final allowed = right?.allowed == true;
+            final audience = right?.audience ?? 'owner';
+            final audienceLabel = t('files.rights.audience.$audience');
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(row.icon, color: airmiusAccentColor(context), size: 18),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t(row.label),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          audienceLabel,
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  StatusPill(
+                    allowed
+                        ? t('files.rights.allowed')
+                        : t('files.rights.notAllowed'),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );

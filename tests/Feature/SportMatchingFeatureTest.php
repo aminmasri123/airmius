@@ -144,4 +144,45 @@ class SportMatchingFeatureTest extends TestCase
             'status' => 'matched',
         ]);
     }
+
+    public function test_swipe_dismissal_is_persistent_and_can_be_restored(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $sport = Sport::query()->create([
+            'name' => 'Tennis',
+            'slug' => 'tennis',
+            'category' => 'racket',
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $matchingId = $this->postJson('/api/v1/sport-matching', [
+            'mode' => 'partner',
+            'sport_id' => $sport->id,
+            'city' => 'Berlin',
+            'country_code' => 'DE',
+            'radius_km' => 25,
+            'starts_at' => now()->addDay()->toIso8601String(),
+            'participants_needed' => 1,
+            'skill_level' => 'all',
+        ])->assertCreated()->json('data.id');
+
+        Sanctum::actingAs($viewer);
+        $this->postJson("/api/v1/sport-matching/{$matchingId}/dismiss")
+            ->assertOk()
+            ->assertJsonPath('data.dismissed', true);
+
+        $this->getJson('/api/v1/sport-matching')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->postJson("/api/v1/sport-matching/{$matchingId}/dismiss", ['dismissed' => false])
+            ->assertOk()
+            ->assertJsonPath('data.dismissed', false);
+
+        $this->getJson('/api/v1/sport-matching')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $matchingId);
+    }
 }

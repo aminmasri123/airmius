@@ -7,12 +7,13 @@ use App\Http\Resources\Api\V1\FileResource;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
-use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\Api\V1\ApiPagination;
+use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -280,35 +281,53 @@ class UploadController extends Controller
         ]);
     }
 
-    /**
-     * Create an expiring public download link for the mobile app.
-     * The raw token is returned only in this response; only its hash is persisted.
-     */
+    /** Share a file with an existing Airmius friend. */
     public function share(Request $request, File $file)
     {
         Gate::authorize('view', $file);
 
         $data = $request->validate([
-            'expires_in_days' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'target_user_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $token = Str::random(64);
-        $expiresAt = now()->addDays((int) ($data['expires_in_days'] ?? 14));
+        $targetUser = User::findOrFail((int) $data['target_user_id']);
+        abort_unless(
+            $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
+            403,
+            'Dateien können nur mit Freunden geteilt werden.'
+        );
 
-        FileShare::create([
-            'file_id' => $file->id,
-            'shared_by_user_id' => $request->user()->id,
-            'email' => strtolower((string) $request->user()->email),
-            'token_hash' => hash('sha256', $token),
-            'expires_at' => $expiresAt,
+        $sharedFile = File::firstOrCreate(
+            [
+                'user_id' => $targetUser->id,
+                'club_id' => null,
+                'team_id' => null,
+                'event_id' => null,
+                'folder_id' => null,
+                'path' => $file->path,
+            ],
+            [
+                'display_name' => $file->display_name,
+                'type' => $file->type,
+                'size' => $file->size,
+            ],
+        );
+
+        AppNotification::send($targetUser, 'file.shared', [
+            'title' => $request->user()->name.' hat eine Datei mit dir geteilt',
+            'body' => $file->display_name,
+            'url' => '/files',
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'file_id' => $sharedFile->id,
         ]);
 
         return response()->json([
             'data' => [
+                'shared' => true,
                 'file_id' => $file->id,
-                'token' => $token,
-                'url' => route('files.shared-download', ['token' => $token]),
-                'expires_at' => $expiresAt->toJSON(),
+                'target_user_id' => $targetUser->id,
+                'target_file_id' => $sharedFile->id,
             ],
         ], 201);
     }

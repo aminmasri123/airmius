@@ -14220,13 +14220,16 @@ const _filesLabelsDe = {
   'files.scope.team': 'Team',
   'files.scope.club': 'Verein',
   'files.scope.event': 'Event',
-  'files.shareLink': 'Share-Link öffnen',
+  'files.shareLink': 'Intern teilen',
+  'files.internal_share_only': 'Nur mit Airmius-Freunden teilen',
   'files.selectFileToShare': 'Bitte zuerst eine Datei öffnen oder auswählen.',
-  'files.shareCreated': 'Freigabe-Link kopiert.',
-  'files.shareUnavailable': 'Für diese Datei ist kein Freigabe-Link verfügbar.',
+  'files.shareCreated': 'Datei intern geteilt.',
+  'files.fileShareCreated': 'Datei intern geteilt.',
+  'files.shareUnavailable': 'Interne Freigabe ist nicht verfügbar.',
   'files.folderShareUnavailable':
       'Ordner-Freigaben sind derzeit nicht verfügbar.',
   'files.shareFolderTitle': 'Ordner mit Freund teilen',
+  'files.shareFileTitle': 'Datei mit Freund teilen',
   'files.noFriendsToShare':
       'Du hast noch keine Freunde, mit denen du teilen kannst.',
   'files.folderShareCreated': 'Ordner wurde freigegeben.',
@@ -14281,6 +14284,33 @@ const _filesLabelsDe = {
   'files.size': 'Größe',
   'files.uploadedAt': 'Hochgeladen',
   'files.unknown': 'Unbekannt',
+  'files.rights.title': 'Zugriff & Rechte',
+  'files.rights.subtitle': 'Wer darf diese Datei verwenden?',
+  'files.rights.read': 'Lesen',
+  'files.rights.edit': 'Bearbeiten',
+  'files.rights.share': 'Teilen',
+  'files.rights.delete': 'Löschen',
+  'files.rights.allowed': 'Du darfst es',
+  'files.rights.notAllowed': 'Nicht erlaubt',
+  'files.rights.audience.owner': 'Nur der Besitzer',
+  'files.rights.audience.club_members': 'Alle Vereinsmitglieder',
+  'files.rights.audience.team_members': 'Alle Teammitglieder',
+  'files.rights.audience.event_members':
+      'Teilnehmende sowie Team- und Vereinsmitglieder',
+  'files.rights.audience.club_file_managers':
+      'Vereinsmitglieder mit Dateiverwaltung',
+  'files.rights.audience.team_file_managers':
+      'Teammitglieder mit Dateiverwaltung',
+  'files.rights.audience.event_file_managers':
+      'Berechtigte im Event-, Team- oder Vereinsbereich',
+  'files.rights.audience.club_file_managers_with_delete':
+      'Vereinsmitglieder mit Löschberechtigung',
+  'files.rights.audience.team_file_managers_with_delete':
+      'Teammitglieder mit Löschberechtigung',
+  'files.rights.audience.event_file_managers_with_delete':
+      'Berechtigte mit Löschberechtigung',
+  'files.rights.audience.readers_with_friendship':
+      'Leseberechtigte mit Freundschaft',
 };
 
 final _filesLabelsEn = {
@@ -14290,12 +14320,15 @@ final _filesLabelsEn = {
   'files.scope.team': 'Team',
   'files.scope.club': 'Club',
   'files.scope.event': 'Event',
-  'files.shareLink': 'Open share link',
+  'files.shareLink': 'Share internally',
+  'files.internal_share_only': 'Share only with Airmius friends',
   'files.selectFileToShare': 'Open or select a file first.',
-  'files.shareCreated': 'Share link copied.',
-  'files.shareUnavailable': 'No share link is available for this file.',
+  'files.shareCreated': 'File shared internally.',
+  'files.fileShareCreated': 'File shared internally.',
+  'files.shareUnavailable': 'Internal sharing is not available.',
   'files.folderShareUnavailable': 'Folder sharing is not available yet.',
   'files.shareFolderTitle': 'Share folder with a friend',
+  'files.shareFileTitle': 'Share file with a friend',
   'files.noFriendsToShare': 'You have no friends to share with yet.',
   'files.folderShareCreated': 'Folder shared.',
   'files.operations': 'File operations',
@@ -14349,6 +14382,33 @@ final _filesLabelsEn = {
   'files.size': 'Size',
   'files.uploadedAt': 'Uploaded',
   'files.unknown': 'Unknown',
+  'files.rights.title': 'Access & permissions',
+  'files.rights.subtitle': 'Who can use this file?',
+  'files.rights.read': 'Read',
+  'files.rights.edit': 'Edit',
+  'files.rights.share': 'Share',
+  'files.rights.delete': 'Delete',
+  'files.rights.allowed': 'You can do this',
+  'files.rights.notAllowed': 'Not allowed',
+  'files.rights.audience.owner': 'Owner only',
+  'files.rights.audience.club_members': 'All club members',
+  'files.rights.audience.team_members': 'All team members',
+  'files.rights.audience.event_members':
+      'Participants and team or club members',
+  'files.rights.audience.club_file_managers':
+      'Club members with file management access',
+  'files.rights.audience.team_file_managers':
+      'Team members with file management access',
+  'files.rights.audience.event_file_managers':
+      'Authorized users in the event, team or club area',
+  'files.rights.audience.club_file_managers_with_delete':
+      'Club members with delete permission',
+  'files.rights.audience.team_file_managers_with_delete':
+      'Team members with delete permission',
+  'files.rights.audience.event_file_managers_with_delete':
+      'Authorized users with delete permission',
+  'files.rights.audience.readers_with_friendship':
+      'Readers who are also friends',
 };
 
 final _filesLabelsFr = {
@@ -14358,14 +14418,17 @@ final _filesLabelsFr = {
   'files.scope.team': 'Équipe',
   'files.scope.club': 'Club',
   'files.scope.event': 'Événement',
-  'files.shareLink': 'Ouvrir le lien partagé',
+  'files.shareLink': 'Partager en interne',
+  'files.internal_share_only': 'Partager uniquement avec des amis Airmius',
   'files.selectFileToShare': 'Ouvrez ou sélectionnez d’abord un fichier.',
-  'files.shareCreated': 'Lien de partage copié.',
+  'files.shareCreated': 'Fichier partagé en interne.',
+  'files.fileShareCreated': 'Fichier partagé en interne.',
   'files.shareUnavailable':
-      'Aucun lien de partage n’est disponible pour ce fichier.',
+      'Le partage interne n’est pas disponible pour ce fichier.',
   'files.folderShareUnavailable':
       'Le partage de dossiers n’est pas encore disponible.',
   'files.shareFolderTitle': 'Partager le dossier avec un ami',
+  'files.shareFileTitle': 'Partager le fichier avec un ami',
   'files.noFriendsToShare': 'Vous n’avez pas encore d’ami avec qui partager.',
   'files.folderShareCreated': 'Dossier partagé.',
   'files.operations': 'Gestion des fichiers',
@@ -14423,12 +14486,15 @@ final _filesLabelsAr = {
   'files.scope.team': 'الفريق',
   'files.scope.club': 'النادي',
   'files.scope.event': 'الحدث',
-  'files.shareLink': 'فتح رابط المشاركة',
+  'files.shareLink': 'مشاركة داخلية',
+  'files.internal_share_only': 'المشاركة مع أصدقاء Airmius فقط',
   'files.selectFileToShare': 'افتح ملفًا أو اختره أولًا.',
-  'files.shareCreated': 'تم نسخ رابط المشاركة.',
-  'files.shareUnavailable': 'لا يتوفر رابط مشاركة لهذا الملف.',
+  'files.shareCreated': 'تمت مشاركة الملف داخليًا.',
+  'files.fileShareCreated': 'تمت مشاركة الملف داخليًا.',
+  'files.shareUnavailable': 'المشاركة الداخلية غير متاحة.',
   'files.folderShareUnavailable': 'مشاركة المجلدات غير متاحة بعد.',
   'files.shareFolderTitle': 'مشاركة المجلد مع صديق',
+  'files.shareFileTitle': 'مشاركة الملف مع صديق',
   'files.noFriendsToShare': 'لا يوجد أصدقاء للمشاركة معهم بعد.',
   'files.folderShareCreated': 'تمت مشاركة المجلد.',
   'files.operations': 'إدارة الملفات',
@@ -14481,10 +14547,10 @@ final _filesLabelsAr = {
 const _fileDetailLabelsDe = {
   'filesOps.title': 'Datei-Operationen',
   'filesOps.subtitle':
-      'Uploads, Vereinsdokumente, Regeln, Share-Links und API-Zuordnung',
+      'Uploads, Vereinsdokumente, Regeln, interne Freigaben und API-Zuordnung',
   'filesOps.eyebrow': 'Dokumente & Dateimanager',
   'filesOps.body':
-      'Vereine können Dateien hochladen, als Pflichtdokument markieren, mit Mitgliedsanträgen oder Beitragsregeln verknüpfen und sicher teilen.',
+      'Vereine können Dateien hochladen, als Pflichtdokument markieren, mit Mitgliedsanträgen oder Beitragsregeln verknüpfen und sicher intern teilen.',
   'filesOps.search': 'Dateiaktion suchen',
   'filesOps.empty': 'Keine Dateiaktion gefunden.',
   'filesOps.apiContext': 'API-Kontext',
@@ -14531,14 +14597,14 @@ const _fileDetailLabelsDe = {
   'filesOps.unlinkTeamBody':
       'Dateizugriff für das Team entfernen und Rechte aktualisieren.',
   'filesOps.unlinkTeamAction': 'Team lösen',
-  'filesOps.createShareTitle': 'Share-Link erstellen',
+  'filesOps.createShareTitle': 'Datei intern teilen',
   'filesOps.createShareBody':
-      'Zeitlich begrenzten Link mit Token, Ablaufdatum und Datenschutzhinweis erzeugen.',
-  'filesOps.createShareAction': 'Link erstellen',
-  'filesOps.openSharedTitle': 'Geteilte Datei öffnen',
+      'Datei mit einem bestehenden Airmius-Freund teilen und den Zugriff intern verwalten.',
+  'filesOps.createShareAction': 'Freund auswählen',
+  'filesOps.openSharedTitle': 'Intern geteilte Datei öffnen',
   'filesOps.openSharedBody':
-      'Öffentliche Token-Route für Download oder Vorschau öffnen.',
-  'filesOps.openSharedAction': 'Token öffnen',
+      'Geteilte Datei direkt im Airmius-Dateimanager öffnen.',
+  'filesOps.openSharedAction': 'Datei öffnen',
   'filesOps.privacyTitle': 'Dokument als Datenschutz setzen',
   'filesOps.privacyBody':
       'Datei als aktuelle Datenschutzversion markieren und mit Anträgen verbinden.',
@@ -14551,7 +14617,7 @@ const _fileDetailLabelsDe = {
   'filesPreview.type': 'Typ',
   'filesPreview.unavailable':
       'Diese Datei ist momentan nicht direkt verfügbar.',
-  'filesPreview.copied': 'Dateilink wurde in die Zwischenablage kopiert.',
+  'filesPreview.copied': 'Datei intern geteilt.',
   'filesPreview.body':
       'Datei-Preview, Download, Teilen, Rechte und Vereinsdokument-Verknüpfung als native Mobile-UI.',
   'filesPreview.linkage': 'Verknüpfung',
@@ -14562,24 +14628,24 @@ const _fileDetailLabelsDe = {
   'filesPreview.clubVisibleBody':
       'Sichtbar für Mitglieder oder Besucher je nach Regel.',
   'filesPreview.permissions': 'Freigabe & Rechte',
-  'filesPreview.share': 'Share-Link',
-  'filesPreview.shareBody': 'Ablaufdatum, Zugriff und Empfänger verwalten.',
+  'filesPreview.share': 'Intern teilen',
+  'filesPreview.shareBody': 'Die Datei mit einem Airmius-Freund teilen.',
   'filesPreview.download': 'Download',
   'filesPreview.downloadBody':
       'Datei herunterladen oder später offline verfügbar machen.',
   'filesPreview.versions': 'Versionen',
   'filesPreview.versionsBody': 'Dokumentversionen und Audit-Trail vorbereiten.',
   'filesPreview.downloadAction': 'Download',
-  'filesPreview.shareAction': 'Teilen',
-  'filesPreview.testLink': 'Share-Link testen',
-  'shared.title': 'Geteilte Datei',
-  'shared.subtitle': 'Token-Link, Zugriff, Datenschutz und Download',
-  'shared.eyebrow': 'Shared Link',
+  'filesPreview.shareAction': 'Intern teilen',
+  'filesPreview.testLink': 'Interne Freigabe prüfen',
+  'shared.title': 'Intern geteilte Datei',
+  'shared.subtitle': 'Zugriff, Datenschutz und Download',
+  'shared.eyebrow': 'Interne Freigabe',
   'shared.body':
-      'Öffentliche oder halbprivate Dateilinks werden mobil als eigener sicherer Zugriff dargestellt.',
+      'Interne Dateifreigaben werden mobil als sicherer Zugriff dargestellt.',
   'shared.token': 'Token',
-  'shared.noLink': 'Noch kein Freigabe-Link vorhanden.',
-  'shared.copy': 'Link kopieren',
+  'shared.noLink': 'Noch keine interne Freigabe vorhanden.',
+  'shared.copy': 'Kopieren',
   'shared.access': 'Zugriff',
   'shared.password': 'Passwort erforderlich',
   'shared.passwordBody': 'Optionaler Schutz für sensible Vereinsdokumente.',
@@ -14611,10 +14677,10 @@ final _fileDetailLabelsEn = {
   ..._fileDetailLabelsDe,
   'filesOps.title': 'File operations',
   'filesOps.subtitle':
-      'Uploads, club documents, rules, share links and API mapping',
+      'Uploads, club documents, rules, internal sharing and API mapping',
   'filesOps.eyebrow': 'Documents & file manager',
   'filesOps.body':
-      'Clubs can upload files, mark required documents, link them to membership applications or fee rules, and share them securely.',
+      'Clubs can upload files, mark required documents, link them to membership applications or fee rules, and share them securely inside Airmius.',
   'filesOps.search': 'Search file operation',
   'filesOps.empty': 'No file operation found.',
   'filesOps.apiContext': 'API context',
@@ -14660,14 +14726,14 @@ final _fileDetailLabelsEn = {
   'filesOps.unlinkTeamTitle': 'Remove team file',
   'filesOps.unlinkTeamBody': 'Remove team access and update permissions.',
   'filesOps.unlinkTeamAction': 'Unlink team',
-  'filesOps.createShareTitle': 'Create share link',
+  'filesOps.createShareTitle': 'Share file internally',
   'filesOps.createShareBody':
-      'Create a time-limited link with token, expiry and privacy notice.',
-  'filesOps.createShareAction': 'Create link',
-  'filesOps.openSharedTitle': 'Open shared file',
+      'Share the file with an existing Airmius friend and manage access internally.',
+  'filesOps.createShareAction': 'Choose friend',
+  'filesOps.openSharedTitle': 'Open internally shared file',
   'filesOps.openSharedBody':
-      'Open the public token route for preview or download.',
-  'filesOps.openSharedAction': 'Open token',
+      'Open the shared file directly in the Airmius file manager.',
+  'filesOps.openSharedAction': 'Open file',
   'filesOps.privacyTitle': 'Set document as privacy policy',
   'filesOps.privacyBody':
       'Mark the file as the current privacy version and link it to applications.',
@@ -14679,7 +14745,7 @@ final _fileDetailLabelsEn = {
   'filesPreview.title': 'Document preview',
   'filesPreview.type': 'Type',
   'filesPreview.unavailable': 'This file is not directly available right now.',
-  'filesPreview.copied': 'The file link was copied to the clipboard.',
+  'filesPreview.copied': 'File shared internally.',
   'filesPreview.body':
       'Native mobile UI for file preview, download, sharing, permissions and club-document links.',
   'filesPreview.linkage': 'Linkage',
@@ -14689,24 +14755,24 @@ final _fileDetailLabelsEn = {
   'filesPreview.clubVisibleBody':
       'Visible to members or visitors according to the rule.',
   'filesPreview.permissions': 'Sharing & permissions',
-  'filesPreview.share': 'Share link',
-  'filesPreview.shareBody': 'Manage expiry, access and recipients.',
+  'filesPreview.share': 'Share internally',
+  'filesPreview.shareBody': 'Share the file with an Airmius friend.',
   'filesPreview.download': 'Download',
   'filesPreview.downloadBody':
       'Download the file or make it available offline later.',
   'filesPreview.versions': 'Versions',
   'filesPreview.versionsBody': 'Prepare document versions and audit trail.',
   'filesPreview.downloadAction': 'Download',
-  'filesPreview.shareAction': 'Share',
-  'filesPreview.testLink': 'Test share link',
-  'shared.title': 'Shared file',
-  'shared.subtitle': 'Token link, access, privacy and download',
-  'shared.eyebrow': 'Shared link',
+  'filesPreview.shareAction': 'Share internally',
+  'filesPreview.testLink': 'Check internal sharing',
+  'shared.title': 'Internally shared file',
+  'shared.subtitle': 'Access, privacy and download',
+  'shared.eyebrow': 'Internal sharing',
   'shared.body':
-      'Public or semi-private file links are displayed as a dedicated secure access flow on mobile.',
+      'Internal file sharing is displayed as a dedicated secure access flow on mobile.',
   'shared.token': 'Token',
-  'shared.noLink': 'No share link is available yet.',
-  'shared.copy': 'Copy link',
+  'shared.noLink': 'No internal share is available yet.',
+  'shared.copy': 'Copy',
   'shared.access': 'Access',
   'shared.password': 'Password required',
   'shared.passwordBody': 'Optional protection for sensitive club documents.',
@@ -14738,7 +14804,7 @@ final _fileDetailLabelsFr = {
   ..._fileDetailLabelsEn,
   'filesOps.title': 'Opérations de fichiers',
   'filesOps.subtitle':
-      'Imports, documents du club, règles, liens partagés et API',
+      'Imports, documents du club, règles, partage interne et API',
   'filesOps.eyebrow': 'Documents et gestionnaire de fichiers',
   'filesOps.body':
       'Les clubs peuvent importer des fichiers, marquer les documents obligatoires et les partager en toute sécurité.',
@@ -14789,14 +14855,14 @@ final _fileDetailLabelsFr = {
   'filesOps.unlinkTeamBody':
       'Retirer l’accès de l’équipe et actualiser les droits.',
   'filesOps.unlinkTeamAction': 'Dissocier l’équipe',
-  'filesOps.createShareTitle': 'Créer un lien de partage',
+  'filesOps.createShareTitle': 'Partager le fichier en interne',
   'filesOps.createShareBody':
-      'Créer un lien limité dans le temps avec jeton, expiration et avis de confidentialité.',
-  'filesOps.createShareAction': 'Créer le lien',
-  'filesOps.openSharedTitle': 'Ouvrir le fichier partagé',
+      'Partager le fichier avec un ami Airmius existant et gérer l’accès en interne.',
+  'filesOps.createShareAction': 'Choisir un ami',
+  'filesOps.openSharedTitle': 'Ouvrir le fichier partagé en interne',
   'filesOps.openSharedBody':
-      'Ouvrir la route sécurisée du jeton pour l’aperçu ou le téléchargement.',
-  'filesOps.openSharedAction': 'Ouvrir le jeton',
+      'Ouvrir le fichier directement dans le gestionnaire Airmius.',
+  'filesOps.openSharedAction': 'Ouvrir le fichier',
   'filesOps.privacyTitle': 'Définir comme document de confidentialité',
   'filesOps.privacyBody':
       'Marquer le fichier comme version actuelle de la confidentialité et l’associer aux demandes.',
@@ -14810,7 +14876,7 @@ final _fileDetailLabelsFr = {
   'filesPreview.unavailable':
       'Ce fichier n’est pas disponible directement pour le moment.',
   'filesPreview.copied':
-      'Le lien du fichier a été copié dans le presse-papiers.',
+      'Fichier partagé en interne.',
   'filesPreview.linkage': 'Association',
   'filesPreview.required': 'Document obligatoire dans la demande',
   'filesPreview.requiredBody':
@@ -14821,8 +14887,8 @@ final _fileDetailLabelsFr = {
   'filesPreview.permissions': 'Partage et droits',
   'filesPreview.body':
       'Interface mobile native pour l’aperçu, le téléchargement, le partage, les droits et les documents du club.',
-  'filesPreview.share': 'Lien de partage',
-  'filesPreview.shareBody': 'Gérer l’expiration, l’accès et les destinataires.',
+  'filesPreview.share': 'Partager en interne',
+  'filesPreview.shareBody': 'Partager le fichier avec un ami Airmius.',
   'filesPreview.download': 'Téléchargement',
   'filesPreview.downloadBody':
       'Télécharger le fichier ou le rendre disponible hors ligne.',
@@ -14830,16 +14896,16 @@ final _fileDetailLabelsFr = {
   'filesPreview.versionsBody':
       'Préparer les versions du document et la piste d’audit.',
   'filesPreview.downloadAction': 'Télécharger',
-  'filesPreview.shareAction': 'Partager',
-  'filesPreview.testLink': 'Tester le lien partagé',
-  'shared.title': 'Fichier partagé',
-  'shared.subtitle': 'Lien de jeton, accès, confidentialité et téléchargement',
-  'shared.eyebrow': 'Lien partagé',
+  'filesPreview.shareAction': 'Partager en interne',
+  'filesPreview.testLink': 'Vérifier le partage interne',
+  'shared.title': 'Fichier partagé en interne',
+  'shared.subtitle': 'Accès, confidentialité et téléchargement',
+  'shared.eyebrow': 'Partage interne',
   'shared.body':
-      'Les liens de fichiers publics ou semi-privés sont présentés dans un accès mobile sécurisé.',
+      'Les partages de fichiers internes sont présentés dans un accès mobile sécurisé.',
   'shared.token': 'Jeton',
-  'shared.noLink': 'Aucun lien de partage n’est encore disponible.',
-  'shared.copy': 'Copier le lien',
+  'shared.noLink': 'Aucun partage interne n’est encore disponible.',
+  'shared.copy': 'Copier',
   'shared.access': 'Accès',
   'shared.password': 'Mot de passe requis',
   'shared.passwordBody':
@@ -14872,7 +14938,7 @@ final _fileDetailLabelsAr = {
   ..._fileDetailLabelsEn,
   'filesOps.title': 'عمليات الملفات',
   'filesOps.subtitle':
-      'الرفع ومستندات النادي والقواعد وروابط المشاركة وربط الواجهة',
+      'الرفع ومستندات النادي والقواعد والمشاركة الداخلية وربط الواجهة',
   'filesOps.eyebrow': 'المستندات ومدير الملفات',
   'filesOps.body':
       'يمكن للأندية رفع الملفات وتحديد المستندات المطلوبة ومشاركتها بأمان.',
@@ -14916,13 +14982,13 @@ final _fileDetailLabelsAr = {
   'filesOps.unlinkTeamTitle': 'إزالة ملف الفريق',
   'filesOps.unlinkTeamBody': 'إزالة وصول الفريق وتحديث الصلاحيات.',
   'filesOps.unlinkTeamAction': 'إلغاء ربط الفريق',
-  'filesOps.createShareTitle': 'إنشاء رابط مشاركة',
+  'filesOps.createShareTitle': 'مشاركة الملف داخليًا',
   'filesOps.createShareBody':
       'إنشاء رابط مؤقت مع رمز وتاريخ انتهاء وإشعار خصوصية.',
-  'filesOps.createShareAction': 'إنشاء الرابط',
-  'filesOps.openSharedTitle': 'فتح الملف المشترك',
-  'filesOps.openSharedBody': 'فتح مسار الرمز الآمن للمعاينة أو التنزيل.',
-  'filesOps.openSharedAction': 'فتح الرمز',
+  'filesOps.createShareAction': 'اختيار صديق',
+  'filesOps.openSharedTitle': 'فتح الملف المشترك داخليًا',
+  'filesOps.openSharedBody': 'فتح الملف مباشرة في مدير ملفات Airmius.',
+  'filesOps.openSharedAction': 'فتح الملف',
   'filesOps.privacyTitle': 'تعيين المستند كسياسة خصوصية',
   'filesOps.privacyBody': 'تحديد الملف كإصدار الخصوصية الحالي وربطه بالطلبات.',
   'filesOps.setPurposeAction': 'تعيين الغرض',
@@ -14932,7 +14998,7 @@ final _fileDetailLabelsAr = {
   'filesPreview.title': 'معاينة المستند',
   'filesPreview.type': 'النوع',
   'filesPreview.unavailable': 'هذا الملف غير متاح مباشرةً الآن.',
-  'filesPreview.copied': 'تم نسخ رابط الملف إلى الحافظة.',
+  'filesPreview.copied': 'تمت مشاركة الملف داخليًا.',
   'filesPreview.linkage': 'الربط',
   'filesPreview.required': 'مستند مطلوب في طلب العضوية',
   'filesPreview.requiredBody': 'يظهر في الطلب ويجب قبوله.',
@@ -14941,23 +15007,23 @@ final _fileDetailLabelsAr = {
   'filesPreview.permissions': 'المشاركة والصلاحيات',
   'filesPreview.body':
       'واجهة هاتفية أصلية لمعاينة الملفات وتنزيلها ومشاركتها وربطها بالنادي.',
-  'filesPreview.share': 'رابط المشاركة',
-  'filesPreview.shareBody': 'إدارة الانتهاء والوصول والمستلمين.',
+  'filesPreview.share': 'مشاركة داخلية',
+  'filesPreview.shareBody': 'مشاركة الملف مع صديق على Airmius.',
   'filesPreview.download': 'التنزيل',
   'filesPreview.downloadBody': 'تنزيل الملف أو إتاحته دون اتصال لاحقًا.',
   'filesPreview.versions': 'الإصدارات',
   'filesPreview.versionsBody': 'تجهيز إصدارات المستند وسجل التدقيق.',
   'filesPreview.downloadAction': 'تنزيل',
-  'filesPreview.shareAction': 'مشاركة',
-  'filesPreview.testLink': 'اختبار رابط المشاركة',
-  'shared.title': 'ملف مشترك',
-  'shared.subtitle': 'رابط الرمز والوصول والخصوصية والتنزيل',
-  'shared.eyebrow': 'رابط مشترك',
+  'filesPreview.shareAction': 'مشاركة داخلية',
+  'filesPreview.testLink': 'التحقق من المشاركة الداخلية',
+  'shared.title': 'ملف مشترك داخليًا',
+  'shared.subtitle': 'الوصول والخصوصية والتنزيل',
+  'shared.eyebrow': 'مشاركة داخلية',
   'shared.body':
-      'تظهر روابط الملفات العامة أو شبه الخاصة في مسار وصول آمن للهاتف.',
+      'تظهر مشاركة الملفات الداخلية في مسار وصول آمن للهاتف.',
   'shared.token': 'الرمز',
-  'shared.noLink': 'لا يتوفر رابط مشاركة بعد.',
-  'shared.copy': 'نسخ الرابط',
+  'shared.noLink': 'لا تتوفر مشاركة داخلية بعد.',
+  'shared.copy': 'نسخ',
   'shared.access': 'الوصول',
   'shared.password': 'كلمة المرور مطلوبة',
   'shared.passwordBody': 'حماية اختيارية لمستندات النادي الحساسة.',

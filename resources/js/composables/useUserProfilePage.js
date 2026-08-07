@@ -125,23 +125,27 @@ export function useUserProfilePage(props) {
         friendshipStatus.value = 'friends'
         canSendFriendRequest.value = false
 
-        router.post(route('auth.friends.invitations.accept', friendInvitationId.value), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                friendshipNotice.value = { type: 'success', message: 'Freundschaft angenommen.' }
-            },
-            onError: (errors) => {
-                friendshipStatus.value = previous.status
-                canSendFriendRequest.value = previous.canSend
-                friendInvitationId.value = previous.invitationId
-                friendshipNotice.value = {
-                    type: 'error',
-                    message: errors.invitation || errors.message || 'Freundschaft konnte nicht angenommen werden.',
-                }
-            },
-            onFinish: () => {
-                friendshipProcessing.value = false
-            },
+        window.axios.post(
+            route('auth.friends.invitations.accept', friendInvitationId.value),
+            {},
+            { headers: { Accept: 'application/json' } },
+        ).then(() => {
+            friendInvitationId.value = null
+            friendshipNotice.value = { type: 'success', message: 'Freundschaft angenommen.' }
+        }).catch((error) => {
+            const errors = error.response?.data?.errors || {}
+
+            friendshipStatus.value = previous.status
+            canSendFriendRequest.value = previous.canSend
+            friendInvitationId.value = previous.invitationId
+            friendshipNotice.value = {
+                type: 'error',
+                message: errors.invitation?.[0]
+                    || error.response?.data?.message
+                    || 'Freundschaft konnte nicht angenommen werden.',
+            }
+        }).finally(() => {
+            friendshipProcessing.value = false
         })
     }
 
@@ -381,5 +385,3 @@ export function useUserProfilePage(props) {
         rejectRecommendation,
     }
 }
-
-

@@ -3488,7 +3488,7 @@ void main() {
       'family_group_key': 'home-1',
     });
     await client.inviteClubExternalMember(4, 17);
-    await client.removeClubExternalMember(4, 17);
+    await client.removeClubExternalMember(4, 17, reason: 'duplicate');
     await client.generateClubMemberNumber(4, 8);
     await client.createClubMemberInvoice(4, 8, {
       'title': 'Beitrag',
@@ -3500,7 +3500,7 @@ void main() {
     await client.updateClubSepaSettings(4, {'sepa_iban': 'DE00'});
     await client.updateClubDatevSettings(4, {'datev_client_number': '42'});
     await client.confirmClubBankTransaction(4, 15);
-    await client.removeClubMember(4, 8);
+    await client.removeClubMember(4, 8, reason: 'requested');
     await client.requestClubMembershipPause(4, {
       'requested_pause_from': '2026-08-01',
     });
@@ -5622,7 +5622,7 @@ void main() {
       const AirmiusApiRequest(
         method: 'POST',
         path: '/api/v1/uploads/42/share',
-        body: {'expires_in_days': 14},
+        body: {'target_user_id': 99},
       ),
     );
     expect(shareResponse.statusCode, 503);
@@ -7724,12 +7724,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('file share client uses the protected expiring-link endpoint', () async {
+  test('file share client uses the internal friend-sharing endpoint', () async {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 201,
         body:
-            '{"data":{"file_id":42,"token":"secure-token","url":"https://airmius.test/shared-files/secure-token"}}',
+            '{"data":{"file_id":42,"shared":true,"target_user_id":99}}',
       ),
     );
     final client = AirmiusApiClient(
@@ -7738,11 +7738,11 @@ void main() {
       token: 'auth-token',
     );
 
-    final result = await client.createFileShare(42, expiresInDays: 7);
+    final result = await client.shareFile(42, 99);
 
     expect(transport.requests.single.method, 'POST');
     expect(transport.requests.single.path, '/api/v1/uploads/42/share');
-    expect(transport.requests.single.body, containsPair('expires_in_days', 7));
+    expect(transport.requests.single.body, containsPair('target_user_id', 99));
     expect(result['data'], containsPair('file_id', 42));
 
     await client.shareFolder(7, 99);

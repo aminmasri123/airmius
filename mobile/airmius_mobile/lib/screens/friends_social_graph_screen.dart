@@ -9,7 +9,9 @@ import '../widgets/airmius_widgets.dart';
 import 'chat_detail_screen.dart';
 
 class FriendsSocialGraphScreen extends StatefulWidget {
-  const FriendsSocialGraphScreen({super.key});
+  const FriendsSocialGraphScreen({super.key, this.initialSection = 'friends'});
+
+  final String initialSection;
 
   @override
   State<FriendsSocialGraphScreen> createState() =>
@@ -20,6 +22,7 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   String _section = 'friends';
   Future<JsonMap>? _friendsFuture;
   bool _busy = false;
+  bool _sectionInitialized = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -29,6 +32,14 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_sectionInitialized) {
+      _section = switch (widget.initialSection) {
+        'received' => 'received',
+        'sent' => 'sent',
+        _ => 'friends',
+      };
+      _sectionInitialized = true;
+    }
     _friendsFuture ??= _load();
   }
 

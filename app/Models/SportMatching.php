@@ -34,4 +34,5 @@ class SportMatching extends Model
     public function sport() { return $this->belongsTo(Sport::class); }
     public function team() { return $this->belongsTo(Team::class); }
     public function applications() { return $this->hasMany(SportMatchingApplication::class); }
+    public function dismissals() { return $this->hasMany(SportMatchingDismissal::class); }
 }
