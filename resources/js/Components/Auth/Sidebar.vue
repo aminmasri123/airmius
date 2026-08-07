@@ -168,13 +168,15 @@ const closeSidebar = () => {
 
             <!-- Feed is the common area and is never disabled by a role module preference. -->
             <NavItem @navigate="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
+            <NavItem
+                v-if="can('file.index')"
+                @navigate="closeSidebar"
+                :href="route('auth.files.index')"
+                label="Dateien"
+                icon="las la-folder-open"
+            />
 
-            <NavGroup
-                v-if="isAthlete"
-                label="Mein Sport"
-                icon="las la-running"
-                :initial-open="true"
-            >
+            <template v-if="isAthlete">
                 <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events" icon="las la-calendar" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Training" icon="las la-clipboard-list" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
@@ -191,7 +193,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('rides.view')" @navigate="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
                 <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
-            </NavGroup>
+            </template>
 
             <NavGroup
                 v-if="isCoach"
@@ -203,7 +205,6 @@ const closeSidebar = () => {
                 <NavItem v-if="can('team.index')" @navigate="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />
                 <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events & Anwesenheit" icon="las la-calendar-check" />
                 <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingsplanung" icon="las la-clipboard-list" />
-                <NavItem v-if="can('file.index')" @navigate="closeSidebar" :href="route('auth.files.index')" label="Teamdateien" icon="las la-folder-open" />
             </NavGroup>
 
             <NavItem
@@ -235,7 +236,6 @@ const closeSidebar = () => {
             </NavGroup>
 
             <NavItem v-if="can('guardians.children.view')" @navigate="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
-            <NavItem v-if="can('file.index') && !isCoach && !isClubManager" @navigate="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem @navigate="closeSidebar" :href="route('guest.marketplace')" label="Marketplace" icon="las la-shopping-bag" />
             <NavItem v-if="isAthlete" @navigate="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
             <NavItem

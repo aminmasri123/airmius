@@ -17,9 +17,9 @@ class FilePolicy extends BasePolicy
 
     public function viewAny(User $user)
     {
-        return $user->can('file.view')
-            || $this->isClubAdmin($user)
-            || $this->isCoach($user);
+        // Every authenticated user has a personal file area. Scoped club,
+        // team and event files are still restricted by canAccessScope().
+        return true;
     }
 
     public function view(User $user, File $file)
