@@ -39,10 +39,8 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   bool _loading = true;
   bool _runningAction = false;
   bool _loadedOnce = false;
-  String _fileName = '';
   String? _error;
   String? _success;
-  PlatformFile? _pickedFile;
   AirmiusFileWorkspace? _workspace;
   final _folderNameController = TextEditingController();
 
@@ -174,7 +172,6 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                       _workspace?.filesPagination.total ?? _activeFiles.length,
                   showFilters: _showFilters,
                   showActions: _showActions,
-                  fileName: _fileName,
                   folderNameController: _folderNameController,
                   onToggleFilters: () => setState(() {
                     _showFilters = !_showFilters;
@@ -185,7 +182,6 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                     _showFilters = false;
                   }),
                   onPickFile: _openUploadIntent,
-                  onUpload: _submitUpload,
                   onCreateFolder: _createFolder,
                   onSearchChanged: _searchWorkspace,
                   onBack: _folderId == null ? null : _goHome,
@@ -304,35 +300,39 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   }
 
   Future<void> _openUploadIntent() async {
+    final t = AirmiusScope.of(context).t;
+    final user = _user;
+    final destination = await showModalBottomSheet<_UploadDestination>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: airmiusSurfaceColor(context),
+      builder: (_) => _UploadDestinationSheet(
+        clubs: user?.clubs ?? const <AirmiusNamedItem>[],
+        teams: user?.teams ?? const <AirmiusNamedItem>[],
+      ),
+    );
+    if (destination == null || !mounted) return;
+
     final result = await FilePicker.platform.pickFiles(withData: true);
     final file = result?.files.single;
     if (file == null) return;
-    setState(() {
-      _pickedFile = file;
-      _fileName = file.name;
-      _error = null;
+    setState(() => _error = null);
+
+    await _runAction(() async {
+      await _uploadFile(file, destination: destination);
+      if (!mounted) return;
+      setState(() => _success = t('files.uploaded'));
+      if (_destinationMatchesCurrent(destination)) {
+        await _loadWorkspace();
+      }
     });
   }
 
-  void _submitUpload() {
-    final t = AirmiusScope.of(context).t;
-    final file = _pickedFile;
-    if (file == null) {
-      setState(() => _error = t('files.chooseFirst'));
-      return;
-    }
-
-    _runAction(() async {
-      await _uploadFile(file);
-      _pickedFile = null;
-      _fileName = '';
-      _showActions = false;
-      _success = t('files.uploaded');
-      await _loadWorkspace();
-    });
-  }
-
-  Future<void> _uploadFile(PlatformFile file) async {
+  Future<void> _uploadFile(
+    PlatformFile file, {
+    _UploadDestination? destination,
+  }) async {
     final readFailed = AirmiusScope.of(context).t('files.readFailed');
     final services = AirmiusServicesScope.of(context);
     final base = Uri.parse(services.environment.apiBaseUrl);
@@ -349,17 +349,27 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         if (services.authState.session?.token.isNotEmpty == true)
           'Authorization': 'Bearer ${services.authState.session!.token}',
       });
-      request.fields['scope'] = _apiScope;
-      if (_selectedClubId != null) {
-        request.fields['club_id'] = '$_selectedClubId';
+      final targetScope = destination?.apiScope ?? _apiScope;
+      final targetClubId = destination != null
+          ? destination.clubId
+          : _selectedClubId;
+      final targetTeamId = destination != null
+          ? destination.teamId
+          : _selectedTeamId;
+      request.fields['scope'] = targetScope;
+      if (targetClubId != null) {
+        request.fields['club_id'] = '$targetClubId';
       }
-      if (_selectedTeamId != null) {
-        request.fields['team_id'] = '$_selectedTeamId';
+      if (targetTeamId != null) {
+        request.fields['team_id'] = '$targetTeamId';
       }
       if (_selectedEventId != null) {
         request.fields['event_id'] = '$_selectedEventId';
       }
-      if (_folderId != null) request.fields['folder_id'] = '$_folderId';
+      if (_folderId != null &&
+          (destination == null || _destinationMatchesCurrent(destination))) {
+        request.fields['folder_id'] = '$_folderId';
+      }
 
       if (file.bytes != null && file.bytes!.isNotEmpty) {
         request.files.add(
@@ -396,6 +406,13 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         );
       }
     });
+  }
+
+  bool _destinationMatchesCurrent(_UploadDestination destination) {
+    final currentScope = _apiScope;
+    if (destination.apiScope != currentScope) return false;
+    if (destination.clubId != _selectedClubId) return false;
+    return destination.teamId == _selectedTeamId;
   }
 
   MediaType _contentTypeFor(PlatformFile file) {
@@ -797,12 +814,10 @@ class _FileBrowserCard extends StatelessWidget {
     required this.totalFiles,
     required this.showFilters,
     required this.showActions,
-    required this.fileName,
     required this.folderNameController,
     required this.onToggleFilters,
     required this.onToggleActions,
     required this.onPickFile,
-    required this.onUpload,
     required this.onCreateFolder,
     required this.onSearchChanged,
     required this.onBack,
@@ -823,12 +838,10 @@ class _FileBrowserCard extends StatelessWidget {
   final int totalFiles;
   final bool showFilters;
   final bool showActions;
-  final String fileName;
   final TextEditingController folderNameController;
   final VoidCallback onToggleFilters;
   final VoidCallback onToggleActions;
   final VoidCallback onPickFile;
-  final VoidCallback onUpload;
   final VoidCallback onCreateFolder;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback? onBack;
@@ -901,20 +914,26 @@ class _FileBrowserCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     _HeaderIconButton(
-                      icon: showActions ? Icons.close : Icons.add,
-                      primary: true,
+                      icon: showActions
+                          ? Icons.close
+                          : Icons.create_new_folder_outlined,
+                      active: showActions,
                       onTap: onToggleActions,
+                      semanticLabel: t('files.createFolder'),
+                    ),
+                    const SizedBox(width: 8),
+                    _HeaderIconButton(
+                      icon: Icons.add,
+                      primary: true,
+                      onTap: onPickFile,
                       semanticLabel: t('files.add'),
                     ),
                   ],
                 ),
-                if (showActions) ...[
-                  const SizedBox(height: 12),
+                  if (showActions) ...[
+                    const SizedBox(height: 12),
                   _ActionsPanel(
-                    fileName: fileName,
                     folderNameController: folderNameController,
-                    onPickFile: onPickFile,
-                    onUpload: onUpload,
                     onCreateFolder: onCreateFolder,
                   ),
                 ],
@@ -1012,17 +1031,11 @@ class _FileBrowserCard extends StatelessWidget {
 
 class _ActionsPanel extends StatelessWidget {
   const _ActionsPanel({
-    required this.fileName,
     required this.folderNameController,
-    required this.onPickFile,
-    required this.onUpload,
     required this.onCreateFolder,
   });
 
-  final String fileName;
   final TextEditingController folderNameController;
-  final VoidCallback onPickFile;
-  final VoidCallback onUpload;
   final VoidCallback onCreateFolder;
 
   @override
@@ -1037,49 +1050,6 @@ class _ActionsPanel extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _Panel(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      t('files.uploadTitle'),
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: .2,
-                      ),
-                    ),
-                    Spacer(),
-                    Text(
-                      t('files.home'),
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _InputLikeButton(
-                  label: fileName,
-                  icon: Icons.attach_file,
-                  onTap: onPickFile,
-                ),
-                const SizedBox(height: 8),
-                _PrimaryBlockButton(
-                  label: t('membership.upload'),
-                  enabled: fileName.isNotEmpty,
-                  onTap: onUpload,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
           _Panel(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -1627,52 +1597,6 @@ class _FooterBadge extends StatelessWidget {
   }
 }
 
-class _InputLikeButton extends StatelessWidget {
-  const _InputLikeButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(9),
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: airmiusInputColor(context),
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: airmiusBorderColor(context)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: airmiusTextColor(context),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            Icon(icon, color: airmiusMutedColor(context), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PrimaryBlockButton extends StatelessWidget {
   const _PrimaryBlockButton({
     required this.label,
@@ -1783,6 +1707,267 @@ class _SelectLike extends StatelessWidget {
           Icon(Icons.keyboard_arrow_down, color: airmiusMutedColor(context)),
         ],
       ),
+    );
+  }
+}
+
+class _UploadDestination {
+  const _UploadDestination({
+    required this.scope,
+    this.clubId,
+    this.teamId,
+  });
+
+  final String scope;
+  final int? clubId;
+  final int? teamId;
+
+  String get apiScope => switch (scope) {
+    'club' => 'club',
+    'team' => 'team',
+    _ => 'user',
+  };
+}
+
+class _UploadDestinationSheet extends StatefulWidget {
+  const _UploadDestinationSheet({required this.clubs, required this.teams});
+
+  final List<AirmiusNamedItem> clubs;
+  final List<AirmiusNamedItem> teams;
+
+  @override
+  State<_UploadDestinationSheet> createState() =>
+      _UploadDestinationSheetState();
+}
+
+class _UploadDestinationSheetState extends State<_UploadDestinationSheet> {
+  String _scope = 'mine';
+  int? _clubId;
+  int? _teamId;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final targets = <({String value, IconData icon, String label})>[
+      (value: 'mine', icon: Icons.person_outline, label: t('files.scope.mine')),
+      if (widget.clubs.isNotEmpty)
+        (value: 'club', icon: Icons.business_outlined, label: t('files.scope.club')),
+      if (widget.teams.isNotEmpty)
+        (value: 'team', icon: Icons.groups_outlined, label: t('files.scope.team')),
+    ];
+    final canContinue =
+        _scope == 'mine' ||
+        (_scope == 'club' && _clubId != null) ||
+        (_scope == 'team' && _teamId != null);
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    airmiusAccentColor(context).withValues(alpha: 0.22),
+                    airmiusSurfaceSoftColor(context),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: airmiusBorderColor(context)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_upload_outlined,
+                    color: airmiusAccentColor(context),
+                    size: 32,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t('files.uploadTitle'),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 21,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          t('files.scope'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              t('files.scope'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            for (final target in targets) ...[
+              InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => setState(() {
+                  _scope = target.value;
+                  if (_scope != 'club') _clubId = null;
+                  if (_scope != 'team') _teamId = null;
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _scope == target.value
+                        ? airmiusAccentColor(context).withValues(alpha: 0.14)
+                        : airmiusSurfaceSoftColor(context),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _scope == target.value
+                          ? airmiusAccentColor(context)
+                          : airmiusBorderColor(context),
+                      width: _scope == target.value ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        target.icon,
+                        color: _scope == target.value
+                            ? airmiusAccentColor(context)
+                            : airmiusMutedColor(context),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          target.label,
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _scope == target.value
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        color: _scope == target.value
+                            ? airmiusAccentColor(context)
+                            : airmiusMutedColor(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (_scope == 'club') ...[
+              const SizedBox(height: 2),
+              _DestinationDropdown(
+                label: t('files.scope.club'),
+                value: _clubId,
+                items: widget.clubs,
+                onChanged: (value) => setState(() => _clubId = value),
+              ),
+            ],
+            if (_scope == 'team') ...[
+              const SizedBox(height: 2),
+              _DestinationDropdown(
+                label: t('files.scope.team'),
+                value: _teamId,
+                items: widget.teams,
+                onChanged: (value) => setState(() => _teamId = value),
+              ),
+            ],
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: canContinue
+                    ? () => Navigator.pop(
+                        context,
+                        _UploadDestination(
+                          scope: _scope,
+                          clubId: _clubId,
+                          teamId: _teamId,
+                        ),
+                      )
+                    : null,
+                icon: const Icon(Icons.attach_file_outlined),
+                label: Text(
+                  t('files.choose'),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: airmiusAccentColor(context),
+                  foregroundColor: airmiusOnColor(airmiusAccentColor(context)),
+                  disabledBackgroundColor: airmiusSurfaceSoftColor(context),
+                  disabledForegroundColor: airmiusMutedColor(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DestinationDropdown extends StatelessWidget {
+  const _DestinationDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int? value;
+  final List<AirmiusNamedItem> items;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: value,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: airmiusInputColor(context),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: airmiusBorderColor(context)),
+        ),
+      ),
+      dropdownColor: airmiusSurfaceColor(context),
+      items: items
+          .map(
+            (item) => DropdownMenuItem<int>(
+              value: item.id,
+              child: Text(item.name),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
     );
   }
 }

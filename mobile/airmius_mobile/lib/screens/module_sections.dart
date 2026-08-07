@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_mvp_surface.dart';
 import '../core/airmius_l10n.dart';
+import '../core/airmius_module_access.dart';
+import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/admin_access_denied_screen.dart';
 import 'admin_center_screen.dart';
 import 'badges_center_screen.dart';
 import 'blog_media_center_screen.dart';
@@ -58,6 +61,10 @@ class ModuleSpecificSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = AirmiusServicesScope.of(context).authState.user;
+    if (!AirmiusModuleAccess.canOpen(user, module.title)) {
+      return const AdminAccessDeniedScreen();
+    }
     if (AirmiusMvpSurface.showDeveloperSuites) {
       return _legacySection();
     }
@@ -112,6 +119,16 @@ class ModuleSpecificSection extends StatelessWidget {
   }
 
   void _openModule(BuildContext context) {
+    final user = AirmiusServicesScope.of(context).authState.user;
+    if (!AirmiusModuleAccess.canOpen(user, module.title)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('adminHub.forbiddenBody')),
+        ),
+      );
+      return;
+    }
+
     final target = switch (module.title) {
       'Arbeitsbereiche' => WorkspaceCenterScreen(),
       'Vereins-Cockpit' => ClubCockpitScreen(),

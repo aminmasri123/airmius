@@ -3,8 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
+import '../core/airmius_module_access.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/admin_access_denied_screen.dart';
 import 'admin_backoffice_screen.dart';
 import 'admin_commerce_operations_screen.dart';
 import 'outfit_operations_screen.dart';
@@ -30,6 +32,11 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!AirmiusModuleAccess.canOpenAdmin(
+      AirmiusServicesScope.of(context).authState.user,
+    )) {
+      return;
+    }
     _future ??= _load();
   }
 
@@ -76,6 +83,12 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!AirmiusModuleAccess.canOpenAdmin(
+      AirmiusServicesScope.of(context).authState.user,
+    )) {
+      return const AdminAccessDeniedScreen();
+    }
+
     final t = AirmiusScope.of(context).t;
     return Scaffold(
       appBar: AppBar(

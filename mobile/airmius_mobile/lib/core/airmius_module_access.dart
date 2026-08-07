@@ -83,31 +83,15 @@ final class AirmiusModuleAccess {
         'file.upload',
         'file.delete',
       }),
-      'Rollen & Rechte' =>
-        _adminTwoFactorSatisfied(user) &&
-            _hasAnyPermission(user, const {
-              'roles.manage',
-              'users.assign_roles',
-              'user.manage',
-              'system.manage',
-            }),
-      'Gamification-Regeln' =>
-        _adminTwoFactorSatisfied(user) &&
-            _hasAnyPermission(user, const {'system.manage'}),
+      'Rollen & Rechte' => canOpenPlatformAdmin(user),
+      'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
       'Sponsoren' => _adminTwoFactorSatisfied(user) && _canManageSponsors(user),
       'Medienrichtlinien' =>
         _adminTwoFactorSatisfied(user) && _canManageMedia(user),
       'Blog & Medien' =>
         _adminTwoFactorSatisfied(user) && _canManageEditorial(user),
-      'Nutzer' =>
-        _adminTwoFactorSatisfied(user) &&
-            _hasAnyPermission(user, const {
-              'users.view',
-              'users.edit',
-              'user.manage',
-              'system.manage',
-            }),
+      'Nutzer' => canOpenPlatformAdmin(user),
       'Eltern & Jugendschutz' => canOpenGuardianCenter(user),
       'Admin' => canOpenAdmin(user),
       _ => false,
@@ -167,6 +151,13 @@ final class AirmiusModuleAccess {
           'media_manager',
           'support',
         });
+  }
+
+  /// Platform administration requires the dedicated system-management
+  /// capability. Specialist admin roles can use their own admin surfaces but
+  /// must not enter the platform-wide user/role administration pages.
+  static bool canOpenPlatformAdmin(AirmiusUser? user) {
+    return canOpenAdmin(user) && user?.can('system.manage') == true;
   }
 
   static bool _hasWorkspace(AirmiusUser user) {

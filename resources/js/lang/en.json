@@ -7729,6 +7729,7 @@
     "search_sort": "Search and sort",
     "add_file_folder": "Add file or folder",
     "upload": "Upload file",
+    "uploadTitle": "Add a file securely",
     "root": "Root",
     "choose_file": "Choose file",
     "storage_full": "Your storage is full. Delete files or upgrade.",

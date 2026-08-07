@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_module_access.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_workspace_snapshot.dart';
@@ -35,6 +36,16 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   String t(String key) => AirmiusScope.of(context).t(key);
 
   Future<void> _activateContext() async {
+    if (_context == 'admin' &&
+        !AirmiusModuleAccess.canOpenAdmin(
+          AirmiusServicesScope.of(context).authState.user,
+        )) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t('adminHub.forbiddenBody'))));
+      return;
+    }
+
     final destination = switch (_context) {
       'guest' => const GuestPortalScreen(),
       'dashboard' => const DailyFlowScreen(),
@@ -73,6 +84,9 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canOpenAdmin = AirmiusModuleAccess.canOpenAdmin(
+      AirmiusServicesScope.of(context).authState.user,
+    );
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
     final text = theme.textTheme.bodyLarge?.color ?? AirmiusColors.text;
@@ -128,7 +142,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                               ('dashboard', t('workspace.dashboard')),
                               ('club', t('workspace.club')),
                               ('trainer', t('workspace.trainer')),
-                              ('admin', t('workspace.admin')),
+                              if (canOpenAdmin) ('admin', t('workspace.admin')),
                             ]
                             .map(
                               (item) => DropdownMenuItem(

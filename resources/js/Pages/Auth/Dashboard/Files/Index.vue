@@ -53,6 +53,10 @@ const page = usePage()
 const isFiltering = ref(false)
 const showMobileFilters = ref(false)
 const showMobileActions = ref(false)
+const showUploadModal = ref(false)
+const uploadTarget = ref('user')
+const uploadClubId = ref(null)
+const uploadTeamId = ref(null)
 const SEARCH_DEBOUNCE_MS = 350
 let searchDebounceTimer = null
 
@@ -121,6 +125,13 @@ const activeFiles = computed(() => {
 const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
 const isStorageFull = computed(() => storageUsage.value?.is_full === true)
 const uploadFileName = computed(() => uploadForm.file?.name || tx('files.choose_file'))
+const uploadTargetReady = computed(() => {
+    if (uploadTarget.value === 'club') return Boolean(uploadClubId.value)
+    if (uploadTarget.value === 'team') return Boolean(uploadTeamId.value)
+
+    return true
+})
+const uploadTargetLabel = computed(() => tx(`files.scope.${uploadTarget.value}`))
 const deleteTargetName = computed(() => {
     if (!deleteTarget.value) return ''
 
@@ -275,15 +286,43 @@ const openFolder = (folder) => {
     visitFileManager(payload)
 }
 
+const openUploadModal = () => {
+    uploadTarget.value = 'user'
+    uploadClubId.value = null
+    uploadTeamId.value = null
+    uploadForm.reset('file')
+    uploadForm.clearErrors()
+    showUploadModal.value = true
+}
+
+const closeUploadModal = () => {
+    if (uploadForm.processing) return
+
+    showUploadModal.value = false
+}
+
+const selectUploadTarget = (target) => {
+    uploadTarget.value = target
+    if (target !== 'club') uploadClubId.value = null
+    if (target !== 'team') uploadTeamId.value = null
+}
+
 const submitUpload = () => {
-    syncForms()
-    uploadForm.folder_id = props.currentFolder?.id || null
+    uploadForm.scope = uploadTarget.value
+    uploadForm.club_id = uploadTarget.value === 'club' ? uploadClubId.value : null
+    uploadForm.team_id = uploadTarget.value === 'team' ? uploadTeamId.value : null
+    uploadForm.event_id = null
+    uploadForm.folder_id = uploadTarget.value === scopeForm.scope
+        && (uploadTarget.value !== 'club' || uploadClubId.value === scopeForm.club_id)
+        && (uploadTarget.value !== 'team' || uploadTeamId.value === scopeForm.team_id)
+        ? props.currentFolder?.id || null
+        : null
     uploadForm.post(route('auth.files.store'), {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
             uploadForm.reset('file')
-            showMobileActions.value = false
+            showUploadModal.value = false
             if (fileInput.value) {
                 fileInput.value.value = ''
             }
@@ -587,6 +626,15 @@ watch(showShareModal, async (show) => {
                             <div class="flex shrink-0 items-center gap-2 sm:justify-end">
                                 <button
                                     type="button"
+                                    class="hidden h-10 items-center gap-2 rounded-lg bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary shadow-sm hover:opacity-90 disabled:opacity-50 md:inline-flex"
+                                    :disabled="isFiltering || isStorageFull"
+                                    @click="openUploadModal"
+                                >
+                                    <i class="las la-cloud-upload-alt text-base"></i>
+                                    {{ tx('files.upload') }}
+                                </button>
+                                <button
+                                    type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg border border-border text-lg text-primary hover:bg-inputBg md:hidden"
                                     :class="{ 'bg-inputBg': showMobileFilters }"
                                     :aria-expanded="showMobileFilters"
@@ -597,49 +645,26 @@ watch(showShareModal, async (show) => {
                                 </button>
                                 <button
                                     type="button"
-                                    class="grid h-10 w-10 place-items-center rounded-lg bg-buttonPrimary text-lg text-buttonTextPrimary shadow-sm disabled:opacity-50 md:hidden"
+                                    class="grid h-10 w-10 place-items-center rounded-lg border border-border text-lg text-primary hover:bg-inputBg md:hidden"
                                     :aria-expanded="showMobileActions"
-                                    :aria-label="tx('files.add_file_folder')"
+                                    :aria-label="tx('files.create_folder')"
                                     @click="showMobileActions = !showMobileActions; showMobileFilters = false"
                                 >
-                                    <i :class="showMobileActions ? 'las la-times' : 'las la-plus'"></i>
+                                    <i :class="showMobileActions ? 'las la-times' : 'las la-folder-plus'"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg bg-buttonPrimary text-lg text-buttonTextPrimary shadow-sm disabled:opacity-50 md:hidden"
+                                    :disabled="isFiltering || isStorageFull"
+                                    :aria-label="tx('files.upload')"
+                                    @click="openUploadModal"
+                                >
+                                    <i class="las la-plus"></i>
                                 </button>
                             </div>
                         </div>
 
                         <div v-if="showMobileActions" class="grid gap-2 rounded-lg border border-border bg-inputBg/40 p-2 md:hidden">
-                            <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="submitUpload">
-                                <div class="flex items-center justify-between gap-2">
-                                    <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('files.upload') }}</h2>
-                                    <span class="truncate text-xs text-secondary">{{ currentFolder?.name || tx('files.root') }}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="mt-3 flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
-                                    @click="selectUploadFile"
-                                    :aria-label="tx('files.choose_file')"
-                                >
-                                    <span class="truncate">{{ uploadFileName }}</span>
-                                    <i class="las la-paperclip text-lg text-secondary"></i>
-                                </button>
-                                <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
-                                    {{ tx('files.storage_full') }}
-                                </p>
-                                <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
-                                    {{ uploadForm.errors.file || uploadForm.errors.general }}
-                                </p>
-                                <AppLoadingState v-if="uploadForm.processing" class="mt-2" :label="tx('files.upload_running')" inline />
-                                <AppButton
-                                    type="submit"
-                                    class="mt-2"
-                                    block
-                                    :loading="uploadForm.processing"
-                                    :disabled="uploadForm.processing || !uploadForm.file || isStorageFull"
-                                >
-                                    {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
-                                </AppButton>
-                            </form>
-
                             <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
                                 <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('files.create_folder') }}</h2>
                                 <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" :placeholder="tx('files.folder_name')">
@@ -887,37 +912,29 @@ watch(showShareModal, async (show) => {
                         </div>
                     </section>
 
-                    <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="submitUpload">
-                        <div class="flex items-center justify-between gap-2">
-                            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.upload') }}</h2>
-                            <span class="truncate text-xs text-secondary">{{ currentFolder?.name || tx('files.root') }}</span>
+                    <section class="hidden rounded-lg border border-border bg-card p-4 md:block">
+                        <div class="flex items-start gap-3">
+                            <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-buttonPrimary/10 text-buttonPrimary">
+                                <i class="las la-cloud-upload-alt text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <h2 class="text-sm font-semibold text-primary">{{ tx('files.upload') }}</h2>
+                                <p class="mt-1 text-xs leading-5 text-secondary">{{ tx('files.scope_label') }}: {{ uploadTargetLabel }}</p>
+                            </div>
                         </div>
                         <button
                             type="button"
-                            class="mt-3 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
-                            @click="selectUploadFile"
-                            :aria-label="tx('files.choose_file')"
+                            class="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary shadow-sm hover:opacity-90 disabled:opacity-50"
+                            :disabled="isStorageFull"
+                            @click="openUploadModal"
                         >
-                            <span class="truncate">{{ uploadFileName }}</span>
-                            <i class="las la-paperclip text-lg text-secondary"></i>
+                            <i class="las la-plus"></i>
+                            {{ tx('files.upload') }}
                         </button>
                         <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
                             {{ tx('files.storage_full') }}
                         </p>
-                        <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
-                            {{ uploadForm.errors.file || uploadForm.errors.general }}
-                        </p>
-                        <AppLoadingState v-if="uploadForm.processing" class="mt-2" :label="tx('files.upload_running')" inline />
-                        <AppButton
-                            type="submit"
-                            class="mt-2"
-                            block
-                            :loading="uploadForm.processing"
-                            :disabled="uploadForm.processing || !uploadForm.file || isStorageFull"
-                        >
-                            {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
-                        </AppButton>
-                    </form>
+                    </section>
 
                     <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="createFolder">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ tx('files.new_folder') }}</h2>
@@ -957,6 +974,92 @@ watch(showShareModal, async (show) => {
             </div>
         </div>
     </AppLayout>
+
+    <Modal :show="showUploadModal" max-width="lg" @close="closeUploadModal">
+        <form class="space-y-6 text-primary" @submit.prevent="submitUpload">
+            <div class="flex items-start gap-3">
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-buttonPrimary/10 text-buttonPrimary">
+                    <i class="las la-cloud-upload-alt text-2xl"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-buttonPrimary">{{ tx('files.upload') }}</p>
+                    <h2 class="mt-1 text-xl font-bold">{{ tx('files.uploadTitle') }}</h2>
+                    <p class="mt-1 text-sm leading-6 text-secondary">{{ tx('files.scope_label') }}: {{ uploadTargetLabel }}</p>
+                </div>
+            </div>
+
+            <div>
+                <p class="mb-2 text-sm font-semibold text-primary">{{ tx('files.scope_label') }}</p>
+                <div class="grid gap-2 sm:grid-cols-3">
+                    <button
+                        v-for="target in [
+                            { value: 'user', icon: 'las la-user', label: tx('files.scope.user') },
+                            ...(clubs.length ? [{ value: 'club', icon: 'las la-building', label: tx('files.scope.club') }] : []),
+                            ...(teams.length ? [{ value: 'team', icon: 'las la-users', label: tx('files.scope.team') }] : []),
+                        ]"
+                        :key="target.value"
+                        type="button"
+                        class="flex min-h-24 flex-col items-start justify-between rounded-2xl border p-3 text-left transition hover:border-buttonPrimary hover:bg-buttonPrimary/5"
+                        :class="uploadTarget === target.value ? 'border-buttonPrimary bg-buttonPrimary/10 ring-2 ring-buttonPrimary/20' : 'border-border bg-inputBg/40'"
+                        @click="selectUploadTarget(target.value)"
+                    >
+                        <i :class="[target.icon, uploadTarget === target.value ? 'text-buttonPrimary' : 'text-secondary']" class="text-xl"></i>
+                        <span class="text-sm font-semibold">{{ target.label }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <label v-if="uploadTarget === 'club'" class="block text-sm">
+                <span class="mb-1 block text-secondary">{{ tx('files.scope.club') }}</span>
+                <select v-model="uploadClubId" class="h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary">
+                    <option :value="null">{{ tx('files.select') }}</option>
+                    <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                </select>
+            </label>
+
+            <label v-if="uploadTarget === 'team'" class="block text-sm">
+                <span class="mb-1 block text-secondary">{{ tx('files.scope.team') }}</span>
+                <select v-model="uploadTeamId" class="h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary">
+                    <option :value="null">{{ tx('files.select') }}</option>
+                    <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                </select>
+            </label>
+
+            <div class="rounded-2xl border border-dashed border-buttonPrimary/50 bg-buttonPrimary/5 p-4">
+                <button
+                    type="button"
+                    class="flex min-h-20 w-full flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-center hover:border-buttonPrimary"
+                    :disabled="uploadForm.processing"
+                    @click="selectUploadFile"
+                >
+                    <i class="las la-paperclip text-2xl text-buttonPrimary"></i>
+                    <span class="max-w-full truncate text-sm font-semibold">{{ uploadFileName }}</span>
+                    <span class="text-xs text-secondary">{{ tx('files.choose_file') }}</span>
+                </button>
+                <p v-if="isStorageFull" class="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
+                    {{ tx('files.storage_full') }}
+                </p>
+                <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-3 rounded-xl border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                    {{ uploadForm.errors.file || uploadForm.errors.general }}
+                </p>
+                <AppLoadingState v-if="uploadForm.processing" class="mt-3" :label="tx('files.upload_running')" inline />
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" class="flex-1 rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-inputBg" :disabled="uploadForm.processing" @click="closeUploadModal">
+                    {{ tx('files.cancel') }}
+                </button>
+                <AppButton
+                    type="submit"
+                    class="flex-1"
+                    :loading="uploadForm.processing"
+                    :disabled="uploadForm.processing || !uploadForm.file || !uploadTargetReady || isStorageFull"
+                >
+                    {{ uploadForm.processing ? tx('files.uploading') : tx('files.upload') }}
+                </AppButton>
+            </div>
+        </form>
+    </Modal>
 
     <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
         <div class="space-y-5 text-primary">

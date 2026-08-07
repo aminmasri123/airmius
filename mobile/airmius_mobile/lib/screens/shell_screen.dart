@@ -347,7 +347,7 @@ class _ShellScreenState extends State<ShellScreen> {
       return;
     }
     if (module.title == 'Admin' &&
-        !_canOpenPlatformAdmin(
+        !AirmiusModuleAccess.canOpenAdmin(
           AirmiusServicesScope.of(context).authState.user,
         )) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1039,7 +1039,7 @@ bool _canOpenClubCockpit(AirmiusUser? user) {
 }
 
 bool _canOpenPlatformAdmin(AirmiusUser? user) {
-  return AirmiusModuleAccess.canOpenAdmin(user);
+  return AirmiusModuleAccess.canOpenPlatformAdmin(user);
 }
 
 class _NutritionChoiceTile extends StatelessWidget {

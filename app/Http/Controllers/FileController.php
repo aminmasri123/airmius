@@ -213,8 +213,6 @@ class FileController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('upload', File::class);
-
         $data = $request->validate([
             'scope' => ['required', Rule::in(['user', 'team', 'club', 'event'])],
             'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
@@ -225,13 +223,21 @@ class FileController extends Controller
         ]);
 
         $scope = $this->authorizeScope($data);
+        $isPersonalScope = ($scope['user_id'] ?? null) === $request->user()->id
+            && empty($scope['club_id'])
+            && empty($scope['team_id'])
+            && empty($scope['event_id']);
+
+        if (! $isPersonalScope) {
+            $this->authorize('upload', File::class);
+        }
 
         if (! empty($scope['club_id'])) {
             $club = Club::findOrFail($scope['club_id']);
             $this->planFeatures->ensureCanStoreFile($club, $request->file('file'));
         }
 
-        if (($scope['user_id'] ?? null) === $request->user()->id && empty($scope['club_id']) && empty($scope['team_id']) && empty($scope['event_id'])) {
+        if ($isPersonalScope) {
             $this->planFeatures->ensureCanStoreUserFile($request->user(), $request->file('file'));
         }
 

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
+import '../core/airmius_module_access.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_workspace_snapshot.dart';
 import '../widgets/airmius_widgets.dart';
-import 'access_operations_screen.dart';
 import 'workspace_detail_screen.dart';
 
 class WorkspaceCenterScreen extends StatefulWidget {
@@ -49,6 +49,9 @@ class _WorkspaceCenterScreenState extends State<WorkspaceCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final canOpenAdmin = AirmiusModuleAccess.canOpenAdmin(
+      AirmiusServicesScope.of(context).authState.user,
+    );
     final text = airmiusTextColor(context);
     final muted = airmiusMutedColor(context);
     final border = Theme.of(context).dividerColor;
@@ -58,7 +61,7 @@ class _WorkspaceCenterScreenState extends State<WorkspaceCenterScreen> {
       (id: 'dashboard', label: t('workspace.dashboard')),
       (id: 'club', label: t('workspace.club')),
       (id: 'trainer', label: t('workspace.trainer')),
-      (id: 'admin', label: t('workspace.admin')),
+      if (canOpenAdmin) (id: 'admin', label: t('workspace.admin')),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -314,17 +317,6 @@ class _WorkspaceCenterScreenState extends State<WorkspaceCenterScreen> {
                                   status: t('workspace.audit'),
                                   snapshot: data,
                                 ),
-                              ),
-                            ),
-                          ),
-                          AirmiusButton(
-                            label: t('workspace.accessOps'),
-                            icon: Icons.admin_panel_settings_outlined,
-                            secondary: true,
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AccessOperationsScreen(),
                               ),
                             ),
                           ),

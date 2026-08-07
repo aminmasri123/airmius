@@ -7407,6 +7407,7 @@
     "search_sort": "Suchen und sortieren",
     "add_file_folder": "Datei oder Ordner hinzufügen",
     "upload": "Datei hochladen",
+    "uploadTitle": "Datei sicher hinzufügen",
     "root": "Hauptebene",
     "choose_file": "Datei auswählen",
     "storage_full": "Dein Speicher ist voll. Bitte lösche Dateien oder upgrade.",
