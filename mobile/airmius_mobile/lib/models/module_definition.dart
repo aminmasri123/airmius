@@ -90,6 +90,13 @@ const appModules = [
     metrics: {'Events': '5', 'Pläne': '2'},
   ),
   ModuleDefinition(
+    title: 'Trainingsplanung',
+    subtitle: 'Trainingsblöcke, Belastung und Teamplanung',
+    icon: Icons.assignment_outlined,
+    actions: ['Plan öffnen', 'Belastung prüfen', 'Coach-Feedback ansehen'],
+    metrics: {'Pläne': '2'},
+  ),
+  ModuleDefinition(
     title: 'Trainer-Cockpit',
     subtitle: 'Athleten, Feedback, Wochenaktionen und Risiken',
     icon: Icons.sports_score_outlined,

@@ -1666,6 +1666,11 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
+  final _locationStreetController = TextEditingController();
+  final _locationHouseNumberController = TextEditingController();
+  final _locationPostalCodeController = TextEditingController();
+  final _locationCityController = TextEditingController();
+  final _locationCountryController = TextEditingController(text: 'DE');
   final _notesController = TextEditingController();
   final _maxParticipantsController = TextEditingController();
   int _step = 1;
@@ -1679,6 +1684,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   final Set<int> _recurrenceDays = {};
   DateTime _start = DateTime.now().add(const Duration(hours: 1));
   DateTime? _end;
+  DateTime? _reminderAt;
 
   List<String> get _eventTypeOptions {
     final options = widget.eventTypes
@@ -1705,6 +1711,11 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
+    _locationStreetController.dispose();
+    _locationHouseNumberController.dispose();
+    _locationPostalCodeController.dispose();
+    _locationCityController.dispose();
+    _locationCountryController.dispose();
     _notesController.dispose();
     _maxParticipantsController.dispose();
     super.dispose();
@@ -1725,6 +1736,12 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     );
     if (next == null) return;
     setState(() => _end = next.isBefore(_start) ? _start : next);
+  }
+
+  Future<void> _pickReminder() async {
+    final next = await _pickDateTime(_reminderAt ?? _start.subtract(const Duration(hours: 1)));
+    if (next == null) return;
+    setState(() => _reminderAt = next);
   }
 
   Future<void> _pickRecurrenceEnd() async {
@@ -1835,6 +1852,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_visibility == 'private' && _teamId != null)
         'uses_penalty_catalog': _usesPenaltyCatalog,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
+      if (_reminderAt != null) 'reminder_at': _reminderAt!.toUtc().toIso8601String(),
       if (_recurring != null) ...{
         'recurring': _recurring,
         'recurrence_ends_at': _recurrenceEndsAt!.toUtc().toIso8601String(),
@@ -1842,7 +1860,17 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           'recurrence_days': _recurrenceDays.toList()..sort(),
       },
       if (_locationController.text.trim().isNotEmpty)
-        'location': _locationController.text.trim(),
+        'location_name': _locationController.text.trim(),
+      if (_locationStreetController.text.trim().isNotEmpty)
+        'location_street': _locationStreetController.text.trim(),
+      if (_locationHouseNumberController.text.trim().isNotEmpty)
+        'location_house_number': _locationHouseNumberController.text.trim(),
+      if (_locationPostalCodeController.text.trim().isNotEmpty)
+        'location_postal_code': _locationPostalCodeController.text.trim(),
+      if (_locationCityController.text.trim().isNotEmpty)
+        'location_city': _locationCityController.text.trim(),
+      if (_locationCountryController.text.trim().isNotEmpty)
+        'location_country': _locationCountryController.text.trim().toUpperCase(),
       if (_notesController.text.trim().isNotEmpty)
         'notes': _notesController.text.trim(),
       'max_participants': ?maxParticipants,
@@ -2067,104 +2095,77 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        if (widget.allowsRecurring) ...[
-          const SizedBox(height: 18),
-          Text(
-            scope.t('events.recurring'),
-            style: TextStyle(
-              color: airmiusTextColor(context),
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            scope.t('events.recurringHint'),
-            style: TextStyle(
-              color: airmiusMutedColor(context),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String?>(
-            initialValue: _recurring,
-            decoration: InputDecoration(labelText: scope.t('events.repeat')),
-            dropdownColor: airmiusSurfaceColor(context),
-            items: [
-              DropdownMenuItem<String?>(
-                value: null,
-                child: Text(scope.t('events.repeat.none')),
-              ),
-              for (final value in const [
-                'daily',
-                'weekly',
-                'biweekly',
-                'monthly',
-              ])
-                DropdownMenuItem<String?>(
-                  value: value,
-                  child: Text(scope.t('events.repeat.$value')),
-                ),
-            ],
-            onChanged: (value) => setState(() {
-              _recurring = value;
-              if (value == null) {
-                _recurrenceEndsAt = null;
-                _recurrenceDays.clear();
-              } else {
-                _recurrenceEndsAt ??= _start.add(const Duration(days: 28));
-              }
-              if (value == 'weekly' || value == 'biweekly') {
-                _recurrenceDays
-                  ..clear()
-                  ..add(_start.weekday % 7);
-              }
-            }),
-          ),
-          if (_recurring != null) ...[
-            const SizedBox(height: 10),
-            AirmiusButton(
-              label: _recurrenceEndsAt == null
-                  ? scope.t('events.recurrenceEnd')
-                  : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
-              icon: Icons.event_repeat_outlined,
-              onPressed: _pickRecurrenceEnd,
-              secondary: true,
-            ),
-          ],
-          if (_recurring == 'weekly' || _recurring == 'biweekly') ...[
-            const SizedBox(height: 10),
-            Text(
-              scope.t('events.recurrenceDays'),
-              style: TextStyle(
-                color: airmiusTextColor(context),
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final day in List.generate(7, (index) => index))
-                  FilterChip(
-                    label: Text(scope.t('events.day.$day')),
-                    selected: _recurrenceDays.contains(day),
-                    onSelected: (selected) => setState(() {
-                      if (selected) {
-                        _recurrenceDays.add(day);
-                      } else {
-                        _recurrenceDays.remove(day);
-                      }
-                    }),
-                  ),
-              ],
-            ),
-          ],
-        ],
+        const SizedBox(height: 12),
+        AirmiusButton(
+          label: _reminderAt == null
+              ? scope.t('events.reminder')
+              : '${scope.t('events.reminder')}: ${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}',
+          icon: Icons.notifications_active_outlined,
+          onPressed: _pickReminder,
+          secondary: true,
+        ),
       ],
     );
+  }
+
+  List<Widget> _recurrenceFields() {
+    final scope = AirmiusScope.of(context);
+    if (!widget.allowsRecurring) return const [];
+    return [
+      const SizedBox(height: 18),
+      Text(scope.t('events.recurring'), style: TextStyle(color: airmiusTextColor(context), fontSize: 16, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 4),
+      Text(scope.t('events.recurringHint'), style: TextStyle(color: airmiusMutedColor(context), fontSize: 12, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 10),
+      DropdownButtonFormField<String?>(
+        initialValue: _recurring,
+        decoration: InputDecoration(labelText: scope.t('events.repeat')),
+        dropdownColor: airmiusSurfaceColor(context),
+        items: [
+          DropdownMenuItem<String?>(value: null, child: Text(scope.t('events.repeat.none'))),
+          for (final value in const ['daily', 'weekly', 'biweekly', 'monthly'])
+            DropdownMenuItem<String?>(value: value, child: Text(scope.t('events.repeat.$value'))),
+        ],
+        onChanged: (value) => setState(() {
+          _recurring = value;
+          if (value == null) {
+            _recurrenceEndsAt = null;
+            _recurrenceDays.clear();
+          } else {
+            _recurrenceEndsAt ??= _start.add(const Duration(days: 28));
+          }
+          if (value == 'weekly' || value == 'biweekly') {
+            _recurrenceDays..clear()..add(_start.weekday % 7);
+          }
+        }),
+      ),
+      if (_recurring != null) ...[
+        const SizedBox(height: 10),
+        AirmiusButton(
+          label: _recurrenceEndsAt == null ? scope.t('events.recurrenceEnd') : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
+          icon: Icons.event_repeat_outlined,
+          onPressed: _pickRecurrenceEnd,
+          secondary: true,
+        ),
+      ],
+      if (_recurring == 'weekly' || _recurring == 'biweekly') ...[
+        const SizedBox(height: 10),
+        Text(scope.t('events.recurrenceDays'), style: TextStyle(color: airmiusTextColor(context), fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final day in List.generate(7, (index) => index))
+              FilterChip(
+                label: Text(scope.t('events.day.$day')),
+                selected: _recurrenceDays.contains(day),
+                onSelected: (selected) => setState(() => selected ? _recurrenceDays.add(day) : _recurrenceDays.remove(day)),
+              ),
+          ],
+        ),
+      ],
+    ];
   }
 
   Widget _detailsStep() {
@@ -2189,12 +2190,60 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           ),
         ),
         const SizedBox(height: 16),
+        ..._recurrenceFields(),
+        const SizedBox(height: 16),
         TextFormField(
           controller: _locationController,
           decoration: InputDecoration(
             labelText: scope.t('events.location'),
             hintText: scope.t('events.locationExample'),
           ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _locationStreetController,
+                decoration: InputDecoration(labelText: scope.t('events.locationStreet')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 92,
+              child: TextFormField(
+                controller: _locationHouseNumberController,
+                decoration: InputDecoration(labelText: scope.t('events.locationHouseNumber')),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            SizedBox(
+              width: 120,
+              child: TextFormField(
+                controller: _locationPostalCodeController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: scope.t('events.locationPostalCode')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _locationCityController,
+                decoration: InputDecoration(labelText: scope.t('events.locationCity')),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _locationCountryController,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 2,
+          decoration: InputDecoration(labelText: scope.t('events.locationCountry')),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -2301,6 +2350,12 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     ? '-'
                     : '${_dateLabel(context, _end!)} ${_time(_end!)}',
               ),
+              _ReviewLine(
+                label: scope.t('events.reminder'),
+                value: _reminderAt == null
+                    ? '-'
+                    : '${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}',
+              ),
               if (_recurring != null) ...[
                 _ReviewLine(
                   label: scope.t('events.repeat'),
@@ -2328,6 +2383,24 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                 value: _locationController.text.trim().isEmpty
                     ? '-'
                     : _locationController.text.trim(),
+              ),
+              _ReviewLine(
+                label: scope.t('events.locationStreet'),
+                value: _locationStreetController.text.trim().isEmpty
+                    ? '-'
+                    : '${_locationStreetController.text.trim()} ${_locationHouseNumberController.text.trim()}'.trim(),
+              ),
+              _ReviewLine(
+                label: scope.t('events.locationCity'),
+                value: _locationCityController.text.trim().isEmpty
+                    ? '-'
+                    : '${_locationPostalCodeController.text.trim()} ${_locationCityController.text.trim()}'.trim(),
+              ),
+              _ReviewLine(
+                label: scope.t('events.locationCountry'),
+                value: _locationCountryController.text.trim().isEmpty
+                    ? '-'
+                    : _locationCountryController.text.trim().toUpperCase(),
               ),
               _ReviewLine(
                 label: scope.t('events.notesLabel'),

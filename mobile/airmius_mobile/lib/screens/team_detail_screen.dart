@@ -2202,8 +2202,7 @@ class _InvitePanelState extends State<_InvitePanel> {
               team?.memberInvitationDailyLimit != null) ...[
             StatusPill(
               '${t('teamDetail.invitesRemaining')}: ${team!.memberInvitationRemainingToday} / ${team.memberInvitationDailyLimit}',
-              color: AirmiusColors.accent,
-              textColor: airmiusTextColor(context),
+              color: airmiusAccentColor(context),
             ),
             const SizedBox(height: 10),
           ],

@@ -35,6 +35,7 @@ import 'sport_integrations_screen.dart';
 import 'event_management_screen.dart';
 import 'trainer_cockpit_screen.dart';
 import 'training_center_screen.dart';
+import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'sport_map_center_screen.dart';
 import 'sport_matching_screen.dart';
@@ -497,6 +498,7 @@ class _ShellScreenState extends State<ShellScreen> {
       'Sportarten' => const SportsCenterScreen(),
       'Sport-Apps & Gesundheitsdaten' => SportIntegrationsScreen(),
       'Events & Training' => const EventManagementScreen(),
+      'Trainingsplanung' => const TrainingPlansLogsScreen(),
       'Trainer-Cockpit' => const TrainerCockpitScreen(),
       'Vereins-Cockpit' => const ClubCockpitScreen(),
       'Ernährung' => const NutritionCenterScreen(),
@@ -875,6 +877,8 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final user = AirmiusServicesScope.of(context).authState.user;
+    final trainerNavigation = user != null &&
+        AirmiusModuleAccess.canOpenTrainerCockpit(user);
     final recommendedModules = user == null
         ? const <String>{}
         : AirmiusPersonaResolver.navigationModules(user);
@@ -882,7 +886,11 @@ class _ModuleDrawer extends StatelessWidget {
         .where(AirmiusMvpSurface.isModuleVisible)
         .where((module) => AirmiusModuleAccess.canOpen(user, module.title))
         .where((module) => recommendedModules.contains(module.title))
-        .where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
+        .where((module) => trainerNavigation
+            ? module.title != 'Arbeitsbereiche' &&
+                module.title != 'Vereine & Teams' &&
+                module.title != 'Feed'
+            : !_hiddenDrawerModuleTitles.contains(module.title));
     final theme = Theme.of(context);
     final drawerBackground = _drawerBackground(context);
     return SizedBox(
@@ -928,7 +936,9 @@ class _ModuleDrawer extends StatelessWidget {
                     ),
                     _DrawerTab(
                       icon: Icons.groups_outlined,
-                      label: scope.t('clubs'),
+                      label: trainerNavigation
+                          ? scope.copy('Trainer & Teams')
+                          : scope.t('clubs'),
                       active: currentTab == AppTab.clubs,
                       onTap: () => _selectTab(context, AppTab.clubs),
                     ),
@@ -973,7 +983,9 @@ class _ModuleDrawer extends StatelessWidget {
                     for (final module in drawerModules)
                       _DrawerTab(
                         icon: module.icon,
-                        label: scope.copy(module.title),
+                        label: trainerNavigation
+                            ? _trainerDrawerLabel(scope, module.title)
+                            : scope.copy(module.title),
                         active: false,
                         onTap: () {
                           Navigator.pop(context);
@@ -1008,6 +1020,12 @@ class _ModuleDrawer extends StatelessWidget {
 }
 
 const _hiddenDrawerModuleTitles = {'Vereine & Teams', 'Teams', 'Feed'};
+
+String _trainerDrawerLabel(AirmiusScope scope, String title) => switch (title) {
+      'Events & Training' => scope.copy('Events & Anwesenheit'),
+      'Dateien' => scope.copy('Teamdateien'),
+      _ => scope.copy(title),
+    };
 
 bool _canOpenGuardianCenter(AirmiusUser? user) {
   return AirmiusModuleAccess.canOpenGuardianCenter(user);

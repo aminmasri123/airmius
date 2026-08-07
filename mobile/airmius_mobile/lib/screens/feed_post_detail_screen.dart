@@ -29,6 +29,8 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
   bool _deleting = false;
   bool _savingEdit = false;
   bool _dirty = false;
+  final Map<int, AirmiusComment> _commentOverrides = {};
+  final Set<int> _removedCommentIds = {};
 
   @override
   void initState() {
@@ -97,11 +99,11 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
       _post.teamName,
     ].whereType<String>().where((value) => value.isNotEmpty).join(' - ');
 
-    return PopScope<bool>(
+    return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        Navigator.pop(context, _dirty);
+        Navigator.pop(context, _dirty ? _post : null);
       },
       child: Scaffold(
         appBar: AppBar(
@@ -116,7 +118,7 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
           leading: IconButton(
             tooltip: scope.t('common.back'),
             icon: Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context, _dirty),
+            onPressed: () => Navigator.pop(context, _dirty ? _post : null),
           ),
           actions: [
             if (_post.canUpdate)
@@ -308,8 +310,17 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                       );
                     }
 
-                    final comments =
-                        snapshot.data?.items ?? const <AirmiusComment>[];
+                    final comments = (snapshot.data?.items ??
+                            const <AirmiusComment>[])
+                        .where(
+                          (comment) =>
+                              !_removedCommentIds.contains(comment.id),
+                        )
+                        .map(
+                          (comment) =>
+                              _commentOverrides[comment.id] ?? comment,
+                        )
+                        .toList();
                     return AirmiusPanel(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -326,7 +337,27 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                             )
                           else
                             for (final comment in comments) ...[
-                              _Comment(comment: comment, onChanged: _reload),
+                              _Comment(
+                                comment: comment,
+                                onUpdated: (updated) {
+                                  setState(() {
+                                    _commentOverrides[updated.id] = updated;
+                                    _dirty = true;
+                                  });
+                                },
+                                onDeleted: (commentId) {
+                                  setState(() {
+                                    _commentOverrides.remove(commentId);
+                                    _removedCommentIds.add(commentId);
+                                    _post = _post.copyWith(
+                                      commentsCount: _post.commentsCount > 0
+                                          ? _post.commentsCount - 1
+                                          : 0,
+                                    );
+                                    _dirty = true;
+                                  });
+                                },
+                              ),
                               const SizedBox(height: 10),
                             ],
                           const SizedBox(height: 4),
@@ -1049,10 +1080,15 @@ class _DetailFileChip extends StatelessWidget {
 }
 
 class _Comment extends StatelessWidget {
-  const _Comment({required this.comment, required this.onChanged});
+  const _Comment({
+    required this.comment,
+    required this.onUpdated,
+    required this.onDeleted,
+  });
 
   final AirmiusComment comment;
-  final VoidCallback onChanged;
+  final ValueChanged<AirmiusComment> onUpdated;
+  final ValueChanged<int> onDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -1261,10 +1297,10 @@ class _Comment extends StatelessWidget {
     );
     controller.dispose();
     if (next == null || next.isEmpty || !context.mounted) return;
-    await AirmiusServicesScope.of(
+    final updated = await AirmiusServicesScope.of(
       context,
     ).repositories.feed.updateComment(comment.id, next);
-    onChanged();
+    if (context.mounted) onUpdated(updated);
   }
 
   Future<void> _delete(BuildContext context) async {
@@ -1277,7 +1313,7 @@ class _Comment extends StatelessWidget {
     await AirmiusServicesScope.of(
       context,
     ).repositories.feed.deleteComment(comment.id);
-    onChanged();
+    if (context.mounted) onDeleted(comment.id);
   }
 
   Future<void> _report(BuildContext context) async {
@@ -1298,7 +1334,6 @@ class _Comment extends StatelessWidget {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(scope.t('feed.moderationThanks'))));
-      onChanged();
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

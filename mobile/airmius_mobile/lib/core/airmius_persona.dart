@@ -92,6 +92,7 @@ final class AirmiusPersonaResolver {
         'Vereine & Teams',
         'Teams',
         'Events & Training',
+        'Trainingsplanung',
         'Sportarten',
         'Sport-Apps & Gesundheitsdaten',
         'Dateien',

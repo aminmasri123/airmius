@@ -75,6 +75,7 @@ final class AirmiusModuleAccess {
         'training.create',
         'training.edit',
       }),
+      'Trainingsplanung' => canOpenTrainerCockpit(user),
       'Trainer-Cockpit' => canOpenTrainerCockpit(user),
       'Vereins-Cockpit' => canOpenClubCockpit(user),
       'Dateien' => _hasAnyPermission(user, const {

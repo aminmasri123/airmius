@@ -2630,7 +2630,6 @@ class _PostCardState extends State<_PostCard> {
     setState(() => _savingEdit = false);
     if (updated != null) {
       widget.onPostChanged(updated);
-      widget.onChanged();
     }
   }
 
@@ -2653,7 +2652,6 @@ class _PostCardState extends State<_PostCard> {
           content: Text(AirmiusScope.of(context).t('feed.moderationThanks')),
         ),
       );
-      widget.onChanged();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2819,13 +2817,18 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _openPostDetail(BuildContext context) async {
-    final changed = await Navigator.push<bool>(
+    final result = await Navigator.push<Object?>(
       context,
       MaterialPageRoute(
         builder: (_) => FeedPostDetailScreen(post: widget.post),
       ),
     );
-    if (changed == true) widget.onChanged();
+    if (!mounted) return;
+    if (result is AirmiusPost) {
+      widget.onPostChanged(result);
+    } else if (result == true) {
+      widget.onDeleted(widget.post.id);
+    }
   }
 
   String _visibilityLabel(AirmiusScope scope, String visibility) {

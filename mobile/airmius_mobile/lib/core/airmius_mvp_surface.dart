@@ -17,6 +17,7 @@ class AirmiusMvpSurface {
     'Feed',
     'Nachrichten',
     'Events & Training',
+    'Trainingsplanung',
     'Trainer-Cockpit',
     'Ernährung',
     'Sportkarte',

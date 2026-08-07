@@ -293,17 +293,10 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   }
 
   Future<void> _createPlan() async {
-    late final _TrainingChoices choices;
-    try {
-      choices = await _TrainingChoices.load(_client);
-    } on AirmiusApiException catch (error) {
-      _message(error.userMessage);
-      return;
-    }
-    if (!mounted) return;
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _PlanFormDialog(choices: choices),
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => const _PlanFormPage(),
+      ),
     );
     if (payload == null) return;
     await _run(() => _client.createTrainingPlan(payload));
@@ -629,9 +622,8 @@ class _TrainingPlanApiDetailScreenState
   }
 
   Future<void> _addItem() async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => const _PlanItemFormDialog(),
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const _PlanItemFormPage()),
     );
     if (payload == null) return;
     final image = payload.remove('_image_file') as PlatformFile?;
@@ -643,26 +635,18 @@ class _TrainingPlanApiDetailScreenState
   }
 
   Future<void> _editPlan(_TrainingPlan plan) async {
-    late final _TrainingChoices choices;
-    try {
-      choices = await _TrainingChoices.load(_client);
-    } on AirmiusApiException catch (error) {
-      _message(error.userMessage);
-      return;
-    }
-    if (!mounted) return;
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _PlanFormDialog(initial: plan, choices: choices),
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => _PlanFormPage(initial: plan),
+      ),
     );
     if (payload == null) return;
     await _run(() => _client.updateTrainingPlan(widget.planId, payload));
   }
 
   Future<void> _editItem(_TrainingPlanItem item) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _PlanItemFormDialog(initial: item),
+    final payload = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => _PlanItemFormPage(initial: item)),
     );
     if (payload == null) return;
     final image = payload.remove('_image_file') as PlatformFile?;
@@ -1306,17 +1290,20 @@ class _AiPlanPreviewDialog extends StatelessWidget {
   }
 }
 
-class _PlanFormDialog extends StatefulWidget {
-  const _PlanFormDialog({required this.choices, this.initial});
+class _PlanFormPage extends StatefulWidget {
+  const _PlanFormPage({this.initial});
 
-  final _TrainingChoices choices;
   final _TrainingPlan? initial;
 
   @override
-  State<_PlanFormDialog> createState() => _PlanFormDialogState();
+  State<_PlanFormPage> createState() => _PlanFormPageState();
 }
 
-class _PlanFormDialogState extends State<_PlanFormDialog> {
+class _PlanFormPageState extends State<_PlanFormPage> {
+  _TrainingChoices _choices = const _TrainingChoices();
+  bool _choicesLoading = true;
+  String? _choicesError;
+  int _step = 0;
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _goal;
@@ -1335,6 +1322,12 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
   late DateTime _startsOn;
   DateTime? _endsOn;
   DateTime? _competitionDate;
+  late final TextEditingController _itemTitle;
+  late final TextEditingController _itemSport;
+  late final TextEditingController _itemDuration;
+  late final TextEditingController _itemDistance;
+  late final TextEditingController _itemFocus;
+  late String _itemLoad;
 
   @override
   void initState() {
@@ -1362,6 +1355,33 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
     _startsOn = initial?.startsOn ?? DateTime.now();
     _endsOn = initial?.endsOn;
     _competitionDate = initial?.competitionDate;
+    _itemTitle = TextEditingController();
+    _itemSport = TextEditingController(text: 'laufen');
+    _itemDuration = TextEditingController();
+    _itemDistance = TextEditingController();
+    _itemFocus = TextEditingController();
+    _itemLoad = 'medium';
+    _loadChoices();
+  }
+
+  Future<void> _loadChoices() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final choices = await _TrainingChoices.load(
+        services.clientForSession(services.authState.session),
+      );
+      if (!mounted) return;
+      setState(() {
+        _choices = choices;
+        _choicesLoading = false;
+      });
+    } on AirmiusApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _choicesLoading = false;
+        _choicesError = error.userMessage;
+      });
+    }
   }
 
   @override
@@ -1374,24 +1394,51 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
     _macrocycle.dispose();
     _mesocycle.dispose();
     _deloadWeek.dispose();
+    _itemTitle.dispose();
+    _itemSport.dispose();
+    _itemDuration.dispose();
+    _itemDistance.dispose();
+    _itemFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        t(
-          widget.initial == null
-              ? 'trainingHub.addPlan'
-              : 'trainingHub.editPlan',
-        ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(t(widget.initial == null ? 'trainingHub.addPlan' : 'trainingHub.editPlan')),
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: AirmiusPanel(
+            gradient: true,
+            child: Column(
           children: [
+            SegmentedButton<int>(
+              segments: [
+                ButtonSegment(value: 0, label: Text(t('trainingHub.step1'))),
+                ButtonSegment(value: 1, label: Text(t('trainingHub.step2'))),
+                ButtonSegment(value: 2, label: Text(t('trainingHub.step3'))),
+                ButtonSegment(value: 3, label: Text(t('trainingHub.step4'))),
+              ],
+              selected: {_step},
+              onSelectionChanged: (value) => setState(() => _step = value.first),
+            ),
+            const SizedBox(height: 18),
+            if (_choicesLoading) ...[
+              const LinearProgressIndicator(),
+              const SizedBox(height: 12),
+            ],
+            if (_choicesError != null) ...[
+              Text(
+                _choicesError!,
+                style: const TextStyle(color: AirmiusColors.red),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_step == 0) ...[
             TextField(
               controller: _title,
               autofocus: true,
@@ -1400,6 +1447,20 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 labelText: t('trainingHub.planTitle'),
               ),
             ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _cadence,
+              decoration: InputDecoration(labelText: t('trainingHub.cadence')),
+              items: ['single', 'daily', 'weekly', 'monthly']
+                  .map((value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(_translatedCadence(t, value)),
+                      ))
+                  .toList(),
+              onChanged: (value) => setState(() => _cadence = value ?? _cadence),
+            ),
+            ],
+            if (_step == 1) ...[
             Row(
               children: [
                 Expanded(
@@ -1421,7 +1482,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: () async {
                 final picked = await showDatePicker(
@@ -1439,6 +1500,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                     : '${t('trainingHub.end')}: ${_dateApi(_endsOn!)}',
               ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _description,
               maxLines: 3,
@@ -1446,24 +1508,12 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 labelText: t('trainingHub.description'),
               ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _goal,
               decoration: InputDecoration(labelText: t('trainingHub.goal')),
             ),
-            DropdownButtonFormField<String>(
-              initialValue: _cadence,
-              decoration: InputDecoration(labelText: t('trainingHub.cadence')),
-              items: ['single', 'daily', 'weekly', 'monthly']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(_translatedCadence(t, value)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _cadence = value ?? _cadence),
-            ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _phase,
               decoration: InputDecoration(labelText: t('trainingHub.phase')),
@@ -1477,6 +1527,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                   .toList(),
               onChanged: (value) => setState(() => _phase = value ?? _phase),
             ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _level,
               decoration: InputDecoration(labelText: t('trainingHub.level')),
@@ -1490,11 +1541,13 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                   .toList(),
               onChanged: (value) => setState(() => _level = value ?? _level),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _weeks,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: t('trainingHub.weeks')),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _weeklySessions,
               keyboardType: TextInputType.number,
@@ -1502,6 +1555,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 labelText: t('trainingHub.sessionsPerWeek'),
               ),
             ),
+            const SizedBox(height: 16),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
               childrenPadding: const EdgeInsets.only(bottom: 8),
@@ -1554,6 +1608,9 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 ),
               ],
             ),
+            ],
+            if (_step == 2) ...[
+            const SizedBox(height: 16),
             DropdownButtonFormField<int?>(
               initialValue: _teamId,
               decoration: InputDecoration(labelText: t('trainingHub.team')),
@@ -1562,7 +1619,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                   value: null,
                   child: Text(t('trainingHub.noTeam')),
                 ),
-                ...widget.choices.teams.map(
+                ..._choices.teams.map(
                   (team) => DropdownMenuItem<int?>(
                     value: _asInt(team['id']),
                     child: Text(team['name']?.toString() ?? 'Team'),
@@ -1571,6 +1628,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
               ],
               onChanged: (value) => setState(() => _teamId = value),
             ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _permission,
               decoration: InputDecoration(
@@ -1587,7 +1645,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
               onChanged: (value) =>
                   setState(() => _permission = value ?? _permission),
             ),
-            if (widget.choices.athletes.isNotEmpty) ...[
+            if (_choices.athletes.isNotEmpty) ...[
               const SizedBox(height: 12),
               Align(
                 alignment: AlignmentDirectional.centerStart,
@@ -1600,7 +1658,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
               Wrap(
                 spacing: 7,
                 runSpacing: 7,
-                children: widget.choices.athletes.map((athlete) {
+                children: _choices.athletes.map((athlete) {
                   final id = _asInt(athlete['id']);
                   return FilterChip(
                     selected: _userIds.contains(id),
@@ -1616,6 +1674,7 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                 }).toList(),
               ),
             ],
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _status,
               decoration: InputDecoration(labelText: t('trainingHub.status')),
@@ -1629,16 +1688,76 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                   .toList(),
               onChanged: (value) => setState(() => _status = value ?? _status),
             ),
+            ],
+            if (_step == 3) ...[
+              TextField(
+                controller: _itemTitle,
+                decoration: InputDecoration(labelText: t('trainingHub.itemTitle')),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _itemSport,
+                decoration: InputDecoration(labelText: t('trainingHub.sport')),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _itemDuration,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: t('trainingHub.duration')),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _itemDistance,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: t('trainingHub.distance')),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _itemLoad,
+                decoration: InputDecoration(labelText: t('trainingHub.load')),
+                items: ['low', 'medium', 'high', 'test']
+                    .map((value) => DropdownMenuItem(value: value, child: Text(t('trainingHub.load.$value'))))
+                    .toList(),
+                onChanged: (value) => setState(() => _itemLoad = value ?? _itemLoad),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _itemFocus,
+                decoration: InputDecoration(labelText: t('trainingHub.focus')),
+              ),
+            ],
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('auth2fa.cancel')),
         ),
-        FilledButton(
-          onPressed: _title.text.trim().isEmpty
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(t('auth2fa.cancel')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _step > 0
+                  ? OutlinedButton(
+                      onPressed: () => setState(() => _step -= 1),
+                      child: Text(t('trainingHub.back')),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+          onPressed: _step < 3
+              ? (_step == 0 && _title.text.trim().isEmpty
+                    ? null
+                    : () => setState(() => _step += 1))
+              : (_title.text.trim().isEmpty || _itemTitle.text.trim().isEmpty)
               ? null
               : () => Navigator.pop(context, {
                   'title': _title.text.trim(),
@@ -1661,27 +1780,37 @@ class _PlanFormDialogState extends State<_PlanFormDialog> {
                   'share_permission': _permission,
                   'team_id': _teamId,
                   'user_ids': _userIds.toList(),
+                  'item_title': _itemTitle.text.trim(),
+                  'item_sport_type': _itemSport.text.trim(),
+                  'item_duration_minutes': int.tryParse(_itemDuration.text),
+                  'item_distance_km': double.tryParse(_itemDistance.text.replaceAll(',', '.')),
+                  'item_load': _itemLoad,
+                  'item_focus': _itemFocus.text.trim(),
                 }),
-          child: Text(t('trainingHub.save')),
+                child: Text(t(_step < 3 ? 'trainingHub.next' : 'trainingHub.save')),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-class _PlanItemFormDialog extends StatefulWidget {
-  const _PlanItemFormDialog({this.initial});
+class _PlanItemFormPage extends StatefulWidget {
+  const _PlanItemFormPage({this.initial});
 
   final _TrainingPlanItem? initial;
 
   @override
-  State<_PlanItemFormDialog> createState() => _PlanItemFormDialogState();
+  State<_PlanItemFormPage> createState() => _PlanItemFormPageState();
 }
 
-class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
+class _PlanItemFormPageState extends State<_PlanItemFormPage> {
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _sportType;
+  late final TextEditingController _sportSearch;
   late final TextEditingController _duration;
   late final TextEditingController _distance;
   late final TextEditingController _week;
@@ -1694,6 +1823,8 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
   late String _load;
   late DateTime _scheduledAt;
   PlatformFile? _image;
+  List<String> _sports = const [];
+  bool _sportsLoading = true;
 
   @override
   void initState() {
@@ -1702,6 +1833,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
     _title = TextEditingController(text: initial?.title ?? '');
     _description = TextEditingController(text: initial?.description ?? '');
     _sportType = TextEditingController(text: initial?.sportType ?? '');
+    _sportSearch = TextEditingController();
     _duration = TextEditingController(
       text: initial?.durationMinutes?.toString() ?? '',
     );
@@ -1721,6 +1853,32 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
     _intensity = initial?.intensity ?? 'mittel';
     _load = initial?.load ?? 'medium';
     _scheduledAt = initial?.scheduledAt ?? DateTime.now();
+    _loadSports();
+  }
+
+  Future<void> _loadSports() async {
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .sports();
+      final data = response['data'];
+      final sports = data is List
+          ? data
+                .whereType<Map>()
+                .map((item) => (item['name'] ?? item['label'] ?? item['slug'])?.toString() ?? '')
+                .where((value) => value.isNotEmpty)
+                .toSet()
+                .toList()
+          : <String>[];
+      if (!mounted) return;
+      setState(() {
+        _sports = sports;
+        _sportsLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _sportsLoading = false);
+    }
   }
 
   @override
@@ -1728,6 +1886,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
     _title.dispose();
     _description.dispose();
     _sportType.dispose();
+    _sportSearch.dispose();
     _duration.dispose();
     _distance.dispose();
     _week.dispose();
@@ -1742,17 +1901,21 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        t(
-          widget.initial == null
-              ? 'trainingHub.addItem'
-              : 'trainingHub.editItem',
-        ),
+    final search = _sportSearch.text.trim().toLowerCase();
+    final filteredSports = _sports
+        .where((sport) => search.length >= 2 && sport.toLowerCase().contains(search))
+        .take(12)
+        .toList();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(t(widget.initial == null ? 'trainingHub.addItem' : 'trainingHub.editItem')),
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          child: AirmiusPanel(
+            gradient: true,
+            child: Column(
           children: [
             TextField(
               controller: _title,
@@ -1762,6 +1925,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                 labelText: t('trainingHub.itemTitle'),
               ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _description,
               maxLines: 3,
@@ -1769,15 +1933,56 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                 labelText: t('trainingHub.description'),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _sportSearch,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: t('trainingHub.sport'),
+                hintText: t('trainingHub.sportSearch'),
+                prefixIcon: const Icon(Icons.search),
+              ),
+            ),
+            if (search.length < 2)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    t('trainingHub.sportSearchHint'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                ),
+              ),
+            if (_sportsLoading) const LinearProgressIndicator(),
+            if (filteredSports.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: filteredSports
+                      .map((sport) => ChoiceChip(
+                            label: Text(sport),
+                            selected: _sportType.text == sport,
+                            onSelected: (_) => setState(() => _sportType.text = sport),
+                          ))
+                      .toList(),
+                ),
+              ),
+            const SizedBox(height: 16),
             TextField(
               controller: _sportType,
-              decoration: InputDecoration(labelText: t('trainingHub.sport')),
+              readOnly: _sports.isNotEmpty,
+              decoration: InputDecoration(labelText: t('trainingHub.selectedSport')),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _duration,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(labelText: t('trainingHub.duration')),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _distance,
               keyboardType: const TextInputType.numberWithOptions(
@@ -1785,6 +1990,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
               ),
               decoration: InputDecoration(labelText: t('trainingHub.distance')),
             ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _intensity,
               decoration: InputDecoration(
@@ -1801,6 +2007,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
               onChanged: (value) =>
                   setState(() => _intensity = value ?? _intensity),
             ),
+            const SizedBox(height: 16),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
               childrenPadding: const EdgeInsets.only(bottom: 8),
@@ -1848,6 +2055,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                     labelText: t('trainingHub.planWeek'),
                   ),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _calories,
                   keyboardType: TextInputType.number,
@@ -1855,6 +2063,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                     labelText: t('trainingHub.calories'),
                   ),
                 ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _load,
                   decoration: InputDecoration(labelText: t('trainingHub.load')),
@@ -1868,6 +2077,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                       .toList(),
                   onChanged: (value) => setState(() => _load = value ?? _load),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _focus,
                   decoration: InputDecoration(
@@ -1885,6 +2095,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _todos,
               minLines: 3,
@@ -1894,6 +2105,7 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                 helperText: t('trainingHub.todosHint'),
               ),
             ),
+            const SizedBox(height: 16),
             TextField(
               controller: _videoUrl,
               keyboardType: TextInputType.url,
@@ -1925,12 +2137,21 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('auth2fa.cancel')),
         ),
-        FilledButton(
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(t('auth2fa.cancel')),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
           onPressed: _title.text.trim().isEmpty
               ? null
               : () => Navigator.pop(context, {
@@ -1952,9 +2173,12 @@ class _PlanItemFormDialogState extends State<_PlanItemFormDialog> {
                   'video_url': _videoUrl.text.trim(),
                   '_image_file': _image,
                 }),
-          child: Text(t('trainingHub.save')),
+                child: Text(t('trainingHub.save')),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -2227,14 +2451,16 @@ class _EmptyTrainingState extends StatelessWidget {
 }
 
 class _TrainingChoices {
-  const _TrainingChoices({required this.teams, required this.athletes});
+  const _TrainingChoices({this.teams = const [], this.athletes = const []});
 
   final List<Map<String, dynamic>> teams;
   final List<Map<String, dynamic>> athletes;
 
   static Future<_TrainingChoices> load(AirmiusApiClient client) async {
     final responses = await Future.wait([client.teams(), client.friends()]);
-    final teams = _dataList(responses[0]);
+    final teams = _dataList(responses[0])
+        .where((team) => team['viewer_is_member'] == true)
+        .toList();
     final friendData = responses[1]['data'];
     final athletes = friendData is Map && friendData['friends'] is List
         ? (friendData['friends'] as List)
