@@ -357,6 +357,14 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                                     _dirty = true;
                                   });
                                 },
+                                onDeleteFailed: (commentId) {
+                                  setState(() {
+                                    _removedCommentIds.remove(commentId);
+                                    _post = _post.copyWith(
+                                      commentsCount: _post.commentsCount + 1,
+                                    );
+                                  });
+                                },
                               ),
                               const SizedBox(height: 10),
                             ],
@@ -1084,11 +1092,13 @@ class _Comment extends StatelessWidget {
     required this.comment,
     required this.onUpdated,
     required this.onDeleted,
+    required this.onDeleteFailed,
   });
 
   final AirmiusComment comment;
   final ValueChanged<AirmiusComment> onUpdated;
   final ValueChanged<int> onDeleted;
+  final ValueChanged<int> onDeleteFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -1310,10 +1320,18 @@ class _Comment extends StatelessWidget {
       AirmiusScope.of(context).t('feed.commentDelete'),
     );
     if (!ok || !context.mounted) return;
-    await AirmiusServicesScope.of(
-      context,
-    ).repositories.feed.deleteComment(comment.id);
-    if (context.mounted) onDeleted(comment.id);
+    onDeleted(comment.id);
+    try {
+      await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.deleteComment(comment.id);
+    } catch (_) {
+      if (!context.mounted) return;
+      onDeleteFailed(comment.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))),
+      );
+    }
   }
 
   Future<void> _report(BuildContext context) async {

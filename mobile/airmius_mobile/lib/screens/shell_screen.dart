@@ -34,7 +34,6 @@ import 'sports_center_screen.dart';
 import 'sport_integrations_screen.dart';
 import 'event_management_screen.dart';
 import 'trainer_cockpit_screen.dart';
-import 'training_center_screen.dart';
 import 'training_plans_logs_screen.dart';
 import 'nutrition_center_screen.dart';
 import 'sport_map_center_screen.dart';
@@ -569,7 +568,7 @@ class _ShellScreenState extends State<ShellScreen> {
                   onWithdrawClub: _withdrawClub,
                 )
         : switch (_tab) {
-            AppTab.training => const TrainingCenterScreen(),
+            AppTab.training => const TrainingPlansLogsScreen(),
             AppTab.clubs => ClubsScreen(
               requestedClubIds: _requestedClubIds,
               onRequestClub: _requestClub,
