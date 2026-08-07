@@ -124,41 +124,41 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
     <Head title="Sport-Matching" />
     <div class="mx-auto max-w-[1480px] space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         <section class="relative isolate overflow-hidden rounded-[30px] bg-[#081526] px-5 py-6 text-white shadow-[0_22px_70px_rgba(8,21,38,0.18)] sm:px-8 sm:py-8 lg:px-10">
-            <div class="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl"></div>
-            <div class="pointer-events-none absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl"></div>
+            <div class="pointer-events-none absolute -right-20 -top-32 h-80 w-80 rounded-full bg-air-blue/20 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-40 left-1/3 h-96 w-96 rounded-full bg-air-green/10 blur-3xl"></div>
             <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
                 <div>
-                    <div class="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                        <span class="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5"><i class="las la-bolt"></i> Gemeinsam aktiv</span>
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-air-blue">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-air-blue/25 bg-air-blue/10 px-3 py-1.5"><i class="las la-bolt"></i> Gemeinsam aktiv</span>
                         <span class="text-white/45">/</span>
                         <span class="text-white/60">{{ modeLabel }}</span>
                     </div>
                     <h1 class="mt-5 max-w-3xl text-4xl font-black tracking-[-0.04em] sm:text-5xl">Sportkontakte, die wirklich zu dir passen.</h1>
                     <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">Entdecke Menschen und Teams in deiner Nähe. Entscheide intuitiv per Karte oder nutze die präzise Liste für deine nächste Einheit.</p>
                     <div class="mt-7 flex flex-wrap items-center gap-3">
-                        <button type="button" class="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black text-[#061423] shadow-lg shadow-cyan-400/20 transition hover:-translate-y-0.5 hover:bg-cyan-300" @click="showCreate = !showCreate">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-2xl bg-air-blue px-5 py-3 text-sm font-black text-white shadow-lg shadow-air-blue/20 transition hover:-translate-y-0.5 hover:bg-air-blue/90" @click="showCreate = !showCreate">
                             <i :class="showCreate ? 'las la-times' : 'las la-plus'"></i>
                             {{ showCreate ? 'Erstellen schließen' : 'Suche veröffentlichen' }}
                         </button>
-                        <span class="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-300"><i class="las la-shield-alt text-cyan-300"></i> Privat bis zur Zustimmung</span>
+                        <span class="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-300"><i class="las la-shield-alt text-air-blue"></i> Privat bis zur Zustimmung</span>
                     </div>
                 </div>
                 <div class="rounded-[26px] border border-white/10 bg-white/[0.06] p-5 backdrop-blur-sm">
                     <div class="flex items-center justify-between">
-                        <p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">So funktioniert es</p>
+                    <p class="text-xs font-black uppercase tracking-[0.18em] text-air-blue">So funktioniert es</p>
                         <i class="las la-arrows-alt-h text-xl text-white/40"></i>
                     </div>
                     <div class="mt-5 space-y-4">
-                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-300/15 text-sm font-black text-cyan-300">01</span><div><p class="text-sm font-black">Filter setzen</p><p class="mt-1 text-xs leading-5 text-slate-400">Sportart, Ort und Niveau auswählen.</p></div></div>
-                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-300/15 text-sm font-black text-cyan-300">02</span><div><p class="text-sm font-black">Angebote entdecken</p><p class="mt-1 text-xs leading-5 text-slate-400">Karte nach links oder rechts bewegen.</p></div></div>
-                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-cyan-300/15 text-sm font-black text-cyan-300">03</span><div><p class="text-sm font-black">Gemeinsam starten</p><p class="mt-1 text-xs leading-5 text-slate-400">Bei Interesse direkt Kontakt aufnehmen.</p></div></div>
+                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-air-blue/15 text-sm font-black text-air-blue">01</span><div><p class="text-sm font-black">Filter setzen</p><p class="mt-1 text-xs leading-5 text-slate-400">Sportart, Ort und Niveau auswählen.</p></div></div>
+                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-air-blue/15 text-sm font-black text-air-blue">02</span><div><p class="text-sm font-black">Angebote entdecken</p><p class="mt-1 text-xs leading-5 text-slate-400">Karte nach links oder rechts bewegen.</p></div></div>
+                        <div class="flex gap-3"><span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-air-blue/15 text-sm font-black text-air-blue">03</span><div><p class="text-sm font-black">Gemeinsam starten</p><p class="mt-1 text-xs leading-5 text-slate-400">Bei Interesse direkt Kontakt aufnehmen.</p></div></div>
                     </div>
                 </div>
             </div>
             <div class="relative mt-8 grid grid-cols-2 gap-2 border-t border-white/10 pt-5 sm:grid-cols-4">
-                <div><p class="text-2xl font-black">{{ resultCount }}</p><p class="mt-1 text-xs text-slate-400">passende Angebote</p></div>
-                <div><p class="text-2xl font-black">{{ sports?.length || 0 }}+</p><p class="mt-1 text-xs text-slate-400">Sportarten</p></div>
-                <div><p class="text-2xl font-black">{{ availableTeams.length }}</p><p class="mt-1 text-xs text-slate-400">deine Teams</p></div>
+                <div><p class="text-2xl font-black text-air-blue">{{ resultCount }}</p><p class="mt-1 text-xs text-slate-400">passende Angebote</p></div>
+                <div><p class="text-2xl font-black text-air-blue">{{ sports?.length || 0 }}+</p><p class="mt-1 text-xs text-slate-400">Sportarten</p></div>
+                <div><p class="text-2xl font-black text-air-blue">{{ availableTeams.length }}</p><p class="mt-1 text-xs text-slate-400">deine Teams</p></div>
                 <div><p class="text-2xl font-black">24/7</p><p class="mt-1 text-xs text-slate-400">offen für Matches</p></div>
             </div>
         </section>
@@ -170,7 +170,7 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
                     <button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black transition" :class="tab === 'team' ? 'bg-card text-air-blue shadow-sm' : 'text-secondary hover:text-primary'" @click="switchTab('team')"><i class="las la-users"></i> Teamgegner</button>
                 </div>
                 <div class="inline-flex rounded-2xl border border-border bg-inputBg/60 p-1">
-                    <button type="button" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition" :class="view === 'swipe' ? 'bg-[#081526] text-white shadow-sm' : 'text-secondary hover:text-primary'" @click="switchView('swipe')"><i class="las la-layer-group"></i> Entdecken</button>
+                <button type="button" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition" :class="view === 'swipe' ? 'bg-[#081526] text-white shadow-sm' : 'text-secondary hover:text-primary'" @click="switchView('swipe')"><i class="las la-layer-group"></i> Entdecken</button>
                     <button type="button" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition" :class="view === 'list' ? 'bg-card text-primary shadow-sm' : 'text-secondary hover:text-primary'" @click="switchView('list')"><i class="las la-list"></i> Liste</button>
                 </div>
             </div>
@@ -183,8 +183,8 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
             </div>
         </section>
 
-        <form v-if="showCreate" class="overflow-hidden rounded-[28px] border border-air-blue/25 bg-card shadow-[0_16px_45px_rgba(14,165,233,0.08)]" @submit.prevent="submit">
-            <div class="flex flex-col gap-4 border-b border-border bg-gradient-to-r from-air-blue/10 via-transparent to-emerald-400/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <form v-if="showCreate" class="overflow-hidden rounded-[28px] border border-air-blue/25 bg-card shadow-[0_16px_45px_rgba(0,0,0,0.06)]" @submit.prevent="submit">
+            <div class="flex flex-col gap-4 border-b border-border bg-gradient-to-r from-air-blue/10 via-transparent to-air-green/10 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
                 <div class="flex items-center gap-4"><span class="grid h-12 w-12 place-items-center rounded-2xl bg-air-blue/15 text-2xl text-air-blue"><i class="las la-bullhorn"></i></span><div><p class="text-xs font-black uppercase tracking-[0.18em] text-air-blue">Neue Suche</p><h2 class="mt-1 text-2xl font-black text-primary">{{ form.mode === 'partner' ? 'Sportpartner-Suche erstellen' : 'Team-Herausforderung erstellen' }}</h2></div></div>
                 <p class="max-w-sm text-sm leading-6 text-secondary">Fülle die wichtigsten Angaben aus. Weitere Details helfen anderen, schneller zu entscheiden.</p>
             </div>
@@ -214,8 +214,8 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
                 <SportMatchingSwipeDeck v-if="view === 'swipe'" :items="matchings.data || []" :teams="availableTeams" />
 
                 <section v-else-if="matchings.data?.length" class="grid gap-4 lg:grid-cols-2">
-                    <article v-for="matching in matchings.data" :key="matching.id" class="group overflow-hidden rounded-[26px] border border-border bg-card shadow-[0_12px_35px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-air-blue/40 hover:shadow-[0_18px_45px_rgba(14,165,233,0.12)]">
-                        <div class="h-1.5 bg-gradient-to-r from-air-blue via-cyan-400 to-emerald-400"></div>
+                    <article v-for="matching in matchings.data" :key="matching.id" class="group overflow-hidden rounded-[26px] border border-border bg-card shadow-[0_12px_35px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-air-blue/40 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
+                        <div class="h-1.5 bg-gradient-to-r from-air-blue via-air-blue/75 to-air-green"></div>
                         <div class="p-5 sm:p-6">
                             <div class="flex items-start justify-between gap-4"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-air-blue/10 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-air-blue">{{ matching.sport?.name }}</span><span class="rounded-full bg-inputBg px-3 py-1 text-[11px] font-bold text-secondary">{{ matching.mode === 'team' ? 'Team-Match' : 'Sportpartner' }}</span></div><h2 class="mt-4 truncate text-xl font-black text-primary">{{ matching.title }}</h2></div><span class="shrink-0 text-right text-xs font-black text-secondary">{{ matching.mode === 'team' ? `${matching.team_size} vs. ${matching.team_size}` : `${matching.participants_needed} gesucht` }}</span></div>
                             <p v-if="matching.description" class="mt-3 line-clamp-2 text-sm leading-6 text-secondary">{{ matching.description }}</p>
@@ -232,7 +232,7 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
             </main>
             <aside class="hidden space-y-4 xl:block">
                 <section class="rounded-[26px] border border-border bg-card p-5 shadow-sm"><div class="flex items-center justify-between"><h2 class="text-sm font-black text-primary">Dein Entdecken</h2><i class="las la-sliders-h text-lg text-air-blue"></i></div><p class="mt-2 text-xs leading-5 text-secondary">Deine Auswahl wird nur für die aktuelle Suche verwendet.</p><div class="mt-5 space-y-3"><div class="flex items-center justify-between rounded-2xl bg-inputBg/60 px-3 py-3"><span class="text-xs font-bold text-secondary">Modus</span><span class="text-xs font-black text-primary">{{ modeLabel }}</span></div><div class="flex items-center justify-between rounded-2xl bg-inputBg/60 px-3 py-3"><span class="text-xs font-bold text-secondary">Umkreis</span><span class="text-xs font-black text-primary">{{ filterRadius ? `bis ${filterRadius} km` : 'beliebig' }}</span></div><div class="flex items-center justify-between rounded-2xl bg-inputBg/60 px-3 py-3"><span class="text-xs font-bold text-secondary">Niveau</span><span class="text-xs font-black text-primary">{{ filterSkill || 'alle' }}</span></div></div></section>
-                <section class="rounded-[26px] border border-air-blue/20 bg-gradient-to-br from-air-blue/10 to-emerald-400/10 p-5"><div class="grid h-10 w-10 place-items-center rounded-2xl bg-air-blue/15 text-xl text-air-blue"><i class="las la-lightbulb"></i></div><h2 class="mt-4 text-sm font-black text-primary">Tipp für bessere Matches</h2><p class="mt-2 text-xs leading-5 text-secondary">Ein genauer Ort und ein konkreter Startzeitpunkt erhöhen die Chance, dass andere direkt zusagen.</p></section>
+                <section class="rounded-[26px] border border-air-blue/20 bg-gradient-to-br from-air-blue/10 to-air-green/10 p-5"><div class="grid h-10 w-10 place-items-center rounded-2xl bg-air-blue/15 text-xl text-air-blue"><i class="las la-lightbulb"></i></div><h2 class="mt-4 text-sm font-black text-primary">Tipp für bessere Matches</h2><p class="mt-2 text-xs leading-5 text-secondary">Ein genauer Ort und ein konkreter Startzeitpunkt erhöhen die Chance, dass andere direkt zusagen.</p></section>
             </aside>
         </div>
     </div>

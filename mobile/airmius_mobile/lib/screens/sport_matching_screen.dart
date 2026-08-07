@@ -105,13 +105,6 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _busy ? null : () => _openCreate(),
-            icon: const Icon(Icons.add),
-            label: Text(
-              _c('Suche erstellen', 'Create search', 'Créer', 'إنشاء بحث'),
-            ),
-          ),
           body: FutureBuilder<JsonMap>(
             future: _future,
             builder: (context, snapshot) {
@@ -137,7 +130,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 16),
-                    _configurationButton(sports),
+                    _topActions(sports),
                     const SizedBox(height: 16),
                     if (snapshot.connectionState == ConnectionState.waiting)
                       const Center(child: CircularProgressIndicator())

@@ -200,8 +200,8 @@ const blockCurrent = () => {
 
 <template>
     <section class="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#081526] p-4 shadow-[0_22px_70px_rgba(8,21,38,0.2)] sm:p-7">
-        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-air-blue/15 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-air-green/10 blur-3xl"></div>
 
         <div class="relative z-10 mx-auto max-w-2xl text-center">
             <div class="inline-flex items-center gap-2 rounded-full border border-air-blue/30 bg-air-blue/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-air-blue">
@@ -234,7 +234,7 @@ const blockCurrent = () => {
                     @pointerup="endDrag"
                     @pointercancel="endDrag"
                 >
-                    <div class="relative h-44 shrink-0 overflow-hidden bg-gradient-to-br from-air-blue via-[#28689e] to-emerald-500/70 sm:h-52">
+                    <div class="relative h-44 shrink-0 overflow-hidden bg-gradient-to-br from-air-blue via-air-blue/75 to-air-green/70 sm:h-52">
                         <div class="absolute -right-8 -top-16 h-48 w-48 rounded-full border-[20px] border-white/10"></div>
                         <div class="absolute -bottom-20 -left-10 h-52 w-52 rounded-full border-[26px] border-white/10"></div>
                         <div class="absolute inset-0 flex items-center justify-center">
@@ -302,7 +302,7 @@ const blockCurrent = () => {
             </div>
 
             <div class="mt-5 flex items-center justify-center gap-4">
-                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-cyan-300 hover:text-white" :disabled="!hiddenIds.length || isAnimating" aria-label="Letztes Angebot zurück" @click="undo">
+                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-white" :disabled="!hiddenIds.length || isAnimating" aria-label="Letztes Angebot zurück" @click="undo">
                     <i class="las la-undo text-xl"></i>
                 </button>
                 <button type="button" class="flex h-16 w-16 items-center justify-center rounded-full border-2 border-red-400/50 bg-red-400/10 text-red-300 shadow-lg transition hover:-translate-y-1 hover:bg-red-400/20" :disabled="isAnimating" aria-label="Angebot überspringen" @click="commitSwipe('left')">
@@ -311,7 +311,7 @@ const blockCurrent = () => {
                 <button type="button" class="flex h-20 w-20 items-center justify-center rounded-full border-2 border-emerald-400/60 bg-emerald-400/15 text-emerald-300 shadow-lg transition hover:-translate-y-1 hover:bg-emerald-400/25" :disabled="isAnimating" aria-label="Interesse senden" @click="commitSwipe('right')">
                     <i class="las la-check text-3xl"></i>
                 </button>
-                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-cyan-300 hover:text-white" aria-label="Angebotsdetails" @click="showFeedback('neutral', 'Alle Details stehen direkt auf der Karte.')">
+                <button type="button" class="flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/10 text-slate-300 shadow-lg transition hover:-translate-y-1 hover:border-air-blue hover:text-white" aria-label="Angebotsdetails" @click="showFeedback('neutral', 'Alle Details stehen direkt auf der Karte.')">
                     <i class="las la-info text-xl"></i>
                 </button>
             </div>
@@ -321,7 +321,7 @@ const blockCurrent = () => {
             </div>
         </div>
 
-        <div v-else class="relative z-10 mx-auto mt-8 max-w-lg rounded-3xl border border-dashed border-cyan-300/30 bg-white/5 p-8 text-center">
+        <div v-else class="relative z-10 mx-auto mt-8 max-w-lg rounded-3xl border border-dashed border-air-blue/30 bg-white/5 p-8 text-center">
             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-air-blue/10 text-3xl text-air-blue"><i class="las la-check-double"></i></div>
             <h3 class="mt-4 text-xl font-black text-white">Du bist auf dem neuesten Stand</h3>
             <p class="mt-2 text-sm leading-6 text-slate-300">Keine weiteren passenden Sportangebote in diesem Feed. Ändere den Ort oder die Sportart im Filter, um neue Karten zu entdecken.</p>
