@@ -54,6 +54,9 @@ const isFiltering = ref(false)
 const showMobileFilters = ref(false)
 const showMobileActions = ref(false)
 const showUploadModal = ref(false)
+const showPreviewModal = ref(false)
+const showInfoModal = ref(false)
+const selectedFile = ref(null)
 const uploadTarget = ref('user')
 const uploadClubId = ref(null)
 const uploadTeamId = ref(null)
@@ -197,6 +200,51 @@ const emptyStateText = computed(() => {
 
     return tx('files.no_results', { query: fileSearch.value.trim() })
 })
+
+const fileType = (file) => `${file?.type || ''}`.trim().toLowerCase()
+const isImageFile = (file) => {
+    const type = fileType(file)
+    const name = fileName(file).toLowerCase()
+
+    return type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp)$/i.test(name)
+}
+const isPdfFile = (file) => fileType(file) === 'application/pdf' || fileName(file).toLowerCase().endsWith('.pdf')
+const isVideoFile = (file) => fileType(file).startsWith('video/')
+const filePreviewUrl = (file, thumbnail = false) => {
+    if (!file?.id) return file?.thumbnail_url || file?.url || ''
+
+    const url = route('auth.files.preview', file.id)
+    return thumbnail ? `${url}${url.includes('?') ? '&' : '?'}thumbnail=1` : url
+}
+const openFilePreview = (file) => {
+    selectedFile.value = file
+    showPreviewModal.value = true
+}
+const closeFilePreview = () => {
+    showPreviewModal.value = false
+    selectedFile.value = null
+}
+const openFileInfo = (file) => {
+    selectedFile.value = file
+    showInfoModal.value = true
+}
+const closeFileInfo = () => {
+    showInfoModal.value = false
+    selectedFile.value = null
+}
+const previewFromInfo = (file) => {
+    showInfoModal.value = false
+    selectedFile.value = file
+    showPreviewModal.value = true
+}
+const formatUploadedAt = (value) => {
+    if (!value) return tx('files.unknown')
+
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(value))
+}
 const filterStatusText = computed(() => {
     if (isFiltering.value) {
         return tx('files.refreshing')
@@ -787,15 +835,39 @@ watch(showShareModal, async (show) => {
                             </button>
                         </div>
 
-                        <div v-for="file in activeFiles" :key="file.id" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
-                            <div class="flex min-w-0 flex-1 items-center gap-3">
-                                <i class="las la-file-alt shrink-0 text-3xl text-secondary"></i>
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-primary">{{ fileName(file) }}</p>
-                                    <p class="truncate text-xs text-secondary">{{ contextLabel(file) }} · {{ file.type }} · {{ formatSize(file.size) }}</p>
-                                </div>
-                            </div>
+                        <div v-for="file in activeFiles" :key="file.id" class="group flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-inputBg/20 p-3 transition hover:border-buttonPrimary/50 hover:bg-inputBg/40">
+                            <button
+                                type="button"
+                                class="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left"
+                                :aria-label="tx('files.preview_file')"
+                                @click="openFilePreview(file)"
+                            >
+                                <span class="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-card text-3xl text-secondary">
+                                    <img
+                                        v-if="isImageFile(file)"
+                                        :src="filePreviewUrl(file, true)"
+                                        :alt="fileName(file)"
+                                        class="h-full w-full object-cover"
+                                        loading="lazy"
+                                    >
+                                    <i v-else class="las la-file-alt"></i>
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block truncate text-sm font-semibold text-primary">{{ fileName(file) }}</span>
+                                    <span class="mt-1 block truncate text-xs text-secondary">{{ file.type }} · {{ formatSize(file.size) }}</span>
+                                </span>
+                            </button>
                             <div class="flex w-full items-center justify-end gap-1 sm:w-auto">
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    :title="tx('files.info')"
+                                    :aria-label="tx('files.info')"
+                                    @click.stop="openFileInfo(file)"
+                                >
+                                    <i class="las la-ellipsis-v"></i>
+                                </button>
                                 <button
                                     type="button"
                                     class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
@@ -1168,6 +1240,95 @@ watch(showShareModal, async (show) => {
             >
                 {{ tx('files.share') }}
             </button>
+        </div>
+    </Modal>
+
+    <Modal :show="showPreviewModal" max-width="xl" @close="closeFilePreview">
+        <div v-if="selectedFile" class="space-y-4 text-primary">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-buttonPrimary">{{ tx('files.preview') }}</p>
+                    <h2 class="mt-1 truncate text-xl font-bold">{{ fileName(selectedFile) }}</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ selectedFile.type }} · {{ formatSize(selectedFile.size) }}</p>
+                </div>
+                <button type="button" class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-inputBg" :aria-label="tx('files.cancel')" @click="closeFilePreview">
+                    <i class="las la-times"></i>
+                </button>
+            </div>
+
+            <div class="overflow-hidden rounded-2xl border border-border bg-inputBg/40">
+                <img
+                    v-if="isImageFile(selectedFile)"
+                    :src="filePreviewUrl(selectedFile)"
+                    :alt="fileName(selectedFile)"
+                    class="max-h-[68vh] w-full object-contain"
+                >
+                <video
+                    v-else-if="isVideoFile(selectedFile)"
+                    :src="filePreviewUrl(selectedFile)"
+                    class="max-h-[68vh] w-full"
+                    controls
+                ></video>
+                <iframe
+                    v-else-if="isPdfFile(selectedFile)"
+                    :src="filePreviewUrl(selectedFile)"
+                    class="h-[68vh] w-full"
+                    :title="fileName(selectedFile)"
+                ></iframe>
+                <div v-else class="flex min-h-56 flex-col items-center justify-center gap-3 p-6 text-center text-secondary">
+                    <i class="las la-file-alt text-5xl text-buttonPrimary"></i>
+                    <p class="text-sm">{{ tx('files.preview_unavailable') }}</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <a :href="route('auth.files.download', selectedFile.id)" class="inline-flex items-center gap-2 rounded-xl bg-buttonPrimary px-4 py-2.5 text-sm font-semibold text-buttonTextPrimary hover:opacity-90">
+                    <i class="las la-download"></i>
+                    {{ tx('files.download') }}
+                </a>
+                <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-primary hover:bg-inputBg" @click="openFileInfo(selectedFile); showPreviewModal = false">
+                    <i class="las la-info-circle"></i>
+                    {{ tx('files.info') }}
+                </button>
+            </div>
+        </div>
+    </Modal>
+
+    <Modal :show="showInfoModal" max-width="md" @close="closeFileInfo">
+        <div v-if="selectedFile" class="space-y-5 text-primary">
+            <div class="flex items-start gap-3">
+                <div class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-buttonPrimary/10 text-buttonPrimary">
+                    <i class="las la-info-circle text-2xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-buttonPrimary">{{ tx('files.info') }}</p>
+                    <h2 class="mt-1 truncate text-xl font-bold">{{ fileName(selectedFile) }}</h2>
+                </div>
+            </div>
+
+            <dl class="divide-y divide-border rounded-2xl border border-border bg-inputBg/30 px-4">
+                <div class="flex items-start justify-between gap-4 py-3">
+                    <dt class="text-sm text-secondary">{{ tx('files.type') }}</dt>
+                    <dd class="text-right text-sm font-semibold text-primary">{{ selectedFile.type || tx('files.unknown') }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-4 py-3">
+                    <dt class="text-sm text-secondary">{{ tx('files.size') }}</dt>
+                    <dd class="text-right text-sm font-semibold text-primary">{{ formatSize(selectedFile.size) }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-4 py-3">
+                    <dt class="text-sm text-secondary">{{ tx('files.uploaded_at') }}</dt>
+                    <dd class="text-right text-sm font-semibold text-primary">{{ formatUploadedAt(selectedFile.created_at) }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-4 py-3">
+                    <dt class="text-sm text-secondary">{{ tx('files.location') }}</dt>
+                    <dd class="text-right text-sm font-semibold text-primary">{{ contextLabel(selectedFile) }}</dd>
+                </div>
+            </dl>
+
+            <div class="flex gap-3">
+                <button type="button" class="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-primary hover:bg-inputBg" @click="closeFileInfo">{{ tx('files.cancel') }}</button>
+                <button type="button" class="flex-1 rounded-xl bg-buttonPrimary px-4 py-2.5 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="previewFromInfo(selectedFile)">{{ tx('files.preview') }}</button>
+            </div>
         </div>
     </Modal>
 </template>

@@ -14275,6 +14275,12 @@ const _filesLabelsDe = {
   'files.free': '{remaining} frei',
   'files.backend': 'Backend',
   'files.backendPreview': 'Backend-Datei ohne direkte Vorschau-URL.',
+  'files.fileMenu': 'Dateiaktionen',
+  'files.info': 'Dateiinformationen',
+  'files.type': 'Typ',
+  'files.size': 'Größe',
+  'files.uploadedAt': 'Hochgeladen',
+  'files.unknown': 'Unbekannt',
 };
 
 final _filesLabelsEn = {
@@ -14337,6 +14343,12 @@ final _filesLabelsEn = {
   'files.free': '{remaining} free',
   'files.backend': 'Backend',
   'files.backendPreview': 'Backend file without a direct preview URL.',
+  'files.fileMenu': 'File actions',
+  'files.info': 'File information',
+  'files.type': 'Type',
+  'files.size': 'Size',
+  'files.uploadedAt': 'Uploaded',
+  'files.unknown': 'Unknown',
 };
 
 final _filesLabelsFr = {

@@ -1624,7 +1624,9 @@ bool _isProtectedFeedImageUrl(String value) {
   final base = Uri.tryParse(origin);
   if (base == null || base.host.isEmpty || uri.host != base.host) return false;
 
-  return RegExp(r'^/api/v1/posts/[^/]+/image/?$').hasMatch(uri.path);
+  return RegExp(
+    r'^/api/v1/(?:posts/[^/]+/image|files/\d+/preview)/?$',
+  ).hasMatch(uri.path);
 }
 
 List<String> _imageUrlCandidates(

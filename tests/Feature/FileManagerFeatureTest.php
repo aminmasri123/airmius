@@ -279,7 +279,8 @@ class FileManagerFeatureTest extends TestCase
         ])
             ->assertCreated()
             ->assertJsonPath('data.folder_id', $folderId)
-            ->assertJsonPath('data.display_name', 'plan.jpg');
+            ->assertJsonPath('data.display_name', 'plan.jpg')
+            ->assertJsonPath('data.preview_url', fn ($value) => str_ends_with((string) $value, "/api/v1/files/".File::query()->where('folder_id', $folderId)->value('id')."/preview"));
 
         $file = File::query()->where('folder_id', $folderId)->firstOrFail();
 
@@ -312,6 +313,30 @@ class FileManagerFeatureTest extends TestCase
 
         $this->assertDatabaseMissing('folders', ['id' => $folderId]);
         $this->assertDatabaseMissing('files', ['id' => $file->id]);
+    }
+
+    public function test_api_file_preview_uses_file_permissions(): void
+    {
+        Storage::fake(UploadStorage::disk());
+
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/v1/uploads', [
+            'scope' => 'user',
+            'file' => UploadedFile::fake()->image('preview.jpg', 24, 24),
+        ])->assertCreated();
+
+        $file = File::query()->where('user_id', $owner->id)->firstOrFail();
+
+        $this->get("/api/v1/files/{$file->id}/preview")
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'inline; filename="preview.jpg"');
+
+        Sanctum::actingAs($other);
+
+        $this->get("/api/v1/files/{$file->id}/preview")->assertForbidden();
     }
 
     public function test_api_scoped_uploads_and_folder_actions_respect_file_permissions(): void

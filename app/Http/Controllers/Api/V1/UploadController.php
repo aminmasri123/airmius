@@ -13,10 +13,12 @@ use App\Models\Team;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\Api\V1\ApiPagination;
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -133,6 +135,23 @@ class UploadController extends Controller
                 'sort' => $sort,
                 'per_page' => $perPage,
             ],
+        ]);
+    }
+
+    public function preview(Request $request, File $file)
+    {
+        Gate::authorize('view', $file);
+
+        $path = $request->boolean('thumbnail') && $file->thumbnail_path
+            ? $file->thumbnail_path
+            : $file->path;
+
+        abort_unless($path && Storage::disk(UploadStorage::disk())->exists($path), 404);
+
+        return Storage::disk(UploadStorage::disk())->response($path, $file->display_name, [
+            'Content-Disposition' => 'inline; filename="'.addcslashes($file->display_name, '\\"').'"',
+            'Cache-Control' => 'private, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

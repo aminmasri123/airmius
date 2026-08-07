@@ -570,6 +570,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('/uploads/{file}', [UploadController::class, 'update'])->middleware('throttle:file-update')->name('uploads.update');
         Route::delete('/uploads/{file}', [UploadController::class, 'destroy'])->middleware('throttle:file-delete')->name('uploads.destroy');
         Route::get('/files', [UploadController::class, 'workspace'])->name('files.workspace');
+        Route::get('/files/{file}/preview', [UploadController::class, 'preview'])->middleware('throttle:file-preview')->name('files.preview');
         Route::post('/files/upload-intents', [UploadController::class, 'uploadIntent'])->middleware('throttle:file-uploads')->name('files.upload-intents.store');
         Route::post('/files/folders', [UploadController::class, 'storeFolder'])->middleware('throttle:file-folder-create')->name('files.folders.store');
         Route::post('/files/folders/{folder}/share', [FolderController::class, 'shareApi'])->middleware('throttle:file-share')->name('files.folders.share');

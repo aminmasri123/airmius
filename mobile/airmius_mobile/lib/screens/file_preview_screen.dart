@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
@@ -19,6 +20,10 @@ class FilePreviewScreen extends StatefulWidget {
     this.fileId,
     this.fileMeta,
     this.fileUrl,
+    this.previewUrl,
+    this.thumbnailUrl,
+    this.isImage,
+    this.uploadedAt,
   });
 
   final String title;
@@ -28,6 +33,10 @@ class FilePreviewScreen extends StatefulWidget {
   final int? fileId;
   final String? fileMeta;
   final String? fileUrl;
+  final String? previewUrl;
+  final String? thumbnailUrl;
+  final bool? isImage;
+  final DateTime? uploadedAt;
 
   @override
   State<FilePreviewScreen> createState() => _FilePreviewScreenState();
@@ -85,6 +94,20 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String get _imageUrl => widget.previewUrl?.trim().isNotEmpty == true
+      ? widget.previewUrl!.trim()
+      : widget.thumbnailUrl?.trim().isNotEmpty == true
+      ? widget.thumbnailUrl!.trim()
+      : widget.fileUrl?.trim() ?? '';
+
+  bool get _isImage {
+    if (widget.isImage != null) return widget.isImage!;
+    final value = '${widget.fileMeta} ${widget.fileUrl} ${widget.title}'
+        .toLowerCase();
+    return value.contains('image/') ||
+        RegExp(r'\.(jpe?g|png|webp|gif|bmp)(?:\?|$)').hasMatch(value);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -108,104 +131,49 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
           children: [
             AirmiusPanel(
               gradient: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    height: 220,
-                    decoration: BoxDecoration(
-                      color: airmiusSurfaceSoftColor(context),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: airmiusBorderColor(context)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.icon,
-                          color: airmiusAccentColor(context),
-                          size: 72,
+              child: SizedBox(
+                height: 250,
+                child: _isImage && _imageUrl.isNotEmpty
+                    ? AirmiusMediaImage(
+                        url: _imageUrl,
+                        fallbackUrls:
+                            widget.fileUrl != null &&
+                                widget.fileUrl!.trim() != _imageUrl
+                            ? [widget.fileUrl!.trim()]
+                            : const [],
+                        height: 250,
+                        borderRadius: 18,
+                        semanticLabel: widget.title,
+                        fallback: _PreviewPlaceholder(
+                          icon: widget.icon,
+                          label: t('filesPreview.unavailable'),
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          t('filesPreview.title'),
-                          style: TextStyle(
-                            color: airmiusTextColor(context),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    t('filesPreview.body'),
-                    style: TextStyle(
-                      color: airmiusMutedColor(context),
-                      height: 1.4,
-                    ),
-                  ),
-                ],
+                      )
+                    : _PreviewPlaceholder(icon: widget.icon),
               ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: MetricCard(
-                    value: widget.fileMeta?.trim().isNotEmpty == true
-                        ? widget.fileMeta!.trim()
-                        : t('shared.status.unknown'),
-                    label: t('filesPreview.type'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    value: widget.fileId != null
-                        ? t('shared.status.available')
-                        : t('shared.status.unknown'),
-                    label: t('shared.status.links'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: MetricCard(
-                    value: t('shared.status.readOnly'),
-                    label: t('shared.status.permissions'),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 14),
             AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Eyebrow(t('filesPreview.permissions')),
-                  SizedBox(height: 10),
-                  _FileActionLine(
-                    icon: Icons.link_outlined,
-                    title: t('filesPreview.share'),
-                    body: t('filesPreview.shareBody'),
-                    status: widget.fileId != null
-                        ? t('shared.status.active')
+                  Eyebrow(t('filesPreview.details')),
+                  const SizedBox(height: 8),
+                  _FileDetailRow(
+                    label: t('filesPreview.type'),
+                    value: widget.fileMeta?.trim().isNotEmpty == true
+                        ? widget.fileMeta!.trim()
                         : t('shared.status.unknown'),
                   ),
-                  _FileActionLine(
-                    icon: Icons.download_outlined,
-                    title: t('filesPreview.download'),
-                    body: t('filesPreview.downloadBody'),
-                    status: widget.fileUrl?.trim().isNotEmpty == true
-                        ? t('shared.status.available')
-                        : t('shared.status.unknown'),
-                  ),
-                  _FileActionLine(
-                    icon: Icons.history_outlined,
-                    title: t('filesPreview.versions'),
-                    body: t('filesPreview.versionsBody'),
-                    status: t('shared.status.unknown'),
-                  ),
+                  if (widget.uploadedAt != null)
+                    _FileDetailRow(
+                      label: t('filesPreview.uploadedAt'),
+                      value: DateFormat.yMMMd(
+                        AirmiusScope.of(
+                          context,
+                        ).language.locale.toLanguageTag(),
+                      ).add_Hm().format(widget.uploadedAt!.toLocal()),
+                    ),
                 ],
               ),
             ),
@@ -234,51 +202,70 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
   }
 }
 
-class _FileActionLine extends StatelessWidget {
-  const _FileActionLine({
-    required this.icon,
-    required this.title,
-    required this.body,
-    required this.status,
-  });
+class _PreviewPlaceholder extends StatelessWidget {
+  const _PreviewPlaceholder({required this.icon, this.label});
 
   final IconData icon;
-  final String title;
-  final String body;
-  final String status;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: airmiusAccentColor(context), size: 68),
+          if (label != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              label!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FileDetailRow extends StatelessWidget {
+  const _FileDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: airmiusAccentColor(context)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  body,
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    height: 1.35,
-                  ),
-                ),
-              ],
+          SizedBox(
+            width: 108,
+            child: Text(
+              label,
+              style: TextStyle(color: airmiusMutedColor(context)),
             ),
           ),
-          StatusPill(status),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ],
       ),
     );

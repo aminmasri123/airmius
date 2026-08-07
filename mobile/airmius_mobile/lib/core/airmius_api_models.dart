@@ -3205,6 +3205,9 @@ class AirmiusManagedFile {
     required this.type,
     required this.size,
     required this.url,
+    this.thumbnailUrl,
+    this.previewUrl,
+    this.createdAt,
     this.folderId,
   });
 
@@ -3213,6 +3216,9 @@ class AirmiusManagedFile {
   final String type;
   final int size;
   final String url;
+  final String? thumbnailUrl;
+  final String? previewUrl;
+  final DateTime? createdAt;
   final int? folderId;
 
   factory AirmiusManagedFile.fromJson(JsonMap json) => AirmiusManagedFile(
@@ -3221,6 +3227,9 @@ class AirmiusManagedFile {
     type: _string(json['type'], fallback: 'Datei'),
     size: _int(json['size']),
     url: _string(json['url'] ?? json['path']),
+    thumbnailUrl: _nullableString(json['thumbnail_url']),
+    previewUrl: _nullableString(json['preview_url']),
+    createdAt: _optionalDate(json['created_at']),
     folderId: _nullableInt(json['folder_id']),
   );
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -10,6 +11,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_upload_retry_policy.dart';
+import '../widgets/airmius_widgets.dart';
 import 'file_operations_screen.dart';
 import 'file_preview_screen.dart';
 
@@ -195,13 +197,18 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
                         title: file.title,
                         fileId: file.id,
                         fileMeta: file.meta,
-                        body: file.previewBody,
+                        body: file.type,
                         status: file.status,
                         icon: file.icon,
                         fileUrl: file.url,
+                        previewUrl: file.previewUrl,
+                        thumbnailUrl: file.thumbnailUrl,
+                        isImage: file.isImage,
+                        uploadedAt: file.uploadedAt,
                       ),
                     ),
                   ),
+                  onInfoFile: _showFileInfo,
                   onShareFile: _shareFile,
                   onShareFolder: _shareFolder,
                   onRenameFolder: _renameFolder,
@@ -273,6 +280,15 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       _workspace = null;
     });
     _loadWorkspace();
+  }
+
+  void _showFileInfo(_ManagedFile file) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _FileInfoSheet(file: file),
+    );
   }
 
   void _goHome() {
@@ -825,6 +841,7 @@ class _FileBrowserCard extends StatelessWidget {
     required this.files,
     required this.onOpenFolder,
     required this.onOpenFile,
+    required this.onInfoFile,
     required this.onShareFile,
     required this.onShareFolder,
     required this.onRenameFolder,
@@ -849,6 +866,7 @@ class _FileBrowserCard extends StatelessWidget {
   final List<_ManagedFile> files;
   final ValueChanged<_FileFolder> onOpenFolder;
   final ValueChanged<_ManagedFile> onOpenFile;
+  final ValueChanged<_ManagedFile> onInfoFile;
   final ValueChanged<_ManagedFile> onShareFile;
   final ValueChanged<_FileFolder> onShareFolder;
   final ValueChanged<_FileFolder> onRenameFolder;
@@ -930,8 +948,8 @@ class _FileBrowserCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                  if (showActions) ...[
-                    const SizedBox(height: 12),
+                if (showActions) ...[
+                  const SizedBox(height: 12),
                   _ActionsPanel(
                     folderNameController: folderNameController,
                     onCreateFolder: onCreateFolder,
@@ -990,6 +1008,7 @@ class _FileBrowserCard extends StatelessWidget {
                   _FileRow(
                     file: file,
                     onOpen: () => onOpenFile(file),
+                    onInfo: () => onInfoFile(file),
                     onShare: () => onShareFile(file),
                     onRename: () => onRenameFile(file),
                     onDelete: () => onDeleteFile(file),
@@ -1266,6 +1285,7 @@ class _FileRow extends StatelessWidget {
   const _FileRow({
     required this.file,
     required this.onOpen,
+    required this.onInfo,
     required this.onShare,
     required this.onRename,
     required this.onDelete,
@@ -1273,6 +1293,7 @@ class _FileRow extends StatelessWidget {
 
   final _ManagedFile file;
   final VoidCallback onOpen;
+  final VoidCallback onInfo;
   final VoidCallback onShare;
   final VoidCallback onRename;
   final VoidCallback onDelete;
@@ -1280,6 +1301,7 @@ class _FileRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final fallbackUrl = file.url;
     return _RowShell(
       child: Column(
         children: [
@@ -1288,7 +1310,24 @@ class _FileRow extends StatelessWidget {
             onTap: onOpen,
             child: Row(
               children: [
-                Icon(file.icon, color: airmiusMutedColor(context), size: 32),
+                SizedBox(
+                  width: 58,
+                  height: 58,
+                  child: file.isImage && file.previewUrl.isNotEmpty
+                      ? AirmiusMediaImage(
+                          url: file.previewUrl,
+                          fallbackUrls:
+                              fallbackUrl != null &&
+                                  fallbackUrl.isNotEmpty &&
+                                  fallbackUrl != file.previewUrl
+                              ? [fallbackUrl]
+                              : const [],
+                          borderRadius: 12,
+                          semanticLabel: file.title,
+                          fallback: _FileTypeIcon(file: file),
+                        )
+                      : _FileTypeIcon(file: file),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -1320,31 +1359,164 @@ class _FileRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _SmallIcon(
-                icon: Icons.share_outlined,
-                onTap: onShare,
-                semanticLabel: t('files.fileShare'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PopupMenuButton<String>(
+              tooltip: t('files.fileMenu'),
+              icon: const Icon(Icons.more_horiz),
+              onSelected: (value) {
+                switch (value) {
+                  case 'info':
+                    onInfo();
+                    break;
+                  case 'share':
+                    onShare();
+                    break;
+                  case 'rename':
+                    onRename();
+                    break;
+                  case 'download':
+                    onOpen();
+                    break;
+                  case 'delete':
+                    onDelete();
+                    break;
+                }
+              },
+              itemBuilder: (_) => [
+                _fileMenuItem(
+                  value: 'info',
+                  icon: Icons.info_outline,
+                  label: t('files.info'),
+                ),
+                _fileMenuItem(
+                  value: 'share',
+                  icon: Icons.share_outlined,
+                  label: t('files.fileShare'),
+                ),
+                _fileMenuItem(
+                  value: 'rename',
+                  icon: Icons.edit_outlined,
+                  label: t('files.fileRename'),
+                ),
+                _fileMenuItem(
+                  value: 'download',
+                  icon: Icons.download_outlined,
+                  label: t('files.fileDownload'),
+                ),
+                _fileMenuItem(
+                  value: 'delete',
+                  icon: Icons.delete_outline,
+                  label: t('files.fileDelete'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+PopupMenuItem<String> _fileMenuItem({
+  required String value,
+  required IconData icon,
+  required String label,
+}) {
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(
+      children: [Icon(icon, size: 20), const SizedBox(width: 10), Text(label)],
+    ),
+  );
+}
+
+class _FileTypeIcon extends StatelessWidget {
+  const _FileTypeIcon({required this.file});
+
+  final _ManagedFile file;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Icon(file.icon, color: airmiusAccentColor(context), size: 28),
+    );
+  }
+}
+
+class _FileInfoSheet extends StatelessWidget {
+  const _FileInfoSheet({required this.file});
+
+  final _ManagedFile file;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t('files.info'),
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
               ),
-              _SmallIcon(
-                icon: Icons.edit_outlined,
-                onTap: onRename,
-                semanticLabel: t('files.fileRename'),
+            ),
+            const SizedBox(height: 14),
+            _FileInfoLine(label: t('files.name'), value: file.title),
+            _FileInfoLine(label: t('files.type'), value: file.type),
+            _FileInfoLine(label: t('files.size'), value: file.sizeLabel),
+            _FileInfoLine(
+              label: t('files.uploadedAt'),
+              value: _formatFileDate(context, file.uploadedAt, t),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FileInfoLine extends StatelessWidget {
+  const _FileInfoLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              label,
+              style: TextStyle(color: airmiusMutedColor(context)),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: airmiusTextColor(context),
+                fontWeight: FontWeight.w700,
               ),
-              _SmallIcon(
-                icon: Icons.download_outlined,
-                onTap: onOpen,
-                semanticLabel: t('files.fileDownload'),
-              ),
-              _SmallIcon(
-                icon: Icons.delete_outline,
-                onTap: onDelete,
-                semanticLabel: t('files.fileDelete'),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1712,11 +1884,7 @@ class _SelectLike extends StatelessWidget {
 }
 
 class _UploadDestination {
-  const _UploadDestination({
-    required this.scope,
-    this.clubId,
-    this.teamId,
-  });
+  const _UploadDestination({required this.scope, this.clubId, this.teamId});
 
   final String scope;
   final int? clubId;
@@ -1751,9 +1919,17 @@ class _UploadDestinationSheetState extends State<_UploadDestinationSheet> {
     final targets = <({String value, IconData icon, String label})>[
       (value: 'mine', icon: Icons.person_outline, label: t('files.scope.mine')),
       if (widget.clubs.isNotEmpty)
-        (value: 'club', icon: Icons.business_outlined, label: t('files.scope.club')),
+        (
+          value: 'club',
+          icon: Icons.business_outlined,
+          label: t('files.scope.club'),
+        ),
       if (widget.teams.isNotEmpty)
-        (value: 'team', icon: Icons.groups_outlined, label: t('files.scope.team')),
+        (
+          value: 'team',
+          icon: Icons.groups_outlined,
+          label: t('files.scope.team'),
+        ),
     ];
     final canContinue =
         _scope == 'mine' ||
@@ -1961,10 +2137,8 @@ class _DestinationDropdown extends StatelessWidget {
       dropdownColor: airmiusSurfaceColor(context),
       items: items
           .map(
-            (item) => DropdownMenuItem<int>(
-              value: item.id,
-              child: Text(item.name),
-            ),
+            (item) =>
+                DropdownMenuItem<int>(value: item.id, child: Text(item.name)),
           )
           .toList(),
       onChanged: onChanged,
@@ -1999,6 +2173,11 @@ class _ManagedFile {
     this.status, {
     this.id,
     this.url,
+    this.thumbnailUrl,
+    this.previewEndpoint,
+    this.type = 'Datei',
+    this.size = 0,
+    this.uploadedAt,
   });
 
   factory _ManagedFile.fromApi(
@@ -2010,10 +2189,15 @@ class _ManagedFile {
       _iconFor(type),
       file.name,
       '$type - ${_formatSize(file.size)}',
-      file.url.isEmpty ? t('files.backendPreview') : file.url,
+      type,
       t('files.backend'),
       id: file.id,
       url: file.url,
+      thumbnailUrl: file.thumbnailUrl,
+      previewEndpoint: file.previewUrl,
+      type: type,
+      size: file.size,
+      uploadedAt: file.createdAt,
     );
   }
 
@@ -2024,6 +2208,21 @@ class _ManagedFile {
   final String status;
   final int? id;
   final String? url;
+  final String? thumbnailUrl;
+  final String? previewEndpoint;
+  final String type;
+  final int size;
+  final DateTime? uploadedAt;
+
+  String get previewUrl => previewEndpoint?.trim().isNotEmpty == true
+      ? previewEndpoint!.trim()
+      : thumbnailUrl?.trim().isNotEmpty == true
+      ? thumbnailUrl!.trim()
+      : url?.trim() ?? '';
+
+  String get sizeLabel => _formatSize(size);
+
+  bool get isImage => type.toLowerCase().startsWith('image/');
 
   static IconData _iconFor(String type) {
     final normalized = type.toLowerCase();
@@ -2044,4 +2243,14 @@ class _ManagedFile {
     }
     return '${value.toStringAsFixed(unit == 0 ? 0 : 2)} ${units[unit]}';
   }
+}
+
+String _formatFileDate(
+  BuildContext context,
+  DateTime? date,
+  String Function(String) t,
+) {
+  if (date == null) return t('files.unknown');
+  final locale = AirmiusScope.of(context).language.locale.toLanguageTag();
+  return DateFormat.yMMMd(locale).add_Hm().format(date.toLocal());
 }

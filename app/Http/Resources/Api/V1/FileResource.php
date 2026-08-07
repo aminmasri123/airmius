@@ -23,6 +23,7 @@ class FileResource extends JsonResource
             'size' => $this->size,
             'url' => $this->url,
             'thumbnail_url' => $this->thumbnail_url,
+            'preview_url' => route('api.v1.files.preview', $this->id),
             'club' => new ClubResource($this->whenLoaded('club')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'event' => new EventResource($this->whenLoaded('event')),
