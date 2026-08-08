@@ -1344,15 +1344,15 @@ class ClubController extends Controller
 
     public function removeExternalMember(Request $request, Club $club, ClubExternalMember $externalMember)
     {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
+
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:2000'],
         ]);
         $reason = trim((string) $data['reason']);
         abort_if($reason === '', 422, 'Eine Begründung ist erforderlich.');
-
-        $this->authorizeVisible($request, $club);
-        abort_unless($this->canManageMembership($request, $club), 403);
-        abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
 
         $familyGroupKey = $this->normalizeFamilyGroupKey($externalMember->family_group_key);
         $memberName = $externalMember->name;

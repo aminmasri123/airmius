@@ -27,7 +27,7 @@ class AuthController extends Controller
             'data' => [
                 'exists' => $exists,
                 'message' => $exists
-                    ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.'
+                    ? __('server.auth.account_exists')
                     : null,
             ],
         ]);
@@ -101,7 +101,7 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Logged out',
+                'message' => __('server.auth.logged_out'),
             ],
         ]);
     }

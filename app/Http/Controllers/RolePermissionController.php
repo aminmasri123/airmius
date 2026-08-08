@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ class RolePermissionController extends Controller
                         'description' => $permission->description,
                     ]),
                 'users_count' => $role->users_count,
-                'is_system' => in_array($role->name, ['super_admin', 'admin', 'system_admin'], true),
+                'is_system' => in_array($role->name, Roles::PROTECTED_PLATFORM, true),
             ]);
 
         $permissions = Permission::query()
@@ -108,7 +109,7 @@ class RolePermissionController extends Controller
     {
         $this->authorizeAccess($request);
 
-        abort_if(in_array($role->name, ['super_admin', 'admin', 'system_admin'], true), 422, 'Systemrollen können nicht gelöscht werden.');
+        abort_if(in_array($role->name, Roles::PROTECTED_PLATFORM, true), 422, 'Systemrollen können nicht gelöscht werden.');
         abort_if($role->users()->exists(), 422, 'Rolle ist noch Nutzern zugewiesen.');
 
         $role->delete();
@@ -148,7 +149,7 @@ class RolePermissionController extends Controller
 
     private function authorizeSystemRoleMutation(Request $request, Role $role): void
     {
-        if (! in_array($role->name, ['super_admin', 'admin', 'system_admin'], true)) {
+        if (! in_array($role->name, Roles::PROTECTED_PLATFORM, true)) {
             return;
         }
 

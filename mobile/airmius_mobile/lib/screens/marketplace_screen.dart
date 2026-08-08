@@ -236,11 +236,22 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 28),
       children: [
+        Text(
+          t('market.title'),
+          style: const TextStyle(
+            color: _marketInk,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 10),
         _MarketplaceSearchBar(
           controller: _searchController,
           hint: t('market.search'),
           onChanged: (value) => setState(() => _query = value),
           onFilter: () => _showSectionPicker(cartCount),
+          cartCount: cartCount,
+          onCart: () => setState(() => _section = 'cart'),
         ),
         const SizedBox(height: 10),
         Text(
@@ -527,12 +538,16 @@ class _MarketplaceSearchBar extends StatelessWidget {
     required this.hint,
     required this.onChanged,
     required this.onFilter,
+    required this.cartCount,
+    required this.onCart,
   });
 
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilter;
+  final int cartCount;
+  final VoidCallback onCart;
 
   @override
   Widget build(BuildContext context) {
@@ -580,6 +595,22 @@ class _MarketplaceSearchBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: _marketBlue, width: 1.5),
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Material(
+            color: const Color(0xFFF9FCFF),
+            borderRadius: BorderRadius.circular(11),
+            child: IconButton(
+              tooltip:
+                  '${AirmiusScope.of(context).t('market.cart')} ($cartCount)',
+              onPressed: onCart,
+              color: _marketBlue,
+              icon: Badge.count(
+                count: cartCount,
+                isLabelVisible: cartCount > 0,
+                child: const Icon(Icons.shopping_cart_outlined),
               ),
             ),
           ),

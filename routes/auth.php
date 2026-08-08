@@ -47,6 +47,7 @@ use App\Http\Controllers\UserDataErasureController;
 use App\Http\Controllers\UserPrivacyController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
+use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use Illuminate\Support\Facades\Route;
 
@@ -79,6 +80,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/dashboard/maturity', [DashboardController::class, 'maturity'])->name('auth.maturity.index');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
+    Route::post('/workspaces/clubs/{club}', [WorkspaceContextController::class, 'selectClub'])
+        ->middleware('purpose:organization')
+        ->name('auth.workspaces.club.select');
+    Route::delete('/workspaces/clubs/current', [WorkspaceContextController::class, 'clear'])
+        ->middleware('purpose:organization')
+        ->name('auth.workspaces.club.clear');
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->name('auth.trainer-cockpit.index');
     Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');

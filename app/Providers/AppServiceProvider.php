@@ -4,12 +4,15 @@ namespace App\Providers;
 
 use App\Models\Club;
 use App\Models\Comment;
+use App\Models\CommerceOrder;
 use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\File;
 use App\Models\Folder;
+use App\Models\LearningEnrollment;
 use App\Models\Like;
 use App\Models\Message;
+use App\Models\Notification;
 use App\Models\Post;
 use App\Models\Ride;
 use App\Models\Team;
@@ -17,6 +20,8 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use App\Notifications\LoginLockoutNotification;
 use App\Notifications\LoginSuccessfulNotification;
+use App\Observers\CommerceOrderObserver;
+use App\Observers\LearningEnrollmentObserver;
 use App\Policies\ClubPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\ConversationPolicy;
@@ -29,17 +34,17 @@ use App\Policies\NotificationPolicy;
 use App\Policies\PostPolicy;
 use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
-use App\Policies\UserSubscriptionPolicy;
 use App\Policies\UserPolicy;
+use App\Policies\UserSubscriptionPolicy;
 use App\Support\Roles;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -60,7 +65,7 @@ class AppServiceProvider extends ServiceProvider
         Like::class => LikePolicy::class,
         Ride::class => RidePolicy::class,
         Message::class => MessagePolicy::class,
-        \App\Models\Notification::class => NotificationPolicy::class,
+        Notification::class => NotificationPolicy::class,
         User::class => UserPolicy::class,
         UserSubscription::class => UserSubscriptionPolicy::class,
     ];
@@ -78,6 +83,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        CommerceOrder::observe(CommerceOrderObserver::class);
+        LearningEnrollment::observe(LearningEnrollmentObserver::class);
+
         Gate::before(function (User $user, string $ability) {
             return $user->hasAnyRole(Roles::FULL_ACCESS) ? true : null;
         });
@@ -241,7 +249,6 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',
 
-            
         ]);
     }
 

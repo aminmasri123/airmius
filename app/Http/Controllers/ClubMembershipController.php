@@ -615,16 +615,16 @@ class ClubMembershipController extends Controller
 
     public function removeMember(Request $request, Club $club, User $user)
     {
+        $this->authorize('update', $club);
+
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+        abort_if($club->owner_id === $user->id, 422, 'Der Owner kann nicht entfernt werden. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:2000'],
         ]);
         $reason = trim((string) $data['reason']);
         abort_if($reason === '', 422, 'Eine Begründung ist erforderlich.');
-
-        $this->authorize('update', $club);
-
-        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
-        abort_if($club->owner_id === $user->id, 422, 'Der Owner kann nicht entfernt werden. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
 
         DB::transaction(function () use ($club, $user) {
             $teamIds = $club->teams()->pluck('id');

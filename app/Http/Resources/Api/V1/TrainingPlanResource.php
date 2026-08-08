@@ -26,6 +26,8 @@ class TrainingPlanResource extends JsonResource
             'status' => $this->status,
             'share_permission' => $this->share_permission,
             'settings' => $this->settings,
+            'target_type' => data_get($this->settings, 'target_type', $this->team_id ? 'team' : 'self'),
+            'team_mode' => data_get($this->settings, 'team_mode'),
             'is_template' => (bool) data_get($this->settings, 'is_template', false),
             'template_source_id' => data_get($this->settings, 'template_source_id'),
             'can_write' => $viewer ? app(TrainingResourceService::class)->canWritePlan($viewer, $this->resource) : false,

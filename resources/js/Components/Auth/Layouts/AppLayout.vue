@@ -1,17 +1,26 @@
 ﻿<!-- Components/Layouts/AppLayout.vue -->
 <script setup>
 import Sidebar from '@/Components/Auth/Sidebar.vue'
+import AppMobileBottomNav from '@/Components/Auth/Layouts/AppMobileBottomNav.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAirmiusShellNavigation } from '@/composables/useAirmiusShellNavigation'
+import { createPartialReloader } from '@/services/partialReload'
 
 const props = defineProps({
     title: String
 })
 
 const page = usePage()
+const { workspace } = useAirmiusShellNavigation()
 const { t, te, locale } = useI18n()
+const workspaceTitle = computed(() => workspace.value.translated ? t(workspace.value.label) : workspace.value.label)
+const showMobileBottomNav = computed(() => ![
+    'Auth/Dashboard/Training/Index',
+    'Auth/Dashboard/Training/LogCreate',
+].includes(page.component))
 const localeCode = computed(() => ({
     de: 'de-DE',
     en: 'en-US',
@@ -128,6 +137,13 @@ let stopInertiaInvalid = null
 let stopInertiaException = null
 const recentFeedback = new Map()
 const shownFlashIds = new Set()
+const notificationReloader = createPartialReloader({
+    only: ['notificationCenter', 'unreadChatsCount', 'friendCenter'],
+})
+const eventReloader = createPartialReloader({
+    only: ['events', 'calendarEvents', 'eventStats', 'nextEvent', 'calendar'],
+    minInterval: 1200,
+})
 
 const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
@@ -238,13 +254,7 @@ const openNotification = (notification) => {
 }
 
 const refreshNotifications = () => {
-    if (document.hidden) return
-
-    router.reload({
-        only: ['notificationCenter', 'unreadChatsCount', 'friendCenter'],
-        preserveScroll: true,
-        preserveState: true,
-    })
+    notificationReloader.refresh()
 }
 
 const setStatus = (status) => {
@@ -461,12 +471,14 @@ const bindRealtime = () => {
 
     statusChannel = window.Echo
         .join('users.status')
-        .listen('.user.status.updated', () => {
-            router.reload({
-                only: ['auth'],
-                preserveScroll: true,
-                preserveState: true,
-            })
+        .listen('.user.status.updated', (event) => {
+            if (Number(event.user?.id) === Number(page.props.auth?.user?.id)) {
+                currentStatus.value = event.user.status
+            }
+
+            window.dispatchEvent(new CustomEvent('airmius:user-status-updated', {
+                detail: event.user,
+            }))
         })
 
     const eventChannels = [
@@ -482,7 +494,7 @@ const bindRealtime = () => {
 
         subscription.listen('.event.updated', () => {
             if (window.location.pathname.startsWith('/events')) {
-                router.reload({ preserveScroll: true, preserveState: true })
+                eventReloader.refresh()
             }
         })
     })
@@ -527,7 +539,10 @@ onMounted(() => {
     document.addEventListener('pointerdown', closeSearchOnOutsideClick)
     document.addEventListener('pointerdown', closeNotificationOnOutsideClick)
 
-    notificationInterval = window.setInterval(refreshNotifications, 8000)
+    // Realtime handles the fast path. This low-frequency fallback also covers
+    // networks where a websocket connection cannot be established.
+    notificationInterval = window.setInterval(refreshNotifications, 60000)
+    document.addEventListener('visibilitychange', refreshNotifications)
 })
 
 onUnmounted(() => {
@@ -541,12 +556,16 @@ onUnmounted(() => {
     window.removeEventListener('resize', updateScreenSize)
     document.removeEventListener('pointerdown', closeSearchOnOutsideClick)
     document.removeEventListener('pointerdown', closeNotificationOnOutsideClick)
+    document.removeEventListener('visibilitychange', refreshNotifications)
 
     unbindRealtime()
 
     if (notificationInterval) {
         window.clearInterval(notificationInterval)
     }
+
+    notificationReloader.cancel()
+    eventReloader.cancel()
 
     if (searchTimeout) {
         window.clearTimeout(searchTimeout)
@@ -635,7 +654,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
         <div
             class="flex min-h-dvh min-w-0 flex-1 flex-col"
-            :class="isRtl ? 'md:pr-[260px]' : 'md:pl-[260px]'"
+            :class="isRtl ? 'md:pr-72' : 'md:pl-72'"
         >
             <!-- Topbar -->
             <header class="sticky top-0 z-40 shrink-0 border-b border-border bg-card/95 backdrop-blur">
@@ -653,9 +672,12 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         </button>
 
                         <!-- Titel -->
-                        <h1 class="truncate text-base font-semibold sm:text-lg">
-                            {{ translatedPageTitle }}
-                        </h1>
+                        <div class="min-w-0">
+                            <p class="hidden truncate text-[10px] font-black uppercase tracking-[0.14em] text-secondary sm:block">
+                                {{ workspaceTitle }}
+                            </p>
+                            <h1 class="truncate text-base font-semibold sm:text-lg">{{ translatedPageTitle }}</h1>
+                        </div>
                     </div>
 
                     <!-- RECHTS -->
@@ -949,6 +971,8 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                 <slot />
             </main>
         </div>
+
+        <AppMobileBottomNav v-if="showMobileBottomNav" />
     </div>
 </template>
 

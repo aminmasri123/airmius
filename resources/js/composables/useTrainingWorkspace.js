@@ -93,6 +93,8 @@ export function useTrainingWorkspace(props) {
         competition_date: '',
         status: 'published',
         share_permission: 'read',
+        target_type: 'self',
+        team_mode: 'all',
         team_id: '',
         user_ids: [],
         item_training_type: 'long_run',
@@ -130,6 +132,8 @@ export function useTrainingWorkspace(props) {
         competition_date: '',
         status: 'published',
         share_permission: 'read',
+        target_type: 'self',
+        team_mode: 'all',
         team_id: '',
         user_ids: [],
     })
@@ -404,8 +408,25 @@ export function useTrainingWorkspace(props) {
 
     const selectedTeamMembers = computed(() => {
         const team = props.teams.find((item) => Number(item.id) === Number(planForm.team_id))
-        return team?.users || []
+        return (team?.users || []).filter((member) => {
+            if (!member.team_role) return true
+            return ['Player', 'player', 'athlete'].includes(member.team_role)
+        })
     })
+
+    const privatePeople = computed(() => props.privatePeople || props.people || [])
+
+    const setPlanTargetType = (targetType, form = planForm) => {
+        form.target_type = targetType
+        form.team_id = ''
+        form.team_mode = targetType === 'team' ? 'all' : null
+        form.user_ids = []
+    }
+
+    const setPlanTeamMode = (mode, form = planForm) => {
+        form.team_mode = mode
+        form.user_ids = []
+    }
 
     const selectPlanTrainingType = (key) => {
         const type = planTrainingTypes.find((item) => item.key === key) || planTrainingTypes[planTrainingTypes.length - 1]
@@ -417,7 +438,19 @@ export function useTrainingWorkspace(props) {
         }
     }
 
-    const canOpenPlanWizardStep = (index) => index === 0 || Boolean(planForm.title?.trim())
+    const planAudienceCanContinue = computed(() => {
+        if (planForm.target_type === 'self') return true
+        if (planForm.target_type === 'private') return planForm.user_ids.length > 0
+        return Boolean(planForm.team_id)
+            && (planForm.team_mode === 'all' || planForm.user_ids.length > 0)
+    })
+
+    const canOpenPlanWizardStep = (index) => {
+        if (index === 0) return true
+        if (!planForm.title?.trim()) return false
+        if (index >= 3) return planAudienceCanContinue.value
+        return true
+    }
     const goToPlanWizardStep = (index) => {
         if (!canOpenPlanWizardStep(index)) return
         planWizardStep.value = index
@@ -425,6 +458,7 @@ export function useTrainingWorkspace(props) {
 
     const planWizardCanContinue = computed(() => {
         if (planWizardStep.value === 0) return Boolean(planForm.title?.trim())
+        if (planWizardStep.value === 2) return planAudienceCanContinue.value
         if (planWizardStep.value === planWizardSteps.length - 1) return Boolean(planForm.item_title?.trim())
 
         return true
@@ -445,6 +479,10 @@ export function useTrainingWorkspace(props) {
         planForm.cadence = 'weekly'
         planForm.status = 'published'
         planForm.share_permission = 'read'
+        planForm.target_type = 'self'
+        planForm.team_mode = 'all'
+        planForm.team_id = ''
+        planForm.user_ids = []
         planForm.phase = 'base'
         planForm.level = 'intermediate'
         planForm.macrocycle = ''
@@ -500,6 +538,8 @@ export function useTrainingWorkspace(props) {
             editForm.competition_date = plan.settings?.competition_date || ''
             editForm.status = plan.status || 'draft'
             editForm.share_permission = plan.share_permission || 'read'
+            editForm.target_type = plan.target_type || (plan.team?.id ? 'team' : ((plan.assignments || []).some((assignment) => assignment.user) ? 'private' : 'self'))
+            editForm.team_mode = plan.team_mode || (editForm.target_type === 'team' ? ((plan.assignments || []).some((assignment) => assignment.team) ? 'all' : 'individual') : null)
             editForm.team_id = plan.team?.id || ''
             editForm.user_ids = (plan.assignments || []).filter((assignment) => assignment.user).map((assignment) => assignment.user.id)
             editForm.clearErrors()
@@ -655,6 +695,10 @@ export function useTrainingWorkspace(props) {
         }
         if (!planForm.item_title?.trim()) {
             planWizardStep.value = planWizardSteps.length - 1
+            return
+        }
+        if (!planAudienceCanContinue.value) {
+            planWizardStep.value = 2
             return
         }
 
@@ -940,6 +984,10 @@ export function useTrainingWorkspace(props) {
         sportStats,
         templatePlans,
         selectedTeamMembers,
+        privatePeople,
+        setPlanTargetType,
+        setPlanTeamMode,
+        planAudienceCanContinue,
         selectPlanTrainingType,
         canOpenPlanWizardStep,
         goToPlanWizardStep,

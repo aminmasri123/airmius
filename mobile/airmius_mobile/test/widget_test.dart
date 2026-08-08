@@ -376,7 +376,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('registration stacks address fields for compact Arabic layouts', (
+  testWidgets('registration keeps essential fields in compact Arabic layouts', (
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1200));
@@ -390,8 +390,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('الشارع'), findsOneWidget);
-    expect(find.text('الرمز البريدي'), findsOneWidget);
+    expect(find.text('الدولة'), findsOneWidget);
+    expect(find.text('تاريخ الميلاد'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -1091,6 +1091,8 @@ void main() {
         find.byType(TextFormField).first,
         'Wöchentliches Training',
       );
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
       await tester.tap(find.text('Weiter'));
       await tester.pump();
 
@@ -1940,7 +1942,7 @@ void main() {
     await tester.tap(find.text('Übernehmen'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Suche erstellen'));
+    await tester.tap(find.text('Erstellen'));
     await tester.pumpAndSettle();
 
     expect(find.text('Stadt / Ort'), findsOneWidget);
@@ -2882,7 +2884,10 @@ void main() {
   ) async {
     _setTestViewport(tester, const Size(390, 1600));
     final transport = _RecordingTransport(
-      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[],"capabilities":{"can_manage_training_plans":true}}',
+      ),
     );
 
     await _pumpAirmiusWidget(
@@ -3834,10 +3839,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Airmius Shirt'), findsOneWidget);
-    expect(find.text('In den Warenkorb'), findsOneWidget);
-    expect(find.text('Warenkorb (1)'), findsOneWidget);
+    expect(find.byTooltip('In den Warenkorb'), findsWidgets);
+    expect(find.byTooltip('Warenkorb (1)'), findsOneWidget);
 
-    await tester.tap(find.text('Warenkorb (1)'));
+    await tester.tap(find.byTooltip('Warenkorb (1)'));
     await tester.pumpAndSettle();
 
     expect(find.text('Sicher zur Kasse'), findsOneWidget);
@@ -4216,6 +4221,8 @@ void main() {
     expect(find.text('Datenschutz & Datenrechte'), findsOneWidget);
     expect(find.text('Support & Hilfe'), findsOneWidget);
     expect(find.text('Recht & öffentliche Informationen'), findsOneWidget);
+    await tester.tap(find.text('Sprache'));
+    await tester.pumpAndSettle();
     expect(find.text('Deutsch'), findsOneWidget);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Web Parity'), findsNothing);
@@ -4326,9 +4333,22 @@ void main() {
       ),
     ]);
 
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Commerce Admin',
+        email: 'commerce-admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['marketplace.manage', 'commerce.orders.manage'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(transport: transport),
+      container,
       const AdminCenterScreen(),
       textScaler: const TextScaler.linear(1.35),
     );
@@ -4450,9 +4470,22 @@ void main() {
       ),
     );
 
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Platform Admin',
+        email: 'platform-admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage', 'users.view', 'users.assign_roles'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(transport: transport),
+      container,
       const PlatformAdminScreen(),
       textScaler: const TextScaler.linear(1.35),
     );
@@ -5169,7 +5202,22 @@ void main() {
   testWidgets('module overview avoids placeholder metrics in the MVP surface', (
     WidgetTester tester,
   ) async {
-    final container = _widgetTestContainer();
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Club Member',
+        email: 'club-member@example.test',
+        role: 'player',
+        roles: ['player'],
+        clubs: [
+          AirmiusNamedItem(
+            id: 1,
+            name: 'Airmius Club',
+            membershipRole: 'member',
+          ),
+        ],
+      ),
+    );
     await _pumpAirmiusWidget(
       tester,
       container,
@@ -5510,9 +5558,20 @@ void main() {
   testWidgets('compatibility admin entries open their matching section', (
     WidgetTester tester,
   ) async {
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Platform Admin',
+        email: 'platform-admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage', 'users.view', 'users.assign_roles'],
+        twoFactorEnabled: true,
+      ),
+    );
     await _pumpAirmiusWidget(
       tester,
-      _widgetTestContainer(),
+      container,
       const RolesPermissionsScreen(),
       themeMode: ThemeMode.light,
       palette: AirmiusThemePalette.air,
@@ -5530,9 +5589,18 @@ void main() {
     'localized module launcher stays ergonomic in Arabic light mode',
     (WidgetTester tester) async {
       _setTestViewport(tester, const Size(390, 1200));
+      final container = await _authenticatedWidgetTestContainer(
+        const AirmiusUser(
+          id: 1,
+          name: 'Mina Sport',
+          email: 'mina@example.test',
+          role: 'player',
+          roles: ['player'],
+        ),
+      );
       await _pumpAirmiusWidget(
         tester,
-        _widgetTestContainer(),
+        container,
         ModuleScreen(
           module: appModules.firstWhere(
             (module) => module.title == 'Sport-Apps & Gesundheitsdaten',
@@ -7137,7 +7205,7 @@ void main() {
     expect(find.text('الفريق'), findsOneWidget);
     expect(find.text('ملف الفريق'), findsOneWidget);
     expect(find.text('القائمة'), findsWidgets);
-    expect(find.text('الدعوات'), findsOneWidget);
+    expect(find.text('دعوة'), findsWidgets);
     expect(
       tester
           .widgetList<Directionality>(find.byType(Directionality))
@@ -7171,7 +7239,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Strafen'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Strafen'));
     await tester.pumpAndSettle();
 
     expect(find.text('Team-Strafkasse'), findsOneWidget);
@@ -7774,7 +7842,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Noch kein Freigabe-Link vorhanden.'), findsWidgets);
+    expect(find.text('Noch keine interne Freigabe vorhanden.'), findsWidgets);
     expect(find.byType(SwitchListTile), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -7825,6 +7893,7 @@ void main() {
   testWidgets('file operations upload opens the real file picker callback', (
     WidgetTester tester,
   ) async {
+    _setTestViewport(tester, const Size(800, 1000));
     var openedUploader = false;
 
     await _pumpAirmiusWidget(
@@ -7834,6 +7903,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Upload starten'));
     await tester.tap(find.text('Upload starten'));
     await tester.pump();
 
@@ -7907,6 +7977,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('الأعضاء والاشتراكات'), findsWidgets);
+    await tester.ensureVisible(find.text('التالي'));
+    await tester.tap(find.text('التالي'));
+    await tester.pump();
     expect(find.text('الاسم الأول'), findsOneWidget);
     expect(find.textContaining('البيانات الشخصية'), findsWidgets);
     expect(find.text('Mina Sport'), findsOneWidget);
@@ -7998,7 +8071,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('عرض البيانات المقدمة'), findsOneWidget);
     expect(find.text('البيانات الشخصية'), findsWidgets);
     expect(find.text('سجل الحالة'), findsOneWidget);
     expect(find.text('الإجراءات'), findsOneWidget);
@@ -8082,15 +8154,16 @@ AirmiusServiceContainer _widgetTestContainer({
 }
 
 Future<AirmiusServiceContainer> _authenticatedWidgetTestContainer(
-  AirmiusUser user,
-) async {
+  AirmiusUser user, {
+  AirmiusApiTransport? transport,
+}) async {
   final tokenStore = AirmiusMemoryTokenStore();
   await tokenStore.write(
     AirmiusSession(token: 'role-test-token', locale: 'de', user: user),
   );
   final container = _widgetTestContainer(
     tokenStore: tokenStore,
-    transport: _AuthenticatedShellTransport(user),
+    transport: _AuthenticatedShellTransport(user, delegate: transport),
   );
   await container.authState.restore();
   return container;
@@ -8121,9 +8194,10 @@ class _RecordingTransport implements AirmiusApiTransport {
 }
 
 class _AuthenticatedShellTransport implements AirmiusApiTransport {
-  const _AuthenticatedShellTransport(this.user);
+  const _AuthenticatedShellTransport(this.user, {this.delegate});
 
   final AirmiusUser user;
+  final AirmiusApiTransport? delegate;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
@@ -8161,6 +8235,7 @@ class _AuthenticatedShellTransport implements AirmiusApiTransport {
         }),
       );
     }
+    if (delegate != null) return delegate!.send(request);
     return const AirmiusApiResponse(
       statusCode: 200,
       body: '{"data":[],"meta":{"unread_count":0}}',

@@ -25,6 +25,7 @@ const props = defineProps({
     sportCatalog: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    privatePeople: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
     canManageTrainingPlans: { type: Boolean, default: false },
 })
@@ -106,6 +107,9 @@ const {
     sportStats,
     templatePlans,
     selectedTeamMembers,
+    privatePeople,
+    setPlanTargetType,
+    setPlanTeamMode,
     selectPlanTrainingType,
     canOpenPlanWizardStep,
     goToPlanWizardStep,
@@ -836,8 +840,19 @@ const {
             </aside>
         </div>
 
-        <div v-if="activeModal" class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center" @click.self="closeModal">
-            <div class="max-h-[92vh] w-full overflow-y-auto rounded-2xl border border-border bg-bg shadow-2xl" :class="['delete', 'draft-delete', 'item-delete', 'item-missed'].includes(activeModal) ? 'max-w-lg' : 'max-w-4xl'">
+        <Teleport to="body">
+        <div
+            v-if="activeModal"
+            class="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+            @pointerdown.stop
+            @click.stop
+        >
+            <div
+                class="max-h-[92vh] w-full overflow-y-auto rounded-2xl border border-border bg-bg shadow-2xl"
+                :class="['delete', 'draft-delete', 'item-delete', 'item-missed'].includes(activeModal) ? 'max-w-lg' : 'max-w-4xl'"
+                @pointerdown.stop
+                @click.stop
+            >
                 <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-bg/95 p-4 backdrop-blur">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
@@ -1440,27 +1455,83 @@ const {
                                     <option value="write">Mit schreiben / verbessern</option>
                                 </select>
                             </label>
-                            <label class="block text-sm font-semibold text-primary md:col-span-2">Team
-                                <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                                    <option value="">Kein komplettes Team</option>
-                                    <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
-                                </select>
-                            </label>
                         </div>
 
-                        <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-sm font-semibold text-primary">Einzelne Sportler</p>
-                                <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                        <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-4">
+                            <p class="text-sm font-semibold text-primary">Plan erstellen für</p>
+                            <p class="mt-1 text-xs text-secondary">Lege zuerst fest, für wen dieser Plan gedacht ist.</p>
+
+                            <div class="mt-3 grid gap-2 md:grid-cols-3">
+                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'self' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('self')">
+                                    <i class="las la-user text-lg"></i>
+                                    <span class="mt-1 block text-sm font-semibold">Für mich selbst</span>
+                                    <span class="mt-1 block text-xs text-secondary">Persönlicher Trainingsplan</span>
+                                </button>
+                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
+                                    <i class="las la-user-friends text-lg"></i>
+                                    <span class="mt-1 block text-sm font-semibold">Privater Kunde / Freund</span>
+                                    <span class="mt-1 block text-xs text-secondary">Nur bestätigte Verbindungen</span>
+                                </button>
+                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
+                                    <i class="las la-users text-lg"></i>
+                                    <span class="mt-1 block text-sm font-semibold">Vereinsteam</span>
+                                    <span class="mt-1 block text-xs text-secondary">Gesamtes Team oder einzelne Sportler</span>
+                                </button>
                             </div>
-                            <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
-                                <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
-                                    <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
-                                    <span class="truncate">{{ person.name }}</span>
+
+                            <div v-if="planForm.target_type === 'self'" class="mt-4 rounded-xl border border-air-blue/20 bg-air-blue/5 p-3 text-sm text-secondary">
+                                Dieser Plan bleibt privat und wird nur deinem eigenen Trainingsbereich zugeordnet.
+                            </div>
+
+                            <template v-else-if="planForm.target_type === 'private'">
+                                <div class="mt-4 flex items-center justify-between gap-3">
+                                    <p class="text-sm font-semibold text-primary">Private Empfänger</p>
+                                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                                </div>
+                                <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                                    <label v-for="person in privatePeople" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
+                                        <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
+                                        <span class="truncate">{{ person.name }}</span>
+                                    </label>
+                                    <p v-if="!privatePeople.length" class="text-sm text-secondary">Noch keine bestätigten Freunde oder privaten Kunden verfügbar.</p>
+                                </div>
+                            </template>
+
+                            <template v-else>
+                                <label class="mt-4 block text-sm font-semibold text-primary">Vereinsteam
+                                    <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" @change="planForm.user_ids = []; planForm.team_mode = 'all'">
+                                        <option value="">Team auswählen</option>
+                                        <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                                    </select>
                                 </label>
-                                <p v-if="!people.length" class="text-sm text-secondary">Keine einzelnen Sportler verfügbar.</p>
-                            </div>
-                            <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
+
+                                <div v-if="planForm.team_id" class="mt-4 grid gap-2 sm:grid-cols-2">
+                                    <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.team_mode === 'all' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('all')">
+                                        <span class="block text-sm font-semibold">Komplettes Team</span>
+                                        <span class="mt-1 block text-xs text-secondary">Alle aktuellen Teammitglieder erhalten Zugriff.</span>
+                                    </button>
+                                    <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.team_mode === 'individual' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('individual')">
+                                        <span class="block text-sm font-semibold">Einzelne Sportler</span>
+                                        <span class="mt-1 block text-xs text-secondary">Nur ausgewählte Mitglieder erhalten Zugriff.</span>
+                                    </button>
+                                </div>
+
+                                <div v-if="planForm.team_id && planForm.team_mode === 'individual'" class="mt-4">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-sm font-semibold text-primary">Sportler aus diesem Team</p>
+                                        <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                                    </div>
+                                    <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                                        <label v-for="person in selectedTeamMembers" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
+                                            <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
+                                            <span class="truncate">{{ person.name }}</span>
+                                        </label>
+                                        <p v-if="!selectedTeamMembers.length" class="text-sm text-secondary">In diesem Team sind keine Sportler verfügbar.</p>
+                                    </div>
+                                </div>
+                                <p v-else-if="!planForm.team_id" class="mt-3 rounded-xl border border-dashed border-border p-3 text-sm text-secondary">Wähle zuerst ein Vereinsteam. Danach werden ausschließlich dessen Mitglieder angezeigt.</p>
+                                <p v-else class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
+                            </template>
                         </div>
                     </section>
 
@@ -1848,6 +1919,7 @@ const {
                 </div>
             </div>
         </div>
+        </Teleport>
 
         <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:hidden">
             <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_1fr_auto] gap-2">

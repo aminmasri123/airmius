@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Session;
+use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
@@ -13,9 +14,19 @@ class SetLocale
 
     public function handle(Request $request, Closure $next)
     {
-        App::setLocale($this->resolveLocale($request));
+        $locale = $this->resolveLocale($request);
+        App::setLocale($locale);
 
-        return $next($request);
+        return self::applyResponseHeaders($next($request), $locale);
+    }
+
+    public static function applyResponseHeaders(Response $response, ?string $locale = null): Response
+    {
+        $locale ??= App::getLocale();
+        $response->headers->set('Content-Language', $locale);
+        $response->headers->set('X-Airmius-Text-Direction', $locale === 'ar' ? 'rtl' : 'ltr');
+
+        return $response;
     }
 
     private function resolveLocale(Request $request): string

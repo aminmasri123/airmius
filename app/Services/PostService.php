@@ -6,32 +6,53 @@ use App\Models\Activity;
 use App\Models\File;
 use App\Models\Post;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PostService
 {
-    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+    public function __construct(
+        private MediaOptimizer $mediaOptimizer,
+        private DomainEventPublisher $domainEvents,
+    ) {}
 
     public function create($user, $data)
     {
-        $post = Post::create([
-            'user_id' => $user->id,
-            'club_id' => $data['club_id'] ?? null,
-            'team_id' => $data['team_id'] ?? null,
-            'sport_id' => $data['sport_id'] ?? null,
-            'post_type' => $data['post_type'] ?? 'normal',
-            'content_origin' => $data['content_origin'] ?? 'self',
-            'visibility' => $data['visibility'] ?? 'organization',
-            'content' => $data['content'],
-            'image' => $data['image'] ?? null,
-        ]);
+        return DB::transaction(function () use ($user, $data) {
+            $post = Post::create([
+                'user_id' => $user->id,
+                'club_id' => $data['club_id'] ?? null,
+                'team_id' => $data['team_id'] ?? null,
+                'sport_id' => $data['sport_id'] ?? null,
+                'post_type' => $data['post_type'] ?? 'normal',
+                'content_origin' => $data['content_origin'] ?? 'self',
+                'visibility' => $data['visibility'] ?? 'organization',
+                'content' => $data['content'],
+                'image' => $data['image'] ?? null,
+            ]);
 
-        $post->sportSkills()->sync($data['sport_skill_ids'] ?? []);
+            $post->sportSkills()->sync($data['sport_skill_ids'] ?? []);
 
-        $this->attachFiles($post, $user, $data['attachments'] ?? []);
-        $this->recordActivity($post, 'post.created', $user);
+            $this->attachFiles($post, $user, $data['attachments'] ?? []);
+            $this->recordActivity($post, 'post.created', $user);
+            $this->domainEvents->record(
+                'community.post.created.v1',
+                $post,
+                payload: [
+                    'visibility' => $post->visibility,
+                    'post_type' => $post->post_type,
+                    'sport_id' => $post->sport_id,
+                    'attachment_count' => count($data['attachments'] ?? []),
+                ],
+                audience: array_filter([
+                    'users' => [$user->id],
+                    'teams' => $post->team_id ? [$post->team_id] : null,
+                    'clubs' => $post->club_id ? [$post->club_id] : null,
+                ]),
+            );
 
-        return $post;
+            return $post;
+        });
     }
 
     public function attachFiles(Post $post, $user, array $attachments): void

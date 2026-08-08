@@ -10,6 +10,14 @@ class Roles
         'system_admin',
     ];
 
+    public const PROTECTED_PLATFORM = [
+        'super_admin',
+        'admin',
+        'system_admin',
+        'platform_engineer',
+        'security_admin',
+    ];
+
     public const MARKETPLACE_OPERATIONS = [
         'marketplace_manager',
         'outfit_subscription_manager',
@@ -23,6 +31,8 @@ class Roles
         'super_admin',      // Globaler Systemadministrator mit Vollzugriff
         'admin',            // System Administrator auf Plattform Ebene
         'system_admin',     // Technischer System Admin
+        'platform_engineer', // Technischer Betrieb mit minimalen Produktivdatenrechten
+        'security_admin',   // Sicherheitsbetrieb und Incident Response
         'support',          // Support Mitarbeiter für Tickets & Hilfe
         'redaktor',         // Website Redaktion für Blog und Inhalte
     ];
@@ -97,6 +107,8 @@ class Roles
             ['name' => 'super_admin', 'description' => 'Globaler Systemadministrator mit Vollzugriff'],
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
+            ['name' => 'platform_engineer', 'description' => 'Technischer Betrieb ohne standardmäßigen Zugriff auf Produktiv-Personendaten'],
+            ['name' => 'security_admin', 'description' => 'Sicherheitsbetrieb und Incident Response ohne Commerce- oder Inhaltsrechte'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
             ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
             ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],

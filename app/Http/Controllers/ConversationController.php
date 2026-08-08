@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ChatTyping;
 use App\Events\ChatConversationUpdated;
+use App\Events\ChatTyping;
+use App\Events\MessageReceiptsUpdated;
 use App\Models\Conversation;
 use App\Models\ConversationInvitation;
 use App\Models\Message;
@@ -89,7 +90,7 @@ class ConversationController extends Controller
         } elseif ($data['type'] === 'direct') {
             $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== auth()->id()));
 
-            abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+            abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, __('server.chat.direct_messages_forbidden'));
 
             $conversation = Conversation::query()
                 ->where('type', 'direct')
@@ -97,7 +98,7 @@ class ConversationController extends Controller
                 ->whereHas('users', fn ($query) => $query->where('users.id', $recipient->id))
                 ->first();
 
-            if (!$conversation) {
+            if (! $conversation) {
                 $conversation = Conversation::create([
                     'type' => 'direct',
                     'club_id' => $data['club_id'] ?? null,
@@ -123,14 +124,14 @@ class ConversationController extends Controller
             );
         }
 
-        if (!empty($data['message'])) {
+        if (! empty($data['message'])) {
             $message = $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
             $this->moderation->flagIfNeeded($message, $message->message, auth()->id());
         }
 
         return redirect()
             ->route('auth.conversations.index', ['conversation' => $conversation->id])
-            ->with('success', 'Konversation erstellt.');
+            ->with('success', __('server.chat.created'));
     }
 
     /**
@@ -168,7 +169,7 @@ class ConversationController extends Controller
     public function addMembers(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Mitglieder können nur zu Gruppenchats hinzugefügt werden.');
+        abort_if($conversation->type !== 'group', 422, __('server.chat.members_group_only'));
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
@@ -181,7 +182,7 @@ class ConversationController extends Controller
             ->unique()
             ->values();
 
-        abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswählen.');
+        abort_if($participantIds->isEmpty(), 422, __('server.chat.select_participant'));
 
         $this->authorizeGroupParticipants($request, $participantIds);
         $existingIds = $conversation->users()
@@ -232,13 +233,16 @@ class ConversationController extends Controller
             broadcast(new ChatConversationUpdated($conversation, 'invitations.created', $invitedIds->all()))->toOthers();
         }
 
-        return back()->with('success', $invitedIds->isEmpty() ? 'Keine neuen Einladungen gesendet.' : 'Einladungen wurden gesendet.');
+        return back()->with(
+            'success',
+            __($invitedIds->isEmpty() ? 'server.chat.no_new_invitations' : 'server.chat.invitations_sent')
+        );
     }
 
     public function leave(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type === 'direct', 422, 'Direktchats können nicht verlassen werden.');
+        abort_if($conversation->type === 'direct', 422, __('server.chat.direct_cannot_leave'));
 
         $data = $request->validate([
             'delete_conversation' => ['nullable', 'boolean'],
@@ -279,7 +283,7 @@ class ConversationController extends Controller
 
         return redirect()
             ->route('auth.conversations.index')
-            ->with('success', 'Du hast die Gruppe verlassen.');
+            ->with('success', __('server.chat.left'));
     }
 
     /**
@@ -296,7 +300,7 @@ class ConversationController extends Controller
     public function update(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Nur Gruppenchats können bearbeitet werden.');
+        abort_if($conversation->type !== 'group', 422, __('server.chat.edit_group_only'));
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
@@ -318,7 +322,7 @@ class ConversationController extends Controller
 
         broadcast(new ChatConversationUpdated($conversation, 'profile.updated'))->toOthers();
 
-        return back()->with('success', 'Gruppenprofil wurde aktualisiert.');
+        return back()->with('success', __('server.chat.profile_updated'));
     }
 
     /**
@@ -345,7 +349,10 @@ class ConversationController extends Controller
             'muted_until' => $mutedUntil,
         ]);
 
-        return back()->with('success', $mutedUntil ? 'Chat wurde stummgeschaltet.' : 'Chat-Benachrichtigungen sind wieder aktiv.');
+        return back()->with(
+            'success',
+            __($mutedUntil ? 'server.chat.muted' : 'server.chat.unmuted')
+        );
     }
 
     public function acceptInvitation(Request $request, ConversationInvitation $invitation)
@@ -394,7 +401,7 @@ class ConversationController extends Controller
 
         return redirect()
             ->route('auth.conversations.index', ['conversation' => $conversation->id])
-            ->with('success', 'Einladung angenommen.');
+            ->with('success', __('server.chat.invitation_accepted'));
     }
 
     public function declineInvitation(Request $request, ConversationInvitation $invitation)
@@ -424,16 +431,16 @@ class ConversationController extends Controller
             ]))->toOthers();
         }
 
-        return back()->with('success', 'Einladung abgelehnt.');
+        return back()->with('success', __('server.chat.invitation_declined'));
     }
 
     public function removeMember(Request $request, Conversation $conversation, User $user)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Mitglieder können nur aus Gruppenchats entfernt werden.');
+        abort_if($conversation->type !== 'group', 422, __('server.chat.remove_group_only'));
         abort_unless($this->canManageGroup($conversation), 403);
-        abort_if($user->id === auth()->id(), 422, 'Nutze Gruppe verlassen, um dich selbst zu entfernen.');
-        abort_if((int) $conversation->owner_id === (int) $user->id, 422, 'Der Owner kann nicht entfernt werden.');
+        abort_if($user->id === auth()->id(), 422, __('server.chat.remove_self'));
+        abort_if((int) $conversation->owner_id === (int) $user->id, 422, __('server.chat.remove_owner'));
         abort_unless($conversation->users()->where('users.id', $user->id)->exists(), 404);
 
         $conversation->users()->detach($user->id);
@@ -457,21 +464,21 @@ class ConversationController extends Controller
             'conversation_id' => $conversation->id,
         ]);
 
-        return back()->with('success', 'Mitglied wurde entfernt.');
+        return back()->with('success', __('server.chat.member_removed'));
     }
 
     public function transferOwner(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Owner kann nur für Gruppenchats Übertragen werden.');
+        abort_if($conversation->type !== 'group', 422, __('server.chat.transfer_group_only'));
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        abort_if((int) $data['user_id'] === auth()->id(), 422, 'Du bist bereits Owner.');
-        abort_unless($conversation->users()->where('users.id', $data['user_id'])->exists(), 422, 'Neuer Owner muss Mitglied der Gruppe sein.');
+        abort_if((int) $data['user_id'] === auth()->id(), 422, __('server.chat.already_owner'));
+        abort_unless($conversation->users()->where('users.id', $data['user_id'])->exists(), 422, __('server.chat.owner_must_be_member'));
 
         $conversation->update(['owner_id' => (int) $data['user_id']]);
         $newOwner = User::find((int) $data['user_id']);
@@ -495,7 +502,7 @@ class ConversationController extends Controller
             'conversation_id' => $conversation->id,
         ]);
 
-        return back()->with('success', 'Owner wurde Übertragen.');
+        return back()->with('success', __('server.chat.owner_transferred'));
     }
 
     private function renderIndex(?Conversation $selectedConversation = null, ?Request $request = null)
@@ -557,7 +564,7 @@ class ConversationController extends Controller
                 ]);
 
             if ($selectedConversation && $readMessageIds) {
-                broadcast(new \App\Events\MessageReceiptsUpdated($selectedConversation, $readMessageIds))->toOthers();
+                broadcast(new MessageReceiptsUpdated($selectedConversation, $readMessageIds))->toOthers();
             }
 
             auth()->user()
@@ -648,9 +655,9 @@ class ConversationController extends Controller
                     $query->whereHas('friendships', function ($q) {
                         $q->where('friend_id', auth()->id());
                     })
-                    ->orWhereHas('receivedFriendships', function ($q) {
-                        $q->where('user_id', auth()->id());
-                    });
+                        ->orWhereHas('receivedFriendships', function ($q) {
+                            $q->where('user_id', auth()->id());
+                        });
                 })
                 ->select(['id', 'name', 'email'])
                 ->orderBy('name')
@@ -769,7 +776,7 @@ class ConversationController extends Controller
             ->get()
             ->keyBy('id');
 
-        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewählte Person wurde nicht gefunden.');
+        abort_if($participants->count() !== $participantIds->count(), 422, __('server.chat.participants_missing'));
 
         $actor = $request->user();
 
@@ -777,7 +784,7 @@ class ConversationController extends Controller
             abort_unless(
                 $actor->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($actor),
                 403,
-                'Gruppenchats können nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+                __('server.chat.group_friends_only')
             );
         }
     }
@@ -789,7 +796,7 @@ class ConversationController extends Controller
 
     private function onlyMessagesVisibleSinceGroupJoin($query, ?Conversation $conversation): void
     {
-        if (!$conversation || $conversation->type !== 'group') {
+        if (! $conversation || $conversation->type !== 'group') {
             return;
         }
 

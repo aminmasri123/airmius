@@ -2,12 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AdCampaign;
 use App\Models\Club;
 use App\Models\CommerceOrder;
-use App\Models\CommerceShippingRate;
-use App\Models\CommerceTaxRate;
 use App\Models\File;
-use App\Models\AdCampaign;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceSellerApplication;
@@ -18,13 +16,15 @@ use App\Models\Setting;
 use App\Models\Story;
 use App\Models\SubscriptionCoupon;
 use App\Models\SubscriptionPlan;
-use App\Models\UserSubscription;
 use App\Models\User;
+use App\Models\UserSubscription;
 use App\Models\WebsiteRequest;
+use App\Support\Api\V1\ApiContract;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
@@ -57,8 +57,8 @@ class MobileApiContractTest extends TestCase
         $this->getJson('/api/v1/meta')
             ->assertOk()
             ->assertJsonPath('data.api_version', 'v1')
-            ->assertJsonPath('data.contract_version', \App\Support\Api\V1\ApiContract::CONTRACT_VERSION)
-            ->assertJsonPath('data.minimum_app_version', \App\Support\Api\V1\ApiContract::MIN_CLIENT_VERSION)
+            ->assertJsonPath('data.contract_version', ApiContract::CONTRACT_VERSION)
+            ->assertJsonPath('data.minimum_app_version', ApiContract::MIN_CLIENT_VERSION)
             ->assertJsonPath('data.feature_flags.mvp_surface', true)
             ->assertJsonPath('data.feature_flags.secure_token_storage', true)
             ->assertJsonPath('data.feature_flags.sport_integrations', true)
@@ -72,6 +72,10 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.role_matrix.4.key', 'plattform_admin')
             ->assertJsonPath('data.role_matrix.2.club_roles.0', 'owner')
             ->assertJsonPath('data.role_matrix.3.team_roles.0', 'ParentContact')
+            ->assertJsonPath('data.modules.0.key', 'account')
+            ->assertJsonPath('data.modules.5.key', 'training')
+            ->assertJsonPath('data.modules.5.processing_purpose', 'training')
+            ->assertJsonPath('data.modules.5.data_classification', 'highly_sensitive')
             ->assertJsonPath('data.capabilities.profile.0', 'user_card')
             ->assertJsonPath('data.capabilities.search.3', 'events')
             ->assertJsonPath('data.capabilities.search.6', 'files')
@@ -136,7 +140,7 @@ class MobileApiContractTest extends TestCase
     {
         config()->set('app.debug', false);
 
-        \Illuminate\Support\Facades\Route::get('/api/v1/__test/server-error', fn () => throw new \RuntimeException('boom'));
+        Route::get('/api/v1/__test/server-error', fn () => throw new \RuntimeException('boom'));
 
         $this->assertApiErrorContract(
             $this->getJson('/api/v1/__test/server-error')

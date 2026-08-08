@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,5 +58,37 @@ class EventIndexTest extends TestCase
                 ->where('eventStats.upcoming', 36)
                 ->where('calendar.month', '2026-05')
                 ->where('filters.calendar_month', '2026-05'));
+    }
+
+    public function test_realtime_partial_reload_omits_static_event_form_catalogs(): void
+    {
+        $user = User::factory()->create();
+
+        Event::create([
+            'user_id' => $user->id,
+            'title' => 'Partial Event',
+            'type' => 'training',
+            'visibility' => 'public',
+            'status' => 'scheduled',
+            'start_time' => now()->addDay(),
+        ]);
+
+        $assetVersion = app(HandleInertiaRequests::class)->version(request());
+
+        $this->actingAs($user)
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Inertia-Version' => $assetVersion,
+                'X-Inertia-Partial-Component' => 'Auth/Dashboard/Events/Index',
+                'X-Inertia-Partial-Data' => 'events,calendarEvents,eventStats,nextEvent,calendar',
+            ])
+            ->get(route('auth.events.index'))
+            ->assertOk()
+            ->assertJsonMissingPath('props.clubs')
+            ->assertJsonMissingPath('props.teams')
+            ->assertJsonMissingPath('props.sports')
+            ->assertJsonMissingPath('props.eventDefaults')
+            ->assertJsonMissingPath('props.eventCreation')
+            ->assertJsonPath('props.events.data.0.title', 'Partial Event');
     }
 }

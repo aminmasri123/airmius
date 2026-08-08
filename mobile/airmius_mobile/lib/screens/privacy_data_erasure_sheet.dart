@@ -6,7 +6,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class DataErasureSheet extends StatefulWidget {
-  const DataErasureSheet({required this.client});
+  const DataErasureSheet({super.key, required this.client});
 
   final AirmiusApiClient client;
 
@@ -67,9 +67,7 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: Eyebrow(t('privacy.eraseSelectAreas')),
-                      ),
+                      Expanded(child: Eyebrow(t('privacy.eraseSelectAreas'))),
                       TextButton(
                         onPressed: _busy ? null : _toggleAll,
                         child: Text(
@@ -147,9 +145,9 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
             if (_codeSent) ...[
               const SizedBox(height: 14),
               AirmiusPanel(
-                borderColor: Theme.of(context).colorScheme.error.withValues(
-                  alpha: .5,
-                ),
+                borderColor: Theme.of(
+                  context,
+                ).colorScheme.error.withValues(alpha: .5),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -294,6 +292,8 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
       : AirmiusScope.of(context).t('common.errorDetails');
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

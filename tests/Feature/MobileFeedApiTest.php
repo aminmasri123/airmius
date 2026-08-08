@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Comment;
 use App\Models\ContentReport;
+use App\Models\DomainOutboxEvent;
 use App\Models\ModerationFlag;
 use App\Models\Post;
 use App\Models\User;
@@ -33,6 +34,13 @@ class MobileFeedApiTest extends TestCase
             ->assertJsonPath('data.can_delete', true);
 
         $postId = $postResponse->json('data.id');
+
+        $outboxEvent = DomainOutboxEvent::query()
+            ->where('event_name', 'community.post.created.v1')
+            ->where('aggregate_id', (string) $postId)
+            ->firstOrFail();
+        $this->assertSame('public', $outboxEvent->payload['visibility']);
+        $this->assertArrayNotHasKey('content', $outboxEvent->payload);
 
         $this->getJson('/api/v1/feed')
             ->assertOk()

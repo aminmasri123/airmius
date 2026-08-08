@@ -1358,6 +1358,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
   late String _phase;
   late String _level;
   late String _permission;
+  late String _targetType;
+  late String _teamMode;
   int? _teamId;
   late Set<int> _userIds;
   late DateTime _startsOn;
@@ -1391,6 +1393,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
     _phase = initial?.phase ?? 'base';
     _level = initial?.level ?? 'beginner';
     _permission = initial?.sharePermission ?? 'read';
+    _targetType = initial?.targetType ?? 'self';
+    _teamMode = initial?.teamMode ?? 'all';
     _teamId = initial?.teamId;
     _userIds = {...(initial?.assignedUserIds ?? const <int>[])};
     _startsOn = initial?.startsOn ?? DateTime.now();
@@ -1423,6 +1427,31 @@ class _PlanFormPageState extends State<_PlanFormPage> {
         _choicesError = error.userMessage;
       });
     }
+  }
+
+  List<Map<String, dynamic>> get _selectedTeamMembers {
+    if (_teamId == null) return const [];
+    Map<String, dynamic>? team;
+    for (final item in _choices.teams) {
+      if (_asInt(item['id']) == _teamId) {
+        team = item;
+        break;
+      }
+    }
+    final users = team?['users'];
+    if (users is! List) return const [];
+
+    return users
+        .whereType<Map>()
+        .map((user) => Map<String, dynamic>.from(user))
+        .toList();
+  }
+
+  bool get _targetSelectionValid {
+    if (_targetType == 'self') return true;
+    if (_targetType == 'private') return _userIds.isNotEmpty;
+    return _teamId != null &&
+        (_teamMode == 'all' || _userIds.isNotEmpty);
   }
 
   @override
@@ -1465,7 +1494,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                 ButtonSegment(value: 3, label: Text(t('trainingHub.step4'))),
               ],
               selected: {_step},
-              onSelectionChanged: (value) => setState(() => _step = value.first),
+              onSelectionChanged: (value) {
+                if (value.first >= 3 && !_targetSelectionValid) return;
+                setState(() => _step = value.first);
+              },
             ),
             const SizedBox(height: 18),
             if (_choicesLoading) ...[
@@ -1651,84 +1683,172 @@ class _PlanFormPageState extends State<_PlanFormPage> {
             ),
             ],
             if (_step == 2) ...[
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int?>(
-              initialValue: _teamId,
-              decoration: InputDecoration(labelText: t('trainingHub.team')),
-              items: [
-                DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text(t('trainingHub.noTeam')),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _targetType,
+                decoration: InputDecoration(labelText: t('trainingHub.target')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'self',
+                    child: Text(t('trainingHub.target.self')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'private',
+                    child: Text(t('trainingHub.target.private')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'team',
+                    child: Text(t('trainingHub.target.team')),
+                  ),
+                ],
+                onChanged: (value) => setState(() {
+                  _targetType = value ?? _targetType;
+                  _teamId = null;
+                  _teamMode = 'all';
+                  _userIds.clear();
+                }),
+              ),
+              if (_targetType == 'team') ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<int?>(
+                  initialValue: _teamId,
+                  decoration: InputDecoration(labelText: t('trainingHub.team')),
+                  items: [
+                    DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text(t('trainingHub.chooseTeam')),
+                    ),
+                    ..._choices.teams.map(
+                      (team) => DropdownMenuItem<int?>(
+                        value: _asInt(team['id']),
+                        child: Text(team['name']?.toString() ?? 'Team'),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() {
+                    _teamId = value;
+                    _teamMode = 'all';
+                    _userIds.clear();
+                  }),
                 ),
-                ..._choices.teams.map(
-                  (team) => DropdownMenuItem<int?>(
-                    value: _asInt(team['id']),
-                    child: Text(team['name']?.toString() ?? 'Team'),
+                if (_teamId != null) ...[
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: [
+                      ButtonSegment(
+                        value: 'all',
+                        icon: const Icon(Icons.groups_outlined),
+                        label: Text(t('trainingHub.target.fullTeam')),
+                      ),
+                      ButtonSegment(
+                        value: 'individual',
+                        icon: const Icon(Icons.person_outline),
+                        label: Text(t('trainingHub.target.individual')),
+                      ),
+                    ],
+                    selected: {_teamMode},
+                    onSelectionChanged: (value) => setState(() {
+                      _teamMode = value.first;
+                      _userIds.clear();
+                    }),
+                  ),
+                ],
+              ],
+              if (_targetType == 'private') ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    t('trainingHub.target.privatePeople'),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
+                const SizedBox(height: 7),
+                if (_choices.athletes.isEmpty)
+                  Text(t('trainingHub.target.noPrivatePeople'))
+                else
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: _choices.athletes.map((athlete) {
+                      final id = _asInt(athlete['id']);
+                      return FilterChip(
+                        selected: _userIds.contains(id),
+                        label: Text(athlete['name']?.toString() ?? 'Person'),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _userIds.add(id);
+                          } else {
+                            _userIds.remove(id);
+                          }
+                        }),
+                      );
+                    }).toList(),
+                  ),
               ],
-              onChanged: (value) => setState(() => _teamId = value),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _permission,
-              decoration: InputDecoration(
-                labelText: t('trainingHub.permission'),
-              ),
-              items: ['read', 'write']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(t('trainingHub.permission.$value')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => _permission = value ?? _permission),
-            ),
-            if (_choices.athletes.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  t('trainingHub.assignAthletes'),
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+              if (_targetType == 'team' && _teamId != null && _teamMode == 'individual') ...[
+                const SizedBox(height: 16),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    t('trainingHub.assignAthletes'),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
                 ),
+                const SizedBox(height: 7),
+                if (_selectedTeamMembers.isEmpty)
+                  Text(t('trainingHub.target.noTeamMembers'))
+                else
+                  Wrap(
+                    spacing: 7,
+                    runSpacing: 7,
+                    children: _selectedTeamMembers.map((athlete) {
+                      final id = _asInt(athlete['id']);
+                      return FilterChip(
+                        selected: _userIds.contains(id),
+                        label: Text(athlete['name']?.toString() ?? 'Athlet'),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _userIds.add(id);
+                          } else {
+                            _userIds.remove(id);
+                          }
+                        }),
+                      );
+                    }).toList(),
+                  ),
+              ],
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _permission,
+                decoration: InputDecoration(
+                  labelText: t('trainingHub.permission'),
+                ),
+                items: ['read', 'write']
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(t('trainingHub.permission.$value')),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => _permission = value ?? _permission),
               ),
-              const SizedBox(height: 7),
-              Wrap(
-                spacing: 7,
-                runSpacing: 7,
-                children: _choices.athletes.map((athlete) {
-                  final id = _asInt(athlete['id']);
-                  return FilterChip(
-                    selected: _userIds.contains(id),
-                    label: Text(athlete['name']?.toString() ?? 'Athlet'),
-                    onSelected: (selected) => setState(() {
-                      if (selected) {
-                        _userIds.add(id);
-                      } else {
-                        _userIds.remove(id);
-                      }
-                    }),
-                  );
-                }).toList(),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                decoration: InputDecoration(labelText: t('trainingHub.status')),
+                items: ['draft', 'published']
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(_translatedStatus(t, value)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => _status = value ?? _status),
               ),
-            ],
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _status,
-              decoration: InputDecoration(labelText: t('trainingHub.status')),
-              items: ['draft', 'published']
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(_translatedStatus(t, value)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _status = value ?? _status),
-            ),
             ],
             if (_step == 3) ...[
               TextField(
@@ -1795,7 +1915,8 @@ class _PlanFormPageState extends State<_PlanFormPage> {
             Expanded(
               child: FilledButton(
           onPressed: _step < 3
-              ? (_step == 0 && _title.text.trim().isEmpty
+              ? ((_step == 0 && _title.text.trim().isEmpty) ||
+                      (_step == 2 && !_targetSelectionValid)
                     ? null
                     : () => setState(() => _step += 1))
               : (_title.text.trim().isEmpty || _itemTitle.text.trim().isEmpty)
@@ -1819,8 +1940,10 @@ class _PlanFormPageState extends State<_PlanFormPage> {
                       : _dateApi(_competitionDate!),
                   'status': _status,
                   'share_permission': _permission,
+                  'target_type': _targetType,
+                  'team_mode': _targetType == 'team' ? _teamMode : null,
                   'team_id': _teamId,
-                  'user_ids': _userIds.toList(),
+                  'user_ids': _targetType == 'self' ? <int>[] : _userIds.toList(),
                   'item_title': _itemTitle.text.trim(),
                   'item_sport_type': _itemSport.text.trim(),
                   'item_duration_minutes': int.tryParse(_itemDuration.text),
@@ -2500,7 +2623,7 @@ class _TrainingChoices {
   static Future<_TrainingChoices> load(AirmiusApiClient client) async {
     final responses = await Future.wait([client.teams(), client.friends()]);
     final teams = _dataList(responses[0])
-        .where((team) => team['viewer_is_member'] == true)
+        .where((team) => team['viewer_is_member'] == true || team['can_manage'] == true)
         .toList();
     final friendData = responses[1]['data'];
     final athletes = friendData is Map && friendData['friends'] is List
@@ -2533,6 +2656,8 @@ class _TrainingPlan {
     required this.status,
     this.description,
     this.teamId,
+    this.targetType = 'self',
+    this.teamMode,
     this.startsOn,
     this.endsOn,
     this.goal,
@@ -2557,6 +2682,9 @@ class _TrainingPlan {
     title: json['title']?.toString() ?? '',
     description: json['description']?.toString(),
     teamId: _nullableInt(json['team_id']),
+    targetType: json['target_type']?.toString() ??
+        (_nullableInt(json['team_id']) != null ? 'team' : 'self'),
+    teamMode: json['team_mode']?.toString(),
     startsOn: DateTime.tryParse(json['starts_on']?.toString() ?? ''),
     endsOn: DateTime.tryParse(json['ends_on']?.toString() ?? ''),
     goal: _planSetting(json, 'goal')?.toString(),
@@ -2589,6 +2717,8 @@ class _TrainingPlan {
   final String title;
   final String? description;
   final int? teamId;
+  final String targetType;
+  final String? teamMode;
   final DateTime? startsOn;
   final DateTime? endsOn;
   final String? goal;

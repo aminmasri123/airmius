@@ -142,10 +142,16 @@ const modalTitle = computed(() => ({
 </script>
 
 <template>
-    <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center" @click.self="closeModal">
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center"
+        @pointerdown.stop
+        @click.stop
+    >
         <div
             class="max-h-[92vh] w-full overflow-y-auto rounded-2xl border border-border bg-bg shadow-2xl"
             :class="modalWidthClass"
+            @pointerdown.stop
+            @click.stop
         >
             <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-bg/95 p-4 backdrop-blur">
                 <div>
@@ -334,4 +340,3 @@ const modalTitle = computed(() => ({
         </div>
     </div>
 </template>
-

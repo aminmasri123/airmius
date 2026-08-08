@@ -16,7 +16,10 @@ class EventService
 {
     private const MAX_RECURRING_EVENTS = 370;
 
-    public function __construct(private ChatService $chatService) {}
+    public function __construct(
+        private ChatService $chatService,
+        private DomainEventPublisher $domainEvents,
+    ) {}
 
     public function create(array $data): Event
     {
@@ -33,16 +36,34 @@ class EventService
             $events = $this->expandRecurringEvents($data);
             $event = null;
             $firstEvent = null;
+            $createdEventIds = [];
 
             foreach ($events as $eventData) {
                 $eventData['user_id'] ??= auth()->id();
 
                 $event = Event::create($eventData);
                 $firstEvent ??= $event;
+                $createdEventIds[] = $event->id;
 
                 $this->postEventNoticeToTeamChat($event, $teamId, $clubId, $participantIds);
 
                 $this->broadcastSafely(fn () => broadcast(new EventUpdated($event->refresh(), 'created')));
+            }
+
+            if ($firstEvent) {
+                $this->domainEvents->record(
+                    count($createdEventIds) > 1 ? 'organization.event.series_created.v1' : 'organization.event.created.v1',
+                    $firstEvent,
+                    payload: [
+                        'event_ids' => $createdEventIds,
+                        'occurrence_count' => count($createdEventIds),
+                        'team_id' => $teamId,
+                        'club_id' => $clubId,
+                        'visibility' => $firstEvent->visibility,
+                        'starts_at' => $firstEvent->start_time?->toIso8601String(),
+                    ],
+                    audience: ['users' => $participantIds],
+                );
             }
 
             return $firstEvent ?: $event;
@@ -51,7 +72,21 @@ class EventService
 
     public function update(Event $event, array $data): bool
     {
-        $event->update($this->normalizeEventTimes($data, $data['event_timezone'] ?? null));
+        DB::transaction(function () use ($event, $data): void {
+            $event->update($this->normalizeEventTimes($data, $data['event_timezone'] ?? null));
+
+            $this->domainEvents->record(
+                'organization.event.updated.v1',
+                $event,
+                payload: [
+                    'changed_fields' => array_values(array_keys($event->getChanges())),
+                    'team_id' => $event->team_id,
+                    'club_id' => $event->club_id,
+                    'starts_at' => $event->start_time?->toIso8601String(),
+                ],
+                audience: ['users' => $this->getParticipantIds($event->club_id, $event->team_id)],
+            );
+        });
 
         $this->broadcastSafely(fn () => broadcast(new EventUpdated($event->refresh(), 'updated')));
 
@@ -60,9 +95,34 @@ class EventService
 
     public function delete(Event $event): bool
     {
-        $this->broadcastSafely(fn () => broadcast(new EventUpdated($event, 'deleted')));
+        $deleted = DB::transaction(function () use ($event): bool {
+            $eventId = $event->id;
+            $clubId = $event->club_id;
+            $teamId = $event->team_id;
+            $audience = $this->getParticipantIds($clubId, $teamId);
+            $deleted = $event->delete();
 
-        return $event->delete();
+            if ($deleted) {
+                $this->domainEvents->record(
+                    'organization.event.deleted.v1',
+                    Event::class,
+                    $eventId,
+                    payload: [
+                        'team_id' => $teamId,
+                        'club_id' => $clubId,
+                    ],
+                    audience: ['users' => $audience],
+                );
+            }
+
+            return $deleted;
+        });
+
+        if ($deleted) {
+            $this->broadcastSafely(fn () => broadcast(new EventUpdated($event, 'deleted')));
+        }
+
+        return $deleted;
     }
 
     private function broadcastSafely(callable $callback): void

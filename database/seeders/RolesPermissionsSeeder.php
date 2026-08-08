@@ -187,6 +187,8 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'super_admin', 'description' => 'Globaler Systemadministrator mit Vollzugriff'],
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
+            ['name' => 'platform_engineer', 'description' => 'Technischer Betrieb ohne standardmäßigen Zugriff auf Produktiv-Personendaten'],
+            ['name' => 'security_admin', 'description' => 'Sicherheitsbetrieb und Incident Response ohne Commerce- oder Inhaltsrechte'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
             ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
             ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],
@@ -512,6 +514,17 @@ class RolesPermissionsSeeder extends Seeder
             'logs.view',
             'api.manage',
             'security.manage',
+        ]);
+
+        Role::findByName('platform_engineer')->givePermissionTo([
+            'logs.view',
+            'api.manage',
+        ]);
+
+        Role::findByName('security_admin')->givePermissionTo([
+            'security.manage',
+            'logs.view',
+            'users.view',
         ]);
 
         app()[PermissionRegistrar::class]

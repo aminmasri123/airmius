@@ -1,18 +1,20 @@
 <?php
 
+use App\Http\Middleware\ApplySecurityHeaders;
+use App\Http\Middleware\AttachApiContractHeaders;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
-use App\Http\Middleware\TranslateUserFacingResponseText;
 use App\Http\Middleware\EnsureProfileIsComplete;
-use App\Http\Middleware\ApplySecurityHeaders;
+use App\Http\Middleware\EstablishProcessingPurpose;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HardenAdminArea;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\StoreIntendedUrlFromQuery;
 use App\Http\Middleware\TrackUserActivity;
+use App\Http\Middleware\TranslateUserFacingResponseText;
 use App\Support\Api\V1\ApiContract;
 use App\Support\Api\V1\ApiErrorResponse;
 use App\Support\PermissionDeniedMessage;
@@ -28,6 +30,7 @@ use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -51,6 +54,9 @@ return Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             TranslateUserFacingResponseText::class,
         ]);
+        $middleware->api(append: [
+            AttachApiContractHeaders::class,
+        ]);
 
         // Locale must run after the default web session middleware and before Inertia.
         $middleware->web(append: [
@@ -69,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'club' => SetCurrentClub::class,
             'admin.harden' => HardenAdminArea::class,
+            'purpose' => EstablishProcessingPurpose::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -90,6 +97,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Exception responses are created after the middleware stack unwinds.
+        // Apply the negotiated locale headers here as well so clients can
+        // reliably render validation and authorization failures in LTR/RTL.
+        $exceptions->respond(fn (Response $response) => SetLocale::applyResponseHeaders($response));
+
         $apiV1Request = fn (Request $request): bool => ApiContract::matches($request);
 
         $exceptions->render(function (AuthenticationException $exception, Request $request) use ($apiV1Request) {
@@ -209,7 +221,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->setStatusCode(403);
         });
 
-        $exceptions->render(function (\Throwable $exception, Request $request) use ($apiV1Request) {
+        $exceptions->render(function (Throwable $exception, Request $request) use ($apiV1Request) {
             return $apiV1Request($request)
                 ? ApiErrorResponse::serverError($exception, $request)
                 : null;

@@ -13,6 +13,7 @@ use App\Services\EventService;
 use App\Services\GamificationService;
 use App\Support\AppNotification;
 use App\Support\EventAttendance;
+use App\Support\TeamRoles;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -146,12 +147,12 @@ class EventController extends Controller
                 'start' => $calendarStart->toDateString(),
                 'end' => $calendarEnd->toDateString(),
             ],
-            'clubs' => Club::query()
+            'clubs' => fn () => Club::query()
                 ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
-            'teams' => Team::query()
+            'teams' => fn () => Team::query()
                 ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'club_id', 'name'])
                 ->orderBy('name')
@@ -159,9 +160,9 @@ class EventController extends Controller
             'eventTypes' => Event::TYPES,
             'visibilities' => Event::VISIBILITIES,
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
-            'sports' => $this->sportsForFilters(),
-            'eventDefaults' => $this->eventDefaultFiltersFor($request->user()),
-            'eventCreation' => $this->eventCreationLimitsFor($request->user()),
+            'sports' => fn () => $this->sportsForFilters(),
+            'eventDefaults' => fn () => $this->eventDefaultFiltersFor($request->user()),
+            'eventCreation' => fn () => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'type' => $filters['type'] ?? '',
@@ -196,7 +197,7 @@ class EventController extends Controller
             'event_default_filters' => $data,
         ]);
 
-        return back()->with('success', 'Event-Standardfilter gespeichert.');
+        return back()->with('success', __('server.events.defaults_saved'));
     }
 
     private function decorateEventForIndex(Event $event, Request $request): Event
@@ -327,7 +328,7 @@ class EventController extends Controller
         $event = $this->service->create($data);
         $this->grantGamificationForEvent($request, $event);
 
-        return redirect()->route('auth.events.show', $event)->with('success', 'Event erstellt.');
+        return redirect()->route('auth.events.show', $event)->with('success', __('server.events.created'));
     }
 
     public function update(Request $request, Event $event)
@@ -336,7 +337,7 @@ class EventController extends Controller
 
         $this->service->update($event, $this->validated($request));
 
-        return back()->with('success', 'Event aktualisiert.');
+        return back()->with('success', __('server.events.updated'));
     }
 
     public function destroy(Event $event)
@@ -347,7 +348,7 @@ class EventController extends Controller
 
         $this->service->delete($event);
 
-        return redirect()->route('auth.events.index')->with('success', 'Event gelöscht.');
+        return redirect()->route('auth.events.index')->with('success', __('server.events.deleted'));
     }
 
     public function cancel(Request $request, Event $event)
@@ -355,7 +356,7 @@ class EventController extends Controller
         $this->authorize('cancel', $event);
 
         if ($event->status === 'cancelled') {
-            return back()->with('success', 'Event ist bereits abgesagt.');
+            return back()->with('success', __('server.events.already_cancelled'));
         }
 
         $data = $request->validate([
@@ -371,7 +372,7 @@ class EventController extends Controller
 
         $this->notifyEventCancellationRecipients($event, 'cancelled', $data['reason'] ?? null);
 
-        return back()->with('success', 'Event wurde abgesagt und Teilnehmer wurden informiert.');
+        return back()->with('success', __('server.events.cancelled'));
     }
 
     public function join(Request $request, Event $event)
@@ -393,7 +394,7 @@ class EventController extends Controller
         if ($currentStatus === $data['status']) {
             $event->participants()->detach($request->user()->id);
 
-            return back()->with('success', 'Teilnahmemeldung entfernt.');
+            return back()->with('success', __('server.events.response_removed'));
         }
 
         $responseDeadlineExpired = $event->participant_response_deadline_at?->isPast() ?? false;
@@ -403,7 +404,7 @@ class EventController extends Controller
             && $data['status'] === 'no'
             && blank($data['response_reason'] ?? null)) {
             throw ValidationException::withMessages([
-                'response_reason' => 'Bitte gib kurz an, warum du absagst.',
+                'response_reason' => __('server.events.response_reason_required'),
             ]);
         }
 
@@ -414,7 +415,7 @@ class EventController extends Controller
 
             if ($acceptedCount >= $event->max_participants) {
                 throw ValidationException::withMessages([
-                    'status' => 'Dieses Event ist bereits voll.',
+                    'status' => __('server.events.full'),
                 ]);
             }
         }
@@ -435,14 +436,14 @@ class EventController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Teilnahmestatus gespeichert.');
+        return back()->with('success', __('server.events.response_saved'));
     }
 
     public function leave(Request $request, Event $event)
     {
         $event->participants()->detach($request->user()->id);
 
-        return back()->with('success', 'Teilnahme entfernt.');
+        return back()->with('success', __('server.events.participation_removed'));
     }
 
     public function recordAttendance(Request $request, Event $event)
@@ -458,7 +459,7 @@ class EventController extends Controller
 
         EventAttendance::record($event, $data['attendance'], 'trainer');
 
-        return back()->with('success', 'Trainingsanwesenheit gespeichert.');
+        return back()->with('success', __('server.events.attendance_saved'));
     }
 
     public function comment(Request $request, Event $event)
@@ -476,7 +477,7 @@ class EventController extends Controller
 
         $this->notifyEventCommentRecipients($event, $comment, $request->user());
 
-        return back()->with('success', 'Kommentar erstellt.');
+        return back()->with('success', __('server.events.comment_created'));
     }
 
     public function chat(Event $event)
@@ -527,13 +528,13 @@ class EventController extends Controller
 
         if (in_array($data['recurring'] ?? null, ['weekly', 'biweekly'], true) && empty($data['recurrence_days'])) {
             throw ValidationException::withMessages([
-                'recurrence_days' => 'Bitte mindestens einen Wochentag auswählen.',
+                'recurrence_days' => __('server.events.recurrence_day_required'),
             ]);
         }
 
         if (filled($data['recurring'] ?? null) && empty($data['recurrence_ends_at'])) {
             throw ValidationException::withMessages([
-                'recurrence_ends_at' => 'Bitte ein Enddatum für die Wiederholung angeben.',
+                'recurrence_ends_at' => __('server.events.recurrence_end_required'),
             ]);
         }
 
@@ -545,13 +546,13 @@ class EventController extends Controller
 
             if ($endDate->lt($startDate)) {
                 throw ValidationException::withMessages([
-                    'recurrence_ends_at' => 'Das Wiederholungsende muss nach dem Startdatum liegen.',
+                    'recurrence_ends_at' => __('server.events.recurrence_end_after_start'),
                 ]);
             }
 
             if (filled($data['recurring'] ?? null) && $this->estimatedRecurringEventCount($data) > self::MAX_RECURRING_EVENTS) {
                 throw ValidationException::withMessages([
-                    'recurrence_ends_at' => 'Eine Serie darf maximal '.self::MAX_RECURRING_EVENTS.' Termine erzeugen.',
+                    'recurrence_ends_at' => __('server.events.recurrence_limit', ['max' => self::MAX_RECURRING_EVENTS]),
                 ]);
             }
         }
@@ -585,9 +586,9 @@ class EventController extends Controller
                 ->findOrFail($data['club_id']);
         }
 
-        abort_if($data['visibility'] === 'private' && empty($data['team_id']), 422, 'Private Events brauchen ein Team.');
-        abort_if($data['visibility'] === 'organization' && empty($data['club_id']), 422, 'Organization Events brauchen eine Organization.');
-        abort_if(! empty($data['uses_penalty_catalog']) && empty($data['team_id']), 422, 'Der Strafkatalog ist nur für Team-Events verfügbar.');
+        abort_if($data['visibility'] === 'private' && empty($data['team_id']), 422, __('server.events.private_team_required'));
+        abort_if($data['visibility'] === 'organization' && empty($data['club_id']), 422, __('server.events.organization_required'));
+        abort_if(! empty($data['uses_penalty_catalog']) && empty($data['team_id']), 422, __('server.events.penalty_team_required'));
 
         $data['uses_penalty_catalog'] = (bool) ($data['uses_penalty_catalog'] ?? false);
 
@@ -599,7 +600,7 @@ class EventController extends Controller
         return $user->can('update', $team)
             || $team->users()
                 ->where('users.id', $user->id)
-                ->wherePivotIn('role', \App\Support\TeamRoles::TEAM_STAFF_ROLES)
+                ->wherePivotIn('role', TeamRoles::TEAM_STAFF_ROLES)
                 ->exists();
     }
 
@@ -635,14 +636,14 @@ class EventController extends Controller
 
         if (filled($data['recurring'] ?? null)) {
             throw ValidationException::withMessages([
-                'recurring' => 'Wiederholungen und Intervalle sind im kostenlosen Konto nicht verfügbar.',
-                'authorization' => 'Kostenlose Konten können einfache Events erstellen, aber keine wiederkehrenden Events.',
+                'recurring' => __('server.events.recurring_free_forbidden'),
+                'authorization' => __('server.events.simple_events_only'),
             ]);
         }
 
         if ($this->eventsCreatedThisMonth($request->user()) >= 2) {
             throw ValidationException::withMessages([
-                'authorization' => 'Im kostenlosen Konto kannst du 2 Events pro Monat erstellen. Dein Monatslimit ist erreicht.',
+                'authorization' => __('server.events.monthly_limit_reached'),
             ]);
         }
     }

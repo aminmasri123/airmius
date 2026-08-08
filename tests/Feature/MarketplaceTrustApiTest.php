@@ -320,7 +320,7 @@ class MarketplaceTrustApiTest extends TestCase
         $this->getJson("/api/v1/commerce/products/{$product->id}?country=DE")
             ->assertOk()
             ->assertJsonPath('data.provider_profile.name', 'Airmius Run Shop')
-            ->assertJsonPath('data.provider_profile.type', 'Shop / Fachhaendler')
+            ->assertJsonPath('data.provider_profile.type', 'Shop / Fachhändler')
             ->assertJsonPath('data.provider_profile.verified', true)
             ->assertJsonPath('data.provider_profile.support_email', 'support@example.test')
             ->assertJsonPath('data.provider_profile.has_pickup', true)

@@ -9,7 +9,7 @@ class ApiContract
 {
     public const VERSION = 'v1';
 
-    public const CONTRACT_VERSION = '2026-05-31';
+    public const CONTRACT_VERSION = '2026-08-08';
 
     public const MIN_CLIENT_VERSION = '1.0.0';
 

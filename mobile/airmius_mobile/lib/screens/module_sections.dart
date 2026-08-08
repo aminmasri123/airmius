@@ -63,7 +63,7 @@ class ModuleSpecificSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = AirmiusServicesScope.of(context).authState.user;
     if (!AirmiusModuleAccess.canOpen(user, module.title)) {
-      return const AdminAccessDeniedScreen();
+      return const AdminAccessDeniedScreen(embedded: true);
     }
     if (AirmiusMvpSurface.showDeveloperSuites) {
       return _legacySection();
@@ -722,8 +722,7 @@ class _TeamsSection extends StatelessWidget {
         ),
         const _WideStatus(
           title: 'Teamkalender',
-          body:
-              'Training, Events, Chat und Dateien direkt am Team verknüpfen.',
+          body: 'Training, Events, Chat und Dateien direkt am Team verknüpfen.',
           icon: Icons.calendar_month_outlined,
         ),
       ],

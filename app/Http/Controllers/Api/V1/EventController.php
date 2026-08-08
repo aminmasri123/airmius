@@ -173,7 +173,7 @@ class EventController extends Controller
 
         if (! empty($data['recurring']) && ! $this->hasUnlimitedEventCreation($request->user())) {
             throw ValidationException::withMessages([
-                'recurring' => 'Wiederkehrende Events sind für dein Konto nicht freigeschaltet.',
+                'recurring' => __('server.events.recurring_forbidden'),
             ]);
         }
 
@@ -182,7 +182,7 @@ class EventController extends Controller
             empty($data['recurrence_days'])
         ) {
             throw ValidationException::withMessages([
-                'recurrence_days' => 'Für wöchentliche Serien muss mindestens ein Wochentag gewählt werden.',
+                'recurrence_days' => __('server.events.recurrence_day_required'),
             ]);
         }
 
@@ -273,7 +273,7 @@ class EventController extends Controller
                 ->where('status', 'yes')
                 ->count();
 
-            abort_if(! $alreadyYes && $yesCount >= $event->max_participants, 422, 'Event is full.');
+            abort_if(! $alreadyYes && $yesCount >= $event->max_participants, 422, __('server.events.full'));
         }
 
         EventParticipant::query()->updateOrCreate(
@@ -441,19 +441,19 @@ class EventController extends Controller
 
         if ($visibility === 'private' && empty($finalTeamId)) {
             throw ValidationException::withMessages([
-                'team_id' => 'Private Events brauchen ein Team.',
+                'team_id' => __('server.events.private_team_required'),
             ]);
         }
 
         if ($visibility === 'organization' && empty($finalClubId)) {
             throw ValidationException::withMessages([
-                'club_id' => 'Vereins-Events brauchen einen Verein.',
+                'club_id' => __('server.events.organization_required'),
             ]);
         }
 
         if ($usesPenaltyCatalog && empty($finalTeamId)) {
             throw ValidationException::withMessages([
-                'uses_penalty_catalog' => 'Der Strafkatalog ist nur für Team-Events verfügbar.',
+                'uses_penalty_catalog' => __('server.events.penalty_team_required'),
             ]);
         }
 

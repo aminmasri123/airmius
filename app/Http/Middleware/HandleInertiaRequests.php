@@ -13,6 +13,7 @@ use App\Models\Ride;
 use App\Models\Setting;
 use App\Models\Team;
 use App\Services\PlanFeatureService;
+use App\Services\WorkspaceContextService;
 use App\Support\ClubRoles;
 use App\Support\NavigationModules;
 use App\Support\Roles;
@@ -63,147 +64,46 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $can = $user ? $this->permissionsFor($user) : [];
-        $unreadNotificationsCount = $user
-            ? $user->appNotifications()->where('read', false)->where('type', '!=', 'chat.message')->count()
-            : 0;
-        $unreadChatsCount = $user
-            ? MessageReceipt::where('user_id', $user->id)
-                ->whereNull('read_at')
-                ->count()
-            : 0;
-        $pendingFriendInvitationsCount = $user
-            ? $user->receivedFriendInvitations()
-                ->where('status', 'pending')
-                ->count()
-            : 0;
-        $commerceCartCount = $user
-            ? (int) CommerceCart::query()
-                ->where('user_id', $user->id)
-                ->withSum('items as items_quantity_sum', 'quantity')
-                ->first()?->items_quantity_sum
-            : 0;
-        $latestNotifications = $user
-            ? $user->appNotifications()
-                ->where('type', '!=', 'chat.message')
-                ->latest()
-                ->limit(5)
-                ->get()
-                ->map(fn ($notification) => [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'data' => $notification->data,
-                    'read' => $notification->read,
-                    'created_at' => $notification->created_at,
-                ])
-            : [];
-        $activeUserSubscriptions = $user
-            ? $user->subscriptions()
-                ->with('plan:id,slug,name,target_actor')
-                ->whereIn('status', ['active', 'trialing'])
-                ->get()
-                ->filter(fn ($subscription) => $subscription->plan)
-                ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')
-                ->map(fn ($subscriptions) => $subscriptions->sortByDesc('id')->first())
-                ->values()
-            : collect();
-        $currentUserSubscription = $activeUserSubscriptions
-            ->sortByDesc(fn ($subscription) => $subscription->current_period_ends_at?->timestamp ?? 0)
-            ->first();
-        $storageUsage = $user
-            ? app(PlanFeatureService::class)->userStorageSummary($user)
-            : null;
-        $flash = [
-            'success' => $request->session()->get('success'),
-            'error' => $request->session()->get('error'),
-            'message' => $request->session()->get('message'),
-            'import_report' => $request->session()->get('import_report'),
-        ];
-        $flashId = $request->session()->get('flash_id');
+        $memo = [];
+        $remember = function (string $key, Closure $resolver) use (&$memo) {
+            if (! array_key_exists($key, $memo)) {
+                $memo[$key] = $resolver();
+            }
 
-        if (! $flashId && collect($flash)->filter(fn ($value) => filled($value))->isNotEmpty()) {
-            $flashId = (string) Str::uuid();
-        }
+            return $memo[$key];
+        };
+        $workspaceContext = fn () => $remember('workspace_context', fn () => $user
+            ? app(WorkspaceContextService::class)->payload($request)
+            : ['current' => null, 'clubs' => []]);
+        $notificationCenter = fn () => $remember('notification_center', fn () => $this->notificationCenterFor($user));
+        $unreadChatsCount = fn () => $remember('unread_chats', fn () => $user
+            ? MessageReceipt::where('user_id', $user->id)->whereNull('read_at')->count()
+            : 0);
+        $activeSubscriptions = fn () => $remember('active_subscriptions', fn () => $this->activeSubscriptionsFor($user));
 
         return array_merge(parent::share($request), [
             'csrf_token' => csrf_token(),
-            'auth' => [
-                'user' => $user ? [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'email' => $user->email,
-                    'country' => $user->country,
-                    'athlete_license_number' => $user->athlete_license_number,
-                    'bio' => $user->bio,
-                    'profile_visibility' => $user->profile_visibility,
-                    'status' => $user->status,
-                    'profile_photo_path' => $user->profile_photo_path,
-                    'profile_photo_url' => $user->profile_photo_url,
-                    'profile_photo_thumb' => $user->profile_photo_thumb,
-                    'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
-                    'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
-                    'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
-                    'has_social_login' => $user->socialAccounts()->exists(),
-
-                    // 🔥 HIER IST DER FIX
-                    'roles' => $user->getRoleNames()->values()->all(),
-
-                    'permissions' => $user->getAllPermissions()
-                        ->pluck('name')
-                        ->values()
-                        ->all(),
-                    'can' => $can,
-                    'navigation_modules' => NavigationModules::payload($user),
-                    'unread_notifications_count' => $unreadNotificationsCount,
-                    'active_subscription_plan_ids' => $activeUserSubscriptions
-                        ->pluck('subscription_plan_id')
-                        ->values()
-                        ->all(),
-                    'active_subscription_plan_slugs' => $activeUserSubscriptions
-                        ->pluck('plan.slug')
-                        ->filter()
-                        ->values()
-                        ->all(),
-                    'current_subscription' => $currentUserSubscription ? [
-                        'id' => $currentUserSubscription->id,
-                        'status' => $currentUserSubscription->status,
-                        'current_period_ends_at' => $currentUserSubscription->current_period_ends_at,
-                        'plan' => $currentUserSubscription->plan ? [
-                            'id' => $currentUserSubscription->plan->id,
-                            'slug' => $currentUserSubscription->plan->slug,
-                            'name' => $currentUserSubscription->plan->name,
-                            'target_actor' => $currentUserSubscription->plan->target_actor,
-                        ] : null,
-                    ] : null,
-                    'storage_usage' => $storageUsage,
-                    'realtime' => [
-                        'notification_channel' => 'notifications.user.'.$user->id,
-                        'team_event_channels' => $user->teams()
-                            ->pluck('teams.id')
-                            ->map(fn ($id) => 'events.team.'.$id)
-                            ->values()
-                            ->all(),
-                        'club_event_channels' => $user->clubs()
-                            ->pluck('clubs.id')
-                            ->map(fn ($id) => 'events.club.'.$id)
-                            ->values()
-                            ->all(),
-                    ],
-                ] : null,
-            ],
-
-            'notificationCenter' => [
-                'unread_count' => $unreadNotificationsCount,
-                'latest' => $latestNotifications,
-            ],
-
+            'auth' => fn () => $this->authPayload(
+                $user,
+                $workspaceContext(),
+                $notificationCenter(),
+                $activeSubscriptions(),
+            ),
+            'notificationCenter' => $notificationCenter,
             'unreadChatsCount' => $unreadChatsCount,
-            'commerceCartCount' => $commerceCartCount,
-            'friendCenter' => [
-                'pending_received_count' => $pendingFriendInvitationsCount,
+            'commerceCartCount' => fn () => $user
+                ? (int) CommerceCart::query()
+                    ->where('user_id', $user->id)
+                    ->withSum('items as items_quantity_sum', 'quantity')
+                    ->first()?->items_quantity_sum
+                : 0,
+            'friendCenter' => fn () => [
+                'pending_received_count' => $user
+                    ? $user->receivedFriendInvitations()->where('status', 'pending')->count()
+                    : 0,
             ],
+
+            'workspaceContext' => $workspaceContext,
 
             'privacyConsent' => [
                 'ads_personalization_consent' => (bool) $user?->ads_personalization_consent,
@@ -218,13 +118,7 @@ class HandleInertiaRequests extends Middleware
 
             'loginImages' => fn () => $this->loginImages(),
 
-            'flash' => [
-                'id' => $flashId,
-                'success' => $flash['success'],
-                'error' => $flash['error'],
-                'message' => $flash['message'],
-                'import_report' => $flash['import_report'],
-            ],
+            'flash' => fn () => $this->flashPayload($request),
 
             'locale' => $user?->language
                 ?? session('locale')
@@ -233,6 +127,137 @@ class HandleInertiaRequests extends Middleware
                 ? 'rtl'
                 : 'ltr',
         ]);
+    }
+
+    private function authPayload($user, array $workspaceContext, array $notificationCenter, $activeSubscriptions): array
+    {
+        if (! $user) {
+            return ['user' => null];
+        }
+
+        $currentSubscription = $activeSubscriptions
+            ->sortByDesc(fn ($subscription) => $subscription->current_period_ends_at?->timestamp ?? 0)
+            ->first();
+
+        return [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'country' => $user->country,
+                'athlete_license_number' => $user->athlete_license_number,
+                'bio' => $user->bio,
+                'profile_visibility' => $user->profile_visibility,
+                'status' => $user->status,
+                'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
+                'profile_photo_thumb' => $user->profile_photo_thumb,
+                'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
+                'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
+                'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
+                'has_social_login' => $user->socialAccounts()->exists(),
+                'roles' => $user->getRoleNames()->values()->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
+                'can' => $this->permissionsFor($user),
+                'navigation_modules' => NavigationModules::payload($user),
+                'unread_notifications_count' => $notificationCenter['unread_count'],
+                'active_subscription_plan_ids' => $activeSubscriptions
+                    ->pluck('subscription_plan_id')
+                    ->values()
+                    ->all(),
+                'active_subscription_plan_slugs' => $activeSubscriptions
+                    ->pluck('plan.slug')
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'current_subscription' => $currentSubscription ? [
+                    'id' => $currentSubscription->id,
+                    'status' => $currentSubscription->status,
+                    'current_period_ends_at' => $currentSubscription->current_period_ends_at,
+                    'plan' => $currentSubscription->plan ? [
+                        'id' => $currentSubscription->plan->id,
+                        'slug' => $currentSubscription->plan->slug,
+                        'name' => $currentSubscription->plan->name,
+                        'target_actor' => $currentSubscription->plan->target_actor,
+                    ] : null,
+                ] : null,
+                'storage_usage' => app(PlanFeatureService::class)->userStorageSummary($user),
+                'realtime' => [
+                    'notification_channel' => 'notifications.user.'.$user->id,
+                    'team_event_channels' => $user->teams()
+                        ->pluck('teams.id')
+                        ->map(fn ($id) => 'events.team.'.$id)
+                        ->values()
+                        ->all(),
+                    'club_event_channels' => collect($workspaceContext['clubs'])
+                        ->pluck('id')
+                        ->map(fn ($id) => 'events.club.'.$id)
+                        ->values()
+                        ->all(),
+                ],
+            ],
+        ];
+    }
+
+    private function notificationCenterFor($user): array
+    {
+        if (! $user) {
+            return ['unread_count' => 0, 'latest' => []];
+        }
+
+        return [
+            'unread_count' => $user->appNotifications()
+                ->where('read', false)
+                ->where('type', '!=', 'chat.message')
+                ->count(),
+            'latest' => $user->appNotifications()
+                ->where('type', '!=', 'chat.message')
+                ->latest()
+                ->limit(5)
+                ->get()
+                ->map(fn ($notification) => [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'read' => $notification->read,
+                    'created_at' => $notification->created_at,
+                ]),
+        ];
+    }
+
+    private function activeSubscriptionsFor($user)
+    {
+        if (! $user) {
+            return collect();
+        }
+
+        return $user->subscriptions()
+            ->with('plan:id,slug,name,target_actor')
+            ->whereIn('status', ['active', 'trialing'])
+            ->get()
+            ->filter(fn ($subscription) => $subscription->plan)
+            ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')
+            ->map(fn ($subscriptions) => $subscriptions->sortByDesc('id')->first())
+            ->values();
+    }
+
+    private function flashPayload(Request $request): array
+    {
+        $flash = [
+            'success' => $request->session()->get('success'),
+            'error' => $request->session()->get('error'),
+            'message' => $request->session()->get('message'),
+            'import_report' => $request->session()->get('import_report'),
+        ];
+        $flashId = $request->session()->get('flash_id');
+
+        if (! $flashId && collect($flash)->filter(fn ($value) => filled($value))->isNotEmpty()) {
+            $flashId = (string) Str::uuid();
+        }
+
+        return ['id' => $flashId] + $flash;
     }
 
     private function permissionsFor($user): array

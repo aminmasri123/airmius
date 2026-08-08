@@ -91,3 +91,11 @@ Schedule::command('airmius:prune-ad-events')
 Schedule::command('airmius:prune-expired-stories')
     ->hourly()
     ->withoutOverlapping();
+
+Schedule::command('airmius:dispatch-domain-outbox --limit=500')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('airmius:prune-platform-delivery --outbox-days=30 --failed-outbox-days=90')
+    ->dailyAt('03:55')
+    ->withoutOverlapping();

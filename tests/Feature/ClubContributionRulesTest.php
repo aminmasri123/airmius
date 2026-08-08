@@ -332,7 +332,9 @@ class ClubContributionRulesTest extends TestCase
             'contribution_amount' => '70.00',
         ]);
 
-        $this->deleteJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}")
+        $this->deleteJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}", [
+            'reason' => 'Mitgliedschaft wurde beendet.',
+        ])
             ->assertOk();
         $this->assertDatabaseMissing('club_external_members', ['id' => $external->id]);
     }

@@ -64,9 +64,10 @@ class TrainingController extends Controller
 
     public function storePlan(Request $request)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         $data = $this->validatePlanData($request);
+        $data = $this->resources->normalizePlanAudience($request->user(), $data);
 
         $plan = DB::transaction(function () use ($request, $data) {
             $plan = TrainingPlan::query()->create($this->planPayload($request, $data));
@@ -96,6 +97,7 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);
 
         $data = $this->validatePlanData($request);
+        $data = $this->resources->normalizePlanAudience($request->user(), $data);
 
         DB::transaction(function () use ($request, $trainingPlan, $data) {
             $trainingPlan->update($this->planPayload($request, $data, $trainingPlan));
@@ -120,7 +122,7 @@ class TrainingController extends Controller
 
         $trainingPlan->delete();
 
-        return response()->json(['message' => 'Trainingsplan wurde gelöscht.']);
+        return response()->json(['message' => __('server.training.plan_deleted')]);
     }
 
     public function publishPlan(Request $request, TrainingPlan $trainingPlan)
@@ -173,7 +175,7 @@ class TrainingController extends Controller
 
     public function instantiateTemplate(Request $request, TrainingPlan $trainingPlan)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         abort_unless(
             $this->visiblePlans($request)
@@ -363,7 +365,7 @@ class TrainingController extends Controller
         return response()->json([
             'data' => [
                 'deleted' => true,
-                'message' => 'Der Trainingslog wurde gelöscht.',
+                'message' => __('server.training.log_deleted'),
             ],
         ]);
     }
@@ -389,6 +391,8 @@ class TrainingController extends Controller
             'competition_date' => ['nullable', 'date'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'share_permission' => ['required', Rule::in(['read', 'write'])],
+            'target_type' => ['nullable', Rule::in(['self', 'private', 'team'])],
+            'team_mode' => ['nullable', Rule::in(['all', 'individual'])],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
@@ -550,6 +554,8 @@ class TrainingController extends Controller
                 'mesocycle' => $data['mesocycle'] ?? null,
                 'deload_week' => $data['deload_week'] ?? null,
                 'competition_date' => $data['competition_date'] ?? null,
+                'target_type' => $data['target_type'],
+                'team_mode' => $data['team_mode'],
             ],
         ];
     }

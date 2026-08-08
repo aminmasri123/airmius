@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\AccountDeletionController as MobileAccountDeletionController;
 use App\Http\Controllers\Api\V1\AccountSecurityController;
 use App\Http\Controllers\Api\V1\AdminBackofficeController;
@@ -59,7 +60,6 @@ use App\Http\Controllers\Api\V1\TrainingAvailabilityController;
 use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\Api\V1\UploadController;
-use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
 use App\Http\Controllers\Api\V1\UserSocialProfileController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
@@ -76,6 +76,8 @@ use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
 use App\Http\Controllers\TrainingController as MobileTrainerFeedbackController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
+use App\Http\Middleware\EnsureApiProcessingPurpose;
+use App\Http\Middleware\EnsureIdempotentApiRequest;
 use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
 use App\Http\Resources\Api\V1\ClubMembershipRequestResource;
 use App\Http\Resources\Api\V1\ClubResource;
@@ -180,7 +182,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware(['throttle:30,1', EnsureApiCorsHeaders::class])
         ->name('clubs.members.invite.token');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
         Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
@@ -210,7 +212,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/me', [MeController::class, 'show'])->name('me.show');
         Route::put('/me/profile', [MeController::class, 'updateProfile'])->name('me.profile.update');
-        Route::patch('/me/language', [MeController::class, 'updateLanguage'])->name('me.language');
+        Route::patch('/me/language', [MeController::class, 'updateLanguage'])
+            ->middleware('purpose:product_operation')
+            ->name('me.language');
         Route::get('/guardian/consent', [GuardianController::class, 'consentStatus'])
             ->name('guardian.consent.show');
         Route::post('/guardian/consent/resend', [GuardianController::class, 'resendOwnConsent'])
@@ -623,39 +627,41 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/events/{event}/decisions/{decision}/close', [EventCompetitivenessController::class, 'closeDecision'])->name('events.decisions.close');
         Route::post('/events/{event}/decisions/{decision}/vote', [EventCompetitivenessController::class, 'castVote'])->name('events.decisions.vote');
 
-        Route::get('/training/plans', [TrainingController::class, 'plans'])->name('training.plans.index');
-        Route::get('/training/templates', [TrainingController::class, 'templates'])->name('training.templates.index');
-        Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('training.plans.store');
-        Route::get('/training/plans/{trainingPlan}', [TrainingController::class, 'showPlan'])->name('training.plans.show');
-        Route::put('/training/plans/{trainingPlan}', [TrainingController::class, 'updatePlan'])->name('training.plans.update');
-        Route::delete('/training/plans/{trainingPlan}', [TrainingController::class, 'destroyPlan'])->name('training.plans.destroy');
-        Route::post('/training/plans/{trainingPlan}/publish', [TrainingController::class, 'publishPlan'])->name('training.plans.publish');
-        Route::post('/training/plans/{trainingPlan}/duplicate', [TrainingController::class, 'duplicatePlan'])->name('training.plans.duplicate');
-        Route::post('/training/plans/{trainingPlan}/template', [TrainingController::class, 'createTemplate'])->name('training.plans.template');
-        Route::post('/training/templates/{trainingPlan}/instantiate', [TrainingController::class, 'instantiateTemplate'])->name('training.templates.instantiate');
-        Route::post('/training/plans/{trainingPlan}/items', [TrainingController::class, 'storePlanItem'])->name('training.plans.items.store');
-        Route::put('/training/plans/{trainingPlan}/items/{trainingPlanItem}', [TrainingController::class, 'updatePlanItem'])->name('training.plans.items.update');
-        Route::delete('/training/plans/{trainingPlan}/items/{trainingPlanItem}', [TrainingController::class, 'destroyPlanItem'])->name('training.plans.items.destroy');
-        Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('training.plans.items.duplicate');
-        Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('training.plans.items.missed');
-        Route::post('/training/ai/plans/preview', [MobileTrainerFeedbackController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
-        Route::post('/training/ai/plans', [MobileTrainerFeedbackController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
-        Route::get('/training/logs', [TrainingController::class, 'logs'])->name('training.logs.index');
-        Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('training.logs.store');
-        Route::get('/training/logs/{trainingLog}', [TrainingController::class, 'showLog'])->name('training.logs.show');
-        Route::put('/training/logs/{trainingLog}', [TrainingController::class, 'updateLog'])->name('training.logs.update');
-        Route::delete('/training/logs/{trainingLog}', [TrainingController::class, 'destroyLog'])->name('training.logs.destroy');
-        Route::get('/training/analytics', [TrainingAnalyticsController::class, 'index'])->name('training.analytics.index');
-        Route::get('/training/availability', [TrainingAvailabilityController::class, 'index'])->name('training.availability.index');
-        Route::post('/training/availability', [TrainingAvailabilityController::class, 'store'])->name('training.availability.store');
-        Route::put('/training/availability/{trainingAvailabilityStatus}', [TrainingAvailabilityController::class, 'update'])->name('training.availability.update');
-        Route::delete('/training/availability/{trainingAvailabilityStatus}', [TrainingAvailabilityController::class, 'destroy'])->name('training.availability.destroy');
-        Route::get('/training/exercises', [TrainingExerciseController::class, 'index'])->name('training.exercises.index');
-        Route::post('/training/exercises', [TrainingExerciseController::class, 'store'])->name('training.exercises.store');
-        Route::get('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'show'])->name('training.exercises.show');
-        Route::put('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'update'])->name('training.exercises.update');
-        Route::delete('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'destroy'])->name('training.exercises.destroy');
-        Route::post('/training/exercises/{trainingExercise}/add-to-plan', [TrainingExerciseController::class, 'addToPlan'])->name('training.exercises.add-to-plan');
+        Route::middleware('purpose:training')->group(function () {
+            Route::get('/training/plans', [TrainingController::class, 'plans'])->name('training.plans.index');
+            Route::get('/training/templates', [TrainingController::class, 'templates'])->name('training.templates.index');
+            Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('training.plans.store');
+            Route::get('/training/plans/{trainingPlan}', [TrainingController::class, 'showPlan'])->name('training.plans.show');
+            Route::put('/training/plans/{trainingPlan}', [TrainingController::class, 'updatePlan'])->name('training.plans.update');
+            Route::delete('/training/plans/{trainingPlan}', [TrainingController::class, 'destroyPlan'])->name('training.plans.destroy');
+            Route::post('/training/plans/{trainingPlan}/publish', [TrainingController::class, 'publishPlan'])->name('training.plans.publish');
+            Route::post('/training/plans/{trainingPlan}/duplicate', [TrainingController::class, 'duplicatePlan'])->name('training.plans.duplicate');
+            Route::post('/training/plans/{trainingPlan}/template', [TrainingController::class, 'createTemplate'])->name('training.plans.template');
+            Route::post('/training/templates/{trainingPlan}/instantiate', [TrainingController::class, 'instantiateTemplate'])->name('training.templates.instantiate');
+            Route::post('/training/plans/{trainingPlan}/items', [TrainingController::class, 'storePlanItem'])->name('training.plans.items.store');
+            Route::put('/training/plans/{trainingPlan}/items/{trainingPlanItem}', [TrainingController::class, 'updatePlanItem'])->name('training.plans.items.update');
+            Route::delete('/training/plans/{trainingPlan}/items/{trainingPlanItem}', [TrainingController::class, 'destroyPlanItem'])->name('training.plans.items.destroy');
+            Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('training.plans.items.duplicate');
+            Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('training.plans.items.missed');
+            Route::post('/training/ai/plans/preview', [MobileTrainerFeedbackController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
+            Route::post('/training/ai/plans', [MobileTrainerFeedbackController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
+            Route::get('/training/logs', [TrainingController::class, 'logs'])->name('training.logs.index');
+            Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('training.logs.store');
+            Route::get('/training/logs/{trainingLog}', [TrainingController::class, 'showLog'])->name('training.logs.show');
+            Route::put('/training/logs/{trainingLog}', [TrainingController::class, 'updateLog'])->name('training.logs.update');
+            Route::delete('/training/logs/{trainingLog}', [TrainingController::class, 'destroyLog'])->name('training.logs.destroy');
+            Route::get('/training/analytics', [TrainingAnalyticsController::class, 'index'])->name('training.analytics.index');
+            Route::get('/training/availability', [TrainingAvailabilityController::class, 'index'])->name('training.availability.index');
+            Route::post('/training/availability', [TrainingAvailabilityController::class, 'store'])->name('training.availability.store');
+            Route::put('/training/availability/{trainingAvailabilityStatus}', [TrainingAvailabilityController::class, 'update'])->name('training.availability.update');
+            Route::delete('/training/availability/{trainingAvailabilityStatus}', [TrainingAvailabilityController::class, 'destroy'])->name('training.availability.destroy');
+            Route::get('/training/exercises', [TrainingExerciseController::class, 'index'])->name('training.exercises.index');
+            Route::post('/training/exercises', [TrainingExerciseController::class, 'store'])->name('training.exercises.store');
+            Route::get('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'show'])->name('training.exercises.show');
+            Route::put('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'update'])->name('training.exercises.update');
+            Route::delete('/training/exercises/{trainingExercise}', [TrainingExerciseController::class, 'destroy'])->name('training.exercises.destroy');
+            Route::post('/training/exercises/{trainingExercise}/add-to-plan', [TrainingExerciseController::class, 'addToPlan'])->name('training.exercises.add-to-plan');
+        });
         Route::get('/trainer-cockpit{slash}', [MobileTrainerCockpitController::class, 'index'])
             ->where('slash', '/?')
             ->name('trainer-cockpit.index');

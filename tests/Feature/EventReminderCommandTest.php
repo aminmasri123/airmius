@@ -46,7 +46,7 @@ class EventReminderCommandTest extends TestCase
         $event->participants()->attach($declined->id, ['status' => 'no']);
 
         $this->artisan('airmius:send-event-reminders')
-            ->expectsOutput('3 Event-Erinnerungen fuer 1 Events versendet.')
+            ->expectsOutput('3 Event-Erinnerungen für 1 Events versendet.')
             ->assertSuccessful();
 
         $this->assertDatabaseHas('events', [
@@ -60,7 +60,7 @@ class EventReminderCommandTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['user_id' => $declined->id, 'type' => 'event.reminder']);
 
         $this->artisan('airmius:send-event-reminders')
-            ->expectsOutput('0 Event-Erinnerungen fuer 0 Events versendet.')
+            ->expectsOutput('0 Event-Erinnerungen für 0 Events versendet.')
             ->assertSuccessful();
     }
 
@@ -88,7 +88,7 @@ class EventReminderCommandTest extends TestCase
         ]);
 
         $this->artisan('airmius:send-event-reminders')
-            ->expectsOutput('0 Event-Erinnerungen fuer 0 Events versendet.')
+            ->expectsOutput('0 Event-Erinnerungen für 0 Events versendet.')
             ->assertSuccessful();
 
         $this->assertSame(0, Notification::where('type', 'event.reminder')->count());

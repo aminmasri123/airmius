@@ -612,6 +612,7 @@ export function useEventsWorkspace(props) {
         router.post(route('auth.events.join', event.id), { status }, {
             preserveScroll: true,
             preserveState: true,
+            only: ['events', 'calendarEvents', 'eventStats', 'nextEvent', 'calendar', 'flash', 'errors'],
         })
     }
 

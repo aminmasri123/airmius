@@ -46,7 +46,7 @@ class UserSubscriptionAccountManagementTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('auth.user-subscriptions.cancel', $subscription->id));
 
-        $response->assertSessionHas('error', 'Das Abo wurde bereits gekuendigt.');
+        $response->assertSessionHas('error', 'Das Abo wurde bereits gekündigt.');
         $this->assertEquals('cancelled', $subscription->fresh()->status);
     }
 

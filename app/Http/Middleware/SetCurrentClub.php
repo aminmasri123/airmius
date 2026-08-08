@@ -20,15 +20,15 @@ class SetCurrentClub
             ?? $request->header('X-Club-ID')
             ?? session('club_id');
 
-        if (!$clubId) {
+        if (! $clubId) {
             abort(403, 'Kein Club ausgewählt');
         }
 
         // Club aus DB laden
         $club = Club::findOrFail($clubId);
 
-        // 🔐 Prüfen ob User im Club ist
-        if (!auth()->user()->clubs->contains($club->id)) {
+        // Direct club members and users linked through a team can use the context.
+        if (! Club::query()->linkedToUser($request->user())->whereKey($club->id)->exists()) {
             abort(403, 'Kein Zugriff auf diesen Club');
         }
 

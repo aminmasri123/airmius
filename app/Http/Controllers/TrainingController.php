@@ -35,6 +35,12 @@ class TrainingController extends Controller
         $teamIds = $this->resources->trainingPlanTeamIds($user);
         $manageableAthletes = $this->manageableAthletes($user);
         $manageableAthleteIds = $manageableAthletes->pluck('id');
+        $privatePeople = $user->friendships()
+            ->with('friend:id,name,first_name,last_name,email')
+            ->get()
+            ->map(fn ($friendship) => $friendship->friend ? $this->resources->user($friendship->friend) : null)
+            ->filter()
+            ->values();
         $activeDraft = $this->currentDraftLog($user, true);
 
         $plans = TrainingPlan::query()
@@ -125,9 +131,15 @@ class TrainingController extends Controller
                     'id' => $team->id,
                     'name' => $team->name,
                     'club_id' => $team->club_id,
-                    'users' => $team->users->map(fn (User $member) => $this->resources->user($member)),
+                    'users' => $team->users->map(fn (User $member) => [
+                        ...$this->resources->user($member),
+                        'team_role' => $member->pivot?->role,
+                    ]),
                 ]),
+            // Legacy edit form data; new plan creation uses privatePeople and
+            // derives team members only from the selected team.
             'people' => $manageableAthletes->map(fn (User $person) => $this->resources->user($person)),
+            'privatePeople' => $privatePeople,
             'aiCapabilities' => $ai->capabilities($user),
         ]);
     }
@@ -191,7 +203,7 @@ class TrainingController extends Controller
         $user = $request->user();
 
         abort_unless($this->canViewLog($user, $log), 403);
-        abort_if($log->status === 'draft', 422, 'Feedback ist erst nach dem Speichern der Trainingseinheit möglich.');
+        abort_if($log->status === 'draft', 422, __('server.training.feedback_draft_forbidden'));
 
         $data = $request->validate([
             'body' => ['required', 'string', 'min:2', 'max:3000'],
@@ -209,12 +221,12 @@ class TrainingController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Feedback wurde gesendet.',
+                'message' => __('server.training.feedback_sent'),
                 'data' => $feedback,
             ], 201);
         }
 
-        return back()->with('success', 'Feedback wurde gesendet.');
+        return back()->with('success', __('server.training.feedback_sent'));
     }
 
     public function previewAiTrainingPlan(
@@ -223,7 +235,7 @@ class TrainingController extends Controller
         AthleteSportProfileService $sportProfiles,
         TrainingPlanQualityService $quality,
     ) {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         $maxPlanItems = $this->aiTrainingPlanMaxItems();
         $data = $request->validate([
@@ -247,7 +259,7 @@ class TrainingController extends Controller
 
         if (((int) $data['weeks'] * (int) $data['sessions_per_week']) > $maxPlanItems) {
             return response()->json([
-                'message' => "Der Plan ist zu groß für eine saubere KI-Vorschau. Maximal {$maxPlanItems} Einheiten sind erlaubt.",
+                'message' => __('server.training.ai.plan_too_large', ['max' => $maxPlanItems]),
             ], 422);
         }
 
@@ -266,7 +278,10 @@ class TrainingController extends Controller
 
         if (! $profileReadiness['ready'] && ! $allowProfileEstimate) {
             return response()->json([
-                'message' => 'Für einen zuverlässigen KI-Trainingsplan fehlen noch Leistungsdaten für '.$profileReadiness['sport']['name'].'. Möchtest du sie jetzt nachtragen? Fehlend: '.$missing.'. Wenn du die Werte nicht kennst, kannst du bewusst mit vorsichtigen Schätzungen fortfahren.',
+                'message' => __('server.training.ai.profile_missing', [
+                    'sport' => $profileReadiness['sport']['name'],
+                    'missing' => $missing,
+                ]),
                 'missing_profile_fields' => $profileFieldsToResolve->values()->all(),
                 'profile_completion_url' => route('auth.settings', ['tab' => 'sport-profile']),
                 'profile_estimate_allowed' => true,
@@ -293,18 +308,18 @@ class TrainingController extends Controller
             if (! $profileReadiness['ready']) {
                 $plan['warnings'] = array_values(array_unique(array_filter([
                     ...($plan['warnings'] ?? []),
-                    'Der Plan wurde mit vorsichtigen Schätzungen erstellt, weil Leistungsdaten fehlen: '.$missing.'.',
+                    __('server.training.ai.estimate_warning', ['missing' => $missing]),
                 ])));
                 $plan['analysis_tips'] = array_values(array_unique(array_filter([
                     ...($plan['analysis_tips'] ?? []),
-                    'Trage die fehlenden Sportprofildaten später nach und generiere den Plan neu, wenn du präzisere Pace-, Umfangs- oder Belastungswerte möchtest.',
+                    __('server.training.ai.estimate_tip'),
                 ])));
             }
 
             return response()->json([
                 'message' => $profileReadiness['ready']
-                    ? 'KI-Vorschlag erstellt und mit Airmius-Regeln geprüft. Bitte erst danach speichern.'
-                    : 'Konservativer KI-Vorschlag mit Schätzungen erstellt und mit Airmius-Regeln geprüft. Bitte genau prüfen, bevor du speicherst.',
+                    ? __('server.training.ai.preview_ready')
+                    : __('server.training.ai.preview_estimated'),
                 'plan' => $plan,
             ]);
         } catch (\Throwable $exception) {
@@ -315,7 +330,7 @@ class TrainingController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Der Trainingsplan konnte derzeit nicht erstellt werden. Bitte versuche es später erneut.',
+                'message' => __('server.training.ai.unavailable'),
                 'code' => 'training_ai_unavailable',
             ], 422);
         }
@@ -324,7 +339,7 @@ class TrainingController extends Controller
     public function storeAiTrainingPlan(Request $request)
     {
         $user = $request->user();
-        abort_unless($this->resources->canManageTrainingPlans($user), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+        abort_unless($this->resources->canManageTrainingPlans($user), 403, __('server.training.manage_plans_forbidden'));
 
         $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
         $maxPlanItems = $this->aiTrainingPlanMaxItems();
@@ -476,7 +491,7 @@ class TrainingController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'KI-Trainingsplan wurde gespeichert. Du kannst jede Einheit jetzt bearbeiten oder dokumentieren.',
+            'message' => __('server.training.ai.saved'),
             'plan' => $this->resources->plan($plan, $user),
         ], 201);
     }
@@ -597,9 +612,10 @@ class TrainingController extends Controller
             ]), $user);
         }
 
-        return redirect()->route('auth.training.logs.show', $log)->with('success', $log->trainer_id
-            ? 'Trainingseinheit wurde für den Sportler dokumentiert.'
-            : 'Trainingseinheit wurde dokumentiert.');
+        return redirect()->route('auth.training.logs.show', $log)->with(
+            'success',
+            __($log->trainer_id ? 'server.training.log_created_for_athlete' : 'server.training.log_created')
+        );
     }
 
     public function updateDraftLog(Request $request, TrainingLog $log)
@@ -712,7 +728,7 @@ class TrainingController extends Controller
         $log->entries()->delete();
         $log->delete();
 
-        return back()->with('success', 'Training-Entwurf wurde verworfen.');
+        return back()->with('success', __('server.training.draft_deleted'));
     }
 
     public function storeActivity(Request $request)
@@ -747,12 +763,12 @@ class TrainingController extends Controller
             ],
         ]);
 
-        return back()->with('success', 'Trainingseinheit wurde eingetragen.');
+        return back()->with('success', __('server.training.log_entered'));
     }
 
     public function storePlan(Request $request)
     {
-        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, __('server.training.manage_plans_forbidden'));
 
         $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
         $data = $request->validate([
@@ -772,6 +788,8 @@ class TrainingController extends Controller
             'competition_date' => ['nullable', 'date'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'share_permission' => ['required', Rule::in(['read', 'write'])],
+            'target_type' => ['nullable', Rule::in(['self', 'private', 'team'])],
+            'team_mode' => ['nullable', Rule::in(['all', 'individual'])],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
@@ -792,6 +810,8 @@ class TrainingController extends Controller
             'item_metrics' => ['nullable', 'array'],
             'item_metrics.*' => ['nullable', 'string', 'max:120'],
         ]);
+
+        $data = $this->resources->normalizePlanAudience($request->user(), $data);
 
         $imagePath = $request->file('item_image')?->store('training-plans', 'public');
         $userIds = collect($data['user_ids'] ?? [])
@@ -822,6 +842,8 @@ class TrainingController extends Controller
                     'mesocycle' => $data['mesocycle'] ?? null,
                     'deload_week' => $data['deload_week'] ?? null,
                     'competition_date' => $data['competition_date'] ?? null,
+                    'target_type' => $data['target_type'],
+                    'team_mode' => $data['team_mode'],
                 ],
             ]);
 
@@ -864,9 +886,10 @@ class TrainingController extends Controller
             ]));
         });
 
-        return back()->with('success', $data['status'] === 'published'
-            ? 'Trainingsplan wurde freigegeben.'
-            : 'Trainingsplan wurde als Entwurf gespeichert.');
+        return back()->with(
+            'success',
+            __($data['status'] === 'published' ? 'server.training.plan_created_and_published' : 'server.training.plan_created')
+        );
     }
 
     public function storePlanItem(Request $request, TrainingPlan $plan)
@@ -883,7 +906,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Neue Einheit im Trainingsplan', '"'.$item->title.'" wurde zu "'.$plan->title.'" hinzugefügt.', route('auth.training.plans.items.show', [$plan, $item]));
 
-        return back()->with('success', 'Trainingseinheit wurde zum Plan hinzugefügt.');
+        return back()->with('success', __('server.training.item_added'));
     }
 
     public function updatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -903,7 +926,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingseinheit aktualisiert', '"'.$item->title.'" in "'.$plan->title.'" wurde angepasst.', route('auth.training.plans.items.show', [$plan, $item]));
 
-        return back()->with('success', 'Trainingseinheit wurde aktualisiert.');
+        return back()->with('success', __('server.training.item_updated'));
     }
 
     public function duplicatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -919,7 +942,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Einheit dupliziert', '"'.$copy->title.'" wurde in "'.$plan->title.'" angelegt.', route('auth.training.plans.items.show', [$plan, $copy]));
 
-        return back()->with('success', 'Trainingseinheit wurde dupliziert.');
+        return back()->with('success', __('server.training.item_duplicated'));
     }
 
     public function destroyPlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -930,14 +953,14 @@ class TrainingController extends Controller
         $this->deletePlanItemImageIfUnused($item);
         $item->delete();
 
-        return back()->with('success', 'Trainingseinheit wurde gelöscht.');
+        return back()->with('success', __('server.training.item_deleted'));
     }
 
     public function updatePlan(Request $request, TrainingPlan $plan)
     {
         abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
-        $teamIds = $request->user()->teams()->pluck('teams.id')->all();
+        $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -955,10 +978,14 @@ class TrainingController extends Controller
             'competition_date' => ['nullable', 'date'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'share_permission' => ['required', Rule::in(['read', 'write'])],
+            'target_type' => ['nullable', Rule::in(['self', 'private', 'team'])],
+            'team_mode' => ['nullable', Rule::in(['all', 'individual'])],
             'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
             'user_ids' => ['nullable', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
         ]);
+
+        $data = $this->resources->normalizePlanAudience($request->user(), $data);
 
         DB::transaction(function () use ($request, $plan, $data) {
             $plan->update([
@@ -981,6 +1008,8 @@ class TrainingController extends Controller
                     'mesocycle' => $data['mesocycle'] ?? null,
                     'deload_week' => $data['deload_week'] ?? null,
                     'competition_date' => $data['competition_date'] ?? null,
+                    'target_type' => $data['target_type'],
+                    'team_mode' => $data['team_mode'],
                 ],
             ]);
 
@@ -1005,7 +1034,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan aktualisiert', '"'.$plan->title.'" wurde angepasst.', route('auth.training.index'));
 
-        return back()->with('success', 'Trainingsplan wurde aktualisiert.');
+        return back()->with('success', __('server.training.plan_updated'));
     }
 
     public function publishPlan(Request $request, TrainingPlan $plan)
@@ -1016,7 +1045,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan freigegeben', '"'.$plan->title.'" ist jetzt für dich sichtbar.', route('auth.training.index'));
 
-        return back()->with('success', 'Trainingsplan wurde freigegeben.');
+        return back()->with('success', __('server.training.plan_published'));
     }
 
     public function duplicatePlan(Request $request, TrainingPlan $plan)
@@ -1054,7 +1083,7 @@ class TrainingController extends Controller
             ]));
         });
 
-        return back()->with('success', 'Trainingsplan wurde als bearbeitbare Vorlage kopiert.');
+        return back()->with('success', __('server.training.plan_copied'));
     }
 
     public function markPlanItemMissed(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -1099,7 +1128,7 @@ class TrainingController extends Controller
 
         $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $user, 'Trainingseinheit ausgefallen', '"'.$item->title.'" wurde als nicht gemacht markiert.', route('auth.training.logs.show', $missedLog));
 
-        return back()->with('success', 'Einheit wurde als nicht gemacht markiert.');
+        return back()->with('success', __('server.training.item_missed'));
     }
 
     public function destroyPlan(Request $request, TrainingPlan $plan)
@@ -1115,7 +1144,7 @@ class TrainingController extends Controller
 
         $plan->delete();
 
-        return back()->with('success', 'Trainingsplan wurde gelöscht.');
+        return back()->with('success', __('server.training.plan_deleted'));
     }
 
     private function logFormProps(User $user, ?TrainingLog $draft = null): array

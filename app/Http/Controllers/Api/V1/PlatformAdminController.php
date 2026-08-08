@@ -8,6 +8,7 @@ use App\Models\Badge;
 use App\Models\Club;
 use App\Models\ContentReport;
 use App\Models\GamificationRule;
+use App\Models\Message;
 use App\Models\ModerationFlag;
 use App\Models\Permission;
 use App\Models\Post;
@@ -20,6 +21,7 @@ use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\ClubVerificationStatusUpdated;
 use App\Services\AdminCreatedUserProvisioner;
 use App\Support\ModerationAuditLog;
+use App\Support\Roles;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -513,7 +515,7 @@ class PlatformAdminController extends Controller
     {
         $this->ensureRoleManager($request);
         abort_if(
-            in_array($role->name, ['super_admin', 'admin', 'system_admin'], true),
+            in_array($role->name, Roles::PROTECTED_PLATFORM, true),
             422,
             'Systemrollen können nicht gelöscht werden.'
         );
@@ -745,7 +747,7 @@ class PlatformAdminController extends Controller
         Request $request,
         Role $role
     ): void {
-        if (! in_array($role->name, ['super_admin', 'admin', 'system_admin'], true)) {
+        if (! in_array($role->name, Roles::PROTECTED_PLATFORM, true)) {
             return;
         }
         abort_unless(
@@ -787,11 +789,10 @@ class PlatformAdminController extends Controller
         Role $role,
         Request $request,
         int $usersCount
-    ): array
-    {
+    ): array {
         $isSystem = in_array(
             $role->name,
-            ['super_admin', 'admin', 'system_admin'],
+            Roles::PROTECTED_PLATFORM,
             true
         );
 
@@ -831,7 +832,7 @@ class PlatformAdminController extends Controller
         if ($model->isFillable('moderation_status')) {
             $model->forceFill(['moderation_status' => 'removed'])->save();
         }
-        if ($model instanceof \App\Models\Message) {
+        if ($model instanceof Message) {
             $model->delete();
         }
     }

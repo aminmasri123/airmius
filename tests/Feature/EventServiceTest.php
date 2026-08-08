@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DomainOutboxEvent;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\EventService;
@@ -27,6 +28,11 @@ class EventServiceTest extends TestCase
             'event_timezone' => 'Europe/Berlin',
         ]);
 
+        $this->assertDatabaseHas('domain_outbox_events', [
+            'event_name' => 'organization.event.series_created.v1',
+            'aggregate_type' => Event::class,
+        ]);
+
         $this->assertSame([
             '2026-05-16 10:00',
             '2026-05-17 10:00',
@@ -48,6 +54,11 @@ class EventServiceTest extends TestCase
             'recurrence_ends_at' => '2026-03-31',
             'event_timezone' => 'Europe/Berlin',
         ]);
+
+        $seriesEvent = DomainOutboxEvent::query()
+            ->where('event_name', 'organization.event.series_created.v1')
+            ->firstOrFail();
+        $this->assertSame(3, $seriesEvent->payload['occurrence_count']);
 
         $this->assertSame([
             '2026-01-31 18:30',

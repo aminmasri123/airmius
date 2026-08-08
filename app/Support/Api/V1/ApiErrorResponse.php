@@ -17,6 +17,26 @@ use Throwable;
 
 class ApiErrorResponse
 {
+    public static function badRequest(
+        Request $request,
+        string $code,
+        string $message,
+        array $error = [],
+        array $headers = [],
+    ): JsonResponse {
+        return self::make($request, $code, $message, Response::HTTP_BAD_REQUEST, $error, $headers);
+    }
+
+    public static function conflict(
+        Request $request,
+        string $code,
+        string $message,
+        array $error = [],
+        array $headers = [],
+    ): JsonResponse {
+        return self::make($request, $code, $message, Response::HTTP_CONFLICT, $error, $headers);
+    }
+
     public static function validation(ValidationException $exception, Request $request): JsonResponse
     {
         $errors = $exception->errors();

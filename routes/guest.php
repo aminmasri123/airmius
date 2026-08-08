@@ -6,10 +6,11 @@ use App\Http\Controllers\KontaktController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
-use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicSponsorController;
+use App\Http\Controllers\UserLanguageController;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Club;
@@ -21,7 +22,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -408,35 +408,8 @@ Route::get('/cookies', [LegalPageController::class, 'cookies'])->name('legal.coo
 Route::get('/widerruf', [LegalPageController::class, 'withdrawal'])->name('legal.withdrawal');
 Route::get('/kontakt-und-melden', [LegalPageController::class, 'reporting'])->name('legal.reporting');
 
-
-Route::post('/user/language', function (Request $request) {
-
-    $request->validate([
-        'language' => 'required|in:de,en,fr,ar',
-    ]);
-
-    $lang = $request->language;
-
-    // ✅ Nur wenn User eingeloggt ist
-    if ($request->user()) {
-        $request->user()->update([
-            'language' => $lang,
-        ]);
-    }
-
-    // ✅ IMMER setzen (auch für Gäste)
-    session()->put('locale', $lang);
-
-    // ✅ Direkt anwenden
-    app()->setLocale($lang);
-
-    return back();
-
-})->name('user.language.update');
-
-
-
-
-
+Route::post('/user/language', UserLanguageController::class)
+    ->middleware('purpose:product_operation')
+    ->name('user.language.update');
 
 Route::post('/standort/anlegen', [KontaktController::class, 'store'])->name('contact.store');

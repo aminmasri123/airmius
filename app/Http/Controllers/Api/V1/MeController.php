@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Identity\UpdateUserLanguage;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Support\AccountType;
@@ -32,17 +33,15 @@ class MeController extends Controller
         );
     }
 
-    public function updateLanguage(Request $request)
+    public function updateLanguage(Request $request, UpdateUserLanguage $updateLanguage)
     {
         $data = $request->validate([
             'language' => ['required', Rule::in(['de', 'en', 'fr', 'ar'])],
         ]);
 
-        $request->user()->forceFill([
-            'language' => $data['language'],
-        ])->save();
-
-        return new UserResource($request->user()->refresh());
+        return new UserResource(
+            $updateLanguage->execute($request->user(), $data['language'])
+        );
     }
 
     public function updateProfile(Request $request)

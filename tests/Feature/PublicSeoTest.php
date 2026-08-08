@@ -170,7 +170,7 @@ class PublicSeoTest extends TestCase
         $this->get(route('guest.events'))
             ->assertOk()
             ->assertSee('<title inertia>Sportevents entdecken | Airmius</title>', false)
-            ->assertSee('<meta name="description" content="Finde oeffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius."', false)
+            ->assertSee('<meta name="description" content="Finde öffentliche Trainings, Spiele, Treffen und Sportveranstaltungen von Vereinen und Teams auf Airmius."', false)
             ->assertSee('<link rel="canonical" href="'.route('guest.events').'"', false)
             ->assertSee('Public Lauftreff');
 

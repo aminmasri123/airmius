@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class TrainingResourceService
 {
@@ -34,6 +35,8 @@ class TrainingResourceService
             'status' => $plan->status,
             'share_permission' => $plan->share_permission,
             'settings' => $plan->settings ?? [],
+            'target_type' => $this->planTargetType($plan),
+            'team_mode' => data_get($plan->settings, 'team_mode'),
             'creator' => $plan->creator ? $this->user($plan->creator) : null,
             'team' => $plan->team ? ['id' => $plan->team->id, 'name' => $plan->team->name] : null,
             'can_write' => $this->canWritePlan($viewer, $plan),
@@ -245,6 +248,132 @@ class TrainingResourceService
         }
 
         return $teamIds->unique()->values();
+    }
+
+    /**
+     * Normalize and validate the audience of a training plan.
+     *
+     * A plan can be personal, shared with selected friends/private clients,
+     * or scoped to one club team. Individual team members are only available
+     * after a team has been selected.
+     */
+    public function normalizePlanAudience(User $user, array $data): array
+    {
+        $userIds = collect($data['user_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+        $teamId = filled($data['team_id'] ?? null) ? (int) $data['team_id'] : null;
+        $targetType = $data['target_type'] ?? ($teamId ? 'team' : ($userIds->isNotEmpty() ? 'private' : 'self'));
+        $teamMode = $data['team_mode'] ?? ($targetType === 'team'
+            ? ($userIds->isNotEmpty() ? 'individual' : 'all')
+            : null);
+
+        if (! in_array($targetType, ['self', 'private', 'team'], true)) {
+            throw ValidationException::withMessages([
+                'target_type' => 'Bitte wähle ein gültiges Plan-Ziel.',
+            ]);
+        }
+
+        if ($targetType === 'self') {
+            if ($teamId || $userIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'target_type' => 'Ein persönlicher Plan darf kein Team oder andere Personen enthalten.',
+                ]);
+            }
+
+            return [
+                ...$data,
+                'target_type' => 'self',
+                'team_mode' => null,
+                'team_id' => null,
+                'user_ids' => [],
+            ];
+        }
+
+        if ($targetType === 'private') {
+            if ($teamId) {
+                throw ValidationException::withMessages([
+                    'team_id' => 'Private Pläne dürfen keinem Vereinsteam zugewiesen werden.',
+                ]);
+            }
+
+            $friendIds = $user->friendships()->pluck('friend_id')->map(fn ($id) => (int) $id);
+            $invalidIds = $userIds->diff($friendIds);
+
+            if ($userIds->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'user_ids' => 'Wähle mindestens einen privaten Kunden oder Freund aus.',
+                ]);
+            }
+
+            if ($invalidIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'user_ids' => 'Private Pläne können nur an bestätigte Freunde oder private Kunden mit Verbindung freigegeben werden.',
+                ]);
+            }
+
+            return [
+                ...$data,
+                'target_type' => 'private',
+                'team_mode' => null,
+                'team_id' => null,
+                'user_ids' => $userIds->all(),
+            ];
+        }
+
+        if (! $teamId || ! in_array($teamMode, ['all', 'individual'], true)) {
+            throw ValidationException::withMessages([
+                'team_id' => 'Wähle ein Vereinsteam und ob der Plan für das ganze Team oder einzelne Sportler gilt.',
+            ]);
+        }
+
+        if (! $this->trainingPlanTeamIds($user)->contains($teamId)) {
+            throw ValidationException::withMessages([
+                'team_id' => 'Du darfst dieses Vereinsteam nicht für Trainingspläne auswählen.',
+            ]);
+        }
+
+        $teamMemberIds = Team::query()->findOrFail($teamId)->users()->pluck('users.id')->map(fn ($id) => (int) $id);
+
+        if ($teamMode === 'all') {
+            $userIds = collect();
+        } elseif ($userIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'user_ids' => 'Wähle mindestens einen Sportler aus diesem Team aus.',
+            ]);
+        } elseif ($userIds->diff($teamMemberIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'user_ids' => 'Es dürfen nur Mitglieder des ausgewählten Teams zugewiesen werden.',
+            ]);
+        }
+
+        return [
+            ...$data,
+            'target_type' => 'team',
+            'team_mode' => $teamMode,
+            'team_id' => $teamId,
+            'user_ids' => $userIds->all(),
+        ];
+    }
+
+    public function planTargetType(TrainingPlan $plan): string
+    {
+        $targetType = data_get($plan->settings, 'target_type');
+
+        if (in_array($targetType, ['self', 'private', 'team'], true)) {
+            return $targetType;
+        }
+
+        if ($plan->team_id) {
+            return 'team';
+        }
+
+        return $plan->relationLoaded('assignments')
+            && $plan->assignments->contains(fn ($assignment) => $assignment->user_id !== null)
+            ? 'private'
+            : 'self';
     }
 
     private function trainingPlanComparison(TrainingLog $log): ?array

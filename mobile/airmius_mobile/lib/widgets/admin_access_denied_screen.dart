@@ -8,11 +8,26 @@ import 'airmius_widgets.dart';
 /// Navigation visibility is not a security boundary, so protected screens
 /// use this guard before loading any administration data.
 class AdminAccessDeniedScreen extends StatelessWidget {
-  const AdminAccessDeniedScreen({super.key});
+  const AdminAccessDeniedScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
+    final content = AirmiusPanel(
+      gradient: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline, size: 56),
+          const SizedBox(height: 16),
+          Text(t('adminHub.forbiddenBody'), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+
+    if (embedded) return content;
 
     return Scaffold(
       appBar: AppBar(
@@ -24,17 +39,7 @@ class AdminAccessDeniedScreen extends StatelessWidget {
       body: PageFrame(
         title: t('adminHub.title'),
         subtitle: t('adminHub.forbidden'),
-        child: AirmiusPanel(
-          gradient: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.lock_outline, size: 56),
-              const SizedBox(height: 16),
-              Text(t('adminHub.forbiddenBody'), textAlign: TextAlign.center),
-            ],
-          ),
-        ),
+        child: content,
       ),
     );
   }

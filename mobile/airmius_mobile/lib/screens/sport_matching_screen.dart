@@ -48,17 +48,21 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
 
     final locationName = value(matching['location_name']);
     final address = value(matching['address']);
-    final locality = [value(matching['postal_code']), value(matching['city'])]
-        .where((part) => part.isNotEmpty)
-        .join(' ');
+    final locality = [
+      value(matching['postal_code']),
+      value(matching['city']),
+    ].where((part) => part.isNotEmpty).join(' ');
     final country = value(matching['country_code']);
-    final cityAndCountry = [locality, country]
-        .where((part) => part.isNotEmpty)
-        .join(', ');
+    final cityAndCountry = [
+      locality,
+      country,
+    ].where((part) => part.isNotEmpty).join(', ');
 
-    final parts = [locationName, address, cityAndCountry]
-        .where((part) => part.isNotEmpty)
-        .toList();
+    final parts = [
+      locationName,
+      address,
+      cityAndCountry,
+    ].where((part) => part.isNotEmpty).toList();
 
     return parts.isEmpty
         ? _c('Ort offen', 'Location open', 'Lieu à définir', 'المكان مفتوح')
@@ -208,12 +212,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       'Participation confirmée',
       'تم تأكيد الحضور',
     ),
-    'checked_in' => _c(
-      'Angekommen',
-      'Checked in',
-      'Arrivé',
-      'تم تسجيل الوصول',
-    ),
+    'checked_in' => _c('Angekommen', 'Checked in', 'Arrivé', 'تم تسجيل الوصول'),
     'cancelled' => _c('Abgesagt', 'Cancelled', 'Annulé', 'ملغى'),
     'no_show' => _c(
       'Nicht erschienen',
@@ -503,12 +502,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              _c(
-                'Meine Termine',
-                'My sessions',
-                'Mes séances',
-                'مواعيدي',
-              ),
+              _c('Meine Termine', 'My sessions', 'Mes séances', 'مواعيدي'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
           ),
@@ -910,9 +904,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                 '${matching['description'] ?? _c('Keine zusätzliche Beschreibung.', 'No additional description.', 'Aucune description supplémentaire.', 'لا يوجد وصف إضافي.')}',
               ),
               const SizedBox(height: 12),
-              Text(
-                _matchingLocationLabel(matching),
-              ),
+              Text(_matchingLocationLabel(matching)),
               if (ownerId > 0) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
@@ -1022,19 +1014,26 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     final value = '${sport['slug'] ?? ''} ${sport['name'] ?? ''}'.toLowerCase();
     if (value.contains('football') ||
         value.contains('fußball') ||
-        value.contains('soccer'))
+        value.contains('soccer')) {
       return Icons.sports_soccer;
-    if (value.contains('basket')) return Icons.sports_basketball;
-    if (value.contains('tennis') || value.contains('padel'))
+    }
+    if (value.contains('basket')) {
+      return Icons.sports_basketball;
+    }
+    if (value.contains('tennis') || value.contains('padel')) {
       return Icons.sports_tennis;
-    if (value.contains('swim') || value.contains('schwimm'))
+    }
+    if (value.contains('swim') || value.contains('schwimm')) {
       return Icons.pool_outlined;
+    }
     if (value.contains('bike') ||
         value.contains('rad') ||
-        value.contains('cycling'))
+        value.contains('cycling')) {
       return Icons.directions_bike;
-    if (value.contains('hike') || value.contains('wandern'))
+    }
+    if (value.contains('hike') || value.contains('wandern')) {
       return Icons.hiking;
+    }
     return Icons.directions_run;
   }
 
@@ -1145,18 +1144,16 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _c(
-                        'Teilnahme',
-                        'Attendance',
-                        'Participation',
-                        'الحضور',
-                      ),
+                      _c('Teilnahme', 'Attendance', 'Participation', 'الحضور'),
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       _attendanceStatusLabel(status),
-                      style: TextStyle(color: color, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     if (startsAt != null) ...[
                       const SizedBox(height: 3),
@@ -1194,7 +1191,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
-          if (status == 'pending' || status == 'cancelled' || status == 'confirmed') ...[
+          if (status == 'pending' ||
+              status == 'cancelled' ||
+              status == 'confirmed') ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -1206,7 +1205,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                         ? null
                         : () => _updateAttendance(matching, 'confirm'),
                     icon: const Icon(Icons.check, size: 18),
-                    label: Text(_c('Ich komme', 'I’m coming', 'Je viens', 'سآتي')),
+                    label: Text(
+                      _c('Ich komme', 'I’m coming', 'Je viens', 'سآتي'),
+                    ),
                   ),
                 if (status == 'confirmed')
                   FilledButton.icon(
@@ -1284,7 +1285,9 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: _attendanceStatusColor(attendanceStatus).withValues(alpha: 0.07),
+              color: _attendanceStatusColor(
+                attendanceStatus,
+              ).withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -1302,18 +1305,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
                   TextButton.icon(
                     onPressed: _busy
                         ? null
-                        : () => _reportNoShow(
-                              matching,
-                              _int(user['id']),
-                            ),
+                        : () => _reportNoShow(matching, _int(user['id'])),
                     icon: const Icon(Icons.flag_outlined, size: 17),
                     label: Text(
-                      _c(
-                        'Nicht erschienen',
-                        'No-show',
-                        'Absent',
-                        'لم يحضر',
-                      ),
+                      _c('Nicht erschienen', 'No-show', 'Absent', 'لم يحضر'),
                     ),
                   ),
               ],
@@ -1390,30 +1385,32 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Future<void> _decide(
-    JsonMap matching,
-    JsonMap application,
-    String status,
-  ) => _run(
-    () => _client.decideSportMatchingApplication(
-      _int(matching['id']),
-      _int(application['id']),
-      status,
-    ),
-    onSuccess: (response) {
-      final conversationId = _int(response['conversation_id']);
-      if (status != 'accepted' || conversationId <= 0 || !mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChatDetailScreen(
-            conversationId: conversationId,
-            title: _c('Sport-Match', 'Sport match', 'Match sportif', 'تطابق رياضي'),
-            kind: 'direct',
-          ),
+  Future<void> _decide(JsonMap matching, JsonMap application, String status) =>
+      _run(
+        () => _client.decideSportMatchingApplication(
+          _int(matching['id']),
+          _int(application['id']),
+          status,
         ),
+        onSuccess: (response) {
+          final conversationId = _int(response['conversation_id']);
+          if (status != 'accepted' || conversationId <= 0 || !mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ChatDetailScreen(
+                conversationId: conversationId,
+                title: _c(
+                  'Sport-Match',
+                  'Sport match',
+                  'Match sportif',
+                  'تطابق رياضي',
+                ),
+                kind: 'direct',
+              ),
+            ),
+          );
+        },
       );
-    },
-  );
 
   Future<void> _updateAttendance(JsonMap matching, String action) async {
     if (action == 'cancel') {
@@ -1452,10 +1449,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     }
 
     await _run(
-      () => _client.updateSportMatchingAttendance(
-        _int(matching['id']),
-        action,
-      ),
+      () => _client.updateSportMatchingAttendance(_int(matching['id']), action),
     );
   }
 
@@ -1513,7 +1507,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
             child: Text(_c('Abbrechen', 'Cancel', 'Annuler', 'إلغاء')),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, reasonController.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, reasonController.text.trim()),
             child: Text(_c('Melden', 'Report', 'Signaler', 'إبلاغ')),
           ),
         ],
@@ -1963,9 +1958,7 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         child: FilledButton.icon(
           onPressed: _busy ? null : _openCreate,
           icon: const Icon(Icons.add),
-          label: Text(
-            _c('Erstellen', 'Create', 'Créer', 'إنشاء'),
-          ),
+          label: Text(_c('Erstellen', 'Create', 'Créer', 'إنشاء')),
         ),
       ),
     ],

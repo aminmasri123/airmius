@@ -149,7 +149,7 @@ class ChatController extends Controller
             } elseif ($data['type'] === 'direct') {
                 $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== $request->user()->id));
 
-                abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+                abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, __('server.chat.direct_messages_forbidden'));
 
                 $conversation = Conversation::query()
                     ->where('type', 'direct')
@@ -218,7 +218,7 @@ class ChatController extends Controller
         abort_if(
             $message->hides()->where('user_id', $request->user()->id)->exists(),
             404,
-            'Diese Nachricht ist nicht verfügbar.'
+            __('server.chat.message_unavailable')
         );
 
         return new MessageResource(
@@ -247,7 +247,7 @@ class ChatController extends Controller
                 ->where('users.id', '!=', $request->user()->id)
                 ->first();
 
-            abort_unless($recipient?->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+            abort_unless($recipient?->allowsDirectMessagesFrom($request->user()), 403, __('server.chat.direct_messages_forbidden'));
         }
 
         $message = $this->chatService->sendMessage(
@@ -396,7 +396,7 @@ class ChatController extends Controller
     {
         $this->authorizeMessageAccess($message, $request);
         abort_unless($message->sender_id === $request->user()->id || $request->user()->can('user.manage'), 403);
-        abort_if($message->receipts()->whereNotNull('read_at')->exists(), 422, 'Diese Nachricht wurde bereits gelesen und kann nicht mehr gelöscht werden.');
+        abort_if($message->receipts()->whereNotNull('read_at')->exists(), 422, __('server.chat.message_already_read'));
 
         $message->load('attachments.file');
 
@@ -436,7 +436,7 @@ class ChatController extends Controller
     {
         app(WebConversationController::class)->leave($request, $conversation);
 
-        return response()->json(['message' => 'Du hast die Gruppe verlassen.']);
+        return response()->json(['message' => __('server.chat.left')]);
     }
 
     public function inviteMembers(Request $request, Conversation $conversation)
@@ -457,7 +457,7 @@ class ChatController extends Controller
     {
         app(WebConversationController::class)->declineInvitation($request, $invitation);
 
-        return response()->json(['message' => 'Einladung abgelehnt.']);
+        return response()->json(['message' => __('server.chat.invitation_declined')]);
     }
 
     public function removeMember(Request $request, Conversation $conversation, User $user)
@@ -583,13 +583,13 @@ class ChatController extends Controller
             ->get()
             ->keyBy('id');
 
-        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewählte Person wurde nicht gefunden.');
+        abort_if($participants->count() !== $participantIds->count(), 422, __('server.chat.participants_missing'));
 
         foreach ($participants as $participant) {
             abort_unless(
                 $request->user()->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($request->user()),
                 403,
-                'Gruppenchats können nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+                __('server.chat.group_friends_only')
             );
         }
     }
