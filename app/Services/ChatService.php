@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Events\ChatConversationUpdated;
 use App\Events\MessageSent;
+use App\Models\Conversation;
 use App\Models\File;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +16,37 @@ use Illuminate\Support\Str;
 class ChatService
 {
     public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
+    public function findOrCreateDirectConversation(
+        User $first,
+        User $second,
+        ?int $clubId = null,
+    ): Conversation {
+        abort_if($first->id === $second->id, 422, 'Ein Direktchat benötigt zwei verschiedene Personen.');
+
+        return DB::transaction(function () use ($first, $second, $clubId) {
+            $conversation = Conversation::query()
+                ->where('type', 'direct')
+                ->whereHas('users', fn ($query) => $query->where('users.id', $first->id))
+                ->whereHas('users', fn ($query) => $query->where('users.id', $second->id))
+                ->first();
+
+            if (! $conversation) {
+                $conversation = Conversation::create([
+                    'type' => 'direct',
+                    'club_id' => $clubId,
+                ]);
+                $conversation->users()->attach([
+                    $first->id => ['joined_at' => now()],
+                    $second->id => ['joined_at' => now()],
+                ]);
+            } else {
+                $conversation->touch();
+            }
+
+            return $conversation->fresh(['users']);
+        });
+    }
 
     public function sendMessage($user, $conversationId, ?string $text, array $attachments = [])
     {

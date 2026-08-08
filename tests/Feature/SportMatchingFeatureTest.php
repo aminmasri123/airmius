@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Club;
 use App\Models\Sport;
 use App\Models\Team;
+use App\Models\SportMatching;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -84,9 +85,74 @@ class SportMatchingFeatureTest extends TestCase
             ->assertJsonPath('data.0.applications.0.user.id', $runner->id)
             ->json('data.0.applications.0.id');
 
-        $this->putJson("/api/v1/sport-matching/{$matchingId}/applications/{$applicationId}", [
+        $decisionResponse = $this->putJson("/api/v1/sport-matching/{$matchingId}/applications/{$applicationId}", [
             'status' => 'accepted',
-        ])->assertOk()->assertJsonPath('data.status', 'accepted');
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'accepted');
+
+        $this->assertGreaterThan(0, (int) $decisionResponse->json('conversation_id'));
+
+        $conversationId = $this->getJson('/api/v1/chat/conversations')
+            ->assertOk()
+            ->json('data.0.id');
+
+        $this->assertDatabaseHas('conversations', [
+            'id' => $conversationId,
+            'type' => 'direct',
+        ]);
+        $this->assertDatabaseHas('conversation_users', [
+            'conversation_id' => $conversationId,
+            'user_id' => $owner->id,
+        ]);
+        $this->assertDatabaseHas('conversation_users', [
+            'conversation_id' => $conversationId,
+            'user_id' => $runner->id,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->putJson("/api/v1/sport-matching/{$matchingId}/attendance", [
+            'action' => 'confirm',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'confirmed');
+
+        Sanctum::actingAs($runner);
+        $this->putJson("/api/v1/sport-matching/{$matchingId}/attendance", [
+            'action' => 'confirm',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'confirmed');
+
+        SportMatching::query()->whereKey($matchingId)->update([
+            'starts_at' => now()->addHour(),
+        ]);
+
+        $this->artisan('airmius:send-sport-matching-reminders')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('sport_matching_attendances', [
+            'sport_matching_id' => $matchingId,
+        ]);
+        $this->assertNotNull(
+            \App\Models\SportMatchingAttendance::query()
+                ->where('sport_matching_id', $matchingId)
+                ->value('reminder_2h_sent_at')
+        );
+
+        SportMatching::query()->whereKey($matchingId)->update([
+            'starts_at' => now()->subHour(),
+        ]);
+
+        $this->postJson("/api/v1/sport-matching/{$matchingId}/attendance/no-show", [
+            'target_user_id' => $owner->id,
+            'reason' => 'Keine Ankunft und keine Absage.',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'no_show');
+
+        $this->assertDatabaseHas('sport_matching_attendances', [
+            'sport_matching_id' => $matchingId,
+            'user_id' => $owner->id,
+            'status' => 'no_show',
+            'no_show_reported_by' => $runner->id,
+        ]);
     }
 
     public function test_any_sport_can_match_team_against_team_with_a_custom_team_size(): void

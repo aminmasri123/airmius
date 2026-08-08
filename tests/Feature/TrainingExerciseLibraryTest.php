@@ -20,6 +20,9 @@ class TrainingExerciseLibraryTest extends TestCase
     public function test_user_can_manage_personal_exercise_and_add_a_snapshot_to_a_plan(): void
     {
         $coach = User::factory()->create(['name' => 'Mina Coach']);
+        $club = Club::factory()->create(['owner_id' => $coach->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($coach->id, ['role' => TeamRoles::COACH]);
         $plan = TrainingPlan::query()->create([
             'created_by' => $coach->id,
             'title' => 'Frühjahrsaufbau',

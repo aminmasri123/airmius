@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
+import 'chat_detail_screen.dart';
 import '../widgets/content_report_dialog.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -200,6 +201,42 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     _ => '$status',
   };
 
+  String _attendanceStatusLabel(Object? status) => switch ('$status') {
+    'confirmed' => _c(
+      'Teilnahme bestätigt',
+      'Attendance confirmed',
+      'Participation confirmée',
+      'تم تأكيد الحضور',
+    ),
+    'checked_in' => _c(
+      'Angekommen',
+      'Checked in',
+      'Arrivé',
+      'تم تسجيل الوصول',
+    ),
+    'cancelled' => _c('Abgesagt', 'Cancelled', 'Annulé', 'ملغى'),
+    'no_show' => _c(
+      'Nicht erschienen',
+      'No-show reported',
+      'Absent signalé',
+      'تم الإبلاغ عن عدم الحضور',
+    ),
+    _ => _c(
+      'Noch nicht bestätigt',
+      'Not confirmed yet',
+      'Pas encore confirmé',
+      'لم يتم التأكيد بعد',
+    ),
+  };
+
+  Color _attendanceStatusColor(Object? status) => switch ('$status') {
+    'confirmed' => airmiusAccentColor(context),
+    'checked_in' => Colors.green,
+    'cancelled' => airmiusMutedColor(context),
+    'no_show' => Colors.red,
+    _ => Colors.orange,
+  };
+
   Widget _matchingList(JsonMap response, JsonMap meta) {
     final matchings = _maps(response['data']);
     final teams = _maps(meta['teams']);
@@ -211,7 +248,25 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
               !_swipedMatchingIds.contains(_int(matching['id'])),
         )
         .toList();
-    if (_swipeView) return _swipeDeck(discoverable, teams);
+    if (_swipeView) {
+      final tracked = matchings
+          .where(
+            (matching) =>
+                (matching['mine'] == true ||
+                    matching['my_application'] == 'accepted') &&
+                matching['attendance'] is JsonMap,
+          )
+          .toList();
+      return Column(
+        children: [
+          _swipeDeck(discoverable, teams),
+          if (tracked.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _attendanceOverview(tracked),
+          ],
+        ],
+      );
+    }
     if (matchings.isEmpty) {
       return AirmiusPanel(
         child: Padding(
@@ -439,6 +494,47 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       ],
     );
   }
+
+  Widget _attendanceOverview(List<JsonMap> matchings) => AirmiusPanel(
+    children: [
+      Row(
+        children: [
+          Icon(Icons.event_available, color: airmiusAccentColor(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _c(
+                'Meine Termine',
+                'My sessions',
+                'Mes séances',
+                'مواعيدي',
+              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              _c(
+                'Teilnahme im Blick',
+                'Keep attendance up to date',
+                'Suivez votre participation',
+                'تابع حضورك',
+              ),
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      ...matchings.map(
+        (matching) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _attendancePanel(matching),
+        ),
+      ),
+    ],
+  );
 
   Widget _swipeCard(
     JsonMap matching,
@@ -984,6 +1080,10 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
         ),
         Text('🎯 ${matching['skill_level']} · ${matching['radius_km']} km'),
         if (team != null) Text('👥 ${team['name']}'),
+        if (matching['attendance'] is JsonMap) ...[
+          const SizedBox(height: 14),
+          _attendancePanel(matching),
+        ],
         if (mine && applications.isNotEmpty) ...[
           const Divider(height: 24),
           ...applications.map(
@@ -1017,6 +1117,123 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
+  Widget _attendancePanel(JsonMap matching) {
+    final attendance = matching['attendance'] is JsonMap
+        ? matching['attendance'] as JsonMap
+        : const <String, dynamic>{};
+    final status = '${attendance['status'] ?? 'pending'}';
+    final color = _attendanceStatusColor(status);
+    final startsAt = DateTime.tryParse('${matching['starts_at'] ?? ''}');
+    final canCancel = status == 'pending' || status == 'confirmed';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.event_available, color: color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _c(
+                        'Teilnahme',
+                        'Attendance',
+                        'Participation',
+                        'الحضور',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _attendanceStatusLabel(status),
+                      style: TextStyle(color: color, fontWeight: FontWeight.w800),
+                    ),
+                    if (startsAt != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        _formatMatchingDateTime(context, startsAt.toLocal()),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (status == 'pending') ...[
+            const SizedBox(height: 8),
+            Text(
+              _c(
+                'Bestätige kurz, ob du dabei bist. So weiß die andere Person, worauf sie sich verlassen kann.',
+                'Confirm whether you are coming so the other person can rely on your answer.',
+                'Confirmez votre présence pour que l’autre personne puisse s’organiser.',
+                'أكد حضورك حتى يتمكن الطرف الآخر من التخطيط.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (status == 'no_show') ...[
+            const SizedBox(height: 8),
+            Text(
+              _c(
+                'Diese Teilnahme wurde als nicht erschienen gemeldet.',
+                'This attendance was reported as a no-show.',
+                'Cette participation a été signalée comme absence.',
+                'تم الإبلاغ عن عدم الحضور.',
+              ),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (status == 'pending' || status == 'cancelled' || status == 'confirmed') ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (status == 'pending' || status == 'cancelled')
+                  FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _updateAttendance(matching, 'confirm'),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: Text(_c('Ich komme', 'I’m coming', 'Je viens', 'سآتي')),
+                  ),
+                if (status == 'confirmed')
+                  FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _updateAttendance(matching, 'check_in'),
+                    icon: const Icon(Icons.login, size: 18),
+                    label: Text(
+                      _c('Angekommen', 'I’m here', 'Je suis arrivé', 'وصلت'),
+                    ),
+                  ),
+                if (canCancel)
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _updateAttendance(matching, 'cancel'),
+                    icon: const Icon(Icons.close, size: 18),
+                    label: Text(_c('Absagen', 'Cancel', 'Annuler', 'إلغاء')),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _applicationRow(JsonMap matching, JsonMap application) {
     final user = application['user'] is JsonMap
         ? application['user'] as JsonMap
@@ -1024,32 +1241,86 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     final team = application['team'] is JsonMap
         ? application['team'] as JsonMap
         : null;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text('${team?['name'] ?? user['name'] ?? ''}'),
-      subtitle: Text('${application['message'] ?? ''}'),
-      trailing: application['status'] == 'pending'
-          ? Wrap(
-              children: [
-                IconButton(
-                  onPressed: () => _decide(matching, application, 'accepted'),
-                  icon: const Icon(Icons.check, color: Colors.green),
+    final attendance = application['attendance'] is JsonMap
+        ? application['attendance'] as JsonMap
+        : null;
+    final attendanceStatus = '${attendance?['status'] ?? ''}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('${team?['name'] ?? user['name'] ?? ''}'),
+          subtitle: Text('${application['message'] ?? ''}'),
+          trailing: application['status'] == 'pending'
+              ? Wrap(
+                  children: [
+                    IconButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _decide(matching, application, 'accepted'),
+                      icon: const Icon(Icons.check, color: Colors.green),
+                    ),
+                    IconButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _decide(matching, application, 'declined'),
+                      icon: const Icon(Icons.close, color: Colors.red),
+                    ),
+                  ],
+                )
+              : Text(
+                  _applicationStatusLabel(application['status']),
+                  style: TextStyle(
+                    color: application['status'] == 'accepted'
+                        ? Colors.green
+                        : airmiusMutedColor(context),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                IconButton(
-                  onPressed: () => _decide(matching, application, 'declined'),
-                  icon: const Icon(Icons.close, color: Colors.red),
-                ),
-              ],
-            )
-          : Text(
-              _applicationStatusLabel(application['status']),
-              style: TextStyle(
-                color: application['status'] == 'accepted'
-                    ? Colors.green
-                    : airmiusMutedColor(context),
-                fontWeight: FontWeight.w800,
-              ),
+        ),
+        if (application['status'] == 'accepted' && attendance != null) ...[
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: _attendanceStatusColor(attendanceStatus).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _attendanceStatusLabel(attendanceStatus),
+                    style: TextStyle(
+                      color: _attendanceStatusColor(attendanceStatus),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (attendanceStatus == 'confirmed')
+                  TextButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _reportNoShow(
+                              matching,
+                              _int(user['id']),
+                            ),
+                    icon: const Icon(Icons.flag_outlined, size: 17),
+                    label: Text(
+                      _c(
+                        'Nicht erschienen',
+                        'No-show',
+                        'Absent',
+                        'لم يحضر',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1119,21 +1390,158 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
     );
   }
 
-  Future<void> _decide(JsonMap matching, JsonMap application, String status) =>
-      _run(
-        () => _client.decideSportMatchingApplication(
-          _int(matching['id']),
-          _int(application['id']),
-          status,
+  Future<void> _decide(
+    JsonMap matching,
+    JsonMap application,
+    String status,
+  ) => _run(
+    () => _client.decideSportMatchingApplication(
+      _int(matching['id']),
+      _int(application['id']),
+      status,
+    ),
+    onSuccess: (response) {
+      final conversationId = _int(response['conversation_id']);
+      if (status != 'accepted' || conversationId <= 0 || !mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChatDetailScreen(
+            conversationId: conversationId,
+            title: _c('Sport-Match', 'Sport match', 'Match sportif', 'تطابق رياضي'),
+            kind: 'direct',
+          ),
         ),
       );
+    },
+  );
 
-  Future<void> _run(Future<JsonMap> Function() action) async {
+  Future<void> _updateAttendance(JsonMap matching, String action) async {
+    if (action == 'cancel') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            _c(
+              'Teilnahme absagen?',
+              'Cancel attendance?',
+              'Annuler la participation ?',
+              'إلغاء الحضور؟',
+            ),
+          ),
+          content: Text(
+            _c(
+              'Die andere Person wird über deine Absage informiert.',
+              'The other person will be notified about your cancellation.',
+              'L’autre personne sera informée de votre annulation.',
+              'سيتم إبلاغ الطرف الآخر بإلغائك.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_c('Zurück', 'Back', 'Retour', 'رجوع')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_c('Absagen', 'Cancel', 'Annuler', 'إلغاء')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    await _run(
+      () => _client.updateSportMatchingAttendance(
+        _int(matching['id']),
+        action,
+      ),
+    );
+  }
+
+  Future<void> _reportNoShow(JsonMap matching, int targetUserId) async {
+    if (targetUserId <= 0) return;
+    final reasonController = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          _c(
+            'Nicht erschienen melden?',
+            'Report a no-show?',
+            'Signaler une absence ?',
+            'الإبلاغ عن عدم الحضور؟',
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _c(
+                'Melde dies nur, wenn der Termin vorbei ist und die Person nicht erschienen ist.',
+                'Only report this after the session has ended and the person did not show up.',
+                'Signalez-le uniquement après la séance si la personne ne s’est pas présentée.',
+                'أبلغ عن ذلك فقط بعد انتهاء الموعد إذا لم يحضر الشخص.',
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: InputDecoration(
+                labelText: _c(
+                  'Grund (optional)',
+                  'Reason (optional)',
+                  'Motif (facultatif)',
+                  'السبب (اختياري)',
+                ),
+                hintText: _c(
+                  'z. B. keine Absage erhalten',
+                  'e.g. no cancellation received',
+                  'ex. aucune annulation reçue',
+                  'مثال: لم يصل إلغاء',
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_c('Abbrechen', 'Cancel', 'Annuler', 'إلغاء')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, reasonController.text.trim()),
+            child: Text(_c('Melden', 'Report', 'Signaler', 'إبلاغ')),
+          ),
+        ],
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null || !mounted) return;
+    await _run(
+      () => _client.reportSportMatchingNoShow(
+        _int(matching['id']),
+        targetUserId,
+        reason: reason,
+      ),
+    );
+  }
+
+  Future<void> _run(
+    Future<JsonMap> Function() action, {
+    void Function(JsonMap response)? onSuccess,
+  }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await action();
-      if (mounted) _reload();
+      final response = await action();
+      if (mounted) {
+        _reload();
+        onSuccess?.call(response);
+      }
     } catch (error) {
       if (mounted) {
         final message = error is AirmiusApiException

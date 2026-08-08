@@ -14,4 +14,5 @@ class SportMatchingApplication extends Model
     public function matching() { return $this->belongsTo(SportMatching::class, 'sport_matching_id'); }
     public function user() { return $this->belongsTo(User::class); }
     public function team() { return $this->belongsTo(Team::class); }
+    public function attendance() { return $this->hasOne(SportMatchingAttendance::class, 'sport_matching_application_id'); }
 }

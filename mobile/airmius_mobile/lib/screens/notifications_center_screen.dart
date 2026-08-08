@@ -448,6 +448,14 @@ class _NotificationLineState extends State<_NotificationLine> {
         return;
       }
 
+      if (_isSportMatchingDecisionNotification(notification) &&
+          notification.actionUrl != null &&
+          notification.actionUrl!.isNotEmpty) {
+        AirmiusDeepLinkNavigator.open(context, notification.actionUrl!);
+        widget.onChanged();
+        return;
+      }
+
       if (_isMembershipRequestNotification(notification) &&
           notification.actionUrl != null &&
           notification.actionUrl!.isNotEmpty) {
@@ -708,6 +716,11 @@ bool _isFriendInvitationNotification(AirmiusNotification notification) {
           type == 'friend.request' ||
           type == 'friend.requested') &&
       _intFromDynamic(notification.data['invitation_id']) != null;
+}
+
+bool _isSportMatchingDecisionNotification(AirmiusNotification notification) {
+  return notification.type == 'sport_matching.decision' &&
+      _intFromDynamic(notification.data['conversation_id']) != null;
 }
 
 int? _intFromDynamic(Object? value) {

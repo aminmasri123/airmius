@@ -52,6 +52,10 @@ Schedule::command('airmius:send-event-reminders')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('airmius:send-sport-matching-reminders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('airmius:mobile-push-dispatch --limit=500')
     ->everyMinute()
     ->withoutOverlapping();

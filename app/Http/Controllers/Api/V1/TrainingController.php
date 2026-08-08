@@ -28,7 +28,11 @@ class TrainingController extends Controller
             ->latest()
             ->paginate($this->perPage($request));
 
-        return TrainingPlanResource::collection($plans);
+        return TrainingPlanResource::collection($plans)->additional([
+            'capabilities' => [
+                'can_manage_training_plans' => $this->resources->canManageTrainingPlans($request->user()),
+            ],
+        ]);
     }
 
     public function templates(Request $request)
@@ -40,7 +44,11 @@ class TrainingController extends Controller
             ->latest('updated_at')
             ->paginate($this->perPage($request));
 
-        return TrainingPlanResource::collection($templates);
+        return TrainingPlanResource::collection($templates)->additional([
+            'capabilities' => [
+                'can_manage_training_plans' => $this->resources->canManageTrainingPlans($request->user()),
+            ],
+        ]);
     }
 
     public function showPlan(Request $request, TrainingPlan $trainingPlan)
@@ -56,6 +64,8 @@ class TrainingController extends Controller
 
     public function storePlan(Request $request)
     {
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+
         $data = $this->validatePlanData($request);
 
         $plan = DB::transaction(function () use ($request, $data) {
@@ -98,7 +108,7 @@ class TrainingController extends Controller
 
     public function destroyPlan(Request $request, TrainingPlan $trainingPlan)
     {
-        abort_unless((int) $trainingPlan->created_by === (int) $request->user()->id, 403);
+        abort_unless($this->resources->canDeletePlan($request->user(), $trainingPlan), 403);
 
         $trainingPlan->load('items');
 
@@ -163,6 +173,8 @@ class TrainingController extends Controller
 
     public function instantiateTemplate(Request $request, TrainingPlan $trainingPlan)
     {
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+
         abort_unless(
             $this->visiblePlans($request)
                 ->whereKey($trainingPlan->id)
@@ -358,7 +370,7 @@ class TrainingController extends Controller
 
     private function validatePlanData(Request $request): array
     {
-        $teamIds = $request->user()->teams()->pluck('teams.id')->all();
+        $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
 
         return $request->validate([
             'title' => ['required', 'string', 'max:160'],
@@ -709,7 +721,7 @@ class TrainingController extends Controller
     private function visiblePlans(Request $request)
     {
         $user = $request->user();
-        $teamIds = $user->teams()->pluck('teams.id')->all();
+        $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
 
         return TrainingPlan::query()->where(function ($query) use ($user, $teamIds) {
             $query
@@ -726,7 +738,7 @@ class TrainingController extends Controller
     private function visibleLogs(Request $request)
     {
         $user = $request->user();
-        $teamIds = $user->teams()->pluck('teams.id')->all();
+        $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
 
         return TrainingLog::query()->where(function ($query) use ($user, $teamIds) {
             $query

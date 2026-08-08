@@ -49,6 +49,7 @@ const selectedTeams = ref({})
 
 const availableTeams = computed(() => props.teams || [])
 const resultCount = computed(() => Number(props.matchings?.meta?.total || props.matchings?.data?.length || 0))
+const ownMatchings = computed(() => (props.matchings?.data || []).filter((matching) => (matching.mine || matching.my_application === 'accepted') && matching.attendance))
 const modeLabel = computed(() => tab.value === 'team' ? 'Team-Herausforderungen' : 'Sportpartner')
 const formatLocation = (matching) => {
     const locationName = String(matching?.location_name || '').trim()
@@ -121,6 +122,33 @@ const applicationStatusLabel = (status) => ({
     accepted: 'Anfrage angenommen',
     declined: 'Anfrage abgelehnt',
 })[status] || status
+const attendanceStatusLabel = (status) => ({
+    pending: 'Noch nicht bestätigt',
+    confirmed: 'Teilnahme bestätigt',
+    checked_in: 'Angekommen',
+    cancelled: 'Abgesagt',
+    no_show: 'Nicht erschienen',
+})[status] || status || 'Noch nicht bestätigt'
+const attendanceStatusClass = (status) => ({
+    pending: 'bg-amber-400/10 text-amber-600',
+    confirmed: 'bg-air-blue/10 text-air-blue',
+    checked_in: 'bg-emerald-400/10 text-emerald-600',
+    cancelled: 'bg-inputBg text-secondary',
+    no_show: 'bg-red-400/10 text-red-500',
+})[status] || 'bg-inputBg text-secondary'
+const updateAttendance = (matching, action) => router.put(
+    route('auth.sport-matching.attendance.update', matching.id),
+    { action },
+    { preserveScroll: true },
+)
+const reportNoShow = (matching, targetUserId) => {
+    if (!window.confirm('Als nicht erschienen melden?')) return
+    router.post(
+        route('auth.sport-matching.attendance.no-show', matching.id),
+        { target_user_id: targetUserId },
+        { preserveScroll: true },
+    )
+}
 const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), {
     mode: tab.value,
     location: filterLocation.value || undefined,
@@ -225,6 +253,16 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
             <main class="min-w-0">
                 <SportMatchingSwipeDeck v-if="view === 'swipe'" :items="matchings.data || []" :teams="availableTeams" />
 
+                <section v-if="view === 'swipe' && ownMatchings.length" class="mt-5 rounded-[26px] border border-border bg-card p-5 shadow-sm sm:p-6">
+                    <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-black uppercase tracking-[0.18em] text-air-blue">Deine Termine</p><h2 class="mt-1 text-xl font-black text-primary">Teilnahme im Blick behalten</h2></div><i class="las la-calendar-check text-2xl text-air-blue"></i></div>
+                    <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div v-for="matching in ownMatchings" :key="`attendance-${matching.id}`" class="rounded-2xl border border-border bg-inputBg/60 p-4">
+                            <div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="truncate text-sm font-black text-primary">{{ matching.title }}</p><p class="mt-1 text-xs text-secondary">{{ formatDateTime(matching.starts_at) }} · {{ formatLocation(matching) }}</p></div><span class="shrink-0 rounded-full px-3 py-1 text-[11px] font-black" :class="attendanceStatusClass(matching.attendance?.status)">{{ attendanceStatusLabel(matching.attendance?.status) }}</span></div>
+                            <div v-if="matching.attendance" class="mt-3 flex flex-wrap gap-2"><button v-if="['pending', 'cancelled'].includes(matching.attendance.status)" type="button" class="rounded-xl bg-air-blue px-3 py-2 text-xs font-black text-buttonTextPrimary" @click="updateAttendance(matching, 'confirm')">Ich komme</button><button v-if="matching.attendance.status === 'confirmed'" type="button" class="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-black text-white" @click="updateAttendance(matching, 'check_in')">Angekommen</button><button v-if="['pending', 'confirmed'].includes(matching.attendance.status)" type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-black text-secondary" @click="updateAttendance(matching, 'cancel')">Absagen</button></div>
+                        </div>
+                    </div>
+                </section>
+
                 <section v-else-if="matchings.data?.length" class="grid gap-4 lg:grid-cols-2">
                     <article v-for="matching in matchings.data" :key="matching.id" class="group overflow-hidden rounded-[26px] border border-border bg-card shadow-[0_12px_35px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-air-blue/40 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)]">
                         <div class="h-1.5 bg-gradient-to-r from-air-blue via-air-blue/75 to-air-green"></div>
@@ -233,9 +271,9 @@ const goToPage = (pageNumber) => router.get(route('auth.sport-matching.index'), 
                             <p v-if="matching.description" class="mt-3 line-clamp-2 text-sm leading-6 text-secondary">{{ matching.description }}</p>
                             <div class="mt-5 grid gap-3 rounded-2xl bg-inputBg/60 p-4 text-sm text-secondary"><span class="flex items-start gap-3"><i class="las la-map-marker mt-0.5 text-lg text-air-blue"></i><span class="min-w-0 break-words">{{ formatLocation(matching) }}</span></span><span class="flex items-center gap-3"><i class="las la-calendar text-lg text-air-blue"></i>{{ formatDateTime(matching.starts_at) }} Uhr</span><span class="flex items-center gap-3"><i class="las la-signal text-lg text-air-blue"></i>{{ matching.skill_level === 'all' ? 'Alle Niveaus' : matching.skill_level }} · bis {{ matching.radius_km }} km</span></div>
                             <div class="mt-5 flex items-center gap-3 border-t border-border pt-4"><div class="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-air-blue/10 text-sm font-black text-air-blue"><img v-if="matching.owner?.profile_photo_url" :src="matching.owner.profile_photo_url" :alt="matching.owner.name" class="h-full w-full object-cover"><span v-else>{{ (matching.owner?.name || '?').slice(0, 1).toUpperCase() }}</span></div><div class="min-w-0"><p class="text-[11px] font-bold uppercase tracking-wide text-secondary">Angebot von</p><p class="truncate text-sm font-black text-primary">{{ matching.owner?.name || 'Sport-Community' }}<span v-if="matching.team" class="font-normal text-secondary"> · {{ matching.team.name }}</span></p></div></div>
-                            <div v-if="matching.mine" class="mt-5 space-y-3 border-t border-border pt-5"><div v-for="application in matching.applications" :key="application.id" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-inputBg/60 p-3"><div><strong class="text-sm text-primary">{{ application.team?.name || application.user?.name }}</strong><p v-if="application.message" class="mt-1 text-xs text-secondary">{{ application.message }}</p></div><div v-if="application.status === 'pending'" class="flex gap-2"><button type="button" class="rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-600" @click="decide(matching, application, 'accepted')">Annehmen</button><button type="button" class="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-500" @click="decide(matching, application, 'declined')">Ablehnen</button></div><span v-else class="text-xs font-black" :class="application.status === 'accepted' ? 'text-emerald-600' : 'text-secondary'">{{ applicationStatusLabel(application.status) }}</span></div><button type="button" class="text-xs font-black text-red-500 hover:underline" @click="router.post(route('auth.sport-matching.cancel', matching.id), {}, { preserveScroll: true })">Suche schließen</button></div>
+                            <div v-if="matching.mine" class="mt-5 space-y-3 border-t border-border pt-5"><div v-for="application in matching.applications" :key="application.id" class="rounded-2xl border border-border bg-inputBg/60 p-3"><div class="flex flex-wrap items-center justify-between gap-3"><div><strong class="text-sm text-primary">{{ application.team?.name || application.user?.name }}</strong><p v-if="application.message" class="mt-1 text-xs text-secondary">{{ application.message }}</p></div><div v-if="application.status === 'pending'" class="flex gap-2"><button type="button" class="rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-600" @click="decide(matching, application, 'accepted')">Annehmen</button><button type="button" class="rounded-xl bg-red-500/10 px-3 py-2 text-xs font-black text-red-500" @click="decide(matching, application, 'declined')">Ablehnen</button></div><span v-else class="text-xs font-black" :class="application.status === 'accepted' ? 'text-emerald-600' : 'text-secondary'">{{ applicationStatusLabel(application.status) }}</span></div><div v-if="application.status === 'accepted' && application.attendance" class="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3"><span class="rounded-full px-3 py-1 text-[11px] font-black" :class="attendanceStatusClass(application.attendance.status)">{{ attendanceStatusLabel(application.attendance.status) }}</span><button v-if="application.attendance.status === 'confirmed'" type="button" class="rounded-xl border border-red-400/40 px-3 py-2 text-xs font-black text-red-500" @click="reportNoShow(matching, application.user.id)">Nicht erschienen melden</button></div></div><button type="button" class="text-xs font-black text-red-500 hover:underline" @click="router.post(route('auth.sport-matching.cancel', matching.id), {}, { preserveScroll: true })">Suche schließen</button></div>
                             <div v-else-if="!matching.my_application" class="mt-5 space-y-3 border-t border-border pt-5"><select v-if="matching.mode === 'team'" v-model="selectedTeams[matching.id]" class="h-11 w-full rounded-xl border-border bg-inputBg text-sm text-primary"><option value="">Team auswählen</option><option v-for="team in availableTeams" :key="team.id" :value="team.id">{{ team.name }}</option></select><textarea v-model="applicationMessages[matching.id]" rows="2" class="w-full rounded-xl border-border bg-inputBg text-sm text-primary" placeholder="Kurze Nachricht (optional)" /><button type="button" class="w-full rounded-2xl bg-air-blue px-4 py-3 text-sm font-black text-buttonTextPrimary transition hover:bg-air-blue/90" @click="apply(matching)"><i class="las la-paper-plane me-1"></i> Interesse senden</button></div>
-                            <p v-else class="mt-5 rounded-2xl p-4 text-sm font-black" :class="matching.my_application === 'accepted' ? 'bg-emerald-400/10 text-emerald-600' : matching.my_application === 'declined' ? 'bg-red-400/10 text-red-500' : 'bg-air-blue/10 text-air-blue'">{{ applicationStatusLabel(matching.my_application) }}<span v-if="matching.my_application === 'accepted'" class="mt-1 block text-xs font-normal">Der Kontakt wurde bestätigt. Vereinbare die Details anschließend direkt.</span></p>
+                            <div v-else class="mt-5 rounded-2xl border border-border bg-inputBg/60 p-4"><div class="flex flex-wrap items-center justify-between gap-3"><span class="text-sm font-black" :class="matching.my_application === 'accepted' ? 'text-emerald-600' : matching.my_application === 'declined' ? 'text-red-500' : 'text-air-blue'">{{ applicationStatusLabel(matching.my_application) }}</span><span v-if="matching.attendance" class="rounded-full px-3 py-1 text-[11px] font-black" :class="attendanceStatusClass(matching.attendance.status)">{{ attendanceStatusLabel(matching.attendance.status) }}</span></div><p v-if="matching.my_application === 'accepted'" class="mt-2 text-xs text-secondary">Bestätige deine Teilnahme und markiere dich am Termin als angekommen.</p><div v-if="matching.my_application === 'accepted' && matching.attendance" class="mt-3 flex flex-wrap gap-2"><button v-if="['pending', 'cancelled'].includes(matching.attendance.status)" type="button" class="rounded-xl bg-air-blue px-3 py-2 text-xs font-black text-buttonTextPrimary" @click="updateAttendance(matching, 'confirm')">Ich komme</button><button v-if="matching.attendance.status === 'confirmed'" type="button" class="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-black text-white" @click="updateAttendance(matching, 'check_in')">Angekommen</button><button v-if="['pending', 'confirmed'].includes(matching.attendance.status)" type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-black text-secondary" @click="updateAttendance(matching, 'cancel')">Absagen</button></div></div>
                         </div>
                     </article>
                 </section>

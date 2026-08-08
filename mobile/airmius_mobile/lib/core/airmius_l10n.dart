@@ -18378,6 +18378,8 @@ final _strings = {
     'trainingHub.editPlan': 'Plan bearbeiten',
     'trainingHub.addLog': 'Training eintragen',
     'trainingHub.emptyPlans': 'Noch keine Trainingspläne vorhanden.',
+    'trainingHub.planPermission':
+        'Trainingspläne dürfen nur Trainer, Club-Owner und Club-Präsidenten erstellen oder bearbeiten.',
     'trainingHub.templates': 'Vorlagen',
     'trainingHub.templatesHint':
         'Speichere bewährte Pläne und starte sie später mit neuen Daten.',
@@ -20635,6 +20637,8 @@ final _strings = {
     'trainingHub.editPlan': 'Edit plan',
     'trainingHub.addLog': 'Record training',
     'trainingHub.emptyPlans': 'No training plans yet.',
+    'trainingHub.planPermission':
+        'Only coaches, club owners and club presidents can create or edit training plans.',
     'trainingHub.templates': 'Templates',
     'trainingHub.templatesHint':
         'Save proven plans and start them later with new dates and assignments.',
@@ -22829,6 +22833,8 @@ final _strings = {
     'trainingHub.editPlan': 'Modifier le plan',
     'trainingHub.addLog': 'Enregistrer une séance',
     'trainingHub.emptyPlans': 'Aucun plan d’entraînement pour le moment.',
+    'trainingHub.planPermission':
+        'Seuls les entraîneurs, propriétaires de club et présidents de club peuvent créer ou modifier des plans.',
     'trainingHub.templates': 'Modèles',
     'trainingHub.templatesHint':
         'Enregistre des plans éprouvés et relance-les plus tard avec de nouvelles dates.',
@@ -25001,6 +25007,8 @@ final _strings = {
     'trainingHub.editPlan': 'تعديل الخطة',
     'trainingHub.addLog': 'تسجيل تدريب',
     'trainingHub.emptyPlans': 'لا توجد خطط تدريب حتى الآن.',
+    'trainingHub.planPermission':
+        'يمكن للمدربين ومالكي الأندية ورؤساء الأندية فقط إنشاء خطط التدريب أو تعديلها.',
     'trainingHub.templates': 'القوالب',
     'trainingHub.templatesHint':
         'احفظ الخطط الناجحة وابدأها لاحقًا بتواريخ وتعيينات جديدة.',

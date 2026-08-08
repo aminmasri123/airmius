@@ -26,6 +26,7 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
+    canManageTrainingPlans: { type: Boolean, default: false },
 })
 
 const {
@@ -222,11 +223,11 @@ const {
                         </div>
                     </div>
                     <div class="hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                        <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
+                        <button v-if="canManageTrainingPlans" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
                             <i class="las la-plus-circle text-lg"></i>
                             {{ tx('training_workspace.actions.create_plan') }}
                         </button>
-                        <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-4" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                        <button v-if="canManageTrainingPlans" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-4" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                             <i class="las la-magic text-lg"></i>
                             {{ tx('training_workspace.actions.ai_plan') }}
                         </button>
@@ -234,6 +235,9 @@ const {
                             <i class="las la-pen-alt text-lg"></i>
                             {{ tx('training_workspace.actions.document') }}
                         </button>
+                        <span v-if="!canManageTrainingPlans" class="col-span-2 text-xs text-secondary">
+                            Trainingspläne werden von Trainern, Club-Ownern und Club-Präsidenten verwaltet.
+                        </span>
                     </div>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg/40 p-2 lg:rounded-2xl lg:bg-muted/30 lg:p-2.5">
@@ -605,10 +609,10 @@ const {
                         <h2 class="text-xl font-semibold text-primary">{{ tx('Trainingspläne', 'Trainingspläne') }}</h2>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                        <button v-if="canManageTrainingPlans" type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                             KI-Plan
                         </button>
-                        <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
+                        <button v-if="canManageTrainingPlans" type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
                             Neuer Plan
                         </button>
                     </div>
@@ -767,7 +771,7 @@ const {
                             <button v-if="plan.status !== 'published' && plan.can_write" type="button" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10" @click="publishPlan(plan)">
                                 Freigeben
                             </button>
-                            <button v-if="plan.can_write" type="button" class="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openModal('delete', plan)">
+                            <button v-if="plan.can_delete" type="button" class="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openModal('delete', plan)">
                                 Löschen
                             </button>
                         </div>
@@ -775,8 +779,8 @@ const {
 
                     <div v-if="!filteredPlans.length" class="rounded-2xl border border-dashed border-border bg-card p-8 text-center lg:col-span-2">
                         <p class="text-lg font-semibold text-primary">Noch kein Plan für diese Auswahl.</p>
-                        <p class="mt-2 text-sm text-secondary">Erstelle den ersten Plan und gib ihn direkt an Sportler oder ein Team frei.</p>
-                        <div class="mt-4 flex flex-wrap justify-center gap-2">
+                        <p class="mt-2 text-sm text-secondary">{{ canManageTrainingPlans ? 'Erstelle den ersten Plan und gib ihn direkt an Sportler oder ein Team frei.' : 'Trainingspläne werden nur von Trainern, Club-Ownern und Club-Präsidenten erstellt. Deine eigenen Trainings kannst du weiterhin als Log dokumentieren.' }}</p>
+                        <div v-if="canManageTrainingPlans" class="mt-4 flex flex-wrap justify-center gap-2">
                             <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                                 KI-Plan erstellen
                             </button>
@@ -822,7 +826,7 @@ const {
                         <div v-for="plan in templatePlans.slice(0, 4)" :key="plan.id" class="rounded-xl border border-border bg-inputBg/40 p-3">
                             <p class="text-sm font-semibold text-primary">{{ plan.title }}</p>
                             <p class="mt-1 text-xs text-secondary">{{ plan.items?.length || 0 }} Einheiten · {{ phaseLabels[plan.settings?.phase] || 'Phase offen' }}</p>
-                            <button type="button" class="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="duplicatePlan(plan)">
+                            <button v-if="canManageTrainingPlans && (plan.can_write || plan.settings?.is_template)" type="button" class="mt-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="duplicatePlan(plan)">
                                 Wiederverwenden
                             </button>
                         </div>
@@ -1847,11 +1851,11 @@ const {
 
         <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:hidden">
             <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_1fr_auto] gap-2">
-                <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                <button v-if="canManageTrainingPlans" type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                     <i class="las la-plus-circle text-lg"></i>
                     Plan
                 </button>
-                <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                <button v-if="canManageTrainingPlans" type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
                     <i class="las la-magic text-lg"></i>
                     KI
                 </button>

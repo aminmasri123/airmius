@@ -17,7 +17,7 @@ class SportMatchingController extends Controller
     public function index(Request $request)
     {
         $matchings = SportMatching::query()
-            ->with(['user:id,name,profile_photo_path', 'sport:id,name,slug', 'team.club', 'applications.user', 'applications.team'])
+            ->with(['user:id,name,profile_photo_path', 'sport:id,name,slug', 'team.club', 'applications.user', 'applications.team', 'applications.attendance', 'attendances'])
             ->withCount([
                 'applications',
                 'applications as accepted_count' => fn ($q) => $q->where('status', 'accepted'),
@@ -80,7 +80,15 @@ class SportMatchingController extends Controller
 
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application, ApiSportMatchingController $api)
     {
-        $api->decide($request, $sportMatching, $application);
+        $response = $api->decide($request, $sportMatching, $application);
+        $conversationId = data_get($response->getData(true), 'conversation_id');
+
+        if ($request->input('status') === 'accepted' && $conversationId) {
+            return redirect()
+                ->route('auth.conversations.show', $conversationId)
+                ->with('success', 'Matching bestätigt. Der Chat wurde geöffnet.');
+        }
+
         return back()->with('success', 'Anfrage wurde bearbeitet.');
     }
 
@@ -88,5 +96,19 @@ class SportMatchingController extends Controller
     {
         $api->cancel($request, $sportMatching);
         return back()->with('success', 'Matching-Angebot wurde geschlossen.');
+    }
+
+    public function updateAttendance(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
+    {
+        $api->updateAttendance($request, $sportMatching);
+
+        return back()->with('success', 'Teilnahmestatus aktualisiert.');
+    }
+
+    public function reportNoShow(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
+    {
+        $api->reportNoShow($request, $sportMatching);
+
+        return back()->with('success', 'Nicht-Erscheinen wurde gemeldet.');
     }
 }

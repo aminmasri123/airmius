@@ -32,7 +32,7 @@ class TrainingController extends Controller
     public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
-        $teamIds = $user->teams()->pluck('teams.id');
+        $teamIds = $this->resources->trainingPlanTeamIds($user);
         $manageableAthletes = $this->manageableAthletes($user);
         $manageableAthleteIds = $manageableAthletes->pluck('id');
         $activeDraft = $this->currentDraftLog($user, true);
@@ -61,6 +61,7 @@ class TrainingController extends Controller
 
         return Inertia::render('Auth/Dashboard/Training/Index', [
             'plans' => $plans,
+            'canManageTrainingPlans' => $this->resources->canManageTrainingPlans($user),
             'activeDraftLog' => $activeDraft
                 ? $this->resources->log($activeDraft->load([
                     'athlete:id,name,first_name,last_name,email',
@@ -115,8 +116,8 @@ class TrainingController extends Controller
                     'slug' => $sport->slug,
                     'category' => $sport->category,
                 ]),
-            'teams' => $user
-                ->teams()
+            'teams' => Team::query()
+                ->whereIn('teams.id', $teamIds)
                 ->with('users:id,name,first_name,last_name,email')
                 ->orderBy('name')
                 ->get(['teams.id', 'teams.name', 'teams.club_id'])
@@ -222,6 +223,8 @@ class TrainingController extends Controller
         AthleteSportProfileService $sportProfiles,
         TrainingPlanQualityService $quality,
     ) {
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+
         $maxPlanItems = $this->aiTrainingPlanMaxItems();
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
@@ -321,7 +324,9 @@ class TrainingController extends Controller
     public function storeAiTrainingPlan(Request $request)
     {
         $user = $request->user();
-        $teamIds = $user->teams()->pluck('teams.id')->all();
+        abort_unless($this->resources->canManageTrainingPlans($user), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+
+        $teamIds = $this->resources->trainingPlanTeamIds($user)->all();
         $maxPlanItems = $this->aiTrainingPlanMaxItems();
         $data = $request->validate([
             'plan' => ['required', 'array'],
@@ -747,7 +752,9 @@ class TrainingController extends Controller
 
     public function storePlan(Request $request)
     {
-        $teamIds = $request->user()->teams()->pluck('teams.id')->all();
+        abort_unless($this->resources->canManageTrainingPlans($request->user()), 403, 'Nur Trainer, Club-Owner und Club-Präsidenten dürfen Trainingspläne erstellen.');
+
+        $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -1014,7 +1021,10 @@ class TrainingController extends Controller
 
     public function duplicatePlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
+        $canUseTemplate = (bool) data_get($plan->settings, 'is_template', false)
+            && $this->resources->canManageTrainingPlans($request->user());
+
+        abort_unless($this->resources->canWritePlan($request->user(), $plan) || $canUseTemplate, 403);
 
         DB::transaction(function () use ($request, $plan) {
             $plan->load(['items', 'assignments']);
@@ -1094,7 +1104,7 @@ class TrainingController extends Controller
 
     public function destroyPlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless((int) $plan->created_by === (int) $request->user()->id, 403);
+        abort_unless($this->resources->canDeletePlan($request->user(), $plan), 403);
 
         $plan->load('items');
 
@@ -1110,7 +1120,7 @@ class TrainingController extends Controller
 
     private function logFormProps(User $user, ?TrainingLog $draft = null): array
     {
-        $teamIds = $user->teams()->pluck('teams.id');
+        $teamIds = $this->resources->trainingPlanTeamIds($user);
         $manageableAthletes = $this->manageableAthletes($user);
 
         $plans = TrainingPlan::query()
@@ -1172,7 +1182,7 @@ class TrainingController extends Controller
             return true;
         }
 
-        $teamIds = $user->teams()->pluck('teams.id');
+        $teamIds = $this->resources->trainingPlanTeamIds($user);
 
         return $plan->assignments()
             ->where(function ($query) use ($user, $teamIds) {
@@ -1483,9 +1493,21 @@ class TrainingController extends Controller
             return Team::query()->pluck('id');
         }
 
-        return $user->teams()
-            ->wherePivotIn('role', ['Coach', 'coach', 'Trainer', 'trainer', 'Captain', 'captain', 'Admin', 'admin', 'Manager', 'manager'])
+        $managedTeamIds = $user->teams()
+            ->wherePivotIn('role', ['Coach', 'coach', 'Trainer', 'trainer', 'ClubPresident', 'club_president', 'Captain', 'captain', 'Admin', 'admin', 'Manager', 'manager'])
             ->pluck('teams.id');
+
+        $ownedClubIds = $user->clubs()
+            ->where('clubs.owner_id', $user->id)
+            ->pluck('clubs.id');
+
+        if ($ownedClubIds->isNotEmpty()) {
+            $managedTeamIds = $managedTeamIds->merge(
+                Team::query()->whereIn('club_id', $ownedClubIds)->pluck('id')
+            );
+        }
+
+        return $managedTeamIds->unique()->values();
     }
 
     private function canLogPlanItemForAthlete(User $user, int $athleteId, TrainingPlanItem $item, array $manageableAthleteIds): bool

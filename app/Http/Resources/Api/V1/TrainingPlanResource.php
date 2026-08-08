@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\User;
+use App\Services\Training\TrainingResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -27,8 +28,8 @@ class TrainingPlanResource extends JsonResource
             'settings' => $this->settings,
             'is_template' => (bool) data_get($this->settings, 'is_template', false),
             'template_source_id' => data_get($this->settings, 'template_source_id'),
-            'can_write' => $viewer ? $this->canWrite($viewer) : false,
-            'can_delete' => $viewer ? (int) $this->created_by === (int) $viewer->id : false,
+            'can_write' => $viewer ? app(TrainingResourceService::class)->canWritePlan($viewer, $this->resource) : false,
+            'can_delete' => $viewer ? app(TrainingResourceService::class)->canDeletePlan($viewer, $this->resource) : false,
             'creator' => new UserResource($this->whenLoaded('creator')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'assignments_count' => $this->whenCounted('assignments'),
@@ -67,21 +68,4 @@ class TrainingPlanResource extends JsonResource
         ];
     }
 
-    private function canWrite(User $user): bool
-    {
-        if ((int) $this->created_by === (int) $user->id) {
-            return true;
-        }
-
-        $teamIds = $user->teams()->pluck('teams.id');
-
-        return $this->assignments()
-            ->where('permission', 'write')
-            ->where(function ($query) use ($user, $teamIds) {
-                $query
-                    ->where('user_id', $user->id)
-                    ->orWhereIn('team_id', $teamIds);
-            })
-            ->exists();
-    }
 }

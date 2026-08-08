@@ -317,6 +317,14 @@ class TrainingPlanApiCrudTest extends TestCase
 
         Sanctum::actingAs($athlete);
 
+        $this->postJson("/api/v1/training/templates/{$templateId}/instantiate", [
+            'title' => 'Neue Grundlagenwoche',
+            'starts_on' => now()->addWeek()->toDateString(),
+            'ends_on' => now()->addWeeks(2)->toDateString(),
+        ])->assertForbidden();
+
+        Sanctum::actingAs($coach);
+
         $copy = $this->postJson("/api/v1/training/templates/{$templateId}/instantiate", [
             'title' => 'Neue Grundlagenwoche',
             'starts_on' => now()->addWeek()->toDateString(),
@@ -330,9 +338,66 @@ class TrainingPlanApiCrudTest extends TestCase
         $this->assertNotSame($templateId, $copy->json('data.id'));
         $this->assertDatabaseHas('training_plans', [
             'id' => $copy->json('data.id'),
-            'created_by' => $athlete->id,
+            'created_by' => $coach->id,
             'status' => 'draft',
         ]);
+    }
+
+    public function test_only_coaches_club_owners_and_club_presidents_can_create_or_modify_plans(): void
+    {
+        $owner = User::factory()->create();
+        $coach = User::factory()->create();
+        $president = User::factory()->create();
+        $captain = User::factory()->create();
+        $player = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+
+        $team->users()->attach([
+            $coach->id => ['role' => TeamRoles::COACH],
+            $president->id => ['role' => TeamRoles::CLUB_PRESIDENT],
+            $captain->id => ['role' => TeamRoles::CAPTAIN],
+            $player->id => ['role' => TeamRoles::PLAYER],
+        ]);
+
+        $payload = [
+            'title' => 'Sommerplan',
+            'cadence' => 'weekly',
+            'status' => 'draft',
+            'share_permission' => 'write',
+            'team_id' => $team->id,
+            'item_title' => 'Grundlageneinheit',
+        ];
+
+        foreach ([$coach, $owner, $president] as $manager) {
+            Sanctum::actingAs($manager);
+
+            $this->postJson('/api/v1/training/plans', $payload)
+                ->assertCreated()
+                ->assertJsonPath('data.can_write', true);
+        }
+
+        foreach ([$captain, $player] as $restrictedUser) {
+            Sanctum::actingAs($restrictedUser);
+
+            $this->getJson('/api/v1/training/plans')
+                ->assertOk()
+                ->assertJsonPath('capabilities.can_manage_training_plans', false);
+
+            $this->postJson('/api/v1/training/plans', $payload)->assertForbidden();
+        }
+
+        $plan = TrainingPlan::query()->where('created_by', $coach->id)->firstOrFail();
+
+        foreach ([$captain, $player] as $restrictedUser) {
+            Sanctum::actingAs($restrictedUser);
+
+            $this->putJson("/api/v1/training/plans/{$plan->id}", [])
+                ->assertForbidden();
+
+            $this->postJson("/api/v1/training/plans/{$plan->id}/items", [])
+                ->assertForbidden();
+        }
     }
 
     private function trainingFixture(): array

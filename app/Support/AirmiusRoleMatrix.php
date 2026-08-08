@@ -34,9 +34,9 @@ final class AirmiusRoleMatrix
                 'key' => self::TRAINER,
                 'label' => 'Trainer',
                 'scope' => 'team',
-                'platform_roles' => ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'team_manager', 'captain'],
+                'platform_roles' => ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach'],
                 'club_roles' => ['trainer', 'member'],
-                'team_roles' => [TeamRoles::COACH, TeamRoles::CAPTAIN],
+                'team_roles' => [TeamRoles::COACH],
                 'capabilities' => [
                     'team.view',
                     'team.members.coordinate',

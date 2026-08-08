@@ -17,8 +17,9 @@ class TrainingPlanTemplatesScreen extends StatefulWidget {
 
 class _TrainingPlanTemplatesScreenState
     extends State<TrainingPlanTemplatesScreen> {
-  Future<List<_TrainingTemplate>>? _future;
+  Future<_TemplateData>? _future;
   bool _busy = false;
+  bool _canManagePlans = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -31,10 +32,22 @@ class _TrainingPlanTemplatesScreenState
     _future ??= _load();
   }
 
-  Future<List<_TrainingTemplate>> _load() async {
-    return _dataList(
-      await _client.trainingTemplates(),
-    ).map(_TrainingTemplate.fromJson).toList();
+  Future<_TemplateData> _load() async {
+    final response = await _client.trainingTemplates();
+    final capabilities = response['capabilities'];
+    final canManagePlans = capabilities is Map &&
+        capabilities['can_manage_training_plans'] == true;
+    if (mounted && _canManagePlans != canManagePlans) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _canManagePlans != canManagePlans) {
+          setState(() => _canManagePlans = canManagePlans);
+        }
+      });
+    }
+    return _TemplateData(
+      templates: _dataList(response).map(_TrainingTemplate.fromJson).toList(),
+      canManagePlans: canManagePlans,
+    );
   }
 
   void _reload() => setState(() => _future = _load());
@@ -70,7 +83,7 @@ class _TrainingPlanTemplatesScreenState
                 ),
               ),
               const SizedBox(height: 14),
-              FutureBuilder<List<_TrainingTemplate>>(
+              FutureBuilder<_TemplateData>(
                 future: _future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -104,7 +117,8 @@ class _TrainingPlanTemplatesScreenState
                       ),
                     );
                   }
-                  final templates = snapshot.data ?? const [];
+                  final data = snapshot.data ?? const _TemplateData();
+                  final templates = data.templates;
                   if (templates.isEmpty) {
                     return AirmiusPanel(
                       child: Column(
@@ -142,14 +156,18 @@ class _TrainingPlanTemplatesScreenState
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: IconButton(
-                              tooltip: t('trainingHub.useTemplate'),
-                              icon: const Icon(Icons.add_circle_outline),
-                              onPressed: _busy
-                                  ? null
-                                  : () => _instantiate(template),
-                            ),
-                            onTap: _busy ? null : () => _instantiate(template),
+                            trailing: data.canManagePlans
+                                ? IconButton(
+                                    tooltip: t('trainingHub.useTemplate'),
+                                    icon: const Icon(Icons.add_circle_outline),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _instantiate(template),
+                                  )
+                                : null,
+                            onTap: data.canManagePlans && !_busy
+                                ? () => _instantiate(template)
+                                : null,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -336,6 +354,16 @@ class _TrainingTemplate {
   final String title;
   final String? description;
   final int itemsCount;
+}
+
+class _TemplateData {
+  const _TemplateData({
+    this.templates = const [],
+    this.canManagePlans = false,
+  });
+
+  final List<_TrainingTemplate> templates;
+  final bool canManagePlans;
 }
 
 String? _isoDate(DateTime? value) => value == null

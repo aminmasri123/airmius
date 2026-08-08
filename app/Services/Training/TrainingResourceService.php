@@ -6,11 +6,17 @@ use App\Models\TrainingLog;
 use App\Models\TrainingLogFeedback;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
+use App\Models\Team;
 use App\Models\User;
+use App\Support\Roles;
+use App\Support\TeamRoles;
 use Illuminate\Support\Facades\Storage;
 
 class TrainingResourceService
 {
+    /** @var array<int, bool> */
+    private array $planManagerCache = [];
+
     public function plan(TrainingPlan $plan, User $viewer): array
     {
         $items = $plan->items;
@@ -31,6 +37,7 @@ class TrainingResourceService
             'creator' => $plan->creator ? $this->user($plan->creator) : null,
             'team' => $plan->team ? ['id' => $plan->team->id, 'name' => $plan->team->name] : null,
             'can_write' => $this->canWritePlan($viewer, $plan),
+            'can_delete' => $this->canDeletePlan($viewer, $plan),
             'progress' => [
                 'completed' => $completedCount,
                 'missed' => $missedCount,
@@ -145,6 +152,10 @@ class TrainingResourceService
 
     public function canWritePlan(User $user, TrainingPlan $plan): bool
     {
+        if (! $this->canManageTrainingPlans($user)) {
+            return false;
+        }
+
         if ((int) $plan->created_by === (int) $user->id) {
             return true;
         }
@@ -159,6 +170,81 @@ class TrainingResourceService
                     ->orWhereIn('team_id', $teamIds);
             })
             ->exists();
+    }
+
+    /**
+     * Trainingspläne sind eine fachliche Trainer-Funktion. Team-Mitgliedschaft
+     * oder eine Schreibzuweisung allein darf diese Berechtigung nicht verleihen.
+     */
+    public function canManageTrainingPlans(User $user): bool
+    {
+        $userId = (int) $user->id;
+
+        if (array_key_exists($userId, $this->planManagerCache)) {
+            return $this->planManagerCache[$userId];
+        }
+
+        $allowed = false;
+
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            $allowed = true;
+        } elseif ($user->hasAnyRole([
+            'club_owner',
+            'coach',
+            'assistant_coach',
+            'performance_coach',
+            'fitness_coach',
+        ])) {
+            $allowed = true;
+        } elseif (
+            // Ein Club-Owner kann auch dann verwalten, wenn die globale Rolle
+            // noch nicht synchronisiert wurde.
+            $user->clubs()->where('clubs.owner_id', $user->id)->exists()
+            || $user->clubs()->wherePivotIn('role', ['owner', 'trainer'])->exists()
+        ) {
+            $allowed = true;
+        } else {
+            // ClubPresident ist eine Team-Pivot-Rolle. Captain und TeamManager
+            // sind bewusst nicht enthalten.
+            $allowed = $user->teams()
+                ->wherePivotIn('role', [
+                    TeamRoles::COACH,
+                    TeamRoles::CLUB_PRESIDENT,
+                    'coach',
+                    'club_president',
+                ])
+                ->exists();
+        }
+
+        return $this->planManagerCache[$userId] = $allowed;
+    }
+
+    public function canDeletePlan(User $user, TrainingPlan $plan): bool
+    {
+        return $this->canManageTrainingPlans($user)
+            && (int) $plan->created_by === (int) $user->id;
+    }
+
+    /**
+     * Teams, die ein berechtigter Nutzer bei der Planerstellung auswählen darf.
+     * Club-Owner verwalten dabei auch Teams ihres Clubs, ohne selbst in jedem
+     * einzelnen Team Mitglied sein zu müssen.
+     */
+    public function trainingPlanTeamIds(User $user)
+    {
+        $teamIds = $user->teams()->pluck('teams.id');
+
+        $ownedClubIds = $user->clubs()
+            ->where('clubs.owner_id', $user->id)
+            ->pluck('clubs.id');
+
+        if ($ownedClubIds->isNotEmpty()) {
+            $teamIds = $teamIds->merge(
+                Team::query()->whereIn('club_id', $ownedClubIds)->pluck('id')
+            );
+        }
+
+        return $teamIds->unique()->values();
     }
 
     private function trainingPlanComparison(TrainingLog $log): ?array

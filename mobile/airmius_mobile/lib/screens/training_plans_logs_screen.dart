@@ -26,6 +26,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   Future<_TrainingData>? _future;
   int _tab = 0;
   bool _busy = false;
+  bool _canManagePlans = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -43,9 +44,20 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
       _client.trainingPlans(),
       _client.trainingLogs(),
     ]);
+    final capabilities = responses[0]['capabilities'];
+    final canManagePlans = capabilities is Map &&
+        capabilities['can_manage_training_plans'] == true;
+    if (mounted && _canManagePlans != canManagePlans) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _canManagePlans != canManagePlans) {
+          setState(() => _canManagePlans = canManagePlans);
+        }
+      });
+    }
     return _TrainingData(
       plans: _dataList(responses[0]).map(_TrainingPlan.fromJson).toList(),
       logs: _dataList(responses[1]).map(_TrainingLog.fromJson).toList(),
+      canManagePlans: canManagePlans,
     );
   }
 
@@ -96,13 +108,15 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _busy ? null : (_tab == 0 ? _createPlan : _createLog),
-        icon: const Icon(Icons.add),
-        label: Text(
-          t(_tab == 0 ? 'trainingHub.addPlan' : 'trainingHub.addLog'),
-        ),
-      ),
+      floatingActionButton: (_tab == 1 || _canManagePlans)
+          ? FloatingActionButton.extended(
+              onPressed: _busy ? null : (_tab == 0 ? _createPlan : _createLog),
+              icon: const Icon(Icons.add),
+              label: Text(
+                t(_tab == 0 ? 'trainingHub.addPlan' : 'trainingHub.addLog'),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -189,7 +203,11 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
                   final data = snapshot.data ?? const _TrainingData();
                   return _tab == 0
-                      ? _planList(data.plans, t)
+                      ? _planList(
+                          data.plans,
+                          t,
+                          canManagePlans: data.canManagePlans,
+                        )
                       : _logList(data.logs, t);
                 },
               ),
@@ -200,24 +218,47 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     );
   }
 
-  Widget _planList(List<_TrainingPlan> plans, String Function(String) t) {
+  Widget _planList(
+    List<_TrainingPlan> plans,
+    String Function(String) t, {
+    required bool canManagePlans,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusButton(
-          label: t('trainingHub.aiPlan'),
-          icon: Icons.auto_awesome_outlined,
-          secondary: true,
-          onPressed: _busy ? null : _createAiPlan,
-        ),
-        const SizedBox(height: 12),
-        if (plans.isEmpty)
-          _EmptyTrainingState(
-            icon: Icons.calendar_month_outlined,
-            text: t('trainingHub.emptyPlans'),
-            action: t('trainingHub.addPlan'),
-            onAction: _createPlan,
+        if (canManagePlans) ...[
+          AirmiusButton(
+            label: t('trainingHub.aiPlan'),
+            icon: Icons.auto_awesome_outlined,
+            secondary: true,
+            onPressed: _busy ? null : _createAiPlan,
           ),
+          const SizedBox(height: 12),
+        ],
+        if (plans.isEmpty)
+          canManagePlans
+              ? _EmptyTrainingState(
+                  icon: Icons.calendar_month_outlined,
+                  text: t('trainingHub.emptyPlans'),
+                  action: t('trainingHub.addPlan'),
+                  onAction: _createPlan,
+                )
+              : AirmiusPanel(
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.lock_outline,
+                        size: 48,
+                        color: AirmiusColors.blue,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        t('trainingHub.planPermission'),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
         for (final plan in plans) ...[
           AirmiusPanel(
             child: ListTile(
@@ -2473,10 +2514,15 @@ class _TrainingChoices {
 }
 
 class _TrainingData {
-  const _TrainingData({this.plans = const [], this.logs = const []});
+  const _TrainingData({
+    this.plans = const [],
+    this.logs = const [],
+    this.canManagePlans = false,
+  });
 
   final List<_TrainingPlan> plans;
   final List<_TrainingLog> logs;
+  final bool canManagePlans;
 }
 
 class _TrainingPlan {

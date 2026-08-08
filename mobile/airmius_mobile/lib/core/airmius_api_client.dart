@@ -1074,6 +1074,28 @@ class AirmiusApiClient {
     body: {'status': status},
   );
 
+  Future<AirmiusJson> updateSportMatchingAttendance(
+    int matchingId,
+    String action,
+  ) => _json(
+    'PUT',
+    '/api/v1/sport-matching/$matchingId/attendance',
+    body: {'action': action},
+  );
+
+  Future<AirmiusJson> reportSportMatchingNoShow(
+    int matchingId,
+    int targetUserId, {
+    String? reason,
+  }) => _json(
+    'POST',
+    '/api/v1/sport-matching/$matchingId/attendance/no-show',
+    body: {
+      'target_user_id': targetUserId,
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+    },
+  );
+
   Future<AirmiusJson> cancelSportMatching(int matchingId) =>
       _json('POST', '/api/v1/sport-matching/$matchingId/cancel');
 
