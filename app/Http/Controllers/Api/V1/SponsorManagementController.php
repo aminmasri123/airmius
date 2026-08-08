@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Services\PlanFeatureService;
+use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,28 +19,34 @@ class SponsorManagementController extends Controller
     public function index(Request $request): JsonResponse
     {
         $this->authorizeManagement($request);
+        $global = $this->canManageGlobal($request);
+        $managedClubIds = $this->managedClubIds($request);
         $clubs = Club::query()
-            ->visibleTo($request->user())
+            ->when(! $global, fn ($query) => $query->whereIn('id', $managedClubIds))
             ->select(['id', 'name'])
             ->orderBy('name')
+            ->limit(100)
             ->get();
-        $sponsors = Sponsor::query()
+        $sponsorQuery = Sponsor::query()
             ->with('club:id,name')
+            ->when(! $global, fn ($query) => $query->whereIn('club_id', $managedClubIds));
+        $stats = [
+            'total' => (clone $sponsorQuery)->count(),
+            'platform' => (clone $sponsorQuery)->where('scope', 'platform')->count(),
+            'outfit_subscription' => (clone $sponsorQuery)->where('scope', 'outfit_subscription')->count(),
+            'club' => (clone $sponsorQuery)->where('scope', 'club')->count(),
+        ];
+        $sponsors = (clone $sponsorQuery)
+            ->latest('id')
+            ->limit(500)
             ->get()
-            ->filter(fn (Sponsor $sponsor) => $this->canManageSponsor($request, $sponsor))
-            ->sortByDesc('id')
             ->map(fn (Sponsor $sponsor) => $this->sponsorData($sponsor))
             ->values();
 
         return response()->json([
             'data' => $sponsors,
             'clubs' => $clubs,
-            'stats' => [
-                'total' => $sponsors->count(),
-                'platform' => $sponsors->where('scope', 'platform')->count(),
-                'outfit_subscription' => $sponsors->where('scope', 'outfit_subscription')->count(),
-                'club' => $sponsors->where('scope', 'club')->count(),
-            ],
+            'stats' => $stats,
         ]);
     }
 
@@ -51,7 +58,7 @@ class SponsorManagementController extends Controller
         $sponsor = Sponsor::query()->create($this->normalize($data));
 
         return response()->json([
-            'message' => 'sponsor_created',
+            'message' => __('sponsor.flash.created'),
             'data' => $this->sponsorData($sponsor->load('club:id,name')),
         ], 201);
     }
@@ -64,7 +71,7 @@ class SponsorManagementController extends Controller
         $sponsor->update($this->normalize($data));
 
         return response()->json([
-            'message' => 'sponsor_updated',
+            'message' => __('sponsor.flash.updated'),
             'data' => $this->sponsorData($sponsor->fresh('club:id,name')),
         ]);
     }
@@ -74,7 +81,7 @@ class SponsorManagementController extends Controller
         abort_unless($this->canManageSponsor($request, $sponsor), 403);
         $sponsor->delete();
 
-        return response()->json(['message' => 'sponsor_deleted']);
+        return response()->json(['message' => __('sponsor.flash.deleted')]);
     }
 
     private function validated(Request $request): array
@@ -98,7 +105,7 @@ class SponsorManagementController extends Controller
     {
         if ($data['scope'] === 'club') {
             $club = Club::query()->findOrFail($data['club_id']);
-            abort_unless($request->user()->can('update', $club), 403);
+            abort_unless($this->canManageGlobal($request) || $this->managedClubIds($request)->contains($club->id), 403);
             $this->planFeatures->ensureAllows($club, 'sponsors');
 
             return;
@@ -144,7 +151,7 @@ class SponsorManagementController extends Controller
     {
         abort_unless(
             $this->canManageGlobal($request)
-                || Club::query()->visibleTo($request->user())->get()->contains(fn (Club $club) => $request->user()->can('update', $club)),
+                || $this->managedClubIds($request)->isNotEmpty(),
             403,
         );
     }
@@ -155,13 +162,23 @@ class SponsorManagementController extends Controller
             return $this->canManageGlobal($request);
         }
 
-        return $sponsor->club && $request->user()->can('update', $sponsor->club);
+        return $this->managedClubIds($request)->contains($sponsor->club_id);
     }
 
     private function canManageGlobal(Request $request): bool
     {
         return $request->user()->can('finance.edit')
             || $request->user()->can('system.manage')
-            || $request->user()->hasAnyRole(['super_admin', 'admin']);
+            || $request->user()->hasAnyRole(['super_admin', 'admin', 'sponsor_manager']);
+    }
+
+    private function managedClubIds(Request $request)
+    {
+        $user = $request->user();
+        $owned = Club::query()->where('owner_id', $user->id)->pluck('id');
+        $managed = ClubRoles::whereAny($user->clubs(), ['owner', 'admin', 'manager', 'financial_controller'])
+            ->pluck('clubs.id');
+
+        return $owned->concat($managed)->map(fn ($id) => (int) $id)->unique()->values();
     }
 }

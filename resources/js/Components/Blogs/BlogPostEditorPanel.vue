@@ -88,9 +88,9 @@ const setEditor = (element) => {
                             :href="route('blog-categories.index')"
                             class="text-sm font-semibold text-primary hover:text-air-blue hover:underline"
                         >
-                            Kategorie
+                            {{ $t('Kategorie') }}
                         </Link>
-                        <label v-else class="text-sm font-semibold text-primary">Kategorie</label>
+                        <label v-else class="text-sm font-semibold text-primary">{{ $t('Kategorie') }}</label>
                     </div>
                     <select v-model="form.blog_category_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                         <option value="">Kategorie wählen</option>
@@ -119,7 +119,7 @@ const setEditor = (element) => {
             </div>
 
             <div>
-                <label class="text-sm font-semibold text-primary">Inhalt</label>
+                <label class="text-sm font-semibold text-primary">{{ $t('Inhalt') }}</label>
                 <div class="mt-1 overflow-hidden rounded-lg border border-border bg-inputBg">
                     <div class="flex flex-wrap items-center gap-1 border-b border-border bg-card/70 p-2">
                         <select class="h-9 rounded-md border-border bg-inputBg text-xs font-semibold text-primary" @change="applyContentStyle($event.target.value)">
@@ -205,7 +205,7 @@ const setEditor = (element) => {
 
             <div>
                 <label class="text-sm font-semibold text-primary">Cover Bild</label>
-                <input v-model="form.cover_image" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." />
+                <input v-model="form.cover_image" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('commerce.ui.url_placeholder')" />
                 <input
                     :ref="setCoverUploadInput"
                     type="file"
@@ -403,4 +403,3 @@ const setEditor = (element) => {
     padding: 0.05rem 0.25rem;
 }
 </style>
-

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Notifications\UserDataErasureCompleted;
 use App\Services\UserDataErasureConfirmationService;
 use App\Services\UserDataErasureService;
+use App\Support\SupportedLocale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,10 +27,10 @@ class UserDataErasureController extends Controller
 
     public function sendCode(Request $request, UserDataErasureConfirmationService $confirmation, UserDataErasureService $erasure): RedirectResponse
     {
-        $data = $request->validate($this->confirmationRules($erasure));
+        $data = $request->validate($this->confirmationRules($erasure), $this->validationMessages());
         $confirmation->issue($request->user(), $data['identity'], $data['categories']);
 
-        return back()->with('success', 'Wir haben dir einen Bestätigungscode per E-Mail gesendet. Er ist 15 Minuten gültig.');
+        return back()->with('success', __('data_erasure.flash.code_sent'));
     }
 
     public function destroy(Request $request, UserDataErasureConfirmationService $confirmation, UserDataErasureService $erasure): RedirectResponse
@@ -37,18 +38,18 @@ class UserDataErasureController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string', 'max:32'],
             ...$this->categoryRules($erasure),
-        ], [
-            'code.required' => 'Bitte gib den Code aus deiner E-Mail ein.',
-        ]);
+        ], $this->validationMessages());
 
         $user = $request->user();
         $name = $user->name;
+        $email = $user->email;
+        $locale = SupportedLocale::normalize($user->language) ?? app()->getLocale();
         $categories = $confirmation->consume($user, $data['code'], $data['categories']);
         $erasure->erase($user, $categories);
 
         try {
-            Notification::route('mail', $user->email)
-                ->notify(new UserDataErasureCompleted($name));
+            Notification::route('mail', $email)
+                ->notify(new UserDataErasureCompleted($name, $locale));
         } catch (\Throwable $exception) {
             Log::warning('Data-erasure confirmation email could not be sent.', [
                 'user_id' => $user->id,
@@ -57,7 +58,7 @@ class UserDataErasureController extends Controller
         }
 
         return to_route('auth.settings.privacy.erasure')
-            ->with('success', 'Die ausgewählten Daten wurden gelöscht oder – soweit erforderlich – anonymisiert. Dein Konto bleibt bestehen.');
+            ->with('success', __('data_erasure.flash.completed'));
     }
 
     /**
@@ -79,6 +80,19 @@ class UserDataErasureController extends Controller
         return [
             'categories' => ['required', 'array', 'min:1'],
             'categories.*' => ['required', 'string', Rule::in($erasure->categoryKeys())],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function validationMessages(): array
+    {
+        return [
+            'identity.required' => __('data_erasure.validation.identity_required'),
+            'categories.required' => __('data_erasure.validation.categories_required'),
+            'categories.min' => __('data_erasure.validation.categories_required'),
+            'code.required' => __('data_erasure.validation.code_required'),
         ];
     }
 }

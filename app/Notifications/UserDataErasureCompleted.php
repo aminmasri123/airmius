@@ -12,7 +12,10 @@ class UserDataErasureCompleted extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly ?string $name = null) {}
+    public function __construct(
+        public readonly ?string $name = null,
+        public readonly ?string $recipientLocale = null,
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -22,7 +25,7 @@ class UserDataErasureCompleted extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return EmailTemplate::mail('data_erasure_completed', [
-            'name' => $this->name ?: 'zusammen',
-        ]);
+            'name' => $this->name ?: __('data_erasure.email_templates.together', locale: $this->recipientLocale),
+        ], locale: $this->recipientLocale);
     }
 }

@@ -1,12 +1,12 @@
 <?php
 
+use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CommerceCheckoutController;
-use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
@@ -28,6 +28,7 @@ use App\Http\Controllers\PostHelpfulController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\PublicLearningController;
+use App\Http\Controllers\RecruitingPipelineController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\RoleHomeController;
 use App\Http\Controllers\RoleWorkspaceController;
@@ -90,6 +91,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->name('auth.trainer-cockpit.index');
     Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
     Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
+    Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])->name('auth.recruiting-pipeline.index');
+    Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])->name('auth.recruiting-pipeline.applications.update');
+    Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])->name('auth.recruiting-pipeline.applications.destroy');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');

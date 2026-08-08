@@ -204,7 +204,7 @@ const stepModel = computed({
                                 <option value="NL">{{ $t('Niederlande') }}</option>
                                 <option value="BE">{{ $t('Belgien') }}</option>
                                 <option value="TR">{{ $t('Türkei') }}</option>
-                                <option value="US">USA</option>
+                                <option value="US">{{ $t('USA') }}</option>
                             </select>
                             <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
                         </div>

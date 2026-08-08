@@ -52,7 +52,7 @@ class ClubAnnouncementController extends Controller
         $teamId = $data['team_id'] ?? null;
         if ($data['audience_type'] === 'team') {
             if (! $teamId || ! Team::query()->whereKey($teamId)->where('club_id', $club->id)->exists()) {
-                throw ValidationException::withMessages(['team_id' => 'Bitte ein Team dieses Vereins auswählen.']);
+                throw ValidationException::withMessages(['team_id' => __('organization.survey.team_required')]);
             }
         } else {
             $teamId = null;
@@ -84,19 +84,19 @@ class ClubAnnouncementController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Ankündigung veröffentlicht.', 'data' => $this->payload($item, true)], 201);
+        return response()->json(['message' => __('platform.organization.announcement_published'), 'data' => $this->payload($item, true)], 201);
     }
 
     public function acknowledge(Request $request, Club $club, ClubAnnouncement $announcement)
     {
         abort_unless((int) $announcement->club_id === (int) $club->id, 404);
         $this->authorizeAccess($request, $club);
-        abort_unless($this->visibleTo($request, $announcement), 403, 'Diese Ankündigung ist für dich nicht freigegeben.');
+        abort_unless($this->visibleTo($request, $announcement), 403, __('platform.organization.announcement_not_available'));
         $read = $announcement->reads()->updateOrCreate(
             ['user_id' => $request->user()->id],
             ['read_at' => now()],
         );
-        return response()->json(['message' => 'Lesebestätigung gespeichert.', 'data' => [
+        return response()->json(['message' => __('platform.organization.announcement_read'), 'data' => [
             'announcement_id' => $announcement->id,
             'read_at' => $read->read_at?->toJSON(),
         ]]);
@@ -110,7 +110,7 @@ class ClubAnnouncementController extends Controller
         $isMember = $club->users()->where('users.id', $user->id)->where(function ($query) {
             $query->whereNull('club_user.membership_status')->orWhere('club_user.membership_status', 'active');
         })->exists();
-        abort_unless($isMember, 403, 'Nur Vereinsmitglieder können Ankündigungen sehen.');
+        abort_unless($isMember, 403, __('platform.organization.announcement_members_only'));
         return false;
     }
 

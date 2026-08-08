@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Setting;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Lang;
 
 class EmailTemplate
 {
@@ -56,9 +57,13 @@ class EmailTemplate
         Setting::setValue(self::SETTINGS_KEY, json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
     }
 
-    public static function mail(string $key, array $variables = [], ?string $actionUrl = null): MailMessage
-    {
-        $template = self::content($key, $variables);
+    public static function mail(
+        string $key,
+        array $variables = [],
+        ?string $actionUrl = null,
+        ?string $locale = null,
+    ): MailMessage {
+        $template = self::content($key, $variables, $locale);
         $message = (new MailMessage)
             ->subject($template['subject'])
             ->greeting($template['greeting']);
@@ -80,9 +85,9 @@ class EmailTemplate
         return app(TransactionalMail::class)->applyToMessage($message, self::categoryFor($key));
     }
 
-    public static function content(string $key, array $variables = []): array
+    public static function content(string $key, array $variables = [], ?string $locale = null): array
     {
-        $template = self::template($key);
+        $template = self::template($key, $locale);
 
         return [
             'subject' => self::render((string) $template['subject'], $variables),
@@ -293,6 +298,17 @@ class EmailTemplate
                     'action_label' => 'Pläne ansehen',
                 ],
             ],
+            'subscription_resumed' => [
+                'label' => 'Abo-Kündigung zurückgenommen',
+                'description' => 'Bestätigung, wenn eine vorgemerkte Kündigung zurückgenommen wird.',
+                'variables' => ['name', 'plan_name', 'renewal_date'],
+                'template' => [
+                    'subject' => 'Dein Airmius Abo läuft weiter',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "deine vorgemerkte Kündigung wurde zurückgenommen.\nPlan: {{ plan_name }}\nNächster Verlängerungstermin: {{ renewal_date }}\nDein Abo läuft ohne Unterbrechung weiter.",
+                    'action_label' => 'Pläne ansehen',
+                ],
+            ],
             'subscription_payment_issue' => [
                 'label' => 'Abo Zahlung offen',
                 'description' => 'Zahlungsproblem oder abgelaufene Testphase.',
@@ -406,8 +422,19 @@ class EmailTemplate
         ];
     }
 
-    private static function template(string $key): array
+    private static function template(string $key, ?string $locale = null): array
     {
+        $locale = SupportedLocale::normalize($locale);
+        $translationKey = 'data_erasure.email_templates.'.$key;
+
+        if ($locale && $locale !== SupportedLocale::DEFAULT && Lang::has($translationKey, $locale)) {
+            $localized = Lang::get($translationKey, [], $locale);
+
+            if (is_array($localized)) {
+                return $localized;
+            }
+        }
+
         $definition = self::definitions()[$key] ?? null;
 
         if (! $definition) {

@@ -21,7 +21,20 @@ class WebsiteRequest extends Model
         'domain',
         'goals',
         'notes',
+        'consent_at',
+        'status_changed_at',
+        'status_changed_by',
+        'retention_expires_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'consent_at' => 'datetime',
+            'status_changed_at' => 'datetime',
+            'retention_expires_at' => 'datetime',
+        ];
+    }
 
     public function user()
     {
@@ -31,5 +44,10 @@ class WebsiteRequest extends Model
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function statusChangedBy()
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 }

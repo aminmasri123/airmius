@@ -199,6 +199,13 @@ const appModules = [
     metrics: {'Sponsoren': '4', 'Kampagnen': '2'},
   ),
   ModuleDefinition(
+    title: 'Recruiting',
+    subtitle: 'Stellen, Bewerbungen und Besetzungsprozess',
+    icon: Icons.person_search_outlined,
+    actions: ['Bewerbungen prüfen', 'Status aktualisieren', 'Kontakt aufnehmen'],
+    metrics: {},
+  ),
+  ModuleDefinition(
     title: 'Medienrichtlinien',
     subtitle: 'Bildrechte, Upload-Regeln, Freigaben und Moderation',
     icon: Icons.policy_outlined,

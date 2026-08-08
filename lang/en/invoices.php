@@ -1,0 +1,63 @@
+<?php
+
+return [
+    'flash' => [
+        'created' => 'Invoice created.',
+        'status_updated' => 'Invoice status updated.',
+        'deleted' => 'Invoice deleted.',
+    ],
+    'errors' => [
+        'payments_exist' => 'Invoices with payments cannot be deleted.',
+        'type_not_deletable' => 'This invoice type cannot be deleted here.',
+    ],
+    'types' => [
+        'recurring_contribution' => 'Membership fee',
+        'account_subscription' => 'Account subscription',
+        'outfit_subscription_manual' => 'Outfit subscription',
+        'marketplace_purchase' => 'Marketplace purchase',
+        'elearning' => 'E-learning / course',
+        'ads' => 'Ads / advertising',
+        'agency_website' => 'Agency – website',
+        'agency_logo' => 'Agency – logo',
+        'agency_branding' => 'Agency – branding',
+        'sponsorship' => 'Sponsorship',
+        'custom' => 'Custom',
+        'manual' => 'Other invoice',
+        'club' => 'Club invoice',
+    ],
+    'manual_options' => [
+        'account_subscription' => ['label' => 'Account subscription', 'hint' => 'Plan, upgrade or user account'],
+        'outfit_subscription_manual' => ['label' => 'Outfit subscription', 'hint' => 'Sportswear, box or sponsor deal'],
+        'marketplace_purchase' => ['label' => 'Marketplace purchase', 'hint' => 'Product, order or shopping cart'],
+        'elearning' => ['label' => 'E-learning / course', 'hint' => 'Course provider, coach or trainer'],
+        'ads' => ['label' => 'Ads / advertising', 'hint' => 'Ad, campaign or visibility'],
+        'agency_website' => ['label' => 'Website', 'hint' => 'Agency website project'],
+        'agency_logo' => ['label' => 'Logo', 'hint' => 'Logo design or redesign'],
+        'agency_branding' => ['label' => 'Branding', 'hint' => 'Corporate identity, design package or brand presence'],
+        'sponsorship' => ['label' => 'Sponsorship', 'hint' => 'Sponsor package or partnership'],
+        'custom' => ['label' => 'Custom', 'hint' => 'Custom reason'],
+    ],
+    'fallbacks' => [
+        'account_subscription' => 'Airmius subscription',
+        'outfit_subscription' => 'Outfit subscription',
+        'outfit_number' => 'Outfit subscription #:id',
+    ],
+    'notifications' => [
+        'created_title' => 'New invoice received',
+        'created_body' => ':invoice for :amount is now available in your invoices.',
+        'new_invoice_fallback' => 'A new invoice',
+        'status_updated_title' => 'Invoice status updated',
+        'status_updated_body' => ':invoice is now :status.',
+        'invoice_fallback' => 'Your invoice',
+    ],
+    'status' => [
+        'paid' => 'paid',
+        'open' => 'open',
+        'pending' => 'pending',
+        'awaiting_transfer' => 'awaiting bank transfer',
+        'overdue' => 'overdue',
+        'cancelled' => 'cancelled',
+        'failed' => 'failed',
+        'unknown' => 'unknown',
+    ],
+];

@@ -69,7 +69,7 @@ class MediaGuidelineController extends Controller
             Setting::setValue($definition['setting_key'], $source ?: $definition['default']);
         }
 
-        return back()->with('success', 'Bildquellen wurden gespeichert.');
+        return back()->with('success', __('media_guidelines.responses.visuals_saved'));
     }
 
     private function guidelines(): array
@@ -242,7 +242,7 @@ class MediaGuidelineController extends Controller
                 'key' => 'login_slide_'.($index + 1),
                 'source' => $source,
                 'url' => UploadStorage::url($source),
-                'label' => 'Login-Slider Bild '.($index + 1),
+                'label' => __('media_guidelines.visuals.login_slide.label', ['number' => $index + 1]),
             ])
             ->values()
             ->all();
@@ -297,8 +297,8 @@ class MediaGuidelineController extends Controller
             'marketplace_side_banner' => [
                 'setting_key' => 'marketplace_visual_side_banner',
                 'category' => 'Marketplace',
-                'label' => 'Marketplace Seitenbanner',
-                'description' => 'Schmaler, dezenter Hintergrundbanner links/rechts im Marketplace.',
+                'label' => __('media_guidelines.visuals.marketplace_side.label'),
+                'description' => __('media_guidelines.visuals.marketplace_side.description'),
                 'recommended_size' => '192 x 1080 px oder 384 x 2160 px',
                 'ratio' => '8:45',
                 'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
@@ -307,8 +307,8 @@ class MediaGuidelineController extends Controller
             'marketplace_hero_banner' => [
                 'setting_key' => 'marketplace_visual_hero_banner',
                 'category' => 'Marketplace',
-                'label' => 'Marketplace Hero-Banner',
-                'description' => 'Optionales Hauptbild im Marketplace-Kopfbereich.',
+                'label' => __('media_guidelines.visuals.marketplace_hero.label'),
+                'description' => __('media_guidelines.visuals.marketplace_hero.description'),
                 'recommended_size' => '1600 x 900 px',
                 'ratio' => '16:9',
                 'default' => '',
@@ -317,8 +317,8 @@ class MediaGuidelineController extends Controller
             'marketplace_sale_banner' => [
                 'setting_key' => 'marketplace_visual_sale_banner',
                 'category' => 'Marketplace',
-                'label' => 'Marketplace Sale-Kachel',
-                'description' => 'Optionales Aktionsbild für die Sale-Kachel.',
+                'label' => __('media_guidelines.visuals.marketplace_sale.label'),
+                'description' => __('media_guidelines.visuals.marketplace_sale.description'),
                 'recommended_size' => '800 x 1000 px',
                 'ratio' => '4:5',
                 'default' => '',
@@ -327,8 +327,8 @@ class MediaGuidelineController extends Controller
             'outfit_subscription_hero' => [
                 'setting_key' => 'outfit_subscription_hero_image',
                 'category' => 'Outfit-Abo',
-                'label' => 'Outfit-Abo Dashboard Hero',
-                'description' => 'Großes Hero-Bild auf der Outfit-Abo Dashboardseite.',
+                'label' => __('media_guidelines.visuals.outfit_dashboard_hero.label'),
+                'description' => __('media_guidelines.visuals.outfit_dashboard_hero.description'),
                 'recommended_size' => '1920 x 1080 px',
                 'ratio' => '16:9',
                 'default' => '/images/marketplace/airmius_outfit_abo.webp',
@@ -337,4 +337,3 @@ class MediaGuidelineController extends Controller
         ];
     }
 }
-

@@ -289,7 +289,7 @@ onMounted(() => {
                     type="button"
                     class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-inputBg text-primary"
                     @click="showFilterModal = true"
-                    aria-label="Filter"
+                    :aria-label="tAuto('Filter')"
                 >
                     <i class="las la-sliders-h text-xl"></i>
 
@@ -527,7 +527,7 @@ onMounted(() => {
                             <option value="NL">{{ tAuto('Niederlande') }}</option>
                             <option value="BE">{{ tAuto('Belgien') }}</option>
                             <option value="TR">{{ tAuto('Türkei') }}</option>
-                            <option value="US">USA</option>
+                            <option value="US">{{ tAuto('USA') }}</option>
                         </select>
                     </label>
 
@@ -571,19 +571,19 @@ onMounted(() => {
                                 >
                             </label>
                             <label class="block">
-                                <span class="text-xs font-semibold uppercase text-secondary">IBAN</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('IBAN') }}</span>
                                 <input
                                     v-model="clubEditFormFor(club).sepa_iban"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                    placeholder="DE..."
+                                    :placeholder="'DE...'"
                                 >
                             </label>
                             <label class="block">
-                                <span class="text-xs font-semibold uppercase text-secondary">BIC</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('BIC') }}</span>
                                 <input
                                     v-model="clubEditFormFor(club).sepa_bic"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                    placeholder="GENODE..."
+                                    :placeholder="'GENODE...'"
                                 >
                             </label>
                         </div>
@@ -621,7 +621,7 @@ onMounted(() => {
                             </label>
                             <label class="block">
                                 <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Website') }}</span>
-                                <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="https://...">
+                                <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="'https://...'">
                             </label>
                             <label class="block">
                                 <span class="text-xs font-semibold uppercase text-secondary">{{ tAuto('Budget / Betrag') }}</span>
@@ -1002,7 +1002,7 @@ onMounted(() => {
                         <input
                             v-model="inviteFormFor(team).email"
                             type="email"
-                            placeholder="E-Mail"
+                            :placeholder="tAuto('E-Mail')"
                             class="min-w-0 flex-1 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                         >
 
@@ -1158,6 +1158,13 @@ onMounted(() => {
                         <span class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">
                             {{ club.jobs?.length || 0 }} {{ tAuto('Einträge') }}
                         </span>
+                        <Link
+                            v-if="club.can_manage_jobs"
+                            :href="route('auth.recruiting-pipeline.index')"
+                            class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        >
+                            {{ t('recruiting_pipeline.page_title') }}
+                        </Link>
                         <button
                             v-if="club.can_manage_jobs"
                             type="button"
@@ -1608,7 +1615,7 @@ onMounted(() => {
                                 <option value="IT">{{ tAuto('Italien') }}</option>
                                 <option value="GB">{{ tAuto('Großbritannien') }}</option>
                                 <option value="TR">{{ tAuto('Türkei') }}</option>
-                                <option value="US">USA</option>
+                                <option value="US">{{ tAuto('USA') }}</option>
                             </select>
                             <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
                         </div>
@@ -1658,11 +1665,11 @@ onMounted(() => {
                                         <p v-if="clubForm.errors.sepa_account_holder" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_account_holder }}</p>
                                     </div>
                                     <div>
-                                        <input v-model="clubForm.sepa_iban" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_iban ? 'border-error' : ''" placeholder="IBAN">
+                                <input v-model="clubForm.sepa_iban" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_iban ? 'border-error' : ''" :placeholder="tAuto('IBAN')">
                                         <p v-if="clubForm.errors.sepa_iban" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_iban }}</p>
                                     </div>
                                     <div>
-                                        <input v-model="clubForm.sepa_bic" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_bic ? 'border-error' : ''" placeholder="BIC">
+                                <input v-model="clubForm.sepa_bic" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_bic ? 'border-error' : ''" :placeholder="tAuto('BIC')">
                                         <p v-if="clubForm.errors.sepa_bic" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_bic }}</p>
                                     </div>
                                 </div>
@@ -1918,7 +1925,7 @@ onMounted(() => {
                             inputmode="url"
                             autocomplete="url"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="https://formular.verein.de"
+                            :placeholder="'https://formular.verein.de'"
                         >
                         <span v-if="errors.application_url" class="mt-1 block text-xs text-error">{{ errors.application_url }}</span>
                         <span class="mt-1 block text-xs text-secondary">

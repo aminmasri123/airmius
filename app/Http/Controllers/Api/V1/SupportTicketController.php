@@ -44,7 +44,7 @@ class SupportTicketController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Support-Ticket erstellt.',
+            'message' => __('support.responses.created'),
             'data' => $this->payload($ticket),
         ], 201);
     }
@@ -151,16 +151,24 @@ class SupportTicketController extends Controller
         $supportTicket->update($updates);
 
         if ($supportTicket->user_id && ($status !== $originalStatus || $priority !== $originalPriority)) {
-            AppNotification::send($supportTicket->user_id, 'support.ticket_updated', [
-                'title' => 'Support-Ticket aktualisiert',
-                'body' => $supportTicket->subject.' ist jetzt '.$status.'.',
+            AppNotification::sendLocalized(
+                $supportTicket->user_id,
+                'support.ticket_updated',
+                'support.notifications.updated_title',
+                'support.notifications.updated_body',
+                [
+                    'subject' => $supportTicket->subject,
+                    'status' => AppNotification::translatedReplacement('support.statuses.'.$status, $status),
+                ],
+                [
                 'url' => '/support',
                 'support_ticket_id' => $supportTicket->id,
-            ]);
+                ],
+            );
         }
 
         return response()->json([
-            'message' => 'Support-Ticket aktualisiert.',
+            'message' => __('support.responses.updated'),
             'data' => $this->payload($supportTicket->fresh(['user:id,name,email', 'assignee:id,name,email'])),
         ]);
     }

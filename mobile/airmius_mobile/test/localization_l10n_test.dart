@@ -97,6 +97,51 @@ void main() {
     expect(AirmiusLanguage.ar.label, 'العربية');
   });
 
+  test('public recruiting copy is complete in every supported language', () {
+    const scopes = [
+      AirmiusScope(
+        language: AirmiusLanguage.de,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.en,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.fr,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+      AirmiusScope(
+        language: AirmiusLanguage.ar,
+        setLanguage: _ignoreLanguage,
+        child: SizedBox.shrink(),
+      ),
+    ];
+    const keys = [
+      'recruitingMobile.title',
+      'recruitingMobile.search',
+      'recruitingMobile.professional',
+      'recruitingMobile.volunteer',
+      'recruitingMobile.interestTitle',
+      'recruitingMobile.privacy',
+      'recruitingMobile.submitError',
+      'recruitingMobile.sent',
+    ];
+
+    for (final scope in scopes) {
+      for (final key in keys) {
+        expect(scope.t(key), isNot(key));
+        expect(scope.t(key).trim(), isNotEmpty);
+      }
+    }
+
+    expect(scopes[2].t('recruitingMobile.title'), contains('bénévolat'));
+    expect(scopes[3].t('recruitingMobile.title'), contains('التطوع'));
+  });
+
   test('coverage status copy stays localized for the release audit', () {
     const french = AirmiusScope(
       language: AirmiusLanguage.fr,
@@ -681,6 +726,24 @@ void main() {
     expect(arabic.t('deepLink.destination.event'), 'الفعاليات والتدريب');
     expect(french.t('deepLink.unknown.title'), 'Lien profond');
     expect(arabic.t('deepLink.unknown.title'), 'رابط عميق');
+  });
+
+  test('data-erasure safety copy is native in French and Arabic', () {
+    const french = AirmiusScope(
+      language: AirmiusLanguage.fr,
+      setLanguage: _ignoreLanguage,
+      child: SizedBox.shrink(),
+    );
+    const arabic = AirmiusScope(
+      language: AirmiusLanguage.ar,
+      setLanguage: _ignoreLanguage,
+      child: SizedBox.shrink(),
+    );
+
+    expect(french.t('privacy.eraseData'), contains('Supprimer'));
+    expect(french.t('privacy.eraseEmailIdentityHint'), contains('associé'));
+    expect(arabic.t('privacy.eraseData'), contains('حذف'));
+    expect(arabic.t('privacy.eraseEmailIdentityHint'), contains('حساب'));
   });
 }
 

@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     marketplaceVisuals: { type: Array, default: () => [] },
     marketplaceVisualForm: { type: Object, required: true },
@@ -91,7 +95,7 @@ const emit = defineEmits([
                 <input
                     v-model="marketplaceVisualForm.sources[visual.key]"
                     class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
-                    placeholder="https://... oder marketplace/visuals/..."
+                    :placeholder="t('commerce.ui.marketplace_visual_placeholder')"
                 />
 
                 <label class="mt-3 block text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
@@ -105,4 +109,3 @@ const emit = defineEmits([
         </div>
     </section>
 </template>
-

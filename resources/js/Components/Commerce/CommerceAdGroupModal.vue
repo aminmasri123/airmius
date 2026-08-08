@@ -67,7 +67,7 @@ const sportQuery = computed({
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div class="rounded-lg border border-border bg-bg p-3">
-                        <label class="text-xs font-semibold uppercase text-secondary">Sportarten</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ $t('Sportarten') }}</label>
                         <div class="mt-2 flex flex-wrap gap-2">
                             <span
                                 v-for="sport in selectedAdGroupSports"
@@ -191,4 +191,3 @@ const sportQuery = computed({
         </form>
     </div>
 </template>
-

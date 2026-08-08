@@ -10,26 +10,30 @@ use App\Models\LearningCourseSection;
 use App\Models\LearningEnrollment;
 use App\Models\LearningLesson;
 use App\Models\LearningLessonComment;
-use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
-use App\Models\LearningQuizAttempt;
 use App\Models\LearningQuizQuestion;
 use App\Models\LearningSecurityEvent;
 use App\Models\MarketplaceProduct;
 use App\Models\User;
+use App\Services\Learning\LearningEnrollmentService;
+use App\Services\Learning\LearningProgressService;
 use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Throwable;
 
 class LearningStudioController extends Controller
 {
+    public function __construct(
+        private readonly LearningEnrollmentService $learningEnrollment,
+        private readonly LearningProgressService $learningProgress,
+    ) {}
+
     public function index(Request $request)
     {
         $courses = LearningCourse::query()
@@ -92,17 +96,17 @@ class LearningStudioController extends Controller
 
         $course->sections()->create([
             'title' => 'Start',
-            'description' => 'Einleitung und Orientierung',
+            'description' => __('learning.studio.default_section_description'),
             'position' => 1,
         ]);
 
         if ($request->expectsJson()) {
-            return $this->courseJsonResponse($course, 'Kurs wurde angelegt.', 201);
+            return $this->courseJsonResponse($course, __('learning.responses.course_created'), 201);
         }
 
         return redirect()
             ->route('auth.learning.studio.index', ['course' => $course->id])
-            ->with('success', 'Kurs wurde angelegt. Du kannst jetzt Kapitel und Lektionen planen.');
+            ->with('success', __('learning.responses.course_created'));
     }
 
     public function updateCourse(Request $request, LearningCourse $course)
@@ -123,10 +127,10 @@ class LearningStudioController extends Controller
         ]);
 
         if ($request->expectsJson()) {
-            return $this->courseJsonResponse($course, 'Kurs wurde gespeichert.');
+            return $this->courseJsonResponse($course, __('learning.responses.course_saved'));
         }
 
-        return back()->with('success', 'Kurs wurde gespeichert.');
+        return back()->with('success', __('learning.responses.course_saved'));
     }
 
     public function storeSection(Request $request, LearningCourse $course)
@@ -145,12 +149,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Kapitel wurde hinzugefügt.',
+                'message' => __('learning.responses.section_created'),
                 'data' => $section,
             ], 201);
         }
 
-        return back()->with('success', 'Kapitel wurde hinzugefügt.');
+        return back()->with('success', __('learning.responses.section_created'));
     }
 
     public function storeLesson(Request $request, LearningCourse $course)
@@ -169,12 +173,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Lektion wurde hinzugefügt.',
+                'message' => __('learning.responses.lesson_created'),
                 'data' => $lesson->fresh(),
             ], 201);
         }
 
-        return back()->with('success', 'Lektion wurde hinzugefügt.');
+        return back()->with('success', __('learning.responses.lesson_created'));
     }
 
     public function updateLesson(Request $request, LearningCourse $course, LearningLesson $lesson)
@@ -191,12 +195,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Lektion wurde gespeichert.',
+                'message' => __('learning.responses.lesson_saved'),
                 'data' => $lesson->fresh(),
             ]);
         }
 
-        return back()->with('success', 'Lektion wurde gespeichert.');
+        return back()->with('success', __('learning.responses.lesson_saved'));
     }
 
     public function destroyLesson(Request $request, LearningCourse $course, LearningLesson $lesson)
@@ -210,10 +214,10 @@ class LearningStudioController extends Controller
         $this->recalculateCourseDuration($course);
 
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'Lektion wurde gelöscht.']);
+            return response()->json(['message' => __('learning.responses.lesson_deleted')]);
         }
 
-        return back()->with('success', 'Lektion wurde gelöscht.');
+        return back()->with('success', __('learning.responses.lesson_deleted'));
     }
 
     public function reorderLessons(Request $request, LearningCourse $course)
@@ -234,10 +238,10 @@ class LearningStudioController extends Controller
         }
 
         if ($request->expectsJson()) {
-            return $this->courseJsonResponse($course, 'Lektionsreihenfolge wurde gespeichert.');
+            return $this->courseJsonResponse($course, __('learning.responses.lesson_order_saved'));
         }
 
-        return back()->with('success', 'Lektionsreihenfolge wurde gespeichert.');
+        return back()->with('success', __('learning.responses.lesson_order_saved'));
     }
 
     public function storeQuiz(Request $request, LearningCourse $course)
@@ -276,12 +280,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Quiz wurde angelegt.',
+                'message' => __('learning.responses.quiz_created'),
                 'data' => $quiz->fresh('questions'),
             ], 201);
         }
 
-        return back()->with('success', 'Quiz wurde angelegt.');
+        return back()->with('success', __('learning.responses.quiz_created'));
     }
 
     public function destroyQuiz(Request $request, LearningCourse $course, LearningQuiz $quiz)
@@ -292,10 +296,10 @@ class LearningStudioController extends Controller
         $quiz->delete();
 
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'Quiz wurde gelöscht.']);
+            return response()->json(['message' => __('learning.responses.quiz_deleted')]);
         }
 
-        return back()->with('success', 'Quiz wurde gelöscht.');
+        return back()->with('success', __('learning.responses.quiz_deleted'));
     }
 
     public function uploadAsset(Request $request, LearningCourse $course, MediaOptimizer $mediaOptimizer)
@@ -338,10 +342,10 @@ class LearningStudioController extends Controller
         ]);
 
         if ($request->expectsJson()) {
-            return $this->courseJsonResponse($course, 'Fragenstatus wurde aktualisiert.');
+            return $this->courseJsonResponse($course, __('learning.responses.question_status_saved'));
         }
 
-        return back()->with('success', 'Fragenstatus wurde aktualisiert.');
+        return back()->with('success', __('learning.responses.question_status_saved'));
     }
 
     public function replyComment(Request $request, LearningCourse $course, LearningLessonComment $comment)
@@ -369,15 +373,21 @@ class LearningStudioController extends Controller
         ]);
 
         if ((int) $comment->user_id !== (int) $request->user()->id) {
-            AppNotification::send($comment->user_id, 'learning.question.answered', [
-                'course_id' => $course->id,
-                'course_title' => $course->title,
-                'lesson_id' => $comment->learning_lesson_id,
-                'lesson_title' => $comment->lesson?->title,
-                'comment_id' => $comment->id,
-                'reply_by' => $request->user()->name,
-                'url' => route('guest.learning.courses.show', $course),
-            ]);
+            AppNotification::sendLocalized(
+                $comment->user_id,
+                'learning.question.answered',
+                'learning.notifications.question_answered_title',
+                'learning.notifications.question_answered_body',
+                ['course' => $course->title],
+                [
+                    'course_id' => $course->id,
+                    'lesson_id' => $comment->learning_lesson_id,
+                    'comment_id' => $comment->id,
+                    'reply_by' => $request->user()->name,
+                    'url' => route('guest.learning.courses.show', $course),
+                ],
+                ['dedupe_key' => 'learning-question:'.$comment->id.':answered'],
+            );
             $this->sendLearningMail($comment->user, 'Antwort auf deine Kursfrage: '.$course->title, [
                 'Hallo '.$comment->user?->name.',',
                 $request->user()->name.' hat auf deine Frage im Kurs "'.$course->title.'" geantwortet.',
@@ -387,10 +397,10 @@ class LearningStudioController extends Controller
         }
 
         if ($request->expectsJson()) {
-            return $this->courseJsonResponse($course, 'Antwort wurde an den Teilnehmer gesendet.', 201);
+            return $this->courseJsonResponse($course, __('learning.responses.reply_sent'), 201);
         }
 
-        return back()->with('success', 'Antwort wurde an den Teilnehmer gesendet.');
+        return back()->with('success', __('learning.responses.reply_sent'));
     }
 
     public function storeCoupon(Request $request, LearningCourse $course)
@@ -417,12 +427,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Gutschein wurde gespeichert.',
+                'message' => __('learning.responses.coupon_saved'),
                 'data' => $coupon->fresh(),
             ], 201);
         }
 
-        return back()->with('success', 'Gutschein wurde gespeichert.');
+        return back()->with('success', __('learning.responses.coupon_saved'));
     }
 
     public function storeAssignment(Request $request, LearningCourse $course)
@@ -446,12 +456,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Aufgabe wurde angelegt.',
+                'message' => __('learning.responses.assignment_created'),
                 'data' => $assignment,
             ], 201);
         }
 
-        return back()->with('success', 'Aufgabe wurde angelegt.');
+        return back()->with('success', __('learning.responses.assignment_created'));
     }
 
     public function gradeAssignment(Request $request, LearningCourse $course, LearningAssignmentSubmission $submission)
@@ -471,16 +481,24 @@ class LearningStudioController extends Controller
             'graded_at' => now(),
         ]);
         $submission->loadMissing(['assignment', 'enrollment.user']);
-        $this->refreshEnrollmentCompletion($course, $submission->enrollment);
+        if ($submission->enrollment) {
+            $this->learningProgress->refreshCompletion($course, $submission->enrollment);
+        }
 
-        AppNotification::send($submission->user, 'learning.assignment.graded', [
-            'course_id' => $course->id,
-            'course_title' => $course->title,
-            'assignment_id' => $submission->assignment->id,
-            'assignment_title' => $submission->assignment->title,
-            'status' => $submission->status,
-            'url' => route('guest.learning.courses.show', $course),
-        ]);
+        AppNotification::sendLocalized(
+            $submission->user,
+            'learning.assignment.graded',
+            'learning.notifications.assignment_graded_title',
+            'learning.notifications.assignment_graded_body',
+            ['assignment' => $submission->assignment->title, 'course' => $course->title],
+            [
+                'course_id' => $course->id,
+                'assignment_id' => $submission->assignment->id,
+                'status' => $submission->status,
+                'url' => route('guest.learning.courses.show', $course),
+            ],
+            ['dedupe_key' => 'learning-assignment-submission:'.$submission->id.':graded:'.$submission->graded_at?->format('Uu')],
+        );
 
         $this->sendLearningMail($submission->user, 'Deine Aufgabe wurde bewertet', [
             "Deine Aufgabe \"{$submission->assignment->title}\" im Kurs \"{$course->title}\" wurde bewertet.",
@@ -489,12 +507,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Bewertung wurde gespeichert.',
+                'message' => __('learning.responses.grade_saved'),
                 'data' => $submission->fresh(),
             ]);
         }
 
-        return back()->with('success', 'Bewertung wurde gespeichert.');
+        return back()->with('success', __('learning.responses.grade_saved'));
     }
 
     public function grantEnrollment(Request $request, LearningCourse $course)
@@ -506,31 +524,25 @@ class LearningStudioController extends Controller
         ]);
 
         $user = User::query()->where('email', strtolower($data['email']))->first();
-        abort_unless($user, 422, 'Nutzer mit dieser E-Mail wurde nicht gefunden.');
+        abort_unless($user, 422, __('learning.errors.user_not_found'));
 
-        $enrollment = LearningEnrollment::query()->updateOrCreate(
-            ['learning_course_id' => $course->id, 'user_id' => $user->id],
-            ['status' => 'active', 'started_at' => now()],
-        );
-
-        AppNotification::send($user, 'learning.access.granted', [
-            'course_id' => $course->id,
-            'course_title' => $course->title,
-            'url' => route('guest.learning.courses.show', $course),
-        ]);
-        $this->sendLearningMail($user, 'Dein Kurszugang ist freigeschaltet', [
-            "Du hast jetzt Zugriff auf \"{$course->title}\".",
-            route('guest.learning.courses.show', $course),
-        ]);
+        $result = $this->learningEnrollment->activate($user, $course, 'manual', true);
+        $enrollment = $result['enrollment'];
+        if ($result['activated']) {
+            $this->sendLearningMail($user, 'Dein Kurszugang ist freigeschaltet', [
+                "Du hast jetzt Zugriff auf \"{$course->title}\".",
+                route('guest.learning.courses.show', $course),
+            ]);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => "Zugang für {$user->name} wurde freigeschaltet.",
+                'message' => __('learning.responses.access_granted'),
                 'data' => $enrollment->fresh('user:id,name,email,profile_photo_path'),
             ], 201);
         }
 
-        return back()->with('success', "Zugang für {$user->name} wurde freigeschaltet.");
+        return back()->with('success', __('learning.responses.access_granted'));
     }
 
     public function revokeEnrollment(Request $request, LearningCourse $course, LearningEnrollment $enrollment)
@@ -542,12 +554,12 @@ class LearningStudioController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Kurszugang wurde deaktiviert.',
+                'message' => __('learning.responses.access_revoked'),
                 'data' => $enrollment->fresh(),
             ]);
         }
 
-        return back()->with('success', 'Kurszugang wurde deaktiviert.');
+        return back()->with('success', __('learning.responses.access_revoked'));
     }
 
     public function exportReport(Request $request, LearningCourse $course)
@@ -609,7 +621,7 @@ class LearningStudioController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        return back()->with('success', 'Kurs-Qualitätsstatus wurde gespeichert.');
+        return back()->with('success', __('learning.responses.quality_saved'));
     }
 
     private function courseData(Request $request, ?LearningCourse $course = null): array
@@ -690,7 +702,7 @@ class LearningStudioController extends Controller
                     'passed_quizzes_count' => $enrollment->quizAttempts->where('passed', true)->pluck('learning_quiz_id')->unique()->count(),
                     'assignments_submitted_count' => $enrollment->assignmentSubmissions->count(),
                     'assignments_passed_count' => $enrollment->assignmentSubmissions->where('status', 'passed')->count(),
-                    'completion_requirements' => $this->completionRequirements($course, $enrollment),
+                    'completion_requirements' => $this->learningProgress->requirements($course, $enrollment),
                     'certificate' => $enrollment->certificate,
                 ])
                 ->values(),
@@ -875,16 +887,16 @@ class LearningStudioController extends Controller
     private function publishChecklist(LearningCourse $course): array
     {
         $checks = [
-            ['key' => 'description', 'label' => 'Beschreibung vorhanden', 'done' => filled($course->description)],
-            ['key' => 'cover', 'label' => 'Cover-Bild gesetzt', 'done' => filled($course->cover_image)],
-            ['key' => 'goals', 'label' => 'Lernziele gepflegt', 'done' => ! empty($course->learning_goals)],
-            ['key' => 'lessons', 'label' => 'Mindestens eine Lektion', 'done' => $course->lessons->isNotEmpty()],
-            ['key' => 'structure', 'label' => 'Kapitelstruktur gepflegt', 'done' => $course->sections->isNotEmpty()],
-            ['key' => 'completion', 'label' => 'Abschlusslogik vorhanden', 'done' => $course->quizzes->isNotEmpty() || $course->assignments->where('is_required', true)->isNotEmpty()],
-            ['key' => 'sales', 'label' => 'Verkaufsargumente gepflegt', 'done' => ! empty($course->sales_points)],
-            ['key' => 'faq', 'label' => 'FAQ für Einwände', 'done' => ! empty($course->faq_items)],
-            ['key' => 'price', 'label' => 'Preislogik geklärt', 'done' => $course->is_free || $course->price_cents > 0],
-            ['key' => 'public', 'label' => 'öffentlich sichtbar', 'done' => (bool) $course->is_public],
+            ['key' => 'description', 'label' => __('learning.studio.checklist.description'), 'done' => filled($course->description)],
+            ['key' => 'cover', 'label' => __('learning.studio.checklist.cover'), 'done' => filled($course->cover_image)],
+            ['key' => 'goals', 'label' => __('learning.studio.checklist.goals'), 'done' => ! empty($course->learning_goals)],
+            ['key' => 'lessons', 'label' => __('learning.studio.checklist.lessons'), 'done' => $course->lessons->isNotEmpty()],
+            ['key' => 'structure', 'label' => __('learning.studio.checklist.structure'), 'done' => $course->sections->isNotEmpty()],
+            ['key' => 'completion', 'label' => __('learning.studio.checklist.completion'), 'done' => $course->quizzes->isNotEmpty() || $course->assignments->where('is_required', true)->isNotEmpty()],
+            ['key' => 'sales', 'label' => __('learning.studio.checklist.sales'), 'done' => ! empty($course->sales_points)],
+            ['key' => 'faq', 'label' => __('learning.studio.checklist.faq'), 'done' => ! empty($course->faq_items)],
+            ['key' => 'price', 'label' => __('learning.studio.checklist.price'), 'done' => $course->is_free || $course->price_cents > 0],
+            ['key' => 'public', 'label' => __('learning.studio.checklist.public'), 'done' => (bool) $course->is_public],
         ];
         $doneCount = collect($checks)->where('done', true)->count();
 
@@ -959,100 +971,5 @@ class LearningStudioController extends Controller
         } catch (Throwable) {
             // Mail delivery must not block studio workflows.
         }
-    }
-
-    private function refreshEnrollmentCompletion(LearningCourse $course, ?LearningEnrollment $enrollment): void
-    {
-        if (! $enrollment) {
-            return;
-        }
-
-        $requirements = $this->completionRequirements($course, $enrollment);
-        $totalMilestones = max(1, (int) ($requirements['lessons']['total'] + $requirements['quizzes']['total'] + $requirements['assignments']['total']));
-        $completedMilestones = (int) ($requirements['lessons']['completed'] + $requirements['quizzes']['completed'] + $requirements['assignments']['completed']);
-        $progressPercent = min(100, (int) round(($completedMilestones / $totalMilestones) * 100));
-        $completedAt = $requirements['complete'] ? ($enrollment->completed_at ?: now()) : null;
-
-        $enrollment->forceFill([
-            'progress_percent' => $progressPercent,
-            'completed_at' => $completedAt,
-        ])->save();
-
-        if (! $completedAt) {
-            return;
-        }
-
-        $certificate = $enrollment->certificate()->firstOrCreate([], [
-            'learning_course_id' => $course->id,
-            'user_id' => $enrollment->user_id,
-            'code' => 'AIR-LEARN-'.Str::upper(Str::random(10)),
-            'issued_at' => now(),
-        ]);
-
-        if (! $certificate->wasRecentlyCreated) {
-            return;
-        }
-
-        AppNotification::send($enrollment->user_id, 'learning.certificate.issued', [
-            'course_id' => $course->id,
-            'course_title' => $course->title,
-            'certificate_code' => $certificate->code,
-            'url' => route('guest.learning.courses.show', $course),
-        ]);
-        $this->sendLearningMail($enrollment->user, 'Dein Zertifikat ist bereit: '.$course->title, [
-            'Hallo '.$enrollment->user?->name.'.',
-            'du hast den Kurs "'.$course->title.'" abgeschlossen.',
-            'Zertifikat prüfen: '.route('guest.learning.certificates.verify', $certificate->code),
-            'Kurs: '.route('guest.learning.courses.show', $course),
-        ]);
-    }
-
-    private function completionRequirements(LearningCourse $course, LearningEnrollment $enrollment): array
-    {
-        $totalLessons = $course->lessons()->count();
-        $completedLessons = LearningLessonProgress::query()
-            ->where('learning_enrollment_id', $enrollment->id)
-            ->where('completed', true)
-            ->whereHas('lesson', fn ($query) => $query->where('learning_course_id', $course->id))
-            ->count();
-        $quizIds = $course->quizzes()->pluck('id');
-        $passedQuizIds = $quizIds->isEmpty()
-            ? collect()
-            : LearningQuizAttempt::query()
-                ->where('learning_enrollment_id', $enrollment->id)
-                ->where('passed', true)
-                ->whereIn('learning_quiz_id', $quizIds)
-                ->distinct()
-                ->pluck('learning_quiz_id');
-        $assignmentIds = $course->assignments()->where('is_required', true)->pluck('id');
-        $passedAssignmentIds = $assignmentIds->isEmpty()
-            ? collect()
-            : LearningAssignmentSubmission::query()
-                ->where('learning_enrollment_id', $enrollment->id)
-                ->where('status', 'passed')
-                ->whereIn('learning_assignment_id', $assignmentIds)
-                ->distinct()
-                ->pluck('learning_assignment_id');
-
-        return [
-            'lessons' => [
-                'label' => 'Lektionen',
-                'total' => (int) $totalLessons,
-                'completed' => (int) $completedLessons,
-            ],
-            'quizzes' => [
-                'label' => 'Quiz',
-                'total' => $quizIds->count(),
-                'completed' => $passedQuizIds->count(),
-            ],
-            'assignments' => [
-                'label' => 'Pflicht-Aufgaben',
-                'total' => $assignmentIds->count(),
-                'completed' => $passedAssignmentIds->count(),
-            ],
-            'complete' => $completedLessons >= $totalLessons
-                && $quizIds->diff($passedQuizIds)->isEmpty()
-                && $assignmentIds->diff($passedAssignmentIds)->isEmpty(),
-        ];
     }
 }

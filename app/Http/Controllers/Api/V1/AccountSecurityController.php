@@ -22,7 +22,7 @@ class AccountSecurityController extends Controller
 
         if (! Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([
-                'current_password' => ['Das aktuelle Passwort ist nicht korrekt.'],
+                'current_password' => [__('account_security.errors.current_password')],
             ]);
         }
 
@@ -37,7 +37,7 @@ class AccountSecurityController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Dein Passwort wurde aktualisiert.',
+                'message' => __('account_security.responses.password_updated'),
             ],
         ]);
     }
@@ -92,7 +92,7 @@ class AccountSecurityController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Die Sitzung wurde beendet.',
+                'message' => __('account_security.responses.session_ended'),
                 'current_session_ended' => $isCurrent,
             ],
         ]);
@@ -108,7 +108,7 @@ class AccountSecurityController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Alle anderen Sitzungen wurden beendet.',
+                'message' => __('account_security.responses.other_sessions_ended'),
                 'deleted_count' => $deleted,
             ],
         ]);

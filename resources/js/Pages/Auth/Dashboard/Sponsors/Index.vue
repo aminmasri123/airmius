@@ -1,7 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import { useI18n } from 'vue-i18n'
 
@@ -37,11 +37,15 @@ const scopes = computed(() => [
 ])
 
 const activeScope = ref(props.filters.scope || 'all')
+const search = ref(props.filters.q || '')
+const clubSearch = ref(props.filters.club_query || '')
 const showFormModal = ref(false)
 const editingSponsor = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
 const { isDark } = useTheme()
+let searchTimer = null
+let clubSearchTimer = null
 
 const form = useForm({
     scope: 'platform',
@@ -111,6 +115,7 @@ const changeScope = (scope) => {
 
     router.get(route('sponsors.index'), {
         scope: scope === 'all' ? undefined : scope,
+        q: search.value || undefined,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -118,6 +123,42 @@ const changeScope = (scope) => {
         only: ['sponsors', 'filters'],
     })
 }
+
+watch(search, () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        router.get(route('sponsors.index'), {
+            scope: activeScope.value === 'all' ? undefined : activeScope.value,
+            q: search.value || undefined,
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            only: ['sponsors', 'filters'],
+        })
+    }, 350)
+})
+
+watch(clubSearch, () => {
+    clearTimeout(clubSearchTimer)
+    clubSearchTimer = setTimeout(() => {
+        router.get(route('sponsors.index'), {
+            scope: activeScope.value === 'all' ? undefined : activeScope.value,
+            q: search.value || undefined,
+            club_query: clubSearch.value || undefined,
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+            only: ['clubs', 'filters'],
+        })
+    }, 350)
+})
+
+onBeforeUnmount(() => {
+    clearTimeout(searchTimer)
+    clearTimeout(clubSearchTimer)
+})
 
 const visitPage = (url) => {
     if (!url) return
@@ -272,7 +313,8 @@ const paginationLabel = (label) => String(label || '')
         </section>
 
         <section class="rounded-lg border border-border bg-card p-3">
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex flex-wrap gap-2">
                 <button
                     v-for="scope in scopes"
                     :key="scope.key"
@@ -286,6 +328,14 @@ const paginationLabel = (label) => String(label || '')
                         {{ formatNumber(scope.key === 'all' ? sponsorStats.total : sponsorStats[scope.key]) }}
                     </span>
                 </button>
+                </div>
+                <input
+                    v-model="search"
+                    type="search"
+                    class="w-full rounded-lg border-border bg-inputBg text-primary lg:max-w-xs"
+                    :placeholder="t('sponsors_admin.search_placeholder')"
+                    :aria-label="t('sponsors_admin.search_placeholder')"
+                >
             </div>
         </section>
 
@@ -418,6 +468,7 @@ const paginationLabel = (label) => String(label || '')
 
                             <label v-if="form.scope === 'club'" class="block">
                                 <span class="text-sm font-semibold text-primary">{{ t('sponsors_admin.field_club') }}</span>
+                                <input v-model="clubSearch" type="search" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('sponsors_admin.club_search_placeholder')">
                                 <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
                                     <option value="">{{ t('sponsors_admin.club_placeholder') }}</option>
                                     <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>

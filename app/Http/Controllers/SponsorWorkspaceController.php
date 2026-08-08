@@ -26,6 +26,6 @@ class SponsorWorkspaceController extends Controller
     {
         $this->workspace->saveOwnProfile($request->user(), $request->validated());
 
-        return back()->with('success', 'Sponsorprofil gespeichert.');
+        return back()->with('success', __('sponsor.flash.profile_saved'));
     }
 }

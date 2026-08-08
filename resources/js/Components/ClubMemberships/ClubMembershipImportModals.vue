@@ -70,7 +70,7 @@ const closeBankImportModal = () => emit('update:showBankImportModal', false)
 
                             <div class="grid gap-3 md:grid-cols-2">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Name</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t('Name') }}</label>
                                     <input
                                         v-model="member.name"
                                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -79,7 +79,7 @@ const closeBankImportModal = () => emit('update:showBankImportModal', false)
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">E-Mail</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t('E-Mail') }}</label>
                                     <input
                                         v-model="member.email"
                                         type="email"

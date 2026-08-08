@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../widgets/airmius_widgets.dart';
-import 'guest_learning_certificate_screen.dart';
+import 'blog_media_center_screen.dart';
 import 'guest_club_directory_screen.dart';
+import 'guest_jobs_careers_screen.dart';
+import 'guest_learning_certificate_screen.dart';
 import 'guest_marketplace_parity_screen.dart';
 import 'legal_status_center_screen.dart';
 import 'public_detail_screen.dart';
@@ -12,7 +14,6 @@ import 'public_location_submission_screen.dart';
 import 'public_top_content_screen.dart';
 import 'sponsors_center_screen.dart';
 import 'support_helpdesk_screen.dart';
-import 'blog_media_center_screen.dart';
 
 /// Public entry point. It intentionally contains only guest-safe screens and
 /// never exposes internal operations or private account data.
@@ -135,6 +136,9 @@ class GuestPortalScreen extends StatelessWidget {
       case _GuestAction.learning:
         _open(context, const GuestLearningCertificateScreen());
         return;
+      case _GuestAction.jobs:
+        _open(context, const GuestJobsCareersScreen());
+        return;
       case _GuestAction.sponsors:
         _open(context, const SponsorsCenterScreen());
         return;
@@ -176,6 +180,7 @@ enum _GuestAction {
   blog,
   marketplace,
   learning,
+  jobs,
   sponsors,
   topContent,
   contact,
@@ -331,7 +336,7 @@ const _primaryItems = [
     titleKey: 'guestPortal.jobs',
     bodyKey: 'guestPortal.jobsBody',
     icon: Icons.work_outline,
-    action: _GuestAction.interest,
+    action: _GuestAction.jobs,
   ),
   _PublicItem(
     titleKey: 'guestPortal.sponsors',

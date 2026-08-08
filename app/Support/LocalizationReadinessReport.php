@@ -8,11 +8,11 @@ use SplFileInfo;
 
 class LocalizationReadinessReport
 {
-    public const VERSION = '2026-06-03';
+    public const VERSION = '2026-08-08';
 
-    public const SUPPORTED_LOCALES = ['de', 'en', 'fr', 'ar'];
+    public const SUPPORTED_LOCALES = SupportedLocale::ALL;
 
-    public const RTL_LOCALES = ['ar'];
+    public const RTL_LOCALES = SupportedLocale::RTL;
 
     public static function make(): array
     {
@@ -70,23 +70,35 @@ class LocalizationReadinessReport
     {
         $folder = resource_path('js/lang');
         $messages = [];
+        $automaticMessages = [];
 
         foreach (self::SUPPORTED_LOCALES as $locale) {
             $decoded = json_decode((string) file_get_contents($folder.DIRECTORY_SEPARATOR.$locale.'.json'), true);
             $messages[$locale] = is_array($decoded) ? $decoded : [];
+            $automaticDecoded = json_decode(
+                (string) file_get_contents($folder.DIRECTORY_SEPARATOR.'auto'.DIRECTORY_SEPARATOR.$locale.'.json'),
+                true,
+            );
+            $automaticMessages[$locale] = is_array($automaticDecoded) ? $automaticDecoded : [];
         }
 
         $sourceKeys = array_keys($messages['de']);
-        $sourceAutoKeys = array_keys(is_array($messages['de']['auto'] ?? null) ? $messages['de']['auto'] : []);
+        $sourceAutoKeys = array_keys(
+            is_array($automaticMessages['de']['auto'] ?? null) ? $automaticMessages['de']['auto'] : [],
+        );
         $locales = [];
         $corruptTotal = 0;
 
         foreach (['en', 'fr', 'ar'] as $locale) {
             $missing = array_values(array_diff($sourceKeys, array_keys($messages[$locale])));
             $extra = array_values(array_diff(array_keys($messages[$locale]), $sourceKeys));
-            $corrupt = self::corruptValueCount($messages[$locale], $locale === 'ar');
-            $placeholderMismatches = self::placeholderMismatchCount($messages['de'], $messages[$locale]);
-            $targetAuto = is_array($messages[$locale]['auto'] ?? null) ? $messages[$locale]['auto'] : [];
+            $corrupt = self::corruptValueCount($messages[$locale], $locale === 'ar')
+                + self::corruptValueCount($automaticMessages[$locale], $locale === 'ar');
+            $placeholderMismatches = self::placeholderMismatchCount($messages['de'], $messages[$locale])
+                + self::placeholderMismatchCount($automaticMessages['de'], $automaticMessages[$locale]);
+            $targetAuto = is_array($automaticMessages[$locale]['auto'] ?? null)
+                ? $automaticMessages[$locale]['auto']
+                : [];
             $missingAuto = array_values(array_diff($sourceAutoKeys, array_keys($targetAuto)));
             $extraAuto = array_values(array_diff(array_keys($targetAuto), $sourceAutoKeys));
             $corruptTotal += $corrupt;
@@ -170,9 +182,13 @@ class LocalizationReadinessReport
     protected static function rtlQa(array $languageFiles): array
     {
         $arabicPath = resource_path('js/lang/ar.json');
+        $arabicAutoPath = resource_path('js/lang/auto/ar.json');
         $contents = is_file($arabicPath) ? (string) file_get_contents($arabicPath) : '';
+        $autoContents = is_file($arabicAutoPath) ? (string) file_get_contents($arabicAutoPath) : '';
         $decoded = $contents !== '' ? json_decode($contents, true) : null;
-        $jsonValid = is_array($decoded) && json_last_error() === JSON_ERROR_NONE;
+        $autoDecoded = $autoContents !== '' ? json_decode($autoContents, true) : null;
+        $jsonValid = is_array($decoded) && is_array($autoDecoded) && json_last_error() === JSON_ERROR_NONE;
+        $contents .= $autoContents;
         $arabicGlyphs = $contents !== '' ? preg_match_all('/\p{Arabic}/u', $contents) : 0;
         $mojibakeMarkers = $contents !== '' ? preg_match_all('/�|\?{2,}/u', $contents) : 0;
 
@@ -209,6 +225,7 @@ class LocalizationReadinessReport
     {
         return [
             'resources_js_lang' => self::jsonLocaleFolder(resource_path('js/lang')),
+            'resources_js_auto_lang' => self::jsonLocaleFolder(resource_path('js/lang/auto')),
             'resources_lang' => self::jsonLocaleFolder(resource_path('lang')),
             'root_lang' => self::jsonLocaleFolder(base_path('lang')),
         ];
@@ -240,9 +257,14 @@ class LocalizationReadinessReport
     protected static function vueReadiness(): array
     {
         $files = self::files(resource_path('js'), 'vue');
+        $automaticUiSources = self::automaticUiSources();
         $withI18n = 0;
         $visibleTextCandidates = 0;
         $attributeTextCandidates = 0;
+        $visibleTextSourceCandidates = 0;
+        $attributeTextSourceCandidates = 0;
+        $autoCoveredVisibleTextCandidates = 0;
+        $autoCoveredAttributeTextCandidates = 0;
         $topFiles = [];
 
         foreach ($files as $file) {
@@ -252,10 +274,33 @@ class LocalizationReadinessReport
                 $withI18n++;
             }
 
-            $visible = preg_match_all('/>([^<>{}\\n]*[A-Za-z\x{00C0}-\x{017F}][^<>{}]*)</u', $contents);
-            $attributes = preg_match_all('/\b(?:placeholder|aria-label|title|alt)="[^"]*[A-Za-z\x{00C0}-\x{017F}][^"]*"/u', $contents);
+            // Script comparisons such as `days >= 0` contain a `>` token but
+            // are not rendered UI. Restrict text debt to the Vue template.
+            $templateContents = preg_match('/<template\b[^>]*>(.*)<\/template>/su', $contents, $templateMatch)
+                ? $templateMatch[1]
+                : $contents;
+
+            $visibleSource = (int) preg_match_all(
+                '/>([^<>{}\\n]*[A-Za-z\x{00C0}-\x{017F}][^<>{}]*)</u',
+                $templateContents,
+                $visibleMatches,
+            );
+            $attributeSource = (int) preg_match_all(
+                '/(?<![:\\w-])(?:placeholder|aria-label|title|alt)="([^"]*[A-Za-z\x{00C0}-\x{017F}][^"]*)"/u',
+                $templateContents,
+                $attributeMatches,
+            );
+            $visibleCovered = self::automaticUiCoverageCount($visibleMatches[1] ?? [], $automaticUiSources);
+            $attributeCovered = self::automaticUiCoverageCount($attributeMatches[1] ?? [], $automaticUiSources);
+            $visible = $visibleSource - $visibleCovered;
+            $attributes = $attributeSource - $attributeCovered;
+
             $visibleTextCandidates += $visible;
             $attributeTextCandidates += $attributes;
+            $visibleTextSourceCandidates += $visibleSource;
+            $attributeTextSourceCandidates += $attributeSource;
+            $autoCoveredVisibleTextCandidates += $visibleCovered;
+            $autoCoveredAttributeTextCandidates += $attributeCovered;
 
             if (($visible + $attributes) > 0) {
                 $topFiles[] = [
@@ -263,6 +308,8 @@ class LocalizationReadinessReport
                     'candidates' => $visible + $attributes,
                     'visible_text_candidates' => $visible,
                     'attribute_text_candidates' => $attributes,
+                    'source_candidates' => $visibleSource + $attributeSource,
+                    'runtime_auto_covered_candidates' => $visibleCovered + $attributeCovered,
                 ];
             }
         }
@@ -275,9 +322,13 @@ class LocalizationReadinessReport
             'i18n_usage_ratio' => count($files) > 0 ? round($withI18n / count($files), 4) : 0.0,
             'visible_text_candidates' => $visibleTextCandidates,
             'attribute_text_candidates' => $attributeTextCandidates,
+            'visible_text_source_candidates' => $visibleTextSourceCandidates,
+            'attribute_text_source_candidates' => $attributeTextSourceCandidates,
+            'runtime_auto_covered_visible_text_candidates' => $autoCoveredVisibleTextCandidates,
+            'runtime_auto_covered_attribute_text_candidates' => $autoCoveredAttributeTextCandidates,
             'total_candidates' => $visibleTextCandidates + $attributeTextCandidates,
             'top_files' => array_slice($topFiles, 0, 10),
-            'audit_mode' => 'report_only',
+            'audit_mode' => 'translation_keys_plus_verified_runtime_auto_catalog',
         ];
     }
 
@@ -288,20 +339,33 @@ class LocalizationReadinessReport
             ...self::files(app_path('Notifications'), 'php'),
             ...self::files(app_path('Mail'), 'php'),
         ];
+        $automaticUiSources = self::automaticUiSources();
         $translationCalls = 0;
         $responseStringCandidates = 0;
+        $responseStringSourceCandidates = 0;
+        $autoCoveredResponseStringCandidates = 0;
         $topFiles = [];
 
         foreach ($files as $file) {
             $contents = (string) file_get_contents($file->getPathname());
             $translationCalls += preg_match_all('/(?:__|trans|Lang::get)\s*\(/', $contents);
-            $candidates = preg_match_all('/(?:message|title|body|label|description)\'?\s*=>\s*[\'"][^\'"]*[A-Za-z\x{00C0}-\x{017F}][^\'"]*[\'"]/u', $contents);
+            $sourceCandidates = (int) preg_match_all(
+                '/(?:message|title|body|label|description)\'?\s*=>\s*[\'"]([^\'"]*[A-Za-z\x{00C0}-\x{017F}][^\'"]*)[\'"]/u',
+                $contents,
+                $candidateMatches,
+            );
+            $autoCovered = self::automaticUiCoverageCount($candidateMatches[1] ?? [], $automaticUiSources);
+            $candidates = $sourceCandidates - $autoCovered;
             $responseStringCandidates += $candidates;
+            $responseStringSourceCandidates += $sourceCandidates;
+            $autoCoveredResponseStringCandidates += $autoCovered;
 
             if ($candidates > 0) {
                 $topFiles[] = [
                     'path' => self::relativePath($file->getPathname()),
                     'candidates' => $candidates,
+                    'source_candidates' => $sourceCandidates,
+                    'runtime_auto_covered_candidates' => $autoCovered,
                 ];
             }
         }
@@ -312,10 +376,59 @@ class LocalizationReadinessReport
             'files_scanned' => count($files),
             'translation_calls' => $translationCalls,
             'response_string_candidates' => $responseStringCandidates,
+            'response_string_source_candidates' => $responseStringSourceCandidates,
+            'runtime_auto_covered_response_string_candidates' => $autoCoveredResponseStringCandidates,
             'total_candidates' => $responseStringCandidates,
             'top_files' => array_slice($topFiles, 0, 10),
-            'audit_mode' => 'report_only',
+            'audit_mode' => 'translation_keys_plus_verified_runtime_auto_catalog',
         ];
+    }
+
+    /** @return array<string, true> */
+    protected static function automaticUiSources(): array
+    {
+        static $sources;
+
+        if (is_array($sources)) {
+            return $sources;
+        }
+
+        $path = resource_path('js/lang/auto/de.json');
+        $decoded = is_file($path) ? json_decode((string) file_get_contents($path), true) : [];
+        $auto = is_array($decoded['auto'] ?? null) ? $decoded['auto'] : [];
+
+        return $sources = array_fill_keys(array_keys($auto), true);
+    }
+
+    /** @param array<int, string> $candidates */
+    protected static function automaticUiCoverageCount(array $candidates, array $sources): int
+    {
+        return collect($candidates)
+            ->filter(fn (string $candidate) => self::automaticUiCovers($candidate, $sources))
+            ->count();
+    }
+
+    /** @param array<string, true> $sources */
+    protected static function automaticUiCovers(string $candidate, array $sources): bool
+    {
+        $source = trim($candidate);
+
+        if ($source === '' || isset($sources[$source])) {
+            return $source !== '';
+        }
+
+        if (preg_match('/[.!?]$/u', $source)) {
+            $withoutTrailingPunctuation = trim(substr($source, 0, -1));
+            if (isset($sources[$withoutTrailingPunctuation])) {
+                return true;
+            }
+        }
+
+        if (preg_match('/^[.!?]/u', $source)) {
+            return isset($sources[trim(substr($source, 1))]);
+        }
+
+        return false;
     }
 
     protected static function warnings(array $languageFiles, array $vue, array $php, array $rtlQa): array

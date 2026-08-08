@@ -904,7 +904,14 @@ class TrainingController extends Controller
             'sort_order' => $plan->items()->count() + 1,
         ]);
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Neue Einheit im Trainingsplan', '"'.$item->title.'" wurde zu "'.$plan->title.'" hinzugefügt.', route('auth.training.plans.items.show', [$plan, $item]));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $request->user(),
+            'server.training.notifications.item_added_title',
+            'server.training.notifications.item_added_body',
+            ['item' => $item->title, 'plan' => $plan->title],
+            route('auth.training.plans.items.show', [$plan, $item]),
+        );
 
         return back()->with('success', __('server.training.item_added'));
     }
@@ -924,7 +931,14 @@ class TrainingController extends Controller
 
         $item->update($this->planItemPayload($data, $imagePath));
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingseinheit aktualisiert', '"'.$item->title.'" in "'.$plan->title.'" wurde angepasst.', route('auth.training.plans.items.show', [$plan, $item]));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $request->user(),
+            'server.training.notifications.item_updated_title',
+            'server.training.notifications.item_updated_body',
+            ['item' => $item->title, 'plan' => $plan->title],
+            route('auth.training.plans.items.show', [$plan, $item]),
+        );
 
         return back()->with('success', __('server.training.item_updated'));
     }
@@ -940,7 +954,14 @@ class TrainingController extends Controller
         $copy->scheduled_at = null;
         $copy->save();
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Einheit dupliziert', '"'.$copy->title.'" wurde in "'.$plan->title.'" angelegt.', route('auth.training.plans.items.show', [$plan, $copy]));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $request->user(),
+            'server.training.notifications.item_duplicated_title',
+            'server.training.notifications.item_duplicated_body',
+            ['item' => $copy->title, 'plan' => $plan->title],
+            route('auth.training.plans.items.show', [$plan, $copy]),
+        );
 
         return back()->with('success', __('server.training.item_duplicated'));
     }
@@ -1032,7 +1053,14 @@ class TrainingController extends Controller
                 ]));
         });
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan aktualisiert', '"'.$plan->title.'" wurde angepasst.', route('auth.training.index'));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $request->user(),
+            'server.training.notifications.plan_updated_title',
+            'server.training.notifications.plan_updated_body',
+            ['plan' => $plan->title],
+            route('auth.training.index'),
+        );
 
         return back()->with('success', __('server.training.plan_updated'));
     }
@@ -1043,7 +1071,14 @@ class TrainingController extends Controller
 
         $plan->update(['status' => 'published']);
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan freigegeben', '"'.$plan->title.'" ist jetzt für dich sichtbar.', route('auth.training.index'));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $request->user(),
+            'server.training.notifications.plan_published_title',
+            'server.training.notifications.plan_published_body',
+            ['plan' => $plan->title],
+            route('auth.training.index'),
+        );
 
         return back()->with('success', __('server.training.plan_published'));
     }
@@ -1126,7 +1161,14 @@ class TrainingController extends Controller
             ],
         );
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $user, 'Trainingseinheit ausgefallen', '"'.$item->title.'" wurde als nicht gemacht markiert.', route('auth.training.logs.show', $missedLog));
+        $this->notifyPlanRecipients(
+            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
+            $user,
+            'server.training.notifications.item_missed_title',
+            'server.training.notifications.item_missed_body',
+            ['item' => $item->title],
+            route('auth.training.logs.show', $missedLog),
+        );
 
         return back()->with('success', __('server.training.item_missed'));
     }
@@ -1278,7 +1320,12 @@ class TrainingController extends Controller
     private function notifyTrainingLogSaved(TrainingLog $log, User $actor): void
     {
         $actorName = $this->resources->user($actor)['name'];
-        $athleteName = $log->athlete ? $this->resources->user($log->athlete)['name'] : 'Sportler';
+        $athleteName = $log->athlete
+            ? $this->resources->user($log->athlete)['name']
+            : AppNotification::translatedReplacement(
+                'server.training.notifications.fallback_athlete',
+                'Sportler',
+            );
         $privacyScope = $log->metrics['privacy_scope'] ?? 'trainer';
 
         if ($privacyScope === 'private') {
@@ -1298,35 +1345,59 @@ class TrainingController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique();
 
-        $recipientIds->each(fn (int $recipientId) => AppNotification::send($recipientId, 'training.log.saved', [
-            'title' => 'Training dokumentiert',
-            'body' => $actorName.' hat "'.$log->title.'" für '.$athleteName.' gespeichert.',
-            'url' => route('auth.training.logs.show', $log),
-            'training_log_id' => $log->id,
-        ]));
+        User::query()
+            ->select(['id', 'language'])
+            ->whereKey($recipientIds->all())
+            ->get()
+            ->each(fn (User $recipient) => AppNotification::sendLocalized(
+                $recipient,
+                'training.log.saved',
+                'server.training.notifications.log_saved_title',
+                'server.training.notifications.log_saved_body',
+                ['actor' => $actorName, 'log' => $log->title, 'athlete' => $athleteName],
+                [
+                    'url' => route('auth.training.logs.show', $log),
+                    'training_log_id' => $log->id,
+                ],
+            ));
     }
 
-    private function notifyPlanRecipients(TrainingPlan $plan, User $actor, string $title, string $body, string $url): void
-    {
-        $recipientIds = collect([$plan->created_by])
-            ->merge($plan->assignments->pluck('user_id'))
-            ->merge($plan->assignments->flatMap(fn ($assignment) => $assignment->team?->users?->pluck('id') ?? collect()))
+    private function notifyPlanRecipients(
+        TrainingPlan $plan,
+        User $actor,
+        string $titleKey,
+        string $bodyKey,
+        array $replace,
+        string $url,
+    ): void {
+        $recipients = collect([$plan->creator])
+            ->merge($plan->assignments->pluck('user'))
+            ->merge($plan->assignments->flatMap(fn ($assignment) => $assignment->team?->users ?? collect()))
             ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->reject(fn ($id) => $id === (int) $actor->id);
+            ->unique('id')
+            ->reject(fn (User $recipient) => (int) $recipient->id === (int) $actor->id);
 
-        $recipientIds->each(fn (int $recipientId) => AppNotification::send($recipientId, 'training.plan.changed', [
-            'title' => $title,
-            'body' => $body,
-            'url' => $url,
-            'training_plan_id' => $plan->id,
-        ]));
+        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
+            $recipient,
+            'training.plan.changed',
+            $titleKey,
+            $bodyKey,
+            $replace,
+            [
+                'url' => $url,
+                'training_plan_id' => $plan->id,
+            ],
+        ));
     }
 
     private function notifyTrainingFeedbackRecipients(TrainingLog $log, TrainingLogFeedback $feedback): void
     {
-        $authorName = $feedback->author ? $this->resources->user($feedback->author)['name'] : 'Jemand';
+        $authorName = $feedback->author
+            ? $this->resources->user($feedback->author)['name']
+            : AppNotification::translatedReplacement(
+                'server.training.notifications.fallback_someone',
+                'Jemand',
+            );
         $recipientIds = collect([
             $log->user_id,
             $log->created_by,
@@ -1338,13 +1409,22 @@ class TrainingController extends Controller
             ->unique()
             ->reject(fn ($id) => $id === (int) $feedback->user_id);
 
-        $recipientIds->each(fn (int $recipientId) => AppNotification::send($recipientId, 'training.feedback', [
-            'title' => 'Neues Training-Feedback',
-            'body' => $authorName.' hat bei "'.$log->title.'" geantwortet.',
-            'url' => route('auth.training.logs.show', $log),
-            'training_log_id' => $log->id,
-            'feedback_id' => $feedback->id,
-        ]));
+        User::query()
+            ->select(['id', 'language'])
+            ->whereKey($recipientIds->all())
+            ->get()
+            ->each(fn (User $recipient) => AppNotification::sendLocalized(
+                $recipient,
+                'training.feedback',
+                'server.training.notifications.feedback_title',
+                'server.training.notifications.feedback_body',
+                ['actor' => $authorName, 'log' => $log->title],
+                [
+                    'url' => route('auth.training.logs.show', $log),
+                    'training_log_id' => $log->id,
+                    'feedback_id' => $feedback->id,
+                ],
+            ));
     }
 
     private function findOrCreateDraftLog(User $user): TrainingLog

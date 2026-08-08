@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\AccountRoleApplicationController;
+use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\BlogCategoryController;
@@ -16,6 +16,7 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\OperatingContractController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProductAnalyticsController;
 use App\Http\Controllers\ProviderCostController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SettingController;
@@ -195,6 +196,7 @@ Route::middleware([
     // SETTINGS
     Route::get('/admin/mail-center', [MailCenterController::class, 'index'])->middleware('can:system.manage')->name('admin.mail-center.index');
     Route::get('/admin/provider-costs', [ProviderCostController::class, 'index'])->middleware('can:system.manage')->name('admin.provider-costs.index');
+    Route::get('/admin/product-analytics', [ProductAnalyticsController::class, 'index'])->middleware('can:analytics.view')->name('admin.product-analytics.index');
     Route::put('/admin/mail-center/preferences', [MailCenterController::class, 'updatePreferences'])->middleware('can:system.manage')->name('admin.mail-center.preferences.update');
     Route::put('/admin/mail-center/senders/{category}', [MailCenterController::class, 'updateSender'])->middleware('can:system.manage')->name('admin.mail-center.senders.update');
     Route::post('/admin/mail-center/senders/{category}/test', [MailCenterController::class, 'testSender'])->middleware('can:system.manage')->name('admin.mail-center.senders.test');

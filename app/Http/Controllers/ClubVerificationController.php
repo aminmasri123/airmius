@@ -64,16 +64,21 @@ class ClubVerificationController extends Controller
 
         $club->owner?->notify(new ClubVerificationStatusUpdated($club));
         if ($club->owner) {
-            AppNotification::send($club->owner, 'club.verification_status_updated', [
-                'title' => 'Vereinsantrag freigegeben',
-                'body' => 'Airmius hat deinen Verein „'.$club->name.'“ geprüft und freigegeben.',
+            AppNotification::sendLocalized(
+                $club->owner,
+                'club.verification_status_updated',
+                'organization.notifications.verification_approved_title',
+                'organization.notifications.verification_approved_body',
+                ['club' => $club->name],
+                [
                 'url' => route('auth.clubs.show', $club->id),
                 'club_id' => $club->id,
                 'verification_status' => $club->verification_status,
-            ]);
+                ],
+            );
         }
 
-        return back()->with('success', 'Verein wurde freigegeben.');
+        return back()->with('success', __('organization.club.verification_approved'));
     }
 
     public function reject(Request $request, Club $club)
@@ -96,16 +101,21 @@ class ClubVerificationController extends Controller
 
         $club->owner?->notify(new ClubVerificationStatusUpdated($club));
         if ($club->owner) {
-            AppNotification::send($club->owner, 'club.verification_status_updated', [
-                'title' => 'Vereinsantrag abgelehnt',
-                'body' => 'Airmius hat deinen Vereinsantrag abgelehnt. Bitte prüfe den Hinweis im Dashboard.',
+            AppNotification::sendLocalized(
+                $club->owner,
+                'club.verification_status_updated',
+                'organization.notifications.verification_rejected_title',
+                'organization.notifications.verification_rejected_body',
+                ['club' => $club->name],
+                [
                 'url' => route('auth.clubs.show', $club->id),
                 'club_id' => $club->id,
                 'verification_status' => $club->verification_status,
                 'verification_notes' => $club->verification_notes,
-            ]);
+                ],
+            );
         }
 
-        return back()->with('success', 'Vereinsantrag wurde abgelehnt.');
+        return back()->with('success', __('organization.club.verification_rejected'));
     }
 }

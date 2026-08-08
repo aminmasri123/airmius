@@ -52,7 +52,7 @@ const emit = defineEmits([
                                     </button>
                                 </div>
                             </div>
-                            <p v-if="!day.items.length" class="text-xs text-secondary">frei</p>
+                            <p v-if="!day.items.length" class="text-xs text-secondary">{{ $t('frei') }}</p>
                         </div>
                     </div>
                 </div>
@@ -89,5 +89,4 @@ const emit = defineEmits([
             </div>
         </section>
 </template>
-
 

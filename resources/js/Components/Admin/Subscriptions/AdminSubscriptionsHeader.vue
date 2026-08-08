@@ -9,7 +9,7 @@ defineProps({
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Business Model</p>
-                <h1 class="mt-1 text-2xl font-bold text-primary">Abo-Verwaltung</h1>
+                <h1 class="mt-1 text-2xl font-bold text-primary">{{ $t('Abo-Verwaltung') }}</h1>
                 <p class="mt-2 max-w-3xl text-sm text-secondary">
                     Preise, Zielgruppen, Limits und Vereinszuordnungen zentral verwalten.
                 </p>

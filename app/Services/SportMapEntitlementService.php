@@ -95,10 +95,8 @@ class SportMapEntitlementService
 
     private function activeSubscriptionSlugs(User $user): Collection
     {
-        $activeStatuses = ['active', 'trialing'];
-
         $userSlugs = $user->subscriptions()
-            ->whereIn('status', $activeStatuses)
+            ->grantingAccess()
             ->with('plan:id,slug')
             ->get()
             ->pluck('plan.slug')
@@ -106,9 +104,9 @@ class SportMapEntitlementService
 
         $clubSlugs = $user->clubs()
             ->with(['currentSubscription.plan:id,slug'])
-            ->whereHas('currentSubscription', function ($query) use ($activeStatuses) {
+            ->whereHas('currentSubscription', function ($query) {
                 $query
-                    ->whereIn('status', $activeStatuses)
+                    ->grantingAccess()
                     ->whereHas('plan');
             })
             ->get()

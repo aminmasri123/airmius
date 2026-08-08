@@ -183,6 +183,32 @@ class AdminSubscriptionManagementTest extends TestCase
         ]);
     }
 
+    public function test_subscription_admin_searches_large_user_and_club_lists_on_the_server(): void
+    {
+        $admin = User::factory()->create();
+        $this->grantPermissions($admin, ['subscriptions.manage']);
+        User::factory()->create(['name' => 'Lifecycle Search Athlete']);
+        User::factory()->create(['name' => 'Unrelated Athlete']);
+        $clubOwner = User::factory()->create();
+        Club::factory()->create(['name' => 'Lifecycle Search Club', 'owner_id' => $clubOwner->id]);
+        Club::factory()->create(['name' => 'Unrelated Club', 'owner_id' => $clubOwner->id]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.subscriptions.index', [
+                'user_query' => 'Lifecycle Search Athlete',
+                'club_query' => 'Lifecycle Search Club',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.user_query', 'Lifecycle Search Athlete')
+                ->where('filters.club_query', 'Lifecycle Search Club')
+                ->has('users', 1)
+                ->where('users.0.name', 'Lifecycle Search Athlete')
+                ->has('clubs', 1)
+                ->where('clubs.0.name', 'Lifecycle Search Club')
+            );
+    }
+
     private function createPlan(array $overrides = []): SubscriptionPlan
     {
         return SubscriptionPlan::query()->create(array_merge([

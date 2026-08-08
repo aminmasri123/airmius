@@ -85,7 +85,7 @@ const emit = defineEmits(['submit'])
             <label class="block text-sm font-semibold text-primary">Wettkampf / Zieltermin
                 <input v-model="form.competition_date" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
             </label>
-            <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+            <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Beschreibung') }}
                 <textarea v-model="form.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
             </label>
         </div>
@@ -103,4 +103,3 @@ const emit = defineEmits(['submit'])
         </button>
     </form>
 </template>
-

@@ -14,6 +14,18 @@ use Illuminate\Validation\ValidationException;
 
 class EditorialController extends Controller
 {
+    private const POST_CREATED = 'blog_post_created';
+
+    private const POST_UPDATED = 'blog_post_updated';
+
+    private const POST_DELETED = 'blog_post_deleted';
+
+    private const CATEGORY_CREATED = 'blog_category_created';
+
+    private const CATEGORY_UPDATED = 'blog_category_updated';
+
+    private const CATEGORY_DELETED = 'blog_category_deleted';
+
     public function index(Request $request): JsonResponse
     {
         $this->authorizeBlog($request, 'blog.view');
@@ -68,7 +80,8 @@ class EditorialController extends Controller
         $this->recordRevision($post, $request, ['created']);
 
         return response()->json([
-            'message' => 'blog_post_created',
+            'message' => self::POST_CREATED,
+            'message_text' => __('editorial.responses.'.self::POST_CREATED),
             'data' => $this->postData($post->load(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])),
         ], 201);
     }
@@ -90,7 +103,8 @@ class EditorialController extends Controller
         }
 
         return response()->json([
-            'message' => 'blog_post_updated',
+            'message' => self::POST_UPDATED,
+            'message_text' => __('editorial.responses.'.self::POST_UPDATED),
             'data' => $this->postData($fresh),
         ]);
     }
@@ -100,7 +114,10 @@ class EditorialController extends Controller
         $this->authorizeBlog($request, 'blog.delete');
         $blogPost->delete();
 
-        return response()->json(['message' => 'blog_post_deleted']);
+        return response()->json([
+            'message' => self::POST_DELETED,
+            'message_text' => __('editorial.responses.'.self::POST_DELETED),
+        ]);
     }
 
     public function storeCategory(Request $request): JsonResponse
@@ -110,7 +127,11 @@ class EditorialController extends Controller
         $data['slug'] = $data['slug'] ?: BlogCategory::uniqueSlug($data['name']);
         $category = BlogCategory::query()->create($data);
 
-        return response()->json(['message' => 'blog_category_created', 'data' => $category], 201);
+        return response()->json([
+            'message' => self::CATEGORY_CREATED,
+            'message_text' => __('editorial.responses.'.self::CATEGORY_CREATED),
+            'data' => $category,
+        ], 201);
     }
 
     public function updateCategory(Request $request, BlogCategory $blogCategory): JsonResponse
@@ -126,7 +147,11 @@ class EditorialController extends Controller
                 ->update(['category' => $blogCategory->name]);
         }
 
-        return response()->json(['message' => 'blog_category_updated', 'data' => $blogCategory->refresh()]);
+        return response()->json([
+            'message' => self::CATEGORY_UPDATED,
+            'message_text' => __('editorial.responses.'.self::CATEGORY_UPDATED),
+            'data' => $blogCategory->refresh(),
+        ]);
     }
 
     public function destroyCategory(Request $request, BlogCategory $blogCategory): JsonResponse
@@ -135,7 +160,10 @@ class EditorialController extends Controller
         abort_if($blogCategory->posts()->exists(), 422, 'blog_category_in_use');
         $blogCategory->delete();
 
-        return response()->json(['message' => 'blog_category_deleted']);
+        return response()->json([
+            'message' => self::CATEGORY_DELETED,
+            'message_text' => __('editorial.responses.'.self::CATEGORY_DELETED),
+        ]);
     }
 
     private function validatedPost(Request $request, ?BlogPost $post = null): array
@@ -180,7 +208,7 @@ class EditorialController extends Controller
         $score = BlogPost::seoScoreFor($data);
         if ($score < 85) {
             throw ValidationException::withMessages([
-                'status' => ["Zum Veröffentlichen sind mindestens 85% Inhaltsqualität nötig. Aktuell: {$score}%."],
+                'status' => [__('editorial.errors.quality_required', ['score' => $score])],
             ]);
         }
         $data['published_at'] = $data['published_at'] ?? now();

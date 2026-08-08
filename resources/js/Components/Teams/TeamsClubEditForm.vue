@@ -146,7 +146,7 @@ defineProps({
                     <option value="NL">{{ $t('Niederlande') }}</option>
                     <option value="BE">{{ $t('Belgien') }}</option>
                     <option value="TR">{{ $t('Türkei') }}</option>
-                    <option value="US">USA</option>
+                    <option value="US">{{ $t('USA') }}</option>
                 </select>
             </label>
 
@@ -240,7 +240,7 @@ defineProps({
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Website') }}</span>
-                        <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="https://...">
+                        <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="$t('commerce.ui.url_placeholder')">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Budget / Betrag') }}</span>

@@ -157,12 +157,17 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $data['payment_note'] ?? null,
         );
 
-        AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
-            'title' => 'Outfit-Abo aktiviert',
-            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestätigt. Dein Outfit-Abo ist jetzt aktiv.',
-            'url' => route('auth.outfit-subscriptions.index'),
-            'subscription_id' => $subscription->id,
-        ]);
+        AppNotification::sendLocalized(
+            $subscription->user_id,
+            'outfit.subscription.paid',
+            'outfit_subscription.notifications.paid_title',
+            'outfit_subscription.notifications.paid_body',
+            ['plan' => $this->localizedPlanName($subscription)],
+            [
+                'url' => route('auth.outfit-subscriptions.index'),
+                'subscription_id' => $subscription->id,
+            ],
+        );
 
         return back()->with('success', 'Zahlung wurde bestätigt und das Outfit-Abo aktiviert.');
     }
@@ -196,12 +201,20 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $data['reason'] ?? null,
         );
 
-        AppNotification::send($subscription->user_id, 'outfit.payment.opened_by_admin', [
-            'title' => 'Outfit-Abo Zahlung offen',
-            'message' => trim('Für dein Outfit-Abo '.$subscription->plan?->name.' wurde eine offene Zahlung hinterlegt. '.($data['reason'] ?? '')),
-            'url' => route('auth.outfit-subscriptions.index'),
-            'subscription_id' => $subscription->id,
-        ]);
+        AppNotification::sendLocalized(
+            $subscription->user_id,
+            'outfit.payment.opened_by_admin',
+            'outfit_subscription.notifications.unpaid_title',
+            'outfit_subscription.notifications.unpaid_body',
+            [
+                'plan' => $this->localizedPlanName($subscription),
+                'reason' => filled($data['reason'] ?? null) ? ' '.$data['reason'] : '',
+            ],
+            [
+                'url' => route('auth.outfit-subscriptions.index'),
+                'subscription_id' => $subscription->id,
+            ],
+        );
 
         return back()->with('success', 'Outfit-Abo wurde als offene Zahlung markiert. Mahnungen laufen automatisch.');
     }
@@ -220,12 +233,17 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->subscriptionAuditSnapshot($subscription->fresh()),
         );
 
-        AppNotification::send($subscription->user_id, 'outfit.subscription.shipping_address_updated', [
-            'title' => 'Lieferadresse aktualisiert',
-            'message' => 'Die Lieferadresse für dein Outfit-Abo '.$subscription->plan?->name.' wurde aktualisiert.',
-            'url' => route('auth.outfit-subscriptions.index'),
-            'subscription_id' => $subscription->id,
-        ]);
+        AppNotification::sendLocalized(
+            $subscription->user_id,
+            'outfit.subscription.shipping_address_updated',
+            'outfit_subscription.notifications.address_updated_title',
+            'outfit_subscription.notifications.address_updated_body',
+            ['plan' => $this->localizedPlanName($subscription)],
+            [
+                'url' => route('auth.outfit-subscriptions.index'),
+                'subscription_id' => $subscription->id,
+            ],
+        );
 
         return back()->with('success', 'Lieferadresse wurde aktualisiert.');
     }
@@ -274,12 +292,20 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $data['reason'] ?? null,
         );
 
-        AppNotification::send($subscription->user_id, 'outfit.subscription.cancelled_by_admin', [
-            'title' => 'Outfit-Abo-Anfrage abgebrochen',
-            'message' => trim('Deine Outfit-Abo-Anfrage für '.$subscription->plan?->name.' wurde abgebrochen. '.($data['reason'] ?? '')),
-            'url' => route('auth.outfit-subscriptions.index'),
-            'subscription_id' => $subscription->id,
-        ]);
+        AppNotification::sendLocalized(
+            $subscription->user_id,
+            'outfit.subscription.cancelled_by_admin',
+            'outfit_subscription.notifications.cancelled_title',
+            'outfit_subscription.notifications.cancelled_body',
+            [
+                'plan' => $this->localizedPlanName($subscription),
+                'reason' => filled($data['reason'] ?? null) ? ' '.$data['reason'] : '',
+            ],
+            [
+                'url' => route('auth.outfit-subscriptions.index'),
+                'subscription_id' => $subscription->id,
+            ],
+        );
 
         return back()->with('success', 'Outfit-Abo-Anfrage wurde abgebrochen.');
     }
@@ -524,7 +550,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         return [
             'hero' => [
-                'label' => 'Outfit-Abo Hero-Bild',
+                'label' => __('media_guidelines.visuals.outfit_subscription_hero.label'),
                 'source' => $source,
                 'url' => UploadStorage::url($source),
                 'recommended_size' => '1920 x 1080 px',
@@ -801,31 +827,39 @@ class AdminOutfitSubscriptionPlanController extends Controller
             return;
         }
 
-        AppNotification::send($user, 'outfit.delivery.issue_status_updated', [
-            'title' => 'Support-Vorgang aktualisiert',
-            'message' => $this->deliveryIssueStatusMessage($delivery),
-            'delivery_id' => $delivery->id,
-            'subscription_id' => $delivery->outfit_subscription_id,
-            'issue_status' => $delivery->issue_status,
-            'return_tracking_number' => $delivery->return_tracking_number,
-            'return_tracking_url' => $delivery->return_tracking_url,
-            'url' => route('auth.outfit-subscriptions.index'),
-        ]);
+        $status = in_array($delivery->issue_status, [
+            'reviewing',
+            'approved',
+            'return_waiting',
+            'replacement_preparing',
+            'resolved',
+            'rejected',
+        ], true) ? $delivery->issue_status : 'updated';
+
+        AppNotification::sendLocalized(
+            $user,
+            'outfit.delivery.issue_status_updated',
+            'outfit_subscription.notifications.issue_status_updated_title',
+            'outfit_subscription.notifications.issue_status.'.$status,
+            ['plan' => $this->localizedPlanName($delivery->subscription)],
+            [
+                'delivery_id' => $delivery->id,
+                'subscription_id' => $delivery->outfit_subscription_id,
+                'issue_status' => $delivery->issue_status,
+                'return_tracking_number' => $delivery->return_tracking_number,
+                'return_tracking_url' => $delivery->return_tracking_url,
+                'url' => route('auth.outfit-subscriptions.index'),
+            ],
+        );
     }
 
-    private function deliveryIssueStatusMessage(OutfitDelivery $delivery): string
+    private function localizedPlanName(?OutfitSubscription $subscription): string|array
     {
-        $planName = $delivery->subscription?->plan?->name ?? 'Outfit-Abo';
-
-        return match ($delivery->issue_status) {
-            'reviewing' => "Deine Meldung für {$planName} wird geprüft.",
-            'approved' => "Deine Meldung für {$planName} wurde freigegeben.",
-            'return_waiting' => "Wir warten auf deine Rücksendung für {$planName}.",
-            'replacement_preparing' => "Dein Ersatz für {$planName} wird vorbereitet.",
-            'resolved' => "Dein Support-Vorgang für {$planName} wurde gelöst.",
-            'rejected' => "Dein Support-Vorgang für {$planName} wurde abgeschlossen.",
-            default => "Dein Support-Vorgang für {$planName} wurde aktualisiert.",
-        };
+        return $subscription?->plan?->name
+            ?? AppNotification::translatedReplacement(
+                'outfit_subscription.notifications.plan_fallback',
+                'Outfit subscription',
+            );
     }
 
     private function cancelPayPalSubscription(OutfitSubscription $subscription, ?string $reason = null): void

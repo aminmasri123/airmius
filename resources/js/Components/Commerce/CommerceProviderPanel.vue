@@ -21,7 +21,7 @@ const emit = defineEmits([
             <article class="surface-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace Anbieter</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t('Marketplace Anbieter') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">Sitzadresse & öffentliches Profil</h2>
                         <p class="mt-1 max-w-2xl text-sm text-secondary">
                             Die Sitzadresse bleibt intern, solange du sie nicht freigibst. Kunden sehen nur die Daten, die du bewusst öffentlich schaltest.
@@ -63,11 +63,11 @@ const emit = defineEmits([
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary">
                         Website
-                        <input v-model="providerProfileForm.website" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                        <input v-model="providerProfileForm.website" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('commerce.ui.url_placeholder')">
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary md:col-span-2">
                         Logo-URL
-                        <input v-model="providerProfileForm.logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://.../logo.png">
+                        <input v-model="providerProfileForm.logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('commerce.ui.logo_url_placeholder')">
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary md:col-span-2">
                         Öffentliche Beschreibung
@@ -190,4 +190,3 @@ const emit = defineEmits([
             </aside>
         </section>
 </template>
-

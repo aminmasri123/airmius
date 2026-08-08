@@ -35,7 +35,7 @@ defineEmits(['createQuiz', 'deleteQuiz'])
                     <option v-for="lesson in allLessons" :key="lesson.id" :value="lesson.id">{{ lesson.title }}</option>
                 </select>
                 <input v-model="quizForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Quiztitel">
-                <textarea v-model="quizForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                <textarea v-model="quizForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Beschreibung')"></textarea>
                 <input v-model="quizForm.pass_percent" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestehensgrenze in %">
                 <textarea v-model="quizForm.question" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Erste Frage optional"></textarea>
                 <textarea v-model="quizForm.options_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwortoptionen, je Zeile eine"></textarea>
@@ -46,4 +46,3 @@ defineEmits(['createQuiz', 'deleteQuiz'])
         </div>
     </article>
 </template>
-

@@ -775,7 +775,7 @@ const {
                             <button v-if="plan.status !== 'published' && plan.can_write" type="button" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10" @click="publishPlan(plan)">
                                 Freigeben
                             </button>
-                            <button v-if="plan.can_delete" type="button" class="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openModal('delete', plan)">
+                            <button v-if="plan.can_delete" type="button" class="ms-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openModal('delete', plan)">
                                 Löschen
                             </button>
                         </div>
@@ -969,7 +969,7 @@ const {
                 </form>
 
                 <form v-if="activeModal === 'activity'" class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="submitActivity">
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Name
+                    <label class="block text-sm font-semibold text-primary md:col-span-2">{{ t('training_workspace.fields.name') }}
                         <input v-model="activityForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
                     </label>
                     <label class="block text-sm font-semibold text-primary">Sportart
@@ -990,7 +990,7 @@ const {
                         <input v-model="activityForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="block text-sm font-semibold text-primary">Bild
-                        <input ref="activityImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setActivityImage" />
+                        <input ref="activityImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:me-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setActivityImage" />
                     </label>
                     <button type="submit" class="md:col-span-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="activityForm.processing">
                         Einheit speichern
@@ -1003,7 +1003,7 @@ const {
                             v-for="(step, index) in aiPlanSteps"
                             :key="step.label"
                             type="button"
-                            class="rounded-2xl border p-3 text-left transition"
+                            class="rounded-2xl border p-3 text-start transition"
                             :class="[
                                 aiPlanStep === index ? 'border-air-blue bg-air-blue text-white shadow-lg shadow-air-blue/20' : 'border-border bg-card text-primary hover:bg-muted',
                                 !canOpenAiPlanStep(index) ? 'cursor-not-allowed opacity-50' : '',
@@ -1095,12 +1095,12 @@ const {
                                         v-for="sport in aiPlanSportChoices"
                                         :key="sport.key"
                                         type="button"
-                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        class="rounded-xl border px-3 py-3 text-start text-sm font-semibold transition"
                                         :class="aiPlanForm.sport_type === sport.key ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
                                         @click="selectAiPlanSportType(sport.key)"
                                     >
                                         <span :class="['mb-2 block h-1.5 w-8 rounded-full', sport.accent]"></span>
-                                        <i :class="sport.icon" class="mr-2"></i>{{ sport.label }}
+                                        <i :class="sport.icon" class="me-2"></i>{{ sport.label }}
                                     </button>
                                 </div>
                                 <div class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
@@ -1139,7 +1139,7 @@ const {
                                         v-for="preset in aiPlanDurationPresets"
                                         :key="preset.weeks"
                                         type="button"
-                                        class="rounded-xl border px-3 py-3 text-left transition"
+                                        class="rounded-xl border px-3 py-3 text-start transition"
                                         :class="[
                                             Number(aiPlanForm.weeks) === Math.min(preset.weeks, aiPlanMaxWeeks) ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted',
                                             preset.weeks > aiPlanMaxWeeks ? 'opacity-50' : '',
@@ -1325,7 +1325,7 @@ const {
                             v-for="(step, index) in planWizardSteps"
                             :key="step.label"
                             type="button"
-                            class="rounded-2xl border p-3 text-left transition"
+                            class="rounded-2xl border p-3 text-start transition"
                             :class="[
                                 planWizardStep === index ? 'border-air-blue bg-air-blue text-white shadow-lg shadow-air-blue/20' : 'border-border bg-card text-primary hover:bg-muted',
                                 !canOpenPlanWizardStep(index) ? 'cursor-not-allowed opacity-50' : '',
@@ -1364,11 +1364,11 @@ const {
                                         ]"
                                         :key="option.value"
                                         type="button"
-                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        class="rounded-xl border px-3 py-3 text-start text-sm font-semibold transition"
                                         :class="planForm.cadence === option.value ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
                                         @click="planForm.cadence = option.value"
                                     >
-                                        <i :class="option.icon" class="mr-2"></i>{{ option.label }}
+                                        <i :class="option.icon" class="me-2"></i>{{ option.label }}
                                     </button>
                                 </div>
                             </div>
@@ -1430,7 +1430,7 @@ const {
                                 <label class="block text-sm font-semibold text-primary">Wettkampf / Zieltermin
                                     <input v-model="planForm.competition_date" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+                                <label class="block text-sm font-semibold text-primary md:col-span-2">{{ t('training_workspace.fields.description') }}
                                     <textarea v-model="planForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                                 </label>
                             </div>
@@ -1458,79 +1458,79 @@ const {
                         </div>
 
                         <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-4">
-                            <p class="text-sm font-semibold text-primary">Plan erstellen für</p>
-                            <p class="mt-1 text-xs text-secondary">Lege zuerst fest, für wen dieser Plan gedacht ist.</p>
+                            <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.title') }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ t('training_workspace.plan_audience.intro') }}</p>
 
                             <div class="mt-3 grid gap-2 md:grid-cols-3">
-                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'self' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('self')">
+                                <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'self' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('self')">
                                     <i class="las la-user text-lg"></i>
-                                    <span class="mt-1 block text-sm font-semibold">Für mich selbst</span>
-                                    <span class="mt-1 block text-xs text-secondary">Persönlicher Trainingsplan</span>
+                                    <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.self_title') }}</span>
+                                    <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.self_hint') }}</span>
                                 </button>
-                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
+                                <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'private' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('private')">
                                     <i class="las la-user-friends text-lg"></i>
-                                    <span class="mt-1 block text-sm font-semibold">Privater Kunde / Freund</span>
-                                    <span class="mt-1 block text-xs text-secondary">Nur bestätigte Verbindungen</span>
+                                    <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.private_title') }}</span>
+                                    <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.private_hint') }}</span>
                                 </button>
-                                <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
+                                <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.target_type === 'team' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTargetType('team')">
                                     <i class="las la-users text-lg"></i>
-                                    <span class="mt-1 block text-sm font-semibold">Vereinsteam</span>
-                                    <span class="mt-1 block text-xs text-secondary">Gesamtes Team oder einzelne Sportler</span>
+                                    <span class="mt-1 block text-sm font-semibold">{{ t('training_workspace.plan_audience.team_title') }}</span>
+                                    <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.team_hint') }}</span>
                                 </button>
                             </div>
 
                             <div v-if="planForm.target_type === 'self'" class="mt-4 rounded-xl border border-air-blue/20 bg-air-blue/5 p-3 text-sm text-secondary">
-                                Dieser Plan bleibt privat und wird nur deinem eigenen Trainingsbereich zugeordnet.
+                                {{ t('training_workspace.plan_audience.self_notice') }}
                             </div>
 
                             <template v-else-if="planForm.target_type === 'private'">
                                 <div class="mt-4 flex items-center justify-between gap-3">
-                                    <p class="text-sm font-semibold text-primary">Private Empfänger</p>
-                                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                                    <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.private_recipients') }}</p>
+                                    <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ t('training_workspace.plan_audience.selected', { count: planForm.user_ids.length }) }}</span>
                                 </div>
                                 <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
                                     <label v-for="person in privatePeople" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
                                         <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
                                         <span class="truncate">{{ person.name }}</span>
                                     </label>
-                                    <p v-if="!privatePeople.length" class="text-sm text-secondary">Noch keine bestätigten Freunde oder privaten Kunden verfügbar.</p>
+                                    <p v-if="!privatePeople.length" class="text-sm text-secondary">{{ t('training_workspace.plan_audience.private_empty') }}</p>
                                 </div>
                             </template>
 
                             <template v-else>
-                                <label class="mt-4 block text-sm font-semibold text-primary">Vereinsteam
+                                <label class="mt-4 block text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.team_label') }}
                                     <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" @change="planForm.user_ids = []; planForm.team_mode = 'all'">
-                                        <option value="">Team auswählen</option>
+                                        <option value="">{{ t('training_workspace.plan_audience.team_choose') }}</option>
                                         <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                                     </select>
                                 </label>
 
                                 <div v-if="planForm.team_id" class="mt-4 grid gap-2 sm:grid-cols-2">
-                                    <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.team_mode === 'all' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('all')">
-                                        <span class="block text-sm font-semibold">Komplettes Team</span>
-                                        <span class="mt-1 block text-xs text-secondary">Alle aktuellen Teammitglieder erhalten Zugriff.</span>
+                                    <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.team_mode === 'all' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('all')">
+                                        <span class="block text-sm font-semibold">{{ t('training_workspace.plan_audience.all_title') }}</span>
+                                        <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.all_hint') }}</span>
                                     </button>
-                                    <button type="button" class="rounded-xl border p-3 text-left transition" :class="planForm.team_mode === 'individual' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('individual')">
-                                        <span class="block text-sm font-semibold">Einzelne Sportler</span>
-                                        <span class="mt-1 block text-xs text-secondary">Nur ausgewählte Mitglieder erhalten Zugriff.</span>
+                                    <button type="button" class="rounded-xl border p-3 text-start transition" :class="planForm.team_mode === 'individual' ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-bg/40 text-primary hover:bg-muted'" @click="setPlanTeamMode('individual')">
+                                        <span class="block text-sm font-semibold">{{ t('training_workspace.plan_audience.individual_title') }}</span>
+                                        <span class="mt-1 block text-xs text-secondary">{{ t('training_workspace.plan_audience.individual_hint') }}</span>
                                     </button>
                                 </div>
 
                                 <div v-if="planForm.team_id && planForm.team_mode === 'individual'" class="mt-4">
                                     <div class="flex items-center justify-between gap-3">
-                                        <p class="text-sm font-semibold text-primary">Sportler aus diesem Team</p>
-                                        <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
+                                        <p class="text-sm font-semibold text-primary">{{ t('training_workspace.plan_audience.team_members') }}</p>
+                                        <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ t('training_workspace.plan_audience.selected', { count: planForm.user_ids.length }) }}</span>
                                     </div>
                                     <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
                                         <label v-for="person in selectedTeamMembers" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
                                             <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
                                             <span class="truncate">{{ person.name }}</span>
                                         </label>
-                                        <p v-if="!selectedTeamMembers.length" class="text-sm text-secondary">In diesem Team sind keine Sportler verfügbar.</p>
+                                        <p v-if="!selectedTeamMembers.length" class="text-sm text-secondary">{{ t('training_workspace.plan_audience.team_members_empty') }}</p>
                                     </div>
                                 </div>
-                                <p v-else-if="!planForm.team_id" class="mt-3 rounded-xl border border-dashed border-border p-3 text-sm text-secondary">Wähle zuerst ein Vereinsteam. Danach werden ausschließlich dessen Mitglieder angezeigt.</p>
-                                <p v-else class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
+                                <p v-else-if="!planForm.team_id" class="mt-3 rounded-xl border border-dashed border-border p-3 text-sm text-secondary">{{ t('training_workspace.plan_audience.choose_team_first') }}</p>
+                                <p v-else class="mt-3 text-xs text-secondary">{{ t('training_workspace.plan_audience.team_selected', { count: selectedTeamMembers.length }) }}</p>
                             </template>
                         </div>
                     </section>
@@ -1543,7 +1543,7 @@ const {
                         <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Schnellstart</p>
                             <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
-                                <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border bg-bg/50 px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyPlanExerciseTemplate(template)">
+                                <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border bg-bg/50 px-3 py-2 text-start text-xs text-primary hover:bg-muted" @click="applyPlanExerciseTemplate(template)">
                                     <span class="block font-semibold">{{ template.title }}</span>
                                     <span class="text-secondary">{{ sportLabel(template.sport_type) }} - {{ template.focus }}</span>
                                 </button>
@@ -1559,12 +1559,12 @@ const {
                                         v-for="type in planTrainingTypes"
                                         :key="type.key"
                                         type="button"
-                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        class="rounded-xl border px-3 py-3 text-start text-sm font-semibold transition"
                                         :class="planForm.item_training_type === type.key ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
                                         @click="selectPlanTrainingType(type.key)"
                                     >
                                         <span :class="['mb-2 block h-1.5 w-8 rounded-full', type.accent]"></span>
-                                        <i :class="type.icon" class="mr-2"></i>{{ type.label }}
+                                        <i :class="type.icon" class="me-2"></i>{{ type.label }}
                                     </button>
                                 </div>
                             </div>
@@ -1610,7 +1610,7 @@ const {
                                     <input v-model="planForm.item_video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                                 </label>
                                 <label class="block text-sm font-semibold text-primary">Bild
-                                    <input ref="planImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setPlanImage" />
+                                    <input ref="planImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary file:me-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setPlanImage" />
                                 </label>
                             </div>
                         </details>
@@ -1704,7 +1704,7 @@ const {
                         <label class="block text-sm font-semibold text-primary">Wettkampf / Zieltermin
                             <input v-model="editForm.competition_date" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
-                        <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+                        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ t('training_workspace.fields.description') }}
                             <textarea v-model="editForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
                     </div>
@@ -1726,7 +1726,7 @@ const {
                     <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungsbibliothek</p>
                         <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
-                            <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, itemForm)">
+                            <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-start text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, itemForm)">
                                 <span class="block font-semibold">{{ template.title }}</span>
                                 <span class="text-secondary">{{ sportLabel(template.sport_type) }} · {{ template.focus }}</span>
                             </button>
@@ -1770,7 +1770,7 @@ const {
                     <label class="block text-sm font-semibold text-primary">Fokus
                         <input v-model="itemForm.focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+                    <label class="block text-sm font-semibold text-primary md:col-span-2">{{ t('training_workspace.fields.description') }}
                         <textarea v-model="itemForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
@@ -1780,7 +1780,7 @@ const {
                         <input v-model="itemForm.video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="block text-sm font-semibold text-primary">Bild
-                        <input ref="itemImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setItemImage" />
+                        <input ref="itemImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:me-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setItemImage" />
                     </label>
                     <button type="submit" class="md:col-span-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="itemForm.processing">
                         Einheit hinzufügen
@@ -1791,7 +1791,7 @@ const {
                     <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungsbibliothek</p>
                         <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
-                            <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, editItemForm)">
+                            <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-start text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, editItemForm)">
                                 <span class="block font-semibold">{{ template.title }}</span>
                                 <span class="text-secondary">{{ sportLabel(template.sport_type) }} · {{ template.focus }}</span>
                             </button>
@@ -1835,7 +1835,7 @@ const {
                     <label class="block text-sm font-semibold text-primary">Fokus
                         <input v-model="editItemForm.focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+                    <label class="block text-sm font-semibold text-primary md:col-span-2">{{ t('training_workspace.fields.description') }}
                         <textarea v-model="editItemForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
@@ -1845,7 +1845,7 @@ const {
                         <input v-model="editItemForm.video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="block text-sm font-semibold text-primary">Bild ersetzen
-                        <input ref="editItemImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditItemImage" />
+                        <input ref="editItemImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:me-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditItemImage" />
                     </label>
                     <button type="submit" class="md:col-span-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="editItemForm.processing">
                         Einheit speichern

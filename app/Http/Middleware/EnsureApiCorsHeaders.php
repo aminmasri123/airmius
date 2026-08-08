@@ -52,8 +52,8 @@ class EnsureApiCorsHeaders
         }
 
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With, X-Airmius-Locale, X-App-Locale, X-CSRF-TOKEN, X-XSRF-TOKEN');
-        $response->headers->set('Access-Control-Expose-Headers', 'Authorization, Content-Type');
+        $response->headers->set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Accept, X-Requested-With, X-Locale, X-Airmius-Locale, X-App-Locale, X-CSRF-TOKEN, X-XSRF-TOKEN');
+        $response->headers->set('Access-Control-Expose-Headers', 'Authorization, Content-Type, Content-Language, ETag, X-Airmius-Api-Version, X-Airmius-Contract, X-Airmius-Min-Client-Version, X-Airmius-Text-Direction, X-Request-Id');
         $response->headers->set('Access-Control-Max-Age', '86400');
 
         return $response;

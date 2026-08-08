@@ -20,7 +20,7 @@ defineProps({
                     <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary">
                         <i class="las la-calendar-check text-xl"></i>
                     </span>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Events & Training</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Events & Training') }}</p>
                 </div>
 
                 <h1 class="mt-3 text-2xl font-bold text-primary sm:text-3xl">
@@ -78,4 +78,3 @@ defineProps({
         </div>
     </div>
 </template>
-

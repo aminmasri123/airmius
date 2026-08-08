@@ -21,7 +21,7 @@ defineProps({
             </div>
 
             <div class="rounded-lg bg-inputBg p-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Ort</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ $t('Ort') }}</p>
                 <p class="mt-2 text-sm font-semibold text-primary">{{ event.location || 'Kein Ort angegeben' }}</p>
             </div>
 
@@ -74,4 +74,3 @@ defineProps({
         </div>
     </article>
 </template>
-

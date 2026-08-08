@@ -871,7 +871,7 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 
                         </div>
 
-                        <div v-if="activeMembershipTab >= 1 && activeMembershipTab <= 4" class="space-y-3">
+                        <div v-if="activeMembershipTab !== 0 && activeMembershipTab <= 4" class="space-y-3">
                         <div v-for="section in applicationSectionsForTab(membershipRequestTabs[activeMembershipTab].key)" :key="section.name" class="rounded-lg border border-border bg-bg p-3">
                             <h3 class="text-sm font-semibold text-primary">{{ section.name }}</h3>
                             <div class="mt-3 grid gap-3 md:grid-cols-2">

@@ -2,7 +2,7 @@
 
 return [
     'auth' => [
-        'account_exists' => 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze „Passwort vergessen“.',
+        'account_exists' => 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.',
         'logged_out' => 'Du wurdest abgemeldet.',
     ],
     'training' => [
@@ -25,6 +25,26 @@ return [
         'plan_published' => 'Trainingsplan wurde freigegeben.',
         'plan_copied' => 'Trainingsplan wurde als bearbeitbare Vorlage kopiert.',
         'item_missed' => 'Einheit wurde als nicht gemacht markiert.',
+        'notifications' => [
+            'fallback_athlete' => 'Sportler',
+            'fallback_someone' => 'Jemand',
+            'log_saved_title' => 'Training dokumentiert',
+            'log_saved_body' => ':actor hat „:log“ für :athlete gespeichert.',
+            'item_added_title' => 'Neue Einheit im Trainingsplan',
+            'item_added_body' => '„:item“ wurde zu „:plan“ hinzugefügt.',
+            'item_updated_title' => 'Trainingseinheit aktualisiert',
+            'item_updated_body' => '„:item“ in „:plan“ wurde angepasst.',
+            'item_duplicated_title' => 'Einheit dupliziert',
+            'item_duplicated_body' => '„:item“ wurde in „:plan“ angelegt.',
+            'plan_updated_title' => 'Trainingsplan aktualisiert',
+            'plan_updated_body' => '„:plan“ wurde angepasst.',
+            'plan_published_title' => 'Trainingsplan freigegeben',
+            'plan_published_body' => '„:plan“ ist jetzt für dich sichtbar.',
+            'item_missed_title' => 'Trainingseinheit ausgefallen',
+            'item_missed_body' => '„:item“ wurde als nicht gemacht markiert.',
+            'feedback_title' => 'Neues Training-Feedback',
+            'feedback_body' => ':actor hat bei „:log“ geantwortet.',
+        ],
         'ai' => [
             'plan_too_large' => 'Der Plan ist zu groß für eine saubere KI-Vorschau. Maximal :max Einheiten sind erlaubt.',
             'profile_missing' => 'Für einen zuverlässigen KI-Trainingsplan fehlen noch Leistungsdaten für :sport. Möchtest du sie jetzt nachtragen? Fehlend: :missing. Wenn du die Werte nicht kennst, kannst du bewusst mit vorsichtigen Schätzungen fortfahren.',
@@ -37,6 +57,11 @@ return [
         ],
     ],
     'events' => [
+        'notifications' => [
+            'reminder_title' => 'Event-Erinnerung',
+            'reminder_body' => ':event startet am :date.',
+            'reminder_body_with_location' => ':event startet am :date. Ort: :location.',
+        ],
         'defaults_saved' => 'Event-Standardfilter gespeichert.',
         'recurring_forbidden' => 'Wiederkehrende Events sind für dein Konto nicht freigeschaltet.',
         'recurrence_day_required' => 'Für wöchentliche Serien muss mindestens ein Wochentag gewählt werden.',
@@ -63,6 +88,10 @@ return [
         'monthly_limit_reached' => 'Im kostenlosen Konto kannst du zwei Events pro Monat erstellen. Dein Monatslimit ist erreicht.',
     ],
     'chat' => [
+        'notifications' => [
+            'message_title' => 'Neue Nachricht von :sender',
+            'attachment' => 'Dateianhang',
+        ],
         'created' => 'Konversation erstellt.',
         'direct_messages_forbidden' => 'Diese Person erlaubt keine Nachrichten von dir.',
         'message_unavailable' => 'Diese Nachricht ist nicht verfügbar.',

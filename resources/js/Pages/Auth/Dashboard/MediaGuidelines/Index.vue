@@ -298,7 +298,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                     <input
                         v-model="visualForm.sources[visual.key]"
                         class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary"
-                        placeholder="https://... oder uploads/..."
+                        :placeholder="t('commerce.ui.marketplace_visual_placeholder')"
                     >
                     <p v-if="visualForm.errors[`sources.${visual.key}`]" class="mt-1 text-xs text-error">{{ visualForm.errors[`sources.${visual.key}`] }}</p>
 

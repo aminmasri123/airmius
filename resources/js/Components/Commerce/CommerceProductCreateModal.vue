@@ -227,7 +227,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                 <div class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">{{ c('mainImageUrl') }}</label>
-                        <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                        <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('commerce.ui.url_placeholder')">
                         <p v-if="productForm.errors.image_url" class="mt-1 text-sm text-error">{{ productForm.errors.image_url }}</p>
                     </div>
                     <div>
@@ -457,7 +457,6 @@ const c = (key) => labels.value[key] || copy.de[key] || key
         </form>
     </div>
 </template>
-
 
 
 

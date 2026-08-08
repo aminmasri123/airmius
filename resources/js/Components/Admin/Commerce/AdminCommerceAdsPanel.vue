@@ -425,7 +425,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                 <p class="mt-2 text-xs text-secondary">{{ c('imageSize') }} {{ selectedAdFormat.size }}</p>
             </div>
             <input v-model="campaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="c('imageUrl')">
-            <input type="file" accept="image/jpeg,image/png,image/webp" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-campaign-creative-upload', $event)">
+            <input type="file" accept="image/jpeg,image/png,image/webp" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:me-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-campaign-creative-upload', $event)">
             <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
                 <div class="flex items-center justify-between gap-3">
                     <div>
@@ -529,17 +529,17 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                     <p class="text-sm font-semibold text-primary">{{ row.placement }}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-secondary">
                         <span>{{ c('views') }}</span>
-                        <strong class="text-right text-primary">{{ row.impressions }}</strong>
+                        <strong class="text-end text-primary">{{ row.impressions }}</strong>
                         <span>{{ c('clicks') }}</span>
-                        <strong class="text-right text-primary">{{ row.clicks }}</strong>
+                        <strong class="text-end text-primary">{{ row.clicks }}</strong>
                         <span>{{ c('leads') }}</span>
-                        <strong class="text-right text-primary">{{ row.leads }}</strong>
+                        <strong class="text-end text-primary">{{ row.leads }}</strong>
                         <span>{{ c('sales') }}</span>
-                        <strong class="text-right text-primary">{{ row.sales }}</strong>
+                        <strong class="text-end text-primary">{{ row.sales }}</strong>
                         <span>CTR</span>
-                        <strong class="text-right text-primary">{{ row.ctr }}%</strong>
+                        <strong class="text-end text-primary">{{ row.ctr }}%</strong>
                         <span>{{ c('costs') }}</span>
-                        <strong class="text-right text-primary">{{ formatMoney(row.cost_cents) }}</strong>
+                        <strong class="text-end text-primary">{{ formatMoney(row.cost_cents) }}</strong>
                     </div>
                 </article>
             </div>
@@ -583,7 +583,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="min-w-full text-start text-sm">
                 <thead class="border-b border-border text-xs uppercase text-secondary">
                     <tr>
                         <th class="px-5 py-3">{{ c('campaign') }}</th>
@@ -592,7 +592,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                         <th class="px-5 py-3">{{ c('clicks') }}</th>
                         <th class="px-5 py-3">CTR</th>
                         <th class="px-5 py-3">{{ c('budget') }}</th>
-                        <th class="px-5 py-3 text-right">{{ c('actions') }}</th>
+                        <th class="px-5 py-3 text-end">{{ c('actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
@@ -624,7 +624,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                     <div class="h-2 rounded-full bg-air-blue" :style="{ width: `${budgetUsage(campaign.spent_cents, campaign.budget_cents)}%` }"></div>
                                 </div>
                             </td>
-                            <td class="px-5 py-3 text-right">
+                            <td class="px-5 py-3 text-end">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <p v-if="campaign.user_id && !campaign.payment_completed" class="w-full text-xs text-warning">
                                         {{ c('approveAfterPayment') }}
@@ -704,6 +704,5 @@ const c = (key) => labels.value[key] || copy.de[key] || key
         </div>
     </section>
 </template>
-
 
 

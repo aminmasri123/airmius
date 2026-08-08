@@ -5,16 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\ClubSubscription;
 use App\Models\PaymentCheckout;
-use App\Models\SubscriptionPlanPrice;
 use App\Models\SubscriptionPlan;
+use App\Models\SubscriptionPlanPrice;
 use App\Models\User;
 use App\Models\UserSubscription;
-use App\Notifications\SubscriptionCancelled;
-use App\Notifications\SubscriptionPaymentIssue;
-use App\Notifications\SubscriptionRenewed;
+use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Services\UserSubscriptionActivationService;
-use App\Support\AppNotification;
-use App\Support\ClubRoles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -26,22 +22,38 @@ class SubscriptionPlanController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private readonly UserSubscriptionActivationService $userSubscriptionActivator)
-    {
-    }
+    public function __construct(
+        private readonly UserSubscriptionActivationService $userSubscriptionActivator,
+        private readonly SubscriptionLifecycleService $subscriptionLifecycle,
+    ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $clubQuery = trim((string) $request->string('club_query'));
+        $userQuery = trim((string) $request->string('user_query'));
+
         return Inertia::render('Auth/Dashboard/Admin/Subscriptions/Index', [
-            'plans' => SubscriptionPlan::query()
+            'filters' => [
+                'club_query' => $clubQuery,
+                'user_query' => $userQuery,
+            ],
+            'plans' => fn () => SubscriptionPlan::query()
                 ->with('countryPrices')
                 ->withCount(['clubSubscriptions', 'userSubscriptions'])
                 ->orderBy('sort_order')
                 ->get(),
-            'clubs' => Club::query()
+            'clubs' => fn () => Club::query()
                 ->with('currentSubscription.plan')
                 ->withCount(['users', 'externalMembers', 'teams'])
+                ->when($clubQuery !== '', function ($query) use ($clubQuery): void {
+                    $query->where(function ($search) use ($clubQuery): void {
+                        $search->where('name', 'like', '%'.$clubQuery.'%')
+                            ->orWhereHas('currentSubscription.plan', fn ($plan) => $plan
+                                ->where('name', 'like', '%'.$clubQuery.'%'));
+                    });
+                })
                 ->orderBy('name')
+                ->limit(100)
                 ->get(['id', 'name'])
                 ->map(fn (Club $club) => [
                     'id' => $club->id,
@@ -53,11 +65,22 @@ class SubscriptionPlanController extends Controller
                     'plan' => $club->subscriptionPlan(),
                     'subscription' => $club->currentSubscription ? $this->subscriptionResource($club->currentSubscription) : null,
                 ]),
-            'users' => User::query()
+            'users' => fn () => User::query()
                 ->with(['subscriptions' => fn ($query) => $query
                     ->with('plan:id,name,target_actor')
                     ->latest('id')])
+                ->when($userQuery !== '', function ($query) use ($userQuery): void {
+                    $query->where(function ($search) use ($userQuery): void {
+                        $search->where('name', 'like', '%'.$userQuery.'%')
+                            ->orWhere('first_name', 'like', '%'.$userQuery.'%')
+                            ->orWhere('last_name', 'like', '%'.$userQuery.'%')
+                            ->orWhere('email', 'like', '%'.$userQuery.'%')
+                            ->orWhereHas('subscriptions.plan', fn ($plan) => $plan
+                                ->where('name', 'like', '%'.$userQuery.'%'));
+                    });
+                })
                 ->orderBy('name')
+                ->limit(100)
                 ->get(['id', 'name', 'email', 'first_name', 'last_name'])
                 ->map(fn (User $user) => [
                     'id' => $user->id,
@@ -72,7 +95,7 @@ class SubscriptionPlanController extends Controller
                         ])
                         ->values(),
                 ]),
-            'userSubscriptions' => UserSubscription::query()
+            'userSubscriptions' => fn () => UserSubscription::query()
                 ->with(['user:id,name,email', 'plan:id,name,target_actor'])
                 ->latest('id')
                 ->limit(100)
@@ -82,7 +105,7 @@ class SubscriptionPlanController extends Controller
                     'user' => $subscription->user,
                     'plan' => $subscription->plan,
                 ]),
-            'pendingBankTransfers' => PaymentCheckout::query()
+            'pendingBankTransfers' => fn () => PaymentCheckout::query()
                 ->with(['user:id,name,email', 'club:id,name', 'plan:id,name'])
                 ->where('provider', 'bank_transfer')
                 ->where('status', 'awaiting_transfer')
@@ -134,7 +157,7 @@ class SubscriptionPlanController extends Controller
         $subscriptionPlan->update($data);
         $this->syncCountryPrices($subscriptionPlan, $countryPrices);
 
-        return back()->with('success', 'Abo-Plan aktualisiert.');
+        return back()->with('success', __('subscription.responses.plan_updated'));
     }
 
     private function syncCountryPrices(SubscriptionPlan $plan, array $prices): void
@@ -190,9 +213,9 @@ class SubscriptionPlanController extends Controller
                 'cancelled_at' => $data['status'] === 'cancelled' ? now() : null,
             ],
         );
-        $this->sendStatusEmail($subscription);
+        $this->subscriptionLifecycle->sendCurrentStatusEmail($subscription);
 
-        return back()->with('success', 'Vereins-Abo aktualisiert.');
+        return back()->with('success', __('subscription.responses.club_updated'));
     }
 
     public function assignUser(Request $request, User $user)
@@ -226,9 +249,9 @@ class SubscriptionPlanController extends Controller
             $subscription = $user->subscriptions()->create($payload);
         }
         $this->userSubscriptionActivator->retireOtherUserSubscriptions($subscription->fresh('plan'));
-        $this->sendStatusEmail($subscription);
+        $this->subscriptionLifecycle->sendCurrentStatusEmail($subscription);
 
-        return back()->with('success', 'Nutzer-Abo aktualisiert.');
+        return back()->with('success', __('subscription.responses.user_updated'));
     }
 
     public function cancelClub(Request $request, ClubSubscription $subscription)
@@ -237,9 +260,9 @@ class SubscriptionPlanController extends Controller
             'mode' => ['required', Rule::in(['period_end', 'now'])],
         ]);
 
-        $this->cancelSubscription($subscription, $data['mode']);
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode']);
 
-        return back()->with('success', 'Vereins-Abo wurde gekündigt.');
+        return back()->with('success', __('subscription.responses.club_cancelled'));
     }
 
     public function renewClub(Request $request, ClubSubscription $subscription)
@@ -248,9 +271,9 @@ class SubscriptionPlanController extends Controller
             'months' => ['required', 'integer', 'min:1', 'max:36'],
         ]);
 
-        $this->renewSubscription($subscription, (int) $data['months']);
+        $this->subscriptionLifecycle->renew($subscription, (int) $data['months']);
 
-        return back()->with('success', 'Vereins-Abo wurde verlängert.');
+        return back()->with('success', __('subscription.responses.club_renewed'));
     }
 
     public function cancelUser(Request $request, UserSubscription $subscription)
@@ -259,9 +282,9 @@ class SubscriptionPlanController extends Controller
             'mode' => ['required', Rule::in(['period_end', 'now'])],
         ]);
 
-        $this->cancelSubscription($subscription, $data['mode']);
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode']);
 
-        return back()->with('success', 'Nutzer-Abo wurde gekündigt.');
+        return back()->with('success', __('subscription.responses.user_cancelled'));
     }
 
     public function renewUser(Request $request, UserSubscription $subscription)
@@ -270,9 +293,9 @@ class SubscriptionPlanController extends Controller
             'months' => ['required', 'integer', 'min:1', 'max:36'],
         ]);
 
-        $this->renewSubscription($subscription, (int) $data['months']);
+        $this->subscriptionLifecycle->renew($subscription, (int) $data['months']);
 
-        return back()->with('success', 'Nutzer-Abo wurde verlängert.');
+        return back()->with('success', __('subscription.responses.user_renewed'));
     }
 
     public function cancelOwnUserSubscription(Request $request, UserSubscription $subscription)
@@ -280,12 +303,12 @@ class SubscriptionPlanController extends Controller
         $this->authorize('cancel', $subscription);
 
         if (! $this->isUserSubscriptionCancellable($subscription)) {
-            return back()->with('error', 'Das Abo wurde bereits gekündigt.');
+            return back()->with('error', __('subscription.responses.already_cancelled'));
         }
 
-        $this->cancelSubscription($subscription, 'period_end');
+        $this->subscriptionLifecycle->cancel($subscription, 'period_end');
 
-        return back()->with('success', 'Dein Abo wird zum Periodenende beendet.');
+        return back()->with('success', __('subscription.responses.own_cancelled'));
     }
 
     public function providerPortal(Request $request, UserSubscription $subscription)
@@ -293,7 +316,7 @@ class SubscriptionPlanController extends Controller
         $this->authorize('accessProviderPortal', $subscription);
 
         if (! $this->hasStripePortalConfiguration()) {
-            return back()->with('error', 'Provider-Portal ist für dieses Abo nicht verfügbar.');
+            return back()->with('error', __('subscription.responses.portal_unavailable'));
         }
 
         try {
@@ -310,7 +333,7 @@ class SubscriptionPlanController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->with('error', 'Provider-Portal konnte aktuell nicht gestartet werden.');
+            return back()->with('error', __('subscription.responses.portal_request_failed'));
         }
 
         if ($response->failed() || blank($response->json('url'))) {
@@ -321,7 +344,7 @@ class SubscriptionPlanController extends Controller
                 'body' => $response->json(),
             ]);
 
-            return back()->with('error', 'Provider-Portal konnte nicht gestartet werden.');
+            return back()->with('error', __('subscription.responses.portal_start_failed'));
         }
 
         return redirect()->away($response->json('url'));
@@ -329,205 +352,12 @@ class SubscriptionPlanController extends Controller
 
     private function isUserSubscriptionCancellable(UserSubscription $subscription): bool
     {
-        return ! in_array($subscription->status, ['cancelled', 'cancels_at_period_end'], true);
+        return $this->subscriptionLifecycle->canCancel($subscription);
     }
 
     private function hasStripePortalConfiguration(): bool
     {
         return blank(config('services.stripe.secret')) === false;
-    }
-
-    private function cancelSubscription(ClubSubscription|UserSubscription $subscription, string $mode): void
-    {
-        $endsAt = $subscription->current_period_ends_at ?: now();
-        $recipientId = $subscription instanceof UserSubscription ? $subscription->user_id : null;
-
-        $this->cancelProviderSubscription($subscription, $mode);
-
-        if ($mode === 'now') {
-            $subscription->update([
-                'status' => 'cancelled',
-                'cancel_at_period_end' => false,
-                'cancels_at' => now(),
-                'cancelled_at' => now(),
-                'current_period_ends_at' => now(),
-            ]);
-        } else {
-            $endsAt = $this->contractualCancellationDate($subscription);
-
-            $subscription->update([
-                'status' => 'cancels_at_period_end',
-                'cancel_at_period_end' => true,
-                'cancels_at' => $endsAt,
-                'cancelled_at' => now(),
-            ]);
-        }
-
-        if ($recipientId) {
-            AppNotification::send($recipientId, 'subscription.cancelled', [
-                'title' => 'Abo-Kündigung vorgemerkt',
-                'body' => $mode === 'now' ? 'Dein Abo wurde beendet.' : 'Dein Abo läuft bis zum Periodenende weiter.',
-                'subscription_id' => $subscription->id,
-            ]);
-        }
-        if ($subscription instanceof ClubSubscription) {
-            $subscription->loadMissing(['club', 'plan']);
-            $clubName = $subscription->club?->name ?? 'Verein';
-
-            foreach ($this->subscriptionRecipients($subscription) as $recipient) {
-                AppNotification::send($recipient, 'club.subscription.cancelled', [
-                    'title' => $mode === 'now' ? 'Vereins-Abo beendet' : 'Vereins-Abo-Kündigung vorgemerkt',
-                    'body' => $mode === 'now'
-                        ? "Das Abo von {$clubName} wurde beendet."
-                        : "Das Abo von {$clubName} läuft bis zum Kündigungsdatum weiter.",
-                    'subscription_id' => $subscription->id,
-                    'club_id' => $subscription->club_id,
-                    'club_name' => $clubName,
-                    'plan_id' => $subscription->subscription_plan_id,
-                    'plan_name' => $subscription->plan?->name,
-                    'cancels_at' => $subscription->cancels_at?->toDateString(),
-                ]);
-            }
-        }
-
-        $this->sendSubscriptionEmail($subscription, new SubscriptionCancelled($subscription, $mode), 'cancellation_email_sent_at');
-    }
-
-    private function cancelProviderSubscription(ClubSubscription|UserSubscription $subscription, string $mode): void
-    {
-        if (! $subscription->provider_subscription_id) {
-            return;
-        }
-
-        if ($subscription->payment_provider === 'stripe' && filled(config('services.stripe.secret'))) {
-            $payload = $mode === 'period_end'
-                ? ['cancel_at_period_end' => 'true']
-                : [];
-
-            $request = Http::asForm()->withToken(config('services.stripe.secret'));
-            $response = $mode === 'period_end'
-                ? $request->post('https://api.stripe.com/v1/subscriptions/'.$subscription->provider_subscription_id, $payload)
-                : $request->delete('https://api.stripe.com/v1/subscriptions/'.$subscription->provider_subscription_id);
-
-            if ($response->failed()) {
-                Log::warning('Stripe subscription cancellation failed', [
-                    'subscription_id' => $subscription->id,
-                    'provider_subscription_id' => $subscription->provider_subscription_id,
-                    'status' => $response->status(),
-                    'body' => $response->json(),
-                ]);
-            }
-
-            return;
-        }
-
-        if ($subscription->payment_provider === 'paypal' && filled(config('services.paypal.client_id')) && filled(config('services.paypal.client_secret'))) {
-            try {
-                $tokenResponse = Http::asForm()
-                    ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
-                    ->post((config('services.paypal.mode') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com').'/v1/oauth2/token', [
-                        'grant_type' => 'client_credentials',
-                    ]);
-
-                if ($tokenResponse->failed()) {
-                    return;
-                }
-
-                Http::withToken($tokenResponse->json('access_token'))
-                    ->withBody(json_encode(['reason' => 'Airmius Abo wurde vom Kunden beendet.']), 'application/json')
-                    ->post((config('services.paypal.mode') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com').'/v1/billing/subscriptions/'.$subscription->provider_subscription_id.'/cancel');
-            } catch (\Throwable $exception) {
-                Log::warning('PayPal subscription cancellation failed', [
-                    'subscription_id' => $subscription->id,
-                    'provider_subscription_id' => $subscription->provider_subscription_id,
-                    'message' => $exception->getMessage(),
-                ]);
-            }
-        }
-    }
-
-    private function contractualCancellationDate(ClubSubscription|UserSubscription $subscription)
-    {
-        $subscription->loadMissing('plan');
-
-        $plan = $subscription->plan;
-        $periodEnd = $subscription->current_period_ends_at ?: now();
-        $noticeEnd = now()->addDays((int) ($plan?->cancellation_notice_days ?? 0));
-        $minimumTermEnd = $subscription->created_at
-            ? $subscription->created_at->copy()->addMonths((int) ($plan?->minimum_term_months ?? 0))
-            : now();
-
-        return collect([$periodEnd, $noticeEnd, $minimumTermEnd])
-            ->reduce(fn ($latest, $date) => $date->greaterThan($latest) ? $date : $latest, now());
-    }
-
-    private function renewSubscription(ClubSubscription|UserSubscription $subscription, int $months): void
-    {
-        $baseDate = $subscription->current_period_ends_at && $subscription->current_period_ends_at->isFuture()
-            ? $subscription->current_period_ends_at
-            : now();
-
-        $subscription->update([
-            'status' => 'active',
-            'cancel_at_period_end' => false,
-            'cancels_at' => null,
-            'cancelled_at' => null,
-            'current_period_ends_at' => $baseDate->copy()->addMonths($months),
-            'last_renewed_at' => now(),
-            'renewal_notified_at' => null,
-            'renewal_email_sent_at' => null,
-            'payment_issue_email_sent_at' => null,
-        ]);
-        $subscription->refresh();
-        $this->sendSubscriptionEmail($subscription, new SubscriptionRenewed($subscription), 'renewal_email_sent_at');
-    }
-
-    private function sendStatusEmail(ClubSubscription|UserSubscription $subscription): void
-    {
-        $subscription->refresh();
-
-        if ($subscription->status === 'cancelled' || $subscription->status === 'cancels_at_period_end') {
-            $this->sendSubscriptionEmail($subscription, new SubscriptionCancelled($subscription, $subscription->status === 'cancelled' ? 'now' : 'period_end'), 'cancellation_email_sent_at');
-        }
-
-        if ($subscription->status === 'past_due') {
-            $this->sendSubscriptionEmail($subscription, new SubscriptionPaymentIssue($subscription), 'payment_issue_email_sent_at');
-        }
-    }
-
-    private function sendSubscriptionEmail(ClubSubscription|UserSubscription $subscription, object $notification, string $sentColumn): void
-    {
-        if ($subscription->{$sentColumn}) {
-            return;
-        }
-
-        foreach ($this->subscriptionRecipients($subscription) as $recipient) {
-            if ($recipient?->email) {
-                $recipient->notify($notification);
-            }
-        }
-
-        $subscription->forceFill([$sentColumn => now()])->save();
-    }
-
-    private function subscriptionRecipients(ClubSubscription|UserSubscription $subscription)
-    {
-        if ($subscription instanceof UserSubscription) {
-            return $subscription->user ? collect([$subscription->user]) : collect();
-        }
-
-        $club = $subscription->club;
-
-        if (! $club) {
-            return collect();
-        }
-
-        return ClubRoles::whereAny($club->users(), ['owner', 'admin', 'manager'])
-            ->get()
-            ->push($club->owner)
-            ->filter()
-            ->unique('id')
-            ->values();
     }
 
     private function subscriptionResource(ClubSubscription|UserSubscription $subscription): array

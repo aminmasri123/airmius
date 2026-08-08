@@ -62,20 +62,22 @@ class SportMatchingController extends Controller
     public function store(Request $request, ApiSportMatchingController $api)
     {
         $api->store($request);
-        return back()->with('success', 'Matching-Angebot veröffentlicht.');
+
+        return back()->with('success', __('sport_matching.flash.published'));
     }
 
     public function apply(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
     {
         $api->apply($request, $sportMatching);
-        return back()->with('success', 'Anfrage wurde gesendet.');
+
+        return back()->with('success', __('sport_matching.flash.application_sent'));
     }
 
     public function dismiss(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
     {
         $api->dismiss($request, $sportMatching);
 
-        return back()->with('success', 'Angebot wurde ausgeblendet.');
+        return back()->with('success', __('sport_matching.flash.dismissed'));
     }
 
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application, ApiSportMatchingController $api)
@@ -86,29 +88,30 @@ class SportMatchingController extends Controller
         if ($request->input('status') === 'accepted' && $conversationId) {
             return redirect()
                 ->route('auth.conversations.show', $conversationId)
-                ->with('success', 'Matching bestätigt. Der Chat wurde geöffnet.');
+                ->with('success', __('sport_matching.flash.accepted_chat_opened'));
         }
 
-        return back()->with('success', 'Anfrage wurde bearbeitet.');
+        return back()->with('success', __('sport_matching.flash.application_processed'));
     }
 
     public function cancel(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
     {
         $api->cancel($request, $sportMatching);
-        return back()->with('success', 'Matching-Angebot wurde geschlossen.');
+
+        return back()->with('success', __('sport_matching.flash.closed'));
     }
 
     public function updateAttendance(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
     {
         $api->updateAttendance($request, $sportMatching);
 
-        return back()->with('success', 'Teilnahmestatus aktualisiert.');
+        return back()->with('success', __('sport_matching.flash.attendance_updated'));
     }
 
     public function reportNoShow(Request $request, SportMatching $sportMatching, ApiSportMatchingController $api)
     {
         $api->reportNoShow($request, $sportMatching);
 
-        return back()->with('success', 'Nicht-Erscheinen wurde gemeldet.');
+        return back()->with('success', __('sport_matching.flash.no_show_reported'));
     }
 }

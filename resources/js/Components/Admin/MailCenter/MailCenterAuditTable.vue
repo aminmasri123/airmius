@@ -30,9 +30,9 @@ defineProps({
             <template #head>
                 <tr>
                     <th class="px-5 py-3">Zeit</th>
-                    <th class="px-5 py-3">Kategorie</th>
+                    <th class="px-5 py-3">{{ $t('Kategorie') }}</th>
                     <th class="px-5 py-3">Aktion</th>
-                    <th class="px-5 py-3">Admin</th>
+                    <th class="px-5 py-3">{{ $t('Admin') }}</th>
                     <th class="px-5 py-3">Details</th>
                 </tr>
             </template>

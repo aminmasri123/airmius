@@ -7,10 +7,13 @@ use App\Models\LearningCoupon;
 use App\Models\LearningEnrollment;
 use App\Models\MarketplaceProduct;
 use App\Models\User;
+use App\Services\Learning\LearningEnrollmentService;
 use Illuminate\Validation\ValidationException;
 
 class CommerceLearningOrderService
 {
+    public function __construct(private readonly LearningEnrollmentService $learningEnrollment) {}
+
     public function applyCoupon(MarketplaceProduct $product, array $quote, ?string $code): array
     {
         if (! $product->learning_course_id || blank($code)) {
@@ -48,11 +51,11 @@ class CommerceLearningOrderService
 
     public function grantAccessForOrder(CommerceOrder $order): void
     {
-        $userId = $order->user_id ?: User::query()
-            ->where('email', strtolower((string) $order->guest_email))
-            ->value('id');
+        $user = $order->user_id
+            ? User::query()->find($order->user_id)
+            : User::query()->where('email', strtolower((string) $order->guest_email))->first();
 
-        if (! $userId) {
+        if (! $user) {
             return;
         }
 
@@ -63,15 +66,10 @@ class CommerceLearningOrderService
                 continue;
             }
 
-            $enrollment = LearningEnrollment::query()->firstOrNew([
-                'learning_course_id' => $item->orderable->learning_course_id,
-                'user_id' => $userId,
-            ]);
-
-            $enrollment->forceFill([
-                'status' => 'active',
-                'started_at' => $enrollment->started_at ?: now(),
-            ])->save();
+            $item->orderable->loadMissing('learningCourse');
+            if ($item->orderable->learningCourse) {
+                $this->learningEnrollment->activate($user, $item->orderable->learningCourse, 'commerce', true);
+            }
         }
 
         $couponId = data_get($order->payload, 'pricing.learning_coupon.id');

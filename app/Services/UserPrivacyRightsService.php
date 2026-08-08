@@ -13,6 +13,7 @@ class UserPrivacyRightsService
     private const CONSENT_FIELDS = [
         'ads_personalization' => 'ads_personalization_consent',
         'ads_measurement' => 'ads_measurement_consent',
+        'product_analytics' => 'product_analytics_consent',
     ];
 
     public function correct(User $user, array $data): User

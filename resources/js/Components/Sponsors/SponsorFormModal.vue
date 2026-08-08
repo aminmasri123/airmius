@@ -67,7 +67,7 @@ const previewUrl = (source) => {
                             <span class="text-sm font-semibold text-primary">Sponsor-Art</span>
                             <select v-model="form.scope" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                 <option value="platform">Airmius Plattform</option>
-                                <option value="outfit_subscription">Outfit-Abo</option>
+                                <option value="outfit_subscription">{{ $t('Outfit-Abo') }}</option>
                                 <option value="club">Verein</option>
                             </select>
                             <div v-if="form.errors.scope" class="mt-1 text-sm text-error">{{ form.errors.scope }}</div>
@@ -95,14 +95,14 @@ const previewUrl = (source) => {
                         </label>
 
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">E-Mail</span>
+                            <span class="text-sm font-semibold text-primary">{{ $t('E-Mail') }}</span>
                             <input v-model="form.email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsor@example.com" type="email">
                             <div v-if="form.errors.email" class="mt-1 text-sm text-error">{{ form.errors.email }}</div>
                         </label>
 
                         <label class="block">
                             <span class="text-sm font-semibold text-primary">Website</span>
-                            <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." type="url">
+                            <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="$t('commerce.ui.url_placeholder')" type="url">
                             <div v-if="form.errors.website" class="mt-1 text-sm text-error">{{ form.errors.website }}</div>
                         </label>
 
@@ -174,4 +174,3 @@ const previewUrl = (source) => {
         </div>
     </Teleport>
 </template>
-

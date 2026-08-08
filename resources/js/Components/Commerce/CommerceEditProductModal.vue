@@ -58,7 +58,7 @@ const emit = defineEmits([
                     Bestand verwalten
                 </label>
                 <input v-if="form.manages_stock" v-model="form.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
-                <textarea v-model="form.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Beschreibung"></textarea>
+                <textarea v-model="form.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" :placeholder="$t('Beschreibung')"></textarea>
             </div>
             <div v-if="form.manages_stock" class="mt-4 rounded-lg border border-border bg-bg p-3">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -100,4 +100,3 @@ const emit = defineEmits([
         </form>
     </div>
 </template>
-

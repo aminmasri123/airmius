@@ -26,6 +26,7 @@ use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Services\AdminCommerceDashboardPayloadService;
 use App\Services\CommerceDocumentService;
+use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\CarrierTracking;
 use App\Support\Roles;
@@ -37,9 +38,12 @@ use Illuminate\Validation\Rule;
 
 class AdminCommerceController extends Controller
 {
+    private const VALIDATION_FAILED = 'validation failed';
+
     public function __construct(
         private CommerceDocumentService $documents,
         private AdminCommerceDashboardPayloadService $dashboardPayload,
+        private WebsiteRequestService $websiteRequests,
     ) {}
 
     public function dashboard(Request $request)
@@ -257,9 +261,10 @@ class AdminCommerceController extends Controller
 
         if (($data['status'] === 'rejected' || ($data['moderation_status'] ?? null) === 'rejected') && blank($data['rejection_reason'] ?? null)) {
             return response()->json([
-                'message' => 'validation failed',
+                'message' => self::VALIDATION_FAILED,
+                'message_text' => __('commerce.validation.validation_failed'),
                 'errors' => [
-                    'rejection_reason' => ['Bitte gib einen Ablehnungsgrund an.'],
+                    'rejection_reason' => [__('commerce.validation.rejection_reason_required')],
                 ],
             ], 422);
         }
@@ -364,12 +369,15 @@ class AdminCommerceController extends Controller
     {
         $this->authorizeCommerceAdmin($request);
 
-        $websiteRequest->update($request->validate([
-            'status' => ['required', Rule::in(['new', 'contacted', 'quoted', 'in_progress', 'done', 'cancelled'])],
+        $data = $request->validate([
+            'status' => ['required', Rule::in(WebsiteRequestService::STATUSES)],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ]));
+        ]);
 
-        return response()->json(['data' => $websiteRequest->fresh(['user', 'club'])]);
+        return response()->json([
+            'message' => __('agency.flash.request_updated'),
+            'data' => $this->websiteRequests->updateWorkflow($websiteRequest, $request->user(), $data),
+        ]);
     }
 
     public function updateCampaignStatus(Request $request, AdCampaign $campaign)
@@ -799,24 +807,24 @@ class AdminCommerceController extends Controller
     {
         $definitions = [
             'side_banner' => [
-                'label' => 'Seitlicher Marketplace-Banner',
-                'description' => 'Schmaler Hintergrund links und rechts.',
+                'label' => __('media_guidelines.visuals.marketplace_side.label'),
+                'description' => __('media_guidelines.visuals.marketplace_side.description_compact'),
                 'recommended_size' => '192 x 1080 px',
                 'default_width' => 192,
                 'default_height' => 1080,
                 'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
             ],
             'hero_banner' => [
-                'label' => 'Oberer Aktions-/Hero-Banner',
-                'description' => 'Hauptbild im ersten Marketplace-Bereich.',
+                'label' => __('media_guidelines.visuals.marketplace_hero.label'),
+                'description' => __('media_guidelines.visuals.marketplace_hero.description_compact'),
                 'recommended_size' => '1600 x 900 px',
                 'default_width' => 1600,
                 'default_height' => 900,
                 'default' => '',
             ],
             'sale_banner' => [
-                'label' => 'Sale-Kachel / Aktionsbild',
-                'description' => 'Bild für die Sale-Kachel.',
+                'label' => __('media_guidelines.visuals.marketplace_sale.label'),
+                'description' => __('media_guidelines.visuals.marketplace_sale.description_compact'),
                 'recommended_size' => '800 x 1000 px',
                 'default_width' => 800,
                 'default_height' => 1000,

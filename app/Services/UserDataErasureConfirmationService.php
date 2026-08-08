@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Notifications\UserDataErasureCodeRequested;
+use App\Support\SupportedLocale;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -27,7 +28,10 @@ class UserDataErasureConfirmationService
         ], now()->addMinutes(self::TTL_MINUTES));
 
         Notification::route('mail', $user->email)
-            ->notify(new UserDataErasureCodeRequested($code));
+            ->notify(new UserDataErasureCodeRequested(
+                $code,
+                SupportedLocale::normalize($user->language) ?? app()->getLocale(),
+            ));
     }
 
     /**
@@ -44,7 +48,7 @@ class UserDataErasureConfirmationService
             || ! Hash::check($code, (string) ($confirmation['code_hash'] ?? ''))
         ) {
             throw ValidationException::withMessages([
-                'code' => 'Der Code ist ungültig, abgelaufen oder passt nicht zu der ausgewählten Datenlöschung. Bitte fordere einen neuen Code an.',
+                'code' => __('data_erasure.validation.code_invalid'),
             ]);
         }
 
@@ -70,8 +74,8 @@ class UserDataErasureConfirmationService
         if (! $confirmed) {
             throw ValidationException::withMessages([
                 'identity' => $usesSocialLogin
-                    ? 'Die eingegebene E-Mail-Adresse stimmt nicht mit deinem Konto überein.'
-                    : 'Das eingegebene Passwort ist nicht korrekt.',
+                    ? __('data_erasure.validation.email_mismatch')
+                    : __('data_erasure.validation.password_incorrect'),
             ]);
         }
     }

@@ -45,6 +45,7 @@ use App\Services\MarketplacePricingService;
 use App\Services\MarketplaceProductImportService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
+use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\CommerceOrderNotifier;
@@ -78,6 +79,7 @@ class CommerceCheckoutController extends Controller
         private CommerceLearningOrderService $learningOrders,
         private MarketplaceProductImportService $productImport,
         private CommercePaymentGatewayService $payments,
+        private WebsiteRequestService $websiteRequests,
     ) {}
 
     public function index(Request $request)
@@ -376,7 +378,7 @@ class CommerceCheckoutController extends Controller
 
         if (! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Du kannst für diesen Verein keine Angebote, Add-ons, Website-Anfragen oder Ads erstellen.',
+                'club_id' => __('commerce.validation.club_unauthorized'),
             ]);
         }
 
@@ -462,7 +464,7 @@ class CommerceCheckoutController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        abort_if(blank($data['iban'] ?? null) && blank($data['paypal_email'] ?? null), 422, 'Bitte IBAN oder PayPal-E-Mail angeben.');
+        abort_if(blank($data['iban'] ?? null) && blank($data['paypal_email'] ?? null), 422, __('commerce.validation.payout_method_required'));
 
         $profile = PayoutProfile::query()->updateOrCreate(
             ['user_id' => $request->user()->id],
@@ -471,12 +473,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Auszahlungsdaten wurden gespeichert und werden geprüft.',
+                'message' => __('commerce.flash.payout_profile_saved'),
                 'data' => $profile->fresh(),
             ]);
         }
 
-        return back()->with('success', 'Auszahlungsdaten wurden gespeichert und werden geprüft.');
+        return back()->with('success', __('commerce.flash.payout_profile_saved'));
     }
 
     public function storeProviderProfile(Request $request)
@@ -492,12 +494,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Anbieterprofil wurde gespeichert.',
+                'message' => __('commerce.flash.provider_profile_saved'),
                 'data' => $this->marketplaceProviderProfileResource($profile->fresh(), $request->user()),
             ]);
         }
 
-        return back()->with('success', 'Anbieterprofil wurde gespeichert. Öffentliche Daten erscheinen im Marketplace.');
+        return back()->with('success', __('commerce.flash.provider_profile_saved_web'));
     }
 
     public function storeProviderLocation(Request $request)
@@ -515,12 +517,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Standort wurde gespeichert.',
+                'message' => __('commerce.flash.location_saved'),
                 'data' => $this->marketplaceProviderLocationResource($location),
             ], 201);
         }
 
-        return back()->with('success', 'Standort wurde gespeichert und kann im Marketplace angezeigt werden.');
+        return back()->with('success', __('commerce.flash.location_saved_web'));
     }
 
     public function updateProviderLocation(Request $request, MarketplaceProviderLocation $location)
@@ -535,12 +537,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Standort wurde aktualisiert.',
+                'message' => __('commerce.flash.location_updated'),
                 'data' => $this->marketplaceProviderLocationResource($location->fresh()),
             ]);
         }
 
-        return back()->with('success', 'Standort wurde aktualisiert.');
+        return back()->with('success', __('commerce.flash.location_updated'));
     }
 
     public function destroyProviderLocation(Request $request, MarketplaceProviderLocation $location)
@@ -550,11 +552,11 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Standort wurde entfernt.',
+                'message' => __('commerce.flash.location_removed'),
             ]);
         }
 
-        return back()->with('success', 'Standort wurde entfernt.');
+        return back()->with('success', __('commerce.flash.location_removed'));
     }
 
     public function requestPayout(Request $request)
@@ -570,14 +572,14 @@ class CommerceCheckoutController extends Controller
 
         if (! $profile || $profile->status !== 'approved') {
             throw ValidationException::withMessages([
-                'payout' => 'Bitte hinterlege zuerst Auszahlungsdaten und warte auf die Freigabe.',
+                'payout' => __('commerce.validation.payout_profile_required'),
             ]);
         }
 
         $orders = $this->eligiblePayoutOrdersFor($request->user())->get();
         if ($orders->isEmpty()) {
             throw ValidationException::withMessages([
-                'payout' => 'Es gibt aktuell keine auszahlbaren Verkäufe. Auszahlbar sind nur abgeschlossene Verkäufe nach 14 Tagen ohne Beschwerde oder Rücksendung.',
+                'payout' => __('commerce.validation.no_payout_orders'),
             ]);
         }
 
@@ -606,12 +608,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Auszahlung wurde angefordert.',
+                'message' => __('commerce.flash.payout_requested'),
                 'data' => $payout->fresh()->loadCount('orders'),
             ], 201);
         }
 
-        return back()->with('success', 'Auszahlung wurde angefordert. Airmius prüft und zahlt sie aus.');
+        return back()->with('success', __('commerce.flash.payout_requested_web'));
     }
 
     public function storeSellerApplication(Request $request)
@@ -623,12 +625,12 @@ class CommerceCheckoutController extends Controller
         if ($existing?->status === 'approved') {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Dein Shop-Zugang ist bereits freigegeben.',
+                    'message' => __('commerce.flash.seller_approved'),
                     'data' => MarketplaceSellerReadiness::attach($existing),
                 ]);
             }
 
-            return back()->with('success', 'Dein Shop-Zugang ist bereits freigegeben.');
+            return back()->with('success', __('commerce.flash.seller_approved'));
         }
 
         $data = $request->validate([
@@ -665,12 +667,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Shop-Antrag wurde eingereicht.',
+                'message' => __('commerce.flash.seller_submitted'),
                 'data' => MarketplaceSellerReadiness::attach($application->fresh()),
             ], 201);
         }
 
-        return back()->with('success', 'Shop-Antrag wurde eingereicht. Nach Freigabe kannst du Produkte verkaufen.');
+        return back()->with('success', __('commerce.flash.seller_submitted_web'));
     }
 
     public function storeAddon(Request $request, SubscriptionAddon $addon)
@@ -689,13 +691,13 @@ class CommerceCheckoutController extends Controller
 
         if ($targetActor === 'verein' && ! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Dieses Add-on ist nur für Vereine buchbar. Bitte wähle einen Verein aus.',
+                'club_id' => __('commerce.validation.addon_club_required'),
             ]);
         }
 
         if ($targetActor !== 'verein' && $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Dieses Add-on ist für dein persönliches Konto gedacht. Bitte wähle Privat / kein Verein aus.',
+                'club_id' => __('commerce.validation.addon_personal_only'),
             ]);
         }
 
@@ -754,7 +756,7 @@ class CommerceCheckoutController extends Controller
         $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
         if (! $this->cartService->hasSellableStock($product, $shippingAddress['country'], $quantity)) {
             throw ValidationException::withMessages([
-                'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
+                'quantity' => __('commerce.validation.stock_unavailable'),
             ]);
         }
         $fulfillmentInventory = $this->cartService->fulfillmentInventoryFor($product, $shippingAddress['country'], $quantity);
@@ -826,7 +828,7 @@ class CommerceCheckoutController extends Controller
 
         if (! $this->cartService->hasSellableStock($product, $country, (int) $item->quantity)) {
             throw ValidationException::withMessages([
-                'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
+                'quantity' => __('commerce.validation.stock_unavailable'),
             ]);
         }
 
@@ -841,11 +843,11 @@ class CommerceCheckoutController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $this->checkoutPayload->cartResource($request),
-                'message' => 'Artikel wurde in den Einkaufswagen gelegt.',
+                'message' => __('commerce.flash.cart_added'),
             ], 201);
         }
 
-        return back()->with('success', 'Artikel wurde in den Einkaufswagen gelegt.');
+        return back()->with('success', __('commerce.flash.cart_added'));
     }
 
     public function updateCartItem(Request $request, CommerceCartItem $item)
@@ -861,7 +863,7 @@ class CommerceCheckoutController extends Controller
         abort_unless($product && $this->cartService->hasSellableStock($product, $country), 404);
         if (! $this->cartService->hasSellableStock($product, $country, (int) $data['quantity'])) {
             throw ValidationException::withMessages([
-                'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
+                'quantity' => __('commerce.validation.stock_unavailable'),
             ]);
         }
 
@@ -870,11 +872,11 @@ class CommerceCheckoutController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $this->checkoutPayload->cartResource($request),
-                'message' => 'Einkaufswagen wurde aktualisiert.',
+                'message' => __('commerce.flash.cart_updated'),
             ]);
         }
 
-        return back()->with('success', 'Einkaufswagen wurde aktualisiert.');
+        return back()->with('success', __('commerce.flash.cart_updated'));
     }
 
     public function removeCartItem(Request $request, CommerceCartItem $item)
@@ -885,11 +887,11 @@ class CommerceCheckoutController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'data' => $this->checkoutPayload->cartResource($request),
-                'message' => 'Artikel wurde aus dem Einkaufswagen entfernt.',
+                'message' => __('commerce.flash.cart_removed'),
             ]);
         }
 
-        return back()->with('success', 'Artikel wurde aus dem Einkaufswagen entfernt.');
+        return back()->with('success', __('commerce.flash.cart_removed'));
     }
 
     public function checkoutCart(Request $request)
@@ -911,7 +913,7 @@ class CommerceCheckoutController extends Controller
         ]);
 
         $cart = $this->cartService->cartFor($request->user())->load('items.product');
-        abort_if($cart->items->isEmpty(), 422, 'Dein Einkaufswagen ist leer.');
+        abort_if($cart->items->isEmpty(), 422, __('commerce.validation.cart_empty'));
 
         $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
@@ -926,7 +928,7 @@ class CommerceCheckoutController extends Controller
                         && $product->moderation_status === 'approved'
                         && $this->cartService->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity),
                     422,
-                    $product->title.' ist nicht mehr verfügbar.',
+                    __('commerce.validation.product_unavailable', ['product' => $product->title]),
                 );
             }
         });
@@ -1400,12 +1402,12 @@ class CommerceCheckoutController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Produkt wurde aktualisiert und zur Prüfung eingereicht.',
+                'message' => __('commerce.flash.product_updated'),
                 'data' => $product->fresh(['inventories.warehouse:id,name,country_code,city,postal_code']),
             ]);
         }
 
-        return back()->with('success', 'Produkt wurde aktualisiert und zur Prüfung eingereicht.');
+        return back()->with('success', __('commerce.flash.product_updated'));
     }
 
     public function updateOwnProductStatus(Request $request, MarketplaceProduct $product)
@@ -1455,23 +1457,23 @@ class CommerceCheckoutController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.',
+                    'message' => __('commerce.flash.product_archived_orders'),
                     'data' => $product->fresh(),
                 ]);
             }
 
-            return back()->with('success', 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.');
+            return back()->with('success', __('commerce.flash.product_archived_orders'));
         }
 
         $product->delete();
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Produkt wurde gelöscht.',
+                'message' => __('commerce.flash.product_deleted'),
             ]);
         }
 
-        return back()->with('success', 'Produkt wurde gelöscht.');
+        return back()->with('success', __('commerce.flash.product_deleted'));
     }
 
     public function showProduct(Request $request, MarketplaceProduct $product)
@@ -1504,10 +1506,10 @@ class CommerceCheckoutController extends Controller
     public function reportOrderIssue(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless($order->status === 'completed', 422, 'Nur bezahlte Bestellungen können gemeldet werden.');
+        abort_unless($order->status === 'completed', 422, __('commerce.validation.issue_paid_order_required'));
 
         $support = $this->orderSupport->summary($order->loadMissing(['items.orderable', 'returnRequests']));
-        abort_unless($support['can_report_issue'], 422, 'Zu dieser Bestellung läuft bereits ein Problemfall.');
+        abort_unless($support['can_report_issue'], 422, __('commerce.validation.issue_already_open'));
 
         $data = $request->validate([
             'issue_note' => ['required', 'string', 'max:2000'],
@@ -1527,20 +1529,20 @@ class CommerceCheckoutController extends Controller
             );
         }
 
-        return back()->with('success', 'Problem wurde gemeldet. Airmius prüft den Fall.');
+        return back()->with('success', __('commerce.flash.issue_reported'));
     }
 
     public function cancelOrder(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless(in_array($order->type, ['marketplace_product', 'marketplace_cart'], true), 422, 'Nur Marketplace-Bestellungen können hier storniert werden.');
-        abort_unless(in_array($order->status, ['pending', 'awaiting_transfer', 'completed'], true), 422, 'Diese Bestellung kann nicht mehr storniert werden.');
-        abort_if(in_array($order->shipping_status, ['shipped', 'delivered'], true), 422, 'Nach dem Versand ist eine Stornierung nicht mehr möglich. Nach Zustellung kannst du eine Rücksendung anfragen.');
+        abort_unless(in_array($order->type, ['marketplace_product', 'marketplace_cart'], true), 422, __('commerce.validation.marketplace_order_required'));
+        abort_unless(in_array($order->status, ['pending', 'awaiting_transfer', 'completed'], true), 422, __('commerce.validation.order_not_cancellable'));
+        abort_if(in_array($order->shipping_status, ['shipped', 'delivered'], true), 422, __('commerce.validation.order_already_shipped'));
 
         $order->loadMissing(['items.orderable', 'orderable', 'user']);
         $hasShippableItems = $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable);
         $hasLearningProduct = $this->learningOrders->productsForOrder($order)->isNotEmpty();
-        abort_unless($hasShippableItems || $hasLearningProduct, 422, 'Diese Bestellung kann nicht Über diesen Storno storniert werden.');
+        abort_unless($hasShippableItems || $hasLearningProduct, 422, __('commerce.validation.order_cancellation_unsupported'));
 
         DB::transaction(function () use ($order) {
             if ($order->status === 'completed' && $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable)) {
@@ -1550,7 +1552,7 @@ class CommerceCheckoutController extends Controller
             $order->forceFill([
                 'status' => 'cancelled',
                 'issue_status' => 'cancelled',
-                'issue_note' => $order->issue_note ?: 'Vom Käufer vor Versand storniert.',
+                'issue_note' => $order->issue_note ?: __('commerce.validation.buyer_cancelled_note'),
                 'issue_reported_at' => $order->issue_reported_at ?: now(),
                 'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
                 'payout_status' => 'cancelled',
@@ -1559,12 +1561,17 @@ class CommerceCheckoutController extends Controller
             $this->learningOrders->revokeAccessForOrder($order, 'cancelled');
         });
 
-        AppNotification::send($order->user_id, 'commerce.order.cancelled', [
-            'title' => 'Bestellung storniert',
-            'body' => 'Deine Bestellung #'.$order->id.' wurde storniert. Falls bereits bezahlt wurde, wird die Erstattung geprüft.',
-            'url' => route('auth.commerce.index', ['tab' => 'invoices', 'order' => $order->id]),
-            'order_id' => $order->id,
-        ]);
+        AppNotification::sendLocalized(
+            $order->user ?? $order->user_id,
+            'commerce.order.cancelled',
+            'commerce.notifications.cancelled_title',
+            'commerce.notifications.cancelled_body',
+            ['id' => $order->id],
+            [
+                'url' => route('auth.commerce.index', ['tab' => 'invoices', 'order' => $order->id]),
+                'order_id' => $order->id,
+            ],
+        );
 
         app(CommerceOrderNotifier::class)->notifyBuyerCancelled($order->fresh(['items.orderable', 'orderable', 'user']));
 
@@ -1574,13 +1581,13 @@ class CommerceCheckoutController extends Controller
             );
         }
 
-        return back()->with('success', 'Bestellung wurde storniert. Nach Versand wäre nur noch eine Rücksendung möglich.');
+        return back()->with('success', __('commerce.flash.order_cancelled'));
     }
 
     public function requestReturn(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless($order->status === 'completed', 422, 'Rücksendungen sind nur für bezahlte Bestellungen möglich.');
+        abort_unless($order->status === 'completed', 422, __('commerce.validation.paid_order_required'));
 
         $support = $this->orderSupport->summary($order->loadMissing(['items.orderable', 'returnRequests']));
         abort_unless($support['can_request_return'], 422, $this->orderSupport->returnBlockedReasonMessage($support['return_blocked_reason'] ?? null));
@@ -1592,8 +1599,8 @@ class CommerceCheckoutController extends Controller
         ]);
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
-        abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht rücksendepflichtig.');
-        abort_if($item && ! $this->orderSupport->itemStillReturnable($item), 422, 'Die Rücksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
+        abort_if($item && ! $item->is_shippable, 422, __('commerce.validation.return_not_required'));
+        abort_if($item && ! $this->orderSupport->itemStillReturnable($item), 422, __('commerce.validation.return_expired'));
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -1614,7 +1621,7 @@ class CommerceCheckoutController extends Controller
             );
         }
 
-        return back()->with('success', 'Rücksendung wurde angefragt.');
+        return back()->with('success', __('commerce.flash.return_requested'));
     }
 
     public function downloadInvoice(Request $request, CommerceOrder $order)
@@ -1703,7 +1710,7 @@ class CommerceCheckoutController extends Controller
 
         if ($startPayment && ! ($data['accepted_terms'] ?? false)) {
             throw ValidationException::withMessages([
-                'accepted_terms' => 'Bitte AGB und Widerrufshinweise akzeptieren, bevor du die Zahlung startest.',
+                'accepted_terms' => __('commerce.validation.terms_required'),
             ]);
         }
 
@@ -1719,7 +1726,7 @@ class CommerceCheckoutController extends Controller
 
             if ($existingOrder) {
                 if ($existingOrder->status === 'completed') {
-                    return redirect()->route('auth.commerce.index')->with('success', 'Diese Ads-Zahlung wurde bereits verarbeitet.');
+                    return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.ads_payment_processed'));
                 }
 
                 return $this->startCheckout($existingOrder);
@@ -1764,7 +1771,7 @@ class CommerceCheckoutController extends Controller
 
             return redirect()
                 ->route('auth.commerce.index', ['tab' => 'ads'])
-                ->with('success', 'Ads-Kampagne wurde als Entwurf erstellt. Jetzt kannst du Anzeigegruppen darunter anlegen.');
+                ->with('success', __('commerce.flash.ads_draft_created'));
         }
 
         $order = CommerceOrder::create([
@@ -1791,7 +1798,7 @@ class CommerceCheckoutController extends Controller
         $order->items()->create([
             'orderable_type' => $campaign::class,
             'orderable_id' => $campaign->id,
-            'title' => 'Ads-Kampagne: '.$campaign->name,
+            'title' => __('commerce.order_items.ads_campaign', ['name' => $campaign->name]),
             'quantity' => 1,
             'unit_gross_cents' => (int) $campaign->budget_cents,
             'net_cents' => (int) $campaign->budget_cents,
@@ -1814,14 +1821,14 @@ class CommerceCheckoutController extends Controller
         if ($data['status'] === 'active') {
             if ($campaign->status !== 'paused' || ! $campaign->reviewed_at || ! $this->campaignPaymentCompleted($campaign)) {
                 throw ValidationException::withMessages([
-                    'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung und Admin-Freigabe fortgesetzt werden.',
+                    'campaign_status' => __('commerce.validation.campaign_paid_and_approved_required'),
                 ]);
             }
         }
 
         if ($data['status'] === 'pending_review' && ! $this->campaignPaymentCompleted($campaign)) {
             throw ValidationException::withMessages([
-                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung zur Prüfung eingereicht werden.',
+                'campaign_status' => __('commerce.validation.campaign_payment_required'),
             ]);
         }
 
@@ -1837,7 +1844,7 @@ class CommerceCheckoutController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Kampagnenstatus wurde aktualisiert.');
+        return back()->with('success', __('commerce.flash.campaign_status_updated'));
     }
 
     public function storeOwnCampaignGroup(Request $request, AdCampaign $campaign)
@@ -1881,7 +1888,7 @@ class CommerceCheckoutController extends Controller
 
         return redirect()
             ->route('auth.commerce.index', ['tab' => 'ads'])
-            ->with('success', 'Anzeigegruppe wurde erstellt. Danach kannst du Anzeigen und Varianten dafür anlegen.');
+            ->with('success', __('commerce.flash.ad_group_created'));
     }
 
     public function storeOwnCampaignGroupCreatives(Request $request, AdCampaign $campaign, AdGroup $group)
@@ -1913,20 +1920,20 @@ class CommerceCheckoutController extends Controller
 
         if ($created === 0) {
             throw ValidationException::withMessages([
-                'creatives' => 'Bitte lege mindestens eine Variante mit Headline, Text oder Bild-URL an.',
+                'creatives' => __('commerce.validation.creative_required'),
             ]);
         }
 
         return redirect()
             ->route('auth.commerce.index', ['tab' => 'ads'])
-            ->with('success', 'Anzeige und A/B-Varianten wurden in der Anzeigegruppe angelegt.');
+            ->with('success', __('commerce.flash.ad_creatives_created'));
     }
 
     public function updateOwnCampaign(Request $request, AdCampaign $campaign)
     {
         $this->authorizeOwnCampaign($request, $campaign);
 
-        abort_if($campaign->status === 'completed', 422, 'Abgeschlossene Ads-Kampagnen können nicht mehr bearbeitet werden.');
+        abort_if($campaign->status === 'completed', 422, __('commerce.validation.campaign_completed'));
 
         $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
         $paymentCompleted = $this->campaignPaymentCompleted($campaign);
@@ -2016,7 +2023,7 @@ class CommerceCheckoutController extends Controller
                 ])->save();
 
                 $order->items()->update([
-                    'title' => 'Ads-Kampagne: '.$campaign->name,
+                    'title' => __('commerce.order_items.ads_campaign', ['name' => $campaign->name]),
                     'unit_gross_cents' => $amount,
                     'net_cents' => $amount,
                     'total_cents' => $amount,
@@ -2033,8 +2040,8 @@ class CommerceCheckoutController extends Controller
         }
 
         return back()->with('success', $paymentCompleted
-            ? 'Kampagne wurde bearbeitet und erneut zur Prüfung eingereicht.'
-            : 'Kampagne wurde bearbeitet. Zahlung bleibt erforderlich.');
+            ? __('commerce.flash.campaign_updated_review')
+            : __('commerce.flash.campaign_updated_payment'));
     }
 
     public function destroyOwnCampaign(Request $request, AdCampaign $campaign)
@@ -2061,26 +2068,16 @@ class CommerceCheckoutController extends Controller
             return response()->json(['data' => ['deleted' => true]]);
         }
 
-        return back()->with('success', 'Ads-Kampagne wurde gelöscht.');
+        return back()->with('success', __('commerce.flash.campaign_deleted'));
     }
 
     public function storeWebsiteRequest(Request $request)
     {
-        $data = $request->validate([
-            'club_id' => ['nullable', Rule::exists('clubs', 'id')],
-            'domain' => ['nullable', 'string', 'max:255'],
-            'goals' => ['nullable', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $data = $request->validate(WebsiteRequestService::authenticatedRules());
 
         $this->authorizedCommerceClub($request, $data['club_id'] ?? null);
 
-        $websiteRequest = WebsiteRequest::create([
-            ...$data,
-            'user_id' => $request->user()->id,
-            'status' => 'new',
-            'package' => 'website_plus',
-        ]);
+        $websiteRequest = $this->websiteRequests->createForUser($request->user(), $data);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -2088,29 +2085,15 @@ class CommerceCheckoutController extends Controller
             ], 201);
         }
 
-        return back()->with('success', 'Website-Anfrage wurde gesendet.');
+        return back()->with('success', __('commerce.flash.website_request_sent'));
     }
 
     public function storePublicWebsiteRequest(Request $request)
     {
-        $data = $request->validate([
-            'guest_name' => ['required', 'string', 'max:255'],
-            'guest_email' => ['required', 'email', 'max:255'],
-            'guest_phone' => ['nullable', 'string', 'max:80'],
-            'club_name' => ['required', 'string', 'max:255'],
-            'domain' => ['nullable', 'string', 'max:255'],
-            'goals' => ['required', 'string', 'max:2000'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $data = $request->validate(WebsiteRequestService::publicRules());
+        $this->websiteRequests->createPublic($data, $request->user());
 
-        WebsiteRequest::create([
-            ...$data,
-            'user_id' => $request->user()?->id,
-            'status' => 'new',
-            'package' => 'website_plus',
-        ]);
-
-        return back()->with('success', 'Website-Anfrage wurde gesendet.');
+        return back()->with('success', __('agency.flash.request_sent'));
     }
 
     public function success(Request $request, CommerceOrder $order)
@@ -2125,7 +2108,7 @@ class CommerceCheckoutController extends Controller
             $this->payments->capturePayPalOrder($order, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
-        return redirect()->route('auth.commerce.index')->with('success', 'Bestellung wurde verarbeitet.');
+        return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.order_processed'));
     }
 
     public function cancel(Request $request, CommerceOrder $order)
@@ -2140,7 +2123,7 @@ class CommerceCheckoutController extends Controller
             ])->save();
         }
 
-        return redirect()->route('auth.commerce.index')->with('success', 'Bestellung wurde abgebrochen.');
+        return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.order_payment_cancelled'));
     }
 
     public function bankTransfer(Request $request, CommerceOrder $order)
@@ -2218,7 +2201,7 @@ class CommerceCheckoutController extends Controller
             'requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Rücksendung wurde angefragt.');
+        return back()->with('success', __('commerce.flash.return_requested'));
     }
 
     public function activeAd(Request $request)
@@ -2246,7 +2229,11 @@ class CommerceCheckoutController extends Controller
             ->with('creatives')
             ->with(['stats' => fn ($query) => $query->where('date', today()->toDateString())])
             ->limit(50)
-            ->get()
+            ->get();
+
+        $this->loadCampaignDeliverySignals($campaigns, $request);
+
+        $campaigns = $campaigns
             ->filter(fn (AdCampaign $campaign) => $this->campaignHasBudgetFor($campaign, 'impression'))
             ->filter(fn (AdCampaign $campaign) => $this->campaignPassesFrequencyCap($request, $campaign))
             ->filter(fn (AdCampaign $campaign) => $this->campaignPassesBudgetPacing($campaign))
@@ -2258,6 +2245,7 @@ class CommerceCheckoutController extends Controller
             return response()->json(null);
         }
 
+        $this->loadCreativeDeliverySignals($campaign);
         $creative = $this->chooseCreativeForDelivery($campaign);
         $this->recordAdEvent($request, $campaign, 'impression', 0, [], $creative);
 
@@ -2269,7 +2257,7 @@ class CommerceCheckoutController extends Controller
             'headline' => $creative?->headline ?: ($campaign->headline ?: $campaign->name),
             'description' => $creative?->description ?: $campaign->description,
             'primary_text' => $creative?->primary_text ?: $campaign->primary_text,
-            'cta_label' => $creative?->cta_label ?: ($campaign->cta_label ?: 'Mehr erfahren'),
+            'cta_label' => $creative?->cta_label ?: ($campaign->cta_label ?: __('commerce.ads.default_cta')),
             'objective' => $campaign->objective,
             'placement' => $campaign->placement,
             'creative_format' => $creative?->creative_format ?: $campaign->creative_format,
@@ -2280,14 +2268,14 @@ class CommerceCheckoutController extends Controller
 
     public function clickAd(Request $request, AdCampaign $campaign)
     {
-        if ($campaign->status === 'active' && $this->campaignHasBudgetFor($campaign, 'click')) {
-            $this->recordAdEvent($request, $campaign, 'click', 0, [], $this->creativeFromRequest($request, $campaign));
-            $this->rememberAdClick($request, $campaign, $this->creativeFromRequest($request, $campaign));
-        }
-
         $creative = $this->creativeFromRequest($request, $campaign);
 
-        return redirect()->away($creative?->target_url ?: ($campaign->target_url ?: route('guest.pricing')));
+        if ($campaign->status === 'active' && $this->campaignHasBudgetFor($campaign, 'click')) {
+            $this->recordAdEvent($request, $campaign, 'click', 0, [], $creative);
+            $this->rememberAdClick($request, $campaign, $creative);
+        }
+
+        return redirect()->away($this->safeAdTargetUrl($creative?->target_url ?: $campaign->target_url));
     }
 
     public function conversionAd(Request $request, AdCampaign $campaign)
@@ -2542,6 +2530,10 @@ class CommerceCheckoutController extends Controller
             return true;
         }
 
+        if (array_key_exists('viewer_impressions_today', $campaign->getAttributes())) {
+            return (int) $campaign->getAttribute('viewer_impressions_today') < $cap;
+        }
+
         $sessionHash = $this->adHash($request->session()->getId());
         $ipHash = $this->adHash($request->ip());
         $userAgentHash = $this->adHash((string) $request->userAgent());
@@ -2570,13 +2562,13 @@ class CommerceCheckoutController extends Controller
 
     private function frequencyCapForPlacement(?string $placement): int
     {
-        $fallback = (int) Setting::valueFor('ads_frequency_cap_per_day', 3);
+        $fallback = (int) $this->adSetting('ads_frequency_cap_per_day', 3);
 
         return match ($placement) {
-            'feed' => (int) Setting::valueFor('ads_frequency_cap_feed', $fallback ?: 3),
-            'sidebar' => (int) Setting::valueFor('ads_frequency_cap_sidebar', $fallback ?: 6),
-            'marketplace_card' => (int) Setting::valueFor('ads_frequency_cap_marketplace_card', $fallback ?: 3),
-            'sponsor_section' => (int) Setting::valueFor('ads_frequency_cap_sponsor_section', $fallback ?: 4),
+            'feed' => (int) $this->adSetting('ads_frequency_cap_feed', $fallback ?: 3),
+            'sidebar' => (int) $this->adSetting('ads_frequency_cap_sidebar', $fallback ?: 6),
+            'marketplace_card' => (int) $this->adSetting('ads_frequency_cap_marketplace_card', $fallback ?: 3),
+            'sponsor_section' => (int) $this->adSetting('ads_frequency_cap_sponsor_section', $fallback ?: 4),
             default => $fallback,
         };
     }
@@ -3003,6 +2995,10 @@ class CommerceCheckoutController extends Controller
 
     private function campaignRecentEventMetrics(AdCampaign $campaign): array
     {
+        if (array_key_exists('delivery_recent_metrics', $campaign->getAttributes())) {
+            return (array) $campaign->getAttribute('delivery_recent_metrics');
+        }
+
         static $cache = [];
 
         if (array_key_exists($campaign->id, $cache)) {
@@ -3028,7 +3024,7 @@ class CommerceCheckoutController extends Controller
 
         $impressions = (int) $campaign->impressions;
         $budgetCents = max(1, (int) $campaign->budget_cents);
-        $smallBudget = $budgetCents <= (int) Setting::valueFor('ads_small_campaign_budget_cents', 5000);
+        $smallBudget = $budgetCents <= (int) $this->adSetting('ads_small_campaign_budget_cents', 5000);
 
         if ($impressions < 50) {
             return $smallBudget ? 1.9 : 1.35;
@@ -3056,6 +3052,10 @@ class CommerceCheckoutController extends Controller
 
     private function creativeRecentEventMetrics(AdCreative $creative): array
     {
+        if (array_key_exists('delivery_recent_metrics', $creative->getAttributes())) {
+            return (array) $creative->getAttribute('delivery_recent_metrics');
+        }
+
         static $cache = [];
 
         if (array_key_exists($creative->id, $cache)) {
@@ -3071,6 +3071,81 @@ class CommerceCheckoutController extends Controller
             ->pluck('total', 'event_type')
             ->map(fn ($value) => (int) $value)
             ->all();
+    }
+
+    private function loadCampaignDeliverySignals($campaigns, Request $request): void
+    {
+        $campaignIds = $campaigns->pluck('id')->map(fn ($id) => (int) $id)->filter()->values();
+
+        if ($campaignIds->isEmpty()) {
+            return;
+        }
+
+        $recentMetrics = AdEvent::query()
+            ->select(['ad_campaign_id', 'event_type', DB::raw('COUNT(*) as total')])
+            ->whereIn('ad_campaign_id', $campaignIds)
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->whereIn('event_type', ['click', 'lead', 'sale'])
+            ->groupBy('ad_campaign_id', 'event_type')
+            ->get()
+            ->groupBy('ad_campaign_id')
+            ->map(fn ($rows) => $rows->pluck('total', 'event_type')->map(fn ($value) => (int) $value)->all());
+
+        $sessionHash = $this->adHash($request->session()->getId());
+        $ipHash = $this->adHash($request->ip());
+        $userAgentHash = $this->adHash((string) $request->userAgent());
+        $viewerImpressions = AdEvent::query()
+            ->select(['ad_campaign_id', DB::raw('COUNT(*) as total')])
+            ->whereIn('ad_campaign_id', $campaignIds)
+            ->where('event_type', 'impression')
+            ->where('occurred_at', '>=', today())
+            ->where(function ($query) use ($request, $sessionHash, $ipHash, $userAgentHash): void {
+                if ($request->user()) {
+                    $query->where('user_id', $request->user()->id);
+
+                    return;
+                }
+
+                $query->where('session_hash', $sessionHash)
+                    ->orWhere(function ($fallback) use ($ipHash, $userAgentHash): void {
+                        $fallback->where('ip_hash', $ipHash)
+                            ->where('user_agent_hash', $userAgentHash);
+                    });
+            })
+            ->groupBy('ad_campaign_id')
+            ->pluck('total', 'ad_campaign_id');
+
+        $campaigns->each(function (AdCampaign $campaign) use ($recentMetrics, $viewerImpressions): void {
+            $campaign->setAttribute('delivery_recent_metrics', $recentMetrics->get($campaign->id, []));
+            $campaign->setAttribute('viewer_impressions_today', (int) $viewerImpressions->get($campaign->id, 0));
+        });
+    }
+
+    private function loadCreativeDeliverySignals(AdCampaign $campaign): void
+    {
+        $creatives = $campaign->relationLoaded('creatives')
+            ? $campaign->creatives
+            : $campaign->creatives()->get();
+        $creativeIds = $creatives->pluck('id')->map(fn ($id) => (int) $id)->filter()->values();
+
+        if ($creativeIds->isEmpty()) {
+            return;
+        }
+
+        $metrics = AdEvent::query()
+            ->select(['ad_creative_id', 'event_type', DB::raw('COUNT(*) as total')])
+            ->whereIn('ad_creative_id', $creativeIds)
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->whereIn('event_type', ['click', 'lead', 'sale'])
+            ->groupBy('ad_creative_id', 'event_type')
+            ->get()
+            ->groupBy('ad_creative_id')
+            ->map(fn ($rows) => $rows->pluck('total', 'event_type')->map(fn ($value) => (int) $value)->all());
+
+        $creatives->each(fn (AdCreative $creative) => $creative->setAttribute(
+            'delivery_recent_metrics',
+            $metrics->get($creative->id, []),
+        ));
     }
 
     private function chooseCreativeForDelivery(AdCampaign $campaign): ?AdCreative
@@ -3203,7 +3278,27 @@ class CommerceCheckoutController extends Controller
 
     private function adPrice(string $key, int $default): int
     {
-        return max(0, (int) Setting::valueFor($key, $default));
+        return max(0, (int) $this->adSetting($key, $default));
+    }
+
+    private function adSetting(string $key, mixed $default = null): mixed
+    {
+        static $cache = [];
+
+        return $cache[$key] ??= Setting::valueFor($key, $default);
+    }
+
+    private function safeAdTargetUrl(?string $targetUrl): string
+    {
+        if (! is_string($targetUrl) || filter_var($targetUrl, FILTER_VALIDATE_URL) === false) {
+            return route('guest.pricing');
+        }
+
+        $scheme = strtolower((string) parse_url($targetUrl, PHP_URL_SCHEME));
+
+        return in_array($scheme, ['http', 'https'], true)
+            ? $targetUrl
+            : route('guest.pricing');
     }
 
     private function adHash(?string $value): ?string
@@ -3813,15 +3908,25 @@ class CommerceCheckoutController extends Controller
             return;
         }
 
-        $order->loadMissing('orderable');
-        $title = $order->orderable?->name ?? $order->orderable?->title ?? 'deine Bestellung';
+        $order->loadMissing(['orderable', 'user:id,language']);
+        $title = $order->orderable?->name ?? $order->orderable?->title;
 
-        AppNotification::send($order->user_id, 'commerce.order.paid', [
-            'title' => 'Zahlung bestätigt',
-            'body' => 'Deine Bestellung '.$title.' wurde als bezahlt markiert.',
-            'url' => route('auth.commerce.index'),
-            'order_id' => $order->id,
-        ]);
+        AppNotification::sendLocalized(
+            $order->user ?? $order->user_id,
+            'commerce.order.paid',
+            'commerce.notifications.paid_title',
+            'commerce.notifications.paid_body',
+            [
+                'order' => $title ?: AppNotification::translatedReplacement(
+                    'commerce.notifications.fallback_order',
+                    'deine Bestellung',
+                ),
+            ],
+            [
+                'url' => route('auth.commerce.index'),
+                'order_id' => $order->id,
+            ],
+        );
     }
 
     private function authorizeGuestOrder(CommerceOrder $order, string $token): void

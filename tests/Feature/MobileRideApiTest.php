@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Club;
+use App\Models\Notification as StoredNotification;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -13,6 +15,70 @@ use Tests\TestCase;
 class MobileRideApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_ride_catalogs_have_matching_keys_and_placeholders(): void
+    {
+        $reference = Arr::dot(require lang_path('de/rides.php'));
+
+        foreach (['de', 'en', 'fr', 'ar'] as $locale) {
+            $catalog = Arr::dot(require lang_path($locale.'/rides.php'));
+            $this->assertSame(array_keys($reference), array_keys($catalog), $locale.' key parity');
+
+            foreach ($reference as $key => $source) {
+                $this->assertSame(
+                    $this->placeholders((string) $source),
+                    $this->placeholders((string) $catalog[$key]),
+                    $locale.' placeholder parity for '.$key,
+                );
+            }
+        }
+    }
+
+    public function test_response_codes_remain_stable_while_text_and_notifications_are_localized(): void
+    {
+        $driver = $this->withRole('player', ['language' => 'fr']);
+        $passenger = $this->withRole('player', ['language' => 'ar']);
+
+        Sanctum::actingAs($driver);
+        $rideId = $this->withHeader('X-App-Locale', 'fr')
+            ->postJson('/api/v1/rides', $this->payload())
+            ->assertCreated()
+            ->assertHeader('Content-Language', 'fr')
+            ->assertJsonPath('message', 'ride_created')
+            ->assertJsonPath('message_text', __('rides.responses.ride_created', locale: 'fr'))
+            ->json('data.id');
+
+        Sanctum::actingAs($passenger);
+        $this->withHeader('X-App-Locale', 'ar')
+            ->postJson("/api/v1/rides/{$rideId}/join")
+            ->assertOk()
+            ->assertHeader('Content-Language', 'ar')
+            ->assertJsonPath('message', 'requested')
+            ->assertJsonPath('message_text', __('rides.responses.requested', locale: 'ar'));
+
+        $notification = StoredNotification::query()
+            ->where('user_id', $driver->id)
+            ->where('type', 'ride.requested')
+            ->firstOrFail();
+
+        $this->assertSame('fr', data_get($notification->data, 'locale'));
+        $this->assertSame(
+            __('rides.notifications.requested_title', locale: 'fr'),
+            data_get($notification->data, 'title'),
+        );
+        $this->assertSame(
+            __('rides.notifications.requested_body', [
+                'name' => $passenger->name,
+                'from' => 'Koeln',
+                'to' => 'Bonn',
+            ], 'fr'),
+            data_get($notification->data, 'body'),
+        );
+        $this->assertSame(
+            'rides.notifications.requested_body',
+            data_get($notification->data, 'i18n.body_key'),
+        );
+    }
 
     public function test_private_pickup_and_contact_are_revealed_only_after_driver_approval(): void
     {
@@ -192,5 +258,16 @@ class MobileRideApiTest extends TestCase
             'seats' => 3,
             'contact_details' => 'Telefon nach Zusage',
         ], $overrides);
+    }
+
+    /** @return array<int, string> */
+    private function placeholders(string $value): array
+    {
+        preg_match_all('/:[A-Za-z_][A-Za-z0-9_]*/', $value, $matches);
+
+        $placeholders = array_values(array_unique($matches[0] ?? []));
+        sort($placeholders);
+
+        return $placeholders;
     }
 }

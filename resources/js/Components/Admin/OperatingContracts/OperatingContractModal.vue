@@ -50,7 +50,7 @@ defineProps({
                         <div class="space-y-5">
                             <section class="grid gap-4 rounded-2xl border border-border bg-inputBg p-4 md:grid-cols-2 xl:grid-cols-3">
                                 <label class="block md:col-span-2">
-                                    <span class="text-sm font-semibold text-primary">Name</span>
+                                    <span class="text-sm font-semibold text-primary">{{ $t('Name') }}</span>
                                     <input v-model="form.name" class="mt-1 w-full rounded-xl border-border bg-card text-primary" placeholder="WLAN Büro, Handyvertrag, Fahrzeugleasing ..." required>
                                     <p v-if="form.errors.name" class="mt-1 text-xs text-error">{{ form.errors.name }}</p>
                                 </label>
@@ -60,7 +60,7 @@ defineProps({
                                     <p v-if="form.errors.vendor" class="mt-1 text-xs text-error">{{ form.errors.vendor }}</p>
                                 </label>
                                 <label class="block">
-                                    <span class="text-sm font-semibold text-primary">Kategorie</span>
+                                    <span class="text-sm font-semibold text-primary">{{ $t('Kategorie') }}</span>
                                     <select v-model="form.category" class="mt-1 w-full rounded-xl border-border bg-card text-primary">
                                         <option v-for="category in categoryOptions" :key="category.value" :value="category.value">{{ category.label }}</option>
                                     </select>
@@ -164,7 +164,7 @@ defineProps({
                                 </label>
                                 <label class="block">
                                     <span class="text-sm font-semibold text-primary">Website / Portal</span>
-                                    <input v-model="form.website" class="mt-1 w-full rounded-xl border-border bg-card text-primary" placeholder="https://..." type="url">
+                                    <input v-model="form.website" class="mt-1 w-full rounded-xl border-border bg-card text-primary" :placeholder="$t('commerce.ui.url_placeholder')" type="url">
                                     <p v-if="form.errors.website" class="mt-1 text-xs text-error">{{ form.errors.website }}</p>
                                 </label>
                                 <label class="block md:col-span-2">
@@ -185,7 +185,7 @@ defineProps({
                             <h3 class="mt-2 text-lg font-black text-primary">{{ form.name || 'Neuer Vertrag' }}</h3>
                             <div class="mt-4 space-y-3 text-sm">
                                 <div class="rounded-xl bg-card p-3">
-                                    <p class="text-xs uppercase text-secondary">Kategorie</p>
+                                    <p class="text-xs uppercase text-secondary">{{ $t('Kategorie') }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ optionLabel(categoryOptions, form.category, '-') }}</p>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
@@ -228,4 +228,3 @@ defineProps({
         </div>
     </Teleport>
 </template>
-

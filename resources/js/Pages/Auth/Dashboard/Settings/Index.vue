@@ -37,6 +37,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    notificationPreferences: {
+        type: Object,
+        default: () => ({ channels: {}, quiet_time: 'late' }),
+    },
     navigationModules: {
         type: Object,
         default: () => ({ available: [], enabled: [], definitions: [] }),
@@ -99,6 +103,7 @@ const settingsTabs = [
     'integrations',
     'design',
     'language',
+    'notifications',
     'privacy',
     'sport-profile',
     'security',
@@ -319,6 +324,7 @@ const tabClass = (tab) =>
 const { setTheme } = useTheme()
 const addressNotice = ref(null)
 const privacyNotice = ref(null)
+const notificationNotice = ref(null)
 const currentTheme = ref(page.props.auth?.user?.theme || localStorage.getItem('theme') || 'air')
 const navigationNotice = ref(null)
 const navigationModuleOptions = computed(() => props.navigationModules.definitions || [])
@@ -358,8 +364,19 @@ const form = useForm({
     profile_visibility: props.privacySettings.profile_visibility || 'public',
     direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
+    notification_channels: {
+        push: false,
+        email: true,
+        chat: true,
+        club: true,
+        billing: true,
+        marketing: false,
+        ...(props.notificationPreferences.channels || {}),
+    },
+    notification_quiet_time: props.notificationPreferences.quiet_time || 'late',
     ads_personalization_consent: Boolean(props.privacySettings.ads_personalization_consent),
     ads_measurement_consent: Boolean(props.privacySettings.ads_measurement_consent),
+    product_analytics_consent: Boolean(props.privacySettings.product_analytics_consent),
     enabled_navigation_modules: props.navigationModules.enabled || [],
 })
 
@@ -410,6 +427,26 @@ const saveNavigationModules = () => {
     })
 }
 
+const saveNotificationPreferences = () => {
+    notificationNotice.value = null
+
+    form.put(route('auth.settings.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            notificationNotice.value = {
+                type: 'success',
+                message: settingsText('notification_preferences.saved', 'Benachrichtigungseinstellungen wurden gespeichert.'),
+            }
+        },
+        onError: () => {
+            notificationNotice.value = {
+                type: 'error',
+                message: settingsText('notification_preferences.save_failed', 'Benachrichtigungseinstellungen konnten nicht gespeichert werden.'),
+            }
+        },
+    })
+}
+
 const withdrawPrivacyConsents = () => {
     privacyNotice.value = null
 
@@ -420,6 +457,7 @@ const withdrawPrivacyConsents = () => {
         onSuccess: () => {
             form.ads_personalization_consent = false
             form.ads_measurement_consent = false
+            form.product_analytics_consent = false
             privacyNotice.value = {
                 type: 'success',
                 message: settingsText('privacy.withdraw_success', 'Einwilligungen wurden widerrufen.'),
@@ -453,6 +491,15 @@ const toggleDefaultSport = (sportId) => {
 const i18nText = (key, fallback, params = {}) => (te(key) ? t(key, params) : fallback)
 const settingsText = (key, fallback, params = {}) => i18nText(`settings.${key}`, fallback, params)
 const sportProfileText = (key, fallback, params = {}) => i18nText(`settings.sport_profile.${key}`, fallback, params)
+const notificationChannelOptions = computed(() => [
+    { key: 'push', icon: 'las la-mobile-alt' },
+    { key: 'email', icon: 'las la-envelope' },
+    { key: 'chat', icon: 'las la-comment-dots' },
+    { key: 'club', icon: 'las la-users' },
+    { key: 'billing', icon: 'las la-receipt' },
+    { key: 'marketing', icon: 'las la-bullhorn' },
+])
+const notificationQuietOptions = ['none', 'late', 'early', 'weekend']
 const themeDescription = (themeOption) => settingsText(`design.themes.${themeOption.descriptionKey}`, themeOption.description)
 const roleName = (role) => settingsText(`roles.names.${role.name}`, role.name)
 const roleDescription = (role) => settingsText(
@@ -1320,6 +1367,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">{{ t('Verknüpfungen') }}</button>
             <button @click="setActiveTab('design')" :class="tabClass('design')">{{ t('Design') }}</button>
             <button @click="setActiveTab('language')" :class="tabClass('language')">{{ t('Sprache') }}</button>
+            <button @click="setActiveTab('notifications')" :class="tabClass('notifications')">{{ settingsText('notification_preferences.tab', 'Benachrichtigungen') }}</button>
             <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">{{ t('Privatsphäre') }}</button>
             <button @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
             <button @click="setActiveTab('security')" :class="tabClass('security')">{{ t('Sicherheit') }}</button>
@@ -2012,6 +2060,101 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <LanguageDropdown align="start" />
         </div>
 
+        <!-- BENACHRICHTIGUNGEN -->
+        <div v-if="activeTab === 'notifications'" class="surface-card p-5">
+            <form class="space-y-6" @submit.prevent="saveNotificationPreferences">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
+                        {{ settingsText('notification_preferences.eyebrow', 'Zustellung') }}
+                    </p>
+                    <h2 class="mt-1 text-xl font-semibold text-primary">
+                        {{ settingsText('notification_preferences.title', 'Benachrichtigungen steuern') }}
+                    </h2>
+                    <p class="mt-2 max-w-3xl text-sm text-secondary">
+                        {{ settingsText('notification_preferences.description', 'Lege zentral fest, welche Themen Airmius zustellt und wann Push-Nachrichten pausieren.') }}
+                    </p>
+                </div>
+
+                <div
+                    v-if="notificationNotice"
+                    role="status"
+                    class="rounded-lg border px-4 py-3 text-sm font-semibold"
+                    :class="notificationNotice.type === 'success'
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-error/30 bg-error/10 text-error'"
+                >
+                    {{ notificationNotice.message }}
+                </div>
+
+                <fieldset>
+                    <legend class="text-sm font-semibold text-primary">
+                        {{ settingsText('notification_preferences.channels_title', 'Kanäle und Themen') }}
+                    </legend>
+                    <p class="mt-1 text-sm text-secondary">
+                        {{ settingsText('notification_preferences.channels_description', 'Push und E-Mail steuern die Zustellung; die weiteren Schalter filtern Themen.') }}
+                    </p>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <label
+                            v-for="channel in notificationChannelOptions"
+                            :key="channel.key"
+                            class="flex min-h-20 cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg p-4 transition hover:border-borderHover"
+                        >
+                            <input
+                                v-model="form.notification_channels[channel.key]"
+                                type="checkbox"
+                                class="mt-1 rounded border-border bg-inputBg text-buttonPrimary focus:ring-buttonPrimary"
+                            >
+                            <span class="min-w-0">
+                                <span class="flex items-center gap-2 font-semibold text-primary">
+                                    <i :class="[channel.icon, 'text-lg text-air-blue']"></i>
+                                    {{ settingsText(`notification_preferences.channels.${channel.key}.label`, channel.key) }}
+                                </span>
+                                <span class="mt-1 block text-xs leading-5 text-secondary">
+                                    {{ settingsText(`notification_preferences.channels.${channel.key}.hint`, '') }}
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="grid gap-4 rounded-xl border border-border bg-bg p-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,20rem)] md:items-end">
+                    <div>
+                        <label for="notification-quiet-time" class="font-semibold text-primary">
+                            {{ settingsText('notification_preferences.quiet_title', 'Ruhezeit') }}
+                        </label>
+                        <p class="mt-1 text-sm text-secondary">
+                            {{ settingsText('notification_preferences.quiet_description', 'Normale Push-Nachrichten werden gesammelt und nach der Ruhezeit zugestellt.') }}
+                        </p>
+                    </div>
+                    <select
+                        id="notification-quiet-time"
+                        v-model="form.notification_quiet_time"
+                        class="min-h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-primary focus:border-buttonPrimary focus:ring-buttonPrimary"
+                    >
+                        <option v-for="option in notificationQuietOptions" :key="option" :value="option">
+                            {{ settingsText(`notification_preferences.quiet.${option}`, option) }}
+                        </option>
+                    </select>
+                </div>
+
+                <p class="rounded-lg border border-info/30 bg-info/10 px-4 py-3 text-sm text-primary">
+                    <i class="las la-shield-alt me-2 text-info" aria-hidden="true"></i>
+                    {{ settingsText('notification_preferences.critical_notice', 'Kritische Sicherheitsmeldungen bleiben aktiv und dürfen Ruhezeiten umgehen.') }}
+                </p>
+
+                <button
+                    type="submit"
+                    class="inline-flex min-h-11 items-center justify-center rounded-lg bg-buttonPrimary px-5 py-2.5 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="form.processing"
+                >
+                    {{ form.processing
+                        ? settingsText('notification_preferences.saving', 'Speichert …')
+                        : settingsText('notification_preferences.save', 'Einstellungen speichern') }}
+                </button>
+            </form>
+        </div>
+
         <!-- ADRESSE -->
         <div v-if="activeTab === 'address'" class="surface-card p-5">
 
@@ -2045,7 +2188,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <option value="NL">{{ settingsText('address.countries.NL', 'Niederlande') }}</option>
                         <option value="BE">{{ settingsText('address.countries.BE', 'Belgien') }}</option>
                         <option value="TR">{{ settingsText('address.countries.TR', 'Türkei') }}</option>
-                        <option value="US">USA</option>
+                        <option value="US">{{ settingsText('address.countries.US', 'USA') }}</option>
                     </select>
                     <p v-if="form.errors.country" class="mt-1 text-sm text-error">{{ form.errors.country }}</p>
                 </div>
@@ -2205,6 +2348,15 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             <span class="text-xs text-secondary">{{ settingsText('privacy.ads_measurement_help', 'Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.') }}</span>
                         </span>
                     </label>
+                    <div class="mt-4 border-t border-border pt-4">
+                        <label class="flex items-start gap-3 text-sm text-primary">
+                            <input v-model="form.product_analytics_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                            <span>
+                                <span class="block font-semibold">{{ settingsText('privacy.product_analytics', 'Anonyme Produktverbesserung erlauben') }}</span>
+                                <span class="text-xs leading-5 text-secondary">{{ settingsText('privacy.product_analytics_help', 'Erlaubt ausschließlich zusammengefasste Nutzungskennzahlen aus vorhandenen Airmius-Aktionen. Werbeeinwilligungen werden nicht wiederverwendet; es gibt keine zusätzlichen Tracking-Cookies oder SDKs.') }}</span>
+                            </span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="rounded-lg border border-border bg-bg p-4">

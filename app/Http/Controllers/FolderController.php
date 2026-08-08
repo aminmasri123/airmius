@@ -13,15 +13,17 @@ use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class FolderController extends Controller
 {
     use AuthorizesRequests;
 
     private const MAX_FOLDER_COPY_DEPTH = 200;
+
     private const MAX_FOLDER_NAME_LENGTH = 120;
+
     private const RESERVED_FOLDER_NAMES = [
         'con',
         'prn',
@@ -102,7 +104,7 @@ class FolderController extends Controller
 
         if ($normalizedName === '') {
             throw ValidationException::withMessages([
-                'name' => 'Der Ordnername darf nicht leer sein.',
+                'name' => __('file_manager.folder_name_required'),
             ]);
         }
 
@@ -113,7 +115,7 @@ class FolderController extends Controller
             'parent_id' => $data['parent_id'] ?? null,
         ]));
 
-        return back()->with('success', 'Ordner erstellt.');
+        return back()->with('success', __('file_manager.folder_created'));
     }
 
     /**
@@ -154,7 +156,7 @@ class FolderController extends Controller
 
         if ($normalizedName === '') {
             throw ValidationException::withMessages([
-                'name' => 'Der Ordnername darf nicht leer sein.',
+                'name' => __('file_manager.folder_name_required'),
             ]);
         }
 
@@ -164,7 +166,7 @@ class FolderController extends Controller
             'name' => $normalizedName,
         ]);
 
-        return back()->with('success', 'Ordner umbenannt.');
+        return back()->with('success', __('file_manager.folder_renamed'));
     }
 
     /**
@@ -176,7 +178,7 @@ class FolderController extends Controller
 
         $this->deleteTree($folder);
 
-        return back()->with('success', 'Ordner und Dateien gelöscht.');
+        return back()->with('success', __('file_manager.folder_deleted'));
     }
 
     public function share(Request $request, Folder $folder)
@@ -193,21 +195,26 @@ class FolderController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Ordner können nur mit Freunden geteilt werden.'
+            __('file_manager.folder_friends_only')
         );
 
         $this->copyTree($folder, $this->targetScope($data['target_type'], $targetUser->id));
 
-        AppNotification::send($targetUser, 'folder.shared', [
-            'title' => $request->user()->name.' hat einen Ordner mit dir geteilt',
-            'body' => $folder->name,
-            'url' => route('auth.files.index'),
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'folder_id' => $folder->id,
-        ]);
+        AppNotification::sendLocalized(
+            $targetUser,
+            'folder.shared',
+            'file_manager.folder_shared_title',
+            'file_manager.folder_shared_body',
+            ['user' => $request->user()->name, 'folder' => $folder->name],
+            [
+                'url' => route('auth.files.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'folder_id' => $folder->id,
+            ],
+        );
 
-        return back()->with('success', 'Ordner freigegeben.');
+        return back()->with('success', __('file_manager.folder_shared'));
     }
 
     /**
@@ -227,7 +234,7 @@ class FolderController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Ordner können nur mit Freunden geteilt werden.'
+            __('file_manager.folder_friends_only')
         );
 
         $targetFolder = $this->copyTree(
@@ -235,14 +242,19 @@ class FolderController extends Controller
             $this->targetScope('user', $targetUser->id),
         );
 
-        AppNotification::send($targetUser, 'folder.shared', [
-            'title' => $request->user()->name.' hat einen Ordner mit dir geteilt',
-            'body' => $folder->name,
-            'url' => route('auth.files.index'),
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'folder_id' => $targetFolder->id,
-        ]);
+        AppNotification::sendLocalized(
+            $targetUser,
+            'folder.shared',
+            'file_manager.folder_shared_title',
+            'file_manager.folder_shared_body',
+            ['user' => $request->user()->name, 'folder' => $folder->name],
+            [
+                'url' => route('auth.files.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'folder_id' => $targetFolder->id,
+            ],
+        );
 
         return response()->json([
             'data' => [
@@ -410,7 +422,7 @@ class FolderController extends Controller
         $suffix = 1;
 
         while ($this->folderNameExists($candidate, $scope, $parentId)) {
-            $suffixLabel = $suffix === 1 ? 'Kopie' : 'Kopie ' . $suffix;
+            $suffixLabel = $suffix === 1 ? 'Kopie' : 'Kopie '.$suffix;
             $candidate = "{$baseName} ({$suffixLabel})";
             $suffix++;
         }
@@ -434,7 +446,7 @@ class FolderController extends Controller
         if (in_array($normalized, self::RESERVED_FOLDER_NAMES, true) || str_starts_with($normalized, 'desktop.ini')) {
             throw ValidationException::withMessages([
                 'name' => 'Der Ordnername ist ungültig.',
-           ]);
+            ]);
         }
     }
 

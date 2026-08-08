@@ -16,7 +16,7 @@ const emit = defineEmits(['update-seller-application'])
             <p class="mt-1 text-sm text-secondary">Erst freigegebene Nutzer können eigene Marketplace-Produkte erstellen.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="min-w-full text-start text-sm">
                 <tbody class="divide-y divide-border">
                     <tr v-for="application in sellerApplications" :key="application.id">
                         <td class="px-5 py-3">
@@ -46,7 +46,7 @@ const emit = defineEmits(['update-seller-application'])
                             <p v-if="application.notes">{{ application.notes }}</p>
                             <p v-else>-</p>
                         </td>
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3 text-end">
                             <div class="flex flex-wrap justify-end gap-2">
                                 <button
                                     v-if="application.status !== 'approved'"
@@ -81,4 +81,3 @@ const emit = defineEmits(['update-seller-application'])
         </div>
     </article>
 </template>
-

@@ -126,9 +126,9 @@ class InvoiceController extends Controller
                 'id' => 'subscription-'.$invoice->id,
                 'raw_id' => $invoice->id,
                 'type' => 'subscription',
-                'type_label' => 'Konto-Abo',
+                'type_label' => __('invoices.types.account_subscription'),
                 'number' => $invoice->number,
-                'title' => $invoice->title ?: ($invoice->plan?->name ?: 'Airmius Abo'),
+                'title' => $invoice->title ?: ($invoice->plan?->name ?: __('invoices.fallbacks.account_subscription')),
                 'description' => $invoice->description,
                 'amount' => $this->money($invoice->amount_cents, $invoice->currency),
                 'amount_cents' => (int) $invoice->amount_cents,
@@ -206,7 +206,7 @@ class InvoiceController extends Controller
             ->with(['user:id,name,email', 'plan:id,name', 'sponsor:id,name'])
             ->latest()
             ->get()
-            ->reject(fn (OutfitSubscription $subscription) => in_array($subscription->payment_reference ?: 'Outfit-Abo #'.$subscription->id, $invoicedNumbers, true))
+            ->reject(fn (OutfitSubscription $subscription) => in_array($subscription->payment_reference ?: __('invoices.fallbacks.outfit_number', ['id' => $subscription->id]), $invoicedNumbers, true))
             ->map(function (OutfitSubscription $subscription) {
                 $amountCents = max(0, (int) $subscription->monthly_price_cents);
 
@@ -214,9 +214,9 @@ class InvoiceController extends Controller
                     'id' => 'outfit-'.$subscription->id,
                     'raw_id' => $subscription->id,
                     'type' => 'outfit',
-                    'type_label' => 'Outfit-Abo',
-                    'number' => $subscription->payment_reference ?: 'Outfit-Abo #'.$subscription->id,
-                    'title' => $subscription->plan?->name ?: 'Outfit-Abo',
+                    'type_label' => __('invoices.types.outfit_subscription_manual'),
+                    'number' => $subscription->payment_reference ?: __('invoices.fallbacks.outfit_number', ['id' => $subscription->id]),
+                    'title' => $subscription->plan?->name ?: __('invoices.fallbacks.outfit_subscription'),
                     'description' => $subscription->sponsor?->name ? 'Sponsor: '.$subscription->sponsor->name : null,
                     'amount' => $this->money($amountCents, $subscription->currency),
                     'amount_cents' => $amountCents,
@@ -287,37 +287,42 @@ class InvoiceController extends Controller
 
     private function manualInvoiceTypeLabel(?string $source): string
     {
-        return match ($source) {
-            'recurring_contribution' => 'Mitgliedsbeitrag',
-            'account_subscription' => 'Konto-Abo',
-            'outfit_subscription_manual' => 'Outfit-Abo',
-            'marketplace_purchase' => 'Kauf / Marketplace',
-            'elearning' => 'E-Learning / Kurs',
-            'ads' => 'ADS / Werbung',
-            'agency_website' => 'Werbeagentur - Website',
-            'agency_logo' => 'Werbeagentur - Logo',
-            'agency_branding' => 'Werbeagentur - Branding',
-            'sponsorship' => 'Sponsoring',
-            'custom' => 'Individuell',
-            'manual' => 'Sonstige Rechnung',
-            default => 'Vereinsrechnung',
-        };
+        $type = in_array($source, [
+            'recurring_contribution',
+            'account_subscription',
+            'outfit_subscription_manual',
+            'marketplace_purchase',
+            'elearning',
+            'ads',
+            'agency_website',
+            'agency_logo',
+            'agency_branding',
+            'sponsorship',
+            'custom',
+            'manual',
+        ], true) ? $source : 'club';
+
+        return __('invoices.types.'.$type);
     }
 
     private function manualInvoiceTypes(): array
     {
-        return [
-            ['value' => 'account_subscription', 'label' => 'Konto-Abo', 'hint' => 'Plan, Upgrade oder Nutzerkonto'],
-            ['value' => 'outfit_subscription_manual', 'label' => 'Outfit-Abo', 'hint' => 'Sportkleidung, Box, Sponsor-Deal'],
-            ['value' => 'marketplace_purchase', 'label' => 'Kauf / Marketplace', 'hint' => 'Produkt, Bestellung oder Warenkorb'],
-            ['value' => 'elearning', 'label' => 'E-Learning / Kurs', 'hint' => 'Kursanbieter, Coach, Trainer'],
-            ['value' => 'ads', 'label' => 'ADS / Werbung', 'hint' => 'Anzeige, Kampagne, Sichtbarkeit'],
-            ['value' => 'agency_website', 'label' => 'Website', 'hint' => 'Werbeagentur Website-Projekt'],
-            ['value' => 'agency_logo', 'label' => 'Logo', 'hint' => 'Logo-Design oder Redesign'],
-            ['value' => 'agency_branding', 'label' => 'Branding', 'hint' => 'CI, Designpaket, Markenauftritt'],
-            ['value' => 'sponsorship', 'label' => 'Sponsoring', 'hint' => 'Sponsor-Paket oder Partnerschaft'],
-            ['value' => 'custom', 'label' => 'Individuell', 'hint' => 'Freier Grund'],
-        ];
+        return collect([
+            'account_subscription',
+            'outfit_subscription_manual',
+            'marketplace_purchase',
+            'elearning',
+            'ads',
+            'agency_website',
+            'agency_logo',
+            'agency_branding',
+            'sponsorship',
+            'custom',
+        ])->map(fn (string $type) => [
+            'value' => $type,
+            'label' => __("invoices.manual_options.{$type}.label"),
+            'hint' => __("invoices.manual_options.{$type}.hint"),
+        ])->all();
     }
 
     private function deletableInvoiceSources(): array
@@ -428,7 +433,7 @@ class InvoiceController extends Controller
 
         $this->notifyInvoiceRecipient($invoice);
 
-        return back()->with('success', 'Rechnung wurde erstellt.');
+        return back()->with('success', __('invoices.flash.created'));
     }
 
     /**
@@ -472,7 +477,7 @@ class InvoiceController extends Controller
             $this->notifyInvoiceStatusRecipient($invoice, $oldStatus);
         }
 
-        return back()->with('success', 'Rechnungsstatus wurde aktualisiert.');
+        return back()->with('success', __('invoices.flash.status_updated'));
     }
 
     /**
@@ -480,17 +485,17 @@ class InvoiceController extends Controller
      */
     public function destroy(Invoice $invoice)
     {
-        abort_if($invoice->payments()->exists(), 422, 'Rechnungen mit Zahlungen können nicht gelöscht werden.');
-        abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, 'Diese Rechnungsart kann hier nicht gelöscht werden.');
+        abort_if($invoice->payments()->exists(), 422, __('invoices.errors.payments_exist'));
+        abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, __('invoices.errors.type_not_deletable'));
 
         $invoice->delete();
 
-        return back()->with('success', 'Rechnung wurde gelöscht.');
+        return back()->with('success', __('invoices.flash.deleted'));
     }
 
     private function notifyInvoiceRecipient(Invoice $invoice): void
     {
-        $invoice->loadMissing(['user:id,name,email', 'club.owner:id,name,email']);
+        $invoice->loadMissing(['user:id,name,email,language', 'club.owner:id,name,email,language']);
 
         $recipient = $invoice->user ?: $invoice->club?->owner;
 
@@ -498,25 +503,32 @@ class InvoiceController extends Controller
             return;
         }
 
-        AppNotification::send($recipient, 'invoice.created', [
-            'title' => 'Neue Rechnung erhalten',
-            'body' => sprintf(
-                '%s Über %s ist jetzt in deinen Rechnungen sichtbar.',
-                $invoice->title ?: 'Eine neue Rechnung',
-                $this->moneyFromDecimal($invoice->amount),
-            ),
-            'url' => route('auth.settings').'#billing',
-            'invoice_id' => $invoice->id,
-            'invoice_number' => $invoice->number,
-            'invoice_source' => $invoice->source,
-        ]);
+        AppNotification::sendLocalized(
+            $recipient,
+            'invoice.created',
+            'invoices.notifications.created_title',
+            'invoices.notifications.created_body',
+            [
+                'invoice' => $invoice->title ?: AppNotification::translatedReplacement(
+                    'invoices.notifications.new_invoice_fallback',
+                    'A new invoice',
+                ),
+                'amount' => $this->moneyFromDecimal($invoice->amount),
+            ],
+            [
+                'url' => route('auth.settings').'#billing',
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'invoice_source' => $invoice->source,
+            ],
+        );
 
         $this->sendInvoiceEmail($recipient, $invoice);
     }
 
     private function notifyInvoiceStatusRecipient(Invoice $invoice, ?string $oldStatus): void
     {
-        $invoice->loadMissing(['user:id,name,email', 'club.owner:id,name,email']);
+        $invoice->loadMissing(['user:id,name,email,language', 'club.owner:id,name,email,language']);
 
         $recipient = $invoice->user ?: $invoice->club?->owner;
 
@@ -524,19 +536,33 @@ class InvoiceController extends Controller
             return;
         }
 
-        AppNotification::send($recipient, 'invoice.status_updated', [
-            'title' => 'Rechnungsstatus aktualisiert',
-            'body' => sprintf(
-                '%s ist jetzt %s.',
-                $invoice->number ?: ($invoice->title ?: 'Deine Rechnung'),
-                $this->billingStatusLabel($invoice->status),
-            ),
-            'url' => route('auth.settings').'#billing',
-            'invoice_id' => $invoice->id,
-            'invoice_number' => $invoice->number,
-            'old_status' => $oldStatus,
-            'new_status' => $invoice->status,
-        ]);
+        $status = in_array($invoice->status, ['paid', 'open', 'pending', 'awaiting_transfer', 'overdue', 'cancelled', 'failed'], true)
+            ? $invoice->status
+            : 'unknown';
+
+        AppNotification::sendLocalized(
+            $recipient,
+            'invoice.status_updated',
+            'invoices.notifications.status_updated_title',
+            'invoices.notifications.status_updated_body',
+            [
+                'invoice' => $invoice->number ?: ($invoice->title ?: AppNotification::translatedReplacement(
+                    'invoices.notifications.invoice_fallback',
+                    'Your invoice',
+                )),
+                'status' => AppNotification::translatedReplacement(
+                    'invoices.status.'.$status,
+                    (string) $invoice->status,
+                ),
+            ],
+            [
+                'url' => route('auth.settings').'#billing',
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'old_status' => $oldStatus,
+                'new_status' => $invoice->status,
+            ],
+        );
 
         $this->sendInvoiceStatusEmail($recipient, $invoice, $oldStatus);
     }
@@ -592,17 +618,4 @@ class InvoiceController extends Controller
         );
     }
 
-    private function billingStatusLabel(?string $status): string
-    {
-        return match ($status) {
-            'paid' => 'bezahlt',
-            'open' => 'offen',
-            'pending' => 'ausstehend',
-            'awaiting_transfer' => 'wartet auf Überweisung',
-            'overdue' => 'Überfällig',
-            'cancelled' => 'storniert',
-            'failed' => 'fehlgeschlagen',
-            default => $status ?: 'unbekannt',
-        };
-    }
 }

@@ -108,6 +108,7 @@ class HandleInertiaRequests extends Middleware
             'privacyConsent' => [
                 'ads_personalization_consent' => (bool) $user?->ads_personalization_consent,
                 'ads_measurement_consent' => (bool) $user?->ads_measurement_consent,
+                'product_analytics_consent' => (bool) $user?->product_analytics_consent,
                 'source' => $user ? 'user_settings' : 'none',
             ],
 
@@ -157,6 +158,7 @@ class HandleInertiaRequests extends Middleware
                 'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
                 'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
                 'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
+                'product_analytics_consent' => (bool) $user->product_analytics_consent,
                 'has_social_login' => $user->socialAccounts()->exists(),
                 'roles' => $user->getRoleNames()->values()->all(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
@@ -235,7 +237,7 @@ class HandleInertiaRequests extends Middleware
 
         return $user->subscriptions()
             ->with('plan:id,slug,name,target_actor')
-            ->whereIn('status', ['active', 'trialing'])
+            ->grantingAccess()
             ->get()
             ->filter(fn ($subscription) => $subscription->plan)
             ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')
@@ -346,6 +348,7 @@ class HandleInertiaRequests extends Middleware
             'operating-contracts.view' => $user->can('finance.view') || $user->can('finance.edit') || $user->can('billing.manage') || $user->can('system.manage'),
             'operating-contracts.manage' => $user->can('finance.edit') || $user->can('system.manage'),
             'subscriptions.view' => $user->can('subscriptions.manage') || $user->can('system.manage'),
+            'analytics.view' => $user->can('analytics.view'),
             'outfit-subscriptions.view' => true,
             'outfit-subscriptions.manage' => $hasFullAccess || $user->can('outfit-subscriptions.manage'),
             'sponsors.view' => $hasFullAccess

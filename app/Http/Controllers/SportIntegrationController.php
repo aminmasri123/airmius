@@ -16,10 +16,10 @@ class SportIntegrationController extends Controller
 {
     public const PROVIDERS = [
         'google_fit' => [
-            'label' => 'Google Fit',
+            'label_key' => 'sport_integrations.providers.google_fit.label',
             'route_key' => 'google-fit',
             'status' => 'live_oauth',
-            'description' => 'Verknüpfung über Google OAuth. Aktivitäten können über die gespeicherten Tokens synchronisiert werden.',
+            'description_key' => 'sport_integrations.providers.google_fit.description',
             'scopes' => [
                 'openid',
                 'profile',
@@ -29,36 +29,51 @@ class SportIntegrationController extends Controller
             ],
         ],
         'garmin' => [
-            'label' => 'Garmin',
+            'label_key' => 'sport_integrations.providers.garmin.label',
             'status' => 'partner_required',
-            'description' => 'Garmin Health API benötigt eine Anbieterfreigabe. Nutzer können Interesse markieren, bis die Partnerfreigabe aktiv ist.',
+            'description_key' => 'sport_integrations.providers.garmin.description',
             'scopes' => ['activities', 'wellness'],
         ],
         'strava' => [
-            'label' => 'Strava',
+            'label_key' => 'sport_integrations.providers.strava.label',
             'status' => 'live_oauth',
-            'description' => 'Strava verbindet Lauf-, Rad-, Schwimm- und Workout-Daten Über die offizielle OAuth-API.',
+            'description_key' => 'sport_integrations.providers.strava.description',
             'scopes' => ['read', 'activity:read_all'],
         ],
         'fitbit' => [
-            'label' => 'Fitbit',
+            'label_key' => 'sport_integrations.providers.fitbit.label',
             'status' => 'planned_oauth',
-            'description' => 'Fitbit Web API kann Aktivitäten, Schritte, Distanz, Kalorien und Gesundheitsdaten per OAuth bereitstellen. Integration ist vorgemerkt.',
+            'description_key' => 'sport_integrations.providers.fitbit.description',
             'scopes' => ['activity', 'profile'],
         ],
         'polar' => [
-            'label' => 'Polar',
+            'label_key' => 'sport_integrations.providers.polar.label',
             'status' => 'planned_oauth',
-            'description' => 'Polar AccessLink stellt Trainings- und Aktivitätsdaten per OAuth/API bereit. Integration ist vorgemerkt.',
+            'description_key' => 'sport_integrations.providers.polar.description',
             'scopes' => ['accesslink.read_all'],
         ],
         'mi_fitness' => [
-            'label' => 'Mi Fitness',
+            'label_key' => 'sport_integrations.providers.mi_fitness.label',
             'status' => 'partner_required',
-            'description' => 'Mi Fitness hat keine einfache Standard-OAuth-Anbindung im Projekt. Die Verknüpfung wird als gewünscht vorgemerkt.',
+            'description_key' => 'sport_integrations.providers.mi_fitness.description',
             'scopes' => ['activities'],
         ],
     ];
+
+    public static function localizedProviders(): array
+    {
+        $providers = [];
+
+        foreach (self::PROVIDERS as $key => $definition) {
+            $providers[$key] = [
+                ...$definition,
+                'label' => __($definition['label_key']),
+                'description' => __($definition['description_key']),
+            ];
+        }
+
+        return $providers;
+    }
 
     public function redirect(Request $request, string $provider)
     {
@@ -72,11 +87,11 @@ class SportIntegrationController extends Controller
                     'display_name' => $definition['label'],
                     'status' => 'requested',
                     'scopes' => $definition['scopes'],
-                    'sync_summary' => ['message' => 'Verknüpfung vorgemerkt. Wir informieren dich, sobald dieser Anbieter freigeschaltet ist.'],
+                    'sync_summary' => ['message' => __('sport_integrations.summary.requested')],
                 ],
             );
 
-            return back()->with('success', $definition['label'].' wurde vorgemerkt.');
+            return back()->with('success', __('sport_integrations.flash.requested', ['provider' => $definition['label']]));
         }
 
         $state = Str::random(40);
@@ -100,7 +115,7 @@ class SportIntegrationController extends Controller
         ], now()->addMinutes(15));
 
         if (! $this->clientId($provider) || ! $this->clientSecret($provider)) {
-            return back()->with('error', $definition['label'].' ist noch nicht konfiguriert. Bitte Client ID und Client Secret in .env eintragen.');
+            return back()->with('error', __('sport_integrations.flash.not_configured', ['provider' => $definition['label']]));
         }
 
         $targetUrl = $this->authorizeUrl($provider, $definition, $state);
@@ -150,7 +165,7 @@ class SportIntegrationController extends Controller
 
             return redirect()
                 ->route('auth.settings')
-                ->with('error', $definition['label'].' Verbindung ist abgelaufen. Bitte klicke erneut auf Verbinden.');
+                ->with('error', __('sport_integrations.flash.expired', ['provider' => $definition['label']]));
         }
 
         unset($states[$state]);
@@ -173,11 +188,14 @@ class SportIntegrationController extends Controller
 
             $googleError = $tokenResponse->json('error_description')
                 ?: $tokenResponse->json('error')
-                ?: 'Unbekannter Google-Fehler';
+                ?: __('sport_integrations.errors.unknown_provider');
 
             return redirect()
                 ->route('auth.settings')
-                ->with('error', $definition['label'].' konnte den Autorisierungscode nicht gegen Tokens tauschen: '.$googleError);
+                ->with('error', __('sport_integrations.flash.token_exchange_failed', [
+                    'provider' => $definition['label'],
+                    'error' => $googleError,
+                ]));
         }
 
         $token = $tokenResponse->json();
@@ -193,11 +211,11 @@ class SportIntegrationController extends Controller
                 'access_token' => $token['access_token'] ?? null,
                 'refresh_token' => $token['refresh_token'] ?? null,
                 'token_expires_at' => $this->tokenExpiresAt($provider, $token),
-                'sync_summary' => ['message' => 'Konto verbunden. Du kannst jetzt synchronisieren.'],
+                'sync_summary' => ['message' => __('sport_integrations.summary.connected')],
             ],
         );
 
-        return redirect()->route('auth.settings')->with('success', $definition['label'].' wurde verbunden.');
+        return redirect()->route('auth.settings')->with('success', __('sport_integrations.flash.connected', ['provider' => $definition['label']]));
     }
 
     public function sync(Request $request, ConnectedSportAccount $account, SportIntegrationSyncService $syncService)
@@ -242,7 +260,7 @@ class SportIntegrationController extends Controller
             ],
         ]);
 
-        return back()->with('success', 'Trainingseinheit wurde eingetragen.');
+        return back()->with('success', __('sport_integrations.flash.activity_created'));
     }
 
     public function destroy(Request $request, ConnectedSportAccount $account)
@@ -251,7 +269,7 @@ class SportIntegrationController extends Controller
 
         $account->delete();
 
-        return back()->with('success', 'Sport-App-Verknüpfung entfernt.');
+        return back()->with('success', __('sport_integrations.flash.disconnected'));
     }
 
     public function destroyActivity(Request $request, ConnectedSportActivity $activity)
@@ -264,7 +282,7 @@ class SportIntegrationController extends Controller
 
         $activity->delete();
 
-        return back()->with('success', 'Importierte Aktivität wurde gelöscht.');
+        return back()->with('success', __('sport_integrations.flash.activity_deleted'));
     }
 
     public function updateActivity(Request $request, ConnectedSportActivity $activity)
@@ -279,7 +297,7 @@ class SportIntegrationController extends Controller
             'title' => $data['title'],
         ]);
 
-        return back()->with('success', 'Importierte Aktivität wurde umbenannt.');
+        return back()->with('success', __('sport_integrations.flash.activity_renamed'));
     }
 
     public function destroyActivities(Request $request)
@@ -298,7 +316,7 @@ class SportIntegrationController extends Controller
             ->whereKey($activities->pluck('id'))
             ->delete();
 
-        return back()->with('success', $deleted.' importierte Aktivitäten wurden gelöscht.');
+        return back()->with('success', __('sport_integrations.flash.activities_deleted', ['count' => $deleted]));
     }
 
     private function definition(string $provider): array
@@ -307,7 +325,7 @@ class SportIntegrationController extends Controller
 
         abort_unless(array_key_exists($provider, self::PROVIDERS), 404);
 
-        return self::PROVIDERS[$provider];
+        return self::localizedProviders()[$provider];
     }
 
     private function canonicalProvider(string $provider): string

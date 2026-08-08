@@ -14,7 +14,7 @@ const emit = defineEmits(['update:activeTab'])
                 v-for="tab in tabs"
                 :key="tab.id"
                 type="button"
-                class="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-left transition"
+                class="flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-start transition"
                 :class="activeTab === tab.id ? 'bg-buttonPrimary text-buttonTextPrimary shadow-sm' : 'text-secondary hover:bg-inputBg hover:text-primary'"
                 @click="emit('update:activeTab', tab.id)"
             >

@@ -1,7 +1,8 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -17,6 +18,7 @@ const props = defineProps({
     },
 })
 
+const { t } = useI18n()
 const codeSent = ref(false)
 const form = useForm({
     identity: '',
@@ -25,10 +27,22 @@ const form = useForm({
 })
 
 const hasAllCategories = computed(() => form.categories.length === props.categories.length)
-const identityLabel = computed(() => props.usesSocialLogin ? 'E-Mail-Adresse zur Bestätigung' : 'Aktuelles Passwort zur Bestätigung')
+const identityLabel = computed(() => t(props.usesSocialLogin
+    ? 'data_erasure.identity.email_label'
+    : 'data_erasure.identity.password_label'))
 const identityHint = computed(() => props.usesSocialLogin
-    ? `Du meldest dich mit einem verbundenen Konto an. Gib zur Bestätigung ${props.accountEmail || 'deine Konto-E-Mail-Adresse'} ein.`
-    : 'Gib dein aktuelles Passwort ein. Es wird nur zur Bestätigung dieser Löschanfrage verwendet.')
+    ? t('data_erasure.identity.social_hint', {
+        email: props.accountEmail || t('data_erasure.identity.account_email_fallback'),
+    })
+    : t('data_erasure.identity.password_hint'))
+
+watch(() => [...form.categories], () => {
+    if (!codeSent.value) return
+
+    codeSent.value = false
+    form.code = ''
+    form.clearErrors('code')
+})
 
 const toggleAll = () => {
     form.categories = hasAllCategories.value ? [] : props.categories.map((category) => category.key)
@@ -37,7 +51,7 @@ const toggleAll = () => {
 
 const requestCode = () => {
     if (!form.categories.length) {
-        form.setError('categories', 'Wähle mindestens einen Datenbereich aus.')
+        form.setError('categories', t('data_erasure.select_required'))
         return
     }
 
@@ -52,7 +66,7 @@ const requestCode = () => {
 
 const eraseData = () => {
     if (!form.categories.length) {
-        form.setError('categories', 'Wähle mindestens einen Datenbereich aus.')
+        form.setError('categories', t('data_erasure.select_required'))
         return
     }
 
@@ -67,39 +81,39 @@ const eraseData = () => {
 </script>
 
 <template>
-    <Head title="Daten löschen" />
+    <Head :title="t('data_erasure.meta_title')" />
 
     <div class="mx-auto max-w-4xl space-y-5 p-4 sm:p-6">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-                <p class="text-sm font-semibold uppercase tracking-wide text-secondary">Datenschutz</p>
-                <h1 class="mt-1 text-2xl font-bold text-primary sm:text-3xl">Daten löschen, Konto behalten</h1>
+                <p class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('data_erasure.eyebrow') }}</p>
+                <h1 class="mt-1 text-2xl font-bold text-primary sm:text-3xl">{{ t('data_erasure.title') }}</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                    Entferne gezielt persönliche Daten aus Airmius. Dein Konto, deine E-Mail-Adresse und deine Zugangsdaten bleiben bestehen.
+                    {{ t('data_erasure.intro') }}
                 </p>
             </div>
-            <Link :href="route('auth.settings')" class="btn-secondary">Zurück zu Einstellungen</Link>
+            <Link :href="route('auth.settings')" class="btn-secondary">{{ t('data_erasure.back') }}</Link>
         </div>
 
         <div class="rounded-xl border border-error/40 bg-error/10 p-4 text-sm text-primary">
-            <p class="font-semibold text-error">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+            <p class="font-semibold text-error">{{ t('data_erasure.warning_title') }}</p>
             <p class="mt-1 leading-6 text-secondary">
-                Gelöschte Inhalte, Medien und Daten können nicht wiederhergestellt werden. Sichere zuerst alles, was du behalten möchtest.
+                {{ t('data_erasure.warning_body') }}
             </p>
         </div>
 
         <section class="surface-card p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 class="text-lg font-semibold text-primary">1. Datenbereiche auswählen</h2>
-                    <p class="mt-1 text-sm text-secondary">Du kannst einzelne Bereiche wählen oder alles auswählen.</p>
+                    <h2 class="text-lg font-semibold text-primary">{{ t('data_erasure.select_title') }}</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ t('data_erasure.select_hint') }}</p>
                 </div>
                 <button type="button" class="btn-secondary" :disabled="form.processing" @click="toggleAll">
-                    {{ hasAllCategories ? 'Auswahl aufheben' : 'Alle Bereiche auswählen' }}
+                    {{ hasAllCategories ? t('data_erasure.clear_all') : t('data_erasure.select_all') }}
                 </button>
             </div>
 
-            <p v-if="form.errors.categories" class="mt-3 text-sm text-error">{{ form.errors.categories }}</p>
+            <p v-if="form.errors.categories" class="mt-3 text-sm text-error" role="alert">{{ form.errors.categories }}</p>
 
             <div class="mt-4 space-y-3">
                 <label
@@ -118,9 +132,9 @@ const eraseData = () => {
         </section>
 
         <section class="surface-card p-5">
-            <h2 class="text-lg font-semibold text-primary">2. Anfrage bestätigen</h2>
+            <h2 class="text-lg font-semibold text-primary">{{ t('data_erasure.confirm_title') }}</h2>
             <p class="mt-1 text-sm leading-6 text-secondary">
-                {{ identityHint }} Danach senden wir einen einmaligen Code an deine Konto-E-Mail-Adresse. Der Code ist 15 Minuten gültig und gilt nur für die aktuell ausgewählten Bereiche.
+                {{ identityHint }} {{ t('data_erasure.identity.code_hint') }}
             </p>
 
             <div class="mt-4 max-w-xl">
@@ -131,28 +145,28 @@ const eraseData = () => {
                     :type="usesSocialLogin ? 'email' : 'password'"
                     :autocomplete="usesSocialLogin ? 'email' : 'current-password'"
                     class="input mt-2"
-                    :placeholder="usesSocialLogin ? accountEmail : 'Passwort eingeben'"
+                    :placeholder="usesSocialLogin ? accountEmail : t('data_erasure.identity.password_placeholder')"
                     :disabled="form.processing"
                     @input="form.clearErrors('identity')"
                 >
-                <p v-if="form.errors.identity" class="mt-2 text-sm text-error">{{ form.errors.identity }}</p>
+                <p v-if="form.errors.identity" class="mt-2 text-sm text-error" role="alert">{{ form.errors.identity }}</p>
             </div>
 
             <div class="mt-4 flex flex-wrap gap-3">
                 <button type="button" class="btn-primary" :disabled="form.processing" @click="requestCode">
-                    {{ codeSent ? 'Neuen Bestätigungscode senden' : 'Bestätigungscode senden' }}
+                    {{ codeSent ? t('data_erasure.resend_code') : t('data_erasure.send_code') }}
                 </button>
             </div>
         </section>
 
         <section v-if="codeSent" class="surface-card border border-warning/30 p-5">
-            <h2 class="text-lg font-semibold text-primary">3. Löschung ausführen</h2>
+            <h2 class="text-lg font-semibold text-primary">{{ t('data_erasure.erase_title') }}</h2>
             <p class="mt-1 text-sm leading-6 text-secondary">
-                Gib den Code aus der E-Mail ein. Mit der Bestätigung werden die ausgewählten Daten sofort gelöscht beziehungsweise anonymisiert.
+                {{ t('data_erasure.erase_intro') }}
             </p>
 
             <div class="mt-4 max-w-sm">
-                <label class="block text-sm font-semibold text-primary" for="data-erasure-code">Bestätigungscode</label>
+                <label class="block text-sm font-semibold text-primary" for="data-erasure-code">{{ t('data_erasure.code_label') }}</label>
                 <input
                     id="data-erasure-code"
                     v-model="form.code"
@@ -160,27 +174,28 @@ const eraseData = () => {
                     inputmode="numeric"
                     autocomplete="one-time-code"
                     maxlength="6"
+                    dir="ltr"
                     class="input mt-2 tracking-[0.35em]"
-                    placeholder="123456"
+                    :placeholder="t('data_erasure.code_placeholder')"
                     :disabled="form.processing"
                     @input="form.clearErrors('code')"
                 >
-                <p v-if="form.errors.code" class="mt-2 text-sm text-error">{{ form.errors.code }}</p>
+                <p v-if="form.errors.code" class="mt-2 text-sm text-error" role="alert">{{ form.errors.code }}</p>
             </div>
 
             <button type="button" class="mt-4 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition hover:bg-error/90 disabled:cursor-not-allowed disabled:opacity-60" :disabled="form.processing || !form.code" @click="eraseData">
-                Ausgewählte Daten endgültig löschen
+                {{ t('data_erasure.erase_button') }}
             </button>
         </section>
 
         <section class="rounded-xl border border-border bg-bg p-5 text-sm leading-6 text-secondary">
-            <h2 class="font-semibold text-primary">Daten, die erhalten bleiben können</h2>
-            <ul class="mt-2 list-disc space-y-1 pl-5">
-                <li>Rechnungen, Zahlungen, Abonnements, offene Bestellungen sowie gesetzlich erforderliche Nachweise.</li>
-                <li>Vereins-, Team- und Berechtigungszuordnungen, damit keine Daten anderer Personen oder Organisationen verloren gehen.</li>
-                <li>Die technische Zuordnung eines Google- oder Microsoft-Logins, wenn du diese Anmeldung weiterhin verwendest.</li>
+            <h2 class="font-semibold text-primary">{{ t('data_erasure.retained_title') }}</h2>
+            <ul class="mt-2 list-disc space-y-1 ps-5">
+                <li>{{ t('data_erasure.retained_financial') }}</li>
+                <li>{{ t('data_erasure.retained_organization') }}</li>
+                <li>{{ t('data_erasure.retained_social_login') }}</li>
             </ul>
-            <Link :href="route('legal.data-erasure')" class="mt-3 inline-block text-buttonPrimary hover:underline">Öffentliche Informationen zur Datenlöschung</Link>
+            <Link :href="route('legal.data-erasure')" class="mt-3 inline-block text-buttonPrimary hover:underline">{{ t('data_erasure.public_information') }}</Link>
         </section>
     </div>
 </template>

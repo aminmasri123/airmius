@@ -9,7 +9,7 @@ defineProps({
         <h2 class="text-lg font-bold text-primary">Rollen & Berechtigungen</h2>
         <div class="mt-4 grid gap-4 text-sm md:grid-cols-2">
             <div class="rounded-xl border border-border bg-bg p-4">
-                <div class="font-semibold text-primary">Rollen</div>
+                <div class="font-semibold text-primary">{{ $t('Rollen') }}</div>
                 <div class="mt-2 text-secondary">{{ profileUser.roles.length ? profileUser.roles.join(', ') : 'Keine Rollen' }}</div>
             </div>
             <div class="rounded-xl border border-border bg-bg p-4">

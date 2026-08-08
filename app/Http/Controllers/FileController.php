@@ -14,10 +14,10 @@ use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\FileAccessSummary;
 use App\Support\UploadStorage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -29,15 +29,25 @@ class FileController extends Controller
     use AuthorizesRequests;
 
     private const DEFAULT_FILES_PER_PAGE = 24;
+
     private const MAX_FILES_PER_PAGE = 100;
+
     private const DEFAULT_FOLDERS_PER_PAGE = 24;
+
     private const MAX_FOLDERS_PER_PAGE = 100;
+
     private const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 72, 100];
+
     private const MAX_FILE_SIZE_KB = 51200;
+
     private const FILE_NAME_MAX_LENGTH = 180;
+
     private const SEARCH_QUERY_MAX_LENGTH = 200;
+
     private const VALID_ITEM_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest'];
+
     private const VALID_FILE_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest', 'size-asc', 'size-desc'];
+
     private const VALID_FOLDER_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest'];
 
     private const DISALLOWED_FILE_EXTENSIONS = [
@@ -246,7 +256,7 @@ class FileController extends Controller
             $this->planFeatures->ensureCanStoreUserFile($request->user(), $request->file('file'));
         }
 
-        if (!empty($data['folder_id'])) {
+        if (! empty($data['folder_id'])) {
             $folder = Folder::findOrFail($data['folder_id']);
             abort_unless($folder->user_id === ($scope['user_id'] ?? null)
                 && $folder->club_id === ($scope['club_id'] ?? null)
@@ -335,7 +345,7 @@ class FileController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Dateien können nur mit Freunden geteilt werden.'
+            __('file_manager.file_friends_only')
         );
 
         $sharedFile = File::firstOrCreate(
@@ -354,16 +364,21 @@ class FileController extends Controller
             ],
         );
 
-        AppNotification::send($targetUser, 'file.shared', [
-            'title' => $request->user()->name.' hat eine Datei mit dir geteilt',
-            'body' => $file->display_name,
-            'url' => route('auth.files.index'),
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'file_id' => $sharedFile->id,
-        ]);
+        AppNotification::sendLocalized(
+            $targetUser,
+            'file.shared',
+            'file_manager.file_shared_title',
+            'file_manager.file_shared_body',
+            ['user' => $request->user()->name, 'file' => $file->display_name],
+            [
+                'url' => route('auth.files.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'file_id' => $sharedFile->id,
+            ],
+        );
 
-        return back()->with('success', 'Datei freigegeben.');
+        return back()->with('success', __('file_manager.file_shared'));
     }
 
     public function sharedDownload(string $token)
@@ -489,14 +504,14 @@ class FileController extends Controller
 
     private function applyDisplayNameSearch(Builder $query, string $search): void
     {
-        $needle = '%' . $this->escapeLike($search) . '%';
+        $needle = '%'.$this->escapeLike($search).'%';
 
         $query->whereRaw("LOWER(display_name) LIKE ? ESCAPE '!'", [Str::lower($needle)]);
     }
 
     private function applyFolderNameSearch(Builder $query, string $search): void
     {
-        $needle = '%' . $this->escapeLike($search) . '%';
+        $needle = '%'.$this->escapeLike($search).'%';
 
         $query->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [Str::lower($needle)]);
     }

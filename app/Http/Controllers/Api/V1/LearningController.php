@@ -15,13 +15,20 @@ use App\Models\LearningLessonNote;
 use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
+use App\Services\Learning\LearningEnrollmentService;
+use App\Services\Learning\LearningProgressService;
+use App\Support\AppNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class LearningController extends Controller
 {
+    public function __construct(
+        private readonly LearningEnrollmentService $learningEnrollment,
+        private readonly LearningProgressService $learningProgress,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
@@ -150,7 +157,7 @@ class LearningController extends Controller
                     'description' => $section->description,
                     'position' => $section->position,
                     'lessons' => $section->lessons->map(function (LearningLesson $lesson) use ($enrollment, $isTutor, $progress, $notes) {
-                        $lockedByDrip = ! $isTutor && $this->dripLocked($lesson, $enrollment);
+                        $lockedByDrip = ! $isTutor && $this->learningProgress->dripLocked($lesson, $enrollment);
                         $canOpen = ($isTutor || $enrollment || $lesson->is_preview) && ! $lockedByDrip;
                         $lessonProgress = $progress->get($lesson->id);
 
@@ -163,7 +170,7 @@ class LearningController extends Controller
                             'position' => $lesson->position,
                             'is_preview' => $lesson->is_preview,
                             'locked' => ! $canOpen,
-                            'available_at' => optional($this->dripAvailableAt($lesson, $enrollment))->toIso8601String(),
+                            'available_at' => optional($this->learningProgress->dripAvailableAt($lesson, $enrollment))->toIso8601String(),
                             'completed' => (bool) $lessonProgress?->completed,
                             'watch_seconds' => (int) ($lessonProgress?->watch_seconds ?: 0),
                             'content' => $canOpen ? $lesson->content : null,
@@ -187,7 +194,7 @@ class LearningController extends Controller
                 ])->values(),
                 'quizzes' => $course->quizzes->map(function (LearningQuiz $quiz) use ($enrollment, $isTutor, $quizAttempts) {
                     $locked = ! ($isTutor || $enrollment)
-                        || ($quiz->lesson && ! $isTutor && $this->dripLocked($quiz->lesson, $enrollment));
+                        || ($quiz->lesson && ! $isTutor && $this->learningProgress->dripLocked($quiz->lesson, $enrollment));
 
                     return [
                         'id' => $quiz->id,
@@ -210,7 +217,7 @@ class LearningController extends Controller
                         ? LearningLesson::query()->find($assignment->learning_lesson_id)
                         : null;
                     $locked = ! ($isTutor || $enrollment)
-                        || ($lesson && ! $isTutor && $this->dripLocked($lesson, $enrollment));
+                        || ($lesson && ! $isTutor && $this->learningProgress->dripLocked($lesson, $enrollment));
                     $submission = $submissions->get($assignment->id);
 
                     return [
@@ -231,7 +238,7 @@ class LearningController extends Controller
                     ];
                 })->values(),
                 'completion_requirements' => $enrollment
-                    ? $this->completionRequirements($course, $enrollment)
+                    ? $this->learningProgress->requirements($course, $enrollment)
                     : null,
             ],
         ]);
@@ -240,39 +247,26 @@ class LearningController extends Controller
     public function enroll(Request $request, LearningCourse $course): JsonResponse
     {
         $this->published($course);
-        abort_unless($course->is_free, 403, 'Dieser Kurs ist kostenpflichtig.');
-        abort_if((int) $course->user_id === (int) $request->user()->id, 422, 'Kursleitungen müssen sich nicht selbst einschreiben.');
+        abort_unless($course->is_free, 403, __('learning.errors.paid_course'));
+        abort_if((int) $course->user_id === (int) $request->user()->id, 422, __('learning.errors.tutor_self_enroll'));
 
-        $enrollment = LearningEnrollment::query()->updateOrCreate([
-            'learning_course_id' => $course->id,
-            'user_id' => $request->user()->id,
-        ], [
-            'status' => 'active',
-            'started_at' => now(),
-            'completed_at' => null,
-        ]);
+        $result = $this->learningEnrollment->activate($request->user(), $course);
+        $enrollment = $result['enrollment'];
 
         return response()->json([
             'data' => $this->enrollmentData($enrollment->load('course.tutor:id,name')),
-            'message' => 'Du bist im Kurs eingeschrieben.',
-        ], $enrollment->wasRecentlyCreated ? 201 : 200);
+            'message' => __('learning.responses.enrolled'),
+        ], $result['activated'] ? 201 : 200);
     }
 
     public function completeLesson(Request $request, LearningCourse $course, LearningLesson $lesson): JsonResponse
     {
         $enrollment = $this->participant($request, $course, $lesson);
-        LearningLessonProgress::query()->updateOrCreate([
-            'learning_enrollment_id' => $enrollment->id,
-            'learning_lesson_id' => $lesson->id,
-        ], [
-            'completed' => true,
-            'completed_at' => now(),
-        ]);
-        $this->refreshCompletion($course, $enrollment);
+        $this->learningProgress->completeLesson($course, $enrollment, $lesson);
 
         return response()->json([
             'data' => $this->enrollmentData($enrollment->fresh()->load(['course.tutor:id,name', 'certificate'])),
-            'message' => 'Lektion wurde abgeschlossen.',
+            'message' => __('learning.responses.lesson_completed'),
         ]);
     }
 
@@ -282,18 +276,7 @@ class LearningController extends Controller
         $data = $request->validate([
             'watch_seconds' => ['required', 'integer', 'min:0', 'max:1000000'],
         ]);
-        $progress = LearningLessonProgress::query()->firstOrNew([
-            'learning_enrollment_id' => $enrollment->id,
-            'learning_lesson_id' => $lesson->id,
-        ]);
-        $progress->watch_seconds = max((int) $progress->watch_seconds, $data['watch_seconds']);
-        $duration = max(0, (int) $lesson->duration_minutes * 60);
-        if ($duration > 0 && $progress->watch_seconds >= (int) ceil($duration * .8)) {
-            $progress->completed = true;
-            $progress->completed_at ??= now();
-        }
-        $progress->save();
-        $this->refreshCompletion($course, $enrollment);
+        $progress = $this->learningProgress->trackLesson($course, $enrollment, $lesson, $data['watch_seconds']);
 
         return response()->json([
             'data' => [
@@ -314,7 +297,7 @@ class LearningController extends Controller
             'body' => $data['body'],
         ]);
 
-        return response()->json(['data' => $note, 'message' => 'Notiz wurde gespeichert.'], 201);
+        return response()->json(['data' => $note, 'message' => __('learning.responses.note_saved')], 201);
     }
 
     public function storeComment(Request $request, LearningCourse $course, LearningLesson $lesson): JsonResponse
@@ -327,10 +310,27 @@ class LearningController extends Controller
             'body' => $data['body'],
             'visibility' => 'course',
         ])->load('user:id,name');
+        $course->loadMissing('tutor');
+        if ($course->tutor && (int) $course->user_id !== (int) $request->user()->id) {
+            AppNotification::sendLocalized(
+                $course->tutor,
+                'learning.question.created',
+                'learning.notifications.question_created_title',
+                'learning.notifications.question_created_body',
+                ['student' => $request->user()->name, 'course' => $course->title],
+                [
+                    'course_id' => $course->id,
+                    'lesson_id' => $lesson->id,
+                    'comment_id' => $comment->id,
+                    'url' => route('auth.learning.studio.index', ['course' => $course->id]),
+                ],
+                ['dedupe_key' => 'learning-question:'.$comment->id.':created'],
+            );
+        }
 
         return response()->json([
             'data' => $this->commentData($comment),
-            'message' => 'Frage wurde veröffentlicht.',
+            'message' => __('learning.responses.question_published'),
         ], 201);
     }
 
@@ -340,34 +340,22 @@ class LearningController extends Controller
         $enrollment = $this->activeEnrollmentOrFail($request, $course);
         if ($quiz->learning_lesson_id) {
             $lesson = LearningLesson::query()->findOrFail($quiz->learning_lesson_id);
-            abort_if($this->dripLocked($lesson, $enrollment), 403, 'Dieses Quiz ist noch gesperrt.');
+            abort_if($this->learningProgress->dripLocked($lesson, $enrollment), 403, __('learning.errors.quiz_locked'));
         }
         $data = $request->validate(['answers' => ['required', 'array']]);
-        $quiz->load('questions');
-        $answers = collect($data['answers'])
-            ->mapWithKeys(fn ($value, $key) => [(string) $key => $this->normalizeAnswer($value)])
-            ->all();
-        $correctIds = $quiz->questions
-            ->filter(fn ($question) => $this->normalizeAnswer($question->correct_options ?: [])
-                === ($answers[(string) $question->id] ?? []))
-            ->pluck('id')
-            ->all();
-        $score = (int) round((count($correctIds) / max(1, $quiz->questions->count())) * 100);
-        $attempt = LearningQuizAttempt::query()->create([
-            'learning_quiz_id' => $quiz->id,
-            'learning_enrollment_id' => $enrollment->id,
-            'user_id' => $request->user()->id,
-            'answers' => $answers,
-            'correct_question_ids' => $correctIds,
-            'score_percent' => $score,
-            'passed' => $score >= (int) $quiz->pass_percent,
-            'submitted_at' => now(),
-        ]);
-        $this->refreshCompletion($course, $enrollment);
+        $attempt = $this->learningProgress->submitQuiz(
+            $course,
+            $enrollment,
+            $quiz,
+            $request->user(),
+            $data['answers'],
+        );
 
         return response()->json([
             'data' => $this->attemptData($attempt),
-            'message' => $attempt->passed ? 'Quiz bestanden.' : 'Quiz nicht bestanden. Du kannst es erneut versuchen.',
+            'message' => $attempt->passed
+                ? __('learning.responses.quiz_passed')
+                : __('learning.responses.quiz_failed'),
         ], 201);
     }
 
@@ -375,11 +363,23 @@ class LearningController extends Controller
     {
         abort_unless((int) $assignment->learning_course_id === (int) $course->id, 404);
         $enrollment = $this->activeEnrollmentOrFail($request, $course);
+        if ($assignment->learning_lesson_id) {
+            $lesson = LearningLesson::query()->findOrFail($assignment->learning_lesson_id);
+            abort_if(
+                $this->learningProgress->dripLocked($lesson, $enrollment),
+                403,
+                __('learning.errors.assignment_locked'),
+            );
+        }
         $data = $request->validate([
             'body' => ['nullable', 'string', 'max:10000'],
             'attachment_url' => ['nullable', 'url', 'max:500'],
         ]);
-        abort_if(blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null), 422, 'Bitte reiche Text oder einen Link ein.');
+        abort_if(
+            blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null),
+            422,
+            __('learning.errors.submission_required'),
+        );
         $submission = LearningAssignmentSubmission::query()->updateOrCreate([
             'learning_assignment_id' => $assignment->id,
             'learning_enrollment_id' => $enrollment->id,
@@ -394,10 +394,35 @@ class LearningController extends Controller
             'graded_by' => null,
             'graded_at' => null,
         ]);
+        $course->loadMissing('tutor');
+        if ($course->tutor && (int) $course->user_id !== (int) $request->user()->id) {
+            AppNotification::sendLocalized(
+                $course->tutor,
+                'learning.assignment.submitted',
+                'learning.notifications.assignment_submitted_title',
+                'learning.notifications.assignment_submitted_body',
+                [
+                    'student' => $request->user()->name,
+                    'assignment' => $assignment->title,
+                    'course' => $course->title,
+                ],
+                [
+                    'course_id' => $course->id,
+                    'assignment_id' => $assignment->id,
+                    'submission_id' => $submission->id,
+                    'url' => route('auth.learning.studio.index', ['course' => $course->id]),
+                ],
+                ['dedupe_key' => sprintf(
+                    'learning-assignment-submission:%d:%s',
+                    $submission->id,
+                    $submission->updated_at?->format('Uu') ?: 'created',
+                )],
+            );
+        }
 
         return response()->json([
             'data' => $submission,
-            'message' => 'Aufgabe wurde eingereicht.',
+            'message' => __('learning.responses.assignment_submitted'),
         ], 201);
     }
 
@@ -416,8 +441,24 @@ class LearningController extends Controller
             'body' => $data['body'] ?? null,
             'status' => 'published',
         ]);
+        $course->loadMissing('tutor');
+        if ($course->tutor && (int) $course->user_id !== (int) $request->user()->id) {
+            AppNotification::sendLocalized(
+                $course->tutor,
+                'learning.review.created',
+                'learning.notifications.review_created_title',
+                'learning.notifications.review_created_body',
+                ['student' => $request->user()->name, 'course' => $course->title, 'rating' => $review->rating],
+                ['course_id' => $course->id, 'review_id' => $review->id],
+                ['dedupe_key' => sprintf(
+                    'learning-review:%d:%s',
+                    $review->id,
+                    $review->updated_at?->format('Uu') ?: 'created',
+                )],
+            );
+        }
 
-        return response()->json(['data' => $review, 'message' => 'Bewertung wurde gespeichert.']);
+        return response()->json(['data' => $review, 'message' => __('learning.responses.review_saved')]);
     }
 
     public function certificate(Request $request, LearningCertificate $certificate): JsonResponse
@@ -515,7 +556,7 @@ class LearningController extends Controller
     {
         abort_unless((int) $lesson->learning_course_id === (int) $course->id, 404);
         $enrollment = $this->activeEnrollmentOrFail($request, $course);
-        abort_if($this->dripLocked($lesson, $enrollment), 403, 'Diese Lektion ist noch gesperrt.');
+        abort_if($this->learningProgress->dripLocked($lesson, $enrollment), 403, __('learning.errors.lesson_locked'));
 
         return $enrollment;
     }
@@ -542,84 +583,5 @@ class LearningController extends Controller
     private function published(LearningCourse $course): void
     {
         abort_unless($course->status === 'published' && $course->is_public, 404);
-    }
-
-    private function dripLocked(LearningLesson $lesson, ?LearningEnrollment $enrollment): bool
-    {
-        return $enrollment?->started_at
-            && (int) $lesson->unlock_after_days > 0
-            && now()->lt($this->dripAvailableAt($lesson, $enrollment));
-    }
-
-    private function dripAvailableAt(LearningLesson $lesson, ?LearningEnrollment $enrollment)
-    {
-        if (! $enrollment?->started_at || (int) $lesson->unlock_after_days <= 0) {
-            return null;
-        }
-
-        return $enrollment->started_at->copy()->addDays((int) $lesson->unlock_after_days);
-    }
-
-    private function normalizeAnswer($value): array
-    {
-        return collect(is_array($value) ? $value : [$value])
-            ->map(fn ($item) => Str::lower(trim((string) $item)))
-            ->filter()
-            ->sort()
-            ->values()
-            ->all();
-    }
-
-    private function refreshCompletion(LearningCourse $course, LearningEnrollment $enrollment): void
-    {
-        $requirements = $this->completionRequirements($course, $enrollment);
-        $total = max(1, $requirements['lessons']['total'] + $requirements['quizzes']['total'] + $requirements['assignments']['total']);
-        $done = $requirements['lessons']['completed'] + $requirements['quizzes']['completed'] + $requirements['assignments']['completed'];
-        $enrollment->forceFill([
-            'progress_percent' => min(100, (int) round(($done / $total) * 100)),
-            'completed_at' => $requirements['complete'] ? ($enrollment->completed_at ?: now()) : null,
-        ])->save();
-
-        if ($enrollment->completed_at) {
-            $enrollment->certificate()->firstOrCreate([], [
-                'learning_course_id' => $course->id,
-                'user_id' => $enrollment->user_id,
-                'code' => 'AIR-LEARN-'.Str::upper(Str::random(10)),
-                'issued_at' => now(),
-            ]);
-        }
-    }
-
-    private function completionRequirements(LearningCourse $course, LearningEnrollment $enrollment): array
-    {
-        $totalLessons = $course->lessons()->count();
-        $completedLessons = LearningLessonProgress::query()
-            ->where('learning_enrollment_id', $enrollment->id)
-            ->where('completed', true)
-            ->whereHas('lesson', fn ($query) => $query->where('learning_course_id', $course->id))
-            ->count();
-        $quizIds = $course->quizzes()->pluck('id');
-        $passedQuizIds = LearningQuizAttempt::query()
-            ->where('learning_enrollment_id', $enrollment->id)
-            ->where('passed', true)
-            ->whereIn('learning_quiz_id', $quizIds)
-            ->distinct()
-            ->pluck('learning_quiz_id');
-        $assignmentIds = $course->assignments()->where('is_required', true)->pluck('id');
-        $passedAssignmentIds = LearningAssignmentSubmission::query()
-            ->where('learning_enrollment_id', $enrollment->id)
-            ->where('status', 'passed')
-            ->whereIn('learning_assignment_id', $assignmentIds)
-            ->distinct()
-            ->pluck('learning_assignment_id');
-
-        return [
-            'lessons' => ['total' => $totalLessons, 'completed' => $completedLessons],
-            'quizzes' => ['total' => $quizIds->count(), 'completed' => $passedQuizIds->count()],
-            'assignments' => ['total' => $assignmentIds->count(), 'completed' => $passedAssignmentIds->count()],
-            'complete' => $completedLessons >= $totalLessons
-                && $quizIds->diff($passedQuizIds)->isEmpty()
-                && $assignmentIds->diff($passedAssignmentIds)->isEmpty(),
-        ];
     }
 }

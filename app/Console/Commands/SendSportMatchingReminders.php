@@ -41,17 +41,27 @@ class SendSportMatchingReminders extends Command
                     }
 
                     $needsConfirmation = $attendance->status === 'pending';
-                    AppNotification::send($attendance->user_id, 'sport_matching.reminder', [
-                        'title' => $needsConfirmation
-                            ? 'Teilnahme bestätigen'
-                            : ($isTwoHourReminder ? 'Sporttermin in 2 Stunden' : 'Sporttermin morgen'),
-                        'body' => $needsConfirmation
-                            ? 'Bitte bestätige deine Teilnahme: '.$matching->title
-                            : 'Denk an deinen Sporttermin: '.$matching->title,
-                        'url' => route('auth.sport-matching.index'),
-                        'matching_id' => $matching->id,
-                        'reminder' => $isTwoHourReminder ? '2h' : '24h',
-                    ]);
+                    $titleKey = $needsConfirmation
+                        ? 'sport_matching.notifications.reminder_confirm_title'
+                        : ($isTwoHourReminder
+                            ? 'sport_matching.notifications.reminder_two_hours_title'
+                            : 'sport_matching.notifications.reminder_tomorrow_title');
+                    $bodyKey = $needsConfirmation
+                        ? 'sport_matching.notifications.reminder_confirm_body'
+                        : 'sport_matching.notifications.reminder_body';
+
+                    AppNotification::sendLocalized(
+                        $attendance->user_id,
+                        'sport_matching.reminder',
+                        $titleKey,
+                        $bodyKey,
+                        ['matching' => $matching->title],
+                        [
+                            'url' => route('auth.sport-matching.index'),
+                            'matching_id' => $matching->id,
+                            'reminder' => $isTwoHourReminder ? '2h' : '24h',
+                        ],
+                    );
 
                     $attendance->forceFill([$column => now()])->save();
                     $sent++;

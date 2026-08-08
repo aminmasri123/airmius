@@ -1,4 +1,6 @@
 ﻿<script setup>
+import { Link } from '@inertiajs/vue3'
+
 defineProps({
     club: { type: Object, required: true },
     openJobModal: { type: Function, required: true },
@@ -25,6 +27,13 @@ defineProps({
                 <span class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">
                     {{ $t('teams_workspace.jobs.count', { count: club.jobs?.length || 0 }) }}
                 </span>
+                <Link
+                    v-if="club.can_manage_jobs"
+                    :href="route('auth.recruiting-pipeline.index')"
+                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                >
+                    {{ $t('recruiting_pipeline.page_title') }}
+                </Link>
                 <button
                     v-if="club.can_manage_jobs"
                     type="button"
@@ -135,4 +144,3 @@ defineProps({
         </div>
     </div>
 </template>
-

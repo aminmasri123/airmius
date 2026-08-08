@@ -7,7 +7,10 @@ use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
 use App\Models\UserSubscription;
 use App\Notifications\SubscriptionInvoiceReminder;
+use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Support\AppNotification;
+use App\Support\ClubRoles;
+use App\Support\SupportedLocale;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -20,6 +23,11 @@ class ProcessSubscriptionLifecycle extends Command
         {--dry-run : Nur zählen, nichts speichern oder senden}';
 
     protected $description = 'Erzeugt wiederkehrende Abo-Rechnungen, mahnt offene Zahlungen und finalisiert Kündigungen.';
+
+    public function __construct(private readonly SubscriptionLifecycleService $subscriptionLifecycle)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -67,29 +75,17 @@ class ProcessSubscriptionLifecycle extends Command
             ->where('status', 'cancels_at_period_end')
             ->whereNotNull('cancels_at')
             ->where('cancels_at', '<=', $today)
-            ->chunkById(100, function ($subscriptions) use (&$count, $subscriptionType, $dryRun) {
+            ->chunkById(100, function ($subscriptions) use (&$count, $dryRun) {
                 foreach ($subscriptions as $subscription) {
-                    $count++;
-
                     if ($dryRun) {
+                        $count++;
+
                         continue;
                     }
 
-                    $subscription->forceFill([
-                        'status' => 'cancelled',
-                        'cancel_at_period_end' => false,
-                        'cancelled_at' => now(),
-                        'next_invoice_at' => null,
-                        'grace_period_ends_at' => null,
-                        'access_restricted_at' => null,
-                    ])->save();
-
-                    $this->notifySubscriptionOwner($subscription, $subscriptionType, 'subscription.ended', [
-                        'title' => 'Abo beendet',
-                        'body' => 'Dein Abo wurde zum Kündigungsdatum beendet.',
-                        'subscription_type' => $subscriptionType,
-                        'subscription_id' => $subscription->id,
-                    ]);
+                    if ($this->subscriptionLifecycle->finalizeCancellation($subscription)) {
+                        $count++;
+                    }
                 }
             });
 
@@ -120,6 +116,7 @@ class ProcessSubscriptionLifecycle extends Command
                     $periodStart = $this->periodStart($subscription);
                     $periodEnd = $this->periodEnd($periodStart, $subscription->billing_interval);
                     $amountCents = $this->amountCents($subscription);
+                    $locale = $this->subscriptionLocale($subscription, $subscriptionType);
 
                     if ($amountCents <= 0) {
                         if (! $dryRun) {
@@ -156,8 +153,15 @@ class ProcessSubscriptionLifecycle extends Command
                                 'subscription_type' => $subscriptionType,
                                 'subscription_id' => $subscription->id,
                                 'number' => $this->nextInvoiceNumber(),
-                                'title' => 'Airmius '.$subscription->plan->name,
-                                'description' => 'Wiederkehrendes Abo '.$subscription->plan->name.' ('.$this->intervalLabel($subscription->billing_interval).')',
+                                'title' => __('subscription.invoice.title', [
+                                    'plan' => $subscription->plan->name,
+                                ], $locale),
+                                'description' => __(sprintf(
+                                    'subscription.invoice.description_%s',
+                                    $this->billingInterval($subscription) === 'yearly' ? 'yearly' : 'monthly',
+                                ), [
+                                    'plan' => $subscription->plan->name,
+                                ], $locale),
                                 'amount_cents' => $amountCents,
                                 'currency' => $subscription->plan->currency ?: 'EUR',
                                 'status' => $this->paymentMethod($subscription) === 'bank_transfer' ? 'awaiting_transfer' : 'open',
@@ -202,7 +206,7 @@ class ProcessSubscriptionLifecycle extends Command
             ->whereNotNull('due_at')
             ->where('due_at', '<', $today)
             ->orderBy('due_at')
-            ->chunkById(100, function ($invoices) use (&$stats, $today, $dryRun, $reminderDays, $graceDays) {
+            ->chunkById(100, function ($invoices) use (&$stats, $dryRun, $reminderDays, $graceDays) {
                 foreach ($invoices as $invoice) {
                     $subscription = $this->subscriptionForInvoice($invoice);
 
@@ -240,11 +244,18 @@ class ProcessSubscriptionLifecycle extends Command
                         $invoice->user->notify(new SubscriptionInvoiceReminder($invoice));
                     }
 
-                    AppNotification::send($invoice->user_id, 'subscription.invoice.reminder', [
-                        'title' => 'Airmius Abo-Rechnung offen',
-                        'body' => $invoice->number.' ist fällig. Bitte begleiche die Rechnung, damit dein Abo aktiv bleibt.',
-                        'subscription_invoice_id' => $invoice->id,
-                    ]);
+                    AppNotification::sendLocalized(
+                        $invoice->user_id,
+                        'subscription.invoice.reminder',
+                        'notification_settings.notifications.invoice_reminder_title',
+                        'notification_settings.notifications.invoice_reminder_body_extended',
+                        ['invoice' => $invoice->number],
+                        ['subscription_invoice_id' => $invoice->id],
+                        [
+                            'dedupe_key' => 'subscription-invoice:'.$invoice->id.':lifecycle-reminder:'.(((int) $invoice->reminder_count) + 1),
+                            'priority' => 'high',
+                        ],
+                    );
 
                     $invoice->forceFill([
                         'status' => 'overdue',
@@ -281,12 +292,17 @@ class ProcessSubscriptionLifecycle extends Command
                         'access_restricted_at' => now(),
                     ])->save();
 
-                    $this->notifySubscriptionOwner($subscription, $subscriptionType, 'subscription.restricted', [
-                        'title' => 'Abo eingeschraenkt',
-                        'body' => 'Dein Abo ist wegen offener Zahlung eingeschraenkt. Bitte begleiche die offene Rechnung.',
-                        'subscription_type' => $subscriptionType,
-                        'subscription_id' => $subscription->id,
-                    ]);
+                    $this->notifySubscriptionOwnersLocalized(
+                        $subscription,
+                        $subscriptionType,
+                        'subscription.restricted',
+                        'subscription.notifications.restricted_title',
+                        'subscription.notifications.restricted_body',
+                        [
+                            'subscription_type' => $subscriptionType,
+                            'subscription_id' => $subscription->id,
+                        ],
+                    );
                 }
             });
 
@@ -328,11 +344,6 @@ class ProcessSubscriptionLifecycle extends Command
         return $subscription->billing_interval === 'yearly' ? 'yearly' : 'monthly';
     }
 
-    private function intervalLabel(?string $billingInterval): string
-    {
-        return $billingInterval === 'yearly' ? 'Jahreszahlung' : 'Monatszahlung';
-    }
-
     private function paymentMethod(Model $subscription): string
     {
         return $subscription->payment_provider ?: 'bank_transfer';
@@ -347,15 +358,60 @@ class ProcessSubscriptionLifecycle extends Command
         return (int) ($subscription->club?->owner_id ?: $subscription->club?->owner?->id);
     }
 
-    private function notifySubscriptionOwner(Model $subscription, string $subscriptionType, string $type, array $data): void
-    {
-        $userId = $subscriptionType === 'user'
-            ? $subscription->user_id
-            : ($subscription->club?->owner_id ?: $subscription->club?->owner?->id);
-
-        if ($userId) {
-            AppNotification::send((int) $userId, $type, $data);
+    private function notifySubscriptionOwnersLocalized(
+        Model $subscription,
+        string $subscriptionType,
+        string $type,
+        string $titleKey,
+        string $bodyKey,
+        array $data,
+    ): void {
+        foreach ($this->subscriptionRecipientIds($subscription, $subscriptionType) as $userId) {
+            AppNotification::sendLocalized(
+                $userId,
+                $type,
+                $titleKey,
+                $bodyKey,
+                [],
+                $data,
+                [
+                    'dedupe_key' => 'subscription:'.$subscriptionType.':'.$subscription->id.':restricted',
+                    'priority' => 'high',
+                ],
+            );
         }
+    }
+
+    /** @return array<int, int> */
+    private function subscriptionRecipientIds(Model $subscription, string $subscriptionType): array
+    {
+        if ($subscriptionType === 'user') {
+            return $subscription->user_id ? [(int) $subscription->user_id] : [];
+        }
+
+        $club = $subscription->club;
+
+        if (! $club) {
+            return [];
+        }
+
+        return ClubRoles::whereAny($club->users(), ClubRoles::SUBSCRIPTION_MANAGERS)
+            ->pluck('users.id')
+            ->push($club->owner_id)
+            ->filter()
+            ->unique()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function subscriptionLocale(Model $subscription, string $subscriptionType): string
+    {
+        $language = $subscriptionType === 'user'
+            ? $subscription->user?->language
+            : $subscription->club?->owner?->language;
+
+        return SupportedLocale::normalize($language) ?? SupportedLocale::DEFAULT;
     }
 
     private function paymentReference(string $subscriptionType, int $subscriptionId): string

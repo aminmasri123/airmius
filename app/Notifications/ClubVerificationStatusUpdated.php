@@ -3,9 +3,11 @@
 namespace App\Notifications;
 
 use App\Models\Club;
+use App\Support\SupportedLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Lang;
 
 class ClubVerificationStatusUpdated extends Notification
 {
@@ -21,25 +23,31 @@ class ClubVerificationStatusUpdated extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $approved = $this->club->verification_status === 'verified';
+        $locale = SupportedLocale::normalize($notifiable->language ?? null) ?? SupportedLocale::DEFAULT;
+        $copy = fn (string $key, array $replace = []): string => Lang::get(
+            'platform.organization.verification_mail.'.$key,
+            $replace,
+            $locale,
+        );
 
         $message = (new MailMessage)
-            ->subject($approved ? 'Dein Verein wurde freigegeben' : 'Dein Vereinsantrag wurde abgelehnt')
-            ->greeting('Hallo '.$notifiable->name.',');
+            ->subject($copy($approved ? 'approved_subject' : 'rejected_subject'))
+            ->greeting($copy('greeting', ['name' => $notifiable->name]));
 
         if ($approved) {
             $message
-                ->line('dein Verein "'.$this->club->name.'" wurde geprüft und freigegeben.')
-                ->line($this->club->is_official ? 'Der Verein ist jetzt öffentlich sichtbar und als offiziell markiert.' : 'Der Verein ist jetzt öffentlich sichtbar.');
+                ->line($copy('approved_line', ['club' => $this->club->name]))
+                ->line($copy($this->club->is_official ? 'approved_official' : 'approved_public'));
         } else {
             $message
-                ->line('dein Vereinsantrag für "'.$this->club->name.'" wurde abgelehnt.')
-                ->line('Bitte prüfe die Hinweise im Dashboard oder kontaktiere den Support.');
+                ->line($copy('rejected_line', ['club' => $this->club->name]))
+                ->line($copy('rejected_help'));
         }
 
         if ($this->club->verification_notes) {
-            $message->line('Hinweis: '.$this->club->verification_notes);
+            $message->line($copy('notes', ['notes' => $this->club->verification_notes]));
         }
 
-        return $message->action('Verein ?ffnen', route('auth.clubs.show', $this->club->id));
+        return $message->action($copy('action'), route('auth.clubs.show', $this->club->id));
     }
 }

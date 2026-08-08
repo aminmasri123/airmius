@@ -15,6 +15,9 @@ class MinorSafety
             'profile_visibility' => 'private',
             'direct_message_privacy' => 'friends',
             'friend_request_privacy' => 'friends',
+            'ads_personalization_consent' => false,
+            'ads_measurement_consent' => false,
+            'product_analytics_consent' => false,
         ];
     }
 

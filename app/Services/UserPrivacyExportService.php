@@ -2,12 +2,25 @@
 
 namespace App\Services;
 
+use App\Models\OrganizationJobInterest;
 use App\Models\User;
+use App\Models\WebsiteRequest;
 
 class UserPrivacyExportService
 {
     public function export(User $user): array
     {
+        $recruitingInterests = OrganizationJobInterest::query()
+            ->with(['job:id,club_id,title', 'job.club:id,name'])
+            ->where(fn ($query) => $query->where('user_id', $user->id)->orWhere('email', $user->email))
+            ->latest('id')
+            ->get();
+        $agencyRequests = WebsiteRequest::query()
+            ->with('club:id,name')
+            ->where(fn ($query) => $query->where('user_id', $user->id)->orWhere('guest_email', $user->email))
+            ->latest('id')
+            ->get();
+
         $user->loadMissing([
             'roles:id,name',
             'permissions:id,name',
@@ -68,6 +81,9 @@ class UserPrivacyExportService
                 'friend_request_privacy' => $user->friend_request_privacy ?? 'everyone',
                 'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
                 'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
+                'product_analytics_consent' => (bool) $user->product_analytics_consent,
+                'product_analytics_consented_at' => $user->product_analytics_consented_at?->toJSON(),
+                'product_analytics_consent_version' => $user->product_analytics_consent_version,
             ],
             'guardian' => [
                 'guardian_email' => $user->guardian_email,
@@ -229,6 +245,44 @@ class UserPrivacyExportService
                 'subscription_invoices' => $user->subscriptionInvoices->values(),
                 'subscriptions' => $user->subscriptions->values(),
             ],
+            'recruiting' => [
+                'applications' => $recruitingInterests->map(fn (OrganizationJobInterest $interest) => [
+                    'id' => $interest->id,
+                    'job' => $interest->job ? [
+                        'id' => $interest->job->id,
+                        'title' => $interest->job->title,
+                        'club' => $interest->job->club?->only(['id', 'name']),
+                    ] : null,
+                    'name' => $interest->name,
+                    'email' => $interest->email,
+                    'phone' => $interest->phone,
+                    'message' => $interest->message,
+                    'status' => $interest->status,
+                    'internal_note' => $interest->internal_note,
+                    'consent_at' => $interest->consent_at?->toJSON(),
+                    'retention_expires_at' => $interest->retention_expires_at?->toJSON(),
+                    'created_at' => $interest->created_at?->toJSON(),
+                    'updated_at' => $interest->updated_at?->toJSON(),
+                ])->values(),
+            ],
+            'agency' => [
+                'requests' => $agencyRequests->map(fn (WebsiteRequest $agencyRequest) => [
+                    'id' => $agencyRequest->id,
+                    'club' => $agencyRequest->club?->only(['id', 'name']),
+                    'club_name' => $agencyRequest->club_name,
+                    'guest_name' => $agencyRequest->guest_name,
+                    'guest_email' => $agencyRequest->guest_email,
+                    'guest_phone' => $agencyRequest->guest_phone,
+                    'domain' => $agencyRequest->domain,
+                    'goals' => $agencyRequest->goals,
+                    'notes' => $agencyRequest->notes,
+                    'status' => $agencyRequest->status,
+                    'consent_at' => $agencyRequest->consent_at?->toJSON(),
+                    'retention_expires_at' => $agencyRequest->retention_expires_at?->toJSON(),
+                    'created_at' => $agencyRequest->created_at?->toJSON(),
+                    'updated_at' => $agencyRequest->updated_at?->toJSON(),
+                ])->values(),
+            ],
             'rights' => [
                 'export' => [
                     'web_route' => 'auth.settings.privacy.export',
@@ -255,7 +309,7 @@ class UserPrivacyExportService
                 'consent_withdrawal' => [
                     'web_route' => 'auth.settings.privacy.withdraw-consents',
                     'api_route' => 'api.v1.privacy.withdraw-consents',
-                    'supported_consents' => ['ads_personalization', 'ads_measurement'],
+                    'supported_consents' => ['ads_personalization', 'ads_measurement', 'product_analytics'],
                 ],
             ],
         ];

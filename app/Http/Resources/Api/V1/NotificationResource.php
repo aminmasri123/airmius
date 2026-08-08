@@ -15,6 +15,8 @@ class NotificationResource extends JsonResource
         return [
             'id' => $this->id,
             'type' => $this->type,
+            'category' => $this->category,
+            'priority' => $this->priority,
             'title' => $data['title'] ?? null,
             'body' => $data['body'] ?? ($data['message'] ?? null),
             'url' => $actionUrl,

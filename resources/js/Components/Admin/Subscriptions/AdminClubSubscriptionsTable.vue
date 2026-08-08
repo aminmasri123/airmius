@@ -41,7 +41,7 @@ const searchModel = computed({
                     <tr>
                         <th class="px-5 py-3">Verein</th>
                         <th class="px-5 py-3">Nutzung</th>
-                        <th class="px-5 py-3">Aktueller Plan</th>
+                        <th class="px-5 py-3">{{ $t('Aktueller Plan') }}</th>
                         <th class="px-5 py-3">Neuer Plan</th>
                         <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Laufzeit</th>
@@ -109,4 +109,3 @@ const searchModel = computed({
         </div>
     </section>
 </template>
-

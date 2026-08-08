@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     websiteRequests: { type: Array, default: () => [] },
 })
@@ -13,7 +17,7 @@ const emit = defineEmits(['update-website-request'])
             <p class="mt-1 text-sm text-secondary">Vereine, die eine Website von Airmius erstellen lassen möchten.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="min-w-full text-start text-sm">
                 <tbody class="divide-y divide-border">
                     <tr v-for="request in websiteRequests" :key="request.id">
                         <td class="px-5 py-3">
@@ -23,10 +27,10 @@ const emit = defineEmits(['update-website-request'])
                         </td>
                         <td class="px-5 py-3 text-secondary">{{ request.domain || '-' }}</td>
                         <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3 text-end">
                             <div class="flex justify-end gap-2">
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-website-request', request, 'contacted')">Kontaktiert</button>
-                                <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('update-website-request', request, 'quoted')">Angebot</button>
+                                <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('update-website-request', request, 'quoted')">{{ t('commerce.ui.offer') }}</button>
                             </div>
                         </td>
                     </tr>
@@ -36,4 +40,3 @@ const emit = defineEmits(['update-website-request'])
         </div>
     </section>
 </template>
-

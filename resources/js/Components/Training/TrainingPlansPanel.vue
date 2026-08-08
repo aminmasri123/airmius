@@ -36,7 +36,7 @@ const emit = defineEmits([
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ selectedSport.label }}</p>
-                        <h2 class="text-xl font-semibold text-primary">Trainingspläne</h2>
+                        <h2 class="text-xl font-semibold text-primary">{{ $t('Trainingspläne') }}</h2>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="emit('open-ai-training-plan-modal')">
@@ -266,5 +266,4 @@ const emit = defineEmits([
             </aside>
         </div>
 </template>
-
 

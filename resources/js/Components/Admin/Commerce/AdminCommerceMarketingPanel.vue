@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     couponForm: {
         type: Object,
@@ -40,8 +44,8 @@ defineProps({
         <article class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">Rabattcode erstellen</h2>
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
-                <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code">
-                <input v-model="couponForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
+                <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.code')">
+                <input v-model="couponForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
                 <select v-model="couponForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     <option value="percent">Prozent</option>
                     <option value="fixed">Festbetrag</option>
@@ -57,13 +61,13 @@ defineProps({
             </form>
 
             <div class="mt-5 overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
+                <table class="min-w-full text-start text-sm">
                     <tbody class="divide-y divide-border">
                         <tr v-for="coupon in coupons" :key="coupon.id">
                             <td class="py-3 font-semibold text-primary">{{ coupon.code }}</td>
                             <td class="py-3 text-secondary">{{ coupon.type === 'percent' ? `${coupon.percent_off}%` : formatMoney(coupon.value_cents) }}</td>
                             <td class="py-3 text-secondary">{{ coupon.redeemed_count }} genutzt</td>
-                            <td class="py-3 text-right" :class="coupon.is_active ? 'text-success' : 'text-secondary'">{{ coupon.is_active ? 'Aktiv' : 'Inaktiv' }}</td>
+                            <td class="py-3 text-end" :class="coupon.is_active ? 'text-success' : 'text-secondary'">{{ coupon.is_active ? 'Aktiv' : 'Inaktiv' }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -74,10 +78,10 @@ defineProps({
             <h2 class="text-lg font-semibold text-primary">Add-on erstellen</h2>
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeAddon">
                 <input v-model="addonForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug">
-                <input v-model="addonForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
+                <input v-model="addonForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
                 <input v-model="addonForm.monthly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat in EUR">
                 <input v-model="addonForm.yearly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr in EUR">
-                <textarea v-model="addonForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                <textarea v-model="addonForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.description_placeholder')"></textarea>
                 <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
             </form>
             <div class="mt-5 grid gap-3">
@@ -89,5 +93,3 @@ defineProps({
         </article>
     </section>
 </template>
-
-

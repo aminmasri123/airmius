@@ -76,4 +76,14 @@ class NotificationDigestCommandTest extends TestCase
         NotificationFacade::assertNothingSent();
         $this->assertNull($notification->fresh()->email_digest_sent_at);
     }
+
+    public function test_digest_mail_copy_uses_the_requested_locale_catalog(): void
+    {
+        foreach (['de', 'en', 'fr', 'ar'] as $locale) {
+            $mail = (new NotificationDigest([], digestLocale: $locale))->toMail(new User());
+
+            $this->assertSame(trans('platform.notification_digest.subject', locale: $locale), $mail->subject);
+            $this->assertSame(trans('platform.notification_digest.greeting', locale: $locale), $mail->greeting);
+        }
+    }
 }

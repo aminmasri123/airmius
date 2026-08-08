@@ -69,9 +69,9 @@ class MeController extends Controller
 
         if ($requiresGuardianConsent && $guardianEmail === '') {
             return response()->json([
-                'message' => 'Bei Nutzern unter 16 Jahren ist die E-Mail eines Erziehungsberechtigten erforderlich.',
+                'message' => __('account_security.responses.guardian_email_required'),
                 'errors' => [
-                    'guardian_email' => ['Bei Nutzern unter 16 Jahren ist die E-Mail eines Erziehungsberechtigten erforderlich.'],
+                    'guardian_email' => [__('account_security.responses.guardian_email_required')],
                 ],
             ], 422);
         }

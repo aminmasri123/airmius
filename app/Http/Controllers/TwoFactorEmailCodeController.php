@@ -28,7 +28,7 @@ class TwoFactorEmailCodeController extends Controller
         $user->notify(new TwoFactorLoginCodeRequested($code));
 
         return response()->json([
-            'message' => 'Wir haben dir einen Sicherheitscode per E-Mail gesendet.',
+            'message' => __('account_security.responses.email_code_sent'),
             'expires_in' => MobileTwoFactorChallenge::EXPIRES_IN_SECONDS,
         ]);
     }

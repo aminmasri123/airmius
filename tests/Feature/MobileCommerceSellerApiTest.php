@@ -232,6 +232,7 @@ class MobileCommerceSellerApiTest extends TestCase
         $this->postJson('/api/v1/commerce/seller/website-requests', [
             'domain' => 'mein-sportverein.example',
             'goals' => 'Mitglieder informieren und neue Teams vorstellen.',
+            'accepted_privacy' => true,
         ])
             ->assertCreated()
             ->assertJsonPath('data.user_id', $seller->id)

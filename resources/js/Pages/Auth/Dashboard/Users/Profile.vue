@@ -14,7 +14,7 @@ const props = defineProps({
     activeTab: { type: String, default: 'overview' },
 })
 
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const friendshipStatus = ref(props.viewer.friendship_status)
 const canSendFriendRequest = ref(props.viewer.can_send_friend_request)
 const friendInvitationId = ref(props.viewer.friend_invitation_id)
@@ -58,7 +58,7 @@ const sendFriendRequest = () => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            friendshipNotice.value = { type: 'success', message: 'Freundschaftsanfrage gesendet.' }
+            friendshipNotice.value = { type: 'success', message: t('friends.request_sent') }
         },
         onError: (errors) => {
             friendshipStatus.value = previous.status
@@ -66,7 +66,7 @@ const sendFriendRequest = () => {
             friendInvitationId.value = previous.invitationId
             friendshipNotice.value = {
                 type: 'error',
-                message: errors.email || errors.user_id || 'Freundschaftsanfrage konnte nicht gesendet werden.',
+                message: errors.email || errors.user_id || t('friends.request_failed'),
             }
         },
         onFinish: () => {
@@ -84,9 +84,9 @@ const sendMessage = () => {
 
 const blockUser = async () => {
     const confirmed = await confirmDialog({
-        title: 'Nutzer blockieren',
-        message: `${props.profileUser.name} blockieren? Bestehende Freundschaften und offene Anfragen werden entfernt.`,
-        confirmLabel: 'Blockieren',
+        title: t('friends.block_title'),
+        message: t('friends.block_message', { name: props.profileUser.name }),
+        confirmLabel: t('friends.block_confirm'),
         danger: true,
     })
 
@@ -121,7 +121,7 @@ const acceptFriendRequest = () => {
         { headers: { Accept: 'application/json' } },
     ).then(() => {
         friendInvitationId.value = null
-        friendshipNotice.value = { type: 'success', message: 'Freundschaft angenommen.' }
+        friendshipNotice.value = { type: 'success', message: t('friends.accepted') }
     }).catch((error) => {
         const errors = error.response?.data?.errors || {}
 
@@ -130,9 +130,9 @@ const acceptFriendRequest = () => {
         friendInvitationId.value = previous.invitationId
         friendshipNotice.value = {
             type: 'error',
-            message: errors.invitation?.[0]
+                message: errors.invitation?.[0]
                 || error.response?.data?.message
-                || 'Freundschaft konnte nicht angenommen werden.',
+                || t('friends.accept_failed'),
         }
     }).finally(() => {
         friendshipProcessing.value = false
@@ -141,9 +141,9 @@ const acceptFriendRequest = () => {
 
 const removeFriend = async () => {
     const confirmed = await confirmDialog({
-        title: 'Freundschaft beenden',
-        message: `Möchtest du die Freundschaft mit ${props.profileUser.name} wirklich beenden?`,
-        confirmLabel: 'Beenden',
+        title: t('friends.remove_title'),
+        message: t('friends.remove_message', { name: props.profileUser.name }),
+        confirmLabel: t('friends.end'),
         danger: true,
     })
 
@@ -154,7 +154,7 @@ const removeFriend = async () => {
     router.delete(route('auth.friends.destroy', props.profileUser.id), { preserveScroll: true })
 }
 
-const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+const formatDate = (value) => new Intl.DateTimeFormat(locale.value || 'de', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 
 const sportForm = useForm({
@@ -501,7 +501,7 @@ const rejectRecommendation = (recommendation) => {
                                     @click="removeFriend"
                                 >
                                     <i class="las la-user-times text-lg"></i>
-                                    <span>Entfernen</span>
+                                    <span>{{ $t('Entfernen') }}</span>
                                 </button>
 
                                 <button
@@ -633,7 +633,7 @@ const rejectRecommendation = (recommendation) => {
                                 </div>
 
                                 <div class="border-t border-border bg-bg p-5 sm:p-6 lg:border-l lg:border-t-0">
-                                    <div class="text-sm font-semibold uppercase tracking-wide text-secondary">Badges</div>
+                                    <div class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ $t('Badges') }}</div>
                                     <div class="mt-4 grid grid-cols-2 gap-3">
                                         <div
                                             v-for="badge in visibleBadges"
@@ -654,7 +654,7 @@ const rejectRecommendation = (recommendation) => {
                         <section v-if="activeProfileTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <h2 class="text-lg font-bold text-primary">Profil</h2>
+                                    <h2 class="text-lg font-bold text-primary">{{ $t('Profil') }}</h2>
                                     <p class="mt-1 text-sm text-secondary">Bio, Sportarten und öffentliche Einordnung.</p>
                                 </div>
                             </div>
@@ -940,7 +940,7 @@ const rejectRecommendation = (recommendation) => {
                 <h2 class="text-lg font-bold text-primary">Rollen & Berechtigungen</h2>
                 <div class="mt-4 grid gap-4 text-sm md:grid-cols-2">
                     <div class="rounded-xl border border-border bg-bg p-4">
-                        <div class="font-semibold text-primary">Rollen</div>
+                        <div class="font-semibold text-primary">{{ $t('Rollen') }}</div>
                         <div class="mt-2 text-secondary">{{ profileUser.roles.length ? profileUser.roles.join(', ') : 'Keine Rollen' }}</div>
                     </div>
                     <div class="rounded-xl border border-border bg-bg p-4">

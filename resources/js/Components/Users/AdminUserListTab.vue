@@ -100,8 +100,8 @@ const statusLabel = (user) => {
                     <thead class="bg-card">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">ID</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Name</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">E-Mail</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ $t('Name') }}</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ $t('E-Mail') }}</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Status</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Erstellt am</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Aktionen</th>

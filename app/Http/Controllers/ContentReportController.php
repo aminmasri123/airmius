@@ -73,11 +73,11 @@ class ContentReportController extends Controller
                     'reason' => $report->reason,
                     'status' => $report->status,
                 ],
-                'message' => 'Danke. Die Meldung wurde an die Moderation gesendet.',
+                'message' => __('platform.social.report_sent'),
             ], 201);
         }
 
-        return back()->with('success', 'Danke. Die Meldung wurde an die Moderation gesendet.');
+        return back()->with('success', __('platform.social.report_sent'));
     }
 
     public function appeal(Request $request, ContentReport $report)
@@ -119,11 +119,11 @@ class ContentReportController extends Controller
                     'appeal_status' => $report->appeal_status,
                     'appealed_at' => $report->appealed_at?->toJSON(),
                 ],
-                'message' => 'Deine Beschwerde wurde an die Moderation gesendet.',
+                'message' => __('platform.social.appeal_sent'),
             ], 201);
         }
 
-        return back()->with('success', 'Deine Beschwerde wurde an die Moderation gesendet.');
+        return back()->with('success', __('platform.social.appeal_sent'));
     }
 
     private function findReportable(string $type, int $id)

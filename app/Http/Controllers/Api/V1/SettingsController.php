@@ -12,14 +12,19 @@ use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
+use App\Services\ProductAnalyticsConsentService;
+use App\Services\UserDataErasureService;
 use App\Support\BillingOverview;
 use App\Support\MinorSafety;
+use App\Support\NotificationRouting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
-    public function show(Request $request)
+    public function show(Request $request, UserDataErasureService $dataErasure)
     {
         $user = $request->user();
         $clubInvoices = Invoice::query()
@@ -58,7 +63,13 @@ class SettingsController extends Controller
                     'friend_request_privacy',
                     'ads_personalization_consent',
                     'ads_measurement_consent',
+                    'product_analytics_consent',
                 ]),
+                'data_erasure' => [
+                    'uses_social_login' => $user->socialAccounts()->exists(),
+                    'account_email' => $user->email,
+                    'category_keys' => $dataErasure->categoryKeys(),
+                ],
                 'notification_preferences' => [
                     'channels' => $this->notificationChannels($user),
                     'quiet_time' => $user->notification_quiet_time ?: 'late',
@@ -114,7 +125,7 @@ class SettingsController extends Controller
         $lastPage = max(1, (int) ceil($total / $perPage));
         $data = $items
             ->slice(($page - 1) * $perPage, $perPage)
-            ->map(fn (array $item) => \Illuminate\Support\Arr::except($item, ['sort_at']))
+            ->map(fn (array $item) => Arr::except($item, ['sort_at']))
             ->values();
 
         return response()->json([
@@ -141,7 +152,7 @@ class SettingsController extends Controller
 
         if ($clubInvoice) {
             return response()->json([
-                'data' => \Illuminate\Support\Arr::except($this->invoicePayload($clubInvoice), ['sort_at']),
+                'data' => Arr::except($this->invoicePayload($clubInvoice), ['sort_at']),
             ]);
         }
 
@@ -151,7 +162,7 @@ class SettingsController extends Controller
             ->findOrFail($invoice);
 
         return response()->json([
-            'data' => \Illuminate\Support\Arr::except($this->subscriptionInvoicePayload($subscriptionInvoice), ['sort_at']),
+            'data' => Arr::except($this->subscriptionInvoicePayload($subscriptionInvoice), ['sort_at']),
         ]);
     }
 
@@ -220,7 +231,8 @@ class SettingsController extends Controller
             'sort_at' => ($invoice->issued_at ?? $invoice->created_at)?->timestamp ?? 0,
         ];
     }
-    public function update(Request $request)
+
+    public function update(Request $request, ProductAnalyticsConsentService $analyticsConsent)
     {
         $data = $request->validate([
             'theme' => ['nullable', Rule::in(['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail', 'bazaar'])],
@@ -241,6 +253,7 @@ class SettingsController extends Controller
             'notification_quiet_time' => ['nullable', Rule::in(['none', 'late', 'early', 'weekend'])],
             'ads_personalization_consent' => ['boolean'],
             'ads_measurement_consent' => ['boolean'],
+            'product_analytics_consent' => ['boolean'],
         ]);
 
         if (empty($data['theme'])) {
@@ -248,12 +261,12 @@ class SettingsController extends Controller
         }
 
         if (array_key_exists('notification_channels', $data)) {
-            $allowedChannels = array_keys($this->notificationChannels($request->user()));
+            $allowedChannels = NotificationRouting::preferenceKeys();
             $channels = $data['notification_channels'] ?? [];
             $unknownChannels = array_diff(array_keys($channels), $allowedChannels);
             if ($unknownChannels !== []) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'notification_channels' => 'Unbekannter Benachrichtigungskanal.',
+                throw ValidationException::withMessages([
+                    'notification_channels' => __('notification_settings.validation.unknown_channel'),
                 ]);
             }
             $data['notification_channels'] = array_replace(
@@ -266,44 +279,43 @@ class SettingsController extends Controller
             $data = array_merge($data, MinorSafety::privacyDefaults());
         }
 
-        $eventSportIds = collect($data['event_default_sport_ids'] ?? [])
+        $eventSportIds = collect($data['event_default_sport_ids'] ?? $request->user()->event_default_sport_ids ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
             ->all();
 
         $eventDefaults = array_merge($request->user()->event_default_filters ?? [], [
-            'radius_km' => $data['event_radius_km'] ?? null,
+            'radius_km' => $data['event_radius_km'] ?? $request->user()->event_radius_km,
             'sport_ids' => $eventSportIds,
         ]);
+        $previousAnalyticsConsent = (bool) $request->user()->product_analytics_consent;
+        $analyticsConsentUpdates = $analyticsConsent->updates($request->user(), $data);
 
         $request->user()->update([
             ...$data,
             'country' => strtoupper((string) ($data['country'] ?? $request->user()->country ?? 'DE')),
-            'event_radius_km' => $data['event_radius_km'] ?? null,
+            'event_radius_km' => $data['event_radius_km'] ?? $request->user()->event_radius_km,
             'event_default_sport_ids' => $eventSportIds,
             'event_default_filters' => $eventDefaults,
             'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
             'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
             'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
-            'ads_personalization_consent' => (bool) ($data['ads_personalization_consent'] ?? false),
-            'ads_measurement_consent' => (bool) ($data['ads_measurement_consent'] ?? false),
+            'ads_personalization_consent' => array_key_exists('ads_personalization_consent', $data)
+                ? (bool) $data['ads_personalization_consent']
+                : (bool) $request->user()->ads_personalization_consent,
+            'ads_measurement_consent' => array_key_exists('ads_measurement_consent', $data)
+                ? (bool) $data['ads_measurement_consent']
+                : (bool) $request->user()->ads_measurement_consent,
+            ...$analyticsConsentUpdates,
         ]);
+        $analyticsConsent->auditIfChanged($request->user()->refresh(), $previousAnalyticsConsent);
 
-        return new UserResource($request->user()->refresh());
+        return new UserResource($request->user());
     }
 
     private function notificationChannels($user): array
     {
-        $defaults = [
-            'push' => false,
-            'email' => true,
-            'chat' => true,
-            'club' => true,
-            'billing' => true,
-            'marketing' => false,
-        ];
-
-        return array_replace($defaults, is_array($user->notification_channels) ? $user->notification_channels : []);
+        return NotificationRouting::preferencesFor($user);
     }
 }

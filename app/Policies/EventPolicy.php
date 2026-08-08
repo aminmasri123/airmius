@@ -99,7 +99,7 @@ class EventPolicy extends BasePolicy
     private function hasActivePaidSubscription(User $user): bool
     {
         return $user->subscriptions()
-            ->whereIn('status', ['active', 'trialing'])
+            ->grantingAccess()
             ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
             ->exists();
     }

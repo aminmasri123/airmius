@@ -114,7 +114,7 @@ class TrainingExerciseController extends Controller
 
         $trainingExercise->update(['is_active' => false]);
 
-        return response()->json(['message' => 'Übung wurde aus der Bibliothek entfernt.']);
+        return response()->json(['message' => __('platform.training.exercise_removed')]);
     }
 
     public function addToPlan(Request $request, TrainingExercise $trainingExercise)

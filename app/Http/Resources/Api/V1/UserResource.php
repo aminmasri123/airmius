@@ -107,6 +107,7 @@ class UserResource extends JsonResource
             'friend_request_privacy' => $this->friend_request_privacy,
             'ads_personalization_consent' => (bool) $this->ads_personalization_consent,
             'ads_measurement_consent' => (bool) $this->ads_measurement_consent,
+            'product_analytics_consent' => (bool) $this->product_analytics_consent,
             'event_radius_km' => $this->event_radius_km,
             'event_default_sport_ids' => $this->event_default_sport_ids ?? [],
             'event_default_filters' => $this->event_default_filters ?? [],

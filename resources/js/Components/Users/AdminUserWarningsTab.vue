@@ -72,7 +72,7 @@ const badgeClass = (severity) => {
                 <thead class="bg-card">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Nutzer</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Kategorie</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">{{ $t('Kategorie') }}</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Severity</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Punkte</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Grund</th>

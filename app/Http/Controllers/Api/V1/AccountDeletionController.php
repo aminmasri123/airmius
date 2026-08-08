@@ -50,7 +50,7 @@ class AccountDeletionController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Wir haben dir einen Bestätigungscode per E-Mail gesendet.',
+                'message' => __('account_security.responses.deletion_code_sent'),
                 'expires_in_minutes' => 15,
             ],
         ]);
@@ -96,7 +96,7 @@ class AccountDeletionController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Dein Konto wurde gelöscht.',
+                'message' => __('account_security.responses.account_deleted'),
             ],
         ]);
     }

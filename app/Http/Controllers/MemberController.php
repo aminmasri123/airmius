@@ -420,13 +420,13 @@ class MemberController extends Controller
 
     private function inactiveRules(): array
     {
-        return [
-            ['month' => '12 Monate', 'title' => 'Als inaktiv markieren', 'description' => 'Nutzer bleibt erhalten, wird aber im Adminbereich als inaktiv erkennbar.'],
-            ['month' => '18 Monate', 'title' => 'Reaktivierungs-Mail senden', 'description' => 'Automatisch oder manuell erinnern und Versand in der Mail-Zentrale protokollieren.'],
-            ['month' => '24 Monate', 'title' => 'Profil ausblenden', 'description' => 'öffentliches Profil, Suchbarkeit und Komfort-Kommunikation stoppen.'],
-            ['month' => '36 Monate', 'title' => 'Anonymisieren', 'description' => 'Nicht notwendige personenbezogene Daten entfernen oder anonymisieren.'],
-            ['month' => 'Pflichtdaten', 'title' => 'Separat archivieren', 'description' => 'Rechnungen, Zahlungen und Vertragsdaten bleiben gemäß Aufbewahrungspflichten erhalten.'],
-        ];
+        return collect(['inactive', 'reactivation', 'hidden', 'anonymized', 'archived'])
+            ->map(fn (string $rule) => [
+                'month' => __("member_lifecycle.rules.{$rule}.month"),
+                'title' => __("member_lifecycle.rules.{$rule}.title"),
+                'description' => __("member_lifecycle.rules.{$rule}.description"),
+            ])
+            ->all();
     }
 
     private function countInactiveSince(int $months): int

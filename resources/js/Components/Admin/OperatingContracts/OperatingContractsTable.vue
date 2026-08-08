@@ -59,7 +59,7 @@ const filterSearchModel = computed({
                     </select>
                 </label>
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Kategorie</span>
+                    <span class="text-sm font-semibold text-primary">{{ $t('Kategorie') }}</span>
                     <select v-model="filterCategoryModel" class="mt-1 w-full rounded-xl border-border bg-inputBg text-primary">
                         <option v-for="category in allCategoryOptions" :key="category.value" :value="category.value">
                             {{ category.label }}
@@ -236,5 +236,4 @@ const filterSearchModel = computed({
         </section>
     </div>
 </template>
-
 

@@ -2,9 +2,11 @@
 
 namespace App\Notifications;
 
+use App\Support\SupportedLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Lang;
 
 class NotificationDigest extends Notification
 {
@@ -55,39 +57,12 @@ class NotificationDigest extends Notification
 
     private function copy(): array
     {
-        return match (strtolower(substr($this->digestLocale, 0, 2))) {
-            'en' => [
-                'subject' => 'Your Airmius notification summary',
-                'greeting' => 'Hello,',
-                'intro' => 'Here is your summary of unread Airmius notifications from the last day:',
-                'outro' => 'Open Airmius to read the full details and manage your notifications.',
-                'action' => 'Open Airmius',
-                'fallback_title' => 'Notification',
-            ],
-            'fr' => [
-                'subject' => 'Votre résumé de notifications Airmius',
-                'greeting' => 'Bonjour,',
-                'intro' => 'Voici le résumé de vos notifications Airmius non lues de la dernière journée :',
-                'outro' => 'Ouvrez Airmius pour lire les détails et gérer vos notifications.',
-                'action' => 'Ouvrir Airmius',
-                'fallback_title' => 'Notification',
-            ],
-            'ar' => [
-                'subject' => 'ملخص إشعارات Airmius',
-                'greeting' => 'مرحبًا،',
-                'intro' => 'إليك ملخص إشعارات Airmius غير المقروءة خلال اليوم الماضي:',
-                'outro' => 'افتح Airmius لقراءة التفاصيل وإدارة إشعاراتك.',
-                'action' => 'فتح Airmius',
-                'fallback_title' => 'إشعار',
-            ],
-            default => [
-                'subject' => 'Deine Airmius-Benachrichtigungsübersicht',
-                'greeting' => 'Hallo,',
-                'intro' => 'Hier ist deine Übersicht ungelesener Airmius-Benachrichtigungen aus dem letzten Tag:',
-                'outro' => 'Öffne Airmius, um die Details zu lesen und deine Benachrichtigungen zu verwalten.',
-                'action' => 'Airmius öffnen',
-                'fallback_title' => 'Benachrichtigung',
-            ],
-        };
+        $locale = SupportedLocale::normalize($this->digestLocale) ?? SupportedLocale::DEFAULT;
+
+        return collect(['subject', 'greeting', 'intro', 'outro', 'action', 'fallback_title'])
+            ->mapWithKeys(fn (string $key) => [
+                $key => Lang::get('platform.notification_digest.'.$key, [], $locale),
+            ])
+            ->all();
     }
 }

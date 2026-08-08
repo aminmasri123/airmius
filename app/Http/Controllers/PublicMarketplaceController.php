@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
 use App\Models\CommerceCart;
 use App\Models\CommerceOrder;
 use App\Models\CommerceShippingAddress;
-use App\Models\Club;
 use App\Models\LearningCoupon;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
@@ -21,10 +21,10 @@ use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class PublicMarketplaceController extends Controller
 {
@@ -175,12 +175,12 @@ class PublicMarketplaceController extends Controller
             'officialStores' => $this->officialStores(),
             'providerLocations' => $this->publicMarketplaceLocations(),
             'categories' => [
-                ['value' => '', 'label' => 'Alle'],
-                ['value' => 'product', 'label' => 'Produkte'],
-                ['value' => 'outfit_subscription', 'label' => 'Outfit-Abos'],
-                ['value' => 'course', 'label' => 'Kurse'],
-                ['value' => 'camp', 'label' => 'Camps'],
-                ['value' => 'service', 'label' => 'Services'],
+                ['value' => '', 'label' => __('commerce.marketplace.categories.all')],
+                ['value' => 'product', 'label' => __('commerce.marketplace.categories.products')],
+                ['value' => 'outfit_subscription', 'label' => __('commerce.marketplace.categories.outfit_subscriptions')],
+                ['value' => 'course', 'label' => __('commerce.marketplace.categories.courses')],
+                ['value' => 'camp', 'label' => __('commerce.marketplace.categories.camps')],
+                ['value' => 'service', 'label' => __('commerce.marketplace.categories.services')],
             ],
             'segments' => $this->segments(),
             'sortOptions' => $this->sortOptions(),
@@ -490,11 +490,11 @@ class PublicMarketplaceController extends Controller
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
         app(CommerceCheckoutController::class)->rememberMarketplaceInterest($request, $product, 'checkout_started');
         app(CommerceCheckoutController::class)->trackAttributedAdConversion($request, 'checkout_started', (int) ($quote['gross_cents'] ?? $order->amount_cents), [
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'product_category' => $product->category,
-                'quantity' => $quantity,
-            ]);
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_category' => $product->category,
+            'quantity' => $quantity,
+        ]);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
     }
@@ -683,16 +683,16 @@ class PublicMarketplaceController extends Controller
     private function segments(): array
     {
         return [
-            ['value' => '', 'label' => 'Alle Bereiche', 'icon' => 'las la-border-all'],
-            ['value' => 'shoes', 'label' => 'Schuhe', 'icon' => 'las la-shoe-prints'],
-            ['value' => 'apparel', 'label' => 'Bekleidung', 'icon' => 'las la-tshirt'],
-            ['value' => 'equipment', 'label' => 'Equipment', 'icon' => 'las la-dumbbell'],
-            ['value' => 'recovery', 'label' => 'Recovery', 'icon' => 'las la-heartbeat'],
-            ['value' => 'analysis', 'label' => 'Analyse', 'icon' => 'las la-chart-line'],
-            ['value' => 'nutrition', 'label' => 'Ernährung', 'icon' => 'las la-apple-alt'],
-            ['value' => 'plans', 'label' => 'Pläne & Kurse', 'icon' => 'las la-chalkboard-teacher'],
-            ['value' => 'camps', 'label' => 'Camps', 'icon' => 'las la-campground'],
-            ['value' => 'team', 'label' => 'Team & Verein', 'icon' => 'las la-users'],
+            ['value' => '', 'label' => __('commerce.marketplace.segments.all'), 'icon' => 'las la-border-all'],
+            ['value' => 'shoes', 'label' => __('commerce.marketplace.segments.shoes'), 'icon' => 'las la-shoe-prints'],
+            ['value' => 'apparel', 'label' => __('commerce.marketplace.segments.apparel'), 'icon' => 'las la-tshirt'],
+            ['value' => 'equipment', 'label' => __('commerce.marketplace.segments.equipment'), 'icon' => 'las la-dumbbell'],
+            ['value' => 'recovery', 'label' => __('commerce.marketplace.segments.recovery'), 'icon' => 'las la-heartbeat'],
+            ['value' => 'analysis', 'label' => __('commerce.marketplace.segments.analysis'), 'icon' => 'las la-chart-line'],
+            ['value' => 'nutrition', 'label' => __('commerce.marketplace.segments.nutrition'), 'icon' => 'las la-apple-alt'],
+            ['value' => 'plans', 'label' => __('commerce.marketplace.segments.plans'), 'icon' => 'las la-chalkboard-teacher'],
+            ['value' => 'camps', 'label' => __('commerce.marketplace.segments.camps'), 'icon' => 'las la-campground'],
+            ['value' => 'team', 'label' => __('commerce.marketplace.segments.team'), 'icon' => 'las la-users'],
         ];
     }
 
@@ -818,14 +818,14 @@ class PublicMarketplaceController extends Controller
     private function sportCategories(): array
     {
         return [
-            ['label' => 'Running', 'icon' => 'las la-running', 'query' => 'lauf'],
-            ['label' => 'Fußball', 'icon' => 'las la-futbol', 'query' => 'fussball'],
-            ['label' => 'Fitness', 'icon' => 'las la-dumbbell', 'query' => 'fitness'],
-            ['label' => 'Teamsport', 'icon' => 'las la-users', 'query' => 'team'],
-            ['label' => 'Recovery', 'icon' => 'las la-heartbeat', 'segment' => 'recovery'],
-            ['label' => 'Camps', 'icon' => 'las la-campground', 'category' => 'camp', 'segment' => 'camps'],
-            ['label' => 'Kurse', 'icon' => 'las la-video', 'category' => 'course', 'segment' => 'plans'],
-            ['label' => 'Services', 'icon' => 'las la-hands-helping', 'category' => 'service', 'segment' => 'analysis'],
+            ['label' => __('commerce.marketplace.sports.running'), 'icon' => 'las la-running', 'query' => 'lauf'],
+            ['label' => __('commerce.marketplace.sports.football'), 'icon' => 'las la-futbol', 'query' => 'fussball'],
+            ['label' => __('commerce.marketplace.sports.fitness'), 'icon' => 'las la-dumbbell', 'query' => 'fitness'],
+            ['label' => __('commerce.marketplace.sports.team_sport'), 'icon' => 'las la-users', 'query' => 'team'],
+            ['label' => __('commerce.marketplace.sports.recovery'), 'icon' => 'las la-heartbeat', 'segment' => 'recovery'],
+            ['label' => __('commerce.marketplace.sports.camps'), 'icon' => 'las la-campground', 'category' => 'camp', 'segment' => 'camps'],
+            ['label' => __('commerce.marketplace.sports.courses'), 'icon' => 'las la-video', 'category' => 'course', 'segment' => 'plans'],
+            ['label' => __('commerce.marketplace.sports.services'), 'icon' => 'las la-hands-helping', 'category' => 'service', 'segment' => 'analysis'],
         ];
     }
 
@@ -846,20 +846,20 @@ class PublicMarketplaceController extends Controller
     private function sortOptions(): array
     {
         return [
-            ['value' => 'recommended', 'label' => 'Empfohlen'],
-            ['value' => 'newest', 'label' => 'Neueste'],
-            ['value' => 'price_asc', 'label' => 'Preis aufsteigend'],
-            ['value' => 'price_desc', 'label' => 'Preis absteigend'],
+            ['value' => 'recommended', 'label' => __('commerce.marketplace.sort.recommended')],
+            ['value' => 'newest', 'label' => __('commerce.marketplace.sort.newest')],
+            ['value' => 'price_asc', 'label' => __('commerce.marketplace.sort.price_asc')],
+            ['value' => 'price_desc', 'label' => __('commerce.marketplace.sort.price_desc')],
         ];
     }
 
     private function availabilityOptions(): array
     {
         return [
-            ['value' => '', 'label' => 'Alle Verfügbarkeiten'],
-            ['value' => 'available', 'label' => 'Sofort verfügbar'],
-            ['value' => 'shippable', 'label' => 'Versandartikel'],
-            ['value' => 'digital', 'label' => 'Digital / Termin'],
+            ['value' => '', 'label' => __('commerce.marketplace.availability.all')],
+            ['value' => 'available', 'label' => __('commerce.marketplace.availability.available')],
+            ['value' => 'shippable', 'label' => __('commerce.marketplace.availability.shippable')],
+            ['value' => 'digital', 'label' => __('commerce.marketplace.availability.digital')],
         ];
     }
 
@@ -868,20 +868,20 @@ class PublicMarketplaceController extends Controller
         return array_values(array_filter([
             filled(Setting::valueFor('billing_iban')) ? [
                 'value' => 'bank_transfer',
-                'label' => 'Überweisung',
-                'description' => 'Bestellung sofort anlegen und per Banküberweisung bezahlen.',
+                'label' => __('commerce.marketplace.payments.bank_transfer.label'),
+                'description' => __('commerce.marketplace.payments.bank_transfer.description'),
                 'icon' => 'las la-university',
             ] : null,
             filled(config('services.stripe.secret')) ? [
                 'value' => 'stripe',
-                'label' => 'Stripe',
-                'description' => 'Sofortige Kartenzahlung Über Stripe Checkout.',
+                'label' => __('commerce.marketplace.payments.stripe.label'),
+                'description' => __('commerce.marketplace.payments.stripe.description'),
                 'icon' => 'las la-credit-card',
             ] : null,
             filled(config('services.paypal.client_id')) && filled(config('services.paypal.client_secret')) ? [
                 'value' => 'paypal',
-                'label' => 'PayPal',
-                'description' => 'Sicher zu PayPal weiterleiten und dort bezahlen.',
+                'label' => __('commerce.marketplace.payments.paypal.label'),
+                'description' => __('commerce.marketplace.payments.paypal.description'),
                 'icon' => 'lab la-paypal',
             ] : null,
         ]));
@@ -890,10 +890,10 @@ class PublicMarketplaceController extends Controller
     private function trustBenefits(): array
     {
         return [
-            ['label' => 'Gastkauf möglich', 'description' => 'Direkt bestellen, Konto optional.', 'icon' => 'las la-user-check'],
-            ['label' => 'Preis transparent', 'description' => 'Brutto, netto, Steuer und Versand werden ausgewiesen.', 'icon' => 'las la-receipt'],
-            ['label' => 'Anbieter sichtbar', 'description' => 'Verein, Trainer oder Shop bleiben klar erkennbar.', 'icon' => 'las la-store'],
-            ['label' => 'Bestellstatus', 'description' => 'Updates und Belege werden per E-Mail zugestellt.', 'icon' => 'las la-envelope-open-text'],
+            ['label' => __('commerce.marketplace.trust.guest_checkout.label'), 'description' => __('commerce.marketplace.trust.guest_checkout.description'), 'icon' => 'las la-user-check'],
+            ['label' => __('commerce.marketplace.trust.transparent_price.label'), 'description' => __('commerce.marketplace.trust.transparent_price.description'), 'icon' => 'las la-receipt'],
+            ['label' => __('commerce.marketplace.trust.visible_provider.label'), 'description' => __('commerce.marketplace.trust.visible_provider.description'), 'icon' => 'las la-store'],
+            ['label' => __('commerce.marketplace.trust.order_status.label'), 'description' => __('commerce.marketplace.trust.order_status.description'), 'icon' => 'las la-envelope-open-text'],
         ];
     }
 
@@ -1116,7 +1116,7 @@ class PublicMarketplaceController extends Controller
             ->all();
     }
 
-    private function profileAddressFor(?\App\Models\User $user): ?array
+    private function profileAddressFor(?User $user): ?array
     {
         if (! $user) {
             return null;
@@ -1135,7 +1135,7 @@ class PublicMarketplaceController extends Controller
         ]);
     }
 
-    private function shippingAddressesFor(?\App\Models\User $user): array
+    private function shippingAddressesFor(?User $user): array
     {
         if (! $user) {
             return [];

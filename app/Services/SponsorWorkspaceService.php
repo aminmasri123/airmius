@@ -24,7 +24,7 @@ class SponsorWorkspaceService
         $global = $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, ['sponsor_manager']))
             || $user->can('system.manage');
 
-        $sponsorQuery = Sponsor::query()->with('club:id,name');
+        $sponsorQuery = Sponsor::query();
         if (! $global) {
             $sponsorQuery->where(function ($query) use ($user, $managedClubIds) {
                 $query->where('owner_user_id', $user->id);
@@ -33,39 +33,53 @@ class SponsorWorkspaceService
                 }
             });
         }
-        $sponsors = $sponsorQuery->latest('id')->get();
-        $sponsorIds = $sponsors->pluck('id');
+
+        $sponsorIds = (clone $sponsorQuery)->select('id');
+        $partnersCount = (clone $sponsorQuery)->count();
+        $activePartners = (clone $sponsorQuery)
+            ->where(fn ($query) => $query->whereNull('starts_at')->orWhereDate('starts_at', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhereDate('ends_at', '>=', today()))
+            ->count();
+        $sponsors = (clone $sponsorQuery)
+            ->with('club:id,name')
+            ->latest('id')
+            ->limit(50)
+            ->get();
 
         $campaignQuery = AdCampaign::query();
         if (! $global) {
             $campaignQuery->where(function ($query) use ($user, $managedClubIds, $sponsorIds) {
                 $query->where('user_id', $user->id);
-                if ($sponsorIds->isNotEmpty()) {
-                    $query->orWhereIn('sponsor_id', $sponsorIds);
-                }
+                $query->orWhereIn('sponsor_id', $sponsorIds);
                 if ($managedClubIds->isNotEmpty()) {
                     $query->orWhereIn('club_id', $managedClubIds);
                 }
             });
         }
-        $campaigns = $campaignQuery->latest('id')->get();
-        $ownProfile = $sponsors->firstWhere('owner_user_id', $user->id);
-
-        $impressions = (int) $campaigns->sum('impressions');
-        $clicks = (int) $campaigns->sum('clicks');
-        $activePartners = $sponsors->filter(fn (Sponsor $sponsor) => $this->partnershipStatus($sponsor) === 'active')->count();
+        $campaignSummary = (clone $campaignQuery)
+            ->selectRaw('COUNT(*) as campaigns_count')
+            ->selectRaw("SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_campaigns_count")
+            ->selectRaw('COALESCE(SUM(impressions), 0) as impressions_sum')
+            ->selectRaw('COALESCE(SUM(clicks), 0) as clicks_sum')
+            ->selectRaw('COALESCE(SUM(budget_cents), 0) as budget_sum')
+            ->selectRaw('COALESCE(SUM(spent_cents), 0) as spent_sum')
+            ->first();
+        $campaigns = (clone $campaignQuery)->latest('id')->limit(12)->get();
+        $ownProfile = Sponsor::query()->where('owner_user_id', $user->id)->latest('id')->first();
+        $impressions = (int) ($campaignSummary?->impressions_sum ?? 0);
+        $clicks = (int) ($campaignSummary?->clicks_sum ?? 0);
 
         return [
             'summary' => [
-                'partners' => $sponsors->count(),
+                'partners' => $partnersCount,
                 'active_partners' => $activePartners,
-                'campaigns' => $campaigns->count(),
-                'active_campaigns' => $campaigns->where('status', 'active')->count(),
+                'campaigns' => (int) ($campaignSummary?->campaigns_count ?? 0),
+                'active_campaigns' => (int) ($campaignSummary?->active_campaigns_count ?? 0),
                 'impressions' => $impressions,
                 'clicks' => $clicks,
                 'ctr' => $impressions > 0 ? round(($clicks / $impressions) * 100, 2) : 0,
-                'budget_cents' => (int) $campaigns->sum('budget_cents'),
-                'spent_cents' => (int) $campaigns->sum('spent_cents'),
+                'budget_cents' => (int) ($campaignSummary?->budget_sum ?? 0),
+                'spent_cents' => (int) ($campaignSummary?->spent_sum ?? 0),
             ],
             'partners' => $sponsors->map(fn (Sponsor $sponsor) => [
                 'id' => $sponsor->id,
@@ -91,7 +105,7 @@ class SponsorWorkspaceService
                 'logo_dark' => UploadStorage::url($ownProfile->logo_dark),
                 'logo_url' => UploadStorage::url($ownProfile->logo_light ?: $ownProfile->logo),
             ] : null,
-            'campaigns' => $campaigns->take(12)->map(fn (AdCampaign $campaign) => [
+            'campaigns' => $campaigns->map(fn (AdCampaign $campaign) => [
                 'id' => $campaign->id,
                 'name' => $campaign->name,
                 'headline' => $campaign->headline,
@@ -115,6 +129,10 @@ class SponsorWorkspaceService
                 'edit_own_profile' => $user->hasRole('sponsor') || $ownProfile !== null,
                 'manage_campaigns' => true,
                 'global_management' => $global,
+            ],
+            'limits' => [
+                'partners' => 50,
+                'campaigns' => 12,
             ],
         ];
     }

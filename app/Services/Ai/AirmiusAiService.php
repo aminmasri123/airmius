@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\ExternalProviderUsageService;
 use App\Support\Roles;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -17,8 +18,7 @@ class AirmiusAiService
     public function __construct(
         private readonly AiImagePrivacyService $images,
         private readonly ExternalProviderUsageService $usage,
-    ) {
-    }
+    ) {}
 
     public function capabilities(?User $user = null): array
     {
@@ -828,12 +828,10 @@ PROMPT;
             ->isNotEmpty();
     }
 
-    private function activeSubscriptionSlugs(User $user): \Illuminate\Support\Collection
+    private function activeSubscriptionSlugs(User $user): Collection
     {
-        $activeStatuses = ['active', 'trialing'];
-
         $userSlugs = $user->subscriptions()
-            ->whereIn('status', $activeStatuses)
+            ->grantingAccess()
             ->with('plan:id,slug')
             ->get()
             ->pluck('plan.slug')
@@ -841,9 +839,9 @@ PROMPT;
 
         $clubSlugs = $user->clubs()
             ->with(['currentSubscription.plan:id,slug'])
-            ->whereHas('currentSubscription', function ($query) use ($activeStatuses) {
+            ->whereHas('currentSubscription', function ($query) {
                 $query
-                    ->whereIn('status', $activeStatuses)
+                    ->grantingAccess()
                     ->whereHas('plan');
             })
             ->get()

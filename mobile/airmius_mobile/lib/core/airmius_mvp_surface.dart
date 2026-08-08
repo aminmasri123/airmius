@@ -29,6 +29,7 @@ class AirmiusMvpSurface {
     'Altersfreigaben',
     'Kurse',
     'Sponsoren',
+    'Recruiting',
     'Medienrichtlinien',
     'Blog & Medien',
     'Nutzer',

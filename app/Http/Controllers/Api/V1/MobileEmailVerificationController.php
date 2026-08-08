@@ -28,7 +28,7 @@ class MobileEmailVerificationController extends Controller
         return response()->json([
             'data' => [
                 'verified' => true,
-                'message' => 'Deine E-Mail-Adresse wurde erfolgreich bestätigt.',
+                'message' => __('account_security.responses.email_verified'),
             ],
         ]);
     }

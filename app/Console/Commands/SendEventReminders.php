@@ -36,18 +36,34 @@ class SendEventReminders extends Command
                     $recipients = $this->recipientIds($event);
 
                     foreach ($recipients as $recipientId) {
-                        AppNotification::send($recipientId, 'event.reminder', [
-                            'title' => 'Event-Erinnerung',
-                            'body' => $this->notificationBody($event),
-                            'url' => route('auth.events.show', $event->id),
-                            'event_id' => $event->id,
-                            'event_title' => $event->title,
-                            'event_start_time' => $event->start_time?->toISOString(),
-                            'team_id' => $event->team_id,
-                            'club_id' => $event->club_id ?: $event->team?->club_id,
-                        ]);
+                        $notification = AppNotification::sendLocalized(
+                            $recipientId,
+                            'event.reminder',
+                            'server.events.notifications.reminder_title',
+                            $event->location
+                                ? 'server.events.notifications.reminder_body_with_location'
+                                : 'server.events.notifications.reminder_body',
+                            [
+                                'event' => $event->title,
+                                'date' => $this->eventDate($event),
+                                'location' => $event->location,
+                            ],
+                            [
+                                'url' => route('auth.events.show', $event->id),
+                                'event_id' => $event->id,
+                                'event_title' => $event->title,
+                                'event_start_time' => $event->start_time?->toISOString(),
+                                'team_id' => $event->team_id,
+                                'club_id' => $event->club_id ?: $event->team?->club_id,
+                            ],
+                            [
+                                'dedupe_key' => 'event:'.$event->id.':reminder',
+                            ],
+                        );
 
-                        $sentNotifications++;
+                        if ($notification?->wasRecentlyCreated) {
+                            $sentNotifications++;
+                        }
                     }
 
                     $event->forceFill(['reminder_sent_at' => now()])->save();
@@ -91,14 +107,10 @@ class SendEventReminders extends Command
             ->values();
     }
 
-    private function notificationBody(Event $event): string
+    private function eventDate(Event $event): string
     {
-        $time = $event->start_time
+        return $event->start_time
             ? $event->start_time->timezone(config('app.timezone'))->format('d.m.Y H:i')
             : 'bald';
-
-        $location = $event->location ? " Ort: {$event->location}." : '';
-
-        return "{$event->title} startet am {$time}.{$location}";
     }
 }

@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     delivery: { type: Object, required: true },
     issueForm: { type: Object, required: true },
@@ -39,7 +43,7 @@ defineEmits(['close', 'submit'])
                 </label>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Beschreibung</span>
+                    <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.description') }}</span>
                     <textarea v-model="issueForm.issue_description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Was ist passiert? Welche Artikel sind betroffen?"></textarea>
                     <span v-if="issueForm.errors.issue_description" class="mt-1 block text-xs text-red-300">{{ issueForm.errors.issue_description }}</span>
                 </label>
@@ -66,4 +70,3 @@ defineEmits(['close', 'submit'])
         </div>
     </div>
 </template>
-

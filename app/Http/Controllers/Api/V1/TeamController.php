@@ -18,11 +18,11 @@ use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -73,13 +73,13 @@ class TeamController extends Controller
 
         if (! $team->club?->users->contains('id', $request->user()->id)) {
             throw ValidationException::withMessages([
-                'team' => 'Du musst Mitglied im Verein sein, bevor du einem Team beitreten kannst.',
+                'team' => __('organization.team.club_membership_required'),
             ]);
         }
 
         if ($team->users->contains('id', $request->user()->id)) {
             throw ValidationException::withMessages([
-                'team' => 'Du bist bereits im Team.',
+                'team' => __('organization.team.already_member'),
             ]);
         }
 
@@ -90,7 +90,7 @@ class TeamController extends Controller
 
         if ($existingRequest?->status === 'pending') {
             throw ValidationException::withMessages([
-                'team' => 'Deine Beitrittsanfrage wartet bereits auf Freigabe.',
+                'team' => __('organization.team.join_request_pending'),
             ]);
         }
 
@@ -101,14 +101,19 @@ class TeamController extends Controller
 
         $team->club->users
             ->filter(fn (User $member) => filled(array_intersect($member->pivot?->roles ?: [$member->pivot?->role], ['owner', 'admin', 'manager'])))
-            ->each(fn (User $member) => AppNotification::send($member, 'team.join_request', [
-                'title' => 'Neue Team-Anfrage',
-                'body' => $request->user()->name.' möchte '.$team->name.' beitreten.',
-                'url' => route('auth.club-memberships.index'),
-                'team_id' => $team->id,
-                'club_id' => $team->club_id,
-                'join_request_id' => $joinRequest->id,
-            ]));
+            ->each(fn (User $member) => AppNotification::sendLocalized(
+                $member,
+                'team.join_request',
+                'organization.notifications.team_join_request_title',
+                'organization.notifications.team_join_request_body',
+                ['user' => $request->user()->name, 'team' => $team->name],
+                [
+                    'url' => route('auth.club-memberships.index'),
+                    'team_id' => $team->id,
+                    'club_id' => $team->club_id,
+                    'join_request_id' => $joinRequest->id,
+                ],
+            ));
 
         $freshTeam = $team->fresh()
             ->load(['club.users', 'users', 'joinRequests.user'])
@@ -117,7 +122,7 @@ class TeamController extends Controller
         $freshTeam->setAttribute('can_request_join', false);
 
         return (new TeamResource($freshTeam))
-            ->additional(['message' => 'Beitrittsanfrage gesendet.'])
+            ->additional(['message' => __('organization.team.join_request_sent')])
             ->response()
             ->setStatusCode(201);
     }
@@ -220,7 +225,7 @@ class TeamController extends Controller
 
         if ($joinRequest->status !== 'pending') {
             throw ValidationException::withMessages([
-                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+                'join_request' => __('organization.team.join_request_closed'),
             ]);
         }
 
@@ -232,7 +237,7 @@ class TeamController extends Controller
             ! $team->club->users()->where('users.id', $joinRequest->user_id)->exists()
             && ! $team->club->canAddMembers(),
             422,
-            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+            __('organization.team.club_member_limit_reached')
         );
 
         DB::transaction(function () use ($team, $joinRequest, $data) {
@@ -255,12 +260,17 @@ class TeamController extends Controller
             ]);
         });
 
-        AppNotification::send($joinRequest->user_id, 'team.join_request_accepted', [
-            'title' => 'Team-Beitrittsanfrage akzeptiert',
-            'body' => 'Deine Anfrage für '.$team->name.' wurde akzeptiert.',
-            'team_id' => $team->id,
-            'club_id' => $team->club_id,
-        ]);
+        AppNotification::sendLocalized(
+            $joinRequest->user_id,
+            'team.join_request_accepted',
+            'organization.notifications.team_join_accepted_title',
+            'organization.notifications.team_join_accepted_body',
+            ['team' => $team->name],
+            [
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+            ],
+        );
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
@@ -277,7 +287,7 @@ class TeamController extends Controller
 
         if ($joinRequest->status !== 'pending') {
             throw ValidationException::withMessages([
-                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+                'join_request' => __('organization.team.join_request_closed'),
             ]);
         }
 
@@ -286,12 +296,17 @@ class TeamController extends Controller
             'responded_at' => now(),
         ]);
 
-        AppNotification::send($joinRequest->user_id, 'team.join_request_declined', [
-            'title' => 'Team-Beitrittsanfrage abgelehnt',
-            'body' => 'Deine Anfrage für '.$team->name.' wurde abgelehnt.',
-            'team_id' => $team->id,
-            'club_id' => $team->club_id,
-        ]);
+        AppNotification::sendLocalized(
+            $joinRequest->user_id,
+            'team.join_request_declined',
+            'organization.notifications.team_join_declined_title',
+            'organization.notifications.team_join_declined_body',
+            ['team' => $team->name],
+            [
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+            ],
+        );
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
@@ -342,19 +357,19 @@ class TeamController extends Controller
                 ]);
 
                 throw ValidationException::withMessages([
-                    'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
+                    'email' => __('organization.team.email_invitation_failed'),
                 ]);
             }
 
             return response()->json([
                 'data' => $this->teamInvitationPayload($invitation->fresh(['team.club:id,name', 'inviter:id,name,email'])),
-                'message' => 'Einladung per E-Mail wurde gesendet.',
+                'message' => __('organization.team.email_invitation_sent'),
             ], 201);
         }
 
         if ($team->users()->where('users.id', $recipient->id)->exists()) {
             throw ValidationException::withMessages([
-                'email' => 'User ist bereits im Team.',
+                'email' => __('organization.team.already_member'),
             ]);
         }
 
@@ -371,26 +386,40 @@ class TeamController extends Controller
             ],
         );
 
-        AppNotification::send($recipient->id, $data['role'] === 'Coach' ? 'team.trainer_mentioned' : 'team.invite', [
-            'title' => $data['role'] === 'Coach' ? 'Trainer-Einladung zu '.$team->name : 'Einladung zu '.$team->name,
-            'body' => $data['role'] === 'Coach'
-                ? 'Du wurdest als Trainer für '.$team->name.' eingeladen.'
-                : 'Du wurdest als '.$data['role'].' eingeladen.',
-            'url' => '/teams?team_invitation='.$invitation->id,
-            'team_id' => $team->id,
-            'team_name' => $team->name,
-            'club_id' => $team->club_id,
-            'club_name' => $team->club?->name,
-            'invitation_id' => $invitation->id,
-            'role' => $data['role'],
-            'inviter_id' => $request->user()->id,
-            'inviter_name' => $request->user()->name,
-            'inviter_email' => $request->user()->email,
-        ]);
+        $coachInvitation = $data['role'] === 'Coach';
+        AppNotification::sendLocalized(
+            $recipient,
+            $coachInvitation ? 'team.trainer_mentioned' : 'team.invite',
+            $coachInvitation
+                ? 'organization.notifications.team_coach_invite_title'
+                : 'organization.notifications.team_invite_title',
+            $coachInvitation
+                ? 'organization.notifications.team_coach_invite_body'
+                : 'organization.notifications.team_invite_body',
+            [
+                'team' => $team->name,
+                'role' => AppNotification::translatedReplacement(
+                    'organization.roles.team.'.strtolower($data['role']),
+                    TeamRoles::definition($data['role'])['label'] ?? $data['role'],
+                ),
+            ],
+            [
+                'url' => '/teams?team_invitation='.$invitation->id,
+                'team_id' => $team->id,
+                'team_name' => $team->name,
+                'club_id' => $team->club_id,
+                'club_name' => $team->club?->name,
+                'invitation_id' => $invitation->id,
+                'role' => $data['role'],
+                'inviter_id' => $request->user()->id,
+                'inviter_name' => $request->user()->name,
+                'inviter_email' => $request->user()->email,
+            ],
+        );
 
         return response()->json([
             'data' => $this->teamInvitationPayload($invitation->fresh(['team.club:id,name', 'inviter:id,name,email'])),
-            'message' => 'Einladung wurde gesendet.',
+            'message' => __('organization.team.invitation_sent'),
         ], 201);
     }
 
@@ -435,7 +464,7 @@ class TeamController extends Controller
             ! $invitation->team->club->users()->where('users.id', $request->user()->id)->exists()
             && ! $invitation->team->club->canAddMembers(),
             422,
-            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+            __('organization.team.club_member_limit_reached')
         );
 
         DB::transaction(function () use ($invitation, $request) {
@@ -514,7 +543,7 @@ class TeamController extends Controller
             ! $invitation->team->club->users()->where('users.id', $invitation->recipient_id)->exists()
             && ! $invitation->team->club->canAddMembers(),
             422,
-            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+            __('organization.team.club_member_limit_reached')
         );
 
         DB::transaction(function () use ($invitation) {
@@ -584,16 +613,31 @@ class TeamController extends Controller
                 : 'Unbekannt';
             $newRoleLabel = TeamRoles::definition($data['role'])['label'] ?? $data['role'];
 
-            AppNotification::send($user, 'team.role_updated', [
-                'title' => 'Teamrolle geändert',
-                'body' => 'Deine Rolle in '.$team->name.' wurde von '.$previousRoleLabel.' auf '.$newRoleLabel.' geändert.',
-                'url' => '/notifications',
-                'mobile_url' => 'airmius://teams/'.$team->id,
-                'team_id' => $team->id,
-                'club_id' => $team->club_id,
-                'previous_role' => $previousRole,
-                'role' => $data['role'],
-            ]);
+            AppNotification::sendLocalized(
+                $user,
+                'team.role_updated',
+                'organization.notifications.team_role_title',
+                'organization.notifications.team_role_body',
+                [
+                    'team' => $team->name,
+                    'previous' => AppNotification::translatedReplacement(
+                        $previousRole ? 'organization.roles.team.'.strtolower($previousRole) : 'organization.roles.unknown',
+                        $previousRoleLabel,
+                    ),
+                    'next' => AppNotification::translatedReplacement(
+                        'organization.roles.team.'.strtolower($data['role']),
+                        $newRoleLabel,
+                    ),
+                ],
+                [
+                    'url' => '/notifications',
+                    'mobile_url' => 'airmius://teams/'.$team->id,
+                    'team_id' => $team->id,
+                    'club_id' => $team->club_id,
+                    'previous_role' => $previousRole,
+                    'role' => $data['role'],
+                ],
+            );
         }
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
@@ -612,13 +656,13 @@ class TeamController extends Controller
 
         if (! $team->club->users()->where('users.id', $member->id)->exists()) {
             throw ValidationException::withMessages([
-                'user_id' => 'Dieses Mitglied muss zuerst im Verein angelegt oder eingeladen werden.',
+                'user_id' => __('organization.team.club_member_required'),
             ]);
         }
 
         if ($team->users()->where('users.id', $member->id)->exists()) {
             throw ValidationException::withMessages([
-                'user_id' => 'Mitglied ist bereits im Team.',
+                'user_id' => __('organization.team.member_already_added'),
             ]);
         }
 
@@ -630,15 +674,20 @@ class TeamController extends Controller
             $this->syncTeamChatMembers($team, [$member->id]);
         });
 
-        AppNotification::send($member->id, 'team.member_added', [
-            'title' => 'Zum Team hinzugefügt',
-            'body' => 'Du wurdest zu '.$team->name.' hinzugefügt.',
-            'url' => '/teams/'.$team->id,
-            'club_id' => $team->club_id,
-            'team_id' => $team->id,
-            'role' => $data['role'],
-            'added_by' => $request->user()->id,
-        ]);
+        AppNotification::sendLocalized(
+            $member,
+            'team.member_added',
+            'organization.notifications.team_member_added_title',
+            'organization.notifications.team_member_added_body',
+            ['team' => $team->name],
+            [
+                'url' => '/teams/'.$team->id,
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'role' => $data['role'],
+                'added_by' => $request->user()->id,
+            ],
+        );
 
         return (new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events'])))
             ->response()
@@ -669,7 +718,7 @@ class TeamController extends Controller
 
             if ($hasOpenDebt) {
                 throw ValidationException::withMessages([
-                    'team' => 'Du kannst das Team erst verlassen, wenn alle offenen Rechnungen im Verein ausgeglichen sind.',
+                    'team' => __('organization.team.open_invoices_before_leaving'),
                 ]);
             }
         }
@@ -678,23 +727,37 @@ class TeamController extends Controller
         $this->removeTeamChatMember($team, $user->id);
 
         if ($isLeavingSelf) {
-            $this->notifyClubManagers($team->club, 'team.member_left', [
-                'title' => 'Mitglied hat Team verlassen',
-                'body' => $user->name.' hat '.$team->name.' verlassen.'
-                    .(filled($data['reason'] ?? null) ? "\n\nBegründung: ".$data['reason'] : ''),
-                'url' => '/teams/'.$team->id,
-                'club_id' => $team->club_id,
-                'team_id' => $team->id,
-                'user_id' => $user->id,
-            ], $user->id);
+            $this->notifyClubManagersLocalized(
+                $team->club,
+                'team.member_left',
+                'organization.notifications.team_member_left_title',
+                'organization.notifications.team_member_left_body',
+                [
+                    'user' => $user->name,
+                    'team' => $team->name,
+                    'reason' => filled($data['reason'] ?? null) ? "\n\n".$data['reason'] : '',
+                ],
+                [
+                    'url' => '/teams/'.$team->id,
+                    'club_id' => $team->club_id,
+                    'team_id' => $team->id,
+                    'user_id' => $user->id,
+                ],
+                $user->id,
+            );
         } else {
-            AppNotification::send($user, 'team.member_removed', [
-                'title' => 'Aus Team entfernt',
-                'body' => 'Du wurdest aus '.$team->name.' entfernt. Deine Vereinsmitgliedschaft bleibt bestehen.',
-                'url' => '/notifications',
-                'club_id' => $team->club_id,
-                'team_id' => $team->id,
-            ]);
+            AppNotification::sendLocalized(
+                $user,
+                'team.member_removed',
+                'organization.notifications.team_member_removed_title',
+                'organization.notifications.team_member_removed_body',
+                ['team' => $team->name],
+                [
+                    'url' => '/notifications',
+                    'club_id' => $team->club_id,
+                    'team_id' => $team->id,
+                ],
+            );
         }
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
@@ -766,13 +829,27 @@ class TeamController extends Controller
             ->each(fn (Conversation $conversation) => $conversation->users()->detach($userId));
     }
 
-    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
-    {
+    private function notifyClubManagersLocalized(
+        Club $club,
+        string $type,
+        string $titleKey,
+        ?string $bodyKey,
+        array $replace,
+        array $data,
+        ?int $exceptUserId = null,
+    ): void {
         $club->users()
             ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
-            ->get(['users.id'])
-            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
+            ->get(['users.id', 'users.language'])
+            ->each(fn (User $manager) => AppNotification::sendLocalized(
+                $manager,
+                $type,
+                $titleKey,
+                $bodyKey,
+                $replace,
+                $data,
+            ));
     }
 
     private function teamInvitationPayload(TeamInvitation $invitation): array
@@ -829,43 +906,57 @@ class TeamController extends Controller
         $accepted = $status === 'accepted';
         $teamName = $invitation->team?->name ?? 'Team';
 
-        AppNotification::send($invitation->inviter_id, 'team.invitation.'.$status, [
-            'title' => $accepted ? 'Team-Einladung angenommen' : 'Team-Einladung abgelehnt',
-            'body' => $responder->name.' hat die Einladung zu '.$teamName.($accepted ? ' angenommen.' : ' abgelehnt.'),
-            'url' => '/teams/'.$invitation->team_id,
-            'team_id' => $invitation->team_id,
-            'team_name' => $teamName,
-            'club_id' => $invitation->team?->club_id,
-            'club_name' => $invitation->team?->club?->name,
-            'invitation_id' => $invitation->id,
-            'invitation_status' => $status,
-            'role' => $invitation->role,
-            'responder_id' => $responder->id,
-            'responder_name' => $responder->name,
-            'responder_email' => $responder->email,
-        ]);
+        AppNotification::sendLocalized(
+            $invitation->inviter_id,
+            'team.invitation.'.$status,
+            $accepted
+                ? 'organization.notifications.team_invitation_accepted_title'
+                : 'organization.notifications.team_invitation_declined_title',
+            $accepted
+                ? 'organization.notifications.team_invitation_accepted_body'
+                : 'organization.notifications.team_invitation_declined_body',
+            ['user' => $responder->name, 'team' => $teamName],
+            [
+                'url' => '/teams/'.$invitation->team_id,
+                'team_id' => $invitation->team_id,
+                'team_name' => $teamName,
+                'club_id' => $invitation->team?->club_id,
+                'club_name' => $invitation->team?->club?->name,
+                'invitation_id' => $invitation->id,
+                'invitation_status' => $status,
+                'role' => $invitation->role,
+                'responder_id' => $responder->id,
+                'responder_name' => $responder->name,
+                'responder_email' => $responder->email,
+            ],
+        );
     }
 
     private function markTeamInvitationNotificationResponded(TeamInvitation $invitation, User $responder, string $status): void
     {
         $accepted = $status === 'accepted';
         $teamName = $invitation->team?->name ?? 'Team';
-        $title = $accepted ? 'Team-Einladung angenommen' : 'Team-Einladung abgelehnt';
-        $body = $accepted
-            ? 'Du hast die Einladung zu '.$teamName.' angenommen.'
-            : 'Du hast die Einladung zu '.$teamName.' abgelehnt.';
+        $localized = AppNotification::localizedData(
+            $responder,
+            $accepted
+                ? 'organization.notifications.team_invitation_accepted_title'
+                : 'organization.notifications.team_invitation_declined_title',
+            $accepted
+                ? 'organization.notifications.team_invitation_self_accepted_body'
+                : 'organization.notifications.team_invitation_self_declined_body',
+            ['team' => $teamName],
+        ) ?? [];
 
         \App\Models\Notification::query()
             ->where('user_id', $responder->id)
             ->where('data->invitation_id', $invitation->id)
             ->get()
-            ->each(function (\App\Models\Notification $notification) use ($invitation, $status, $title, $body, $teamName) {
+            ->each(function (\App\Models\Notification $notification) use ($invitation, $status, $localized, $teamName) {
                 $data = $notification->data ?: [];
                 $notification->update([
                     'read' => false,
                     'data' => array_merge($data, [
-                        'title' => $title,
-                        'body' => $body,
+                        ...$localized,
                         'team_id' => $invitation->team_id,
                         'team_name' => $teamName,
                         'club_id' => $invitation->team?->club_id,
@@ -894,33 +985,25 @@ class TeamController extends Controller
 
     private function notifyTeamProfileUpdated(Team $team, User $actor, string $previousName, ?string $previousSportType): void
     {
-        $changes = [];
-        if ($team->name !== $previousName) {
-            $changes[] = 'Name: '.$previousName.' -> '.$team->name;
-        }
-        if (($team->sport_type ?? '') !== ($previousSportType ?? '')) {
-            $changes[] = 'Sportart: '.($previousSportType ?: 'offen').' -> '.($team->sport_type ?: 'offen');
-        }
-
-        $body = $actor->name.' hat die Teamdaten von '.$team->name.' aktualisiert.';
-        if ($changes !== []) {
-            $body .= "\n".implode("\n", $changes);
-        }
-
         $team->users
             ->where('id', '!=', $actor->id)
-            ->each(fn (User $member) => AppNotification::send($member, 'team.profile_updated', [
-                'title' => 'Teamdaten aktualisiert',
-                'body' => $body,
-                'url' => '/teams/'.$team->id,
-                'club_id' => $team->club_id,
-                'team_id' => $team->id,
-                'updated_by' => $actor->id,
-                'previous_name' => $previousName,
-                'name' => $team->name,
-                'previous_sport_type' => $previousSportType,
-                'sport_type' => $team->sport_type,
-            ]));
+            ->each(fn (User $member) => AppNotification::sendLocalized(
+                $member,
+                'team.profile_updated',
+                'organization.notifications.team_profile_updated_title',
+                'organization.notifications.team_profile_updated_body',
+                ['user' => $actor->name, 'team' => $team->name, 'changes' => ''],
+                [
+                    'url' => '/teams/'.$team->id,
+                    'club_id' => $team->club_id,
+                    'team_id' => $team->id,
+                    'updated_by' => $actor->id,
+                    'previous_name' => $previousName,
+                    'name' => $team->name,
+                    'previous_sport_type' => $previousSportType,
+                    'sport_type' => $team->sport_type,
+                ],
+            ));
     }
 
     private function perPage(Request $request): int

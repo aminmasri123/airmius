@@ -10,7 +10,7 @@ defineProps({
 <template>
     <aside class="space-y-5">
         <section class="rounded-2xl border border-border bg-card p-5">
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Nächste Termine</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">{{ $t('Nächste Termine') }}</p>
             <div class="mt-4 space-y-3">
                 <article v-for="item in upcoming" :key="`${item.id}-${item.type}`" class="rounded-xl border border-border bg-inputBg p-3">
                     <div class="flex items-start justify-between gap-3">
@@ -46,4 +46,3 @@ defineProps({
         </section>
     </aside>
 </template>
-

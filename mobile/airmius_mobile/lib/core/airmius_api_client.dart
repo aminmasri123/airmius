@@ -1032,7 +1032,9 @@ class AirmiusApiClient {
       if (city != null && city.trim().isNotEmpty) 'city': city.trim(),
       if (sportId != null) 'sport_id': '$sportId',
       if (radiusKm != null) 'radius_km': '$radiusKm',
-      if (skillLevel != null && skillLevel.trim().isNotEmpty && skillLevel != 'all')
+      if (skillLevel != null &&
+          skillLevel.trim().isNotEmpty &&
+          skillLevel != 'all')
         'skill_level': skillLevel.trim(),
     },
   );
@@ -1057,12 +1059,11 @@ class AirmiusApiClient {
   Future<AirmiusJson> dismissSportMatching(
     int matchingId, {
     bool dismissed = true,
-  }) =>
-      _json(
-        'POST',
-        '/api/v1/sport-matching/$matchingId/dismiss',
-        body: {'dismissed': dismissed},
-      );
+  }) => _json(
+    'POST',
+    '/api/v1/sport-matching/$matchingId/dismiss',
+    body: {'dismissed': dismissed},
+  );
 
   Future<AirmiusJson> decideSportMatchingApplication(
     int matchingId,
@@ -2064,11 +2065,90 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicSponsors() =>
       _json('GET', '/api/v1/public/sponsors');
 
+  Future<AirmiusJson> publicRecruitingJobs({
+    String? query,
+    String? type,
+    String? sportType,
+    String? address,
+    String? sort,
+    int page = 1,
+  }) => _json(
+    'GET',
+    '/api/v1/public/recruiting/jobs',
+    query: {
+      'page': '$page',
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      if (type != null && type.trim().isNotEmpty) 'type': type.trim(),
+      if (sportType != null && sportType.trim().isNotEmpty)
+        'sport_type': sportType.trim(),
+      if (address != null && address.trim().isNotEmpty)
+        'address': address.trim(),
+      if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
+    },
+  );
+
+  Future<AirmiusJson> submitPublicRecruitingInterest(
+    int jobId,
+    AirmiusJson body, {
+    String? idempotencyKey,
+  }) => _json(
+    'POST',
+    '/api/v1/public/recruiting/jobs/$jobId/interest',
+    body: body,
+    headers: {
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'Idempotency-Key': idempotencyKey.trim(),
+    },
+  );
+
+  Future<AirmiusJson> submitPublicAgencyRequest(
+    AirmiusJson body, {
+    String? idempotencyKey,
+  }) => _json(
+    'POST',
+    '/api/v1/public/agency/requests',
+    body: body,
+    headers: {
+      if (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        'Idempotency-Key': idempotencyKey.trim(),
+    },
+  );
+
   Future<AirmiusJson> sponsorWorkspace() =>
       _json('GET', '/api/v1/sponsor-workspace');
 
   Future<AirmiusJson> updateSponsorWorkspaceProfile(AirmiusJson body) =>
       _json('PUT', '/api/v1/sponsor-workspace/profile', body: body);
+
+  Future<AirmiusJson> recruitingPipeline({
+    String? status,
+    int? jobId,
+    String? query,
+    int page = 1,
+  }) => _json(
+    'GET',
+    '/api/v1/recruiting-pipeline',
+    query: {
+      'page': '$page',
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (jobId != null && jobId > 0) 'job_id': '$jobId',
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+    },
+  );
+
+  Future<AirmiusJson> updateRecruitingApplication(
+    int applicationId,
+    AirmiusJson body,
+  ) => _json(
+    'PUT',
+    '/api/v1/recruiting-pipeline/applications/$applicationId',
+    body: body,
+  );
+
+  Future<AirmiusJson> deleteRecruitingApplication(int applicationId) => _json(
+    'DELETE',
+    '/api/v1/recruiting-pipeline/applications/$applicationId',
+  );
 
   Future<AirmiusJson> publicClubs({
     String? query,
@@ -3029,10 +3109,7 @@ class AirmiusApiClient {
   }) => _json(
     'POST',
     '/api/v1/privacy/data-erasure-code',
-    body: {
-      'identity': identity.trim(),
-      'categories': categories,
-    },
+    body: {'identity': identity.trim(), 'categories': categories},
   );
 
   Future<AirmiusJson> erasePersonalData({
@@ -3041,10 +3118,7 @@ class AirmiusApiClient {
   }) => _json(
     'POST',
     '/api/v1/privacy/data-erasure',
-    body: {
-      'code': code.trim(),
-      'categories': categories,
-    },
+    body: {'code': code.trim(), 'categories': categories},
   );
 
   Future<AirmiusJson> subscriptionPlans({String? targetActor}) => _json(
@@ -3140,6 +3214,7 @@ class AirmiusApiClient {
     String path, {
     AirmiusJson? body,
     Map<String, String> query = const {},
+    AirmiusHeaders headers = const {},
   }) async {
     try {
       final response = await transport.send(
@@ -3148,7 +3223,7 @@ class AirmiusApiClient {
           path: path,
           body: body,
           query: query,
-          headers: _headers,
+          headers: {..._headers, ...headers},
         ),
       );
       if (!response.ok) {

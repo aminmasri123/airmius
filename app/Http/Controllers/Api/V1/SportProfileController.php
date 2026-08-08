@@ -144,7 +144,7 @@ class SportProfileController extends Controller
                 'is_visible' => $userSportSkill->is_visible,
                 'notes' => $userSportSkill->notes,
             ],
-            'message' => 'Fähigkeit wurde aktualisiert.',
+            'message' => __('platform.social.skill_updated'),
         ]);
     }
 }

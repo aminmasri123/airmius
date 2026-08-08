@@ -68,7 +68,7 @@ class ClubSurveyController extends Controller
         if ($data['audience_type'] === 'team') {
             if (! $teamId || ! Team::query()->whereKey($teamId)->where('club_id', $club->id)->exists()) {
                 throw ValidationException::withMessages([
-                    'team_id' => 'Bitte ein Team dieses Vereins auswählen.',
+                    'team_id' => __('organization.survey.team_required'),
                 ]);
             }
         } else {
@@ -98,7 +98,7 @@ class ClubSurveyController extends Controller
         });
 
         return response()->json([
-            'message' => 'Umfrage erstellt.',
+            'message' => __('organization.survey.created'),
             'data' => $this->payload($survey, true),
         ], 201);
     }
@@ -107,11 +107,11 @@ class ClubSurveyController extends Controller
     {
         abort_unless((int) $survey->club_id === (int) $club->id, 404);
         $this->authorizeSurveyAccess($request, $club);
-        abort_unless($this->canVote($request, $survey), 403, 'Diese Umfrage ist für dich nicht freigegeben.');
+        abort_unless($this->canVote($request, $survey), 403, __('organization.survey.not_available'));
 
         if (! $survey->isOpen()) {
             throw ValidationException::withMessages([
-                'survey' => 'Diese Umfrage ist geschlossen.',
+                'survey' => __('organization.survey.already_closed'),
             ]);
         }
 
@@ -130,7 +130,7 @@ class ClubSurveyController extends Controller
         );
 
         return response()->json([
-            'message' => 'Stimme gespeichert.',
+            'message' => __('organization.survey.vote_saved'),
             'data' => [
                 'vote_id' => $vote->id,
                 'survey_id' => $survey->id,
@@ -147,7 +147,7 @@ class ClubSurveyController extends Controller
         $survey->update(['status' => 'closed']);
 
         return response()->json([
-            'message' => 'Umfrage geschlossen.',
+            'message' => __('organization.survey.closed'),
             'data' => [
                 'id' => $survey->id,
                 'status' => $survey->status,
@@ -171,7 +171,7 @@ class ClubSurveyController extends Controller
             })
             ->exists();
 
-        abort_unless($isMember, 403, 'Nur Vereinsmitglieder können Vereinsumfragen sehen.');
+        abort_unless($isMember, 403, __('organization.survey.members_only'));
 
         return false;
     }

@@ -68,6 +68,8 @@ class NotificationController extends Controller
         return [
             'id' => $notification->id,
             'type' => $notification->type,
+            'category' => $notification->category,
+            'priority' => $notification->priority,
             'title' => $data['title'] ?? null,
             'body' => $data['body'] ?? ($data['message'] ?? null),
             'url' => $actionUrl,

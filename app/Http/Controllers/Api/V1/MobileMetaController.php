@@ -109,6 +109,8 @@ class MobileMetaController extends Controller
                         'gpx_contract',
                     ],
                     'subscriptions' => ['plans', 'overview', 'bank_transfer_checkout', 'stripe_redirect_checkout', 'paypal_redirect_checkout', 'cancel', 'renew'],
+                    'recruiting' => ['public_jobs', 'submit_interest', 'pipeline', 'status_update', 'data_erasure'],
+                    'agency' => ['public_request', 'privacy_consent', 'retention_lifecycle', 'self_service_erasure'],
                     'commerce' => [
                         'products',
                         'orders',

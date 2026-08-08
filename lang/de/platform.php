@@ -1,0 +1,70 @@
+<?php
+
+return [
+    'social' => [
+        'self_follow' => 'Du kannst dir nicht selbst folgen.',
+        'follow_started' => 'Du folgst diesem Profil jetzt.',
+        'follow_stopped' => 'Du folgst diesem Profil nicht mehr.',
+        'follow_title' => ':name folgt dir jetzt',
+        'follow_body' => 'Jemand Neues folgt deinem Profil.',
+        'report_sent' => 'Danke. Die Meldung wurde an die Moderation gesendet.',
+        'appeal_sent' => 'Deine Beschwerde wurde an die Moderation gesendet.',
+        'story_created' => 'Story erstellt.',
+        'post_deleted' => 'Beitrag gelöscht.',
+        'sport_profile_updated' => 'Sportprofil wurde aktualisiert.',
+        'skill_updated' => 'Fähigkeit wurde aktualisiert.',
+        'skill_confirmed' => 'Fähigkeit wurde bestätigt.',
+        'trainer_mention_title' => 'Trainer-Erwähnung erhalten',
+        'trainer_mention_body' => ':name hat dich bei :skill mit Trainer-Bezug bestätigt.',
+        'recommendation_title' => 'Neue Empfehlung erhalten',
+        'trainer_recommendation_body' => ':name hat eine Empfehlung mit Trainer-Bezug geschrieben. Sie wartet auf deine Freigabe.',
+        'recommendation_body' => ':name hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',
+        'recommendation_sent' => 'Empfehlung wurde gesendet und wartet auf Freigabe.',
+    ],
+    'chat' => [
+        'removed_title' => 'Du wurdest aus einer Chatgruppe entfernt',
+        'owner_title' => 'Du bist jetzt Owner einer Chatgruppe',
+        'group_body' => ':conversation',
+        'group_fallback' => 'Gruppenchat',
+    ],
+    'training' => [
+        'exercise_removed' => 'Übung wurde aus der Bibliothek entfernt.',
+    ],
+    'dashboard' => [
+        'next_training_title' => 'Nächste Einheit dokumentieren',
+        'next_event_title' => 'Nächster Termin',
+    ],
+    'organization' => [
+        'this_year' => 'Dieses Jahr',
+        'announcement_published' => 'Ankündigung veröffentlicht.',
+        'announcement_read' => 'Lesebestätigung gespeichert.',
+        'announcement_not_available' => 'Diese Ankündigung ist für dich nicht freigegeben.',
+        'announcement_members_only' => 'Nur Vereinsmitglieder können Ankündigungen sehen.',
+        'verification_mail' => [
+            'approved_subject' => 'Dein Verein wurde freigegeben',
+            'rejected_subject' => 'Dein Vereinsantrag wurde abgelehnt',
+            'greeting' => 'Hallo :name,',
+            'approved_line' => 'Dein Verein „:club“ wurde geprüft und freigegeben.',
+            'approved_official' => 'Der Verein ist jetzt öffentlich sichtbar und als offiziell markiert.',
+            'approved_public' => 'Der Verein ist jetzt öffentlich sichtbar.',
+            'rejected_line' => 'Dein Vereinsantrag für „:club“ wurde abgelehnt.',
+            'rejected_help' => 'Bitte prüfe die Hinweise im Dashboard oder kontaktiere den Support.',
+            'notes' => 'Hinweis: :notes',
+            'action' => 'Verein öffnen',
+        ],
+    ],
+    'commerce' => [
+        'verified_buyer_required' => 'Nur verifizierte Käufer können dieses Produkt bewerten.',
+    ],
+    'learning' => [
+        'certificate_not_found' => 'Zertifikat nicht gefunden.',
+    ],
+    'notification_digest' => [
+        'subject' => 'Deine Airmius-Benachrichtigungsübersicht',
+        'greeting' => 'Hallo,',
+        'intro' => 'Hier ist deine Übersicht ungelesener Airmius-Benachrichtigungen aus dem letzten Tag:',
+        'outro' => 'Öffne Airmius, um die Details zu lesen und deine Benachrichtigungen zu verwalten.',
+        'action' => 'Airmius öffnen',
+        'fallback_title' => 'Benachrichtigung',
+    ],
+];

@@ -87,6 +87,7 @@ final class AirmiusModuleAccess {
       'Gamification-Regeln' => canOpenPlatformAdmin(user),
       'Commerce' => _adminTwoFactorSatisfied(user) && _canManageCommerce(user),
       'Sponsoren' => _adminTwoFactorSatisfied(user) && _canManageSponsors(user),
+      'Recruiting' => user.can('club.jobs.manage'),
       'Medienrichtlinien' =>
         _adminTwoFactorSatisfied(user) && _canManageMedia(user),
       'Blog & Medien' =>

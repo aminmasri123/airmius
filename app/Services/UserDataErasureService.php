@@ -17,34 +17,13 @@ use InvalidArgumentException;
 class UserDataErasureService
 {
     private const CATEGORIES = [
-        'profile' => [
-            'label' => 'Profil- und Kontaktdaten',
-            'description' => 'Name, Foto, Telefonnummer, Adresse, Bio und weitere Profilangaben werden entfernt. E-Mail-Adresse und Zugangsdaten bleiben für dein Konto erhalten.',
-        ],
-        'content' => [
-            'label' => 'Beiträge, Kommentare und Storys',
-            'description' => 'Eigene Beiträge, Kommentare, Storys und die dazugehörigen persönlichen Medien werden dauerhaft entfernt.',
-        ],
-        'messages' => [
-            'label' => 'Eigene Chat-Nachrichten',
-            'description' => 'Der Inhalt eigener Nachrichten und Anhänge wird entfernt. In Unterhaltungen bleibt nur ein neutraler Löschhinweis bestehen.',
-        ],
-        'files' => [
-            'label' => 'Dateien und Ordner',
-            'description' => 'Eigene hochgeladene Dateien, Vorschaubilder und persönliche Ordner werden dauerhaft entfernt.',
-        ],
-        'sport_and_health' => [
-            'label' => 'Sport-, Standort- und Gesundheitsdaten',
-            'description' => 'Importierte Aktivitäten, Routen, Tracks, Sportprofile, Trainingsprotokolle sowie Ernährungsdaten werden entfernt.',
-        ],
-        'social_and_integrations' => [
-            'label' => 'Soziale Verbindungen und Integrationen',
-            'description' => 'Freundschaften, Follows, Benachrichtigungen, Gerätekennungen und externe Sport-Verknüpfungen werden entfernt. Die technische Zuordnung für Google- oder Microsoft-Anmeldung bleibt erhalten.',
-        ],
-        'commerce' => [
-            'label' => 'Shop- und Bestelldaten',
-            'description' => 'Warenkörbe, Lieferadressen, Merkliste und Bewertungen werden entfernt. Nicht aufbewahrungspflichtige, abgeschlossene Bestellungen werden anonymisiert.',
-        ],
+        'profile',
+        'content',
+        'messages',
+        'files',
+        'sport_and_health',
+        'social_and_integrations',
+        'commerce',
     ];
 
     /**
@@ -53,7 +32,11 @@ class UserDataErasureService
     public function categories(): array
     {
         return collect(self::CATEGORIES)
-            ->map(fn (array $definition, string $key) => ['key' => $key, ...$definition])
+            ->map(fn (string $key) => [
+                'key' => $key,
+                'label' => __('data_erasure.categories.'.$key.'.label'),
+                'description' => __('data_erasure.categories.'.$key.'.description'),
+            ])
             ->values()
             ->all();
     }
@@ -63,7 +46,7 @@ class UserDataErasureService
      */
     public function categoryKeys(): array
     {
-        return array_keys(self::CATEGORIES);
+        return self::CATEGORIES;
     }
 
     /**
@@ -80,7 +63,7 @@ class UserDataErasureService
         $unknown = array_diff($requested, $this->categoryKeys());
 
         if ($requested === [] || $unknown !== []) {
-            throw new InvalidArgumentException('Mindestens eine gültige Datenkategorie muss ausgewählt werden.');
+            throw new InvalidArgumentException(__('data_erasure.validation.category_invalid'));
         }
 
         return array_values(array_filter(
@@ -101,8 +84,8 @@ class UserDataErasureService
             'categories' => $categories,
             'deleted' => [],
             'retained' => [
-                'Dein Konto, deine E-Mail-Adresse und deine Zugangsdaten bleiben erhalten.',
-                'Vereins-, Team- und Berechtigungszuordnungen werden nicht automatisch gelöscht, damit keine Daten anderer Personen oder Organisationen verloren gehen.',
+                __('data_erasure.summary.retained_account'),
+                __('data_erasure.summary.retained_relationships'),
             ],
         ];
 
@@ -136,7 +119,7 @@ class UserDataErasureService
         }
 
         $updates = [
-            'name' => 'Airmius Nutzer #'.$user->id,
+            'name' => __('data_erasure.summary.pseudonym', ['id' => $user->id]),
             'first_name' => null,
             'last_name' => null,
             'phone' => null,
@@ -164,6 +147,9 @@ class UserDataErasureService
             'friend_request_privacy' => 'friends',
             'ads_personalization_consent' => false,
             'ads_measurement_consent' => false,
+            'product_analytics_consent' => false,
+            'product_analytics_consented_at' => null,
+            'product_analytics_consent_version' => null,
             'event_radius_km' => null,
             'event_default_sport_ids' => null,
             'event_default_filters' => null,
@@ -180,7 +166,7 @@ class UserDataErasureService
         ];
 
         $count = $this->updateWhereIn('users', 'id', [(int) $user->id], $updates);
-        $this->record($summary, 'Profil- und Kontaktdaten', max(1, $count));
+        $this->record($summary, __('data_erasure.summary.profile'), max(1, $count));
     }
 
     private function eraseContent(User $user, array &$storagePaths, array &$summary): void
@@ -217,8 +203,8 @@ class UserDataErasureService
         $this->deleteIn('stories', 'id', $storyIds);
 
         $otherComments = $this->deleteTablesForUser($userId, ['event_comments', 'learning_lesson_comments']);
-        $this->record($summary, 'Beiträge, Kommentare und Storys', count($postIds) + count($commentIds) + count($storyIds) + $otherComments);
-        $this->record($summary, 'Medien aus Beiträgen und Storys', $deletedFiles);
+        $this->record($summary, __('data_erasure.summary.content'), count($postIds) + count($commentIds) + count($storyIds) + $otherComments);
+        $this->record($summary, __('data_erasure.summary.content_media'), $deletedFiles);
     }
 
     private function eraseMessages(User $user, array &$storagePaths, array &$summary): void
@@ -234,7 +220,7 @@ class UserDataErasureService
         $this->deleteIn('message_hides', 'message_id', $messageIds);
 
         $updated = $this->updateWhereIn('messages', 'id', $messageIds, [
-            'message' => '[Nachricht gelöscht]',
+            'message' => __('data_erasure.summary.message_deleted'),
             'kind' => 'text',
             'metadata' => null,
             'status' => 'deleted',
@@ -242,8 +228,8 @@ class UserDataErasureService
             'deleted_at' => now(),
         ]);
 
-        $this->record($summary, 'Eigene Chat-Nachrichten', $updated);
-        $this->record($summary, 'Chat-Anhänge', $deletedFiles);
+        $this->record($summary, __('data_erasure.summary.messages'), $updated);
+        $this->record($summary, __('data_erasure.summary.message_attachments'), $deletedFiles);
     }
 
     private function eraseFiles(User $user, array &$storagePaths, array &$summary): void
@@ -253,8 +239,8 @@ class UserDataErasureService
         $deletedFiles = $this->deleteFilesByIds($userId, $fileIds, $storagePaths);
         $deletedFolders = $this->deleteForUser('folders', $userId);
 
-        $this->record($summary, 'Dateien', $deletedFiles);
-        $this->record($summary, 'Ordner', $deletedFolders);
+        $this->record($summary, __('data_erasure.summary.files'), $deletedFiles);
+        $this->record($summary, __('data_erasure.summary.folders'), $deletedFolders);
     }
 
     private function eraseSportAndHealth(User $user, array &$storagePaths, array &$summary): void
@@ -285,7 +271,7 @@ class UserDataErasureService
         }
         $deleted += $this->deleteIn('training_plans', 'id', $planIds);
 
-        $this->record($summary, 'Sport-, Standort- und Gesundheitsdaten', $deleted);
+        $this->record($summary, __('data_erasure.summary.sport_and_health'), $deleted);
     }
 
     private function eraseSocialAndIntegrations(User $user, array &$summary): void
@@ -322,6 +308,15 @@ class UserDataErasureService
             'activities',
         ]);
 
+        if ($this->hasTable('organization_job_interests')) {
+            $deleted += DB::table('organization_job_interests')
+                ->where(function (Builder $query) use ($user, $userId): void {
+                    $query->where('user_id', $userId)
+                        ->orWhere('email', $user->email);
+                })
+                ->delete();
+        }
+
         $this->updateForUser('ad_events', $userId, [
             'user_id' => null,
             'session_hash' => null,
@@ -334,7 +329,7 @@ class UserDataErasureService
             'metadata' => null,
         ]);
 
-        $this->record($summary, 'Soziale Verbindungen, Benachrichtigungen und Integrationen', $deleted);
+        $this->record($summary, __('data_erasure.summary.social_and_integrations'), $deleted);
     }
 
     private function eraseCommerce(User $user, array &$summary): void
@@ -346,6 +341,15 @@ class UserDataErasureService
             'marketplace_product_wishlists',
             'marketplace_product_reviews',
         ]);
+
+        if ($this->hasTable('website_requests')) {
+            $deleted += DB::table('website_requests')
+                ->where(function (Builder $query) use ($user, $userId): void {
+                    $query->where('user_id', $userId)
+                        ->orWhere('guest_email', $user->email);
+                })
+                ->delete();
+        }
 
         $allOrderIds = $this->ids($this->tableRowsForUser('commerce_orders', $userId, ['id']));
         $anonymizedOrderIds = $this->anonymizableOrderIds($userId);
@@ -381,20 +385,20 @@ class UserDataErasureService
                 $deleted += $this->updateWhereIn('commerce_return_requests', 'id', $returnIds, [
                     'user_id' => null,
                     'guest_email' => null,
-                    'reason' => '[Personenbezogene Angaben entfernt]',
-                    'resolution_note' => '[Personenbezogene Angaben entfernt]',
+                    'reason' => __('data_erasure.summary.personal_data_removed'),
+                    'resolution_note' => __('data_erasure.summary.personal_data_removed'),
                 ]);
             }
         }
 
-        $this->record($summary, 'Warenkörbe, Lieferadressen, Merklisten und Bewertungen', $deleted);
+        $this->record($summary, __('data_erasure.summary.commerce'), $deleted);
 
         $retainedOrders = max(0, count($allOrderIds) - count($anonymizedOrderIds));
         if ($retainedOrders > 0) {
-            $summary['retained'][] = "{$retainedOrders} Bestellvorgang/-vorgänge bleiben vorerst erhalten, weil sie einen Zahlungs-, Rechnungs-, Liefer- oder offenen Klärungsbezug haben können.";
+            $summary['retained'][] = __('data_erasure.summary.retained_orders', ['count' => $retainedOrders]);
         }
 
-        $summary['retained'][] = 'Rechnungen, Zahlungen, Abonnements und andere gesetzlich oder vertraglich erforderliche Nachweise werden nicht durch diese Funktion gelöscht.';
+        $summary['retained'][] = __('data_erasure.summary.financial_records');
     }
 
     /**

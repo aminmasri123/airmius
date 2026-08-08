@@ -23,8 +23,12 @@ class MaturityWebSessionApiTest extends TestCase
 
         $this->actingAs($user)
             ->withHeader('Referer', 'http://localhost/dashboard/maturity')
+            ->withHeader('X-App-Locale', 'ar')
             ->getJson('/api/v1/maturity/overview')
             ->assertOk()
-            ->assertJsonPath('data.overview.user_id', $user->id);
+            ->assertHeader('Content-Language', 'ar')
+            ->assertJsonPath('data.overview.user_id', $user->id)
+            ->assertJsonPath('data.next_actions.0.key', 'name')
+            ->assertJsonPath('data.next_actions.0.label', __('maturity.onboarding.name', locale: 'ar'));
     }
 }

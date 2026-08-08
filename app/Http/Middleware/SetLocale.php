@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\SupportedLocale;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -10,8 +11,6 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
-    private const SUPPORTED_LOCALES = ['de', 'en', 'fr', 'ar'];
-
     public function handle(Request $request, Closure $next)
     {
         $locale = $this->resolveLocale($request);
@@ -24,7 +23,7 @@ class SetLocale
     {
         $locale ??= App::getLocale();
         $response->headers->set('Content-Language', $locale);
-        $response->headers->set('X-Airmius-Text-Direction', $locale === 'ar' ? 'rtl' : 'ltr');
+        $response->headers->set('X-Airmius-Text-Direction', SupportedLocale::direction($locale));
 
         return $response;
     }
@@ -49,27 +48,13 @@ class SetLocale
         }
 
         foreach ($candidates as $candidate) {
-            $locale = $this->normalizeLocale($candidate);
+            $locale = SupportedLocale::normalize($candidate);
 
             if ($locale) {
                 return $locale;
             }
         }
 
-        return 'de';
-    }
-
-    private function normalizeLocale(mixed $locale): ?string
-    {
-        if (! is_string($locale) || trim($locale) === '') {
-            return null;
-        }
-
-        $locale = strtolower(trim(explode(',', $locale)[0] ?? ''));
-        $locale = strtolower(trim(explode(';', $locale)[0] ?? ''));
-        $locale = str_replace('_', '-', $locale);
-        $locale = substr($locale, 0, 2);
-
-        return in_array($locale, self::SUPPORTED_LOCALES, true) ? $locale : null;
+        return SupportedLocale::DEFAULT;
     }
 }

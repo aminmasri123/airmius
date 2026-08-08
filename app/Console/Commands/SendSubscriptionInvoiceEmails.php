@@ -33,11 +33,18 @@ class SendSubscriptionInvoiceEmails extends Command
 
                     $invoice->user->notify(new SubscriptionInvoiceReminder($invoice));
 
-                    AppNotification::send($invoice->user_id, 'subscription.invoice.reminder', [
-                        'title' => 'Airmius Rechnung ist offen',
-                        'body' => $invoice->number.' ist fällig.',
-                        'subscription_invoice_id' => $invoice->id,
-                    ]);
+                    AppNotification::sendLocalized(
+                        $invoice->user_id,
+                        'subscription.invoice.reminder',
+                        'notification_settings.notifications.invoice_reminder_title',
+                        'notification_settings.notifications.invoice_reminder_body',
+                        ['invoice' => $invoice->number],
+                        ['subscription_invoice_id' => $invoice->id],
+                        [
+                            'dedupe_key' => 'subscription-invoice:'.$invoice->id.':overdue-reminder',
+                            'priority' => 'high',
+                        ],
+                    );
 
                     $invoice->forceFill([
                         'status' => 'overdue',

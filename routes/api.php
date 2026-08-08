@@ -40,7 +40,10 @@ use App\Http\Controllers\Api\V1\PasswordRecoveryController;
 use App\Http\Controllers\Api\V1\PlatformAdminController;
 use App\Http\Controllers\Api\V1\PostImageUploadController;
 use App\Http\Controllers\Api\V1\PrivacyController;
+use App\Http\Controllers\Api\V1\PublicAgencyController;
 use App\Http\Controllers\Api\V1\PublicContentController;
+use App\Http\Controllers\Api\V1\PublicRecruitingController;
+use App\Http\Controllers\Api\V1\RecruitingPipelineController;
 use App\Http\Controllers\Api\V1\RideController as MobileRideController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\SponsorManagementController;
@@ -115,6 +118,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('/public/sponsors', [PublicContentController::class, 'sponsors'])
         ->middleware('throttle:public-content')
         ->name('public.sponsors.index');
+    Route::get('/public/recruiting/jobs', [PublicRecruitingController::class, 'index'])
+        ->middleware('throttle:public-content')
+        ->name('public.recruiting.jobs.index');
+    Route::post('/public/recruiting/jobs/{organizationJob}/interest', [PublicRecruitingController::class, 'submitInterest'])
+        ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
+        ->name('public.recruiting.jobs.interest');
+    Route::post('/public/agency/requests', [PublicAgencyController::class, 'store'])
+        ->middleware(['throttle:content-reports', EnsureIdempotentApiRequest::class])
+        ->name('public.agency.requests.store');
     Route::get('/public/clubs', [PublicClubController::class, 'indexJson'])
         ->middleware('throttle:public-content')
         ->name('public.clubs.index');
@@ -288,6 +300,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('sponsor-workspace.index');
         Route::put('/sponsor-workspace/profile', [SponsorWorkspaceController::class, 'updateProfile'])
             ->name('sponsor-workspace.profile.update');
+        Route::get('/recruiting-pipeline', [RecruitingPipelineController::class, 'index'])
+            ->name('recruiting-pipeline.index');
+        Route::put('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'update'])
+            ->name('recruiting-pipeline.applications.update');
+        Route::delete('/recruiting-pipeline/applications/{interest}', [RecruitingPipelineController::class, 'destroy'])
+            ->name('recruiting-pipeline.applications.destroy');
 
         Route::get('/users/me/sport-cv', [SportProfileController::class, 'me'])->name('users.me.sport-cv');
         Route::get('/sport-integrations', [MobileSportIntegrationController::class, 'index'])

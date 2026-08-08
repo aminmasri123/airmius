@@ -31,12 +31,12 @@ class GuardianConsentController extends Controller
         $request->validate([
             'guardian_confirmation' => ['accepted'],
         ], [
-            'guardian_confirmation.accepted' => 'Bitte bestätigen Sie, dass Sie erziehungsberechtigt sind.',
+            'guardian_confirmation.accepted' => __('guardian.validation.confirmation_required'),
         ]);
 
         $this->approveMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestätigt.');
+        return $this->redirectAfterDecision($request, __('guardian.responses.registration_approved'));
     }
 
     public function approveDirect(Request $request, string $token): RedirectResponse
@@ -45,7 +45,7 @@ class GuardianConsentController extends Controller
 
         $this->approveMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestätigt.');
+        return $this->redirectAfterDecision($request, __('guardian.responses.registration_approved'));
     }
 
     public function reject(Request $request, string $token): RedirectResponse
@@ -54,7 +54,7 @@ class GuardianConsentController extends Controller
 
         $this->rejectMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde abgelehnt.');
+        return $this->redirectAfterDecision($request, __('guardian.responses.registration_rejected'));
     }
 
     public function rejectDirect(Request $request, string $token): RedirectResponse
@@ -63,7 +63,7 @@ class GuardianConsentController extends Controller
 
         $this->rejectMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde abgelehnt.');
+        return $this->redirectAfterDecision($request, __('guardian.responses.registration_rejected'));
     }
 
     public function pending(Request $request): Response
@@ -86,14 +86,14 @@ class GuardianConsentController extends Controller
         $user = $request->user();
 
         abort_unless($user->hasRole('minor_pending_consent'), 403);
-        abort_if($user->guardian_consent_at, 422, 'Die Zustimmung wurde bereits erteilt.');
-        abort_if(empty($user->guardian_email), 422, 'Es ist keine E-Mail eines Erziehungsberechtigten hinterlegt.');
+        abort_if($user->guardian_consent_at, 422, __('guardian.validation.already_approved'));
+        abort_if(empty($user->guardian_email), 422, __('guardian.validation.guardian_email_missing'));
 
         $availableIn = $this->resendAvailableIn($user);
 
         if ($availableIn > 0) {
             return back()->withErrors([
-                'resend' => "Bitte warte noch {$availableIn} Sekunden, bevor du die E-Mail erneut sendest.",
+                'resend' => __('guardian.validation.resend_wait', ['seconds' => $availableIn]),
             ]);
         }
 
@@ -105,7 +105,7 @@ class GuardianConsentController extends Controller
 
         GuardianConsentNotifier::send($user, $user->guardian_email);
 
-        return back()->with('success', 'Die E-Mail wurde erneut gesendet.');
+        return back()->with('success', __('guardian.responses.email_resent'));
     }
 
     private function findMinorByToken(string $token): User
@@ -146,13 +146,17 @@ class GuardianConsentController extends Controller
             $request->user()->assignRole('guardian');
         }
 
-        AppNotification::send($minor, 'guardian.consent_approved', [
-            'title' => 'Zustimmung erteilt',
-            'body' => 'Dein Airmius-Konto wurde von einem Erziehungsberechtigten freigegeben.',
-            'minor_id' => $minor->id,
-            'guardian_user_id' => $minor->guardian_user_id,
-            'url' => route('auth.dashboard'),
-        ]);
+        AppNotification::sendLocalized(
+            $minor,
+            'guardian.consent_approved',
+            'guardian.notifications.approved_title',
+            'guardian.notifications.approved_body',
+            data: [
+                'minor_id' => $minor->id,
+                'guardian_user_id' => $minor->guardian_user_id,
+                'url' => route('auth.dashboard'),
+            ],
+        );
     }
 
     private function rejectMinor(Request $request, User $minor): void
@@ -163,13 +167,17 @@ class GuardianConsentController extends Controller
             'guardian_consent_token' => null,
         ])->save();
 
-        AppNotification::send($minor, 'guardian.consent_rejected', [
-            'title' => 'Zustimmung abgelehnt',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde abgelehnt. Du kannst eine erneute Anfrage auslösen.',
-            'minor_id' => $minor->id,
-            'guardian_user_id' => $minor->guardian_user_id,
-            'url' => route('guardian-consent.pending'),
-        ]);
+        AppNotification::sendLocalized(
+            $minor,
+            'guardian.consent_rejected',
+            'guardian.notifications.rejected_title',
+            'guardian.notifications.rejected_body',
+            data: [
+                'minor_id' => $minor->id,
+                'guardian_user_id' => $minor->guardian_user_id,
+                'url' => route('guardian-consent.pending'),
+            ],
+        );
     }
 
     private function redirectAfterDecision(Request $request, string $message): RedirectResponse

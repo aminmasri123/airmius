@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 class PlanFeatureService
 {
     public const FREE_MEMBER_INVITATIONS_PER_DAY = 3;
+
     public const FREE_MANUAL_MEMBER_ADDITIONS_PER_DAY = 3;
 
     private const PLAN_LEVELS = [
@@ -296,7 +297,7 @@ class PlanFeatureService
     {
         $activePlan = $user->subscriptions()
             ->with('plan:id,slug,name,target_actor,storage_gb')
-            ->whereIn('status', ['active', 'trialing'])
+            ->grantingAccess()
             ->get()
             ->filter(fn ($subscription) => $subscription->plan)
             ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')

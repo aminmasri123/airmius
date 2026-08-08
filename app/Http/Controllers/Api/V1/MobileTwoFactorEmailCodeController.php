@@ -38,7 +38,7 @@ class MobileTwoFactorEmailCodeController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Wir haben dir einen Sicherheitscode per E-Mail gesendet.',
+                'message' => __('account_security.responses.email_code_sent'),
                 'email' => Str::mask((string) $user->email, '*', 2, max(1, strlen((string) $user->email) - 5)),
                 'expires_in' => MobileTwoFactorChallenge::EXPIRES_IN_SECONDS,
             ],

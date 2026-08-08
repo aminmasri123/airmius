@@ -9,15 +9,18 @@ use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
 use App\Models\UserRoleApplication;
+use App\Services\ProductAnalyticsConsentService;
 use App\Services\Training\AthleteSportProfileService;
 use App\Support\BillingOverview;
 use App\Support\MinorSafety;
 use App\Support\NavigationModules;
+use App\Support\NotificationRouting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class UserSettingsController extends Controller
 {
@@ -61,7 +64,12 @@ class UserSettingsController extends Controller
                 'friend_request_privacy',
                 'ads_personalization_consent',
                 'ads_measurement_consent',
+                'product_analytics_consent',
             ]),
+            'notificationPreferences' => [
+                'channels' => NotificationRouting::preferencesFor($user),
+                'quiet_time' => $user->notification_quiet_time ?: 'late',
+            ],
             'navigationModules' => NavigationModules::payload($user),
             'eventDefaults' => [
                 'radius_km' => $user->event_radius_km,
@@ -113,7 +121,7 @@ class UserSettingsController extends Controller
                 ->latest('id')
                 ->get(['id', 'provider', 'email', 'name', 'avatar_url', 'created_at']),
             'sportIntegrations' => [
-                'providers' => SportIntegrationController::PROVIDERS,
+                'providers' => SportIntegrationController::localizedProviders(),
                 'accounts' => $user
                     ->connectedSportAccounts()
                     ->latest('id')
@@ -232,63 +240,88 @@ class UserSettingsController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request)
+    public function update(Request $request, ProductAnalyticsConsentService $analyticsConsent)
     {
-            $data = $request->validate([
-                'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail,bazaar,vital'],
-                'country' => ['required', 'string', 'size:2'],
-                'street' => ['nullable', 'string', 'max:255'],
-                'house_number' => ['nullable', 'string', 'max:40'],
-                'postal_code' => ['nullable', 'string', 'max:30'],
-                'city' => ['nullable', 'string', 'max:255'],
-                'state' => ['nullable', 'string', 'max:255'],
-                'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
-                'event_default_sport_ids' => ['nullable', 'array'],
-                'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
-                'profile_visibility' => ['nullable', 'in:public,private'],
-                'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
-                'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
-                'ads_personalization_consent' => ['boolean'],
-                'ads_measurement_consent' => ['boolean'],
-                'enabled_navigation_modules' => ['nullable', 'array'],
-                'enabled_navigation_modules.*' => ['string', Rule::in(NavigationModules::keys())],
-            ]);
+        $data = $request->validate([
+            'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail,bazaar,vital'],
+            'country' => ['required', 'string', 'size:2'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:40'],
+            'postal_code' => ['nullable', 'string', 'max:30'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'event_default_sport_ids' => ['nullable', 'array'],
+            'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
+            'profile_visibility' => ['nullable', 'in:public,private'],
+            'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
+            'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
+            'notification_channels' => ['nullable', 'array'],
+            'notification_channels.*' => ['boolean'],
+            'notification_quiet_time' => ['nullable', Rule::in(['none', 'late', 'early', 'weekend'])],
+            'ads_personalization_consent' => ['boolean'],
+            'ads_measurement_consent' => ['boolean'],
+            'product_analytics_consent' => ['boolean'],
+            'enabled_navigation_modules' => ['nullable', 'array'],
+            'enabled_navigation_modules.*' => ['string', Rule::in(NavigationModules::keys())],
+        ]);
 
-            if (empty($data['theme'])) {
-                unset($data['theme']);
+        if (empty($data['theme'])) {
+            unset($data['theme']);
+        }
+
+        if (MinorSafety::isUnderConsentAge($request->user())) {
+            $data = array_merge($data, MinorSafety::privacyDefaults());
+        }
+
+        if (array_key_exists('notification_channels', $data)) {
+            $unknownChannels = array_diff(
+                array_keys($data['notification_channels'] ?? []),
+                NotificationRouting::preferenceKeys(),
+            );
+            if ($unknownChannels !== []) {
+                throw ValidationException::withMessages([
+                    'notification_channels' => __('notification_settings.validation.unknown_channel'),
+                ]);
             }
 
-            if (MinorSafety::isUnderConsentAge($request->user())) {
-                $data = array_merge($data, MinorSafety::privacyDefaults());
-            }
+            $data['notification_channels'] = array_replace(
+                NotificationRouting::preferencesFor($request->user()),
+                $data['notification_channels'] ?? [],
+            );
+        }
 
-            if (array_key_exists('enabled_navigation_modules', $data)) {
-                $data['enabled_navigation_modules'] = NavigationModules::sanitize(
-                    $request->user(),
-                    $data['enabled_navigation_modules'],
-                );
-            }
+        if (array_key_exists('enabled_navigation_modules', $data)) {
+            $data['enabled_navigation_modules'] = NavigationModules::sanitize(
+                $request->user(),
+                $data['enabled_navigation_modules'],
+            );
+        }
 
-            $eventSportIds = collect($data['event_default_sport_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();
-            $eventDefaults = array_merge($request->user()->event_default_filters ?? [], [
-                'radius_km' => $data['event_radius_km'] ?? null,
-                'sport_ids' => $eventSportIds,
-            ]);
+        $eventSportIds = collect($data['event_default_sport_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $eventDefaults = array_merge($request->user()->event_default_filters ?? [], [
+            'radius_km' => $data['event_radius_km'] ?? null,
+            'sport_ids' => $eventSportIds,
+        ]);
+        $previousAnalyticsConsent = (bool) $request->user()->product_analytics_consent;
+        $analyticsConsentUpdates = $analyticsConsent->updates($request->user(), $data);
 
-            $request->user()->update([
-                ...$data,
-                'country' => strtoupper($data['country']),
-                'event_radius_km' => $data['event_radius_km'] ?? null,
-                'event_default_sport_ids' => $eventSportIds,
-                'event_default_filters' => $eventDefaults,
-                'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
-                'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
-                'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
-                'ads_personalization_consent' => (bool) ($data['ads_personalization_consent'] ?? false),
-                'ads_measurement_consent' => (bool) ($data['ads_measurement_consent'] ?? false),
-            ]);
+        $request->user()->update([
+            ...$data,
+            'country' => strtoupper($data['country']),
+            'event_radius_km' => $data['event_radius_km'] ?? null,
+            'event_default_sport_ids' => $eventSportIds,
+            'event_default_filters' => $eventDefaults,
+            'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
+            'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
+            'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
+            'ads_personalization_consent' => (bool) ($data['ads_personalization_consent'] ?? false),
+            'ads_measurement_consent' => (bool) ($data['ads_measurement_consent'] ?? false),
+            ...$analyticsConsentUpdates,
+        ]);
+        $analyticsConsent->auditIfChanged($request->user()->refresh(), $previousAnalyticsConsent);
 
-            return back()->with('success', 'Einstellungen wurden gespeichert.');
+        return back()->with('success', __('notification_settings.responses.settings_saved'));
     }
 
     public function updateSportProfile(Request $request, Sport $sport, AthleteSportProfileService $sportProfiles)
@@ -367,7 +400,6 @@ class UserSettingsController extends Controller
 
         return back()->with('success', 'Offene Zahlung wurde gelöscht.');
     }
-
 
     /**
      * Remove the specified resource from storage.

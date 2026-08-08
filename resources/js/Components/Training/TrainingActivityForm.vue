@@ -10,7 +10,7 @@ const emit = defineEmits(['set-image', 'submit'])
 
 <template>
     <form class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="emit('submit')">
-        <label class="block text-sm font-semibold text-primary md:col-span-2">Name
+        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Name') }}
             <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
         </label>
         <label class="block text-sm font-semibold text-primary">Sportart

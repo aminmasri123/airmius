@@ -30,6 +30,7 @@ use App\Services\AdminCommerceDashboardPayloadService;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
 use App\Services\MediaOptimizer;
+use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\CarrierTracking;
 use App\Support\MarketplaceProductInput;
@@ -52,6 +53,7 @@ class AdminCommerceController extends Controller
         private CommerceAuditService $audit,
         private CommerceDocumentService $documents,
         private AdminCommerceDashboardPayloadService $dashboardPayload,
+        private WebsiteRequestService $websiteRequests,
     ) {}
 
     public function index(Request $request)
@@ -358,12 +360,17 @@ class AdminCommerceController extends Controller
         $freshOrder = $order->fresh(['user']);
 
         if ($freshOrder?->user_id) {
-            AppNotification::send($freshOrder->user_id, 'commerce.order.issue_replied', [
-                'title' => 'Antwort zu deiner Meldung',
-                'body' => 'Airmius hat auf deine Meldung zu Bestellung #'.$freshOrder->id.' geantwortet.',
-                'url' => route('auth.commerce.index', ['tab' => 'invoices']),
-                'order_id' => $freshOrder->id,
-            ]);
+            AppNotification::sendLocalized(
+                $freshOrder->user_id,
+                'commerce.order.issue_replied',
+                'commerce.notifications.issue_replied_title',
+                'commerce.notifications.issue_replied_body',
+                ['id' => $freshOrder->id],
+                [
+                    'url' => route('auth.commerce.index', ['tab' => 'invoices']),
+                    'order_id' => $freshOrder->id,
+                ],
+            );
         }
 
         return back()->with('success', 'Antwort wurde gesendet.');
@@ -783,34 +790,46 @@ class AdminCommerceController extends Controller
             return;
         }
 
-        $statusLabel = match ($order->shipping_status) {
-            'prepared' => 'wird vorbereitet',
-            'shipped' => 'wurde versendet',
-            'delivered' => 'wurde zugestellt',
-            default => 'wurde aktualisiert',
-        };
+        $status = in_array($order->shipping_status, ['prepared', 'shipped', 'delivered'], true)
+            ? $order->shipping_status
+            : 'updated';
 
-        $tracking = $order->tracking_number
-            ? ' Tracking: '.$order->tracking_number
-            : '';
-
-        AppNotification::send($order->user_id, 'commerce.order.shipping_updated', [
-            'title' => 'Versand aktualisiert',
-            'body' => 'Deine Bestellung #'.$order->id.' '.$statusLabel.'.'.$tracking,
-            'url' => route('auth.commerce.index'),
-            'order_id' => $order->id,
-            'shipping_status' => $order->shipping_status,
-        ]);
+        AppNotification::sendLocalized(
+            $order->user_id,
+            'commerce.order.shipping_updated',
+            'commerce.notifications.shipping_updated_title',
+            'commerce.notifications.shipping_updated_body',
+            [
+                'id' => $order->id,
+                'status' => AppNotification::translatedReplacement(
+                    'commerce.shipping_status.'.$status,
+                    (string) $order->shipping_status,
+                ),
+                'tracking' => $order->tracking_number
+                    ? AppNotification::translatedReplacement(
+                        'commerce.notifications.shipping_tracking',
+                        ' Tracking: '.$order->tracking_number,
+                        ['number' => $order->tracking_number],
+                    )
+                    : '',
+            ],
+            [
+                'url' => route('auth.commerce.index'),
+                'order_id' => $order->id,
+                'shipping_status' => $order->shipping_status,
+            ],
+        );
     }
 
     public function updateWebsiteRequest(Request $request, WebsiteRequest $websiteRequest)
     {
-        $websiteRequest->update($request->validate([
-            'status' => ['required', Rule::in(['new', 'contacted', 'quoted', 'in_progress', 'done', 'cancelled'])],
+        $data = $request->validate([
+            'status' => ['required', Rule::in(WebsiteRequestService::STATUSES)],
             'notes' => ['nullable', 'string', 'max:2000'],
-        ]));
+        ]);
+        $this->websiteRequests->updateWorkflow($websiteRequest, $request->user(), $data);
 
-        return back()->with('success', 'Website-Anfrage aktualisiert.');
+        return back()->with('success', __('agency.flash.request_updated'));
     }
 
     public function createPayout(Request $request, User $user)
@@ -1788,8 +1807,8 @@ class AdminCommerceController extends Controller
         return [
             'side_banner' => [
                 'setting_key' => 'marketplace_visual_side_banner',
-                'label' => 'Seitlicher Marketplace-Banner',
-                'description' => 'Schmaler Hintergrund links und rechts. Bitte ohne Text, Logo oder wichtige Motive am Rand hochladen.',
+                'label' => __('media_guidelines.visuals.marketplace_side.label'),
+                'description' => __('media_guidelines.visuals.marketplace_side.description_detailed'),
                 'recommended_size' => '192 x 1080 px oder 384 x 2160 px für Retina',
                 'default_width' => 192,
                 'default_height' => 1080,
@@ -1797,8 +1816,8 @@ class AdminCommerceController extends Controller
             ],
             'hero_banner' => [
                 'setting_key' => 'marketplace_visual_hero_banner',
-                'label' => 'Oberer Aktions-/Hero-Banner',
-                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Fokus links/mittig halten, da Text darüber liegen kann.',
+                'label' => __('media_guidelines.visuals.marketplace_hero.label'),
+                'description' => __('media_guidelines.visuals.marketplace_hero.description_detailed'),
                 'recommended_size' => '1600 x 900 px',
                 'default_width' => 1600,
                 'default_height' => 900,
@@ -1806,8 +1825,8 @@ class AdminCommerceController extends Controller
             ],
             'sale_banner' => [
                 'setting_key' => 'marketplace_visual_sale_banner',
-                'label' => 'Sale-Kachel / Aktionsbild',
-                'description' => 'Optionales Bild für die rechte Sale-Kachel im ersten Marketplace-Bereich.',
+                'label' => __('media_guidelines.visuals.marketplace_sale.label'),
+                'description' => __('media_guidelines.visuals.marketplace_sale.description_detailed'),
                 'recommended_size' => '800 x 1000 px',
                 'default_width' => 800,
                 'default_height' => 1000,

@@ -17,7 +17,7 @@ class PricingController extends Controller
         $activePlanIds = $request->user()
             ? $request->user()
                 ->subscriptions()
-                ->whereIn('status', ['active', 'trialing'])
+                ->grantingAccess()
                 ->pluck('subscription_plan_id')
                 ->all()
             : [];

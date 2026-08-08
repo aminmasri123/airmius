@@ -18,6 +18,7 @@ use App\Models\MessageReaction;
 use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
@@ -33,6 +34,7 @@ class ChatController extends Controller
     public function __construct(
         private readonly ChatService $chatService,
         private readonly ModerationService $moderation,
+        private readonly ChatLatestMessageLoader $latestMessageLoader,
     ) {}
 
     public function index(Request $request)
@@ -62,9 +64,10 @@ class ChatController extends Controller
         }
 
         $conversations = $conversationsQuery->paginate($this->perPage($request));
-        $this->attachLatestVisibleMessages(
+        $this->latestMessageLoader->attach(
             $conversations->getCollection(),
             (int) $request->user()->id,
+            ['sender', 'receipts', 'attachments.file', 'reactions.user'],
         );
 
         return ConversationResource::collection($conversations);
@@ -268,15 +271,19 @@ class ChatController extends Controller
                     return;
                 }
 
-                AppNotification::send($recipient, 'chat.message', [
-                    'title' => 'Neue Nachricht von '.$sender->name,
-                    'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
-                    'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
-                    'actor_id' => $sender->id,
-                    'actor_name' => $sender->name,
-                    'conversation_id' => $conversation->id,
-                    'message_id' => $message->id,
-                ]);
+                AppNotification::sendLocalized($recipient, 'chat.message',
+                    'server.chat.notifications.message_title',
+                    $message->message ? null : 'server.chat.notifications.attachment',
+                    ['sender' => $sender->name], [
+                        'body' => $message->message ? str($message->message)->limit(120)->toString() : null,
+                        'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+                        'actor_id' => $sender->id,
+                        'actor_name' => $sender->name,
+                        'conversation_id' => $conversation->id,
+                        'message_id' => $message->id,
+                    ], [
+                        'dedupe_key' => 'chat-message:'.$message->id,
+                    ]);
             });
 
         return (new MessageResource(
@@ -479,50 +486,6 @@ class ChatController extends Controller
         return $conversation->fresh()
             ->loadMissing(['users', 'team', 'owner'])
             ->loadCount('messages');
-    }
-
-    private function attachLatestVisibleMessages($conversations, int $userId): void
-    {
-        if ($conversations->isEmpty()) {
-            return;
-        }
-
-        $conversationIds = $conversations->pluck('id');
-        $joinedAtByConversation = DB::table('conversation_users')
-            ->where('user_id', $userId)
-            ->whereIn('conversation_id', $conversationIds)
-            ->pluck('joined_at', 'conversation_id');
-
-        $latestMessageIds = Message::query()
-            ->selectRaw('MAX(messages.id) as id')
-            ->whereIn('conversation_id', $conversationIds)
-            ->where('moderation_status', '!=', 'removed')
-            ->whereDoesntHave('hides', fn ($hides) => $hides->where('user_id', $userId))
-            ->where(function ($visibleMessages) use ($conversations, $joinedAtByConversation) {
-                $conversations->each(function (Conversation $conversation) use ($visibleMessages, $joinedAtByConversation) {
-                    $visibleMessages->orWhere(function ($conversationMessages) use ($conversation, $joinedAtByConversation) {
-                        $conversationMessages->where('conversation_id', $conversation->id);
-
-                        $joinedAt = $joinedAtByConversation->get($conversation->id);
-                        if ($conversation->type === 'group' && $joinedAt) {
-                            $conversationMessages->where('created_at', '>=', $joinedAt);
-                        }
-                    });
-                });
-            })
-            ->groupBy('conversation_id')
-            ->pluck('id');
-
-        $latestMessages = Message::query()
-            ->whereIn('id', $latestMessageIds)
-            ->with(['sender', 'receipts', 'attachments.file', 'reactions.user'])
-            ->get()
-            ->keyBy('conversation_id');
-
-        $conversations->each(fn (Conversation $conversation) => $conversation->setRelation(
-            'latestVisibleMessage',
-            $latestMessages->get($conversation->id),
-        ));
     }
 
     private function authorizeParticipant(Conversation $conversation, Request $request): void

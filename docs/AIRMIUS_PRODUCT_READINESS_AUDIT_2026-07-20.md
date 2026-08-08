@@ -152,7 +152,7 @@ Aktueller Befund nach der Umsetzung:
 - Oeffentliche SEO-Seiten fuer Vereine, Sportarten, Events und Staedte, SSR und strukturierte Daten.
 - Verifiziertes Anbieter-/Sponsor-Onboarding, Steuerdaten, Auszahlungen und erweitertes Ads-Reporting.
 - Finale Google-Fit-/Garmin-/Mi-Fitness-Anbindungen.
-- Produktanalytics mit Consent: Aktivierung, Retention, Team-/Vereinsnutzung, Conversion und Abwanderungsgruende.
+- [x] Die technische Produktanalyse-Baseline ist datenschutzorientiert umgesetzt: separate widerrufbare Einwilligung, Ausschluss Minderjähriger, Mindestkohorte fünf, eigene `analytics.view`-Berechtigung und aggregierte Aktivierungs-, Bindungs-, Trainings-, Team-, Kauf- und Kündigungskennzahlen ohne neue Rohereignistabelle, Tracking-SDK oder zusätzliche Cookies. Nicht eingewilligte Personen werden ausgeschlossen; kleine Teilmengen werden unterdrückt. Produktive Aktivierung, KPI-/Zweckfreigabe, DPIA-Bewertung und fachliche Sprachabnahme bleiben externe P0-Gates.
 
 ## Empfohlene Markteintrittspositionierung
 

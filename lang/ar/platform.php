@@ -1,0 +1,70 @@
+<?php
+
+return [
+    'social' => [
+        'self_follow' => 'لا يمكنك متابعة نفسك.',
+        'follow_started' => 'أنت تتابع هذا الملف الشخصي الآن.',
+        'follow_stopped' => 'لم تعد تتابع هذا الملف الشخصي.',
+        'follow_title' => 'يتابعك :name الآن',
+        'follow_body' => 'بدأ شخص جديد بمتابعة ملفك الشخصي.',
+        'report_sent' => 'شكرًا لك. تم إرسال البلاغ إلى فريق الإشراف.',
+        'appeal_sent' => 'تم إرسال اعتراضك إلى فريق الإشراف.',
+        'story_created' => 'تم إنشاء القصة.',
+        'post_deleted' => 'تم حذف المنشور.',
+        'sport_profile_updated' => 'تم تحديث الملف الرياضي.',
+        'skill_updated' => 'تم تحديث المهارة.',
+        'skill_confirmed' => 'تم تأكيد المهارة.',
+        'trainer_mention_title' => 'تلقيت إشارة كمدرب',
+        'trainer_mention_body' => 'أكد :name مهارتك في :skill بصفته مدربًا.',
+        'recommendation_title' => 'تلقيت توصية جديدة',
+        'trainer_recommendation_body' => 'كتب :name توصية بصفته مدربًا وهي بانتظار موافقتك.',
+        'recommendation_body' => 'كتب :name توصية وهي بانتظار موافقتك.',
+        'recommendation_sent' => 'تم إرسال التوصية وهي بانتظار الموافقة.',
+    ],
+    'chat' => [
+        'removed_title' => 'تمت إزالتك من محادثة جماعية',
+        'owner_title' => 'أصبحت الآن مالك محادثة جماعية',
+        'group_body' => ':conversation',
+        'group_fallback' => 'محادثة جماعية',
+    ],
+    'training' => [
+        'exercise_removed' => 'تمت إزالة التمرين من المكتبة.',
+    ],
+    'dashboard' => [
+        'next_training_title' => 'وثّق جلستك التالية',
+        'next_event_title' => 'الحدث التالي',
+    ],
+    'organization' => [
+        'this_year' => 'هذا العام',
+        'announcement_published' => 'تم نشر الإعلان.',
+        'announcement_read' => 'تم حفظ تأكيد القراءة.',
+        'announcement_not_available' => 'هذا الإعلان غير متاح لك.',
+        'announcement_members_only' => 'يمكن لأعضاء النادي فقط عرض الإعلانات.',
+        'verification_mail' => [
+            'approved_subject' => 'تمت الموافقة على ناديك',
+            'rejected_subject' => 'تم رفض طلب ناديك',
+            'greeting' => 'مرحبًا :name،',
+            'approved_line' => 'تمت مراجعة ناديك «:club» والموافقة عليه.',
+            'approved_official' => 'أصبح النادي ظاهرًا للعامة ومميزًا كنادٍ رسمي.',
+            'approved_public' => 'أصبح النادي ظاهرًا للعامة.',
+            'rejected_line' => 'تم رفض طلبك للنادي «:club».',
+            'rejected_help' => 'يُرجى مراجعة الملاحظات في لوحة التحكم أو التواصل مع الدعم.',
+            'notes' => 'ملاحظة: :notes',
+            'action' => 'فتح النادي',
+        ],
+    ],
+    'commerce' => [
+        'verified_buyer_required' => 'يمكن للمشترين الموثقين فقط تقييم هذا المنتج.',
+    ],
+    'learning' => [
+        'certificate_not_found' => 'لم يتم العثور على الشهادة.',
+    ],
+    'notification_digest' => [
+        'subject' => 'ملخص إشعارات Airmius',
+        'greeting' => 'مرحبًا،',
+        'intro' => 'إليك ملخص إشعارات Airmius غير المقروءة خلال اليوم الماضي:',
+        'outro' => 'افتح Airmius لقراءة التفاصيل وإدارة إشعاراتك.',
+        'action' => 'فتح Airmius',
+        'fallback_title' => 'إشعار',
+    ],
+];

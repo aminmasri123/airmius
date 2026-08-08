@@ -135,11 +135,16 @@ class SubscriptionInvoiceController extends Controller
         ])->save();
 
         if ($invoice->user_id) {
-            AppNotification::send($invoice->user_id, 'subscription.invoice.paid', [
-                'title' => 'Airmius Rechnung bezahlt',
-                'body' => $invoice->number.' wurde als bezahlt markiert.',
+            AppNotification::sendLocalized(
+                $invoice->user_id,
+                'subscription.invoice.paid',
+                'subscription.notifications.paid_title',
+                'subscription.notifications.paid_body',
+                ['invoice' => $invoice->number],
+                [
                 'subscription_invoice_id' => $invoice->id,
-            ]);
+                ],
+            );
         }
 
         return back()->with('success', 'Rechnung wurde als bezahlt markiert und das Abo wurde aktiviert.');

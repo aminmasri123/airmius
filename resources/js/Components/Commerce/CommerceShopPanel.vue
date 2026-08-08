@@ -59,8 +59,8 @@ const emit = defineEmits([
                 <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
                 <select :value="provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" @change="emit('update:provider', $event.target.value)">
                     <option value="bank_transfer">Überweisung</option>
-                    <option value="stripe">Stripe</option>
-                    <option value="paypal">PayPal</option>
+                    <option value="stripe">{{ $t('Stripe') }}</option>
+                    <option value="paypal">{{ $t('PayPal') }}</option>
                 </select>
             </div>
             <div>
@@ -195,7 +195,6 @@ const emit = defineEmits([
         </div>
     </section>
 </template>
-
 
 
 

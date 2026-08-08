@@ -473,7 +473,7 @@ const selectSegment = (segment) => {
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
                 <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <div class="hidden min-w-0 sm:block">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ mt("Marketplace") }}</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">

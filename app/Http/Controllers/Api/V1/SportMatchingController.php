@@ -83,13 +83,17 @@ class SportMatchingController extends Controller
 
     public function apply(Request $request, SportMatching $sportMatching)
     {
-        abort_if($sportMatching->status !== 'open' || $sportMatching->user_id === $request->user()->id, 422);
+        abort_if(
+            $sportMatching->status !== 'open' || $sportMatching->user_id === $request->user()->id,
+            422,
+            __('sport_matching.errors.not_open_or_own'),
+        );
         $data = $request->validate([
             'team_id' => ['nullable', 'integer', 'exists:teams,id'],
             'message' => ['nullable', 'string', 'max:1000'],
         ]);
         if ($sportMatching->mode === 'team') {
-            abort_if(empty($data['team_id']), 422, 'Für Team-Matching ist ein Team erforderlich.');
+            abort_if(empty($data['team_id']), 422, __('sport_matching.errors.team_required'));
             $this->assertTeamMember($request, (int) $data['team_id']);
         } else {
             $data['team_id'] = null;
@@ -103,18 +107,25 @@ class SportMatchingController extends Controller
             ],
             ['message' => $data['message'] ?? null, 'status' => 'pending'],
         );
-        AppNotification::send($sportMatching->user_id, 'sport_matching.application', [
-            'title' => 'Neue Matching-Anfrage',
-            'body' => $request->user()->name.' interessiert sich für '.$sportMatching->title,
-            'matching_id' => $sportMatching->id,
-        ]);
+        AppNotification::sendLocalized(
+            $sportMatching->user_id,
+            'sport_matching.application',
+            'sport_matching.notifications.application_title',
+            'sport_matching.notifications.application_body',
+            ['user' => $request->user()->name, 'matching' => $sportMatching->title],
+            ['matching_id' => $sportMatching->id],
+        );
 
         return response()->json(['data' => $application->load(['user', 'team'])]);
     }
 
     public function dismiss(Request $request, SportMatching $sportMatching)
     {
-        abort_if($sportMatching->user_id === $request->user()->id, 422);
+        abort_if(
+            $sportMatching->user_id === $request->user()->id,
+            422,
+            __('sport_matching.errors.own_offer_cannot_be_dismissed'),
+        );
 
         $data = $request->validate([
             'dismissed' => ['sometimes', 'boolean'],
@@ -131,7 +142,12 @@ class SportMatchingController extends Controller
 
     public function decide(Request $request, SportMatching $sportMatching, SportMatchingApplication $application)
     {
-        abort_unless($sportMatching->user_id === $request->user()->id && $application->sport_matching_id === $sportMatching->id, 403);
+        abort_unless(
+            $sportMatching->user_id === $request->user()->id
+                && $application->sport_matching_id === $sportMatching->id,
+            403,
+            __('sport_matching.errors.owner_only'),
+        );
         $data = $request->validate(['status' => ['required', Rule::in(['accepted', 'declined'])]]);
         $application->loadMissing('user');
         $previousStatus = $application->status;
@@ -153,7 +169,7 @@ class SportMatchingController extends Controller
                 $this->chatService->sendMessage(
                     $request->user(),
                     $conversation->id,
-                    'Matching bestätigt. Ihr könnt jetzt die Details für eure gemeinsame Sporteinheit abstimmen.',
+                    __('sport_matching.chat.accepted'),
                 );
             }
 
@@ -164,17 +180,25 @@ class SportMatchingController extends Controller
         }
 
         if ($previousStatus !== $data['status']) {
-            AppNotification::send($application->user_id, 'sport_matching.decision', [
-                'title' => $data['status'] === 'accepted' ? 'Matching bestätigt' : 'Matching-Anfrage abgelehnt',
-                'body' => $data['status'] === 'accepted'
-                    ? 'Der Chat für euer Sport-Match ist bereit.'
-                    : $sportMatching->title,
-                'url' => $conversation
-                    ? route('auth.conversations.show', $conversation->id)
-                    : route('auth.sport-matching.index'),
-                'matching_id' => $sportMatching->id,
-                'conversation_id' => $conversation?->id,
-            ]);
+            $accepted = $data['status'] === 'accepted';
+            AppNotification::sendLocalized(
+                $application->user_id,
+                'sport_matching.decision',
+                $accepted
+                    ? 'sport_matching.notifications.accepted_title'
+                    : 'sport_matching.notifications.declined_title',
+                $accepted
+                    ? 'sport_matching.notifications.accepted_body'
+                    : 'sport_matching.notifications.declined_body',
+                ['matching' => $sportMatching->title],
+                [
+                    'url' => $conversation
+                        ? route('auth.conversations.show', $conversation->id)
+                        : route('auth.sport-matching.index'),
+                    'matching_id' => $sportMatching->id,
+                    'conversation_id' => $conversation?->id,
+                ],
+            );
         }
 
         return response()->json([
@@ -195,13 +219,13 @@ class SportMatchingController extends Controller
         $action = $data['action'];
 
         if ($action === 'check_in') {
-            abort_if($attendance->status !== 'confirmed', 422, 'Bitte bestätige zuerst deine Teilnahme.');
+            abort_if($attendance->status !== 'confirmed', 422, __('sport_matching.errors.confirm_first'));
             $attendance->forceFill([
                 'status' => 'checked_in',
                 'checked_in_at' => now(),
             ])->save();
         } elseif ($action === 'confirm') {
-            abort_if($attendance->status === 'checked_in', 422, 'Du bist bereits als angekommen markiert.');
+            abort_if($attendance->status === 'checked_in', 422, __('sport_matching.errors.already_checked_in'));
             $attendance->forceFill([
                 'status' => 'confirmed',
                 'confirmed_at' => $attendance->confirmed_at ?: now(),
@@ -210,7 +234,7 @@ class SportMatchingController extends Controller
                 'no_show_reason' => null,
             ])->save();
         } else {
-            abort_if($attendance->status === 'checked_in', 422, 'Eine bereits bestätigte Ankunft kann nicht abgesagt werden.');
+            abort_if($attendance->status === 'checked_in', 422, __('sport_matching.errors.checked_in_cannot_cancel'));
             $attendance->forceFill(['status' => 'cancelled'])->save();
         }
 
@@ -226,15 +250,19 @@ class SportMatchingController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
         $reporterAttendance = $this->participantAttendance($sportMatching, $request->user());
-        abort_if($request->user()->id === (int) $data['target_user_id'], 422, 'Du kannst dich nicht selbst melden.');
-        abort_if($sportMatching->starts_at?->isFuture(), 422, 'Eine Meldung ist erst nach dem Termin möglich.');
-        abort_if(! in_array($reporterAttendance->status, ['confirmed', 'checked_in'], true), 422, 'Bestätige zuerst deine Teilnahme.');
+        abort_if($request->user()->id === (int) $data['target_user_id'], 422, __('sport_matching.errors.self_no_show'));
+        abort_if($sportMatching->starts_at?->isFuture(), 422, __('sport_matching.errors.no_show_after_start'));
+        abort_if(
+            ! in_array($reporterAttendance->status, ['confirmed', 'checked_in'], true),
+            422,
+            __('sport_matching.errors.reporter_confirm_first'),
+        );
 
         $target = $sportMatching->attendances()
             ->where('user_id', $data['target_user_id'])
             ->firstOrFail();
-        abort_if($target->status === 'checked_in', 422, 'Diese Person ist bereits als angekommen markiert.');
-        abort_if($target->status === 'cancelled', 422, 'Diese Person hat vorher abgesagt.');
+        abort_if($target->status === 'checked_in', 422, __('sport_matching.errors.target_checked_in'));
+        abort_if($target->status === 'cancelled', 422, __('sport_matching.errors.target_cancelled'));
 
         $target->forceFill([
             'status' => 'no_show',
@@ -243,20 +271,30 @@ class SportMatchingController extends Controller
             'no_show_reason' => $data['reason'] ?? null,
         ])->save();
 
-        AppNotification::send($target->user_id, 'sport_matching.no_show_reported', [
-            'title' => 'Teilnahme als nicht erschienen gemeldet',
-            'body' => $sportMatching->title,
-            'url' => route('auth.sport-matching.index'),
-            'matching_id' => $sportMatching->id,
-        ]);
+        AppNotification::sendLocalized(
+            $target->user_id,
+            'sport_matching.no_show_reported',
+            'sport_matching.notifications.no_show_title',
+            'sport_matching.notifications.no_show_body',
+            ['matching' => $sportMatching->title],
+            [
+                'url' => route('auth.sport-matching.index'),
+                'matching_id' => $sportMatching->id,
+            ],
+        );
 
         return response()->json(['data' => $this->attendancePayload($target->fresh())]);
     }
 
     public function cancel(Request $request, SportMatching $sportMatching)
     {
-        abort_unless($sportMatching->user_id === $request->user()->id, 403);
+        abort_unless(
+            $sportMatching->user_id === $request->user()->id,
+            403,
+            __('sport_matching.errors.owner_only'),
+        );
         $sportMatching->update(['status' => 'cancelled']);
+
         return response()->json(['data' => ['id' => $sportMatching->id, 'status' => 'cancelled']]);
     }
 
@@ -287,7 +325,7 @@ class SportMatchingController extends Controller
     private function validateTeam(Request $request, array &$data): void
     {
         if ($data['mode'] === 'team') {
-            abort_if(empty($data['team_id']), 422);
+            abort_if(empty($data['team_id']), 422, __('sport_matching.errors.team_required'));
             $this->assertTeamMember($request, (int) $data['team_id']);
             $data['participants_needed'] = 1;
         } else {
@@ -298,17 +336,23 @@ class SportMatchingController extends Controller
 
     private function defaultTitle(array $data): string
     {
-        $sportName = Sport::query()->whereKey($data['sport_id'])->value('name') ?: 'Sport';
+        $sportName = Sport::query()->whereKey($data['sport_id'])->value('name')
+            ?: __('sport_matching.defaults.sport');
 
         return $data['mode'] === 'team'
-            ? $sportName.'-Teamgegner gesucht'
-            : $sportName.'-Sportpartner gesucht';
+            ? __('sport_matching.defaults.team_title', ['sport' => $sportName])
+            : __('sport_matching.defaults.partner_title', ['sport' => $sportName]);
     }
 
     private function assertTeamMember(Request $request, int $teamId): void
     {
-        abort_unless(Team::query()->whereKey($teamId)
-            ->whereHas('users', fn ($q) => $q->where('users.id', $request->user()->id))->exists(), 403);
+        abort_unless(
+            Team::query()->whereKey($teamId)
+                ->whereHas('users', fn ($q) => $q->where('users.id', $request->user()->id))
+                ->exists(),
+            403,
+            __('sport_matching.errors.team_membership_required'),
+        );
     }
 
     private function catalogs(Request $request): array
@@ -356,6 +400,7 @@ class SportMatchingController extends Controller
             (int) $sportMatching->user_id === (int) $user->id
                 || $sportMatching->applications()->where('user_id', $user->id)->where('status', 'accepted')->exists(),
             403,
+            __('sport_matching.errors.participant_only'),
         );
 
         $application = $sportMatching->applications()->where('user_id', $user->id)->where('status', 'accepted')->first();
@@ -365,22 +410,27 @@ class SportMatchingController extends Controller
 
     private function notifyAttendanceParticipants(SportMatching $sportMatching, User $actor, string $action): void
     {
-        $messages = [
-            'confirm' => [$actor->name.' hat die Teilnahme bestätigt.', 'Teilnahme bestätigt'],
-            'cancel' => [$actor->name.' hat für den Termin abgesagt.', 'Teilnahme abgesagt'],
-            'check_in' => [$actor->name.' ist angekommen.', 'Ankunft bestätigt'],
+        $keys = [
+            'confirm' => ['attendance_confirm_title', 'attendance_confirm_body'],
+            'cancel' => ['attendance_cancel_title', 'attendance_cancel_body'],
+            'check_in' => ['attendance_check_in_title', 'attendance_check_in_body'],
         ];
-        [$body, $title] = $messages[$action];
+        [$titleKey, $bodyKey] = $keys[$action];
 
         $sportMatching->attendances()
             ->where('user_id', '!=', $actor->id)
             ->pluck('user_id')
-            ->each(fn ($recipientId) => AppNotification::send($recipientId, 'sport_matching.attendance', [
-                'title' => $title,
-                'body' => $body,
-                'url' => route('auth.sport-matching.index'),
-                'matching_id' => $sportMatching->id,
-            ]));
+            ->each(fn ($recipientId) => AppNotification::sendLocalized(
+                $recipientId,
+                'sport_matching.attendance',
+                "sport_matching.notifications.{$titleKey}",
+                "sport_matching.notifications.{$bodyKey}",
+                ['user' => $actor->name],
+                [
+                    'url' => route('auth.sport-matching.index'),
+                    'matching_id' => $sportMatching->id,
+                ],
+            ));
     }
 
     private function attendancePayload(?SportMatchingAttendance $attendance): ?array

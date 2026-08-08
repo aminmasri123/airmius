@@ -21,7 +21,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
             <div>
                 <h3 class="font-semibold text-primary">Offene Auszahlungsbeträge</h3>
                 <div class="mt-3 overflow-x-auto rounded-lg border border-border">
-                    <table class="min-w-full text-left text-sm">
+                    <table class="min-w-full text-start text-sm">
                         <tbody class="divide-y divide-border">
                             <tr v-for="candidate in payoutCandidates" :key="candidate.user_id">
                                 <td class="px-4 py-3">
@@ -33,7 +33,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
                                     <p>Provision {{ formatMoney(candidate.commission_cents) }}</p>
                                 </td>
                                 <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(candidate.amount_cents) }}</td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-end">
                                     <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('create-payout', candidate)">
                                         Vorbereiten
                                     </button>
@@ -48,7 +48,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
             <div>
                 <h3 class="font-semibold text-primary">Auszahlungsdaten prüfen</h3>
                 <div class="mt-3 overflow-x-auto rounded-lg border border-border">
-                    <table class="min-w-full text-left text-sm">
+                    <table class="min-w-full text-start text-sm">
                         <tbody class="divide-y divide-border">
                             <tr v-for="profile in payoutProfiles" :key="profile.id">
                                 <td class="px-4 py-3">
@@ -56,7 +56,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
                                     <p class="text-xs text-secondary">{{ profile.paypal_email || profile.iban || 'Keine Zahlungsdaten' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-secondary">{{ profile.status }}</td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-end">
                                     <div class="flex justify-end gap-2">
                                         <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-payout-profile', profile, 'approved')">Freigeben</button>
                                         <button class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger" @click="emit('update-payout-profile', profile, 'blocked')">Sperren</button>
@@ -73,7 +73,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
         <div class="border-t border-border p-5">
             <h3 class="font-semibold text-primary">Auszahlungshistorie</h3>
             <div class="mt-3 overflow-x-auto rounded-lg border border-border">
-                <table class="min-w-full text-left text-sm">
+                <table class="min-w-full text-start text-sm">
                     <tbody class="divide-y divide-border">
                         <tr v-for="payout in payouts" :key="payout.id">
                             <td class="px-4 py-3">
@@ -86,7 +86,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
                             </td>
                             <td class="px-4 py-3 font-semibold text-primary">{{ formatMoney(payout.amount_cents) }}</td>
                             <td class="px-4 py-3 text-secondary">{{ payout.status }}</td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-end">
                                 <button v-if="payout.status !== 'paid'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('mark-payout-paid', payout)">
                                     Ausgezahlt
                                 </button>
@@ -99,4 +99,3 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
         </div>
     </section>
 </template>
-

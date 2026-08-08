@@ -12,6 +12,7 @@ use App\Models\TeamOnboarding;
 use App\Models\User;
 use App\Support\Api\V1\ApiPagination;
 use App\Support\TeamRoles;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -125,7 +126,7 @@ class TeamCompetitivenessController extends Controller
 
         $isMember = $team->users()->where('users.id', $member->id)->exists();
         if (! $isMember) {
-            abort(404, 'Mitglied nicht gefunden.');
+            abort(404, __('team_competitiveness.errors.member_not_found'));
         }
 
         $team->users()->updateExistingPivot($member->id, [
@@ -133,7 +134,8 @@ class TeamCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Teamrolle aktualisiert.',
+            'message' => __('team_competitiveness.responses.role_updated'),
+            'message_code' => 'team_role_updated',
             'data' => [
                 'team_id' => $team->id,
                 'member_id' => $member->id,
@@ -206,7 +208,8 @@ class TeamCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Teamgebühr erfasst.',
+            'message' => __('team_competitiveness.responses.fee_created'),
+            'message_code' => 'team_fee_created',
             'data' => $this->presentFee($fee),
         ]);
     }
@@ -228,14 +231,15 @@ class TeamCompetitivenessController extends Controller
 
         if (array_filter($data) === []) {
             throw ValidationException::withMessages([
-                'fee' => 'Es wurden keine Änderungen erkannt.',
+                'fee' => __('team_competitiveness.errors.no_changes'),
             ]);
         }
 
         $fee->update($data);
 
         return response()->json([
-            'message' => 'Teamgebühr aktualisiert.',
+            'message' => __('team_competitiveness.responses.fee_updated'),
+            'message_code' => 'team_fee_updated',
             'data' => $this->presentFee($fee->refresh()),
         ]);
     }
@@ -248,7 +252,8 @@ class TeamCompetitivenessController extends Controller
         $fee->delete();
 
         return response()->json([
-            'message' => 'Teamgebühr entfernt.',
+            'message' => __('team_competitiveness.responses.fee_removed'),
+            'message_code' => 'team_fee_removed',
         ]);
     }
 
@@ -533,7 +538,7 @@ class TeamCompetitivenessController extends Controller
         if (($feeSummary['counts']['open'] ?? 0) > 0) {
             $tasks->push([
                 'key' => 'collect_open_fees',
-                'title' => 'Offene Teambeiträge klären',
+                'title' => __('team_competitiveness.organizer.open_fees'),
                 'priority' => 'normal',
                 'count' => (int) ($feeSummary['counts']['open'] ?? 0),
                 'assignee_role' => 'treasurer_or_coach',
@@ -553,9 +558,9 @@ class TeamCompetitivenessController extends Controller
             'polls' => [
                 'recommended' => count($missingResponses) > 0 || (($nextEventSummary['maybe'] ?? 0) > 0),
                 'templates' => [
-                    ['key' => 'attendance_confirmation', 'label' => 'Teilnahme final bestätigen'],
-                    ['key' => 'transport_options', 'label' => 'Fahrgemeinschaften abstimmen'],
-                    ['key' => 'equipment_needed', 'label' => 'Materialbedarf klären'],
+                    ['key' => 'attendance_confirmation', 'label' => __('team_competitiveness.polls.attendance_confirmation')],
+                    ['key' => 'transport_options', 'label' => __('team_competitiveness.polls.transport_options')],
+                    ['key' => 'equipment_needed', 'label' => __('team_competitiveness.polls.equipment_needed')],
                 ],
             ],
             'season_plan' => [
@@ -572,12 +577,12 @@ class TeamCompetitivenessController extends Controller
 
     private function organizerTaskTitle(string $key): string
     {
-        return [
-            'remind_missing_responses' => 'Fehlende Rückmeldungen erinnern',
-            'check_availability' => 'Kader und Verfügbarkeit prüfen',
-            'review_open_fees' => 'Offene Beiträge prüfen',
-            'complete_roles' => 'Teamrollen vervollständigen',
-        ][$key] ?? str($key)->replace('_', ' ')->headline()->toString();
+        $translationKey = 'team_competitiveness.tasks.'.$key;
+        $translated = __($translationKey);
+
+        return $translated === $translationKey
+            ? str($key)->replace('_', ' ')->headline()->toString()
+            : $translated;
     }
 
     private function materialListsForEvent(?Event $event): array
@@ -587,13 +592,13 @@ class TeamCompetitivenessController extends Controller
         }
 
         $base = [
-            ['key' => 'balls', 'label' => 'Bälle', 'required' => in_array($event->type, ['training', 'match'], true)],
-            ['key' => 'first_aid', 'label' => 'Erste Hilfe', 'required' => true],
-            ['key' => 'water', 'label' => 'Wasser', 'required' => true],
+            ['key' => 'balls', 'label' => __('team_competitiveness.materials.balls'), 'required' => in_array($event->type, ['training', 'match'], true)],
+            ['key' => 'first_aid', 'label' => __('team_competitiveness.materials.first_aid'), 'required' => true],
+            ['key' => 'water', 'label' => __('team_competitiveness.materials.water'), 'required' => true],
         ];
 
         if ($event->type === 'match') {
-            $base[] = ['key' => 'jerseys', 'label' => 'Trikots', 'required' => true];
+            $base[] = ['key' => 'jerseys', 'label' => __('team_competitiveness.materials.jerseys'), 'required' => true];
         }
 
         return $base;
@@ -610,17 +615,17 @@ class TeamCompetitivenessController extends Controller
     private function coachBriefing(string $risk, int $missingCount, float $attendanceRate, array $teamActions): array
     {
         $headline = match ($risk) {
-            'critical' => 'Teilnahmefrist abgelaufen - Antworten fehlen.',
-            'high' => 'Zu wenige Zusagen für den nächsten Termin.',
-            'watch' => 'Antwortquote beobachten und früh erinnern.',
-            default => 'Team-Alltag wirkt stabil.',
+            'critical' => __('team_competitiveness.briefing.critical'),
+            'high' => __('team_competitiveness.briefing.high'),
+            'watch' => __('team_competitiveness.briefing.watch'),
+            default => __('team_competitiveness.briefing.stable'),
         };
 
         return [
             'headline' => $headline,
             'summary' => $missingCount > 0
-                ? $missingCount.' Mitglieder ohne Antwort, Zusagequote '.$attendanceRate.'%.'
-                : 'Keine offenen Teilnahmeantworten, Zusagequote '.$attendanceRate.'%.',
+                ? __('team_competitiveness.briefing.summary_missing', ['count' => $missingCount, 'rate' => $attendanceRate])
+                : __('team_competitiveness.briefing.summary_clear', ['rate' => $attendanceRate]),
             'next_actions' => collect($teamActions)
                 ->take(4)
                 ->map(fn (array $action) => [
@@ -699,7 +704,7 @@ class TeamCompetitivenessController extends Controller
         }
 
         try {
-            $age = \Carbon\Carbon::parse($birthDate)->age;
+            $age = Carbon::parse($birthDate)->age;
         } catch (\Throwable $exception) {
             return 'unbekannt';
         }
@@ -805,4 +810,3 @@ class TeamCompetitivenessController extends Controller
         ];
     }
 }
-

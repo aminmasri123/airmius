@@ -1550,6 +1550,57 @@ void main() {
   });
 
   test(
+    'public recruiting client preserves filters and interest payload',
+    () async {
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      );
+      final client = AirmiusApiClient(
+        transport: transport,
+        baseUrl: 'https://airmius.test',
+      );
+
+      await client.publicRecruitingJobs(
+        query: ' Coach ',
+        type: 'professional',
+        sportType: 'padel',
+        address: 'Berlin',
+        sort: 'oldest',
+        page: 2,
+      );
+      await client.submitPublicRecruitingInterest(17, {
+        'name': 'Nora Athlete',
+        'email': 'nora@example.test',
+        'message': 'Ich möchte helfen.',
+        'accepted_privacy': true,
+      }, idempotencyKey: 'recruiting-interest-17');
+
+      expect(transport.paths, [
+        '/api/v1/public/recruiting/jobs',
+        '/api/v1/public/recruiting/jobs/17/interest',
+      ]);
+      expect(transport.requests.first.method, 'GET');
+      expect(transport.requests.first.query, {
+        'page': '2',
+        'q': 'Coach',
+        'type': 'professional',
+        'sport_type': 'padel',
+        'address': 'Berlin',
+        'sort': 'oldest',
+      });
+      expect(transport.requests.last.method, 'POST');
+      expect(
+        transport.requests.last.headers,
+        containsPair('Idempotency-Key', 'recruiting-interest-17'),
+      );
+      expect(
+        transport.requests.last.body,
+        containsPair('email', 'nora@example.test'),
+      );
+    },
+  );
+
+  test(
     'public certificate client uses the guest verification contract',
     () async {
       final transport = _RecordingTransport(
@@ -1651,6 +1702,34 @@ void main() {
     expect(find.text('Offiziell'), findsOneWidget);
     expect(find.text('Nach diesem Verein fragen'), findsOneWidget);
     expect(transport.paths, contains('/api/v1/public/clubs'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guest jobs navigation renders live public recruiting data', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":17,"title":"Padel Coach","type":"professional","description":"Begleite unser Nachwuchsteam.","location":"Berlin","workload":"20 Stunden","employment_type":"Teilzeit","club":{"id":8,"name":"Airmius Padel","sport_type":"Padel"}}],"meta":{"total":1}}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const GuestPortalScreen(),
+    );
+    await tester.tap(find.text('Jobs'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jobs & Ehrenamt'), findsWidgets);
+    expect(find.text('Padel Coach'), findsOneWidget);
+    expect(find.text('Airmius Padel • Padel'), findsOneWidget);
+    expect(find.text('Ich habe Interesse'), findsOneWidget);
+    expect(transport.paths, contains('/api/v1/public/recruiting/jobs'));
     expect(tester.takeException(), isNull);
   });
 
@@ -3987,7 +4066,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"user":{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.test","country":"DE"},"profile_address":{"country":"DE","postal_code":"10115","city":"Berlin"},"privacy_settings":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"everyone","ads_personalization_consent":true,"ads_measurement_consent":false}}}',
+            '{"data":{"user":{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.test","country":"DE"},"profile_address":{"country":"DE","postal_code":"10115","city":"Berlin"},"privacy_settings":{"profile_visibility":"private","direct_message_privacy":"friends","friend_request_privacy":"everyone","ads_personalization_consent":true,"ads_measurement_consent":false},"data_erasure":{"uses_social_login":true,"account_email":"ada@example.test","category_keys":["profile","content","messages","files","sport_and_health","social_and_integrations","commerce"]}}}',
       ),
     );
 
@@ -4003,6 +4082,24 @@ void main() {
     expect(find.text('Datenauskunft exportieren'), findsOneWidget);
     expect(find.text('Personendaten korrigieren'), findsOneWidget);
     expect(transport.paths, contains('/api/v1/settings'));
+
+    final erasureAction = find.text('Daten löschen, Konto behalten');
+    await tester.ensureVisible(erasureAction);
+    await tester.tap(erasureAction);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Du meldest dich mit einem verbundenen Konto an. Bestätige die Anfrage mit deiner Konto-E-Mail-Adresse.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Ich melde mich mit Google oder Microsoft an'),
+      findsNothing,
+    );
+    expect(find.widgetWithText(TextField, 'E-Mail'), findsOneWidget);
+    expect(find.text('ada@example.test'), findsOneWidget);
   });
 
   testWidgets('two-factor security stays readable in Arabic light mode', (

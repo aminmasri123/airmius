@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\NutritionMeal;
+use App\Models\TrainingLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -13,6 +14,29 @@ use Tests\TestCase;
 class NutritionFeatureTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_training_suggestions_follow_the_request_locale(): void
+    {
+        $user = User::factory()->create(['language' => 'fr']);
+        TrainingLog::query()->create([
+            'user_id' => $user->id,
+            'created_by' => $user->id,
+            'title' => 'Force du matin',
+            'sport_type' => 'gym',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'duration_minutes' => 45,
+        ]);
+
+        $this->actingAs($user)
+            ->withHeader('X-App-Locale', 'fr')
+            ->get(route('auth.nutrition.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('trainingSuggestions.0.title', __('nutrition.suggestions.strength.title', locale: 'fr'))
+                ->where('trainingSuggestions.0.body', __('nutrition.suggestions.strength.body', ['training' => 'Force du matin'], 'fr'))
+            );
+    }
 
     public function test_user_can_open_nutrition_dashboard_and_manage_day(): void
     {

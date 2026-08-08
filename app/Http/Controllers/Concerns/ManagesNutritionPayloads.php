@@ -344,8 +344,8 @@ trait ManagesNutritionPayloads
 
                 if (str_contains($sportType, 'gym') || str_contains($sportType, 'kraft')) {
                     return [
-                        'title' => 'Protein nach Krafttraining',
-                        'body' => "Nach \"{$title}\" passt eine proteinreiche Mahlzeit mit Kohlenhydraten.",
+                        'title' => __('nutrition.suggestions.strength.title'),
+                        'body' => __('nutrition.suggestions.strength.body', ['training' => $title]),
                         'meal_type' => 'lunch',
                         'training_context' => 'post_workout',
                     ];
@@ -353,16 +353,16 @@ trait ManagesNutritionPayloads
 
                 if (str_contains($sportType, 'lauf') || str_contains($sportType, 'run') || str_contains($sportType, 'cycling') || str_contains($sportType, 'rad')) {
                     return [
-                        'title' => 'Energie für Ausdauer',
-                        'body' => "Rund um \"{$title}\" helfen leicht verdauliche Kohlenhydrate und genug Wasser.",
+                        'title' => __('nutrition.suggestions.endurance.title'),
+                        'body' => __('nutrition.suggestions.endurance.body', ['training' => $title]),
                         'meal_type' => 'snack',
                         'training_context' => 'pre_workout',
                     ];
                 }
 
                 return [
-                    'title' => 'Regeneration sichern',
-                    'body' => "Nach \"{$title}\" sind Protein, Flüssigkeit und eine einfache Mahlzeit sinnvoll.",
+                    'title' => __('nutrition.suggestions.recovery.title'),
+                    'body' => __('nutrition.suggestions.recovery.body', ['training' => $title]),
                     'meal_type' => 'dinner',
                     'training_context' => 'post_workout',
                 ];
@@ -370,14 +370,14 @@ trait ManagesNutritionPayloads
 
         if ($suggestions->isEmpty()) {
             $fallback = match ($goalType) {
-                'build_muscle' => 'Heute kein Training erkannt: plane trotzdem 3-5 Proteinportionen Über den Tag.',
-                'fat_loss' => 'Heute kein Training erkannt: setze auf sättigende Mahlzeiten mit Protein und Gemüse.',
-                'performance' => 'Heute kein Training erkannt: halte deine Kohlenhydrate für die nächste Einheit bereit.',
-                default => 'Heute kein Training erkannt: eine einfache, ausgewogene Mahlzeit reicht oft schon.',
+                'build_muscle' => __('nutrition.suggestions.daily_anchor.build_muscle'),
+                'fat_loss' => __('nutrition.suggestions.daily_anchor.fat_loss'),
+                'performance' => __('nutrition.suggestions.daily_anchor.performance'),
+                default => __('nutrition.suggestions.daily_anchor.default'),
             };
 
             return [[
-                'title' => 'Tagesanker',
+                'title' => __('nutrition.suggestions.daily_anchor.title'),
                 'body' => $fallback,
                 'meal_type' => 'snack',
                 'training_context' => '',

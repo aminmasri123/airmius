@@ -65,7 +65,7 @@ class CommerceController extends Controller
             return response()->json([
                 'error' => [
                     'code' => 'forbidden',
-                    'message' => 'Nur verifizierte Käufer können dieses Produkt bewerten.',
+                    'message' => __('platform.commerce.verified_buyer_required'),
                 ],
             ], 403);
         }

@@ -1,6 +1,6 @@
-﻿import { router, usePage } from '@inertiajs/vue3'
+﻿import { router } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
-import { watch } from 'vue'
+import { activateApplicationLocale } from './localeRuntime'
 
 export const rtlLocales = ['ar']
 
@@ -8,7 +8,6 @@ export const localeDirection = (locale) => (rtlLocales.includes(locale) ? 'rtl' 
 
 export function useLanguage() {
     const { locale } = useI18n()
-    const page = usePage()
 
     const languages = [
         { code: 'de', label: 'Deutsch', native: 'Deutsch' },
@@ -17,22 +16,26 @@ export function useLanguage() {
         { code: 'ar', label: 'Arabic', native: 'العربية' },
     ]
 
-    watch(() => page.props.locale, (newLocale) => {
-        if (newLocale) {
-            locale.value = newLocale
-            localStorage.setItem('lang', newLocale)
-            document.documentElement.lang = newLocale
-            document.documentElement.dir = localeDirection(newLocale)
-        }
-    }, { immediate: true })
-
-    const changeLang = (lang) => {
-        return router.post(route('user.language.update'), {
-            language: lang
+    const changeLang = (lang) => new Promise((resolve, reject) => {
+        router.post(route('user.language.update'), {
+            language: lang,
         }, {
             preserveScroll: true,
+            onSuccess: async (page) => {
+                try {
+                    const activeLocale = await activateApplicationLocale(page.props.locale || lang)
+                    if (activeLocale !== lang) {
+                        throw new Error(`Locale activation fell back to ${activeLocale}`)
+                    }
+                    resolve(true)
+                } catch (error) {
+                    reject(error)
+                }
+            },
+            onError: reject,
+            onCancel: () => reject(new Error('Language change cancelled')),
         })
-    }
+    })
 
     return {
         locale,
@@ -40,4 +43,3 @@ export function useLanguage() {
         changeLang
     }
 }
-

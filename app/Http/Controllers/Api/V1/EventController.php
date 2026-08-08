@@ -585,7 +585,7 @@ class EventController extends Controller
         }
 
         return $user->subscriptions()
-            ->whereIn('status', ['active', 'trialing'])
+            ->grantingAccess()
             ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
             ->exists();
     }

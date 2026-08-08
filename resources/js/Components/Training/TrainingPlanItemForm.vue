@@ -88,7 +88,7 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         <label class="block text-sm font-semibold text-primary">Fokus
             <input v-model="form.focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
-        <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+        <label class="block text-sm font-semibold text-primary md:col-span-2">{{ $t('Beschreibung') }}
             <textarea v-model="form.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
         </label>
         <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
@@ -105,5 +105,4 @@ const emit = defineEmits(['apply-template', 'set-image', 'submit'])
         </button>
     </form>
 </template>
-
 

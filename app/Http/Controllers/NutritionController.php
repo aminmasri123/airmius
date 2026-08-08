@@ -81,7 +81,7 @@ class NutritionController extends Controller
             $this->validateGoalData($request),
         );
 
-        return back()->with('success', 'Ernährungsziel wurde gespeichert.');
+        return back()->with('success', __('nutrition.responses.goal_saved'));
     }
 
     public function searchFoods(Request $request, NutritionFoodLookupService $lookup)
@@ -105,7 +105,7 @@ class NutritionController extends Controller
 
         if (! $product) {
             return response()->json([
-                'message' => 'Kein Produkt für diesen Barcode gefunden.',
+                'message' => __('nutrition.responses.product_not_found'),
             ], 404);
         }
 
@@ -136,7 +136,7 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => $suggestion,
-            'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
+            'message' => __('nutrition.responses.ai_suggestion_created'),
         ]);
     }
 
@@ -146,7 +146,7 @@ class NutritionController extends Controller
             $this->mealPayload($request->user(), $this->validateMealData($request))
         );
 
-        return back()->with('success', 'Mahlzeit "'.$meal->title.'" wurde gespeichert.');
+        return back()->with('success', __('nutrition.responses.meal_saved_named', ['meal' => $meal->title]));
     }
 
     public function storeWater(Request $request)
@@ -156,7 +156,7 @@ class NutritionController extends Controller
         );
 
         return back()->with([
-            'success' => $entry->water_ml.' ml wurden eingetragen.',
+            'success' => __('nutrition.responses.water_logged', ['amount' => $entry->water_ml]),
             'flash_id' => (string) Str::uuid(),
         ]);
     }
@@ -169,7 +169,7 @@ class NutritionController extends Controller
             $this->mealPayload($request->user(), $this->validateMealData($request, true), $nutritionMeal)
         );
 
-        return back()->with('success', 'Mahlzeit wurde aktualisiert.');
+        return back()->with('success', __('nutrition.responses.meal_updated'));
     }
 
     public function destroyMeal(Request $request, NutritionMeal $nutritionMeal)
@@ -178,6 +178,6 @@ class NutritionController extends Controller
 
         $nutritionMeal->delete();
 
-        return back()->with('success', 'Mahlzeit wurde gelöscht.');
+        return back()->with('success', __('nutrition.responses.meal_deleted'));
     }
 }

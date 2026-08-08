@@ -45,7 +45,7 @@ const searchModel = computed({
                 <thead class="bg-bg text-xs uppercase text-secondary">
                     <tr>
                         <th class="px-5 py-3">Nutzer</th>
-                        <th class="px-5 py-3">Aktueller Plan</th>
+                        <th class="px-5 py-3">{{ $t('Aktueller Plan') }}</th>
                         <th class="px-5 py-3">Neuer Plan</th>
                         <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Laufzeit</th>
@@ -112,4 +112,3 @@ const searchModel = computed({
         </div>
     </section>
 </template>
-

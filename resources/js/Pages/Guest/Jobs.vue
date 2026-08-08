@@ -53,6 +53,7 @@ const interestForm = ref({
     email: '',
     phone: '',
     message: '',
+    accepted_privacy: false,
 })
 const isSubmittingInterest = ref(false)
 const filterSummaryId = 'jobs-result-summary'
@@ -191,6 +192,7 @@ const openInterestModal = (job) => {
         email: user.value?.email || '',
         phone: '',
         message: '',
+        accepted_privacy: false,
     }
 }
 
@@ -227,6 +229,7 @@ const submitInterest = () => {
                 email: user.value?.email || '',
                 phone: '',
                 message: '',
+                accepted_privacy: false,
             }
             closeInterestModal()
         },
@@ -630,6 +633,15 @@ const submitInterest = () => {
                     <span v-if="errors.message" class="mt-1 block text-xs text-error">{{ errors.message }}</span>
                 </label>
 
+                <p class="rounded-lg border border-border bg-inputBg/50 px-3 py-2 text-xs leading-5 text-secondary">
+                    {{ t('guest.jobs.interest.privacy_notice') }}
+                </p>
+                <label class="flex items-start gap-3 rounded-lg border border-border px-3 py-3 text-sm text-primary">
+                    <input v-model="interestForm.accepted_privacy" type="checkbox" class="mt-0.5 rounded border-border text-buttonPrimary" required>
+                    <span>{{ t('guest.jobs.interest.privacy_accept') }}</span>
+                </label>
+                <span v-if="errors.accepted_privacy" class="text-xs text-error">{{ errors.accepted_privacy }}</span>
+
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button
                         type="button"
@@ -642,7 +654,7 @@ const submitInterest = () => {
                     <button
                         type="submit"
                         class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
-                        :disabled="isSubmittingInterest"
+                        :disabled="isSubmittingInterest || !interestForm.accepted_privacy"
                         :aria-busy="isSubmittingInterest"
                         :aria-label="isSubmittingInterest ? t('guest.jobs.interest.sending') : t('guest.jobs.interest.send')"
                     >

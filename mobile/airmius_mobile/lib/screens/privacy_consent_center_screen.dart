@@ -297,7 +297,7 @@ class _PrivacyConsentCenterScreenState
                 icon: Icons.delete_sweep_outlined,
                 title: t('privacy.eraseData'),
                 body: t('privacy.eraseDataHint'),
-                onTap: _busy ? null : _openDataErasure,
+                onTap: _busy ? null : () => _openDataErasure(bundle),
               ),
             ],
           ),
@@ -463,12 +463,17 @@ class _PrivacyConsentCenterScreenState
     }, success: t('privacy.corrected'));
   }
 
-  Future<void> _openDataErasure() {
+  Future<void> _openDataErasure(_PrivacyBundle bundle) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => DataErasureSheet(client: _client),
+      builder: (context) => DataErasureSheet(
+        client: _client,
+        usesSocialLogin: bundle.usesSocialLogin,
+        accountEmail: bundle.email,
+        categoryKeys: bundle.dataErasureCategoryKeys,
+      ),
     );
   }
 
@@ -624,6 +629,16 @@ class _PrivacyBundle {
     this.friendRequestPrivacy = 'everyone',
     this.adsPersonalization = false,
     this.adsMeasurement = false,
+    this.usesSocialLogin = false,
+    this.dataErasureCategoryKeys = const [
+      'profile',
+      'content',
+      'messages',
+      'files',
+      'sport_and_health',
+      'social_and_integrations',
+      'commerce',
+    ],
   });
 
   factory _PrivacyBundle.fromJson(JsonMap json) {
@@ -631,6 +646,12 @@ class _PrivacyBundle {
     final user = _privacyMap(data['user']);
     final address = _privacyMap(data['profile_address']);
     final privacy = _privacyMap(data['privacy_settings']);
+    final dataErasure = _privacyMap(data['data_erasure']);
+    final categoryKeys =
+        (dataErasure['category_keys'] as List<dynamic>? ?? const [])
+            .map((value) => _privacyText(value))
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false);
     return _PrivacyBundle(
       country: _privacyText(
         address['country'] ?? user['country'],
@@ -638,7 +659,7 @@ class _PrivacyBundle {
       ).toUpperCase(),
       firstName: _privacyText(user['first_name']),
       lastName: _privacyText(user['last_name']),
-      email: _privacyText(user['email']),
+      email: _privacyText(dataErasure['account_email'] ?? user['email']),
       city: _privacyText(address['city'] ?? user['city']),
       postalCode: _privacyText(address['postal_code'] ?? user['postal_code']),
       profileVisibility: _privacyText(
@@ -655,6 +676,18 @@ class _PrivacyBundle {
       ),
       adsPersonalization: _privacyBool(privacy['ads_personalization_consent']),
       adsMeasurement: _privacyBool(privacy['ads_measurement_consent']),
+      usesSocialLogin: _privacyBool(dataErasure['uses_social_login']),
+      dataErasureCategoryKeys: categoryKeys.isEmpty
+          ? const [
+              'profile',
+              'content',
+              'messages',
+              'files',
+              'sport_and_health',
+              'social_and_integrations',
+              'commerce',
+            ]
+          : categoryKeys,
     );
   }
 
@@ -669,6 +702,8 @@ class _PrivacyBundle {
   final String friendRequestPrivacy;
   final bool adsPersonalization;
   final bool adsMeasurement;
+  final bool usesSocialLogin;
+  final List<String> dataErasureCategoryKeys;
 }
 
 class _PrivacyDropdown extends StatelessWidget {

@@ -12,7 +12,10 @@ class UserDataErasureCodeRequested extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public readonly string $code) {}
+    public function __construct(
+        public readonly string $code,
+        public readonly ?string $recipientLocale = null,
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -23,6 +26,6 @@ class UserDataErasureCodeRequested extends Notification implements ShouldQueue
     {
         return EmailTemplate::mail('data_erasure_code', [
             'code' => $this->code,
-        ]);
+        ], locale: $this->recipientLocale);
     }
 }

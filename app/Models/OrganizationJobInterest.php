@@ -17,9 +17,24 @@ class OrganizationJobInterest extends Model
         'email',
         'phone',
         'message',
+        'status',
+        'internal_note',
+        'consent_at',
+        'status_changed_at',
+        'status_changed_by',
+        'retention_expires_at',
         'ip_address',
         'user_agent',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'consent_at' => 'datetime',
+            'status_changed_at' => 'datetime',
+            'retention_expires_at' => 'datetime',
+        ];
+    }
 
     public function job(): BelongsTo
     {
@@ -29,5 +44,10 @@ class OrganizationJobInterest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function statusChangedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 }

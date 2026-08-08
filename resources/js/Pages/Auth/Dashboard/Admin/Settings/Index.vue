@@ -556,7 +556,7 @@ const save = () => {
                     </div>
 
                     <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
-                        {{ t('Benutzer mit der Berechtigung') }} <span class="font-semibold text-primary">system.manage</span>
+                        {{ t('Benutzer mit der Berechtigung') }} <span class="font-semibold text-primary" translate="no">{{ 'system.manage' }}</span>
                         {{ t('können Airmius weiterhin normal verwenden.') }}
                     </div>
 

@@ -64,7 +64,7 @@ class ProfileGamificationController extends Controller
             ]);
         }
 
-        return back()->with('message', 'Sportprofil wurde aktualisiert.');
+        return back()->with('message', __('platform.social.sport_profile_updated'));
     }
 
     public function updateSkill(Request $request, UserSportSkill $userSportSkill)
@@ -94,7 +94,7 @@ class ProfileGamificationController extends Controller
             'new_level' => $data['self_level'],
         ]);
 
-        return back()->with('message', 'Skill wurde aktualisiert.');
+        return back()->with('message', __('platform.social.skill_updated'));
     }
 
     public function endorse(Request $request, User $user, UserSportSkill $userSportSkill)
@@ -127,16 +127,24 @@ class ProfileGamificationController extends Controller
         if ($data['relationship'] === 'trainer') {
             $userSportSkill->loadMissing('skill');
 
-            AppNotification::send($user, 'profile.trainer_mentioned', [
-                'title' => 'Trainer-Erwähnung erhalten',
-                'body' => $request->user()->name.' hat dich bei '.$userSportSkill->skill->name.' mit Trainer-Bezug bestätigt.',
+            AppNotification::sendLocalized(
+                $user,
+                'profile.trainer_mentioned',
+                'platform.social.trainer_mention_title',
+                'platform.social.trainer_mention_body',
+                [
+                    'name' => $request->user()->name,
+                    'skill' => $userSportSkill->skill->name,
+                ],
+                [
                 'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'skills']),
                 'skill_id' => $userSportSkill->id,
                 'endorser_id' => $request->user()->id,
-            ]);
+                ],
+            );
         }
 
-        return back()->with('message', 'Skill wurde bestätigt.');
+        return back()->with('message', __('platform.social.skill_confirmed'));
     }
 
     public function recommend(Request $request, User $user)
@@ -156,17 +164,21 @@ class ProfileGamificationController extends Controller
             'status' => 'pending',
         ]);
 
-        AppNotification::send($user, $data['relationship'] === 'trainer' ? 'profile.trainer_mentioned' : 'profile.recommendation_received', [
-            'title' => $data['relationship'] === 'trainer' ? 'Trainer-Erwähnung erhalten' : 'Neue Empfehlung erhalten',
-            'body' => $data['relationship'] === 'trainer'
-                ? $request->user()->name.' hat eine Empfehlung mit Trainer-Bezug geschrieben. Sie wartet auf deine Freigabe.'
-                : $request->user()->name.' hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',
+        $trainerRecommendation = $data['relationship'] === 'trainer';
+        AppNotification::sendLocalized(
+            $user,
+            $trainerRecommendation ? 'profile.trainer_mentioned' : 'profile.recommendation_received',
+            $trainerRecommendation ? 'platform.social.trainer_mention_title' : 'platform.social.recommendation_title',
+            $trainerRecommendation ? 'platform.social.trainer_recommendation_body' : 'platform.social.recommendation_body',
+            ['name' => $request->user()->name],
+            [
             'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'recommendations']),
             'recommendation_id' => $recommendation->id,
             'author_id' => $request->user()->id,
-        ]);
+            ],
+        );
 
-        return back()->with('message', 'Empfehlung wurde gesendet und wartet auf Freigabe.');
+        return back()->with('message', __('platform.social.recommendation_sent'));
     }
 
     public function approveRecommendation(Request $request, ProfileRecommendation $profileRecommendation)

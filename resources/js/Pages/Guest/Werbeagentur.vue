@@ -153,6 +153,7 @@ const requestForm = useForm({
     domain: '',
     goals: '',
     notes: '',
+    accepted_privacy: false,
 })
 
 const submitRequest = () => {
@@ -529,7 +530,16 @@ const closeRequestModal = () => {
                             <span v-if="requestForm.errors.notes" class="mt-1 block text-xs text-error">{{ requestForm.errors.notes }}</span>
                         </label>
 
-                        <button class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="requestForm.processing">
+                        <div class="rounded-lg border border-border bg-bg p-4">
+                            <p class="text-xs leading-relaxed text-secondary">{{ t('agency.privacy_notice') }}</p>
+                            <label class="mt-3 flex cursor-pointer items-start gap-3 text-sm font-semibold text-primary">
+                                <input v-model="requestForm.accepted_privacy" type="checkbox" class="mt-0.5 rounded border-border bg-inputBg text-air-blue focus:ring-air-blue">
+                                <span>{{ t('agency.privacy_accept') }}</span>
+                            </label>
+                            <span v-if="requestForm.errors.accepted_privacy" class="mt-2 block text-xs text-error">{{ requestForm.errors.accepted_privacy }}</span>
+                        </div>
+
+                        <button class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="requestForm.processing || !requestForm.accepted_privacy">
                             {{ tx('Anfrage senden') }}
                         </button>
                     </div>

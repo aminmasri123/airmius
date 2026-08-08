@@ -101,7 +101,7 @@ const togglePlan = (plan) => {
                 </div>
 
                 <div>
-                    <label class="text-xs font-semibold uppercase text-secondary">Beschreibung</label>
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t('Beschreibung') }}</label>
                     <textarea v-model="formForPlan(plan).description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"></textarea>
                 </div>
 
@@ -199,4 +199,3 @@ const togglePlan = (plan) => {
         </article>
     </section>
 </template>
-

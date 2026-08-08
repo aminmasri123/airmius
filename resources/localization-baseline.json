@@ -1,20 +1,21 @@
 {
-  "version": "2026-06-03",
+  "version": "2026-08-08",
   "supported_locales": ["de", "en", "fr", "ar"],
   "rtl_locales": ["ar"],
   "quality_gates": {
-    "hardcoded_text_total_candidates": 3779
+    "hardcoded_text_total_candidates": 58
   },
   "vue": {
-    "visible_text_candidates": 2337,
-    "attribute_text_candidates": 1066
+    "visible_text_candidates": 0,
+    "attribute_text_candidates": 0
   },
   "php": {
-    "response_string_candidates": 376
+    "response_string_candidates": 58
   },
   "policy": {
     "mode": "no_regression",
     "command": "php artisan airmius:i18n-audit --json --fail-on-regression",
-    "note": "Lower these numbers as hardcoded text is moved into translation keys. New work should not raise them."
+    "metric": "Open candidates after semantic translation keys and verified runtime auto-catalog coverage",
+    "note": "Only the separately reviewed LegalPageController copy remains. Runtime-covered source strings remain visible in the audit but do not count as open debt. New work must not raise these values."
   }
 }

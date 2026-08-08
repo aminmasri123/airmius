@@ -27,12 +27,15 @@ use Illuminate\Validation\ValidationException;
 class UploadController extends Controller
 {
     private const MAX_FILE_SIZE_KB = 51200;
+
     private const FILE_NAME_MAX_LENGTH = 180;
+
     private const DISALLOWED_FILE_EXTENSIONS = [
         'asp', 'aspx', 'bat', 'cmd', 'cpl', 'com', 'exe', 'jar', 'jsp', 'jspx',
         'js', 'jse', 'msc', 'msi', 'php', 'phtml', 'pif', 'pl', 'ps1', 'py',
         'scr', 'sh', 'vbs',
     ];
+
     private const DISALLOWED_MIME_TYPES = [
         'application/x-msdownload',
         'application/x-msdos-program',
@@ -210,6 +213,7 @@ class UploadController extends Controller
             ],
         ], 201);
     }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -294,7 +298,7 @@ class UploadController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Dateien können nur mit Freunden geteilt werden.'
+            __('file_manager.file_friends_only')
         );
 
         $sharedFile = File::firstOrCreate(
@@ -313,14 +317,19 @@ class UploadController extends Controller
             ],
         );
 
-        AppNotification::send($targetUser, 'file.shared', [
-            'title' => $request->user()->name.' hat eine Datei mit dir geteilt',
-            'body' => $file->display_name,
-            'url' => '/files',
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'file_id' => $sharedFile->id,
-        ]);
+        AppNotification::sendLocalized(
+            $targetUser,
+            'file.shared',
+            'file_manager.file_shared_title',
+            'file_manager.file_shared_body',
+            ['user' => $request->user()->name, 'file' => $file->display_name],
+            [
+                'url' => '/files',
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'file_id' => $sharedFile->id,
+            ],
+        );
 
         return response()->json([
             'data' => [
@@ -498,6 +507,7 @@ class UploadController extends Controller
             throw ValidationException::withMessages(['mime_type' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
         }
     }
+
     private function assertSafeUpload(UploadedFile $file): void
     {
         if (! $file->isValid() || (int) $file->getSize() <= 0) {

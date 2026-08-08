@@ -147,6 +147,7 @@ export const useAirmiusShellNavigation = () => {
             'users.view', 'roles.manage', 'blog.view', 'blog.manage', 'payments.view',
             'invoices.view', 'subscriptions.view', 'outfit-subscriptions.manage',
             'sponsors.view', 'admin.moderation.view', 'admin.settings.view', 'system.manage',
+            'analytics.view',
         ])
 
         if (canOperate) {
@@ -161,6 +162,7 @@ export const useAirmiusShellNavigation = () => {
                     can('subscriptions.view') ? item('commerce', 'shell.items.commerce', 'las la-chart-line', route('admin.commerce.index'), ['/admin/commerce', '/admin/subscriptions', '/admin/payments', '/admin/invoices']) : null,
                     can('blog.view') ? item('content', 'shell.items.content', 'las la-pen-nib', route('blogs.index'), ['/admin/blogs']) : null,
                     can('sponsors.view') ? item('sponsors', 'shell.items.sponsors', 'las la-handshake', route('sponsors.index'), ['/admin/sponsors']) : null,
+                    can('analytics.view') ? item('analytics', 'shell.items.analytics', 'las la-chart-bar', route('admin.product-analytics.index'), ['/admin/product-analytics']) : null,
                     can('admin.settings.view') ? item('settings', 'shell.items.system', 'las la-cog', route('admin.settings.index'), ['/admin/settings']) : null,
                 ].filter(Boolean),
             })

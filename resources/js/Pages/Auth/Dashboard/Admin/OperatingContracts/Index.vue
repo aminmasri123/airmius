@@ -711,7 +711,7 @@ const paginationLabel = (label) => {
                                     </label>
                                     <label class="block">
                                         <span class="text-sm font-semibold text-primary">{{ tAuto('Website / Portal') }}</span>
-                                        <input v-model="form.website" class="mt-1 w-full rounded-xl border-border bg-card text-primary" placeholder="https://..." type="url">
+                                        <input v-model="form.website" class="mt-1 w-full rounded-xl border-border bg-card text-primary" :placeholder="t('commerce.ui.url_placeholder')" type="url">
                                         <p v-if="form.errors.website" class="mt-1 text-xs text-error">{{ form.errors.website }}</p>
                                     </label>
                                     <label class="block md:col-span-2">

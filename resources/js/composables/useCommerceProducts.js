@@ -93,6 +93,7 @@ export function useCommerceProducts({
         domain: '',
         goals: '',
         notes: '',
+        accepted_privacy: false,
     })
 
     const attributePresets = [
@@ -432,7 +433,7 @@ export function useCommerceProducts({
     const storeWebsiteRequest = () => websiteForm.post(route('auth.commerce.website-requests.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            websiteForm.reset('domain', 'goals', 'notes')
+            websiteForm.reset('domain', 'goals', 'notes', 'accepted_privacy')
             websiteRequestModal.value = false
         },
     })
@@ -495,4 +496,3 @@ export function useCommerceProducts({
         websiteRequestModal,
     }
 }
-

@@ -45,15 +45,35 @@ class RoleWorkspaceController extends Controller
     private function workspaces(): array
     {
         return [
-            ['key' => 'athlete', 'title' => 'Mein Sport', 'description' => 'Feed, Training, Events, Ernährung, Sportkarte und passende Sportpartner.', 'icon' => 'las la-running', 'href' => route('auth.feed.index'), 'status' => 'Persönlich', 'roles' => ['player', 'youth_player', 'minor_player', 'guest_player', 'captain'], 'permissions' => []],
-            ['key' => 'coach', 'title' => 'Trainer-Arbeitsbereich', 'description' => 'Heutige Aufgaben, Teams, Trainingsplanung, Anwesenheit und Feedback.', 'icon' => 'las la-chalkboard-teacher', 'href' => route('auth.trainer-cockpit.index'), 'status' => 'Aktiv', 'roles' => ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'team_manager', 'captain'], 'permissions' => ['training.view', 'event.create', 'teams.manage_players']],
-            ['key' => 'club', 'title' => 'Vereinsverwaltung', 'description' => 'Mitglieder, Teams, Rechnungen, Sponsoren und Vereinskommunikation.', 'icon' => 'las la-building', 'href' => route('auth.club-cockpit.index'), 'status' => 'Aktiv', 'roles' => ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller'], 'permissions' => ['org.manage', 'billing.manage']],
-            ['key' => 'sponsor', 'title' => 'Sponsor-Cockpit', 'description' => 'Partnerschaften, Kampagnen, Sichtbarkeit, Angebote und Wirkung zentral steuern.', 'icon' => 'las la-handshake', 'href' => route('auth.sponsor-workspace.index'), 'status' => 'Aktiv', 'roles' => ['sponsor', 'sponsor_manager'], 'permissions' => ['sponsor.workspace.view', 'sponsors.view']],
-            ['key' => 'guardian', 'title' => 'Eltern & Guardian', 'description' => 'Kinderprofile, Zustimmung, Sicherheit und Einblick in relevante Vereinsdaten.', 'icon' => 'las la-user-shield', 'href' => route('guardian-access.children'), 'status' => 'Basis vorhanden', 'roles' => ['parent', 'guardian'], 'permissions' => ['guardians.children.view']],
-            ['key' => 'analytics', 'title' => 'Analyse & Performance', 'description' => 'Leistungsdaten, Training, Feedback und Entwicklungsberichte.', 'icon' => 'las la-chart-bar', 'href' => route('auth.training.index'), 'status' => 'Training aktiv', 'roles' => ['data_analyst', 'performance_coach'], 'permissions' => ['analytics.view', 'performance.view', 'gps.data.view']],
-            ['key' => 'medical', 'title' => 'Medical & Recovery', 'description' => 'Belastung, Reha-Hinweise, Freigaben und Feedback im Trainingskontext.', 'icon' => 'las la-heartbeat', 'href' => route('auth.training.index'), 'status' => 'Training aktiv', 'roles' => ['physiotherapist'], 'permissions' => ['medical.records.view', 'injuries.edit', 'recovery.plan.edit']],
-            ['key' => 'media', 'title' => 'Media & Content', 'description' => 'Beiträge, Medien, SEO, Vereinsnews und öffentliche Kommunikation.', 'icon' => 'las la-photo-video', 'href' => route('auth.feed.index'), 'status' => 'Basis vorhanden', 'roles' => ['media_manager', 'redaktor'], 'permissions' => ['content.create', 'media.upload', 'blog.view']],
-            ['key' => 'support', 'title' => 'Support', 'description' => 'Nutzerhilfe, Benachrichtigungen und Eskalationen.', 'icon' => 'las la-headset', 'href' => route('auth.notifications.index'), 'status' => 'Benachrichtigungen aktiv', 'roles' => ['support'], 'permissions' => ['support.tickets']],
+            $this->workspace('athlete', 'las la-running', route('auth.feed.index'), 'personal', ['player', 'youth_player', 'minor_player', 'guest_player', 'captain']),
+            $this->workspace('coach', 'las la-chalkboard-teacher', route('auth.trainer-cockpit.index'), 'active', ['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'team_manager', 'captain'], ['training.view', 'event.create', 'teams.manage_players']),
+            $this->workspace('club', 'las la-building', route('auth.club-cockpit.index'), 'active', ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller'], ['org.manage', 'billing.manage']),
+            $this->workspace('sponsor', 'las la-handshake', route('auth.sponsor-workspace.index'), 'active', ['sponsor', 'sponsor_manager'], ['sponsor.workspace.view', 'sponsors.view']),
+            $this->workspace('guardian', 'las la-user-shield', route('guardian-access.children'), 'foundation_available', ['parent', 'guardian'], ['guardians.children.view']),
+            $this->workspace('analytics', 'las la-chart-bar', route('admin.product-analytics.index'), 'active', ['data_analyst', 'performance_coach'], ['analytics.view', 'performance.view', 'gps.data.view']),
+            $this->workspace('medical', 'las la-heartbeat', route('auth.training.index'), 'training_active', ['physiotherapist'], ['medical.records.view', 'injuries.edit', 'recovery.plan.edit']),
+            $this->workspace('media', 'las la-photo-video', route('auth.feed.index'), 'foundation_available', ['media_manager', 'redaktor'], ['content.create', 'media.upload', 'blog.view']),
+            $this->workspace('support', 'las la-headset', route('auth.notifications.index'), 'notifications_active', ['support'], ['support.tickets']),
+        ];
+    }
+
+    private function workspace(
+        string $key,
+        string $icon,
+        string $href,
+        string $status,
+        array $roles,
+        array $permissions = [],
+    ): array {
+        return [
+            'key' => $key,
+            'title' => __("workspace.items.{$key}.title"),
+            'description' => __("workspace.items.{$key}.description"),
+            'icon' => $icon,
+            'href' => $href,
+            'status' => __("workspace.status.{$status}"),
+            'roles' => $roles,
+            'permissions' => $permissions,
         ];
     }
 }

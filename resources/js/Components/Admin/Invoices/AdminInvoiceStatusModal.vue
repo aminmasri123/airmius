@@ -60,7 +60,7 @@ defineProps({
 
                     <div class="rounded-xl border border-border bg-inputBg p-4 text-sm">
                         <div class="flex items-center justify-between gap-4">
-                            <span class="text-secondary">Aktuell</span>
+                            <span class="text-secondary">{{ $t('Aktuell') }}</span>
                             <span class="rounded-full border px-3 py-1 text-xs font-black" :class="statusClasses(statusModal.invoice?.status)">
                                 {{ statusLabel(statusModal.invoice?.status) }}
                             </span>
@@ -91,4 +91,3 @@ defineProps({
         </div>
     </Teleport>
 </template>
-

@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageDeleted;
-use App\Events\MessageReceiptsUpdated;
 use App\Events\MessageReactionUpdated;
+use App\Events\MessageReceiptsUpdated;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageHide;
-use App\Models\MessageReceipt;
 use App\Models\MessageReaction;
+use App\Models\MessageReceipt;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -64,15 +64,19 @@ class MessageController extends Controller
                     return;
                 }
 
-                AppNotification::send($recipient, 'chat.message', [
-                    'title' => 'Neue Nachricht von '.auth()->user()->name,
-                    'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
-                    'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
-                    'actor_id' => auth()->id(),
-                    'actor_name' => auth()->user()->name,
-                    'conversation_id' => $conversation->id,
-                    'message_id' => $message->id,
-                ]);
+                AppNotification::sendLocalized($recipient, 'chat.message',
+                    'server.chat.notifications.message_title',
+                    $message->message ? null : 'server.chat.notifications.attachment',
+                    ['sender' => auth()->user()->name], [
+                        'body' => $message->message ? str($message->message)->limit(120)->toString() : null,
+                        'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+                        'actor_id' => auth()->id(),
+                        'actor_name' => auth()->user()->name,
+                        'conversation_id' => $conversation->id,
+                        'message_id' => $message->id,
+                    ], [
+                        'dedupe_key' => 'chat-message:'.$message->id,
+                    ]);
             });
 
         if ($request->expectsJson() || $request->ajax()) {
@@ -228,7 +232,7 @@ class MessageController extends Controller
     {
         $conversation = $message->conversation;
 
-        if (!$conversation->users()->where('users.id', $userId)->exists()) {
+        if (! $conversation->users()->where('users.id', $userId)->exists()) {
             return false;
         }
 
@@ -241,6 +245,6 @@ class MessageController extends Controller
             ->where('user_id', $userId)
             ->value('joined_at');
 
-        return !$joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
+        return ! $joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
     }
 }

@@ -15,12 +15,12 @@ const emit = defineEmits(['update:modelValue', 'upload'])
 
 <template>
     <div class="rounded-xl border border-border bg-inputBg/60 p-3">
-        <p class="text-sm font-semibold text-primary">{{ $t('sport_map.places.images.title') }}</p>
-        <p class="mt-1 text-xs leading-5 text-secondary">{{ $t('sport_map.places.images.description') }}</p>
+        <p class="text-sm font-semibold text-primary">{{ $t('sport_map_ui.images_title') }}</p>
+        <p class="mt-1 text-xs leading-5 text-secondary">{{ $t('sport_map_ui.images_hint') }}</p>
 
         <div class="mt-3 grid gap-3 sm:grid-cols-2">
             <label class="block">
-                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.places.images.upload_label') }}</span>
+                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map_ui.upload_images') }}</span>
                 <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
@@ -30,11 +30,11 @@ const emit = defineEmits(['update:modelValue', 'upload'])
                 >
             </label>
             <label class="block">
-                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.places.images.urls_label') }}</span>
+                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map_ui.image_urls_optional') }}</span>
                 <input
                     :value="modelValue"
                     class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-                    placeholder="https://... , https://..."
+                    :placeholder="$t('sport_map_ui.image_urls_placeholder')"
                     @input="emit('update:modelValue', $event.target.value)"
                 >
             </label>

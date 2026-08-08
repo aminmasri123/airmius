@@ -20,9 +20,17 @@ class SponsorController extends Controller
 
         $scope = (string) $request->input('scope', 'all');
         $scope = in_array($scope, ['all', 'platform', 'outfit_subscription', 'club'], true) ? $scope : 'all';
+        $query = mb_substr(trim((string) $request->input('q', '')), 0, 120);
+        $clubQuery = mb_substr(trim((string) $request->input('club_query', '')), 0, 120);
 
         $sponsorQuery = Sponsor::query()
             ->with('club:id,name')
+            ->when($query, fn ($builder, $search) => $builder->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('contact_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('club', fn ($club) => $club->where('name', 'like', "%{$search}%"));
+            }))
             ->when($scope === 'platform', fn ($query) => $query->where(function ($query) {
                 $query->where('scope', 'platform')
                     ->orWhere(function ($query) {
@@ -62,7 +70,7 @@ class SponsorController extends Controller
                         'name' => $sponsor->club->name,
                     ] : null,
                 ]),
-            'stats' => [
+            'stats' => fn () => [
                 'total' => Sponsor::query()->count(),
                 'platform' => Sponsor::query()
                     ->where('scope', 'platform')
@@ -78,11 +86,15 @@ class SponsorController extends Controller
             ],
             'filters' => [
                 'scope' => $scope,
+                'q' => $query,
+                'club_query' => $clubQuery,
             ],
-            'clubs' => Club::query()
+            'clubs' => fn () => Club::query()
                 ->with('currentSubscription.plan')
                 ->select(['id', 'name'])
+                ->when($clubQuery, fn ($builder, $search) => $builder->where('name', 'like', "%{$search}%"))
                 ->orderBy('name')
+                ->limit(100)
                 ->get()
                 ->map(fn (Club $club) => [
                     'id' => $club->id,
@@ -109,7 +121,7 @@ class SponsorController extends Controller
 
         Sponsor::create($data);
 
-        return back()->with('success', 'Sponsor erstellt.');
+        return back()->with('success', __('sponsor.flash.created'));
     }
 
     public function update(Request $request, Sponsor $sponsor)
@@ -129,7 +141,7 @@ class SponsorController extends Controller
 
         $sponsor->update($data);
 
-        return back()->with('success', 'Sponsor aktualisiert.');
+        return back()->with('success', __('sponsor.flash.updated'));
     }
 
     public function destroy(Request $request, Sponsor $sponsor)
@@ -138,7 +150,7 @@ class SponsorController extends Controller
 
         $sponsor->delete();
 
-        return back()->with('success', 'Sponsor gelöscht.');
+        return back()->with('success', __('sponsor.flash.deleted'));
     }
 
     private function validated(Request $request): array

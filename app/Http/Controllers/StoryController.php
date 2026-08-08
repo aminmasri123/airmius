@@ -76,7 +76,7 @@ class StoryController extends Controller
 
         $this->moderation->flagIfNeeded($story, $story->caption ?? '', $user->id);
 
-        return back()->with('success', 'Story erstellt.');
+        return back()->with('success', __('platform.social.story_created'));
     }
 
     public function react(Request $request, Story $story)

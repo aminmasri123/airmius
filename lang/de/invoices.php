@@ -1,0 +1,63 @@
+<?php
+
+return [
+    'flash' => [
+        'created' => 'Rechnung wurde erstellt.',
+        'status_updated' => 'Rechnungsstatus wurde aktualisiert.',
+        'deleted' => 'Rechnung wurde gelöscht.',
+    ],
+    'errors' => [
+        'payments_exist' => 'Rechnungen mit Zahlungen können nicht gelöscht werden.',
+        'type_not_deletable' => 'Diese Rechnungsart kann hier nicht gelöscht werden.',
+    ],
+    'types' => [
+        'recurring_contribution' => 'Mitgliedsbeitrag',
+        'account_subscription' => 'Konto-Abo',
+        'outfit_subscription_manual' => 'Outfit-Abo',
+        'marketplace_purchase' => 'Kauf / Marketplace',
+        'elearning' => 'E-Learning / Kurs',
+        'ads' => 'Ads / Werbung',
+        'agency_website' => 'Werbeagentur – Website',
+        'agency_logo' => 'Werbeagentur – Logo',
+        'agency_branding' => 'Werbeagentur – Branding',
+        'sponsorship' => 'Sponsoring',
+        'custom' => 'Individuell',
+        'manual' => 'Sonstige Rechnung',
+        'club' => 'Vereinsrechnung',
+    ],
+    'manual_options' => [
+        'account_subscription' => ['label' => 'Konto-Abo', 'hint' => 'Plan, Upgrade oder Nutzerkonto'],
+        'outfit_subscription_manual' => ['label' => 'Outfit-Abo', 'hint' => 'Sportkleidung, Box oder Sponsor-Deal'],
+        'marketplace_purchase' => ['label' => 'Kauf / Marketplace', 'hint' => 'Produkt, Bestellung oder Warenkorb'],
+        'elearning' => ['label' => 'E-Learning / Kurs', 'hint' => 'Kursanbieter, Coach oder Trainer'],
+        'ads' => ['label' => 'Ads / Werbung', 'hint' => 'Anzeige, Kampagne oder Sichtbarkeit'],
+        'agency_website' => ['label' => 'Website', 'hint' => 'Website-Projekt der Werbeagentur'],
+        'agency_logo' => ['label' => 'Logo', 'hint' => 'Logo-Design oder Redesign'],
+        'agency_branding' => ['label' => 'Branding', 'hint' => 'CI, Designpaket oder Markenauftritt'],
+        'sponsorship' => ['label' => 'Sponsoring', 'hint' => 'Sponsor-Paket oder Partnerschaft'],
+        'custom' => ['label' => 'Individuell', 'hint' => 'Freier Grund'],
+    ],
+    'fallbacks' => [
+        'account_subscription' => 'Airmius-Abo',
+        'outfit_subscription' => 'Outfit-Abo',
+        'outfit_number' => 'Outfit-Abo #:id',
+    ],
+    'notifications' => [
+        'created_title' => 'Neue Rechnung erhalten',
+        'created_body' => ':invoice über :amount ist jetzt in deinen Rechnungen sichtbar.',
+        'new_invoice_fallback' => 'Eine neue Rechnung',
+        'status_updated_title' => 'Rechnungsstatus aktualisiert',
+        'status_updated_body' => ':invoice ist jetzt :status.',
+        'invoice_fallback' => 'Deine Rechnung',
+    ],
+    'status' => [
+        'paid' => 'bezahlt',
+        'open' => 'offen',
+        'pending' => 'ausstehend',
+        'awaiting_transfer' => 'wartet auf Überweisung',
+        'overdue' => 'überfällig',
+        'cancelled' => 'storniert',
+        'failed' => 'fehlgeschlagen',
+        'unknown' => 'unbekannt',
+    ],
+];

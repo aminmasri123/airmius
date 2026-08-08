@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Invoice;
+use App\Models\Notification as AppNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -49,7 +50,7 @@ class AdminInvoiceManagementTest extends TestCase
         Notification::fake();
 
         $admin = User::factory()->create();
-        $recipient = User::factory()->create();
+        $recipient = User::factory()->create(['language' => 'ar']);
         $this->grantPermissions($admin, ['billing.manage']);
 
         $this->actingAs($admin)
@@ -74,6 +75,16 @@ class AdminInvoiceManagementTest extends TestCase
         $this->assertSame('149.90', $invoice->amount);
         $this->assertNotEmpty($invoice->number);
 
+        $createdNotification = AppNotification::query()
+            ->where('user_id', $recipient->id)
+            ->where('type', 'invoice.created')
+            ->firstOrFail();
+        $this->assertSame('ar', data_get($createdNotification->data, 'locale'));
+        $this->assertSame(
+            __('invoices.notifications.created_title', locale: 'ar'),
+            data_get($createdNotification->data, 'title'),
+        );
+
         $this->actingAs($admin)
             ->put(route('invoices.status.update', $invoice), [
                 'status' => 'paid',
@@ -84,6 +95,16 @@ class AdminInvoiceManagementTest extends TestCase
 
         $this->assertSame('paid', $invoice->status);
         $this->assertNotNull($invoice->paid_at);
+
+        $statusNotification = AppNotification::query()
+            ->where('user_id', $recipient->id)
+            ->where('type', 'invoice.status_updated')
+            ->firstOrFail();
+        $this->assertSame('ar', data_get($statusNotification->data, 'locale'));
+        $this->assertSame(
+            __('invoices.notifications.status_updated_title', locale: 'ar'),
+            data_get($statusNotification->data, 'title'),
+        );
 
         $this->actingAs($admin)
             ->delete(route('invoices.destroy', $invoice))

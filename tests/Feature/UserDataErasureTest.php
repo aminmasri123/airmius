@@ -8,8 +8,12 @@ use App\Models\Notification as AppNotification;
 use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Notifications\UserDataErasureCodeRequested;
+use App\Notifications\UserDataErasureCompleted;
 use App\Services\UserDataErasureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -149,6 +153,86 @@ class UserDataErasureTest extends TestCase
         $this->assertSame('Köln', $user->fresh()->city);
     }
 
+    public function test_settings_exposes_the_server_owned_data_erasure_contract(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'social@example.test',
+            'language' => 'fr',
+        ]);
+        SocialAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'google-settings-contract',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->withHeader('X-App-Locale', 'fr')
+            ->getJson('/api/v1/settings')
+            ->assertOk()
+            ->assertHeader('Content-Language', 'fr')
+            ->assertJsonPath('data.data_erasure.uses_social_login', true)
+            ->assertJsonPath('data.data_erasure.account_email', 'social@example.test')
+            ->assertJsonPath('data.data_erasure.category_keys', [
+                'profile',
+                'content',
+                'messages',
+                'files',
+                'sport_and_health',
+                'social_and_integrations',
+                'commerce',
+            ]);
+    }
+
+    public function test_api_erasure_result_uses_the_request_locale(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create([
+            'language' => 'fr',
+            'password' => Hash::make('mot-de-passe-actuel'),
+        ]);
+        $this->primeConfirmation($user, ['profile']);
+        Sanctum::actingAs($user);
+
+        $this->withHeader('X-App-Locale', 'fr')
+            ->postJson('/api/v1/privacy/data-erasure', [
+                'code' => '123456',
+                'categories' => ['profile'],
+            ])
+            ->assertOk()
+            ->assertHeader('Content-Language', 'fr')
+            ->assertJsonPath('data.message', __('data_erasure.flash.completed', locale: 'fr'))
+            ->assertJsonPath('data.result.retained.0', __('data_erasure.summary.retained_account', locale: 'fr'));
+    }
+
+    public function test_data_erasure_catalogs_and_transactional_emails_match_all_locales(): void
+    {
+        $reference = Arr::dot(require lang_path('de/data_erasure.php'));
+
+        foreach (['de', 'en', 'fr', 'ar'] as $locale) {
+            $catalog = Arr::dot(require lang_path($locale.'/data_erasure.php'));
+            $this->assertSame(array_keys($reference), array_keys($catalog), $locale.' key parity');
+
+            foreach ($reference as $key => $source) {
+                $this->assertSame(
+                    $this->translationPlaceholders((string) $source),
+                    $this->translationPlaceholders((string) $catalog[$key]),
+                    $locale.' placeholder parity for '.$key,
+                );
+            }
+        }
+
+        $notifiable = new AnonymousNotifiable;
+        $this->assertSame(
+            __('data_erasure.email_templates.data_erasure_code.subject', locale: 'fr'),
+            (new UserDataErasureCodeRequested('123456', 'fr'))->toMail($notifiable)->subject,
+        );
+        $this->assertSame(
+            __('data_erasure.email_templates.data_erasure_completed.subject', locale: 'ar'),
+            (new UserDataErasureCompleted('Amina', 'ar'))->toMail($notifiable)->subject,
+        );
+    }
+
     /**
      * @param  array<int, string>  $categories
      */
@@ -161,5 +245,20 @@ class UserDataErasureTest extends TestCase
             'categories_hash' => hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR)),
             'expires_at' => now()->addMinutes(15)->timestamp,
         ], now()->addMinutes(15));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function translationPlaceholders(string $value): array
+    {
+        preg_match_all('/(?::[a-zA-Z_][a-zA-Z0-9_]*|\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\})/', $value, $matches);
+        $placeholders = array_map(
+            fn (string $placeholder) => preg_replace('/\s+/', '', $placeholder) ?? $placeholder,
+            $matches[0],
+        );
+        sort($placeholders);
+
+        return $placeholders;
     }
 }

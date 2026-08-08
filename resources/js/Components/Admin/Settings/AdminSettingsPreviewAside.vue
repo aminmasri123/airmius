@@ -26,7 +26,7 @@ defineProps({
         </div>
 
         <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
-            Benutzer mit der Berechtigung <span class="font-semibold text-primary">system.manage</span>
+            Benutzer mit der Berechtigung <code v-text="'system.manage'" translate="no" class="font-semibold text-primary"></code>
             können Airmius weiterhin normal verwenden.
         </div>
 
@@ -34,11 +34,11 @@ defineProps({
             <p class="font-semibold text-primary">Überweisungsdaten</p>
             <dl class="mt-3 space-y-2">
                 <div class="flex justify-between gap-3">
-                    <dt>Kontoinhaber</dt>
+                    <dt>{{ $t('Kontoinhaber') }}</dt>
                     <dd class="text-right text-primary">{{ form.billing_bank_account_holder || '-' }}</dd>
                 </div>
                 <div class="flex justify-between gap-3">
-                    <dt>IBAN</dt>
+                    <dt>{{ $t('IBAN') }}</dt>
                     <dd class="text-right text-primary">{{ form.billing_iban || '-' }}</dd>
                 </div>
                 <div class="flex justify-between gap-3">
@@ -63,4 +63,3 @@ defineProps({
         </div>
     </aside>
 </template>
-

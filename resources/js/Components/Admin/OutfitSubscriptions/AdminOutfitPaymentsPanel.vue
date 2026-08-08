@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     subscriptions: { type: Array, default: () => [] },
     paymentModal: { type: Object, required: true },
@@ -53,9 +57,9 @@ defineProps({
                     <span>Plan</span>
                     <span>Status</span>
                     <span>Zahlung</span>
-                    <span>Lieferung</span>
+                    <span>{{ t('outfit_admin.ui.delivery_label') }}</span>
                     <span>Referenz</span>
-                    <span class="text-right">Aktion</span>
+                    <span class="text-end">Aktion</span>
                 </div>
 
                 <article
@@ -214,7 +218,7 @@ defineProps({
                     <div class="mt-4 rounded-lg border border-border bg-inputBg p-4 text-sm">
                         <div class="flex justify-between gap-4">
                             <span class="text-secondary">Kunde</span>
-                            <span class="text-right font-semibold text-primary">{{ paymentModal.subscription?.user?.name }}</span>
+                            <span class="text-end font-semibold text-primary">{{ paymentModal.subscription?.user?.name }}</span>
                         </div>
                         <div class="mt-2 flex justify-between gap-4">
                             <span class="text-secondary">Betrag</span>
@@ -222,7 +226,7 @@ defineProps({
                         </div>
                         <div class="mt-2 flex justify-between gap-4">
                             <span class="text-secondary">Referenz</span>
-                            <span class="text-right font-semibold text-primary">{{ paymentModal.subscription?.payment_reference }}</span>
+                            <span class="text-end font-semibold text-primary">{{ paymentModal.subscription?.payment_reference }}</span>
                         </div>
                     </div>
 
@@ -266,7 +270,7 @@ defineProps({
 
                     <div class="grid max-h-[75vh] gap-4 overflow-y-auto p-5 md:grid-cols-2">
                         <label class="block md:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Name</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.name') }}</span>
                             <input v-model="shippingAddressForm.shipping_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Vor- und Nachname">
                             <span v-if="shippingAddressForm.errors.shipping_name" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_name }}</span>
                         </label>

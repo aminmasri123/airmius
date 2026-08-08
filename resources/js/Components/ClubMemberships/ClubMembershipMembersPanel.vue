@@ -134,7 +134,7 @@ defineProps({
 
                 <form v-if="editingMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-3" @submit.prevent="saveMember(member)">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Rollen</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ $t('Rollen') }}</label>
                         <div class="mt-1 grid gap-2 rounded-lg border border-border bg-inputBg p-3">
                             <label v-for="role in clubRoleOptions" :key="role.value" class="flex items-center gap-2 text-sm text-primary">
                                 <input
@@ -264,5 +264,4 @@ defineProps({
         </div>
     </section>
 </template>
-
 

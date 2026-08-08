@@ -81,13 +81,13 @@ class EventCompetitivenessController extends Controller
 
         if ($event->status === 'cancelled') {
             throw ValidationException::withMessages([
-                'status' => 'Abgesagte Events können nicht beantwortet werden.',
+                'status' => __('event_competitiveness.validation.cancelled'),
             ]);
         }
 
         if ($this->isParticipationDeadlineExpired($event) && ! $request->user()->can('update', $event)) {
             throw ValidationException::withMessages([
-                'status' => 'Die Rückmeldefrist für dieses Event ist bereits abgelaufen.',
+                'status' => __('event_competitiveness.validation.response_deadline_expired'),
             ]);
         }
 
@@ -101,7 +101,7 @@ class EventCompetitivenessController extends Controller
             && ! trim((string) ($data['response_reason'] ?? ''))
         ) {
             throw ValidationException::withMessages([
-                'response_reason' => 'Bitte eine Begründung angeben.',
+                'response_reason' => __('event_competitiveness.validation.reason_required'),
             ]);
         }
 
@@ -113,7 +113,7 @@ class EventCompetitivenessController extends Controller
 
             if ($event->max_participants && $acceptedCount >= $event->max_participants && ! $this->userAlreadyAccepted($event, $request->user()->id)) {
                 throw ValidationException::withMessages([
-                    'status' => 'Das Event ist bereits ausgebucht.',
+                    'status' => __('event_competitiveness.validation.full'),
                 ]);
             }
         }
@@ -132,7 +132,7 @@ class EventCompetitivenessController extends Controller
         $respondedCount = $event->participants()->count();
 
         return response()->json([
-            'message' => 'Teilnahmeantwort gespeichert.',
+            'message' => __('event_competitiveness.responses.participation_saved'),
             'data' => [
                 'status' => $data['status'],
                 'response_reason' => $data['response_reason'] ?? null,
@@ -159,13 +159,13 @@ class EventCompetitivenessController extends Controller
 
         if ($data['response_required'] && is_null($deadlineAt)) {
             throw ValidationException::withMessages([
-                'participant_response_deadline_at' => 'Bei aktivierter Pflichtantwort ist eine Deadline erforderlich.',
+                'participant_response_deadline_at' => __('event_competitiveness.validation.deadline_required'),
             ]);
         }
 
         if (! is_null($deadlineAt) && Carbon::parse($deadlineAt)->lt(now())) {
             throw ValidationException::withMessages([
-                'participant_response_deadline_at' => 'Die Deadline darf nicht in der Vergangenheit liegen.',
+                'participant_response_deadline_at' => __('event_competitiveness.validation.deadline_past'),
             ]);
         }
 
@@ -176,7 +176,7 @@ class EventCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Teilnahmerichtlinie gespeichert.',
+            'message' => __('event_competitiveness.responses.policy_saved'),
             'data' => [
                 'response_required' => (bool) $event->participant_response_required,
                 'participant_response_deadline_at' => $event->participant_response_deadline_at?->toDateTimeString(),
@@ -198,7 +198,7 @@ class EventCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Erinnerung ausgelöst.',
+            'message' => __('event_competitiveness.responses.reminder_sent'),
             'data' => [
                 'event_id' => $event->id,
                 'missing_responses' => $this->countMissingParticipantResponses($event),
@@ -213,7 +213,7 @@ class EventCompetitivenessController extends Controller
         $event->participants()->detach($request->user()->id);
 
         return response()->json([
-            'message' => 'Teilnahmemeldung entfernt.',
+            'message' => __('event_competitiveness.responses.participation_removed'),
         ]);
     }
 
@@ -305,7 +305,7 @@ class EventCompetitivenessController extends Controller
             $rowData = array_combine($header, $line);
 
             if (! is_array($rowData)) {
-                $errors[] = "Zeile ".($index + 2)." ist ungültig.";
+                $errors[] = __('event_competitiveness.csv.invalid_line', ['line' => $index + 2]);
                 continue;
             }
 
@@ -313,13 +313,16 @@ class EventCompetitivenessController extends Controller
                 $this->importedEventFromRow($request, $rowData);
                 $created++;
             } catch (\Throwable $exception) {
-                $errors[] = "Zeile ".($index + 2).": ".$exception->getMessage();
+                $errors[] = __('event_competitiveness.csv.line_error', [
+                    'line' => $index + 2,
+                    'error' => $exception->getMessage(),
+                ]);
                 Log::warning('CSV event import failed', ['line' => $index + 2, 'exception' => $exception::class]);
             }
         }
 
         return response()->json([
-            'message' => "{$created} Events importiert.",
+            'message' => __('event_competitiveness.responses.imported', ['count' => $created]),
             'errors' => $errors,
         ]);
     }
@@ -360,7 +363,7 @@ class EventCompetitivenessController extends Controller
         }
 
         return response()->json([
-            'message' => "{$created} Events importiert.",
+            'message' => __('event_competitiveness.responses.imported', ['count' => $created]),
         ]);
     }
 
@@ -410,7 +413,7 @@ class EventCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Aufstellung/Trainingsblock erstellt.',
+            'message' => __('event_competitiveness.responses.training_block_created'),
             'data' => $this->trainingBlockPayload($block->load('items')),
         ]);
     }
@@ -430,7 +433,7 @@ class EventCompetitivenessController extends Controller
         $block->update(array_filter($data, fn ($value) => ! is_null($value)));
 
         return response()->json([
-            'message' => 'Block aktualisiert.',
+            'message' => __('event_competitiveness.responses.training_block_updated'),
             'data' => $this->trainingBlockPayload($block->refresh()->load('items')),
         ]);
     }
@@ -442,7 +445,7 @@ class EventCompetitivenessController extends Controller
         $block->delete();
 
         return response()->json([
-            'message' => 'Block gelöscht.',
+            'message' => __('event_competitiveness.responses.training_block_deleted'),
         ]);
     }
 
@@ -465,7 +468,7 @@ class EventCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Station erstellt.',
+            'message' => __('event_competitiveness.responses.station_created'),
             'data' => [
                 'id' => $item->id,
                 'title' => $item->title,
@@ -492,7 +495,7 @@ class EventCompetitivenessController extends Controller
         $item->update(array_filter($data, fn ($value) => ! is_null($value)));
 
         return response()->json([
-            'message' => 'Station aktualisiert.',
+            'message' => __('event_competitiveness.responses.station_updated'),
             'data' => [
                 'id' => $item->id,
                 'title' => $item->title,
@@ -521,7 +524,7 @@ class EventCompetitivenessController extends Controller
         }
 
         return response()->json([
-            'message' => 'Block-Reihenfolge gespeichert.',
+            'message' => __('event_competitiveness.responses.blocks_reordered'),
             'data' => [
                 'event_id' => $event->id,
             ],
@@ -547,7 +550,7 @@ class EventCompetitivenessController extends Controller
         }
 
         return response()->json([
-            'message' => 'Stationsreihenfolge gespeichert.',
+            'message' => __('event_competitiveness.responses.stations_reordered'),
             'data' => [
                 'event_id' => $event->id,
                 'block_id' => $block->id,
@@ -563,7 +566,7 @@ class EventCompetitivenessController extends Controller
         $item->delete();
 
         return response()->json([
-            'message' => 'Station gelöscht.',
+            'message' => __('event_competitiveness.responses.station_deleted'),
         ]);
     }
 
@@ -632,7 +635,7 @@ class EventCompetitivenessController extends Controller
         });
 
         return response()->json([
-            'message' => 'Abstimmung erstellt.',
+            'message' => __('event_competitiveness.responses.decision_created'),
             'data' => [
                 'id' => $decision->id,
                 'question' => $decision->question,
@@ -653,7 +656,7 @@ class EventCompetitivenessController extends Controller
 
         if (! $decision->isOpen()) {
             throw ValidationException::withMessages([
-                'decision' => 'Diese Abstimmung ist geschlossen.',
+                'decision' => __('event_competitiveness.validation.decision_closed'),
             ]);
         }
 
@@ -677,7 +680,7 @@ class EventCompetitivenessController extends Controller
         );
 
         return response()->json([
-            'message' => 'Abstimmung gespeichert.',
+            'message' => __('event_competitiveness.responses.vote_saved'),
             'data' => [
                 'vote_id' => $vote->id,
                 'decision_id' => $decision->id,
@@ -694,7 +697,7 @@ class EventCompetitivenessController extends Controller
         $decision->update(['status' => 'closed']);
 
         return response()->json([
-            'message' => 'Abstimmung geschlossen.',
+            'message' => __('event_competitiveness.responses.decision_closed'),
             'data' => [
                 'id' => $decision->id,
                 'status' => $decision->status,
@@ -781,12 +784,12 @@ class EventCompetitivenessController extends Controller
 
         $ride->users()->attach($request->user()->id, [
             'status' => Ride::MEMBER_STATUS_ACCEPTED,
-            'message' => 'Organisator',
+            'message' => __('event_competitiveness.carpool.organizer'),
             'responded_at' => now(),
         ]);
 
         return response()->json([
-            'message' => 'Fahrgemeinschaft angelegt.',
+            'message' => __('event_competitiveness.responses.carpool_created'),
             'data' => [
                 'id' => $ride->id,
                 'event_id' => $event->id,
@@ -805,7 +808,7 @@ class EventCompetitivenessController extends Controller
 
         if ($this->isParticipationDeadlineExpired($event) && ! $request->user()->can('update', $event)) {
             throw ValidationException::withMessages([
-                'ride' => 'Die Teilnahmefrist für dieses Event ist abgelaufen.',
+                'ride' => __('event_competitiveness.validation.event_deadline_expired'),
             ]);
         }
 
@@ -832,7 +835,7 @@ class EventCompetitivenessController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Fahrgemeinschafts-Termin gespeichert.',
+            'message' => __('event_competitiveness.responses.carpool_joined'),
             'data' => [
                 'ride_id' => $ride->id,
                 'status' => $status,
@@ -849,14 +852,14 @@ class EventCompetitivenessController extends Controller
 
         if (! $this->rideHasUser($ride, $request->user()->id)) {
             return response()->json([
-                'message' => 'Nicht eingetragen.',
+                'message' => __('event_competitiveness.responses.carpool_not_joined'),
             ]);
         }
 
         $ride->users()->detach($request->user()->id);
 
         return response()->json([
-            'message' => 'Aus der Fahrgemeinschaft ausgetragen.',
+            'message' => __('event_competitiveness.responses.carpool_left'),
         ]);
     }
 
@@ -946,7 +949,7 @@ class EventCompetitivenessController extends Controller
             return response()->json([
                 'data' => [
                     'actions' => [
-                        ['type' => 'track_event', 'label' => 'Event im Kalender prüfen'],
+                        ['type' => 'track_event', 'label' => __('event_competitiveness.actions.track_event')],
                     ],
                 ],
             ]);
@@ -955,11 +958,11 @@ class EventCompetitivenessController extends Controller
         return response()->json([
             'data' => [
                 'actions' => [
-                    ['type' => 'invite_to_decision', 'label' => 'Schnell-Umfrage starten', 'enabled' => true],
-                    ['type' => 'create_training_block', 'label' => 'Aufstellungsblock anlegen', 'enabled' => true],
-                    ['type' => 'start_carpool', 'label' => 'Carpool anlegen', 'enabled' => true],
-                    ['type' => 'set_deadline', 'label' => 'Teilnahme-Frist setzen', 'enabled' => true],
-                    ['type' => 'send_reminder', 'label' => 'Erinnerung auslösen', 'enabled' => true],
+                    ['type' => 'invite_to_decision', 'label' => __('event_competitiveness.actions.start_decision'), 'enabled' => true],
+                    ['type' => 'create_training_block', 'label' => __('event_competitiveness.actions.create_training_block'), 'enabled' => true],
+                    ['type' => 'start_carpool', 'label' => __('event_competitiveness.actions.start_carpool'), 'enabled' => true],
+                    ['type' => 'set_deadline', 'label' => __('event_competitiveness.actions.set_deadline'), 'enabled' => true],
+                    ['type' => 'send_reminder', 'label' => __('event_competitiveness.actions.send_reminder'), 'enabled' => true],
                 ],
                 'is_event_organizer' => $isEventOrganizer || $isCoach,
             ],

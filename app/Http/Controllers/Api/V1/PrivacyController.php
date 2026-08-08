@@ -43,6 +43,7 @@ class PrivacyController extends Controller
                 'privacy_settings' => [
                     'ads_personalization_consent' => (bool) $user->ads_personalization_consent,
                     'ads_measurement_consent' => (bool) $user->ads_measurement_consent,
+                    'product_analytics_consent' => (bool) $user->product_analytics_consent,
                     'profile_visibility' => $user->profile_visibility ?? 'public',
                     'direct_message_privacy' => $user->direct_message_privacy ?? 'everyone',
                     'friend_request_privacy' => $user->friend_request_privacy ?? 'everyone',

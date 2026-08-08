@@ -1,5 +1,8 @@
 ﻿<script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
     plan: { type: Object, required: true },
@@ -90,7 +93,7 @@ const shippingNoteModel = model('shippingNote', 'update:shippingNote')
                 <span class="text-sm font-semibold text-primary">Zahlungsart</span>
                 <select v-model="paymentProviderModel" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                     <option value="bank_transfer">Überweisung</option>
-                    <option value="paypal">PayPal</option>
+                    <option value="paypal">{{ t('outfit_workspace.payment.paypal') }}</option>
                 </select>
                 <span class="mt-1 block text-xs text-secondary">
                     Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestätigung offen.
@@ -101,7 +104,7 @@ const shippingNoteModel = model('shippingNote', 'update:shippingNote')
                 <p class="text-sm font-bold text-primary">Lieferadresse</p>
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <label class="block sm:col-span-2">
-                        <span class="text-xs font-semibold uppercase text-secondary">Name</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('outfit_ui.name') }}</span>
                         <input v-model="shippingNameModel" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Vor- und Nachname">
                     </label>
                     <label class="block sm:col-span-2">
@@ -204,5 +207,4 @@ const shippingNoteModel = model('shippingNote', 'update:shippingNote')
         </div>
     </div>
 </template>
-
 

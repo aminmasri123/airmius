@@ -1,13 +1,14 @@
 ﻿import './bootstrap';
 import '../css/app.css';
 
-import { createApp, h, watch } from 'vue';
+import { createApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
 
 import { useTheme } from './services/useTheme';
+import { activateApplicationLocale, registerLocaleActivator } from './services/localeRuntime';
 import { createI18n } from 'vue-i18n';
 
 import sports from './lang/sports';
@@ -16,7 +17,11 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const rtlLocales = ['ar'];
 const supportedLocales = ['de', 'en', 'fr', 'ar'];
 const localeMessageLoaders = import.meta.glob('./lang/*.json');
+const autoLocaleMessageLoaders = import.meta.glob('./lang/auto/*.json');
 const loadedLocales = new Set();
+const loadedAutoLocales = new Set();
+const localeLoadPromises = new Map();
+const autoLocaleLoadPromises = new Map();
 const autoTranslatedTextNodes = new WeakMap();
 const autoTranslatedAttributes = new WeakMap();
 const autoTranslateAttributeNames = [
@@ -31,7 +36,13 @@ const autoTranslateAttributeNames = [
 let autoTranslationTouched = false;
 
 const normalizeLocale = (locale) => {
-    return supportedLocales.includes(locale) ? locale : 'de';
+    const language = String(locale || '')
+        .trim()
+        .toLowerCase()
+        .replace('_', '-')
+        .split('-')[0];
+
+    return supportedLocales.includes(language) ? language : 'de';
 };
 
 const sportsMessagesFor = (locale) => ({
@@ -39,23 +50,103 @@ const sportsMessagesFor = (locale) => ({
     sport_categories: sports.categories?.[locale] || sports.categories?.de || {},
 });
 
-const loadLocaleMessages = async (i18n, locale) => {
+const mergeLocaleMessages = (i18n, locale, messages) => {
+    const existing = i18n.global.getLocaleMessage(locale) || {};
+
+    i18n.global.setLocaleMessage(locale, {
+        ...existing,
+        ...messages,
+    });
+};
+
+const loadLocaleMessages = (i18n, locale) => {
     const normalizedLocale = normalizeLocale(locale);
 
     if (loadedLocales.has(normalizedLocale)) {
-        return normalizedLocale;
+        return Promise.resolve(normalizedLocale);
     }
 
-    const loader = localeMessageLoaders[`./lang/${normalizedLocale}.json`] || localeMessageLoaders['./lang/de.json'];
-    const module = await loader();
+    if (localeLoadPromises.has(normalizedLocale)) {
+        return localeLoadPromises.get(normalizedLocale);
+    }
 
-    i18n.global.setLocaleMessage(normalizedLocale, {
-        ...(module.default || module),
-        ...sportsMessagesFor(normalizedLocale),
+    const promise = (async () => {
+        const loader = localeMessageLoaders[`./lang/${normalizedLocale}.json`];
+
+        try {
+            if (!loader) {
+                throw new Error(`Missing locale catalog: ${normalizedLocale}`);
+            }
+
+            const module = await loader();
+
+            mergeLocaleMessages(i18n, normalizedLocale, {
+                ...(module.default || module),
+                ...sportsMessagesFor(normalizedLocale),
+            });
+            loadedLocales.add(normalizedLocale);
+
+            return normalizedLocale;
+        } catch (error) {
+            console.error(`[Airmius i18n] Could not load ${normalizedLocale}.`, error);
+
+            if (normalizedLocale !== 'de') {
+                return loadLocaleMessages(i18n, 'de');
+            }
+
+            mergeLocaleMessages(i18n, 'de', sportsMessagesFor('de'));
+            loadedLocales.add('de');
+
+            return 'de';
+        }
+    })().finally(() => {
+        localeLoadPromises.delete(normalizedLocale);
     });
-    loadedLocales.add(normalizedLocale);
 
-    return normalizedLocale;
+    localeLoadPromises.set(normalizedLocale, promise);
+
+    return promise;
+};
+
+const loadAutoLocaleMessages = (i18n, locale) => {
+    const normalizedLocale = normalizeLocale(locale);
+
+    // German is the source text. Its automatic dictionary would only repeat
+    // the already rendered strings, so it never needs to cross the network.
+    if (normalizedLocale === 'de' || loadedAutoLocales.has(normalizedLocale)) {
+        return Promise.resolve(normalizedLocale);
+    }
+
+    if (autoLocaleLoadPromises.has(normalizedLocale)) {
+        return autoLocaleLoadPromises.get(normalizedLocale);
+    }
+
+    const promise = (async () => {
+        const loader = autoLocaleMessageLoaders[`./lang/auto/${normalizedLocale}.json`];
+
+        try {
+            if (!loader) {
+                throw new Error(`Missing automatic locale catalog: ${normalizedLocale}`);
+            }
+
+            const module = await loader();
+            mergeLocaleMessages(i18n, normalizedLocale, module.default || module);
+        } catch (error) {
+            // Automatic source-text translation is progressive enhancement.
+            // Semantic keys remain available when this optional chunk fails.
+            console.warn(`[Airmius i18n] Could not load automatic ${normalizedLocale} translations.`, error);
+        }
+
+        loadedAutoLocales.add(normalizedLocale);
+
+        return normalizedLocale;
+    })().finally(() => {
+        autoLocaleLoadPromises.delete(normalizedLocale);
+    });
+
+    autoLocaleLoadPromises.set(normalizedLocale, promise);
+
+    return promise;
 };
 
 const applyDocumentLocale = (locale) => {
@@ -254,10 +345,43 @@ const autoTranslateVisibleText = (root, i18n) => {
 
 const installAutoTranslation = (root, i18n) => {
     let pending = false;
-    const run = () => {
+    let fullScanRequested = false;
+    const pendingRoots = new Set();
+
+    const normalizedRoot = (node) => {
+        if (node?.nodeType === Node.TEXT_NODE) {
+            return node.parentElement;
+        }
+
+        return node?.nodeType === Node.ELEMENT_NODE ? node : null;
+    };
+
+    const queueRoot = (node) => {
+        const candidate = normalizedRoot(node);
+
+        if (!candidate || (candidate !== root && !root.contains(candidate))) {
+            return;
+        }
+
+        for (const queued of pendingRoots) {
+            if (queued === candidate || queued.contains(candidate)) {
+                return;
+            }
+
+            if (candidate.contains(queued)) {
+                pendingRoots.delete(queued);
+            }
+        }
+
+        pendingRoots.add(candidate);
+    };
+
+    const schedule = () => {
         const locale = i18n.global.locale.value || 'de';
 
         if (locale === 'de' && !autoTranslationTouched) {
+            pendingRoots.clear();
+            fullScanRequested = false;
             return;
         }
 
@@ -268,11 +392,39 @@ const installAutoTranslation = (root, i18n) => {
         pending = true;
         window.requestAnimationFrame(() => {
             pending = false;
-            autoTranslateVisibleText(root, i18n);
+            const targets = fullScanRequested ? [root] : Array.from(pendingRoots);
+
+            fullScanRequested = false;
+            pendingRoots.clear();
+            targets.forEach((target) => autoTranslateVisibleText(target, i18n));
         });
     };
 
-    const observer = new MutationObserver(run);
+    const run = () => {
+        fullScanRequested = true;
+        pendingRoots.clear();
+        schedule();
+    };
+
+    const observer = new MutationObserver((records) => {
+        const locale = i18n.global.locale.value || 'de';
+
+        if (locale === 'de' && !autoTranslationTouched) {
+            return;
+        }
+
+        records.forEach((record) => {
+            if (record.type === 'childList') {
+                record.addedNodes.forEach(queueRoot);
+            } else {
+                queueRoot(record.target);
+            }
+        });
+
+        if (pendingRoots.size > 0) {
+            schedule();
+        }
+    });
     observer.observe(root, {
         childList: true,
         subtree: true,
@@ -282,7 +434,6 @@ const installAutoTranslation = (root, i18n) => {
     });
     run();
     window.setTimeout(run, 0);
-    window.setTimeout(run, 250);
 
     return run;
 };
@@ -326,35 +477,93 @@ createInertiaApp({
             messages: {},
         });
 
-        await loadLocaleMessages(i18n, initialLocale);
-        applyDocumentLocale(i18n.global.locale.value);
+        const activeInitialLocale = await loadLocaleMessages(i18n, initialLocale);
+
+        i18n.global.locale.value = activeInitialLocale;
+        localStorage.setItem('lang', activeInitialLocale);
+        applyDocumentLocale(activeInitialLocale);
         const runAutoTranslation = installAutoTranslation(el, i18n);
+        let localeActivationSequence = 0;
+        let pendingLocaleActivation = null;
 
-        watch(i18n.global.locale, async (locale) => {
-            const normalizedLocale = await loadLocaleMessages(i18n, locale);
-            if (locale !== normalizedLocale) {
-                i18n.global.locale.value = normalizedLocale;
+        const scheduleAutoLocale = (locale, sequence) => {
+            if (locale === 'de') {
+                return;
             }
-            applyDocumentLocale(normalizedLocale);
-            runAutoTranslation();
-        });
 
-        router.on('success', async (event) => {
-            const locale = normalizeLocale(event.detail.page.props.locale);
+            const load = () => {
+                if (sequence !== localeActivationSequence || i18n.global.locale.value !== locale) {
+                    return;
+                }
 
-            if (locale) {
-                await loadLocaleMessages(i18n, locale);
-                i18n.global.locale.value = locale;
-                applyDocumentLocale(locale);
+                void loadAutoLocaleMessages(i18n, locale).then(() => {
+                    if (sequence === localeActivationSequence && i18n.global.locale.value === locale) {
+                        runAutoTranslation();
+                    }
+                });
+            };
+
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(load, { timeout: 250 });
+            } else {
+                window.setTimeout(load, 0);
+            }
+        };
+
+        const activateLocale = (locale) => {
+            const requestedLocale = normalizeLocale(locale);
+
+            if (pendingLocaleActivation?.locale === requestedLocale) {
+                return pendingLocaleActivation.promise;
+            }
+
+            const sequence = ++localeActivationSequence;
+            let promise;
+
+            promise = (async () => {
+                const loadedLocale = await loadLocaleMessages(i18n, requestedLocale);
+
+                if (sequence !== localeActivationSequence) {
+                    return i18n.global.locale.value;
+                }
+
+                i18n.global.locale.value = loadedLocale;
+                localStorage.setItem('lang', loadedLocale);
+                applyDocumentLocale(loadedLocale);
                 runAutoTranslation();
+                scheduleAutoLocale(loadedLocale, sequence);
+
+                return loadedLocale;
+            })().finally(() => {
+                if (pendingLocaleActivation?.promise === promise) {
+                    pendingLocaleActivation = null;
+                }
+            });
+
+            pendingLocaleActivation = { locale: requestedLocale, promise };
+
+            return promise;
+        };
+
+        registerLocaleActivator(activateLocale);
+
+        router.on('success', (event) => {
+            const locale = event.detail.page.props.locale;
+
+            if (typeof locale === 'string' && locale.trim() !== '') {
+                void activateApplicationLocale(locale);
             }
         });
 
-        return createApp({ render: () => h(App, props) })
+        const mountedApp = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .use(i18n)
             .mount(el);
+
+        scheduleAutoLocale(activeInitialLocale, localeActivationSequence);
+
+        return mountedApp;
     },
     progress: {
         color: 'var(--progress)',

@@ -1,0 +1,70 @@
+<?php
+
+return [
+    'social' => [
+        'self_follow' => 'You cannot follow yourself.',
+        'follow_started' => 'You are now following this profile.',
+        'follow_stopped' => 'You are no longer following this profile.',
+        'follow_title' => ':name is now following you',
+        'follow_body' => 'Someone new is following your profile.',
+        'report_sent' => 'Thank you. The report was sent to moderation.',
+        'appeal_sent' => 'Your appeal was sent to moderation.',
+        'story_created' => 'Story created.',
+        'post_deleted' => 'Post deleted.',
+        'sport_profile_updated' => 'Sport profile updated.',
+        'skill_updated' => 'Skill updated.',
+        'skill_confirmed' => 'Skill endorsed.',
+        'trainer_mention_title' => 'Trainer mention received',
+        'trainer_mention_body' => ':name endorsed your :skill skill as a trainer.',
+        'recommendation_title' => 'New recommendation received',
+        'trainer_recommendation_body' => ':name wrote a trainer recommendation. It is waiting for your approval.',
+        'recommendation_body' => ':name wrote a recommendation. It is waiting for your approval.',
+        'recommendation_sent' => 'Recommendation sent and waiting for approval.',
+    ],
+    'chat' => [
+        'removed_title' => 'You were removed from a group chat',
+        'owner_title' => 'You are now the owner of a group chat',
+        'group_body' => ':conversation',
+        'group_fallback' => 'Group chat',
+    ],
+    'training' => [
+        'exercise_removed' => 'Exercise removed from the library.',
+    ],
+    'dashboard' => [
+        'next_training_title' => 'Log your next session',
+        'next_event_title' => 'Next event',
+    ],
+    'organization' => [
+        'this_year' => 'This year',
+        'announcement_published' => 'Announcement published.',
+        'announcement_read' => 'Read confirmation saved.',
+        'announcement_not_available' => 'This announcement is not available to you.',
+        'announcement_members_only' => 'Only club members can view announcements.',
+        'verification_mail' => [
+            'approved_subject' => 'Your club has been approved',
+            'rejected_subject' => 'Your club application was rejected',
+            'greeting' => 'Hello :name,',
+            'approved_line' => 'Your club “:club” was reviewed and approved.',
+            'approved_official' => 'The club is now publicly visible and marked as official.',
+            'approved_public' => 'The club is now publicly visible.',
+            'rejected_line' => 'Your application for “:club” was rejected.',
+            'rejected_help' => 'Please review the notes in the dashboard or contact support.',
+            'notes' => 'Note: :notes',
+            'action' => 'Open club',
+        ],
+    ],
+    'commerce' => [
+        'verified_buyer_required' => 'Only verified buyers can review this product.',
+    ],
+    'learning' => [
+        'certificate_not_found' => 'Certificate not found.',
+    ],
+    'notification_digest' => [
+        'subject' => 'Your Airmius notification summary',
+        'greeting' => 'Hello,',
+        'intro' => 'Here is your summary of unread Airmius notifications from the last day:',
+        'outro' => 'Open Airmius to read the full details and manage your notifications.',
+        'action' => 'Open Airmius',
+        'fallback_title' => 'Notification',
+    ],
+];

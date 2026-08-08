@@ -33,11 +33,11 @@ class AccessibilitySmokeTest extends TestCase
         $subnav = file_get_contents(resource_path('js/Components/Guest/Subnav.vue'));
         $footer = file_get_contents(resource_path('js/Components/Guest/Footer.vue'));
 
-        $this->assertStringContainsString('aria-label="Hauptnavigation"', $nav);
+        $this->assertStringContainsString(':aria-label="$t(\'guest.nav.main_aria\')"', $nav);
         $this->assertStringContainsString('aria-controls="guest-mobile-menu"', $nav);
         $this->assertStringContainsString('role="dialog"', $nav);
         $this->assertStringContainsString('aria-modal="true"', $nav);
-        $this->assertStringContainsString('aria-label="Menü schließen"', $nav);
+        $this->assertStringContainsString(':aria-label="$t(\'guest.nav.close_menu_aria\')"', $nav);
         $this->assertStringContainsString('type="button"', $nav);
 
         $this->assertStringContainsString('role="navigation"', $subnav);

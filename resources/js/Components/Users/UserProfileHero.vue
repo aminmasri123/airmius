@@ -176,7 +176,7 @@ defineProps({
                             @click="removeFriend"
                         >
                             <i class="las la-user-times text-lg"></i>
-                            <span>Entfernen</span>
+                            <span>{{ $t('Entfernen') }}</span>
                         </button>
 
                         <button

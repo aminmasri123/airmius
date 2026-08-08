@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Club;
 use App\Models\BankTransaction;
+use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubExternalMember;
 use App\Models\ClubFinanceEntry;
@@ -17,16 +17,16 @@ use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
-use App\Services\ClubService;
 use App\Services\ClubContributionCalculator;
+use App\Services\ClubService;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\BillingOverview;
 use App\Support\ClubAuditLog;
-use App\Support\ClubRoles;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubMembershipInput;
+use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -43,7 +43,9 @@ class ClubMembershipController extends Controller
     use AuthorizesRequests;
 
     public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'paused', 'former'];
+
     public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'];
+
     private const IMPORT_FIELDS = [
         'name',
         'email',
@@ -397,7 +399,7 @@ class ClubMembershipController extends Controller
             'expense_period_total' => $expensePeriodTotal,
             'finance_period' => 'year',
             'finance_period_year' => (int) $periodStart->year,
-            'finance_period_label' => 'Dieses Jahr',
+            'finance_period_label' => __('platform.organization.this_year'),
         ];
     }
 
@@ -535,7 +537,7 @@ class ClubMembershipController extends Controller
                 ->where('user_id', '!=', $user->id)
                 ->exists();
 
-        abort_if($duplicateNumber, 422, 'Diese Mitgliedsnummer ist in diesem Verein bereits vergeben.');
+        abort_if($duplicateNumber, 422, __('organization.club.member_number_duplicate'));
 
         DB::transaction(function () use ($club, $user, $data, $roles, $primaryRole) {
             $previousOwner = null;
@@ -590,16 +592,31 @@ class ClubMembershipController extends Controller
             $previousRoleLabel = ClubRoles::LABELS[$previousRole] ?? $previousRole;
             $newRoleLabel = ClubRoles::LABELS[$primaryRole] ?? $primaryRole;
 
-            AppNotification::send($user, 'club.member.role_updated', [
-                'title' => 'Vereinsrolle geändert',
-                'body' => 'Deine Rolle in '.$club->name.' wurde von '.($previousRoleLabel ?? 'Unbekannt').' auf '.$newRoleLabel.' geändert.',
-                'url' => '/notifications',
-                'mobile_url' => 'airmius://clubs/'.$club->id.'/members',
-                'club_id' => $club->id,
-                'previous_role' => $previousRole,
-                'role' => $primaryRole,
-                'roles' => $roles,
-            ]);
+            AppNotification::sendLocalized(
+                $user,
+                'club.member.role_updated',
+                'organization.notifications.club_role_title',
+                'organization.notifications.club_role_body',
+                [
+                    'club' => $club->name,
+                    'previous' => AppNotification::translatedReplacement(
+                        $previousRole ? 'organization.roles.club.'.$previousRole : 'organization.roles.unknown',
+                        $previousRoleLabel ?? 'Unbekannt',
+                    ),
+                    'next' => AppNotification::translatedReplacement(
+                        'organization.roles.club.'.$primaryRole,
+                        $newRoleLabel,
+                    ),
+                ],
+                [
+                    'url' => '/notifications',
+                    'mobile_url' => 'airmius://clubs/'.$club->id.'/members',
+                    'club_id' => $club->id,
+                    'previous_role' => $previousRole,
+                    'role' => $primaryRole,
+                    'roles' => $roles,
+                ],
+            );
         }
 
         foreach (array_unique(array_filter([$previousFamilyGroupKey, $nextFamilyGroupKey])) as $familyGroupKey) {
@@ -610,7 +627,7 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => $data['athlete_license_number'] ?? null,
         ])->save();
 
-        return back()->with('success', 'Mitgliedsdaten aktualisiert.');
+        return back()->with('success', __('organization.club.member_data_updated'));
     }
 
     public function removeMember(Request $request, Club $club, User $user)
@@ -618,13 +635,13 @@ class ClubMembershipController extends Controller
         $this->authorize('update', $club);
 
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
-        abort_if($club->owner_id === $user->id, 422, 'Der Owner kann nicht entfernt werden. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+        abort_if($club->owner_id === $user->id, 422, __('organization.club.owner_remove_forbidden'));
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:2000'],
         ]);
         $reason = trim((string) $data['reason']);
-        abort_if($reason === '', 422, 'Eine Begründung ist erforderlich.');
+        abort_if($reason === '', 422, __('organization.club.removal_reason_required'));
 
         DB::transaction(function () use ($club, $user) {
             $teamIds = $club->teams()->pluck('id');
@@ -644,16 +661,21 @@ class ClubMembershipController extends Controller
             'reason' => $reason,
         ]);
 
-        AppNotification::send($user, 'club.member_removed', [
-            'title' => 'Vereinsmitgliedschaft beendet',
-            'body' => 'Du wurdest aus '.$club->name.' entfernt. Begründung: '.$reason.' Wenn du das für falsch hältst, kannst du widersprechen.',
-            'url' => route('auth.notifications.index'),
-            'mobile_url' => 'airmius://notifications',
-            'club_id' => $club->id,
-            'reason' => $reason,
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'club.member_removed',
+            'organization.notifications.club_member_removed_title',
+            'organization.notifications.club_member_removed_body',
+            ['club' => $club->name, 'reason' => $reason],
+            [
+                'url' => route('auth.notifications.index'),
+                'mobile_url' => 'airmius://notifications',
+                'club_id' => $club->id,
+                'reason' => $reason,
+            ],
+        );
 
-        return back()->with('success', 'Mitglied wurde aus Verein und zugehörigen Teams entfernt.');
+        return back()->with('success', __('organization.club.member_removed'));
     }
 
     public function leaveClub(Request $request, Club $club)
@@ -661,7 +683,7 @@ class ClubMembershipController extends Controller
         $user = $request->user();
 
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
-        abort_if($club->owner_id === $user->id, 422, 'Owner können den Verein nicht verlassen. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+        abort_if($club->owner_id === $user->id, 422, __('organization.club.owner_leave_forbidden'));
 
         $hasOpenDebt = Invoice::query()
             ->where('club_id', $club->id)
@@ -671,7 +693,7 @@ class ClubMembershipController extends Controller
 
         if ($hasOpenDebt) {
             throw ValidationException::withMessages([
-                'club' => 'Du kannst den Verein erst verlassen, wenn alle offenen Rechnungen ausgeglichen sind.',
+                'club' => __('organization.club.open_invoices_before_leaving'),
             ]);
         }
 
@@ -687,15 +709,21 @@ class ClubMembershipController extends Controller
             $this->clubService->refreshClubOwnerRole($user);
         });
 
-        $this->notifyClubManagers($club, 'club.member_left', [
-            'title' => 'Mitglied hat den Verein verlassen',
-            'body' => $user->name.' hat '.$club->name.' verlassen.',
-            'url' => route('auth.club-memberships.index'),
-            'club_id' => $club->id,
-            'user_id' => $user->id,
-        ], $user->id);
+        $this->notifyClubManagersLocalized(
+            $club,
+            'club.member_left',
+            'organization.notifications.club_member_left_title',
+            'organization.notifications.club_member_left_body',
+            ['user' => $user->name, 'club' => $club->name],
+            [
+                'url' => route('auth.club-memberships.index'),
+                'club_id' => $club->id,
+                'user_id' => $user->id,
+            ],
+            $user->id,
+        );
 
-        return back()->with('success', 'Du hast den Verein verlassen.');
+        return back()->with('success', __('organization.club.left'));
     }
 
     public function objectToRemoval(Request $request, Club $club)
@@ -712,15 +740,21 @@ class ClubMembershipController extends Controller
             'message' => $data['message'] ?? 'Ich widerspreche der Entfernung und bitte um Prüfung.',
         ]);
 
-        $this->notifyClubManagers($club, 'club.member_removal_objection', [
-            'title' => 'Widerspruch gegen Entfernung',
-            'body' => $request->user()->name.' widerspricht der Entfernung aus '.$club->name.'.',
-            'url' => route('auth.club-memberships.index'),
-            'club_id' => $club->id,
-            'request_id' => $membershipRequest->id,
-        ], $request->user()->id);
+        $this->notifyClubManagersLocalized(
+            $club,
+            'club.member_removal_objection',
+            'organization.notifications.removal_objection_title',
+            'organization.notifications.removal_objection_body',
+            ['user' => $request->user()->name, 'club' => $club->name],
+            [
+                'url' => route('auth.club-memberships.index'),
+                'club_id' => $club->id,
+                'request_id' => $membershipRequest->id,
+            ],
+            $request->user()->id,
+        );
 
-        return back()->with('success', 'Widerspruch wurde an den Verein gesendet.');
+        return back()->with('success', __('organization.club.appeal_sent'));
     }
 
     public function updateMembershipSettings(Request $request, Club $club)
@@ -775,7 +809,7 @@ class ClubMembershipController extends Controller
             'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($documents, $data['membership_application_document_types'] ?? $configuredDocumentTypes),
         ]);
 
-        return back()->with('success', 'Mitgliedschafts-Einstellungen aktualisiert.');
+        return back()->with('success', __('organization.club.membership_settings_updated'));
     }
 
     public function storeMembershipType(Request $request, Club $club)
@@ -803,7 +837,7 @@ class ClubMembershipController extends Controller
                 : null,
         ]);
 
-        return back()->with('success', 'Mitgliedschaftstyp gespeichert.');
+        return back()->with('success', __('organization.club.membership_type_saved'));
     }
 
     public function updateMembershipType(Request $request, Club $club, ClubMembershipType $membershipType)
@@ -827,7 +861,7 @@ class ClubMembershipController extends Controller
             'sort_order' => (int) ($data['sort_order'] ?? 0),
         ]);
 
-        return back()->with('success', 'Mitgliedschaftstyp aktualisiert.');
+        return back()->with('success', __('organization.club.membership_type_updated'));
     }
 
     public function storeContributionRule(Request $request, Club $club)
@@ -836,7 +870,7 @@ class ClubMembershipController extends Controller
 
         $club->contributionRules()->create($this->validatedContributionRuleData($request, $club));
 
-        return back()->with('success', 'Beitragsregel gespeichert.');
+        return back()->with('success', __('organization.club.contribution_rule_saved'));
     }
 
     public function updateContributionRule(Request $request, Club $club, ClubContributionRule $contributionRule)
@@ -846,13 +880,13 @@ class ClubMembershipController extends Controller
 
         $contributionRule->update($this->validatedContributionRuleData($request, $club));
 
-        return back()->with('success', 'Beitragsregel aktualisiert.');
+        return back()->with('success', __('organization.club.contribution_rule_updated'));
     }
 
     public function storeMembershipRequest(Request $request, Club $club)
     {
-        abort_unless($club->membership_requests_enabled, 403, 'Dieser Verein nimmt aktuell keine Online-Mitgliedsanfragen an.');
-        abort_if($club->users()->where('users.id', $request->user()->id)->exists(), 422, 'Du bist bereits Mitglied in diesem Verein.');
+        abort_unless($club->membership_requests_enabled, 403, __('organization.club.applications_closed'));
+        abort_if($club->users()->where('users.id', $request->user()->id)->exists(), 422, __('organization.club.already_member'));
 
         $selectedTypeFields = $request->input('club_membership_type_id')
             ? $club->membershipTypes()->whereKey($request->input('club_membership_type_id'))->first()?->application_fields
@@ -899,6 +933,7 @@ class ClubMembershipController extends Controller
 
                 if ($allowedValues && ! in_array((string) $value, $allowedValues, true)) {
                     $missingFields['application_data.'.$key] = $field['label'].' ist ungültig.';
+
                     continue;
                 }
             }
@@ -981,16 +1016,22 @@ class ClubMembershipController extends Controller
             ],
         );
 
-        $this->notifyClubManagers($club, 'club.membership_request_created', [
-            'title' => 'Neue Mitgliedschaftsanfrage',
-            'body' => $request->user()->name.' möchte Mitglied bei '.$club->name.' werden.',
-            'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
-            'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
-            'club_id' => $club->id,
-            'membership_request_id' => $membershipRequest->id,
-        ], $request->user()->id);
+        $this->notifyClubManagersLocalized(
+            $club,
+            'club.membership_request_created',
+            'organization.notifications.request_created_title',
+            'organization.notifications.request_created_body',
+            ['user' => $request->user()->name, 'club' => $club->name],
+            [
+                'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
+                'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
+                'club_id' => $club->id,
+                'membership_request_id' => $membershipRequest->id,
+            ],
+            $request->user()->id,
+        );
 
-        return back()->with('success', 'Mitgliedschaftsanfrage wurde an den Verein gesendet.');
+        return back()->with('success', __('organization.club.request_sent'));
     }
 
     public function withdrawMembershipRequest(Request $request, Club $club)
@@ -1008,21 +1049,27 @@ class ClubMembershipController extends Controller
             'review_note' => 'Vom Nutzer zurückgezogen.',
         ]);
 
-        $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
-            'title' => 'Mitgliedschaftsanfrage zurückgezogen',
-            'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurückgezogen.',
-            'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
-            'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
-            'club_id' => $club->id,
-            'membership_request_id' => $membershipRequest->id,
-        ], $request->user()->id);
+        $this->notifyClubManagersLocalized(
+            $club,
+            'club.membership_request_withdrawn',
+            'organization.notifications.request_withdrawn_title',
+            'organization.notifications.request_withdrawn_body',
+            ['user' => $request->user()->name, 'club' => $club->name],
+            [
+                'url' => route('auth.club-memberships.index').'?tab=requests&club_id='.$club->id,
+                'mobile_url' => 'airmius://clubs/'.$club->id.'/membership-requests',
+                'club_id' => $club->id,
+                'membership_request_id' => $membershipRequest->id,
+            ],
+            $request->user()->id,
+        );
 
-        return back()->with('success', 'Mitgliedschaftsanfrage wurde zurückgezogen.');
+        return back()->with('success', __('organization.club.request_withdrawn'));
     }
 
     public function storePauseRequest(Request $request, Club $club)
     {
-        abort_unless($club->member_pause_requests_enabled, 403, 'Dieser Verein erlaubt aktuell keine Pausen-Anfragen.');
+        abort_unless($club->member_pause_requests_enabled, 403, __('organization.club.pause_requests_disabled'));
         abort_unless($club->users()->where('users.id', $request->user()->id)->exists(), 403);
 
         $data = $request->validate([
@@ -1045,7 +1092,7 @@ class ClubMembershipController extends Controller
             'pause_requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Pausen-Anfrage wurde an den Verein gesendet.');
+        return back()->with('success', __('organization.club.pause_request_sent'));
     }
 
     public function approveClubRequest(Request $request, ClubMembershipRequest $membershipRequest)
@@ -1097,22 +1144,27 @@ class ClubMembershipController extends Controller
             ]);
         });
 
-        AppNotification::send($membershipRequest->user_id, 'club.membership_request_approved', [
-            'title' => 'Anfrage angenommen',
-            'body' => $club->name.' hat deine Anfrage angenommen.',
-            'url' => route('auth.clubs.show', $club),
-            'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
-            'club_id' => $club->id,
-            'request_id' => $membershipRequest->id,
-        ]);
+        AppNotification::sendLocalized(
+            $membershipRequest->user_id,
+            'club.membership_request_approved',
+            'organization.notifications.request_approved_title',
+            'organization.notifications.request_approved_body',
+            ['club' => $club->name],
+            [
+                'url' => route('auth.clubs.show', $club),
+                'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
+                'club_id' => $club->id,
+                'request_id' => $membershipRequest->id,
+            ],
+        );
 
-        return back()->with('success', 'Anfrage wurde angenommen.');
+        return back()->with('success', __('organization.club.request_approved'));
     }
 
     public function declineClubRequest(Request $request, ClubMembershipRequest $membershipRequest)
     {
         $this->authorize('update', $membershipRequest->club);
-        abort_unless($membershipRequest->status === 'pending', 422, 'Diese Anfrage ist nicht mehr offen.');
+        abort_unless($membershipRequest->status === 'pending', 422, __('organization.club.request_closed'));
 
         $membershipRequest->update([
             'status' => 'declined',
@@ -1121,16 +1173,21 @@ class ClubMembershipController extends Controller
             'review_note' => $request->input('review_note'),
         ]);
 
-        AppNotification::send($membershipRequest->user_id, 'club.membership_request_declined', [
-            'title' => 'Anfrage abgelehnt',
-            'body' => $membershipRequest->club->name.' hat deine Anfrage abgelehnt.',
-            'url' => route('auth.notifications.index'),
-            'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
-            'club_id' => $membershipRequest->club_id,
-            'request_id' => $membershipRequest->id,
-        ]);
+        AppNotification::sendLocalized(
+            $membershipRequest->user_id,
+            'club.membership_request_declined',
+            'organization.notifications.request_declined_title',
+            'organization.notifications.request_declined_body',
+            ['club' => $membershipRequest->club->name],
+            [
+                'url' => route('auth.notifications.index'),
+                'mobile_url' => 'airmius://membership-applications/'.$membershipRequest->id,
+                'club_id' => $membershipRequest->club_id,
+                'request_id' => $membershipRequest->id,
+            ],
+        );
 
-        return back()->with('success', 'Anfrage wurde abgelehnt.');
+        return back()->with('success', __('organization.club.request_declined'));
     }
 
     public function storeEmailMember(Request $request, Club $club)
@@ -1253,6 +1310,7 @@ class ClubMembershipController extends Controller
                     'email' => $email,
                     'reason' => 'Ungültige oder fehlende E-Mail-Adresse.',
                 ];
+
                 continue;
             }
 
@@ -1263,6 +1321,7 @@ class ClubMembershipController extends Controller
                     'email' => $email,
                     'reason' => 'Doppelte E-Mail in der Importdatei; erster Eintrag wurde verwendet.',
                 ];
+
                 continue;
             }
 
@@ -1302,6 +1361,7 @@ class ClubMembershipController extends Controller
             if ($sendInvitation && $existingUser) {
                 $this->attachExistingUserToClub($club, $existingUser, $memberData);
                 $stats['linked']++;
+
                 continue;
             }
 
@@ -1398,6 +1458,7 @@ class ClubMembershipController extends Controller
                     'email' => $email,
                     'reason' => 'Ungültige oder fehlende E-Mail-Adresse.',
                 ];
+
                 continue;
             }
 
@@ -1407,6 +1468,7 @@ class ClubMembershipController extends Controller
                     'email' => $email,
                     'reason' => 'Doppelte E-Mail in der Importdatei; erster Eintrag wurde verwendet.',
                 ];
+
                 continue;
             }
 
@@ -1480,7 +1542,7 @@ class ClubMembershipController extends Controller
             'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
         ]);
 
-        return back()->with('success', 'SEPA-Einstellungen gespeichert.');
+        return back()->with('success', __('organization.club.sepa_settings_saved'));
     }
 
     public function exportSepaDebit(Club $club)
@@ -1488,7 +1550,7 @@ class ClubMembershipController extends Controller
         $this->authorize('update', $club);
         $this->planFeatures->ensureAllows($club, 'sepa_export');
 
-        abort_if(blank($club->sepa_creditor_id) || blank($club->sepa_iban), 422, 'Bitte zuerst SEPA-Gläubiger-ID und Vereins-IBAN speichern.');
+        abort_if(blank($club->sepa_creditor_id) || blank($club->sepa_iban), 422, __('organization.club.sepa_credentials_required'));
 
         $invoices = Invoice::query()
             ->where('club_id', $club->id)
@@ -1517,7 +1579,7 @@ class ClubMembershipController extends Controller
             })
             ->values();
 
-        abort_if($exportable->isEmpty(), 422, 'Keine offenen Rechnungen mit aktivem SEPA-Mandat gefunden.');
+        abort_if($exportable->isEmpty(), 422, __('organization.club.sepa_no_open_invoices'));
 
         $xml = $this->buildSepaDebitXml($club, $exportable, $memberships);
         $fileName = 'airmius-sepa-'.$club->id.'-'.now()->format('Ymd-His').'.xml';
@@ -1573,14 +1635,19 @@ class ClubMembershipController extends Controller
                 $externalMember->delete();
             });
 
-            AppNotification::send($existingUser, 'club.member_linked', [
-                'title' => 'Du wurdest mit '.$externalMember->club->name.' verknüpft',
-                'body' => 'Der Verein hat deine Mitgliedschaft mit deinem Airmius-Konto verbunden.',
-                'url' => route('auth.club-memberships.index'),
-                'club_id' => $externalMember->club_id,
-            ]);
+            AppNotification::sendLocalized(
+                $existingUser,
+                'club.member_linked',
+                'organization.notifications.member_linked_title',
+                'organization.notifications.member_linked_body',
+                ['club' => $externalMember->club->name],
+                [
+                    'url' => route('auth.club-memberships.index'),
+                    'club_id' => $externalMember->club_id,
+                ],
+            );
 
-            return back()->with('success', 'Bestehender User wurde verknüpft.');
+            return back()->with('success', __('organization.club.existing_user_linked'));
         }
 
         $externalMember->issueInvitation();
@@ -1588,7 +1655,7 @@ class ClubMembershipController extends Controller
         Notification::route('mail', $externalMember->email)
             ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
 
-        return back()->with('success', 'Einladung wurde versendet.');
+        return back()->with('success', __('organization.club.invitation_sent'));
     }
 
     public function acceptExternalInvitation(Request $request, string $token)
@@ -1603,7 +1670,7 @@ class ClubMembershipController extends Controller
         if ($externalMember->invitationExpired()) {
             $externalMember->markInvitationExpired();
 
-            abort(410, 'Diese Einladung ist abgelaufen.');
+            abort(410, __('organization.club.invitation_expired'));
         }
 
         DB::transaction(function () use ($externalMember, $request) {
@@ -1643,7 +1710,7 @@ class ClubMembershipController extends Controller
 
         return redirect()
             ->route('auth.club-memberships.index')
-            ->with('success', 'Vereinsmitgliedschaft wurde mit deinem Konto verknüpft.');
+            ->with('success', __('organization.club.membership_linked'));
     }
 
     public function storeInvoice(Request $request, Club $club, User $user)
@@ -1680,17 +1747,26 @@ class ClubMembershipController extends Controller
             'member_name' => $user->name,
         ]);
 
-        AppNotification::send($user, 'invoice.created', [
-            'title' => 'Neue Rechnung von '.$club->name,
-            'body' => $invoice->title.' - '.number_format((float) $invoice->amount, 2, ',', '.').' EUR',
-            'url' => route('auth.settings'),
-            'club_id' => $club->id,
-            'invoice_id' => $invoice->id,
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'invoice.created',
+            'organization.notifications.invoice_created_title',
+            'organization.notifications.invoice_created_body',
+            [
+                'club' => $club->name,
+                'title' => $invoice->title,
+                'amount' => number_format((float) $invoice->amount, 2, ',', '.'),
+            ],
+            [
+                'url' => route('auth.settings'),
+                'club_id' => $club->id,
+                'invoice_id' => $invoice->id,
+            ],
+        );
 
         $this->sendClubInvoiceCreatedEmail($user, $invoice->loadMissing('club'));
 
-        return back()->with('success', 'Rechnung erstellt und per E-Mail verschickt.');
+        return back()->with('success', __('organization.club.invoice_created'));
     }
 
     private function sendClubInvoiceCreatedEmail(User $user, Invoice $invoice): void
@@ -1758,7 +1834,7 @@ class ClubMembershipController extends Controller
             'member_number' => $this->nextMemberNumber($club),
         ]);
 
-        return back()->with('success', 'Mitgliedsnummer generiert.');
+        return back()->with('success', __('organization.club.member_number_generated'));
     }
 
     public function updateInvoiceStatus(Request $request, Invoice $invoice)
@@ -1784,7 +1860,7 @@ class ClubMembershipController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Rechnungsstatus aktualisiert.');
+        return back()->with('success', __('organization.club.invoice_status_updated'));
     }
 
     public function recordPayment(Request $request, Invoice $invoice)
@@ -1822,14 +1898,19 @@ class ClubMembershipController extends Controller
             'method' => $data['method'] ?? 'manual',
         ]);
 
-        AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
-            'title' => 'Zahlung erfasst',
-            'body' => 'Deine Zahlung für '.$invoice->number.' wurde markiert.',
-            'url' => route('auth.settings'),
-            'invoice_id' => $invoice->id,
-        ]);
+        AppNotification::sendLocalized(
+            (int) $invoice->user_id,
+            'invoice.paid',
+            'organization.notifications.payment_title',
+            'organization.notifications.payment_body',
+            ['invoice' => $invoice->number],
+            [
+                'url' => route('auth.settings'),
+                'invoice_id' => $invoice->id,
+            ],
+        );
 
-        return back()->with('success', 'Zahlung markiert.');
+        return back()->with('success', __('organization.club.payment_marked'));
     }
 
     public function storeFinanceEntry(Request $request, Club $club)
@@ -1843,7 +1924,7 @@ class ClubMembershipController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return back()->with('success', 'Finanzbuchung gespeichert.');
+        return back()->with('success', __('organization.club.finance_entry_saved'));
     }
 
     public function updateFinanceEntry(Request $request, Club $club, ClubFinanceEntry $financeEntry)
@@ -1854,13 +1935,13 @@ class ClubMembershipController extends Controller
 
         $financeEntry->update($this->validatedFinanceEntryData($request));
 
-        return back()->with('success', 'Finanzbuchung aktualisiert.');
+        return back()->with('success', __('organization.club.finance_entry_updated'));
     }
 
     public function sendReminder(Invoice $invoice)
     {
         $this->authorize('update', $invoice->club);
-        abort_if($invoice->status === 'paid', 422, 'Bezahlte Rechnungen können nicht gemahnt werden.');
+        abort_if($invoice->status === 'paid', 422, __('organization.club.paid_invoice_reminder_forbidden'));
         $this->planFeatures->ensureAllows($invoice->club, 'payment_reminders');
 
         $invoice->update([
@@ -1868,14 +1949,19 @@ class ClubMembershipController extends Controller
             'reminder_sent_at' => now(),
         ]);
 
-        AppNotification::send((int) $invoice->user_id, 'invoice.reminder', [
-            'title' => 'Zahlungserinnerung',
-            'body' => 'Bitte prüfe die offene Rechnung '.$invoice->number.'.',
-            'url' => route('auth.settings'),
-            'invoice_id' => $invoice->id,
-        ]);
+        AppNotification::sendLocalized(
+            (int) $invoice->user_id,
+            'invoice.reminder',
+            'organization.notifications.invoice_reminder_title',
+            'organization.notifications.invoice_reminder_body',
+            ['invoice' => $invoice->number],
+            [
+                'url' => route('auth.settings'),
+                'invoice_id' => $invoice->id,
+            ],
+        );
 
-        return back()->with('success', 'Mahnung gesendet.');
+        return back()->with('success', __('organization.club.reminder_sent'));
     }
 
     public function importBankTransactions(Request $request, Club $club)
@@ -1902,6 +1988,7 @@ class ClubMembershipController extends Controller
 
             if (! $transaction || (float) $transaction['amount'] <= 0) {
                 $stats['skipped']++;
+
                 continue;
             }
 
@@ -1910,6 +1997,7 @@ class ClubMembershipController extends Controller
                 ->where('transaction_hash', $transaction['transaction_hash'])
                 ->exists()) {
                 $stats['duplicates']++;
+
                 continue;
             }
 
@@ -1957,7 +2045,7 @@ class ClubMembershipController extends Controller
         $this->planFeatures->ensureAllows($bankTransaction->club, 'bank_reconciliation');
 
         abort_if($bankTransaction->status === 'matched', 422, 'Dieser Umsatz ist bereits zugeordnet.');
-        abort_unless($bankTransaction->invoice && $bankTransaction->invoice->status !== 'paid', 422, 'Es gibt keine offene Rechnung für diesen Umsatz.');
+        abort_unless($bankTransaction->invoice && $bankTransaction->invoice->status !== 'paid', 422, __('organization.club.bank_transaction_no_open_invoice'));
 
         DB::transaction(function () use ($bankTransaction) {
             $payment = $this->recordBankMatchedPayment($bankTransaction->invoice, [
@@ -1974,7 +2062,7 @@ class ClubMembershipController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Bankumsatz wurde als Zahlung verbucht.');
+        return back()->with('success', __('organization.club.bank_transaction_booked'));
     }
 
     public function updateDatevSettings(Request $request, Club $club)
@@ -1996,7 +2084,7 @@ class ClubMembershipController extends Controller
             'datev_bank_account' => $data['datev_bank_account'] ?? null,
         ]);
 
-        return back()->with('success', 'DATEV-Einstellungen gespeichert.');
+        return back()->with('success', __('organization.club.datev_settings_saved'));
     }
 
     public function exportDatev(Request $request, Club $club)
@@ -2022,7 +2110,7 @@ class ClubMembershipController extends Controller
             ->orderBy('paid_at')
             ->get();
 
-        abort_if($payments->isEmpty(), 422, 'Keine bezahlten Zahlungen im ausgewählten Zeitraum gefunden.');
+        abort_if($payments->isEmpty(), 422, __('organization.club.datev_no_payments'));
 
         $fileName = 'airmius-datev-'.$club->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
 
@@ -2174,21 +2262,40 @@ class ClubMembershipController extends Controller
             $this->recalculateFamilyGroupContributions($club, (string) $data['family_group_key']);
         }
 
-        AppNotification::send($user, 'club.member_linked', [
-            'title' => 'Du wurdest mit '.$club->name.' verknüpft',
-            'body' => 'Der Verein hat dich als Mitglied hinzugefügt.',
-            'url' => route('auth.club-memberships.index'),
-            'club_id' => $club->id,
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'club.member_linked',
+            'organization.notifications.member_linked_title',
+            'organization.notifications.member_linked_body',
+            ['club' => $club->name],
+            [
+                'url' => route('auth.club-memberships.index'),
+                'club_id' => $club->id,
+            ],
+        );
     }
 
-    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
-    {
+    private function notifyClubManagersLocalized(
+        Club $club,
+        string $type,
+        string $titleKey,
+        ?string $bodyKey,
+        array $replace,
+        array $data,
+        ?int $exceptUserId = null,
+    ): void {
         $club->users()
             ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
-            ->get(['users.id'])
-            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
+            ->get(['users.id', 'users.language'])
+            ->each(fn (User $manager) => AppNotification::sendLocalized(
+                $manager,
+                $type,
+                $titleKey,
+                $bodyKey,
+                $replace,
+                $data,
+            ));
     }
 
     private function recordBankMatchedPayment(Invoice $invoice, array $transaction): Payment
@@ -2211,12 +2318,17 @@ class ClubMembershipController extends Controller
         ]);
 
         if ($invoice->user_id) {
-            AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
-                'title' => 'Zahlung eingegangen',
-                'body' => 'Deine Zahlung für '.$invoice->number.' wurde per Bankabgleich erkannt.',
-                'url' => route('auth.settings'),
-                'invoice_id' => $invoice->id,
-            ]);
+            AppNotification::sendLocalized(
+                (int) $invoice->user_id,
+                'invoice.paid',
+                'organization.notifications.payment_received_title',
+                'organization.notifications.payment_received_body',
+                ['invoice' => $invoice->number],
+                [
+                    'url' => route('auth.settings'),
+                    'invoice_id' => $invoice->id,
+                ],
+            );
         }
 
         return $payment;
@@ -2415,14 +2527,14 @@ class ClubMembershipController extends Controller
                 'club_id' => $club->id,
                 'email' => $email,
             ],
-                [
-                    'created_by' => $creator->id,
-                    'name' => $memberData['name'],
-                    'role' => $memberData['role'],
-                    'membership_status' => $memberData['membership_status'],
-                    'family_group_key' => $memberData['family_group_key'],
-                    'member_number' => $memberData['member_number'],
-                    'athlete_license_number' => $memberData['athlete_license_number'],
+            [
+                'created_by' => $creator->id,
+                'name' => $memberData['name'],
+                'role' => $memberData['role'],
+                'membership_status' => $memberData['membership_status'],
+                'family_group_key' => $memberData['family_group_key'],
+                'member_number' => $memberData['member_number'],
+                'athlete_license_number' => $memberData['athlete_license_number'],
                 'contribution_amount' => $memberData['contribution_amount'],
                 'contribution_interval' => $memberData['contribution_interval'],
                 'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
@@ -2503,8 +2615,7 @@ class ClubMembershipController extends Controller
         ?string $extension,
         array $mapping = [],
         array &$meta = [],
-    ): array
-    {
+    ): array {
         $extension = strtolower((string) $extension);
 
         if ($extension === 'xlsx') {
@@ -2542,7 +2653,7 @@ class ClubMembershipController extends Controller
 
     private function readXlsxRows(string $path, array $mapping = [], array &$meta = []): array
     {
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
 
         if ($zip->open($path) !== true) {
             return [];
@@ -2556,6 +2667,7 @@ class ClubMembershipController extends Controller
             foreach ($xml->si ?? [] as $string) {
                 if (isset($string->t)) {
                     $sharedStrings[] = (string) $string->t;
+
                     continue;
                 }
 
@@ -2722,7 +2834,7 @@ class ClubMembershipController extends Controller
     private function buildMembershipImportTemplate(): string
     {
         $path = tempnam(sys_get_temp_dir(), 'airmius-members-').'.xlsx';
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
         $zip->addFromString('[Content_Types].xml', <<<'XML'
@@ -2970,7 +3082,7 @@ XML);
         $collectionDate = now()->addDays(3)->toDateString();
         $creditorName = $club->sepa_account_holder ?: $club->name;
 
-        $xml = new \XMLWriter();
+        $xml = new \XMLWriter;
         $xml->openMemory();
         $xml->startDocument('1.0', 'UTF-8');
         $xml->startElement('Document');

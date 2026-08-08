@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     subscriptions: { type: Array, default: () => [] },
     statusLabel: { type: Function, required: true },
@@ -80,7 +84,7 @@ defineProps({
                             <dd class="mt-1 font-bold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3">
-                            <dt class="text-xs uppercase text-secondary">Fällig bis</dt>
+                            <dt class="text-xs uppercase text-secondary">{{ t('outfit_ui.due') }}</dt>
                             <dd class="mt-1 font-bold text-primary">{{ formatDate(subscription.payment_due_at) }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3 sm:col-span-2">
@@ -88,19 +92,19 @@ defineProps({
                             <dd class="mt-1 break-all font-bold text-primary">{{ subscription.payment_reference }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3">
-                            <dt class="text-xs uppercase text-secondary">Kontoinhaber</dt>
+                            <dt class="text-xs uppercase text-secondary">{{ t('outfit_ui.bank_holder') }}</dt>
                             <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bank_account_holder || '-' }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3">
-                            <dt class="text-xs uppercase text-secondary">Bank</dt>
+                            <dt class="text-xs uppercase text-secondary">{{ t('outfit_ui.bank') }}</dt>
                             <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bank_name || '-' }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3">
-                            <dt class="text-xs uppercase text-secondary">IBAN</dt>
+                            <dt class="text-xs uppercase text-secondary">{{ t('outfit_ui.iban') }}</dt>
                             <dd class="mt-1 break-all font-bold text-primary">{{ subscription.bank_transfer?.iban || '-' }}</dd>
                         </div>
                         <div class="rounded-lg bg-card p-3">
-                            <dt class="text-xs uppercase text-secondary">BIC</dt>
+                            <dt class="text-xs uppercase text-secondary">{{ t('outfit_ui.bic') }}</dt>
                             <dd class="mt-1 font-bold text-primary">{{ subscription.bank_transfer?.bic || '-' }}</dd>
                         </div>
                     </dl>
@@ -140,4 +144,3 @@ defineProps({
         <p v-else class="mt-5 rounded-lg bg-inputBg p-4 text-sm text-secondary">Noch kein Outfit-Abo aktiv.</p>
     </div>
 </template>
-

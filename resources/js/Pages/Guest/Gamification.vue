@@ -198,7 +198,7 @@ const badges = [
                                     </div>
                                     <div class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                                         <div class="rounded-md bg-bg p-2">
-                                            <p class="font-bold text-primary">1.30x</p>
+                                            <p class="font-bold text-primary" translate="no">{{ '1.30×' }}</p>
                                     <p class="text-secondary">{{ tx('Trust') }}</p>
                                         </div>
                                         <div class="rounded-md bg-bg p-2">

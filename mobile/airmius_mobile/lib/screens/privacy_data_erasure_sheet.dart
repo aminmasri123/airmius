@@ -6,31 +6,37 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class DataErasureSheet extends StatefulWidget {
-  const DataErasureSheet({super.key, required this.client});
+  const DataErasureSheet({
+    super.key,
+    required this.client,
+    required this.usesSocialLogin,
+    required this.accountEmail,
+    required this.categoryKeys,
+  });
 
   final AirmiusApiClient client;
+  final bool usesSocialLogin;
+  final String accountEmail;
+  final List<String> categoryKeys;
 
   @override
   State<DataErasureSheet> createState() => _DataErasureSheetState();
 }
 
 class _DataErasureSheetState extends State<DataErasureSheet> {
-  static const _categoryKeys = <String>[
-    'profile',
-    'content',
-    'messages',
-    'files',
-    'sport_and_health',
-    'social_and_integrations',
-    'commerce',
-  ];
-
-  final _identity = TextEditingController();
+  late final TextEditingController _identity;
   final _code = TextEditingController();
   final _selected = <String>{};
-  bool _socialLogin = false;
   bool _codeSent = false;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _identity = TextEditingController(
+      text: widget.usesSocialLogin ? widget.accountEmail : '',
+    );
+  }
 
   @override
   void dispose() {
@@ -71,14 +77,14 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
                       TextButton(
                         onPressed: _busy ? null : _toggleAll,
                         child: Text(
-                          _selected.length == _categoryKeys.length
+                          _selected.length == widget.categoryKeys.length
                               ? t('privacy.eraseClearAll')
                               : t('privacy.eraseSelectAll'),
                         ),
                       ),
                     ],
                   ),
-                  ..._categoryKeys.map(
+                  ...widget.categoryKeys.map(
                     (key) => CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _selected.contains(key),
@@ -102,31 +108,26 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
                   Eyebrow(t('privacy.eraseConfirmIdentity')),
                   const SizedBox(height: 8),
                   Text(
-                    t('privacy.eraseIdentityHint'),
+                    t(
+                      widget.usesSocialLogin
+                          ? 'privacy.eraseEmailIdentityHint'
+                          : 'privacy.erasePasswordIdentityHint',
+                    ),
                     style: TextStyle(
                       color: airmiusMutedColor(context),
                       height: 1.35,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    value: _socialLogin,
-                    onChanged: _busy
-                        ? null
-                        : (value) => setState(() => _socialLogin = value),
-                    title: Text(t('privacy.eraseUseEmail')),
-                  ),
-                  const SizedBox(height: 8),
                   TextField(
                     controller: _identity,
-                    obscureText: !_socialLogin,
-                    keyboardType: _socialLogin
+                    obscureText: !widget.usesSocialLogin,
+                    keyboardType: widget.usesSocialLogin
                         ? TextInputType.emailAddress
                         : TextInputType.visiblePassword,
                     enabled: !_busy,
                     decoration: InputDecoration(
-                      labelText: _socialLogin
+                      labelText: widget.usesSocialLogin
                           ? t('privacy.email')
                           : t('account.currentPassword'),
                     ),
@@ -191,12 +192,12 @@ class _DataErasureSheetState extends State<DataErasureSheet> {
 
   void _toggleAll() {
     setState(() {
-      if (_selected.length == _categoryKeys.length) {
+      if (_selected.length == widget.categoryKeys.length) {
         _selected.clear();
       } else {
         _selected
           ..clear()
-          ..addAll(_categoryKeys);
+          ..addAll(widget.categoryKeys);
       }
       _invalidateCode();
     });

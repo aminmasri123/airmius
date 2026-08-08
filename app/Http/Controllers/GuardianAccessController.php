@@ -320,7 +320,7 @@ class GuardianAccessController extends Controller
 
         return redirect()
             ->route('login')
-            ->with('status', 'Dein Elternkonto wurde erstellt. Du kannst dich jetzt anmelden.');
+            ->with('status', __('guardian.responses.account_created'));
     }
 
     public function revoke(Request $request, User $child): RedirectResponse
@@ -362,15 +362,19 @@ class GuardianAccessController extends Controller
             }
         });
 
-        AppNotification::send($child, 'guardian.consent_revoked', [
-            'title' => 'Zustimmung widerrufen',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte kläre das mit deinem Erziehungsberechtigten.',
-            'minor_id' => $child->id,
-            'guardian_email' => $email,
-            'url' => route('guardian-consent.pending'),
-        ]);
+        AppNotification::sendLocalized(
+            $child,
+            'guardian.consent_revoked',
+            'guardian.notifications.revoked_title',
+            'guardian.notifications.revoked_body',
+            data: [
+                'minor_id' => $child->id,
+                'guardian_email' => $email,
+                'url' => route('guardian-consent.pending'),
+            ],
+        );
 
-        return back()->with('success', 'Die Zustimmung wurde widerrufen.');
+        return back()->with('success', __('guardian.responses.access_revoked'));
     }
 
     public function approve(Request $request, User $child): RedirectResponse
@@ -425,15 +429,19 @@ class GuardianAccessController extends Controller
             }
         });
 
-        AppNotification::send($child, 'guardian.consent_approved', [
-            'title' => 'Zustimmung erteilt',
-            'body' => 'Dein Airmius-Konto wurde von einem Erziehungsberechtigten freigegeben.',
-            'minor_id' => $child->id,
-            'guardian_user_id' => $child->fresh()->guardian_user_id,
-            'url' => route('auth.dashboard'),
-        ]);
+        AppNotification::sendLocalized(
+            $child,
+            'guardian.consent_approved',
+            'guardian.notifications.approved_title',
+            'guardian.notifications.approved_body',
+            data: [
+                'minor_id' => $child->id,
+                'guardian_user_id' => $child->fresh()->guardian_user_id,
+                'url' => route('auth.dashboard'),
+            ],
+        );
 
-        return back()->with('success', 'Die Ablehnung wurde zurückgenommen und die Zustimmung erteilt.');
+        return back()->with('success', __('guardian.responses.access_approved'));
     }
 
     public function destroy(Request $request): RedirectResponse

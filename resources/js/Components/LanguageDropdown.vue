@@ -14,7 +14,10 @@ const open = ref(false)
 const dropdownRef = ref(null)
 const buttonRef = ref(null)
 const showSuccess = ref(false)
+const changeFailed = ref(false)
+const changing = ref(false)
 const menuStyle = ref({})
+let feedbackTimeout = null
 
 const { locale, languages, changeLang } = useLanguage()
 
@@ -49,10 +52,33 @@ const toggleOpen = async () => {
 }
 
 const handleLanguageChange = async (code) => {
-    await changeLang(code)
-    open.value = false
-    showSuccess.value = true
-    setTimeout(() => showSuccess.value = false, 1800)
+    if (changing.value) {
+        return
+    }
+
+    if (code === locale.value) {
+        open.value = false
+        return
+    }
+
+    changing.value = true
+    changeFailed.value = false
+    showSuccess.value = false
+
+    try {
+        await changeLang(code)
+        open.value = false
+        showSuccess.value = true
+    } catch (error) {
+        changeFailed.value = true
+    } finally {
+        changing.value = false
+        window.clearTimeout(feedbackTimeout)
+        feedbackTimeout = window.setTimeout(() => {
+            showSuccess.value = false
+            changeFailed.value = false
+        }, 1800)
+    }
 }
 
 const handleClickOutside = (event) => {
@@ -77,6 +103,7 @@ onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside)
     window.removeEventListener('resize', handleViewportChange)
     window.removeEventListener('scroll', handleViewportChange, true)
+    window.clearTimeout(feedbackTimeout)
 })
 </script>
 
@@ -86,10 +113,14 @@ onBeforeUnmount(() => {
             ref="buttonRef"
             type="button"
             @click="toggleOpen"
-            class="flex items-center gap-2 rounded-lg border border-border bg-card/80 px-4 py-2 text-sm text-primary transition hover:border-borderHover hover:bg-muted active:scale-95"
+            :aria-busy="changing"
+            :disabled="changing"
+            class="flex items-center gap-2 rounded-lg border border-border bg-card/80 px-4 py-2 text-sm text-primary transition hover:border-borderHover hover:bg-muted active:scale-95 disabled:cursor-wait disabled:opacity-60"
         >
-            <span v-if="!showSuccess">{{ locale.toUpperCase() }}</span>
-            <span v-else class="text-success">{{ $t('common.saved') }}</span>
+            <span v-if="changing">{{ $t('common.changing_language') }}</span>
+            <span v-else-if="changeFailed" class="text-danger">{{ $t('common.language_change_failed') }}</span>
+            <span v-else-if="showSuccess" class="text-success">{{ $t('common.saved') }}</span>
+            <span v-else>{{ locale.toUpperCase() }}</span>
         </button>
 
         <Transition
@@ -112,7 +143,8 @@ onBeforeUnmount(() => {
                         :key="lang.code"
                         type="button"
                         @click="handleLanguageChange(lang.code)"
-                        class="flex w-full items-center px-4 py-3 text-start text-sm transition hover:bg-muted"
+                        :disabled="changing"
+                        class="flex w-full items-center px-4 py-3 text-start text-sm transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
                         :class="locale === lang.code ? 'bg-muted font-bold text-primary' : ''"
                     >
                         <span class="flex-1">{{ lang.native }}</span>

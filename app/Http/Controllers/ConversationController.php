@@ -11,6 +11,7 @@ use App\Models\Message;
 use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
@@ -24,6 +25,7 @@ class ConversationController extends Controller
     public function __construct(
         private ChatService $chatService,
         private ModerationService $moderation,
+        private ChatLatestMessageLoader $latestMessageLoader,
     ) {}
 
     /**
@@ -455,14 +457,21 @@ class ConversationController extends Controller
 
         broadcast(new ChatConversationUpdated($conversation, 'member.removed', [$user->id]))->toOthers();
 
-        AppNotification::send($user, 'chat.group_removed', [
-            'title' => 'Du wurdest aus einer Chatgruppe entfernt',
-            'body' => $conversation->name ?: 'Gruppenchat',
-            'url' => route('auth.conversations.index'),
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'conversation_id' => $conversation->id,
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'chat.group_removed',
+            'platform.chat.removed_title',
+            'platform.chat.group_body',
+            [
+                'conversation' => $conversation->name ?: AppNotification::translatedReplacement('platform.chat.group_fallback', 'Group chat'),
+            ],
+            [
+                'url' => route('auth.conversations.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'conversation_id' => $conversation->id,
+            ],
+        );
 
         return back()->with('success', __('server.chat.member_removed'));
     }
@@ -493,14 +502,21 @@ class ConversationController extends Controller
 
         broadcast(new ChatConversationUpdated($conversation, 'owner.transferred', [(int) $data['user_id']]))->toOthers();
 
-        AppNotification::send((int) $data['user_id'], 'chat.group_owner_transferred', [
-            'title' => 'Du bist jetzt Owner einer Chatgruppe',
-            'body' => $conversation->name ?: 'Gruppenchat',
-            'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
-            'actor_id' => $request->user()->id,
-            'actor_name' => $request->user()->name,
-            'conversation_id' => $conversation->id,
-        ]);
+        AppNotification::sendLocalized(
+            (int) $data['user_id'],
+            'chat.group_owner_transferred',
+            'platform.chat.owner_title',
+            'platform.chat.group_body',
+            [
+                'conversation' => $conversation->name ?: AppNotification::translatedReplacement('platform.chat.group_fallback', 'Group chat'),
+            ],
+            [
+                'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'conversation_id' => $conversation->id,
+            ],
+        );
 
         return back()->with('success', __('server.chat.owner_transferred'));
     }
@@ -536,7 +552,10 @@ class ConversationController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $this->attachLatestVisibleMessages($conversations);
+        $this->latestMessageLoader->attach($conversations, (int) auth()->id(), [
+            'sender:id,name',
+            'attachments.file:id,display_name,path,thumbnail_path,type,size',
+        ]);
 
         $readConversationIds = $selectedConversation
             ? collect([$selectedConversation->id])
@@ -707,32 +726,6 @@ class ConversationController extends Controller
         if ($newParticipantIds->isNotEmpty()) {
             $conversation->users()->syncWithoutDetaching($this->participantsWithJoinedAt($newParticipantIds));
         }
-    }
-
-    private function attachLatestVisibleMessages($conversations): void
-    {
-        if ($conversations->isEmpty()) {
-            return;
-        }
-
-        $joinedAtByConversation = DB::table('conversation_users')
-            ->where('user_id', auth()->id())
-            ->whereIn('conversation_id', $conversations->pluck('id'))
-            ->pluck('joined_at', 'conversation_id');
-
-        $conversations->each(function (Conversation $conversation) use ($joinedAtByConversation) {
-            $query = Message::query()
-                ->where('conversation_id', $conversation->id)
-                ->where('moderation_status', '!=', 'removed')
-                ->with(['sender:id,name', 'attachments.file:id,display_name,path,thumbnail_path,type,size'])
-                ->latest('id');
-
-            if ($conversation->type === 'group' && $joinedAtByConversation->get($conversation->id)) {
-                $query->where('created_at', '>=', $joinedAtByConversation->get($conversation->id));
-            }
-
-            $conversation->setRelation('latestVisibleMessage', $query->first());
-        });
     }
 
     private function addSystemMessage(Conversation $conversation, User $actor, string $text, string $event, array $metadata = []): Message

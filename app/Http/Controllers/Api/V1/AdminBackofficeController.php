@@ -18,10 +18,14 @@ use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserSubscription;
+use App\Services\Subscriptions\SubscriptionLifecycleService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AdminBackofficeController extends Controller
 {
+    public function __construct(private readonly SubscriptionLifecycleService $subscriptionLifecycle) {}
+
     public function dashboard(Request $request)
     {
         $abilities = $this->abilities($request);
@@ -208,7 +212,10 @@ class AdminBackofficeController extends Controller
         UserSubscription $subscription
     ) {
         $this->ensureSubscriptionsManager($request);
-        app(SubscriptionPlanController::class)->cancelUser($request, $subscription);
+        $data = $request->validate([
+            'mode' => ['required', Rule::in(['period_end', 'now'])],
+        ]);
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode']);
 
         return response()->json([
             'data' => $this->userSubscriptionPayload(
@@ -222,7 +229,10 @@ class AdminBackofficeController extends Controller
         UserSubscription $subscription
     ) {
         $this->ensureSubscriptionsManager($request);
-        app(SubscriptionPlanController::class)->renewUser($request, $subscription);
+        $data = $request->validate([
+            'months' => ['required', 'integer', 'min:1', 'max:36'],
+        ]);
+        $this->subscriptionLifecycle->renew($subscription, (int) $data['months']);
 
         return response()->json([
             'data' => $this->userSubscriptionPayload(
@@ -236,7 +246,10 @@ class AdminBackofficeController extends Controller
         ClubSubscription $subscription
     ) {
         $this->ensureSubscriptionsManager($request);
-        app(SubscriptionPlanController::class)->cancelClub($request, $subscription);
+        $data = $request->validate([
+            'mode' => ['required', Rule::in(['period_end', 'now'])],
+        ]);
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode']);
 
         return response()->json([
             'data' => $this->clubSubscriptionPayload(
@@ -250,7 +263,10 @@ class AdminBackofficeController extends Controller
         ClubSubscription $subscription
     ) {
         $this->ensureSubscriptionsManager($request);
-        app(SubscriptionPlanController::class)->renewClub($request, $subscription);
+        $data = $request->validate([
+            'months' => ['required', 'integer', 'min:1', 'max:36'],
+        ]);
+        $this->subscriptionLifecycle->renew($subscription, (int) $data['months']);
 
         return response()->json([
             'data' => $this->clubSubscriptionPayload(

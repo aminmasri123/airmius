@@ -211,7 +211,7 @@ const toneClass = (tone, active = false) => {
                 v-for="workflow in workflowCards"
                 :key="workflow.key"
                 type="button"
-                class="flex min-h-40 flex-col justify-between rounded-lg border p-4 text-left transition"
+                class="flex min-h-40 flex-col justify-between rounded-lg border p-4 text-start transition"
                 :class="toneClass(workflow.tone, activeTab === workflow.tab)"
                 @click="emit('select-tab', workflow.tab)"
             >

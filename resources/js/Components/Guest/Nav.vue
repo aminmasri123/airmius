@@ -56,7 +56,7 @@ const navItems = [
 </script>
 
 <template>
-    <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur" aria-label="Hauptnavigation">
+    <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur" :aria-label="$t('guest.nav.main_aria')">
         <div
             class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
             :class="isRtl ? 'rtl-mobile-nav' : ''"
@@ -66,7 +66,7 @@ const navItems = [
                 @click="scrollTo('hero')"
                 class="flex shrink-0 items-center font-heading font-900 text-xl tracking-tight"
                 :class="isRtl ? 'max-lg:order-2 max-lg:flex-row-reverse' : ''"
-                aria-label="Airmius Start"
+                :aria-label="$t('guest.nav.home_aria')"
             >
                 <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
             </button>
@@ -133,7 +133,7 @@ const navItems = [
                     class="lg:hidden text-primary hover:text-air-blue p-2"
                     :aria-expanded="mobileOpen"
                     aria-controls="guest-mobile-menu"
-                    aria-label="Menü öffnen"
+                    :aria-label="$t('guest.nav.open_menu_aria')"
                     @click="toggleMobile"
                 >
                     <i class="las la-bars text-2xl"></i>
@@ -156,12 +156,12 @@ const navItems = [
                 class="fixed inset-0 z-[99999] lg:hidden"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Menü"
+                :aria-label="$t('guest.nav.menu_aria')"
             >
                 <button
                     type="button"
                     class="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                    aria-label="Menü schließen"
+                    :aria-label="$t('guest.nav.close_menu_aria')"
                     @click="mobileOpen = false"
                 ></button>
 
@@ -181,7 +181,7 @@ const navItems = [
                     >
                         <div class="flex justify-between items-center p-5 border-b border-border">
                             <span class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
-                            <button type="button" aria-label="Menü schließen" @click="mobileOpen = false" class="text-primary text-2xl p-1">&times;</button>
+                            <button type="button" :aria-label="$t('guest.nav.close_menu_aria')" @click="mobileOpen = false" class="text-primary text-2xl p-1">×</button>
                         </div>
 
                         <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">

@@ -31,6 +31,13 @@ class ClubRoles
         'financial_controller',
     ];
 
+    public const SUBSCRIPTION_MANAGERS = [
+        'owner',
+        'admin',
+        'manager',
+        'financial_controller',
+    ];
+
     public const LABELS = [
         'owner' => 'Owner',
         'admin' => 'Verein-Admin',

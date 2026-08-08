@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\AttachApiContractHeaders;
+use App\Http\Middleware\EnforceApiCachePolicy;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
@@ -10,6 +11,7 @@ use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\EstablishProcessingPurpose;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HardenAdminArea;
+use App\Http\Middleware\MeasureRequestPerformance;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\StoreIntendedUrlFromQuery;
@@ -45,6 +47,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(EnsureApiCorsHeaders::class);
+        // This must wrap the CORS exception renderer as well, otherwise an
+        // error response could bypass the versioned API cache policy.
+        $middleware->prepend(EnforceApiCachePolicy::class);
+        $middleware->prepend(MeasureRequestPerformance::class);
         $middleware->append(ApplySecurityHeaders::class);
 
         $middleware->statefulApi();

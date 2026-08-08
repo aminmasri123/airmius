@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSubscriptionEntitlements;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ClubSubscription extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSubscriptionEntitlements;
 
     protected $fillable = [
         'club_id',

@@ -1,7 +1,8 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { centsToMajor, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 import { useI18n } from 'vue-i18n'
 
@@ -13,6 +14,7 @@ const props = defineProps({
     users: { type: Array, default: () => [] },
     userSubscriptions: { type: Array, default: () => [] },
     pendingBankTransfers: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -22,12 +24,31 @@ const tx = (key, fallback = key, values = {}) => {
     return translated === key ? fallback : translated
 }
 const selectedActor = ref('all')
-const clubSearch = ref('')
-const userSearch = ref('')
+const clubSearch = ref(props.filters.club_query || '')
+const userSearch = ref(props.filters.user_query || '')
 const editingPlanId = ref(null)
+const pendingCancellation = ref(null)
+const cancellationProcessing = ref(false)
 const clubForms = ref({})
 const userForms = ref({})
 const planForms = ref({})
+const resetUserForms = () => { userForms.value = {} }
+let searchTimer = null
+
+watch([clubSearch, userSearch], () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        router.get(route('admin.subscriptions.index'), {
+            club_query: clubSearch.value.trim() || undefined,
+            user_query: userSearch.value.trim() || undefined,
+        }, {
+            only: ['clubs', 'users', 'filters'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        })
+    }, 350)
+})
 
 const actorLabels = {
     all: 'Alle',
@@ -216,69 +237,127 @@ const savePlan = (plan) => {
             country_prices: (data.country_prices || []).map((price) => transformMoneyFields(price, ['monthly_price_cents', 'yearly_price_cents'])),
         }))
         .put(route('admin.subscription-plans.update', plan.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            editingPlanId.value = null
-        },
+            only: ['plans', 'flash'],
+            preserveScroll: true,
+            onSuccess: () => {
+                editingPlanId.value = null
+                delete planForms.value[plan.id]
+            },
         })
 }
 
 const saveClub = (club) => {
     formForClub(club).put(route('admin.clubs.subscription.update', club.id), {
+        only: ['clubs', 'plans', 'flash'],
         preserveScroll: true,
+        onSuccess: () => delete clubForms.value[club.id],
     })
 }
 
 const saveUserSubscription = (subscription) => {
     formForUserSubscription(subscription).put(route('admin.users.subscription.update', subscription.user.id), {
+        only: ['users', 'userSubscriptions', 'plans', 'flash'],
         preserveScroll: true,
+        onSuccess: resetUserForms,
     })
 }
 
 const saveUser = (user) => {
     formForUser(user).put(route('admin.users.subscription.update', user.id), {
+        only: ['users', 'userSubscriptions', 'plans', 'flash'],
         preserveScroll: true,
+        onSuccess: resetUserForms,
     })
 }
 
 const cancelClubSubscription = (club, mode = 'period_end') => {
     if (!club.subscription) return
-    router.post(route('admin.club-subscriptions.cancel', club.subscription.id), { mode }, { preserveScroll: true })
+
+    pendingCancellation.value = {
+        kind: 'club',
+        id: club.subscription.id,
+        name: club.name,
+        formKey: club.id,
+        mode,
+    }
+}
+
+const confirmCancellation = () => {
+    const pending = pendingCancellation.value
+    if (!pending || cancellationProcessing.value) return
+
+    const targetRoute = pending.kind === 'club'
+        ? route('admin.club-subscriptions.cancel', pending.id)
+        : route('admin.user-subscriptions.cancel', pending.id)
+    const only = pending.kind === 'club'
+        ? ['clubs', 'plans', 'flash']
+        : ['users', 'userSubscriptions', 'plans', 'flash']
+
+    cancellationProcessing.value = true
+    router.post(targetRoute, { mode: pending.mode }, {
+        only,
+        preserveScroll: true,
+        onSuccess: () => {
+            if (pending.kind === 'club') delete clubForms.value[pending.formKey]
+            else resetUserForms()
+            pendingCancellation.value = null
+        },
+        onFinish: () => { cancellationProcessing.value = false },
+    })
+}
+
+const closeCancellation = () => {
+    if (!cancellationProcessing.value) pendingCancellation.value = null
 }
 
 const renewClubSubscription = (club, months = 1) => {
     if (!club.subscription) return
-    router.post(route('admin.club-subscriptions.renew', club.subscription.id), { months }, { preserveScroll: true })
+    router.post(route('admin.club-subscriptions.renew', club.subscription.id), { months }, {
+        only: ['clubs', 'plans', 'flash'],
+        preserveScroll: true,
+        onSuccess: () => delete clubForms.value[club.id],
+    })
 }
 
-const cancelUserSubscription = (subscription, mode = 'period_end') => {
+const cancelUserSubscription = (subscription, mode = 'period_end', name = null) => {
     if (!subscription) return
-    router.post(route('admin.user-subscriptions.cancel', subscription.id), { mode }, { preserveScroll: true })
+
+    pendingCancellation.value = {
+        kind: 'user',
+        id: subscription.id,
+        name: name || subscription.user?.name || subscription.user?.email || `#${subscription.id}`,
+        mode,
+    }
 }
 
 const renewUserSubscription = (subscription, months = 1) => {
     if (!subscription) return
-    router.post(route('admin.user-subscriptions.renew', subscription.id), { months }, { preserveScroll: true })
+    router.post(route('admin.user-subscriptions.renew', subscription.id), { months }, {
+        only: ['users', 'userSubscriptions', 'plans', 'flash'],
+        preserveScroll: true,
+        onSuccess: resetUserForms,
+    })
 }
 
 const markTransferPaid = (checkout) => {
     router.post(route('admin.subscription-checkouts.mark-paid', checkout.id), {}, {
+        only: ['pendingBankTransfers', 'users', 'userSubscriptions', 'plans', 'flash'],
         preserveScroll: true,
     })
 }
 </script>
 
 <template>
-    <Head title="Abo-Verwaltung" />
+    <Head :title="tx('Abo-Verwaltung')" />
 
     <div class="space-y-6">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Business Model</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Abo-Verwaltung</h1>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Business Model') }}</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('Abo-Verwaltung') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Preise, Zielgruppen, Limits und Vereinszuordnungen zentral verwalten.
+                        {{ tx('Preise, Zielgruppen, Limits und Vereinszuordnungen zentral verwalten.') }}
                     </p>
                 </div>
 
@@ -289,7 +368,7 @@ const markTransferPaid = (checkout) => {
                     class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                 >
                     <i class="las la-external-link-alt"></i>
-                    Preisseite ansehen
+                    {{ tx('Preisseite ansehen') }}
                 </a>
             </div>
 
@@ -300,24 +379,24 @@ const markTransferPaid = (checkout) => {
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Pläne</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Pläne') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.plans }}</p>
-                <p class="text-sm text-secondary">{{ summary.publicPlans }} aktiv und öffentlich</p>
+                <p class="text-sm text-secondary">{{ summary.publicPlans }} {{ tx('aktiv und öffentlich') }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Vereins-Abos</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Vereins-Abos') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.clubSubscriptions }}</p>
-                <p class="text-sm text-secondary">zugeordneten Vereinen</p>
+                <p class="text-sm text-secondary">{{ tx('zugeordneten Vereinen') }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Nutzer-Abos</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Nutzer-Abos') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.userSubscriptions }}</p>
-                <p class="text-sm text-secondary">Sportler, Trainer und Partner</p>
+                <p class="text-sm text-secondary">{{ tx('Sportler, Trainer und Partner') }}</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Vereine</p>
+                <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Vereine') }}</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ clubs.length }}</p>
-                <p class="text-sm text-secondary">für Plan-Zuordnung</p>
+                <p class="text-sm text-secondary">{{ tx('für Plan-Zuordnung') }}</p>
             </div>
         </section>
 
@@ -359,28 +438,28 @@ const markTransferPaid = (checkout) => {
 
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Monat</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Monat') }}</p>
                             <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.monthly_price_cents, plan.currency) }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Jahr</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Jahr') }}</p>
                             <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.yearly_price_cents, plan.currency) }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Mitglieder</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Mitglieder') }}</p>
                             <p class="mt-1 font-bold text-primary">{{ limitLabel(plan.member_limit) }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Speicher</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Speicher') }}</p>
                             <p class="mt-1 font-bold text-primary">{{ plan.storage_gb }} GB</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Mindestlaufzeit</p>
-                            <p class="mt-1 font-bold text-primary">{{ Number(plan.minimum_term_months || 0) }} Monate</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Mindestlaufzeit') }}</p>
+                            <p class="mt-1 font-bold text-primary">{{ Number(plan.minimum_term_months || 0) }} {{ tx('Monate') }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Kündigungsfrist</p>
-                            <p class="mt-1 font-bold text-primary">{{ Number(plan.cancellation_notice_days || 0) }} Tage</p>
+                            <p class="text-xs uppercase text-secondary">{{ tx('Kündigungsfrist') }}</p>
+                            <p class="mt-1 font-bold text-primary">{{ Number(plan.cancellation_notice_days || 0) }} {{ tx('Tage') }}</p>
                         </div>
                     </div>
 
@@ -389,74 +468,68 @@ const markTransferPaid = (checkout) => {
                             {{ plan.is_active ? tx('Aktiv') : tx('Inaktiv') }}
                         </span>
                         <span class="rounded-full px-2 py-1 font-semibold" :class="plan.is_public ? 'bg-air-blue/15 text-air-blue' : 'bg-muted text-secondary'">
-                            {{ plan.is_public ? 'Öffentlich' : 'Privat' }}
+                            {{ plan.is_public ? tx('Öffentlich') : tx('Privat') }}
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
-                            {{ plan.club_subscriptions_count }} Vereine
+                            {{ plan.club_subscriptions_count }} {{ tx('Vereine') }}
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
-                            {{ plan.user_subscriptions_count }} Nutzer
+                            {{ plan.user_subscriptions_count }} {{ tx('Nutzer') }}
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
-                                    {{ plan.country_prices?.length || 0 }} Länderpreise
+                            {{ plan.country_prices?.length || 0 }} {{ tx('Länderpreise') }}
                         </span>
                     </div>
                 </div>
 
                 <form v-else class="space-y-4 p-4" @submit.prevent="savePlan(plan)">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Zielgruppe</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Zielgruppe') }}</label>
                         <select v-model="formForPlan(plan).target_actor" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="sportler">Sportler</option>
-                            <option value="trainer">Trainer</option>
-                            <option value="verein">Verein</option>
-                            <option value="eltern">Eltern</option>
-                            <option value="sponsor">Sponsor</option>
-                            <option value="anbieter">Anbieter</option>
-                            <option value="enterprise">Enterprise</option>
+                            <option v-for="actor in Object.keys(actorLabels).filter((value) => value !== 'all')" :key="actor" :value="actor">{{ actorLabel(actor) }}</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Beschreibung</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Beschreibung') }}</label>
                         <textarea v-model="formForPlan(plan).description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"></textarea>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Monat</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Monat') }}</label>
                             <input v-model="formForPlan(plan).monthly_price_cents" v-bind="moneyInputAttrs" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="10,99">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Jahr</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Jahr') }}</label>
                             <input v-model="formForPlan(plan).yearly_price_cents" v-bind="moneyInputAttrs" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="99,00">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Mitglieder</label>
-                            <input v-model="formForPlan(plan).member_limit" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="leer = unbegrenzt">
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Mitglieder') }}</label>
+                            <input v-model="formForPlan(plan).member_limit" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('leer = unbegrenzt')">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Teams</label>
-                            <input v-model="formForPlan(plan).team_limit" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="leer = unbegrenzt">
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Teams') }}</label>
+                            <input v-model="formForPlan(plan).team_limit" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('leer = unbegrenzt')">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Speicher GB</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Speicher GB') }}</label>
                             <input v-model="formForPlan(plan).storage_gb" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Mindestlaufzeit Monate</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Mindestlaufzeit Monate') }}</label>
                             <input v-model="formForPlan(plan).minimum_term_months" type="number" min="0" max="60" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Kündigungsfrist Tage</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Kündigungsfrist Tage') }}</label>
                             <input v-model="formForPlan(plan).cancellation_notice_days" type="number" min="0" max="365" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Badge</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Badge') }}</label>
                             <input v-model="formForPlan(plan).badge" type="text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                         <div class="col-span-2">
-                            <label class="text-xs font-semibold uppercase text-secondary">CTA</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('CTA') }}</label>
                             <input v-model="formForPlan(plan).cta_label" type="text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                     </div>
@@ -464,7 +537,7 @@ const markTransferPaid = (checkout) => {
                     <div class="flex flex-wrap gap-4">
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="formForPlan(plan).is_public" type="checkbox" class="rounded border-border bg-inputBg">
-                            Öffentlich
+                            {{ tx('Öffentlich') }}
                         </label>
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="formForPlan(plan).is_active" type="checkbox" class="rounded border-border bg-inputBg">
@@ -475,11 +548,11 @@ const markTransferPaid = (checkout) => {
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                            <p class="text-xs font-semibold uppercase text-secondary">Länderpreise</p>
-                                <p class="mt-1 text-xs text-secondary">Land, Währung und Preis pro Plan steuern.</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">{{ tx('Länderpreise') }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ tx('Land, Währung und Preis pro Plan steuern.') }}</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="addCountryPrice(plan)">
-                                + Land
+                                + {{ tx('Land') }}
                             </button>
                         </div>
 
@@ -491,15 +564,15 @@ const markTransferPaid = (checkout) => {
                             >
                                 <input v-model="price.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE">
                                 <input v-model="price.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
-                                <input v-model="price.monthly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat">
-                                <input v-model="price.yearly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr">
+                                <input v-model="price.monthly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Monat')">
+                                <input v-model="price.yearly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('Jahr')">
                                 <div class="flex items-center gap-2">
                                     <label class="flex items-center gap-1 text-xs text-primary">
                                         <input v-model="price.is_active" type="checkbox" class="rounded border-border bg-inputBg">
                                         {{ tx('Aktiv') }}
                                     </label>
                                     <button type="button" class="rounded-lg border border-border px-2 py-1 text-xs text-primary hover:bg-muted" @click="removeCountryPrice(plan, index)">
-                                        Entfernen
+                                        {{ tx('Entfernen') }}
                                     </button>
                                 </div>
                             </div>
@@ -510,7 +583,7 @@ const markTransferPaid = (checkout) => {
                     </div>
 
                     <button class="w-full rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="formForPlan(plan).processing">
-                        Speichern
+                        {{ tx('Speichern') }}
                     </button>
                 </form>
             </article>
@@ -526,7 +599,7 @@ const markTransferPaid = (checkout) => {
                         </p>
                     </div>
                     <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
-                        {{ pendingBankTransfers.length }} offen
+                        {{ pendingBankTransfers.length }} {{ tx('offen') }}
                     </span>
                 </div>
             </div>
@@ -535,19 +608,19 @@ const markTransferPaid = (checkout) => {
                 <table v-if="pendingBankTransfers.length" class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
-                            <th class="px-5 py-3">Referenz</th>
-                            <th class="px-5 py-3">Kunde</th>
-                            <th class="px-5 py-3">Plan</th>
-                            <th class="px-5 py-3">Betrag</th>
-                            <th class="px-5 py-3">Fällig</th>
-                            <th class="px-5 py-3 text-right">Aktion</th>
+                            <th class="px-5 py-3">{{ tx('Referenz') }}</th>
+                            <th class="px-5 py-3">{{ tx('Kunde') }}</th>
+                            <th class="px-5 py-3">{{ tx('Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Betrag') }}</th>
+                            <th class="px-5 py-3">{{ tx('Fällig') }}</th>
+                            <th class="px-5 py-3 text-right">{{ tx('Aktion') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
                         <tr v-for="checkout in pendingBankTransfers" :key="checkout.id" class="hover:bg-muted/40">
                             <td class="px-5 py-3">
                                 <p class="font-semibold text-primary">{{ checkout.payment_reference }}</p>
-                                <p class="text-xs text-secondary">Checkout {{ checkout.id }}</p>
+                                <p class="text-xs text-secondary">{{ tx('Checkout') }} {{ checkout.id }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <p class="font-semibold text-primary">{{ checkout.club?.name || checkout.user?.name || '-' }}</p>
@@ -558,7 +631,7 @@ const markTransferPaid = (checkout) => {
                             <td class="px-5 py-3 text-secondary">{{ checkout.due_at || '-' }}</td>
                             <td class="px-5 py-3 text-right">
                                 <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="markTransferPaid(checkout)">
-                                    Als bezahlt markieren
+                                    {{ tx('Als bezahlt markieren') }}
                                 </button>
                             </td>
                         </tr>
@@ -566,7 +639,7 @@ const markTransferPaid = (checkout) => {
                 </table>
 
                 <p v-else class="px-5 py-8 text-sm text-secondary">
-                    Keine offenen Überweisungen.
+                    {{ tx('Keine offenen Überweisungen.') }}
                 </p>
             </div>
         </section>
@@ -576,11 +649,11 @@ const markTransferPaid = (checkout) => {
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">{{ tx('Vereins-Abos') }}</h2>
-                        <p class="mt-1 text-sm text-secondary">Ordne Vereinen einen Vereinsplan zu und behalte Nutzung und Limits im Blick.</p>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('Ordne Vereinen einen Vereinsplan zu und behalte Nutzung und Limits im Blick.') }}</p>
                     </div>
                     <div class="relative w-full lg:w-80">
                         <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
-                        <input v-model="clubSearch" type="search" class="w-full rounded-lg border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary" placeholder="Verein oder Plan suchen">
+                        <input v-model="clubSearch" type="search" class="w-full rounded-lg border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary" :placeholder="tx('Verein oder Plan suchen')">
                     </div>
                 </div>
             </div>
@@ -589,13 +662,13 @@ const markTransferPaid = (checkout) => {
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
-                            <th class="px-5 py-3">Verein</th>
-                            <th class="px-5 py-3">Nutzung</th>
-                            <th class="px-5 py-3">Aktueller Plan</th>
-                            <th class="px-5 py-3">Neuer Plan</th>
-                            <th class="px-5 py-3">Status</th>
-                            <th class="px-5 py-3">Laufzeit</th>
-                            <th class="px-5 py-3 text-right">Aktion</th>
+                            <th class="px-5 py-3">{{ tx('Verein') }}</th>
+                            <th class="px-5 py-3">{{ tx('Nutzung') }}</th>
+                            <th class="px-5 py-3">{{ tx('Aktueller Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Neuer Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Status') }}</th>
+                            <th class="px-5 py-3">{{ tx('Laufzeit') }}</th>
+                            <th class="px-5 py-3 text-right">{{ tx('Aktion') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -605,8 +678,8 @@ const markTransferPaid = (checkout) => {
                                 <p class="text-xs text-secondary">ID {{ club.id }}</p>
                             </td>
                             <td class="px-5 py-3 text-secondary">
-                                <p>{{ club.member_usage }} Mitglieder</p>
-                                <p class="text-xs">{{ club.teams_count }} Teams</p>
+                                <p>{{ club.member_usage }} {{ tx('Mitglieder') }}</p>
+                                <p class="text-xs">{{ club.teams_count }} {{ tx('Teams') }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <span class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">
@@ -621,20 +694,16 @@ const markTransferPaid = (checkout) => {
                             </td>
                             <td class="px-5 py-3">
                                 <select v-model="formForClub(club).status" class="min-w-36 rounded-lg border-border bg-inputBg text-sm text-primary">
-                                    <option value="trialing">Testphase</option>
-                                    <option value="active">Aktiv</option>
-                                    <option value="past_due">Zahlung offen</option>
-                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
-                                    <option value="cancelled">Gekündigt</option>
+                                    <option v-for="status in Object.keys(statusLabels)" :key="status" :value="status">{{ statusLabel(status) }}</option>
                                 </select>
                                 <p class="mt-1 text-xs text-secondary">{{ statusLabel(formForClub(club).status) }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <div class="grid min-w-44 gap-2">
-                                    <input v-model="formForClub(club).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" title="Testphase bis">
-                                    <input v-model="formForClub(club).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" title="Aktuelle Periode bis">
+                                    <input v-model="formForClub(club).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" :title="tx('Testphase bis')">
+                                    <input v-model="formForClub(club).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" :title="tx('Aktuelle Periode bis')">
                                 </div>
-                                <p v-if="club.subscription?.cancels_at" class="mt-1 text-xs text-warning">Endet {{ club.subscription.cancels_at }}</p>
+                                <p v-if="club.subscription?.cancels_at" class="mt-1 text-xs text-warning">{{ tx('Endet') }} {{ club.subscription.cancels_at }}</p>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex justify-end gap-2">
@@ -642,10 +711,10 @@ const markTransferPaid = (checkout) => {
                                         +1M
                                     </button>
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" :disabled="!club.subscription" @click="cancelClubSubscription(club, 'period_end')">
-                                        Kündigen
+                                        {{ tx('Kündigen') }}
                                     </button>
                                     <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForClub(club).processing" @click="saveClub(club)">
-                                        Speichern
+                                        {{ tx('Speichern') }}
                                     </button>
                                 </div>
                             </td>
@@ -654,7 +723,7 @@ const markTransferPaid = (checkout) => {
                 </table>
 
                 <p v-if="!filteredClubs.length" class="px-5 py-8 text-sm text-secondary">
-                    Keine Vereine gefunden.
+                    {{ tx('Keine Vereine gefunden.') }}
                 </p>
             </div>
         </section>
@@ -670,7 +739,7 @@ const markTransferPaid = (checkout) => {
                     </div>
                     <div class="relative w-full lg:w-80">
                         <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
-                        <input v-model="userSearch" type="search" class="w-full rounded-lg border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary" placeholder="Nutzer, E-Mail oder Plan suchen">
+                        <input v-model="userSearch" type="search" class="w-full rounded-lg border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary" :placeholder="tx('Nutzer, E-Mail oder Plan suchen')">
                     </div>
                 </div>
             </div>
@@ -679,12 +748,12 @@ const markTransferPaid = (checkout) => {
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
-                            <th class="px-5 py-3">Nutzer</th>
-                            <th class="px-5 py-3">Aktueller Plan</th>
-                            <th class="px-5 py-3">Neuer Plan</th>
-                            <th class="px-5 py-3">Status</th>
-                            <th class="px-5 py-3">Laufzeit</th>
-                            <th class="px-5 py-3 text-right">Aktion</th>
+                            <th class="px-5 py-3">{{ tx('Nutzer') }}</th>
+                            <th class="px-5 py-3">{{ tx('Aktueller Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Neuer Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Status') }}</th>
+                            <th class="px-5 py-3">{{ tx('Laufzeit') }}</th>
+                            <th class="px-5 py-3 text-right">{{ tx('Aktion') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -695,7 +764,7 @@ const markTransferPaid = (checkout) => {
                             </td>
                             <td class="px-5 py-3">
                                 <span class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">
-                                    {{ subscriptionForUser(user)?.plan?.name || 'Kein Abo' }}
+                                    {{ subscriptionForUser(user)?.plan?.name || tx('Kein Abo') }}
                                 </span>
                                 <p v-if="subscriptionForUser(user)?.payment_provider" class="mt-1 text-xs text-secondary">{{ subscriptionForUser(user).payment_provider }}</p>
                             </td>
@@ -706,31 +775,27 @@ const markTransferPaid = (checkout) => {
                             </td>
                             <td class="px-5 py-3">
                                 <select v-model="formForUser(user).status" class="min-w-44 rounded-lg border-border bg-inputBg text-sm text-primary">
-                                    <option value="trialing">Testphase</option>
-                                    <option value="active">Aktiv</option>
-                                    <option value="past_due">Zahlung offen</option>
-                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
-                                    <option value="cancelled">Gekündigt</option>
+                                    <option v-for="status in Object.keys(statusLabels)" :key="status" :value="status">{{ statusLabel(status) }}</option>
                                 </select>
-                                <input v-model="formForUser(user).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Zahlungsart">
+                                <input v-model="formForUser(user).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" :placeholder="tx('Zahlungsart')">
                             </td>
                             <td class="px-5 py-3">
                                 <div class="grid min-w-44 gap-2">
                                     <input v-model="formForUser(user).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
                                     <input v-model="formForUser(user).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
                                 </div>
-                                <p v-if="subscriptionForUser(user)?.cancels_at" class="mt-1 text-xs text-warning">Endet {{ subscriptionForUser(user).cancels_at }}</p>
+                                <p v-if="subscriptionForUser(user)?.cancels_at" class="mt-1 text-xs text-warning">{{ tx('Endet') }} {{ subscriptionForUser(user).cancels_at }}</p>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex justify-end gap-2">
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted disabled:opacity-50" :disabled="!subscriptionForUser(user)" @click="renewUserSubscription(subscriptionForUser(user), 1)">
                                         +1M
                                     </button>
-                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted disabled:opacity-50" :disabled="!subscriptionForUser(user)" @click="cancelUserSubscription(subscriptionForUser(user), 'period_end')">
-                                    Kündigen
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted disabled:opacity-50" :disabled="!subscriptionForUser(user)" @click="cancelUserSubscription(subscriptionForUser(user), 'period_end', displayUserName(user))">
+                                    {{ tx('Kündigen') }}
                                     </button>
                                     <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForUser(user).processing || !selectedUserPlans.length" @click="saveUser(user)">
-                                        Speichern
+                                        {{ tx('Speichern') }}
                                     </button>
                                 </div>
                             </td>
@@ -739,7 +804,7 @@ const markTransferPaid = (checkout) => {
                 </table>
 
                 <p v-if="!filteredUsers.length" class="px-5 py-8 text-sm text-secondary">
-                    Keine Nutzer gefunden.
+                    {{ tx('Keine Nutzer gefunden.') }}
                 </p>
                 <p v-else-if="!selectedUserPlans.length" class="px-5 pb-5 text-sm text-warning">
                     {{ tx('Für diesen Bereich sind noch keine Abo-Pläne vorhanden.') }}
@@ -750,9 +815,9 @@ const markTransferPaid = (checkout) => {
         <section v-if="selectedActor === 'all'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <div>
-                    <h2 class="text-lg font-semibold text-primary">Nutzer-Abos</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ tx('Nutzer-Abos') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Persönliche Pläne für Sportler, Trainer, Sponsoren, Anbieter und weitere Rollen verwalten.
+                        {{ tx('Persönliche Pläne für Sportler, Trainer, Sponsoren, Anbieter und weitere Rollen verwalten.') }}
                     </p>
                 </div>
             </div>
@@ -761,11 +826,11 @@ const markTransferPaid = (checkout) => {
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
-                            <th class="px-5 py-3">Nutzer</th>
-                            <th class="px-5 py-3">Plan</th>
-                            <th class="px-5 py-3">Status</th>
-                            <th class="px-5 py-3">Laufzeit</th>
-                            <th class="px-5 py-3 text-right">Aktion</th>
+                            <th class="px-5 py-3">{{ tx('Nutzer') }}</th>
+                            <th class="px-5 py-3">{{ tx('Plan') }}</th>
+                            <th class="px-5 py-3">{{ tx('Status') }}</th>
+                            <th class="px-5 py-3">{{ tx('Laufzeit') }}</th>
+                            <th class="px-5 py-3 text-right">{{ tx('Aktion') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -782,20 +847,16 @@ const markTransferPaid = (checkout) => {
                             </td>
                             <td class="px-5 py-3">
                                 <select v-model="formForUserSubscription(subscription).status" class="min-w-44 rounded-lg border-border bg-inputBg text-sm text-primary">
-                                    <option value="trialing">Testphase</option>
-                                    <option value="active">Aktiv</option>
-                                    <option value="past_due">Zahlung offen</option>
-                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
-                                    <option value="cancelled">Gekündigt</option>
+                                    <option v-for="status in Object.keys(statusLabels)" :key="status" :value="status">{{ statusLabel(status) }}</option>
                                 </select>
-                                <input v-model="formForUserSubscription(subscription).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Zahlungsart">
+                                <input v-model="formForUserSubscription(subscription).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" :placeholder="tx('Zahlungsart')">
                             </td>
                             <td class="px-5 py-3">
                                 <div class="grid min-w-44 gap-2">
                                     <input v-model="formForUserSubscription(subscription).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
                                     <input v-model="formForUserSubscription(subscription).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
                                 </div>
-                                <p v-if="subscription.cancels_at" class="mt-1 text-xs text-warning">Endet {{ subscription.cancels_at }}</p>
+                                <p v-if="subscription.cancels_at" class="mt-1 text-xs text-warning">{{ tx('Endet') }} {{ subscription.cancels_at }}</p>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex justify-end gap-2">
@@ -803,10 +864,10 @@ const markTransferPaid = (checkout) => {
                                         +1M
                                     </button>
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="cancelUserSubscription(subscription, 'period_end')">
-                                        Kündigen
+                                        {{ tx('Kündigen') }}
                                     </button>
                                     <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForUserSubscription(subscription).processing" @click="saveUserSubscription(subscription)">
-                                        Speichern
+                                        {{ tx('Speichern') }}
                                     </button>
                                 </div>
                             </td>
@@ -819,5 +880,17 @@ const markTransferPaid = (checkout) => {
                 </p>
             </div>
         </section>
+
+        <ConfirmActionModal
+            :show="Boolean(pendingCancellation)"
+            :title="tx('subscriptions.admin.confirm_cancel_title', 'Abo-Kündigung bestätigen')"
+            :message="tx('subscriptions.admin.confirm_cancel_message', `Möchtest du die Kündigung für ${pendingCancellation?.name || ''} wirklich zum Periodenende vormerken?`, { name: pendingCancellation?.name || '' })"
+            :confirm-label="tx('subscriptions.admin.confirm_cancel_action', 'Kündigung vormerken')"
+            :cancel-label="tx('Abbrechen')"
+            :processing="cancellationProcessing"
+            danger
+            @cancel="closeCancellation"
+            @confirm="confirmCancellation"
+        />
     </div>
 </template>

@@ -176,6 +176,31 @@ class MobileEditorialSponsorApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_sponsor_mutations_follow_the_request_locale_and_catalogs_match(): void
+    {
+        $reference = require lang_path('de/sponsor.php');
+        foreach (['en', 'fr', 'ar'] as $locale) {
+            $catalog = require lang_path("{$locale}/sponsor.php");
+            $this->assertSame(array_keys($reference), array_keys($catalog));
+            $this->assertSame(
+                array_keys($reference['flash']),
+                array_keys($catalog['flash']),
+            );
+        }
+
+        $manager = User::factory()->create(['language' => 'ar']);
+        $manager->givePermissionTo($this->permissions(['finance.edit']));
+        Sanctum::actingAs($manager);
+
+        $this->withHeader('X-App-Locale', 'ar')
+            ->postJson('/api/v1/sponsor-management', [
+                'scope' => 'platform',
+                'name' => 'Arabic Sponsor',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('message', trans('sponsor.flash.created', locale: 'ar'));
+    }
+
     private function permissions(array $names): array
     {
         return collect($names)

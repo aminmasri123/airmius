@@ -109,7 +109,7 @@ class TranslateUserFacingResponseText
     private function loadCatalog(string $locale): array
     {
         if (! array_key_exists($locale, $this->catalogs)) {
-            $path = resource_path("js/lang/{$locale}.json");
+            $path = resource_path("js/lang/auto/{$locale}.json");
             if (! is_file($path)) {
                 $this->catalogs[$locale] = [];
             } else {

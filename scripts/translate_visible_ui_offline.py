@@ -139,11 +139,12 @@ def translate_batch(batch, lang):
 
 def process_language(lang, parallel_batches=1):
     catalog = json.loads((ROOT / 'lang' / f'{lang}.json').read_text(encoding='utf-8-sig'))
+    automatic_catalog = json.loads((ROOT / 'lang' / 'auto' / f'{lang}.json').read_text(encoding='utf-8-sig'))
     completed_path = PROGRESS / f'airmius_local_translations_{lang}.json'
     completed = json.loads(completed_path.read_text()) if completed_path.exists() else {}
     missing = [
         s for s in sources
-        if s not in catalog.get('auto', {}) and s not in catalog and (
+        if s not in automatic_catalog.get('auto', {}) and s not in catalog and (
             s not in completed
             or (args.retranslate_identical and completed[s].casefold() == s.casefold())
         )

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Event;
 use App\Models\Club;
+use App\Models\Event;
 use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
@@ -17,7 +17,7 @@ class EventReminderCommandTest extends TestCase
     public function test_it_sends_due_event_reminders_to_team_members_once(): void
     {
         $owner = User::factory()->create();
-        $yes = User::factory()->create();
+        $yes = User::factory()->create(['language' => 'ar']);
         $maybe = User::factory()->create();
         $declined = User::factory()->create();
         $club = Club::factory()->create(['owner_id' => $owner->id]);
@@ -58,10 +58,24 @@ class EventReminderCommandTest extends TestCase
         $this->assertDatabaseHas('notifications', ['user_id' => $yes->id, 'type' => 'event.reminder']);
         $this->assertDatabaseHas('notifications', ['user_id' => $maybe->id, 'type' => 'event.reminder']);
         $this->assertDatabaseMissing('notifications', ['user_id' => $declined->id, 'type' => 'event.reminder']);
+        $arabicReminder = Notification::query()
+            ->where('user_id', $yes->id)
+            ->where('type', 'event.reminder')
+            ->firstOrFail();
+        $this->assertSame(trans('server.events.notifications.reminder_title', locale: 'ar'), $arabicReminder->data['title']);
+        $this->assertSame('server.events.notifications.reminder_body_with_location', data_get($arabicReminder->data, 'i18n.body_key'));
 
         $this->artisan('airmius:send-event-reminders')
             ->expectsOutput('0 Event-Erinnerungen für 0 Events versendet.')
             ->assertSuccessful();
+
+        $event->forceFill(['reminder_sent_at' => null])->save();
+
+        $this->artisan('airmius:send-event-reminders')
+            ->expectsOutput('0 Event-Erinnerungen für 1 Events versendet.')
+            ->assertSuccessful();
+
+        $this->assertSame(3, Notification::where('type', 'event.reminder')->count());
     }
 
     public function test_it_does_not_send_reminders_for_cancelled_or_started_events(): void

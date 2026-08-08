@@ -203,8 +203,8 @@ const methodLabel = (method) => tx(`admin_finance.method.${method}`, method || '
                         <option value="bank_transfer">Überweisung</option>
                         <option value="cash">Bar</option>
                         <option value="card">Karte</option>
-                        <option value="paypal">PayPal</option>
-                        <option value="stripe">Stripe</option>
+                        <option value="paypal">{{ t('PayPal') }}</option>
+                        <option value="stripe">{{ t('Stripe') }}</option>
                         <option value="manual">Manuell</option>
                     </select>
                     <p v-if="form.errors.method" class="mt-1 text-xs text-error">{{ form.errors.method }}</p>

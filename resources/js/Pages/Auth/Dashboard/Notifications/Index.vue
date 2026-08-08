@@ -1,7 +1,6 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
@@ -20,8 +19,6 @@ const paginationLabel = (label) => String(label || '')
     .replace(/&laquo;/g, '«')
     .replace(/&raquo;/g, '»')
     .replace(/&amp;/g, '&')
-
-let notificationsInterval = null
 
 const formatDate = (value) => new Intl.DateTimeFormat(locale.value === 'ar' ? 'ar' : (locale.value === 'fr' ? 'fr-FR' : (locale.value === 'en' ? 'en-US' : 'de-DE')), {
     day: '2-digit',
@@ -123,25 +120,6 @@ const visitPage = (url) => {
     })
 }
 
-const refreshNotifications = () => {
-    if (document.hidden) return
-
-    router.reload({
-        only: ['notifications', 'notificationCenter', 'auth'],
-        preserveScroll: true,
-        preserveState: true,
-    })
-}
-
-onMounted(() => {
-    notificationsInterval = window.setInterval(refreshNotifications, 5000)
-})
-
-onUnmounted(() => {
-    if (notificationsInterval) {
-        window.clearInterval(notificationsInterval)
-    }
-})
 </script>
 
 <template>

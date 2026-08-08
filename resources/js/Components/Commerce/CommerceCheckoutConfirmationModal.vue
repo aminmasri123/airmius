@@ -70,7 +70,7 @@ const acceptedModel = computed({
                 <input v-model="acceptedModel" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                 <span>
                     Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass Marketplace-Angebote je nach Produkt durch den jeweiligen Anbieter erbracht werden.
-                    <Link :href="route('terms.show')" class="text-air-blue underline">AGB</Link>
+                    <Link :href="route('terms.show')" class="text-air-blue underline">{{ $t('AGB') }}</Link>
                     <span> · </span>
                     <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
                 </span>

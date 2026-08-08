@@ -247,7 +247,9 @@ Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeag
 
 Route::get('/werbeagentur-für-vereine', fn () => redirect()->route('guest.werbeagentur', [], 301));
 
-Route::post('/werbeagentur-fuer-vereine/anfrage', [CommerceCheckoutController::class, 'storePublicWebsiteRequest'])->name('guest.werbeagentur.request');
+Route::post('/werbeagentur-fuer-vereine/anfrage', [CommerceCheckoutController::class, 'storePublicWebsiteRequest'])
+    ->middleware('throttle:content-reports')
+    ->name('guest.werbeagentur.request');
 
 Route::get('/e-learning', [PublicLearningController::class, 'index'])->name('guest.e-learning');
 Route::get('/e-learning/courses/{course}', [PublicLearningController::class, 'show'])->name('guest.learning.courses.show');

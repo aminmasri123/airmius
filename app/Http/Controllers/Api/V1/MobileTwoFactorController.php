@@ -68,7 +68,7 @@ class MobileTwoFactorController extends Controller
         return response()->json([
             'data' => [
                 ...$this->status($request->user()->refresh()),
-                'message' => 'Die Zwei-Faktor-Authentifizierung wurde deaktiviert.',
+                'message' => __('account_security.responses.two_factor_disabled'),
             ],
         ]);
     }
@@ -104,7 +104,7 @@ class MobileTwoFactorController extends Controller
 
         if (! Hash::check($data['current_password'], $request->user()->password)) {
             throw ValidationException::withMessages([
-                'current_password' => ['Das aktuelle Passwort ist nicht korrekt.'],
+                'current_password' => [__('account_security.errors.current_password')],
             ]);
         }
     }

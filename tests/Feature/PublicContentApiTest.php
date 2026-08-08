@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use App\Models\Club;
-use App\Models\MarketplaceProduct;
 use App\Models\LearningCourse;
+use App\Models\MarketplaceProduct;
 use App\Models\Sponsor;
 use App\Models\Team;
 use App\Models\User;
@@ -23,6 +23,7 @@ class PublicContentApiTest extends TestCase
             'api.v1.public.blog.index',
             'api.v1.public.blog.show',
             'api.v1.public.sponsors.index',
+            'api.v1.public.recruiting.jobs.index',
             'api.v1.public.clubs.index',
             'api.v1.public.marketplace.index',
             'api.v1.public.learning.certificates.verify',

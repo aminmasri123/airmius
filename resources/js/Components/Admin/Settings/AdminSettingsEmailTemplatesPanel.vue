@@ -70,7 +70,7 @@ const activeTemplate = computed(() => props.emailTemplates.find((template) => te
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Inhalt</label>
+                    <label class="text-sm font-semibold text-primary">{{ $t('Inhalt') }}</label>
                     <textarea
                         v-model="form.email_templates[activeTemplate.key].body"
                         rows="10"

@@ -53,7 +53,7 @@ defineProps({
                 </div>
 
                 <div class="border-t border-border bg-bg p-5 sm:p-6 lg:border-l lg:border-t-0">
-                    <div class="text-sm font-semibold uppercase tracking-wide text-secondary">Badges</div>
+                    <div class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ $t('Badges') }}</div>
                     <div class="mt-4 grid grid-cols-2 gap-3">
                         <div
                             v-for="badge in visibleBadges"
@@ -74,7 +74,7 @@ defineProps({
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
             <div class="flex items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-primary">Profil</h2>
+                    <h2 class="text-lg font-bold text-primary">{{ $t('Profil') }}</h2>
                     <p class="mt-1 text-sm text-secondary">Bio, Sportarten und öffentliche Einordnung.</p>
                 </div>
             </div>
@@ -88,4 +88,3 @@ defineProps({
         </section>
     </div>
 </template>
-

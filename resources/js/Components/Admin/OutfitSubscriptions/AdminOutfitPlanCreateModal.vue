@@ -1,5 +1,8 @@
 ﻿<script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
     activeTab: { type: String, required: true },
@@ -68,7 +71,7 @@ const selectSport = (sport) => {
                 <form class="max-h-[75vh] overflow-y-auto p-5" @submit.prevent="storePlan">
                     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <label class="block xl:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Name</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.name') }}</span>
                             <input v-model="newPlan.name" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Runner Box" />
                         </label>
                         <label class="block">
@@ -80,7 +83,7 @@ const selectSport = (sport) => {
                             <input v-model="newPlan.sponsor_discount_eur" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                         </label>
                         <label class="block xl:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Beschreibung</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.description') }}</span>
                             <textarea v-model="newPlan.description" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></textarea>
                         </label>
                         <div class="grid gap-4 rounded-lg border border-border bg-inputBg p-4 xl:col-span-4">
@@ -152,7 +155,7 @@ const selectSport = (sport) => {
                             <input v-model="newPlan.sizes_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                         </label>
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Sportarten</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('commerce.ui.sports') }}</span>
                             <div class="mt-1 rounded-lg border border-border bg-inputBg p-3">
                                 <div class="flex flex-wrap gap-2">
                                     <span
@@ -170,20 +173,20 @@ const selectSport = (sport) => {
 
                                 <div class="mt-3">
                                     <div class="relative">
-                                        <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
+                                        <i class="las la-search absolute start-3 top-1/2 -translate-y-1/2 text-secondary"></i>
                                         <input
                                             v-model="sportQuery"
                                             type="text"
-                                            class="w-full rounded-lg border-border bg-card py-2 pl-10 pr-3 text-sm text-primary"
+                                            class="w-full rounded-lg border-border bg-card py-2 pe-3 ps-10 text-sm text-primary"
                                             placeholder="Sportart filtern und aus Liste wählen"
                                         />
                                     </div>
-                                    <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                                    <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pe-1 sm:grid-cols-2">
                                         <button
                                             v-for="sport in filteredSports(sportQuery, newPlan)"
                                             :key="sport.slug"
                                             type="button"
-                                            class="rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition hover:border-borderHover hover:bg-muted"
+                                            class="rounded-lg border border-border bg-card px-3 py-2 text-start text-sm transition hover:border-borderHover hover:bg-muted"
                                             @click="selectSport(sport)"
                                         >
                                             <span class="block font-semibold text-primary">{{ sportLabel(sport.slug) }}</span>
@@ -218,4 +221,3 @@ const selectSport = (sport) => {
         </div>
     </Teleport>
 </template>
-

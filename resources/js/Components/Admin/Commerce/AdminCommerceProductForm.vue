@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     productForm: { type: Object, required: true },
     productAttributeRows: { type: Array, default: () => [] },
@@ -44,11 +48,11 @@ const emit = defineEmits([
         <div class="md:col-span-2 grid gap-3 rounded-lg border border-border bg-bg p-3 md:grid-cols-2">
             <div>
                 <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
-                <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
             </div>
             <div>
                 <label class="text-xs font-semibold uppercase text-secondary">Hauptbild hochladen</label>
-                <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-product-image-upload', $event)">
+                <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:me-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-product-image-upload', $event)">
                 <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP. Upload ersetzt die URL.</p>
             </div>
             <div>
@@ -57,15 +61,15 @@ const emit = defineEmits([
             </div>
             <div>
                 <label class="text-xs font-semibold uppercase text-secondary">Weitere Bilder hochladen</label>
-                <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-product-gallery-uploads', $event)">
+                <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:me-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="emit('set-product-gallery-uploads', $event)">
                 <p class="mt-1 text-xs text-secondary">Bis zu 8 Dateien, Galerie maximal 12 Bilder.</p>
             </div>
         </div>
 
         <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-            <option value="product">Produkt</option>
-            <option value="course">Kurs</option>
-            <option value="camp">Camp</option>
+            <option value="product">{{ t('commerce.ui.product') }}</option>
+            <option value="course">{{ t('commerce.ui.course') }}</option>
+            <option value="camp">{{ t('commerce.ui.camp') }}</option>
             <option value="service">Dienstleistung</option>
         </select>
         <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
@@ -118,7 +122,7 @@ const emit = defineEmits([
         <div v-if="productForm.product_type === 'variable'" class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h3 class="text-sm font-semibold text-primary">Varianten</h3>
+                    <h3 class="text-sm font-semibold text-primary">{{ t('commerce.ui.variants') }}</h3>
                     <p class="text-xs text-secondary">Jede Variante kann eigene Merkmale, Preis, Bestand und Bild haben.</p>
                 </div>
                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('add-product-variant-row')">
@@ -167,8 +171,7 @@ const emit = defineEmits([
             </div>
         </div>
 
-        <textarea v-model="productForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+        <textarea v-model="productForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.description_placeholder')"></textarea>
         <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
     </form>
 </template>
-

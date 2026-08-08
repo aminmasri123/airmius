@@ -332,8 +332,8 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                         <label class="text-xs font-semibold uppercase text-secondary">{{ c('paymentType') }}</label>
                         <select :value="adProvider" @change="emit('update:adProvider', $event.target.value)" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="bank_transfer">{{ c('bankTransfer') }}</option>
-                            <option value="stripe">Stripe</option>
-                            <option value="paypal">PayPal</option>
+                            <option value="stripe">{{ $t('Stripe') }}</option>
+                            <option value="paypal">{{ $t('PayPal') }}</option>
                         </select>
                     </div>
                     <label class="hidden items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -567,5 +567,4 @@ const c = (key) => labels.value[key] || copy.de[key] || key
             </article>
         </section>
 </template>
-
 

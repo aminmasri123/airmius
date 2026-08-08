@@ -38,7 +38,7 @@ defineProps({
                     <input v-model="sepaSettingsFor(selectedClub).sepa_creditor_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE98ZZZ09999999999">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold uppercase text-secondary">Kontoinhaber</label>
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t('Kontoinhaber') }}</label>
                     <input v-model="sepaSettingsFor(selectedClub).sepa_account_holder" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Name laut Bankkonto">
                 </div>
                 <div>
@@ -126,4 +126,3 @@ defineProps({
         </section>
     </div>
 </template>
-

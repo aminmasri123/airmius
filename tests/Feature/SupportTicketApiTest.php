@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Models\Notification as StoredNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
@@ -64,7 +65,7 @@ class SupportTicketApiTest extends TestCase
 
     public function test_support_staff_can_filter_update_and_escalate_tickets_with_sla_data(): void
     {
-        $requester = User::factory()->create(['name' => 'Requester']);
+        $requester = User::factory()->create(['name' => 'Requester', 'language' => 'ar']);
         $support = User::factory()->create(['name' => 'Support Agent']);
         Permission::findOrCreate('support.tickets', 'web');
         $support->givePermissionTo('support.tickets');
@@ -103,6 +104,16 @@ class SupportTicketApiTest extends TestCase
             'status' => 'in_progress',
         ]);
         $this->assertNotNull(SupportTicket::find($ticketId)?->escalated_at);
+        $notification = StoredNotification::query()
+            ->where('user_id', $requester->id)
+            ->where('type', 'support.ticket_updated')
+            ->firstOrFail();
+        $this->assertSame('ar', data_get($notification->data, 'locale'));
+        $this->assertSame(
+            trans('support.notifications.updated_title', locale: 'ar'),
+            data_get($notification->data, 'title'),
+        );
+        $this->assertSame('support.statuses.in_progress', data_get($notification->data, 'i18n.replace.status.translation_key'));
     }
 
     public function test_support_admin_endpoints_are_denied_without_support_permission(): void

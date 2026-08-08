@@ -214,17 +214,31 @@ class ClubController extends Controller
         if ($previousRole !== $primaryRole) {
             $previousRoleLabel = filled($previousRole)
                 ? (ClubRoles::LABELS[$previousRole] ?? $previousRole)
-                : 'Unbekannt';
+                : __('organization.roles.unknown');
 
-            AppNotification::send($user, 'club.member.role_updated', [
-                'title' => 'Vereinsrolle geändert',
-                'body' => 'Deine Rolle in '.$club->name.' wurde von '.$previousRoleLabel.' auf '.(ClubRoles::LABELS[$primaryRole] ?? $primaryRole).' geändert.',
+            AppNotification::sendLocalized(
+                $user,
+                'club.member.role_updated',
+                'organization.notifications.club_role_title',
+                'organization.notifications.club_role_body',
+                [
+                    'club' => $club->name,
+                    'previous' => filled($previousRole)
+                        ? AppNotification::translatedReplacement('organization.roles.club.'.$previousRole, $previousRoleLabel)
+                        : AppNotification::translatedReplacement('organization.roles.unknown', $previousRoleLabel),
+                    'next' => AppNotification::translatedReplacement(
+                        'organization.roles.club.'.$primaryRole,
+                        ClubRoles::LABELS[$primaryRole] ?? $primaryRole,
+                    ),
+                ],
+                [
                 'url' => route('auth.club-memberships.index'),
                 'club_id' => $club->id,
                 'previous_role' => $previousRole,
                 'role' => $primaryRole,
                 'roles' => $roles,
-            ]);
+                ],
+            );
         }
 
         if ($request->expectsJson()) {

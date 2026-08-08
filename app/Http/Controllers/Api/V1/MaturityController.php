@@ -182,7 +182,7 @@ class MaturityController extends Controller
                         'type' => 'club',
                         'id' => $club->id,
                         'title' => $club->name,
-                        'subtitle' => 'Verein',
+                        'subtitle' => __('maturity.search.club'),
                         'updated_at' => $club->updated_at?->toIso8601String(),
                     ]),
                 'count' => fn () => Club::query()
@@ -197,7 +197,7 @@ class MaturityController extends Controller
             'team' => [
                 'query' => fn () => Team::query()
                     ->visibleTo($user)
-                    ->where(function ($query) use ($user, $like) {
+                    ->where(function ($query) use ($like) {
                         $query->where('name', 'like', $like)
                             ->orWhere('sport_type', 'like', $like);
                     })
@@ -209,12 +209,12 @@ class MaturityController extends Controller
                         'type' => 'team',
                         'id' => $team->id,
                         'title' => $team->name,
-                        'subtitle' => trim(($team->club?->name ?? 'Team').' - '.($team->sport_type ?? '')),
+                        'subtitle' => trim(($team->club?->name ?? __('maturity.search.team')).' - '.($team->sport_type ?? '')),
                         'updated_at' => $team->updated_at?->toIso8601String(),
                     ]),
                 'count' => fn () => Team::query()
                     ->visibleTo($user)
-                    ->where(function ($query) use ($user, $like) {
+                    ->where(function ($query) use ($like) {
                         $query->where('name', 'like', $like)
                             ->orWhere('sport_type', 'like', $like);
                     })
@@ -234,7 +234,7 @@ class MaturityController extends Controller
                         'type' => 'route',
                         'id' => $route->id,
                         'title' => $route->title,
-                        'subtitle' => $route->sport_type ? trim(($route->sport_type).' - '.$route->difficulty) : 'Route',
+                        'subtitle' => $route->sport_type ? trim(($route->sport_type).' - '.$route->difficulty) : __('maturity.search.route'),
                         'distance_km' => round((($route->distance_meters ?? 0) / 1000), 2),
                         'updated_at' => $route->updated_at?->toIso8601String(),
                     ]),
@@ -259,7 +259,7 @@ class MaturityController extends Controller
                         'type' => 'training_plan',
                         'id' => $plan->id,
                         'title' => $plan->title,
-                        'subtitle' => 'Training Plan',
+                        'subtitle' => __('maturity.search.training_plan'),
                         'status' => $plan->status,
                         'updated_at' => $plan->updated_at?->toIso8601String(),
                     ]),
@@ -292,7 +292,7 @@ class MaturityController extends Controller
                     ->map(fn (Post $post) => [
                         'type' => 'post',
                         'id' => $post->id,
-                        'title' => $post->post_type ? ucfirst((string) $post->post_type) : 'Post',
+                        'title' => $post->post_type ? ucfirst((string) $post->post_type) : __('maturity.search.post'),
                         'subtitle' => mb_substr(strip_tags($post->content ?? ''), 0, 110),
                         'post_id' => $post->id,
                         'updated_at' => $post->created_at?->toIso8601String(),
@@ -732,16 +732,16 @@ class MaturityController extends Controller
     private function onboardingChecklist(User $user): array
     {
         $items = [
-            ['key' => 'name', 'label' => 'Name vervollständigt', 'done' => (bool) ($user->first_name && $user->last_name)],
-            ['key' => 'email_verified', 'label' => 'E-Mail verifiziert', 'done' => (bool) $user->email_verified_at],
-            ['key' => 'photo', 'label' => 'Profilbild gesetzt', 'done' => (bool) $user->profile_photo_path],
-            ['key' => 'bio', 'label' => 'Bio gesetzt', 'done' => (bool) $user->bio],
-            ['key' => 'country', 'label' => 'Standort hinterlegt', 'done' => (bool) $user->country],
-            ['key' => 'first_route', 'label' => 'Erste Route erstellt', 'done' => (bool) $user->sportRoutes()->exists()],
-            ['key' => 'first_track', 'label' => 'Ersten Track abgeschlossen', 'done' => (bool) $user->sportRouteTracks()->where('status', 'completed')->exists()],
-            ['key' => 'first_training_log', 'label' => 'Erstes Training geloggt', 'done' => (bool) $user->trainingLogs()->exists()],
-            ['key' => 'first_post', 'label' => 'Ersten Post geteilt', 'done' => (bool) $user->posts()->exists()],
-            ['key' => 'first_friendship', 'label' => 'Ersten Kontakt hinzugefügt', 'done' => (bool) $user->friendships()->exists()],
+            ['key' => 'name', 'label' => __('maturity.onboarding.name'), 'done' => (bool) ($user->first_name && $user->last_name)],
+            ['key' => 'email_verified', 'label' => __('maturity.onboarding.email_verified'), 'done' => (bool) $user->email_verified_at],
+            ['key' => 'photo', 'label' => __('maturity.onboarding.photo'), 'done' => (bool) $user->profile_photo_path],
+            ['key' => 'bio', 'label' => __('maturity.onboarding.bio'), 'done' => (bool) $user->bio],
+            ['key' => 'country', 'label' => __('maturity.onboarding.country'), 'done' => (bool) $user->country],
+            ['key' => 'first_route', 'label' => __('maturity.onboarding.first_route'), 'done' => (bool) $user->sportRoutes()->exists()],
+            ['key' => 'first_track', 'label' => __('maturity.onboarding.first_track'), 'done' => (bool) $user->sportRouteTracks()->where('status', 'completed')->exists()],
+            ['key' => 'first_training_log', 'label' => __('maturity.onboarding.first_training_log'), 'done' => (bool) $user->trainingLogs()->exists()],
+            ['key' => 'first_post', 'label' => __('maturity.onboarding.first_post'), 'done' => (bool) $user->posts()->exists()],
+            ['key' => 'first_friendship', 'label' => __('maturity.onboarding.first_friendship'), 'done' => (bool) $user->friendships()->exists()],
         ];
 
         $completed = count(array_filter($items, fn ($item) => $item['done']));
@@ -786,6 +786,7 @@ class MaturityController extends Controller
             ->values()
             ->map(function (array $player, int $index) {
                 $player['rank'] = $index + 1;
+
                 return $player;
             })
             ->values()
@@ -799,6 +800,7 @@ class MaturityController extends Controller
         if ($logs instanceof Collection) {
             $distanceMeters = $logs->sum('distance_meters');
             $durationMinutes = (int) $logs->sum('duration_minutes');
+
             return [
                 'session_count' => $logs->count(),
                 'distance_m' => (int) $distanceMeters,
@@ -884,10 +886,3 @@ class MaturityController extends Controller
         ];
     }
 }
-
-
-
-
-
-
-

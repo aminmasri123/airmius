@@ -28,7 +28,7 @@ export const createPartialReloader = ({ only, minInterval = 750 }) => {
         lastStartedAt = Date.now()
 
         router.reload({
-            only,
+            only: typeof only === 'function' ? only() : only,
             preserveScroll: true,
             preserveState: true,
             onFinish: () => {

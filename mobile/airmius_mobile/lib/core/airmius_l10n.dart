@@ -14875,8 +14875,7 @@ final _fileDetailLabelsFr = {
   'filesPreview.type': 'Type',
   'filesPreview.unavailable':
       'Ce fichier n’est pas disponible directement pour le moment.',
-  'filesPreview.copied':
-      'Fichier partagé en interne.',
+  'filesPreview.copied': 'Fichier partagé en interne.',
   'filesPreview.linkage': 'Association',
   'filesPreview.required': 'Document obligatoire dans la demande',
   'filesPreview.requiredBody':
@@ -15019,8 +15018,7 @@ final _fileDetailLabelsAr = {
   'shared.title': 'ملف مشترك داخليًا',
   'shared.subtitle': 'الوصول والخصوصية والتنزيل',
   'shared.eyebrow': 'مشاركة داخلية',
-  'shared.body':
-      'تظهر مشاركة الملفات الداخلية في مسار وصول آمن للهاتف.',
+  'shared.body': 'تظهر مشاركة الملفات الداخلية في مسار وصول آمن للهاتف.',
   'shared.token': 'الرمز',
   'shared.noLink': 'لا تتوفر مشاركة داخلية بعد.',
   'shared.copy': 'نسخ',
@@ -16587,6 +16585,112 @@ final _guestPortalLabelsEn = {
   'guestPortal.terms': 'Terms of use',
   'guestPortal.guidelines': 'Community guidelines',
   'guestPortal.youth': 'Youth protection',
+  'agencyMobile.title': 'Airmius agency',
+  'agencyMobile.subtitle':
+      'Websites, campaigns and sponsor visibility for sport organisations.',
+  'agencyMobile.hero': 'Turn club goals into a clear digital project',
+  'agencyMobile.heroBody':
+      'Choose a goal and send a non-binding request. Airmius will respond with a realistic scope and next step.',
+  'agencyMobile.request': 'Request an assessment',
+  'agencyMobile.goalTitle': 'Primary goal',
+  'agencyMobile.goal.reach': 'Reach',
+  'agencyMobile.goal.leads': 'Enquiries',
+  'agencyMobile.goal.sponsoring': 'Sponsoring',
+  'agencyMobile.goal.content': 'Content',
+  'agencyMobile.local.title': 'Club campaign',
+  'agencyMobile.local.body':
+      'Regional visibility across club, team and event surfaces.',
+  'agencyMobile.sponsor.title': 'Sponsor package',
+  'agencyMobile.sponsor.body':
+      'Partner surfaces, landing pages and transparent reporting.',
+  'agencyMobile.content.title': 'Content campaign',
+  'agencyMobile.content.body':
+      'Coordinated stories for blog, feed and public content.',
+  'agencyMobile.performance.title': 'Performance package',
+  'agencyMobile.performance.body':
+      'Targeting, measurement, leads and conversion reporting.',
+  'agencyMobile.packageRequest': 'Request this package',
+  'agencyMobile.adsOps': 'Open Ads operations',
+  'agencyMobile.formTitle': 'Agency request',
+  'agencyMobile.name': 'Name',
+  'agencyMobile.email': 'Email address',
+  'agencyMobile.phone': 'Phone (optional)',
+  'agencyMobile.club': 'Club or organisation',
+  'agencyMobile.domain': 'Preferred domain (optional)',
+  'agencyMobile.goals': 'Goals',
+  'agencyMobile.notes': 'Additional notes (optional)',
+  'agencyMobile.privacy':
+      'Your details are used only to process this request and are deleted after the documented retention deadline.',
+  'agencyMobile.privacyAccept':
+      'I confirm this purpose-bound processing of my details.',
+  'agencyMobile.required':
+      'Enter your name, a valid email, the organisation and goals, then confirm the privacy notice.',
+  'agencyMobile.cancel': 'Cancel',
+  'agencyMobile.send': 'Send request',
+  'agencyMobile.sending': 'Sending …',
+  'agencyMobile.sent': 'Your agency request was sent.',
+  'agencyMobile.submitError': 'The request could not be sent.',
+  'recruitingMobile.title': 'Jobs & volunteering',
+  'recruitingMobile.subtitle':
+      'Discover published opportunities from clubs and sport organisations.',
+  'recruitingMobile.eyebrow': 'Recruiting',
+  'recruitingMobile.hero': 'Find the role that fits your sport.',
+  'recruitingMobile.results': 'opportunities',
+  'recruitingMobile.reload': 'Reload jobs',
+  'recruitingMobile.search': 'Search by role, club, sport or place',
+  'recruitingMobile.all': 'All',
+  'recruitingMobile.professional': 'Professional',
+  'recruitingMobile.volunteer': 'Volunteer',
+  'recruitingMobile.error': 'The jobs could not be loaded.',
+  'recruitingMobile.retry': 'Try again',
+  'recruitingMobile.empty': 'No matching opportunities are published yet.',
+  'recruitingMobile.interested': 'I am interested',
+  'recruitingMobile.interestTitle': 'Express interest',
+  'recruitingMobile.name': 'Name',
+  'recruitingMobile.email': 'Email address',
+  'recruitingMobile.phone': 'Phone (optional)',
+  'recruitingMobile.message': 'Message (optional)',
+  'recruitingMobile.privacy':
+      'Your details are sent only to the organisation responsible for this opportunity and processed to respond to your enquiry.',
+  'recruitingMobile.privacyAccept':
+      'I agree to this purpose-bound processing of my details.',
+  'recruitingMobile.cancel': 'Cancel',
+  'recruitingMobile.required':
+      'Enter your name and a valid email address, then confirm the privacy notice.',
+  'recruitingMobile.submitError': 'Your enquiry could not be sent.',
+  'recruitingMobile.sending': 'Sending …',
+  'recruitingMobile.send': 'Send enquiry',
+  'recruitingMobile.sent': 'Your enquiry was sent.',
+  'recruitingPipeline.eyebrow': 'Recruiting',
+  'recruitingPipeline.title': 'Recruiting pipeline',
+  'recruitingPipeline.subtitle':
+      'Review club applications securely and move each person through a clear workflow.',
+  'recruitingPipeline.reload': 'Reload applications',
+  'recruitingPipeline.loadError': 'The applications could not be loaded.',
+  'recruitingPipeline.retry': 'Try again',
+  'recruitingPipeline.total': 'Applications',
+  'recruitingPipeline.new': 'New',
+  'recruitingPipeline.hired': 'Hired',
+  'recruitingPipeline.filter': 'Filter by status',
+  'recruitingPipeline.empty': 'No matching applications.',
+  'recruitingPipeline.edit': 'Process',
+  'recruitingPipeline.editTitle': 'Process application',
+  'recruitingPipeline.status': 'Status',
+  'recruitingPipeline.note': 'Internal note',
+  'recruitingPipeline.save': 'Save',
+  'recruitingPipeline.saveError': 'The application could not be saved.',
+  'recruitingPipeline.erase': 'Delete data',
+  'recruitingPipeline.eraseTitle': 'Delete application',
+  'recruitingPipeline.eraseBody':
+      'Permanently delete the application and all contact details?',
+  'recruitingPipeline.status.all': 'All statuses',
+  'recruitingPipeline.status.new': 'New',
+  'recruitingPipeline.status.reviewing': 'Under review',
+  'recruitingPipeline.status.contacted': 'Contacted',
+  'recruitingPipeline.status.interview': 'Interview',
+  'recruitingPipeline.status.offered': 'Offer',
+  'recruitingPipeline.status.hired': 'Hired',
+  'recruitingPipeline.status.rejected': 'Rejected',
 };
 
 final _guestPortalLabelsDe = {
@@ -16627,6 +16731,112 @@ final _guestPortalLabelsDe = {
   'guestPortal.terms': 'Nutzungsbedingungen',
   'guestPortal.guidelines': 'Community-Richtlinien',
   'guestPortal.youth': 'Jugendschutz',
+  'agencyMobile.title': 'Airmius Werbeagentur',
+  'agencyMobile.subtitle':
+      'Websites, Kampagnen und Sponsorensichtbarkeit für Sportorganisationen.',
+  'agencyMobile.hero': 'Vereinsziele in ein klares digitales Projekt übersetzen',
+  'agencyMobile.heroBody':
+      'Wähle ein Ziel und sende eine unverbindliche Anfrage. Airmius antwortet mit realistischem Umfang und nächstem Schritt.',
+  'agencyMobile.request': 'Einschätzung anfragen',
+  'agencyMobile.goalTitle': 'Hauptziel',
+  'agencyMobile.goal.reach': 'Reichweite',
+  'agencyMobile.goal.leads': 'Anfragen',
+  'agencyMobile.goal.sponsoring': 'Sponsoring',
+  'agencyMobile.goal.content': 'Content',
+  'agencyMobile.local.title': 'Vereinskampagne',
+  'agencyMobile.local.body':
+      'Regionale Sichtbarkeit auf Vereins-, Team- und Eventflächen.',
+  'agencyMobile.sponsor.title': 'Sponsor-Paket',
+  'agencyMobile.sponsor.body':
+      'Partnerflächen, Landingpages und transparentes Reporting.',
+  'agencyMobile.content.title': 'Content-Kampagne',
+  'agencyMobile.content.body':
+      'Abgestimmte Inhalte für Blog, Feed und öffentliche Seiten.',
+  'agencyMobile.performance.title': 'Performance-Paket',
+  'agencyMobile.performance.body':
+      'Zielgruppen, Messung, Leads und Conversion-Reporting.',
+  'agencyMobile.packageRequest': 'Dieses Paket anfragen',
+  'agencyMobile.adsOps': 'Ads-Verwaltung öffnen',
+  'agencyMobile.formTitle': 'Agentur-Anfrage',
+  'agencyMobile.name': 'Name',
+  'agencyMobile.email': 'E-Mail-Adresse',
+  'agencyMobile.phone': 'Telefon (optional)',
+  'agencyMobile.club': 'Verein oder Organisation',
+  'agencyMobile.domain': 'Wunschdomain (optional)',
+  'agencyMobile.goals': 'Ziele',
+  'agencyMobile.notes': 'Weitere Hinweise (optional)',
+  'agencyMobile.privacy':
+      'Deine Angaben werden nur zur Bearbeitung dieser Anfrage verwendet und nach Ablauf der dokumentierten Aufbewahrungsfrist gelöscht.',
+  'agencyMobile.privacyAccept':
+      'Ich bestätige diese zweckgebundene Verarbeitung meiner Angaben.',
+  'agencyMobile.required':
+      'Bitte gib Name, gültige E-Mail, Organisation und Ziele ein und bestätige den Datenschutzhinweis.',
+  'agencyMobile.cancel': 'Abbrechen',
+  'agencyMobile.send': 'Anfrage senden',
+  'agencyMobile.sending': 'Wird gesendet …',
+  'agencyMobile.sent': 'Deine Agentur-Anfrage wurde gesendet.',
+  'agencyMobile.submitError': 'Die Anfrage konnte nicht gesendet werden.',
+  'recruitingMobile.title': 'Jobs & Ehrenamt',
+  'recruitingMobile.subtitle':
+      'Entdecke veröffentlichte Möglichkeiten von Vereinen und Sportorganisationen.',
+  'recruitingMobile.eyebrow': 'Recruiting',
+  'recruitingMobile.hero': 'Finde die Aufgabe, die zu deinem Sport passt.',
+  'recruitingMobile.results': 'Möglichkeiten',
+  'recruitingMobile.reload': 'Stellen neu laden',
+  'recruitingMobile.search': 'Nach Aufgabe, Verein, Sport oder Ort suchen',
+  'recruitingMobile.all': 'Alle',
+  'recruitingMobile.professional': 'Beruflich',
+  'recruitingMobile.volunteer': 'Ehrenamt',
+  'recruitingMobile.error': 'Die Stellen konnten nicht geladen werden.',
+  'recruitingMobile.retry': 'Erneut versuchen',
+  'recruitingMobile.empty':
+      'Aktuell sind keine passenden Möglichkeiten veröffentlicht.',
+  'recruitingMobile.interested': 'Ich habe Interesse',
+  'recruitingMobile.interestTitle': 'Interesse bekunden',
+  'recruitingMobile.name': 'Name',
+  'recruitingMobile.email': 'E-Mail-Adresse',
+  'recruitingMobile.phone': 'Telefon (optional)',
+  'recruitingMobile.message': 'Nachricht (optional)',
+  'recruitingMobile.privacy':
+      'Deine Angaben werden nur an die für diese Stelle verantwortliche Organisation übermittelt und zur Beantwortung deiner Anfrage verarbeitet.',
+  'recruitingMobile.privacyAccept':
+      'Ich stimme dieser zweckgebundenen Verarbeitung meiner Angaben zu.',
+  'recruitingMobile.cancel': 'Abbrechen',
+  'recruitingMobile.required':
+      'Bitte gib Namen und gültige E-Mail-Adresse ein und bestätige den Datenschutzhinweis.',
+  'recruitingMobile.submitError': 'Deine Anfrage konnte nicht gesendet werden.',
+  'recruitingMobile.sending': 'Wird gesendet …',
+  'recruitingMobile.send': 'Anfrage senden',
+  'recruitingMobile.sent': 'Deine Anfrage wurde gesendet.',
+  'recruitingPipeline.title': 'Recruiting-Pipeline',
+  'recruitingPipeline.subtitle':
+      'Vereinsbewerbungen sicher prüfen und durch einen klaren Prozess führen.',
+  'recruitingPipeline.reload': 'Bewerbungen neu laden',
+  'recruitingPipeline.loadError': 'Die Bewerbungen konnten nicht geladen werden.',
+  'recruitingPipeline.retry': 'Erneut versuchen',
+  'recruitingPipeline.total': 'Bewerbungen',
+  'recruitingPipeline.new': 'Neu',
+  'recruitingPipeline.hired': 'Eingestellt',
+  'recruitingPipeline.filter': 'Nach Status filtern',
+  'recruitingPipeline.empty': 'Keine passenden Bewerbungen.',
+  'recruitingPipeline.edit': 'Bearbeiten',
+  'recruitingPipeline.editTitle': 'Bewerbung bearbeiten',
+  'recruitingPipeline.status': 'Status',
+  'recruitingPipeline.note': 'Interne Notiz',
+  'recruitingPipeline.save': 'Speichern',
+  'recruitingPipeline.saveError': 'Die Bewerbung konnte nicht gespeichert werden.',
+  'recruitingPipeline.erase': 'Daten löschen',
+  'recruitingPipeline.eraseTitle': 'Bewerbung löschen',
+  'recruitingPipeline.eraseBody':
+      'Bewerbung und alle Kontaktdaten dauerhaft löschen?',
+  'recruitingPipeline.status.all': 'Alle Status',
+  'recruitingPipeline.status.new': 'Neu',
+  'recruitingPipeline.status.reviewing': 'In Prüfung',
+  'recruitingPipeline.status.contacted': 'Kontaktiert',
+  'recruitingPipeline.status.interview': 'Gespräch',
+  'recruitingPipeline.status.offered': 'Angebot',
+  'recruitingPipeline.status.hired': 'Eingestellt',
+  'recruitingPipeline.status.rejected': 'Abgelehnt',
 };
 
 final _guestPortalLabelsFr = {
@@ -16665,6 +16875,112 @@ final _guestPortalLabelsFr = {
   'guestPortal.terms': 'Conditions d’utilisation',
   'guestPortal.guidelines': 'Règles de la communauté',
   'guestPortal.youth': 'Protection des mineurs',
+  'agencyMobile.title': 'Agence Airmius',
+  'agencyMobile.subtitle':
+      'Sites web, campagnes et visibilité des sponsors pour les organisations sportives.',
+  'agencyMobile.hero': 'Transformez les objectifs du club en projet numérique clair',
+  'agencyMobile.heroBody':
+      'Choisissez un objectif et envoyez une demande sans engagement. Airmius proposera un périmètre réaliste et la prochaine étape.',
+  'agencyMobile.request': 'Demander une évaluation',
+  'agencyMobile.goalTitle': 'Objectif principal',
+  'agencyMobile.goal.reach': 'Portée',
+  'agencyMobile.goal.leads': 'Demandes',
+  'agencyMobile.goal.sponsoring': 'Sponsoring',
+  'agencyMobile.goal.content': 'Contenu',
+  'agencyMobile.local.title': 'Campagne du club',
+  'agencyMobile.local.body':
+      'Visibilité régionale sur les espaces club, équipe et événement.',
+  'agencyMobile.sponsor.title': 'Pack sponsor',
+  'agencyMobile.sponsor.body':
+      'Espaces partenaires, pages d’atterrissage et rapports transparents.',
+  'agencyMobile.content.title': 'Campagne de contenu',
+  'agencyMobile.content.body':
+      'Contenus coordonnés pour le blog, le fil et les pages publiques.',
+  'agencyMobile.performance.title': 'Pack performance',
+  'agencyMobile.performance.body':
+      'Ciblage, mesure, prospects et rapports de conversion.',
+  'agencyMobile.packageRequest': 'Demander ce pack',
+  'agencyMobile.adsOps': 'Ouvrir la gestion Ads',
+  'agencyMobile.formTitle': 'Demande à l’agence',
+  'agencyMobile.name': 'Nom',
+  'agencyMobile.email': 'Adresse e-mail',
+  'agencyMobile.phone': 'Téléphone (facultatif)',
+  'agencyMobile.club': 'Club ou organisation',
+  'agencyMobile.domain': 'Nom de domaine souhaité (facultatif)',
+  'agencyMobile.goals': 'Objectifs',
+  'agencyMobile.notes': 'Informations complémentaires (facultatif)',
+  'agencyMobile.privacy':
+      'Vos informations servent uniquement à traiter cette demande et sont supprimées après l’échéance de conservation documentée.',
+  'agencyMobile.privacyAccept':
+      'Je confirme ce traitement de mes informations limité à cette finalité.',
+  'agencyMobile.required':
+      'Saisissez votre nom, une adresse e-mail valide, l’organisation et les objectifs, puis confirmez l’avis de confidentialité.',
+  'agencyMobile.cancel': 'Annuler',
+  'agencyMobile.send': 'Envoyer la demande',
+  'agencyMobile.sending': 'Envoi…',
+  'agencyMobile.sent': 'Votre demande à l’agence a été envoyée.',
+  'agencyMobile.submitError': 'La demande n’a pas pu être envoyée.',
+  'recruitingMobile.title': 'Emplois et bénévolat',
+  'recruitingMobile.subtitle':
+      'Découvrez les opportunités publiées par les clubs et organisations sportives.',
+  'recruitingMobile.eyebrow': 'Recrutement',
+  'recruitingMobile.hero': 'Trouvez le rôle adapté à votre sport.',
+  'recruitingMobile.results': 'opportunités',
+  'recruitingMobile.reload': 'Actualiser les offres',
+  'recruitingMobile.search': 'Rechercher un rôle, club, sport ou lieu',
+  'recruitingMobile.all': 'Tout',
+  'recruitingMobile.professional': 'Professionnel',
+  'recruitingMobile.volunteer': 'Bénévolat',
+  'recruitingMobile.error': 'Impossible de charger les offres.',
+  'recruitingMobile.retry': 'Réessayer',
+  'recruitingMobile.empty':
+      'Aucune opportunité correspondante n’est encore publiée.',
+  'recruitingMobile.interested': 'Je suis intéressé(e)',
+  'recruitingMobile.interestTitle': 'Manifester mon intérêt',
+  'recruitingMobile.name': 'Nom',
+  'recruitingMobile.email': 'Adresse e-mail',
+  'recruitingMobile.phone': 'Téléphone (facultatif)',
+  'recruitingMobile.message': 'Message (facultatif)',
+  'recruitingMobile.privacy':
+      'Vos coordonnées sont transmises uniquement à l’organisation responsable de cette opportunité et traitées pour répondre à votre demande.',
+  'recruitingMobile.privacyAccept':
+      'J’accepte ce traitement limité de mes données.',
+  'recruitingMobile.cancel': 'Annuler',
+  'recruitingMobile.required':
+      'Saisissez votre nom et une adresse e-mail valide, puis confirmez la notice de confidentialité.',
+  'recruitingMobile.submitError': 'Votre demande n’a pas pu être envoyée.',
+  'recruitingMobile.sending': 'Envoi …',
+  'recruitingMobile.send': 'Envoyer la demande',
+  'recruitingMobile.sent': 'Votre demande a été envoyée.',
+  'recruitingPipeline.title': 'Pipeline de recrutement',
+  'recruitingPipeline.subtitle':
+      'Examiner les candidatures des clubs en toute sécurité et les faire avancer dans un parcours clair.',
+  'recruitingPipeline.reload': 'Recharger les candidatures',
+  'recruitingPipeline.loadError': 'Les candidatures n’ont pas pu être chargées.',
+  'recruitingPipeline.retry': 'Réessayer',
+  'recruitingPipeline.total': 'Candidatures',
+  'recruitingPipeline.new': 'Nouvelles',
+  'recruitingPipeline.hired': 'Recrutées',
+  'recruitingPipeline.filter': 'Filtrer par statut',
+  'recruitingPipeline.empty': 'Aucune candidature correspondante.',
+  'recruitingPipeline.edit': 'Traiter',
+  'recruitingPipeline.editTitle': 'Traiter la candidature',
+  'recruitingPipeline.status': 'Statut',
+  'recruitingPipeline.note': 'Note interne',
+  'recruitingPipeline.save': 'Enregistrer',
+  'recruitingPipeline.saveError': 'La candidature n’a pas pu être enregistrée.',
+  'recruitingPipeline.erase': 'Supprimer les données',
+  'recruitingPipeline.eraseTitle': 'Supprimer la candidature',
+  'recruitingPipeline.eraseBody':
+      'Supprimer définitivement la candidature et toutes les coordonnées ?',
+  'recruitingPipeline.status.all': 'Tous les statuts',
+  'recruitingPipeline.status.new': 'Nouvelle',
+  'recruitingPipeline.status.reviewing': 'En examen',
+  'recruitingPipeline.status.contacted': 'Contactée',
+  'recruitingPipeline.status.interview': 'Entretien',
+  'recruitingPipeline.status.offered': 'Offre',
+  'recruitingPipeline.status.hired': 'Recrutée',
+  'recruitingPipeline.status.rejected': 'Refusée',
 };
 
 final _guestPortalLabelsAr = {
@@ -16701,6 +17017,105 @@ final _guestPortalLabelsAr = {
   'guestPortal.terms': 'شروط الاستخدام',
   'guestPortal.guidelines': 'إرشادات المجتمع',
   'guestPortal.youth': 'حماية القاصرين',
+  'agencyMobile.title': 'وكالة Airmius',
+  'agencyMobile.subtitle': 'مواقع وحملات وظهور للرعاة مخصصة للجهات الرياضية.',
+  'agencyMobile.hero': 'حوّل أهداف النادي إلى مشروع رقمي واضح',
+  'agencyMobile.heroBody':
+      'اختر هدفًا وأرسل طلبًا غير ملزم. ستقترح Airmius نطاقًا واقعيًا وخطوة تالية.',
+  'agencyMobile.request': 'طلب تقييم',
+  'agencyMobile.goalTitle': 'الهدف الرئيسي',
+  'agencyMobile.goal.reach': 'الوصول',
+  'agencyMobile.goal.leads': 'الطلبات',
+  'agencyMobile.goal.sponsoring': 'الرعاية',
+  'agencyMobile.goal.content': 'المحتوى',
+  'agencyMobile.local.title': 'حملة النادي',
+  'agencyMobile.local.body': 'ظهور إقليمي عبر مساحات النادي والفريق والفعاليات.',
+  'agencyMobile.sponsor.title': 'باقة الراعي',
+  'agencyMobile.sponsor.body': 'مساحات للشركاء وصفحات هبوط وتقارير شفافة.',
+  'agencyMobile.content.title': 'حملة المحتوى',
+  'agencyMobile.content.body': 'محتوى منسق للمدونة والخلاصة والصفحات العامة.',
+  'agencyMobile.performance.title': 'باقة الأداء',
+  'agencyMobile.performance.body': 'استهداف وقياس وعملاء محتملون وتقارير تحويل.',
+  'agencyMobile.packageRequest': 'طلب هذه الباقة',
+  'agencyMobile.adsOps': 'فتح إدارة الإعلانات',
+  'agencyMobile.formTitle': 'طلب الوكالة',
+  'agencyMobile.name': 'الاسم',
+  'agencyMobile.email': 'البريد الإلكتروني',
+  'agencyMobile.phone': 'الهاتف (اختياري)',
+  'agencyMobile.club': 'النادي أو الجهة',
+  'agencyMobile.domain': 'النطاق المطلوب (اختياري)',
+  'agencyMobile.goals': 'الأهداف',
+  'agencyMobile.notes': 'ملاحظات إضافية (اختياري)',
+  'agencyMobile.privacy':
+      'تُستخدم بياناتك فقط لمعالجة هذا الطلب وتُحذف بعد نهاية مدة الاحتفاظ الموثقة.',
+  'agencyMobile.privacyAccept': 'أؤكد معالجة بياناتي لهذا الغرض المحدد.',
+  'agencyMobile.required':
+      'أدخل الاسم وبريدًا صالحًا والجهة والأهداف ثم أكّد إشعار الخصوصية.',
+  'agencyMobile.cancel': 'إلغاء',
+  'agencyMobile.send': 'إرسال الطلب',
+  'agencyMobile.sending': 'جارٍ الإرسال…',
+  'agencyMobile.sent': 'تم إرسال طلبك إلى الوكالة.',
+  'agencyMobile.submitError': 'تعذر إرسال الطلب.',
+  'recruitingMobile.title': 'الوظائف والتطوع',
+  'recruitingMobile.subtitle':
+      'اكتشف الفرص المنشورة من الأندية والمؤسسات الرياضية.',
+  'recruitingMobile.eyebrow': 'التوظيف',
+  'recruitingMobile.hero': 'اعثر على الدور المناسب لرياضتك.',
+  'recruitingMobile.results': 'فرص',
+  'recruitingMobile.reload': 'تحديث الوظائف',
+  'recruitingMobile.search': 'ابحث حسب الدور أو النادي أو الرياضة أو المكان',
+  'recruitingMobile.all': 'الكل',
+  'recruitingMobile.professional': 'مهني',
+  'recruitingMobile.volunteer': 'تطوعي',
+  'recruitingMobile.error': 'تعذر تحميل الوظائف.',
+  'recruitingMobile.retry': 'إعادة المحاولة',
+  'recruitingMobile.empty': 'لا توجد فرص مطابقة منشورة حاليًا.',
+  'recruitingMobile.interested': 'أنا مهتم',
+  'recruitingMobile.interestTitle': 'إبداء الاهتمام',
+  'recruitingMobile.name': 'الاسم',
+  'recruitingMobile.email': 'البريد الإلكتروني',
+  'recruitingMobile.phone': 'الهاتف (اختياري)',
+  'recruitingMobile.message': 'الرسالة (اختيارية)',
+  'recruitingMobile.privacy':
+      'تُرسل بياناتك فقط إلى الجهة المسؤولة عن هذه الفرصة وتُعالج للرد على استفسارك.',
+  'recruitingMobile.privacyAccept':
+      'أوافق على هذه المعالجة المحددة الغرض لبياناتي.',
+  'recruitingMobile.cancel': 'إلغاء',
+  'recruitingMobile.required':
+      'أدخل اسمك وبريداً إلكترونياً صالحاً ثم أكّد إشعار الخصوصية.',
+  'recruitingMobile.submitError': 'تعذر إرسال طلبك.',
+  'recruitingMobile.sending': 'جارٍ الإرسال …',
+  'recruitingMobile.send': 'إرسال الطلب',
+  'recruitingMobile.sent': 'تم إرسال طلبك.',
+  'recruitingPipeline.title': 'مسار التوظيف',
+  'recruitingPipeline.subtitle':
+      'مراجعة طلبات الأندية بأمان وإدارتها ضمن مسار واضح.',
+  'recruitingPipeline.reload': 'إعادة تحميل الطلبات',
+  'recruitingPipeline.loadError': 'تعذر تحميل الطلبات.',
+  'recruitingPipeline.retry': 'إعادة المحاولة',
+  'recruitingPipeline.total': 'الطلبات',
+  'recruitingPipeline.new': 'جديدة',
+  'recruitingPipeline.hired': 'تم توظيفهم',
+  'recruitingPipeline.filter': 'تصفية حسب الحالة',
+  'recruitingPipeline.empty': 'لا توجد طلبات مطابقة.',
+  'recruitingPipeline.edit': 'معالجة',
+  'recruitingPipeline.editTitle': 'معالجة الطلب',
+  'recruitingPipeline.status': 'الحالة',
+  'recruitingPipeline.note': 'ملاحظة داخلية',
+  'recruitingPipeline.save': 'حفظ',
+  'recruitingPipeline.saveError': 'تعذر حفظ الطلب.',
+  'recruitingPipeline.erase': 'حذف البيانات',
+  'recruitingPipeline.eraseTitle': 'حذف الطلب',
+  'recruitingPipeline.eraseBody':
+      'هل تريد حذف الطلب وجميع بيانات الاتصال نهائياً؟',
+  'recruitingPipeline.status.all': 'جميع الحالات',
+  'recruitingPipeline.status.new': 'جديد',
+  'recruitingPipeline.status.reviewing': 'قيد المراجعة',
+  'recruitingPipeline.status.contacted': 'تم التواصل',
+  'recruitingPipeline.status.interview': 'مقابلة',
+  'recruitingPipeline.status.offered': 'عرض',
+  'recruitingPipeline.status.hired': 'تم التوظيف',
+  'recruitingPipeline.status.rejected': 'مرفوض',
 };
 
 final _publicTopLabelsEn = {
@@ -18178,6 +18593,85 @@ const _trainingAvailabilityAr = {
   'trainingAvailability.noEnd': 'بدون تاريخ نهاية',
 };
 
+const _privacyErasureFr = {
+  'privacy.eraseData': 'Supprimer des données, conserver le compte',
+  'privacy.eraseWarning':
+      'Les données et médias supprimés ne peuvent pas être restaurés. Le compte, les identifiants et les justificatifs requis par la loi sont conservés.',
+  'privacy.eraseSelectAreas': 'Choisir les catégories de données',
+  'privacy.eraseSelectAll': 'Tout sélectionner',
+  'privacy.eraseClearAll': 'Effacer la sélection',
+  'privacy.eraseCategory.profile': 'Profil et coordonnées',
+  'privacy.eraseCategory.content': 'Publications, commentaires et stories',
+  'privacy.eraseCategory.messages': 'Vos messages de chat',
+  'privacy.eraseCategory.files': 'Fichiers et dossiers',
+  'privacy.eraseCategory.sport_and_health':
+      'Données sportives, de localisation et de santé',
+  'privacy.eraseCategory.social_and_integrations':
+      'Relations sociales et intégrations',
+  'privacy.eraseCategory.commerce': 'Boutique et commandes',
+  'privacy.eraseConfirmIdentity': 'Confirmer la demande',
+  'privacy.erasePasswordIdentityHint':
+      'Saisissez votre mot de passe actuel. Il sert uniquement à confirmer cette demande de suppression.',
+  'privacy.eraseEmailIdentityHint':
+      'Vous vous connectez avec un compte associé. Confirmez la demande avec l’adresse e-mail de votre compte.',
+  'privacy.eraseRequestCode': 'Envoyer le code de confirmation',
+  'privacy.eraseNewCode': 'Envoyer un nouveau code',
+  'privacy.eraseFinalStep': 'Supprimer les données',
+  'privacy.eraseCodeHint':
+      'Saisissez le code reçu par e-mail. Il est valable 15 minutes et uniquement pour la sélection actuelle.',
+  'privacy.eraseCode': 'Code de confirmation',
+  'privacy.eraseConfirm': 'Supprimer définitivement les données sélectionnées',
+  'privacy.eraseSelectionRequired':
+      'Sélectionnez au moins une catégorie de données.',
+  'privacy.eraseIdentityRequired':
+      'Saisissez d’abord votre mot de passe ou l’adresse e-mail du compte.',
+  'privacy.eraseCodeSent': 'Le code de confirmation a été envoyé par e-mail.',
+  'privacy.eraseCodeRequired':
+      'Saisissez le code de confirmation reçu par e-mail.',
+  'privacy.eraseFinalWarning':
+      'Les données sélectionnées seront immédiatement supprimées ou anonymisées si nécessaire. Cette action est irréversible.',
+  'privacy.eraseCompleted':
+      'Les données sélectionnées ont été supprimées ou anonymisées. Votre compte reste actif.',
+};
+
+const _privacyErasureAr = {
+  'privacy.eraseData': 'حذف البيانات مع الإبقاء على الحساب',
+  'privacy.eraseWarning':
+      'لا يمكن استعادة البيانات والوسائط المحذوفة. يبقى الحساب وبيانات الدخول والسجلات المطلوبة قانونيًا.',
+  'privacy.eraseSelectAreas': 'اختر فئات البيانات',
+  'privacy.eraseSelectAll': 'تحديد الكل',
+  'privacy.eraseClearAll': 'مسح التحديد',
+  'privacy.eraseCategory.profile': 'بيانات الملف الشخصي والاتصال',
+  'privacy.eraseCategory.content': 'المنشورات والتعليقات والقصص',
+  'privacy.eraseCategory.messages': 'رسائل الدردشة الخاصة بك',
+  'privacy.eraseCategory.files': 'الملفات والمجلدات',
+  'privacy.eraseCategory.sport_and_health': 'بيانات الرياضة والموقع والصحة',
+  'privacy.eraseCategory.social_and_integrations':
+      'العلاقات الاجتماعية وعمليات الربط',
+  'privacy.eraseCategory.commerce': 'بيانات المتجر والطلبات',
+  'privacy.eraseConfirmIdentity': 'تأكيد الطلب',
+  'privacy.erasePasswordIdentityHint':
+      'أدخل كلمة مرورك الحالية. لن تُستخدم إلا لتأكيد طلب الحذف هذا.',
+  'privacy.eraseEmailIdentityHint':
+      'أنت تسجل الدخول بحساب مرتبط. أكّد الطلب بعنوان البريد الإلكتروني لحسابك.',
+  'privacy.eraseRequestCode': 'إرسال رمز التأكيد',
+  'privacy.eraseNewCode': 'إرسال رمز جديد',
+  'privacy.eraseFinalStep': 'تنفيذ الحذف',
+  'privacy.eraseCodeHint':
+      'أدخل الرمز الوارد في البريد الإلكتروني. الرمز صالح لمدة 15 دقيقة وللتحديد الحالي فقط.',
+  'privacy.eraseCode': 'رمز التأكيد',
+  'privacy.eraseConfirm': 'حذف البيانات المحددة نهائيًا',
+  'privacy.eraseSelectionRequired': 'اختر فئة بيانات واحدة على الأقل.',
+  'privacy.eraseIdentityRequired':
+      'أدخل كلمة المرور أو عنوان البريد الإلكتروني للحساب أولًا.',
+  'privacy.eraseCodeSent': 'أُرسل رمز التأكيد عبر البريد الإلكتروني.',
+  'privacy.eraseCodeRequired': 'أدخل رمز التأكيد الوارد في البريد الإلكتروني.',
+  'privacy.eraseFinalWarning':
+      'ستُحذف البيانات المحددة أو تُخفى هويتها فورًا عند الحاجة. لا يمكن التراجع عن هذا الإجراء.',
+  'privacy.eraseCompleted':
+      'حُذفت البيانات المحددة أو أُخفيت هويتها، وسيبقى حسابك فعالًا.',
+};
+
 final _strings = {
   AirmiusLanguage.de: {
     ..._accountDe,
@@ -18452,8 +18946,10 @@ final _strings = {
     'trainingHub.target.fullTeam': 'Komplettes Team',
     'trainingHub.target.individual': 'Einzelne Sportler',
     'trainingHub.target.privatePeople': 'Private Empfänger',
-    'trainingHub.target.noPrivatePeople': 'Noch keine bestätigten Freunde oder privaten Kunden verfügbar.',
-    'trainingHub.target.noTeamMembers': 'In diesem Team sind keine Sportler verfügbar.',
+    'trainingHub.target.noPrivatePeople':
+        'Noch keine bestätigten Freunde oder privaten Kunden verfügbar.',
+    'trainingHub.target.noTeamMembers':
+        'In diesem Team sind keine Sportler verfügbar.',
     'trainingHub.chooseTeam': 'Team auswählen',
     'trainingHub.noTeam': 'Keinem Team zuweisen',
     'trainingHub.permission': 'Berechtigung',
@@ -18508,7 +19004,8 @@ final _strings = {
     'trainingHub.sport': 'Sportart',
     'trainingHub.sportSearch': 'Sportart suchen',
     'trainingHub.selectedSport': 'Ausgewählte Sportart',
-    'trainingHub.sportSearchHint': 'Mindestens 2 Zeichen eingeben, um Sportarten zu suchen.',
+    'trainingHub.sportSearchHint':
+        'Mindestens 2 Zeichen eingeben, um Sportarten zu suchen.',
     'trainingHub.todos': 'Aufgaben und Übungen',
     'trainingHub.todosHint': 'Eine Aufgabe pro Zeile',
     'trainingHub.videoUrl': 'Video-Link',
@@ -19563,6 +20060,10 @@ final _strings = {
     'privacy.eraseConfirmIdentity': 'Anfrage bestätigen',
     'privacy.eraseIdentityHint':
         'Gib dein aktuelles Passwort ein. Bei Google- oder Microsoft-Anmeldung aktiviere die Option und gib die Konto-E-Mail ein.',
+    'privacy.erasePasswordIdentityHint':
+        'Gib dein aktuelles Passwort ein. Es wird nur zur Bestätigung dieser Löschanfrage verwendet.',
+    'privacy.eraseEmailIdentityHint':
+        'Du meldest dich mit einem verbundenen Konto an. Bestätige die Anfrage mit deiner Konto-E-Mail-Adresse.',
     'privacy.eraseUseEmail': 'Ich melde mich mit Google oder Microsoft an',
     'privacy.eraseRequestCode': 'Bestätigungscode senden',
     'privacy.eraseNewCode': 'Neuen Code senden',
@@ -20720,8 +21221,10 @@ final _strings = {
     'trainingHub.target.fullTeam': 'Entire team',
     'trainingHub.target.individual': 'Individual athletes',
     'trainingHub.target.privatePeople': 'Private recipients',
-    'trainingHub.target.noPrivatePeople': 'No confirmed friends or private clients available yet.',
-    'trainingHub.target.noTeamMembers': 'No athletes are available in this team.',
+    'trainingHub.target.noPrivatePeople':
+        'No confirmed friends or private clients available yet.',
+    'trainingHub.target.noTeamMembers':
+        'No athletes are available in this team.',
     'trainingHub.chooseTeam': 'Choose a team',
     'trainingHub.noTeam': 'Do not assign a team',
     'trainingHub.permission': 'Permission',
@@ -20776,7 +21279,8 @@ final _strings = {
     'trainingHub.sport': 'Sport',
     'trainingHub.sportSearch': 'Search sport',
     'trainingHub.selectedSport': 'Selected sport',
-    'trainingHub.sportSearchHint': 'Enter at least 2 characters to search sports.',
+    'trainingHub.sportSearchHint':
+        'Enter at least 2 characters to search sports.',
     'trainingHub.todos': 'Tasks and exercises',
     'trainingHub.todosHint': 'One task per line',
     'trainingHub.videoUrl': 'Video link',
@@ -21791,6 +22295,10 @@ final _strings = {
     'privacy.eraseConfirmIdentity': 'Confirm request',
     'privacy.eraseIdentityHint':
         'Enter your current password. For Google or Microsoft sign-in, enable the option and enter your account email.',
+    'privacy.erasePasswordIdentityHint':
+        'Enter your current password. It is used only to confirm this deletion request.',
+    'privacy.eraseEmailIdentityHint':
+        'You sign in with a connected account. Confirm the request with your account email address.',
     'privacy.eraseUseEmail': 'I sign in with Google or Microsoft',
     'privacy.eraseRequestCode': 'Send confirmation code',
     'privacy.eraseNewCode': 'Send a new code',
@@ -22655,6 +23163,7 @@ final _strings = {
     ..._publicDetailLabelsEn,
   },
   AirmiusLanguage.fr: {
+    ..._privacyErasureFr,
     ..._accountFr,
     ..._notificationSettingsFr,
     ..._outfitFr,
@@ -22928,8 +23437,10 @@ final _strings = {
     'trainingHub.target.fullTeam': 'Toute l’équipe',
     'trainingHub.target.individual': 'Sportifs individuels',
     'trainingHub.target.privatePeople': 'Destinataires privés',
-    'trainingHub.target.noPrivatePeople': 'Aucun ami confirmé ou client privé disponible.',
-    'trainingHub.target.noTeamMembers': 'Aucun sportif disponible dans cette équipe.',
+    'trainingHub.target.noPrivatePeople':
+        'Aucun ami confirmé ou client privé disponible.',
+    'trainingHub.target.noTeamMembers':
+        'Aucun sportif disponible dans cette équipe.',
     'trainingHub.chooseTeam': 'Choisir une équipe',
     'trainingHub.noTeam': 'Ne pas attribuer d’équipe',
     'trainingHub.permission': 'Autorisation',
@@ -22984,7 +23495,8 @@ final _strings = {
     'trainingHub.sport': 'Sport',
     'trainingHub.sportSearch': 'Rechercher un sport',
     'trainingHub.selectedSport': 'Sport sélectionné',
-    'trainingHub.sportSearchHint': 'Saisis au moins 2 caractères pour rechercher un sport.',
+    'trainingHub.sportSearchHint':
+        'Saisis au moins 2 caractères pour rechercher un sport.',
     'trainingHub.todos': 'Tâches et exercices',
     'trainingHub.todosHint': 'Une tâche par ligne',
     'trainingHub.videoUrl': 'Lien vidéo',
@@ -24845,6 +25357,7 @@ final _strings = {
     ..._publicDetailLabelsFr,
   },
   AirmiusLanguage.ar: {
+    ..._privacyErasureAr,
     ..._accountAr,
     ..._notificationSettingsAr,
     ..._outfitAr,
@@ -25110,7 +25623,8 @@ final _strings = {
     'trainingHub.target.fullTeam': 'الفريق بأكمله',
     'trainingHub.target.individual': 'رياضيون محددون',
     'trainingHub.target.privatePeople': 'المستلمون الخاصون',
-    'trainingHub.target.noPrivatePeople': 'لا يوجد أصدقاء مؤكدون أو عملاء خاصون متاحون بعد.',
+    'trainingHub.target.noPrivatePeople':
+        'لا يوجد أصدقاء مؤكدون أو عملاء خاصون متاحون بعد.',
     'trainingHub.target.noTeamMembers': 'لا يوجد رياضيون متاحون في هذا الفريق.',
     'trainingHub.chooseTeam': 'اختر فريقًا',
     'trainingHub.noTeam': 'بدون تعيين فريق',

@@ -101,6 +101,7 @@ class TrainingSystemTest extends TestCase
     public function test_plan_item_can_be_rescheduled_and_notifies_assigned_athlete(): void
     {
         [$trainer, $athlete, $plan, $item] = $this->assignedTrainingPlan(permission: 'write');
+        $athlete->forceFill(['language' => 'ar'])->save();
 
         $scheduledAt = now()->addDays(3)->setTime(18, 30);
 
@@ -124,10 +125,27 @@ class TrainingSystemTest extends TestCase
         $this->assertSame('Zone 2', $item->metrics['Fokus']);
         $this->assertSame(12000, $item->distance_meters);
         $this->assertTrue($item->scheduled_at->isSameMinute($scheduledAt));
-        $this->assertTrue(Notification::query()
+        $notification = Notification::query()
             ->where('user_id', $athlete->id)
             ->where('type', 'training.plan.changed')
-            ->exists());
+            ->firstOrFail();
+
+        $this->assertSame('ar', $notification->data['locale']);
+        $this->assertSame(
+            trans('server.training.notifications.item_updated_title', locale: 'ar'),
+            $notification->data['title'],
+        );
+        $this->assertSame(
+            trans('server.training.notifications.item_updated_body', [
+                'item' => $item->title,
+                'plan' => $plan->title,
+            ], 'ar'),
+            $notification->data['body'],
+        );
+        $this->assertSame(
+            'server.training.notifications.item_updated_title',
+            $notification->data['i18n']['title_key'],
+        );
     }
 
     public function test_assigned_athlete_can_open_plan_item_detail_page(): void

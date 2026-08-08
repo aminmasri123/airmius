@@ -77,7 +77,7 @@ class NutritionController extends Controller
         $product = $lookup->barcode($data['barcode']);
 
         if (! $product) {
-            return response()->json(['message' => 'Kein Produkt für diesen Barcode gefunden.'], 404);
+            return response()->json(['message' => __('nutrition.responses.product_not_found')], 404);
         }
 
         return response()->json(['data' => $product]);
@@ -105,14 +105,14 @@ class NutritionController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Die KI-Auswertung ist derzeit nicht verfügbar. Bitte versuche es später erneut.',
+                'message' => __('nutrition.responses.ai_unavailable'),
                 'code' => 'nutrition_ai_unavailable',
             ], 422);
         }
 
         return response()->json([
             'data' => $suggestion,
-            'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
+            'message' => __('nutrition.responses.ai_suggestion_created'),
         ]);
     }
 
@@ -125,7 +125,7 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => (new NutritionGoalResource($goal))->resolve(),
-            'message' => 'Ernährungsziel gespeichert.',
+            'message' => __('nutrition.responses.goal_saved'),
         ]);
     }
 
@@ -136,7 +136,7 @@ class NutritionController extends Controller
         );
 
         return (new NutritionMealResource($meal))
-            ->additional(['message' => 'Mahlzeit gespeichert.'])
+            ->additional(['message' => __('nutrition.responses.meal_saved')])
             ->response()
             ->setStatusCode(201);
     }
@@ -156,7 +156,7 @@ class NutritionController extends Controller
                 ...(new NutritionMealResource($entry))->resolve(),
                 'water_total_ml' => (int) $waterTotalMl,
             ],
-            'message' => 'Trinken gespeichert.',
+            'message' => __('nutrition.responses.water_saved'),
         ], 201);
     }
 

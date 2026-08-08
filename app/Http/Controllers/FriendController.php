@@ -86,7 +86,7 @@ class FriendController extends Controller
         if (! $recipient) {
             if ($email === strtolower($sender->email)) {
                 throw ValidationException::withMessages([
-                    'email' => 'Du kannst dich nicht selbst einladen.',
+                    'email' => __('social.friends.self_invite'),
                 ]);
             }
 
@@ -102,7 +102,7 @@ class FriendController extends Controller
                     $request,
                     $existingInvitation,
                     'already_sent',
-                    'Diese Einladung wurde bereits gesendet.',
+                    __('social.friends.already_sent_external'),
                 );
             }
 
@@ -124,20 +124,20 @@ class FriendController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'data' => ['invitation_id' => $invitation->id, 'external' => true],
-                    'message' => 'Einladung per E-Mail gesendet.',
+                    'message' => __('social.friends.external_sent'),
                 ], 201);
             }
 
-            return back()->with('success', 'Einladung per E-Mail gesendet.');
+            return back()->with('success', __('social.friends.external_sent'));
         }
 
         if ($recipient->is($sender)) {
             throw ValidationException::withMessages([
-                'email' => 'Du kannst dich nicht selbst einladen.',
+                'email' => __('social.friends.self_invite'),
             ]);
         }
 
-        abort_unless($recipient->allowsFriendRequestsFrom($sender), 403, 'Diese Person erlaubt keine Freundschaftsanfragen von dir.');
+        abort_unless($recipient->allowsFriendRequestsFrom($sender), 403, __('social.friends.requests_blocked'));
 
         $alreadyFriends = Friendship::query()
             ->where('user_id', $sender->id)
@@ -149,7 +149,7 @@ class FriendController extends Controller
                 $request,
                 null,
                 'already_friends',
-                'Ihr seid bereits Freunde.',
+                __('social.friends.already_friends'),
             );
         }
 
@@ -184,7 +184,7 @@ class FriendController extends Controller
                     $request,
                     $invitation,
                     'already_sent',
-                    'Diese Freundschaftsanfrage wurde bereits gesendet.',
+                    __('social.friends.already_sent'),
                 );
             }
 
@@ -206,14 +206,19 @@ class FriendController extends Controller
             ]);
         }
 
-        AppNotification::send($recipient, 'friend.invite', [
-            'title' => $sender->name.' möchte dich als Freund hinzufügen',
-            'body' => 'Du kannst die Einladung im Freunde-Bereich annehmen oder ablehnen.',
+        AppNotification::sendLocalized(
+            $recipient,
+            'friend.invite',
+            'social.notifications.invite_title',
+            'social.notifications.invite_body',
+            ['name' => $sender->name],
+            [
             'url' => route('auth.friends.index'),
             'actor_id' => $sender->id,
             'actor_name' => $sender->name,
             'invitation_id' => $invitation->id,
-        ]);
+            ],
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -222,11 +227,11 @@ class FriendController extends Controller
                     'recipient_id' => $recipient->id,
                     'external' => false,
                 ],
-                'message' => 'Einladung gesendet.',
+                'message' => __('social.friends.sent'),
             ], 201);
         }
 
-        return back()->with('success', 'Einladung gesendet.');
+        return back()->with('success', __('social.friends.sent'));
     }
 
     private function duplicateInvitationResponse(
@@ -271,14 +276,19 @@ class FriendController extends Controller
             ]);
         });
 
-        AppNotification::send($invitation->sender_id, 'friend.accepted', [
-            'title' => $request->user()->name.' hat deine Freundschaftsanfrage angenommen',
-            'body' => 'Ihr seid jetzt verbunden.',
+        AppNotification::sendLocalized(
+            $invitation->sender_id,
+            'friend.accepted',
+            'social.notifications.accepted_title',
+            'social.notifications.accepted_body',
+            ['name' => $request->user()->name],
+            [
             'url' => route('auth.friends.index'),
             'actor_id' => $request->user()->id,
             'actor_name' => $request->user()->name,
             'invitation_id' => $invitation->id,
-        ]);
+            ],
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -287,11 +297,11 @@ class FriendController extends Controller
                     'status' => 'accepted',
                     'friend_id' => $invitation->sender_id,
                 ],
-                'message' => 'Einladung angenommen.',
+                'message' => __('social.friends.accepted'),
             ]);
         }
 
-        return back()->with('success', 'Einladung angenommen.');
+        return back()->with('success', __('social.friends.accepted'));
     }
 
     public function withdraw(Request $request, FriendInvitation $invitation)
@@ -305,14 +315,19 @@ class FriendController extends Controller
         ]);
 
         if ($invitation->recipient_id) {
-            AppNotification::send($invitation->recipient_id, 'friend.invite_withdrawn', [
-                'title' => $request->user()->name.' hat die Freundschaftsanfrage zurückgezogen',
-                'body' => 'Die offene Freundschaftsanfrage wurde zurückgezogen.',
+            AppNotification::sendLocalized(
+                $invitation->recipient_id,
+                'friend.invite_withdrawn',
+                'social.notifications.withdrawn_title',
+                'social.notifications.withdrawn_body',
+                ['name' => $request->user()->name],
+                [
                 'url' => route('auth.friends.index'),
                 'actor_id' => $request->user()->id,
                 'actor_name' => $request->user()->name,
                 'invitation_id' => $invitation->id,
-            ]);
+                ],
+            );
         }
 
         if ($request->expectsJson()) {
@@ -321,11 +336,11 @@ class FriendController extends Controller
                     'invitation_id' => $invitation->id,
                     'status' => $invitation->status,
                 ],
-                'message' => 'Freundschaftsanfrage zurückgezogen.',
+                'message' => __('social.friends.withdrawn'),
             ]);
         }
 
-        return back()->with('success', 'Freundschaftsanfrage zurückgezogen.');
+        return back()->with('success', __('social.friends.withdrawn'));
     }
 
     public function invitationByToken(Request $request, string $token)
@@ -342,14 +357,14 @@ class FriendController extends Controller
     {
         $invitation = $this->pendingInvitationByToken($token);
         $this->assertTokenRecipient($request, $invitation);
-        abort_if($invitation->sender_id === $request->user()->id, 422, 'Du kannst dich nicht selbst einladen.');
+        abort_if($invitation->sender_id === $request->user()->id, 422, __('social.friends.self_invite'));
 
         $alreadyFriends = Friendship::query()
             ->where('user_id', $invitation->sender_id)
             ->where('friend_id', $request->user()->id)
             ->exists();
 
-        abort_if($alreadyFriends, 422, 'Ihr seid bereits Freunde.');
+        abort_if($alreadyFriends, 422, __('social.friends.already_friends'));
 
         DB::transaction(function () use ($invitation, $request) {
             $invitation->update([
@@ -369,14 +384,19 @@ class FriendController extends Controller
             ]);
         });
 
-        AppNotification::send($invitation->sender_id, 'friend.accepted', [
-            'title' => $request->user()->name.' hat deine Freundschaftsanfrage angenommen',
-            'body' => 'Ihr seid jetzt verbunden.',
+        AppNotification::sendLocalized(
+            $invitation->sender_id,
+            'friend.accepted',
+            'social.notifications.accepted_title',
+            'social.notifications.accepted_body',
+            ['name' => $request->user()->name],
+            [
             'url' => route('auth.friends.index'),
             'actor_id' => $request->user()->id,
             'actor_name' => $request->user()->name,
             'invitation_id' => $invitation->id,
-        ]);
+            ],
+        );
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -385,11 +405,11 @@ class FriendController extends Controller
                     'status' => 'accepted',
                     'friend_id' => $invitation->sender_id,
                 ],
-                'message' => 'Einladung angenommen.',
+                'message' => __('social.friends.accepted'),
             ]);
         }
 
-        return redirect()->route('auth.friends.index')->with('success', 'Einladung angenommen.');
+        return redirect()->route('auth.friends.index')->with('success', __('social.friends.accepted'));
     }
 
     public function declineByToken(Request $request, string $token)
@@ -409,11 +429,11 @@ class FriendController extends Controller
                     'invitation_id' => $invitation->id,
                     'status' => 'declined',
                 ],
-                'message' => 'Einladung abgelehnt.',
+                'message' => __('social.friends.declined'),
             ]);
         }
 
-        return redirect()->route('auth.friends.index')->with('success', 'Einladung abgelehnt.');
+        return redirect()->route('auth.friends.index')->with('success', __('social.friends.declined'));
     }
 
     public function decline(Request $request, FriendInvitation $invitation)
@@ -432,18 +452,18 @@ class FriendController extends Controller
                     'invitation_id' => $invitation->id,
                     'status' => 'declined',
                 ],
-                'message' => 'Einladung abgelehnt.',
+                'message' => __('social.friends.declined'),
             ]);
         }
 
-        return back()->with('success', 'Einladung abgelehnt.');
+        return back()->with('success', __('social.friends.declined'));
     }
 
     public function destroy(Request $request, User $user)
     {
         $viewer = $request->user();
 
-        abort_if($viewer->is($user), 422, 'Du kannst dich nicht selbst entfernen.');
+        abort_if($viewer->is($user), 422, __('social.friends.self_remove'));
 
         $deleted = Friendship::query()
             ->where(function ($query) use ($viewer, $user) {
@@ -456,7 +476,7 @@ class FriendController extends Controller
             })
             ->delete();
 
-        abort_if($deleted === 0, 422, 'Ihr seid aktuell nicht befreundet.');
+        abort_if($deleted === 0, 422, __('social.friends.not_friends'));
 
         FriendInvitation::query()
             ->where(function ($query) use ($viewer, $user) {
@@ -480,11 +500,11 @@ class FriendController extends Controller
                     'friend_id' => $user->id,
                     'deleted' => true,
                 ],
-                'message' => 'Freundschaft wurde beendet.',
+                'message' => __('social.friends.ended'),
             ]);
         }
 
-        return back()->with('success', 'Freundschaft wurde beendet.');
+        return back()->with('success', __('social.friends.ended'));
     }
 
     private function pendingInvitationByToken(string $token): FriendInvitation

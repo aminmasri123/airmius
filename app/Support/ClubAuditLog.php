@@ -21,6 +21,8 @@ class ClubAuditLog
         'club.contribution_rule.updated' => 'Beitragsregel aktualisiert',
         'club.membership_request.approved' => 'Mitgliedsantrag angenommen',
         'club.membership_request.declined' => 'Mitgliedsantrag abgelehnt',
+        'club.recruiting.application_updated' => 'Bewerbungsstatus geändert',
+        'club.recruiting.application_erased' => 'Bewerbung datenschutzkonform gelöscht',
     ];
 
     public static function record(Club $club, ?User $actor, string $type, ?Model $subject = null, array $data = []): Activity

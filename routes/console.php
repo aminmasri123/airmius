@@ -88,6 +88,14 @@ Schedule::command('airmius:prune-ad-events')
     ->dailyAt('03:45')
     ->withoutOverlapping();
 
+Schedule::command('airmius:prune-website-requests --limit=1000')
+    ->dailyAt('03:48')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:prune-recruiting-interests --limit=1000')
+    ->dailyAt('03:50')
+    ->withoutOverlapping();
+
 Schedule::command('airmius:prune-expired-stories')
     ->hourly()
     ->withoutOverlapping();

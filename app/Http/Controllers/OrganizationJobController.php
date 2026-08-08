@@ -4,14 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\OrganizationJob;
-use App\Models\OrganizationJobInterest;
 use App\Models\Sport;
-use App\Notifications\OrganizationJobInterestReceived;
+use App\Services\OrganizationJobDirectoryService;
+use App\Services\OrganizationJobInterestService;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -30,7 +29,7 @@ class OrganizationJobController extends Controller
 
         $club->jobs()->create($data);
 
-        return back()->with('success', 'Stelle erstellt.');
+        return back()->with('success', __('recruiting.flash.created'));
     }
 
     public function update(Request $request, OrganizationJob $organizationJob)
@@ -44,7 +43,7 @@ class OrganizationJobController extends Controller
 
         $organizationJob->update($data);
 
-        return back()->with('success', 'Stelle aktualisiert.');
+        return back()->with('success', __('recruiting.flash.updated'));
     }
 
     public function destroy(Request $request, OrganizationJob $organizationJob)
@@ -53,41 +52,13 @@ class OrganizationJobController extends Controller
 
         $organizationJob->delete();
 
-        return back()->with('success', 'Stelle gelöscht.');
+        return back()->with('success', __('recruiting.flash.deleted'));
     }
 
-    public function publicIndex(Request $request)
+    public function publicIndex(Request $request, OrganizationJobDirectoryService $directory)
     {
-        $requestFilters = $request->only(['sport_type', 'address', 'type', 'sort']);
-        $roleType = $requestFilters['type'] ?? null;
-        $sortMode = $requestFilters['sort'] ?? 'newest';
-        $hasValidRoleType = in_array($roleType, ['professional', 'volunteer'], true);
-        $filters = [
-            'type' => $hasValidRoleType ? $roleType : null,
-            'sport_type' => trim((string) ($requestFilters['sport_type'] ?? '')),
-            'address' => trim((string) ($requestFilters['address'] ?? '')),
-            'sort' => in_array($sortMode, ['newest', 'oldest'], true) ? $sortMode : 'newest',
-        ];
-        $jobsQuery = OrganizationJob::query()
-            ->published()
-            ->with('club:id,name,logo,sport_type,country,street,house_number,postal_code,city,state')
-            ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
-            ->when($filters['sport_type'], fn ($query, $sport) => $query
-                ->whereHas('club', fn ($clubQuery) => $clubQuery->where('sport_type', $sport)))
-            ->when($filters['address'], fn ($query, $address) => $query->where(function ($query) use ($address) {
-                $query->where('location', 'like', "%{$address}%")
-                    ->orWhereHas('club', fn ($clubQuery) => $clubQuery
-                        ->where('city', 'like', "%{$address}%")
-                        ->orWhere('postal_code', 'like', "%{$address}%")
-                        ->orWhere('street', 'like', "%{$address}%")
-                        ->orWhere('state', 'like', "%{$address}%")
-                        ->orWhere('country', 'like', "%{$address}%"));
-            }));
-
-        $jobs = match ($filters['sort']) {
-            'oldest' => $jobsQuery->oldest('published_at')->paginate(12),
-            default => $jobsQuery->latest('published_at')->paginate(12),
-        };
+        $filters = $directory->filters($request->only(['sport_type', 'address', 'type', 'sort']));
+        $jobs = $directory->paginate($filters);
 
         return Inertia::render('Guest/Jobs', [
             'canLogin' => Route::has('login'),
@@ -102,48 +73,24 @@ class OrganizationJobController extends Controller
         ]);
     }
 
-    public function submitInterest(Request $request, OrganizationJob $organizationJob)
-    {
+    public function submitInterest(
+        Request $request,
+        OrganizationJob $organizationJob,
+        OrganizationJobInterestService $interests,
+    ) {
         abort_unless($organizationJob->is_published, 404);
 
-        $user = $request->user();
+        $data = $request->validate(OrganizationJobInterestService::rules());
+        $interests->submit(
+            $organizationJob,
+            $data,
+            $request->user(),
+            $request->ip(),
+            $request->userAgent(),
+            app()->getLocale(),
+        );
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:80'],
-            'message' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $interest = $organizationJob->interests()->create([
-            ...$data,
-            'user_id' => $user?->id,
-            'ip_address' => $request->ip(),
-            'user_agent' => (string) str($request->userAgent() ?? '')->limit(512, ''),
-        ]);
-
-        $interest->load('job.club.owner', 'job.club.admins');
-
-        $recipients = $organizationJob->club->admins
-            ->push($organizationJob->club->owner)
-            ->filter()
-            ->unique('id')
-            ->values();
-
-        try {
-            if ($organizationJob->contact_email) {
-                Notification::route('mail', $organizationJob->contact_email)
-                    ->notify(new OrganizationJobInterestReceived($interest));
-            }
-
-            if ($recipients->isNotEmpty()) {
-                Notification::send($recipients, new OrganizationJobInterestReceived($interest));
-            }
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
-
-        return back()->with('success', 'Dein Interesse wurde gesendet.');
+        return back()->with('success', __('recruiting.flash.interest_sent'));
     }
 
     private function validated(Request $request): array

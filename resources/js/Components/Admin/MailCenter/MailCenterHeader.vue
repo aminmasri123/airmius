@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">System</p>
-                <h1 class="mt-1 text-2xl font-bold text-primary">Mail-Zentrale</h1>
+                <h1 class="mt-1 text-2xl font-bold text-primary">{{ $t('Mail-Zentrale') }}</h1>
                 <p class="mt-2 max-w-3xl text-sm text-secondary">
                     Überwache Versand, Warteschlange, Fehler und Absender-Regeln für transaktionale E-Mails.
                 </p>
@@ -14,4 +14,3 @@
         </div>
     </section>
 </template>
-

@@ -27,16 +27,19 @@ class AuditLocalizationReadiness extends Command
         $this->line('Locales: '.implode(', ', $report['supported_locales']));
         $this->line('RTL: '.implode(', ', $report['rtl_locales']));
         $this->line(sprintf(
-            'Vue: %d files, %.1f%% using i18n, %d visible text candidates.',
+            'Vue: %d files, %.1f%% using i18n, %d open candidates (%d runtime-covered).',
             $report['vue']['files_scanned'],
             $report['vue']['i18n_usage_ratio'] * 100,
-            $report['vue']['visible_text_candidates'],
+            $report['vue']['total_candidates'],
+            $report['vue']['runtime_auto_covered_visible_text_candidates']
+                + $report['vue']['runtime_auto_covered_attribute_text_candidates'],
         ));
         $this->line(sprintf(
-            'PHP: %d files, %d translation calls, %d response text candidates.',
+            'PHP: %d files, %d translation calls, %d open response candidates (%d runtime-covered).',
             $report['php']['files_scanned'],
             $report['php']['translation_calls'],
             $report['php']['response_string_candidates'],
+            $report['php']['runtime_auto_covered_response_string_candidates'],
         ));
 
         foreach ($report['warnings'] as $warning) {

@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     centsToMajor: { type: Function, required: true },
     commerceSettingsForm: { type: Object, required: true },
@@ -131,7 +135,7 @@ defineProps({
                     <p class="text-sm text-secondary">Der Checkout wählt den passenden Satz über Lieferland und optional Region.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeTaxRate">
-                    <input v-model="taxRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
+                    <input v-model="taxRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
                     <input v-model="taxRateForm.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE">
                     <input v-model="taxRateForm.region" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Region optional">
                     <select v-model="taxRateForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -184,7 +188,7 @@ defineProps({
                     <p class="text-sm text-secondary">Regeln können nach Ursprungslager, Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeShippingRate">
-                    <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
+                    <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
                     <input v-model="shippingRateForm.origin_country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Von Land, z. B. DE">
                     <input v-model="shippingRateForm.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE oder leer">
                     <input v-model="shippingRateForm.postal_code_prefix" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ-Prefix optional">
@@ -218,7 +222,6 @@ defineProps({
         </section>
     </div>
 </template>
-
 
 
 

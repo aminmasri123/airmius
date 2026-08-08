@@ -12,6 +12,8 @@ use Illuminate\Validation\Rule;
 
 class SportIntegrationController extends Controller
 {
+    private const DISCONNECTED = 'sport_integration_disconnected';
+
     public function index(Request $request)
     {
         $accounts = ConnectedSportAccount::query()
@@ -81,7 +83,8 @@ class SportIntegrationController extends Controller
         $account->delete();
 
         return response()->json([
-            'message' => 'sport_integration_disconnected',
+            'message' => self::DISCONNECTED,
+            'message_text' => __('sport_integrations.flash.disconnected'),
             'data' => ['account_id' => $account->id],
         ]);
     }

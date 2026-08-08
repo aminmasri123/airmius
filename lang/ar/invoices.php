@@ -1,0 +1,63 @@
+<?php
+
+return [
+    'flash' => [
+        'created' => 'تم إنشاء الفاتورة.',
+        'status_updated' => 'تم تحديث حالة الفاتورة.',
+        'deleted' => 'تم حذف الفاتورة.',
+    ],
+    'errors' => [
+        'payments_exist' => 'لا يمكن حذف الفواتير التي تتضمن مدفوعات.',
+        'type_not_deletable' => 'لا يمكن حذف هذا النوع من الفواتير هنا.',
+    ],
+    'types' => [
+        'recurring_contribution' => 'رسوم العضوية',
+        'account_subscription' => 'اشتراك الحساب',
+        'outfit_subscription_manual' => 'اشتراك الملابس',
+        'marketplace_purchase' => 'شراء من Marketplace',
+        'elearning' => 'تعلم إلكتروني / دورة',
+        'ads' => 'إعلانات',
+        'agency_website' => 'الوكالة – موقع إلكتروني',
+        'agency_logo' => 'الوكالة – شعار',
+        'agency_branding' => 'الوكالة – هوية العلامة',
+        'sponsorship' => 'رعاية',
+        'custom' => 'مخصص',
+        'manual' => 'فاتورة أخرى',
+        'club' => 'فاتورة النادي',
+    ],
+    'manual_options' => [
+        'account_subscription' => ['label' => 'اشتراك الحساب', 'hint' => 'خطة أو ترقية أو حساب مستخدم'],
+        'outfit_subscription_manual' => ['label' => 'اشتراك الملابس', 'hint' => 'ملابس رياضية أو صندوق أو اتفاق رعاية'],
+        'marketplace_purchase' => ['label' => 'شراء من Marketplace', 'hint' => 'منتج أو طلب أو سلة شراء'],
+        'elearning' => ['label' => 'تعلم إلكتروني / دورة', 'hint' => 'مقدم دورة أو مدرب'],
+        'ads' => ['label' => 'إعلانات', 'hint' => 'إعلان أو حملة أو ظهور'],
+        'agency_website' => ['label' => 'موقع إلكتروني', 'hint' => 'مشروع موقع إلكتروني للوكالة'],
+        'agency_logo' => ['label' => 'شعار', 'hint' => 'تصميم شعار أو إعادة تصميمه'],
+        'agency_branding' => ['label' => 'هوية العلامة', 'hint' => 'هوية بصرية أو حزمة تصميم أو حضور العلامة'],
+        'sponsorship' => ['label' => 'رعاية', 'hint' => 'حزمة راعٍ أو شراكة'],
+        'custom' => ['label' => 'مخصص', 'hint' => 'سبب مخصص'],
+    ],
+    'fallbacks' => [
+        'account_subscription' => 'اشتراك Airmius',
+        'outfit_subscription' => 'اشتراك الملابس',
+        'outfit_number' => 'اشتراك الملابس رقم :id',
+    ],
+    'notifications' => [
+        'created_title' => 'تم استلام فاتورة جديدة',
+        'created_body' => 'أصبحت :invoice بقيمة :amount متاحة الآن ضمن فواتيرك.',
+        'new_invoice_fallback' => 'فاتورة جديدة',
+        'status_updated_title' => 'تم تحديث حالة الفاتورة',
+        'status_updated_body' => 'أصبحت حالة :invoice الآن :status.',
+        'invoice_fallback' => 'فاتورتك',
+    ],
+    'status' => [
+        'paid' => 'مدفوعة',
+        'open' => 'مفتوحة',
+        'pending' => 'معلقة',
+        'awaiting_transfer' => 'بانتظار التحويل البنكي',
+        'overdue' => 'متأخرة',
+        'cancelled' => 'ملغاة',
+        'failed' => 'فشلت',
+        'unknown' => 'غير معروفة',
+    ],
+];

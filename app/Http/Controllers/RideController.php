@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Ride;
 use App\Models\Club;
+use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\RideService;
@@ -128,10 +128,10 @@ class RideController extends Controller
                 ->orderBy('name')
                 ->get(),
             'visibilities' => [
-                ['value' => 'friends', 'label' => 'Nur Freunde', 'description' => 'Datenschutzfreundlich: sichtbar für deine Freunde.'],
-                ['value' => 'club', 'label' => 'Nur Verein', 'description' => 'Sichtbar für Mitglieder des ausgewählten Vereins.'],
-                ['value' => 'team', 'label' => 'Nur Team', 'description' => 'Sichtbar für Mitglieder des ausgewählten Teams.'],
-                ['value' => 'public', 'label' => 'öffentlich', 'description' => 'Sichtbar für alle eingeloggten Nutzer. Kontaktdaten bleiben bis zum Beitritt verborgen.'],
+                ['value' => 'friends', 'label' => __('rides.visibility.friends.label'), 'description' => __('rides.visibility.friends.description')],
+                ['value' => 'club', 'label' => __('rides.visibility.club.label'), 'description' => __('rides.visibility.club.description')],
+                ['value' => 'team', 'label' => __('rides.visibility.team.label'), 'description' => __('rides.visibility.team.description')],
+                ['value' => 'public', 'label' => __('rides.visibility.public.label'), 'description' => __('rides.visibility.public.description')],
             ],
         ]);
     }
@@ -145,7 +145,7 @@ class RideController extends Controller
         $ride = $this->service->create($request->user(), $data);
         $this->service->join($ride, $request->user());
 
-        return back()->with('success', 'Fahrgemeinschaft erstellt.');
+        return back()->with('success', __('rides.flash.created'));
     }
 
     public function update(Request $request, Ride $ride)
@@ -155,7 +155,7 @@ class RideController extends Controller
         $data = $this->validatedRideData($request);
         $participantsCount = $ride->acceptedUsers()->count();
 
-        abort_if((int) $data['seats'] < $participantsCount, 422, 'Die Plätze dürfen nicht unter der aktuellen Mitfahrerzahl liegen.');
+        abort_if((int) $data['seats'] < $participantsCount, 422, __('rides.flash.seats_below_participants'));
 
         $ride->update([
             ...$data,
@@ -163,14 +163,20 @@ class RideController extends Controller
             'team_id' => $data['visibility'] === 'team' ? ($data['team_id'] ?? null) : null,
         ]);
 
-        $this->notifyParticipants($ride->fresh(['users', 'driver']), 'ride.updated', [
-            'title' => 'Fahrgemeinschaft wurde bearbeitet',
-            'message' => $ride->from.' -> '.$ride->to.' wurde aktualisiert.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ], excludeUserId: $request->user()->id);
+        $this->notifyParticipants(
+            $ride->fresh(['users', 'driver']),
+            'ride.updated',
+            'rides.notifications.updated_title',
+            'rides.notifications.updated_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+            excludeUserId: $request->user()->id,
+        );
 
-        return back()->with('success', 'Fahrgemeinschaft aktualisiert.');
+        return back()->with('success', __('rides.flash.updated'));
     }
 
     public function join(Ride $ride)
@@ -202,34 +208,39 @@ class RideController extends Controller
         $result = $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null);
 
         if ($result === RideService::RESULT_FULL) {
-            return back()->with('error', 'Diese Fahrgemeinschaft ist bereits voll.');
+            return back()->with('error', __('rides.flash.full'));
         }
 
         if ($result === RideService::RESULT_ALREADY_JOINED) {
-            return back()->with('success', 'Du bist bereits Mitfahrer dieser Fahrt.');
+            return back()->with('success', __('rides.flash.already_joined'));
         }
 
         if ($result === RideService::RESULT_ALREADY_REQUESTED) {
-            return back()->with('success', 'Deine Anfrage wurde bereits gespeichert.');
+            return back()->with('success', __('rides.flash.already_requested'));
         }
 
         if ($result === RideService::RESULT_REQUESTED && (int) $ride->driver_id !== (int) auth()->id()) {
-            AppNotification::send($ride->driver_id, 'ride.requested', [
-                'title' => 'Neue Mitfahranfrage',
-                'message' => auth()->user()->name.' möchte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $ride->driver_id,
+                'ride.requested',
+                'rides.notifications.requested_title',
+                'rides.notifications.requested_body',
+                ['name' => auth()->user()->name, 'from' => $ride->from, 'to' => $ride->to],
+                [
+                    'ride_id' => $ride->id,
+                    'url' => route('auth.rides.index'),
+                ],
+            );
         }
 
         if ($result !== RideService::RESULT_REQUESTED
             && $result !== RideService::RESULT_ALREADY_JOINED
             && $result !== RideService::RESULT_ALREADY_REQUESTED
         ) {
-            return back()->with('error', 'Die Mitfahranfrage konnte nicht verarbeitet werden.');
+            return back()->with('error', __('rides.flash.request_failed'));
         }
 
-        return back()->with('success', 'Deine Mitfahranfrage wurde gesendet.');
+        return back()->with('success', __('rides.flash.request_sent'));
     }
 
     public function leave(Ride $ride)
@@ -240,32 +251,37 @@ class RideController extends Controller
             ->first()?->pivot;
 
         if ((int) $ride->driver_id === (int) $user->id) {
-            return back()->with('error', 'Der Fahrer kann die eigene Fahrt nicht verlassen.');
+            return back()->with('error', __('rides.flash.driver_cannot_leave'));
         }
 
         if (! $ownPivot) {
-            return back()->with('error', 'Du nimmst nicht an dieser Fahrgemeinschaft teil.');
+            return back()->with('error', __('rides.flash.not_participant'));
         }
 
         if ($ownPivot->status === Ride::MEMBER_STATUS_REQUESTED) {
             $ride->users()->detach($user->id);
 
-            return back()->with('success', 'Deine offene Mitfahranfrage wurde zurückgezogen.');
+            return back()->with('success', __('rides.flash.request_withdrawn'));
         }
 
         if ($ownPivot->status !== Ride::MEMBER_STATUS_ACCEPTED) {
-            return back()->with('error', 'Die Aktion ist für diese Mitgliedschaft nicht möglich.');
+            return back()->with('error', __('rides.flash.action_unavailable'));
         }
 
         $ride->users()->detach($user->id);
-        AppNotification::send($ride->driver_id, 'ride.left', [
-            'title' => 'Mitfahrt verlassen',
-            'message' => $user->name.' hat deine Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' verlassen.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $ride->driver_id,
+            'ride.left',
+            'rides.notifications.left_title',
+            'rides.notifications.left_body',
+            ['name' => $user->name, 'from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
-        return back()->with('success', 'Du hast die Fahrgemeinschaft verlassen.');
+        return back()->with('success', __('rides.flash.left'));
     }
 
     public function approveRequest(Ride $ride, User $user)
@@ -274,21 +290,26 @@ class RideController extends Controller
         $result = $this->service->approveRequest($ride, $user);
 
         if ($result === RideService::RESULT_FULL) {
-            return back()->with('error', 'Diese Fahrgemeinschaft ist bereits voll.');
+            return back()->with('error', __('rides.flash.full'));
         }
 
         if ($result !== RideService::RESULT_APPROVED) {
-            return back()->with('error', 'Mitfahranfrage nicht mehr vorhanden.');
+            return back()->with('error', __('rides.flash.request_not_found'));
         }
 
-        AppNotification::send($user, 'ride.request_approved', [
-            'title' => 'Mitfahranfrage angenommen',
-            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde angenommen.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.request_approved',
+            'rides.notifications.approved_title',
+            'rides.notifications.approved_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
-        return back()->with('success', 'Mitfahranfrage angenommen.');
+        return back()->with('success', __('rides.flash.request_approved'));
     }
 
     public function rejectRequest(Ride $ride, User $user)
@@ -297,17 +318,22 @@ class RideController extends Controller
         $updated = $this->service->rejectRequest($ride, $user);
 
         if (! $updated) {
-            return back()->with('error', 'Mitfahranfrage nicht mehr vorhanden.');
+            return back()->with('error', __('rides.flash.request_not_found'));
         }
 
-        AppNotification::send($user, 'ride.request_rejected', [
-            'title' => 'Mitfahranfrage abgelehnt',
-            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde abgelehnt.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.request_rejected',
+            'rides.notifications.rejected_title',
+            'rides.notifications.rejected_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
-        return back()->with('success', 'Mitfahranfrage abgelehnt.');
+        return back()->with('success', __('rides.flash.request_rejected'));
     }
 
     public function removeMember(Ride $ride, User $user)
@@ -318,47 +344,55 @@ class RideController extends Controller
             ->first()?->pivot;
 
         if (! $memberPivot) {
-            return back()->with('error', 'Der Nutzer ist keine/r aktive/r Mitfahrer/in dieser Fahrgemeinschaft.');
+            return back()->with('error', __('rides.flash.active_member_not_found'));
         }
 
         if ((int) $user->id === (int) $ride->driver_id) {
-            return back()->with('error', 'Der Fahrer kann nicht aus seiner eigenen Fahrgemeinschaft entfernt werden.');
+            return back()->with('error', __('rides.flash.driver_cannot_be_removed'));
         }
 
         if ($memberPivot->status !== Ride::MEMBER_STATUS_ACCEPTED) {
-            return back()->with('error', 'Es kann nur ein aktiver Mitfahrer entfernt werden.');
+            return back()->with('error', __('rides.flash.only_active_member'));
         }
 
         $ride->users()->detach($user->id);
 
-        AppNotification::send($user, 'ride.member_removed', [
-            'title' => 'Aus Fahrgemeinschaft entfernt',
-            'message' => 'Du wurdest aus der Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' entfernt.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.member_removed',
+            'rides.notifications.removed_title',
+            'rides.notifications.removed_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
-        return back()->with('success', 'Mitfahrer wurde entfernt.');
+        return back()->with('success', __('rides.flash.member_removed'));
     }
 
     public function destroy(Ride $ride)
     {
         $this->authorize('delete', $ride);
         $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->wherePivotIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])->get();
-        $message = $ride->from.' -> '.$ride->to.' wurde gelöscht.';
-
         foreach ($participants as $participant) {
-            AppNotification::send($participant, 'ride.deleted', [
-                'title' => 'Fahrgemeinschaft gelöscht',
-                'message' => $message,
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $participant,
+                'ride.deleted',
+                'rides.notifications.deleted_title',
+                'rides.notifications.deleted_body',
+                ['from' => $ride->from, 'to' => $ride->to],
+                [
+                    'ride_id' => $ride->id,
+                    'url' => route('auth.rides.index'),
+                ],
+            );
         }
 
         $ride->delete();
 
-        return back()->with('success', 'Fahrgemeinschaft gelöscht.');
+        return back()->with('success', __('rides.flash.deleted'));
     }
 
     private function validatedRideData(Request $request): array
@@ -376,7 +410,7 @@ class RideController extends Controller
             'pickup_city' => ['nullable', 'string', 'max:255'],
             'pickup_country' => ['nullable', 'string', 'size:2'],
             'pickup_note' => ['nullable', 'string', 'max:500'],
-            'departure_time' => ['required', 'date', 'after_or_equal:' . now()->addMinutes(10)->toDateTimeString()],
+            'departure_time' => ['required', 'date', 'after_or_equal:'.now()->addMinutes(10)->toDateTimeString()],
             'seats' => ['required', 'integer', 'min:1', 'max:20'],
             'contact_details' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -477,14 +511,21 @@ class RideController extends Controller
         return $parts ? implode(', ', $parts) : null;
     }
 
-    private function notifyParticipants(Ride $ride, string $type, array $data, ?int $excludeUserId = null): void
-    {
+    private function notifyParticipants(
+        Ride $ride,
+        string $type,
+        string $titleKey,
+        string $bodyKey,
+        array $replace,
+        array $data,
+        ?int $excludeUserId = null,
+    ): void {
         foreach ($ride->users as $participant) {
             if ((int) $participant->id === (int) $excludeUserId) {
                 continue;
             }
 
-            AppNotification::send($participant, $type, $data);
+            AppNotification::sendLocalized($participant, $type, $titleKey, $bodyKey, $replace, $data);
         }
     }
 
@@ -531,15 +572,10 @@ class RideController extends Controller
 
     private function joinBlockMessage(?string $reason): string
     {
-        return match ($reason) {
-            'driver' => 'Du bist der Fahrer dieser Fahrt.',
-            'already_joined' => 'Du bist bereits beigetreten.',
-            'pending_request' => 'Deine Anfrage ist bereits offen.',
-            'full' => 'Diese Fahrgemeinschaft ist bereits voll.',
-            'past' => 'Die Abfahrtszeit liegt bereits in der Vergangenheit.',
-            'not_allowed' => 'Du hast keinen Zugriff auf diese Fahrt.',
-            'unavailable' => 'Diese Fahrt ist aktuell nicht buchbar.',
-            default => 'Diese Fahrt ist aktuell nicht buchbar.',
-        };
+        $key = in_array($reason, ['driver', 'already_joined', 'pending_request', 'full', 'past', 'not_allowed'], true)
+            ? $reason
+            : 'unavailable';
+
+        return __('rides.join_block.'.$key);
     }
 }

@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     returnRequests: { type: Array, default: () => [] },
     reportedOrders: { type: Array, default: () => [] },
@@ -29,7 +33,7 @@ const emit = defineEmits([
             <p class="mt-1 text-sm text-secondary">Anfragen prüfen, Ware als erhalten markieren, Bestand wieder einbuchen und Erstattung dokumentieren.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="min-w-full text-start text-sm">
                 <tbody class="divide-y divide-border">
                     <tr v-for="request in returnRequests" :key="request.id">
                         <td class="px-5 py-3">
@@ -39,7 +43,7 @@ const emit = defineEmits([
                         <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
                         <td class="px-5 py-3 text-secondary">{{ request.reason }}</td>
                         <td class="px-5 py-3 text-secondary">{{ formatMoney(request.requested_amount_cents) }}</td>
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3 text-end">
                             <div class="flex flex-wrap justify-end gap-2">
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-return-request', request, 'approved')">Freigeben</button>
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-return-request', request, 'received', true)">Erhalten + Bestand</button>
@@ -85,7 +89,7 @@ const emit = defineEmits([
             <p class="mt-1 text-sm text-secondary">Offene Überweisungen für Add-ons und Marketplace manuell bestätigen.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="min-w-full text-start text-sm">
                 <tbody class="divide-y divide-border">
                     <tr v-for="order in orders" :key="order.id">
                         <td class="px-5 py-3 font-semibold text-primary">{{ order.orderable?.name || order.orderable?.title || order.type }}</td>
@@ -102,14 +106,14 @@ const emit = defineEmits([
                             <p v-if="order.tracking_number" class="text-xs text-secondary">{{ order.shipping_carrier }} - {{ order.tracking_number }}</p>
                             <p v-if="order.issue_status && order.issue_status !== 'none'" class="text-xs font-semibold text-warning">{{ orderIssueLabel(order.issue_status) }}</p>
                         </td>
-                        <td class="px-5 py-3 text-right">
+                        <td class="px-5 py-3 text-end">
                             <div class="flex flex-wrap justify-end gap-2">
                                 <button v-if="['pending', 'awaiting_transfer'].includes(order.status)" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('mark-order-paid', order)">
                                     Bezahlt
                                 </button>
                                 <a v-if="order.invoice_number" :href="route('admin.commerce.orders.invoice', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Rechnung</a>
                                 <a v-if="order.credit_note_number" :href="route('admin.commerce.orders.credit-note', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Gutschrift</a>
-                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('open-shipping', order)">Versand</button>
+                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('open-shipping', order)">{{ t('commerce.ui.shipping') }}</button>
                                 <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="emit('open-refund', order)">Teilerstattung</button>
                                 <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('open-issue-reply', order)">Antworten</button>
                                 <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-order-issue', order, 'reviewing')">Prüfen</button>
@@ -124,5 +128,3 @@ const emit = defineEmits([
         </div>
     </section>
 </template>
-
-

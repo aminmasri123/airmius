@@ -2,16 +2,18 @@
 
 namespace App\Services;
 
-use Firebase\JWT\JWT;
 use App\Models\MobileDeviceToken;
 use App\Models\MobilePushDelivery;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\Api\V1\MobileSyncContract;
+use App\Support\NotificationRouting;
+use Carbon\Carbon;
+use Firebase\JWT\JWT;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Illuminate\Http\Client\RequestException;
 use RuntimeException;
 
 class MobilePushDeliveryService
@@ -54,7 +56,7 @@ class MobilePushDeliveryService
         $queued = 0;
 
         foreach ($devices as $device) {
-            $nextAttemptAt = $this->nextAllowedAttemptAt($user, $device, $channel);
+            $nextAttemptAt = $this->nextAllowedAttemptAt($user, $device, $notification);
             MobilePushDelivery::query()->create([
                 'notification_id' => $notification->id,
                 'mobile_device_token_id' => $device->id,
@@ -183,27 +185,21 @@ class MobilePushDeliveryService
 
     protected function userAcceptsNotification(User $user, Notification $notification, string $channel): bool
     {
-        $preferences = $user->notification_channels;
-        if (! is_array($preferences)) {
-            return true;
-        }
-
-        $key = match (true) {
-            Str::startsWith($notification->type, 'chat.') || Str::contains($notification->type, 'message') => 'chat',
-            Str::startsWith($notification->type, 'invoice.') || Str::contains($notification->type, 'billing') => 'billing',
-            Str::startsWith($notification->type, 'club.') => 'club',
-            Str::startsWith($notification->type, 'commerce.') || Str::startsWith($notification->type, 'marketplace.') || Str::startsWith($notification->type, 'outfit.') => 'billing',
-            Str::startsWith($notification->type, 'friend.') || Str::startsWith($notification->type, 'social.') => 'club',
-            Str::startsWith($notification->type, 'event.') || Str::startsWith($notification->type, 'training.') => 'club',
-            default => null,
-        };
-
-        return $key === null || ! array_key_exists($key, $preferences) || (bool) $preferences[$key];
+        return NotificationRouting::transportEnabled($user, 'push')
+            && NotificationRouting::topicEnabled(
+                $user,
+                $notification->type,
+                $notification->category,
+                $notification->priority,
+            );
     }
 
-    protected function nextAllowedAttemptAt(?User $user, MobileDeviceToken $device, string $channel): ?\Carbon\Carbon
+    protected function nextAllowedAttemptAt(?User $user, MobileDeviceToken $device, Notification $notification): ?Carbon
     {
-        if (! $user || in_array($channel, ['event_reminders', 'chat_mentions'], true)) {
+        if (! $user || NotificationRouting::bypassesQuietHours(
+            NotificationRouting::normalizePriority($notification->priority, $notification->type),
+            $notification->data ?? [],
+        )) {
             return null;
         }
 
@@ -224,7 +220,7 @@ class MobilePushDeliveryService
                 return null;
             }
 
-            return $localNow->copy()->next(\Carbon\Carbon::MONDAY)->setTime(8, 0)->setTimezone(config('app.timezone', 'UTC'));
+            return $localNow->copy()->next(Carbon::MONDAY)->setTime(8, 0)->setTimezone(config('app.timezone', 'UTC'));
         }
 
         $startHour = $quietTime === 'early' ? 20 : 22;
@@ -281,7 +277,11 @@ class MobilePushDeliveryService
             'body' => (string) ($data['body'] ?? $data['message'] ?? $data['description'] ?? ''),
             'deep_link' => $deepLink,
             'fallback_url' => $fallbackUrl,
-            'importance' => Arr::get($channelContract, 'importance', 'default'),
+            'category' => $notification->category ?: NotificationRouting::categoryFor($notification->type),
+            'priority' => $notification->priority ?: NotificationRouting::priorityFor($notification->type),
+            'importance' => $notification->priority === 'critical'
+                ? 'high'
+                : Arr::get($channelContract, 'importance', 'default'),
             'data' => Arr::except($data, ['token', 'password']),
         ];
     }
@@ -466,6 +466,7 @@ class MobilePushDeliveryService
     protected function retryDelay(int $attempt): int
     {
         $base = max(10, (int) config('services.mobile_push.retry_base_seconds', 60));
+
         return min(3600, $base * (2 ** max(0, $attempt - 1)));
     }
 

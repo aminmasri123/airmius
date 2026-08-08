@@ -36,10 +36,12 @@ use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\UserSubscriptionPolicy;
+use App\Support\Performance\RequestPerformanceTracker;
 use App\Support\Roles;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event as EventFacade;
@@ -75,7 +77,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(RequestPerformanceTracker::class);
     }
 
     /**
@@ -83,6 +85,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ((bool) config('airmius_monitoring.performance.enabled', false)) {
+            EventFacade::listen(QueryExecuted::class, function (QueryExecuted $query): void {
+                app(RequestPerformanceTracker::class)->record($query);
+            });
+        }
+
         CommerceOrder::observe(CommerceOrderObserver::class);
         LearningEnrollment::observe(LearningEnrollmentObserver::class);
 

@@ -23,6 +23,8 @@ use Illuminate\Validation\ValidationException;
 
 class FeedController extends Controller
 {
+    private const POST_DELETED = 'Post deleted.';
+
     use AuthorizesRequests;
 
     public function __construct(
@@ -305,7 +307,10 @@ class FeedController extends Controller
 
         $post->delete();
 
-        return response()->json(['message' => 'Post deleted.']);
+        return response()->json([
+            'message' => self::POST_DELETED,
+            'message_text' => __('platform.social.post_deleted'),
+        ]);
     }
 
     private function perPage(Request $request): int

@@ -48,10 +48,10 @@ defineEmits(['close', 'submit'])
                     {{ selectedClub.name }}
                 </p>
                 <h2 id="job-modal-title" class="mt-1 text-lg font-bold text-primary">
-                    {{ editingJobId ? $t('Eintrag bearbeiten') : $t('Jobs- oder Ehrenamtsangebot erstellen') }}
+                    {{ editingJobId ? $t('teams_workspace.jobs.modal.edit_title') : $t('teams_workspace.jobs.modal.create_title') }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    {{ $t('Beschreibe die Aufgabe klar genug, damit Interessierte sofort verstehen, ob sie passt und wie sie Kontakt aufnehmen können.') }}
+                    {{ $t('teams_workspace.jobs.modal.intro') }}
                 </p>
             </div>
 
@@ -67,40 +67,40 @@ defineEmits(['close', 'submit'])
             </div>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">{{ $t('Was wird gesucht?') }}</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('teams_workspace.jobs.modal.what') }}</h3>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block sm:col-span-2">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Titel') }} *</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.title') }} *</span>
                         <input
                             v-model="jobFormFor(selectedClub).title"
                             required
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            :placeholder="$t('z.B. Jugendtrainer U15')"
+                            :placeholder="$t('teams_workspace.jobs.modal.title_placeholder')"
                         >
                         <span v-if="errors.title" class="mt-1 block text-xs text-error">{{ errors.title }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kategorie') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.category') }}</span>
                         <select
                             v-model="jobFormFor(selectedClub).type"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
-                            <option value="volunteer">{{ $t('Ehrenamt') }}</option>
-                            <option value="professional">{{ $t('Beruf / bezahlte Stelle') }}</option>
+                            <option value="volunteer">{{ $t('teams_workspace.jobs.volunteer') }}</option>
+                            <option value="professional">{{ $t('teams_workspace.jobs.modal.professional') }}</option>
                         </select>
                         <span v-if="errors.type" class="mt-1 block text-xs text-error">{{ errors.type }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Art') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.kind') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).employment_type"
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            :placeholder="$t('Teilzeit, Minijob, Ehrenamt')"
+                            :placeholder="$t('teams_workspace.jobs.modal.kind_placeholder')"
                         >
                         <span v-if="errors.employment_type" class="mt-1 block text-xs text-error">{{ errors.employment_type }}</span>
                     </label>
@@ -108,27 +108,27 @@ defineEmits(['close', 'submit'])
             </section>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">{{ $t('Rahmen') }}</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('teams_workspace.jobs.modal.framework') }}</h3>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Adresse / Ort') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.location') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).location"
                             autocomplete="address-line1"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            :placeholder="$t('Sportanlage, Adresse, Stadt oder Remote')"
+                            :placeholder="$t('teams_workspace.jobs.modal.location_placeholder')"
                         >
                         <span v-if="errors.location" class="mt-1 block text-xs text-error">{{ errors.location }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Umfang') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.workload') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).workload"
                             autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            :placeholder="$t('z.B. 6 Std./Woche')"
+                            :placeholder="$t('teams_workspace.jobs.modal.workload_placeholder')"
                         >
                         <span v-if="errors.workload" class="mt-1 block text-xs text-error">{{ errors.workload }}</span>
                     </label>
@@ -136,46 +136,46 @@ defineEmits(['close', 'submit'])
             </section>
 
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold text-primary">{{ $t('Beschreibung & Kontakt') }}</h3>
+                <h3 class="text-sm font-semibold text-primary">{{ $t('teams_workspace.jobs.modal.description_contact') }}</h3>
 
                 <label class="block">
-                    <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Beschreibung') }} *</span>
+                    <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.description') }} *</span>
                     <textarea
                         v-model="jobFormFor(selectedClub).description"
                         required
                         rows="5"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        :placeholder="$t('Aufgaben, Voraussetzungen, Zeitraum und was die Person wissen sollte.')"
+                        :placeholder="$t('teams_workspace.jobs.modal.description_placeholder')"
                     ></textarea>
                     <span v-if="errors.description" class="mt-1 block text-xs text-error">{{ errors.description }}</span>
                 </label>
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Kontakt E-Mail') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.contact_email') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).contact_email"
                             type="email"
                             autocomplete="email"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="kontakt@verein.de"
+                            :placeholder="$t('teams_workspace.jobs.modal.contact_placeholder')"
                         >
                         <span v-if="errors.contact_email" class="mt-1 block text-xs text-error">{{ errors.contact_email }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Externer Bewerbungslink optional') }}</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('teams_workspace.jobs.modal.application_url') }}</span>
                         <input
                             v-model="jobFormFor(selectedClub).application_url"
                             type="url"
                             inputmode="url"
                             autocomplete="url"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            :placeholder="$t('https://formular.verein.de')"
+                            :placeholder="$t('teams_workspace.jobs.modal.application_url_placeholder')"
                         >
                         <span v-if="errors.application_url" class="mt-1 block text-xs text-error">{{ errors.application_url }}</span>
                         <span class="mt-1 block text-xs text-secondary">
-                            {{ $t('Nur ausfüllen, wenn Interessierte zusätzlich auf ein externes Formular weitergeleitet werden sollen.') }}
+                            {{ $t('teams_workspace.jobs.modal.application_url_hint') }}
                         </span>
                     </label>
                 </div>
@@ -188,8 +188,8 @@ defineEmits(['close', 'submit'])
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">{{ $t('Auf Webseite veröffentlichen') }}</span>
-                    <span class="block text-xs text-secondary">{{ $t('Wenn deaktiviert, bleibt der Eintrag als Entwurf im Dashboard.') }}</span>
+                    <span class="block font-semibold">{{ $t('teams_workspace.jobs.modal.publish') }}</span>
+                    <span class="block text-xs text-secondary">{{ $t('teams_workspace.jobs.modal.publish_hint') }}</span>
                 </span>
             </label>
 
@@ -199,14 +199,14 @@ defineEmits(['close', 'submit'])
                     class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                     @click="$emit('close')"
                 >
-                    {{ $t('Abbrechen') }}
+                    {{ $t('teams_workspace.jobs.modal.cancel') }}
                 </button>
                 <button
                     class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="isSubmittingJob"
                     :aria-busy="isSubmittingJob"
                 >
-                    {{ isSubmittingJob ? $t('Wird gespeichert...') : (editingJobId ? $t('Aktualisieren') : $t('Eintrag erstellen')) }}
+                    {{ isSubmittingJob ? $t('teams_workspace.jobs.modal.saving') : (editingJobId ? $t('teams_workspace.jobs.modal.update') : $t('teams_workspace.jobs.modal.create')) }}
                 </button>
             </div>
         </form>

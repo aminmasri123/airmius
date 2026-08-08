@@ -6,7 +6,6 @@ use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\ClubSubscription;
 use App\Models\Invoice;
-use App\Models\User;
 use App\Models\UserSubscription;
 use App\Notifications\SubscriptionEndingSoon;
 use App\Notifications\SubscriptionPaymentIssue;
@@ -219,16 +218,26 @@ class SendMembershipAndBillingReminders extends Command
             ->chunkById(100, function ($subscriptions) use (&$sent) {
                 foreach ($subscriptions as $subscription) {
                     $endsAt = $subscription->current_period_ends_at ?? $subscription->trial_ends_at;
-                    $date = $this->formatDate($endsAt);
+                    $date = $endsAt?->toDateString() ?? '-';
 
                     foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
-                        AppNotification::send($recipientId, 'club.subscription_ending_soon', [
-                            'title' => 'Airmius Vereinsplan läuft bald ab',
-                            'body' => "{$subscription->club?->name}: {$subscription->plan?->name} endet am {$date}.",
-                            'url' => route('auth.club-memberships.index'),
-                            'club_id' => $subscription->club_id,
-                            'subscription_id' => $subscription->id,
-                        ]);
+                        AppNotification::sendLocalized(
+                            $recipientId,
+                            'club.subscription_ending_soon',
+                            'subscription.notifications.ending_title',
+                            'subscription.notifications.ending_club_body',
+                            [
+                                'club' => $subscription->club?->name ?? AppNotification::translatedReplacement('subscription.notifications.club_fallback', 'Club'),
+                                'plan' => $subscription->plan?->name ?? AppNotification::translatedReplacement('subscription.email.plan_fallback', 'Airmius plan'),
+                                'date' => $date,
+                            ],
+                            [
+                                'url' => route('auth.club-memberships.index'),
+                                'club_id' => $subscription->club_id,
+                                'subscription_id' => $subscription->id,
+                            ],
+                            ['dedupe_key' => 'subscription:club:'.$subscription->id.':ending:'.$date],
+                        );
                     }
                     foreach ($this->clubManagerUsers((int) $subscription->club_id) as $recipient) {
                         $recipient->notify(new SubscriptionEndingSoon($subscription));
@@ -253,14 +262,23 @@ class SendMembershipAndBillingReminders extends Command
             ->chunkById(100, function ($subscriptions) use (&$sent) {
                 foreach ($subscriptions as $subscription) {
                     $endsAt = $subscription->current_period_ends_at ?? $subscription->trial_ends_at;
-                    $date = $this->formatDate($endsAt);
+                    $date = $endsAt?->toDateString() ?? '-';
 
-                    AppNotification::send((int) $subscription->user_id, 'user.subscription_ending_soon', [
-                        'title' => 'Dein Airmius Plan läuft bald ab',
-                        'body' => "{$subscription->plan?->name} endet am {$date}.",
-                        'url' => route('guest.pricing'),
-                        'subscription_id' => $subscription->id,
-                    ]);
+                    AppNotification::sendLocalized(
+                        (int) $subscription->user_id,
+                        'user.subscription_ending_soon',
+                        'subscription.notifications.ending_title',
+                        'subscription.notifications.ending_user_body',
+                        [
+                            'plan' => $subscription->plan?->name ?? AppNotification::translatedReplacement('subscription.email.plan_fallback', 'Airmius plan'),
+                            'date' => $date,
+                        ],
+                        [
+                            'url' => route('guest.pricing'),
+                            'subscription_id' => $subscription->id,
+                        ],
+                        ['dedupe_key' => 'subscription:user:'.$subscription->id.':ending:'.$date],
+                    );
                     if ($subscription->user?->email) {
                         $subscription->user->notify(new SubscriptionEndingSoon($subscription));
                     }
@@ -342,21 +360,44 @@ class SendMembershipAndBillingReminders extends Command
         }
 
         if ($subscription instanceof UserSubscription) {
-            AppNotification::send((int) $subscription->user_id, 'user.subscription_payment_issue', [
-                'title' => 'Airmius Zahlung offen',
-                'body' => "{$subscription->plan?->name}: Bitte aktualisiere deine Zahlung.",
-                'url' => route('guest.pricing'),
-                'subscription_id' => $subscription->id,
-            ]);
+            AppNotification::sendLocalized(
+                (int) $subscription->user_id,
+                'user.subscription_payment_issue',
+                'subscription.notifications.payment_issue_title',
+                'subscription.notifications.payment_issue_user_body',
+                [
+                    'plan' => $subscription->plan?->name ?? AppNotification::translatedReplacement('subscription.email.plan_fallback', 'Airmius plan'),
+                ],
+                [
+                    'url' => route('guest.pricing'),
+                    'subscription_id' => $subscription->id,
+                ],
+                [
+                    'dedupe_key' => 'subscription:user:'.$subscription->id.':payment-issue',
+                    'priority' => 'high',
+                ],
+            );
         } else {
             foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
-                AppNotification::send($recipientId, 'club.subscription_payment_issue', [
-                    'title' => 'Airmius Vereinsplan Zahlung offen',
-                    'body' => "{$subscription->club?->name}: {$subscription->plan?->name} braucht eine Zahlung.",
-                    'url' => route('guest.pricing'),
-                    'club_id' => $subscription->club_id,
-                    'subscription_id' => $subscription->id,
-                ]);
+                AppNotification::sendLocalized(
+                    $recipientId,
+                    'club.subscription_payment_issue',
+                    'subscription.notifications.payment_issue_title',
+                    'subscription.notifications.payment_issue_club_body',
+                    [
+                        'club' => $subscription->club?->name ?? AppNotification::translatedReplacement('subscription.notifications.club_fallback', 'Club'),
+                        'plan' => $subscription->plan?->name ?? AppNotification::translatedReplacement('subscription.email.plan_fallback', 'Airmius plan'),
+                    ],
+                    [
+                        'url' => route('guest.pricing'),
+                        'club_id' => $subscription->club_id,
+                        'subscription_id' => $subscription->id,
+                    ],
+                    [
+                        'dedupe_key' => 'subscription:club:'.$subscription->id.':payment-issue',
+                        'priority' => 'high',
+                    ],
+                );
             }
         }
 

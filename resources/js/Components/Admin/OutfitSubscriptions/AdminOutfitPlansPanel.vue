@@ -1,5 +1,8 @@
 ﻿<script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
     plans: { type: Array, default: () => [] },
@@ -43,12 +46,12 @@ const addEditSport = (plan, sport) => {
                     </div>
                     <div class="flex gap-2">
                         <button class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-inputBg" @click="editingPlanIdModel = plan.id">Bearbeiten</button>
-                        <button class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="destroyPlan(plan)">Entfernen</button>
+                        <button class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="destroyPlan(plan)">{{ t('commerce.ui.remove') }}</button>
                     </div>
                 </div>
                 <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Preis</p>
+                        <p class="text-xs uppercase text-secondary">{{ t('outfit_admin.ui.price') }}</p>
                         <p class="font-bold text-primary">{{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
@@ -87,11 +90,11 @@ const addEditSport = (plan, sport) => {
 
             <form v-else class="grid gap-4 md:grid-cols-2" @submit.prevent="savePlan(plan)">
                 <label class="block md:col-span-2">
-                    <span class="text-sm font-semibold text-primary">Name</span>
+                    <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.name') }}</span>
                     <input v-model="formFor(plan).name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                 </label>
                 <label class="block md:col-span-2">
-                    <span class="text-sm font-semibold text-primary">Beschreibung</span>
+                    <span class="text-sm font-semibold text-primary">{{ t('outfit_ui.description') }}</span>
                     <textarea v-model="formFor(plan).description" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></textarea>
                 </label>
                 <div class="grid gap-4 rounded-lg border border-border bg-inputBg p-4 md:col-span-2">
@@ -124,7 +127,7 @@ const addEditSport = (plan, sport) => {
                     <input v-model="formFor(plan).monthly_price_eur" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                 </label>
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Rabatt EUR</span>
+                    <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.discount_eur') }}</span>
                     <input v-model="formFor(plan).sponsor_discount_eur" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                 </label>
                 <label class="block">
@@ -148,7 +151,7 @@ const addEditSport = (plan, sport) => {
                     <input v-model="formFor(plan).sizes_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                 </label>
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Sportarten</span>
+                    <span class="text-sm font-semibold text-primary">{{ t('commerce.ui.sports') }}</span>
                     <div class="mt-1 rounded-lg border border-border bg-inputBg p-3">
                         <div class="flex flex-wrap gap-2">
                             <span
@@ -166,20 +169,20 @@ const addEditSport = (plan, sport) => {
 
                         <div class="mt-3">
                             <div class="relative">
-                                <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
+                                <i class="las la-search absolute start-3 top-1/2 -translate-y-1/2 text-secondary"></i>
                                 <input
                                     v-model="editSportQueries[plan.id]"
                                     type="text"
-                                    class="w-full rounded-lg border-border bg-card py-2 pl-10 pr-3 text-sm text-primary"
+                                    class="w-full rounded-lg border-border bg-card py-2 pe-3 ps-10 text-sm text-primary"
                                     placeholder="Sportart filtern und aus Liste wählen"
                                 />
                             </div>
-                            <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1">
+                            <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pe-1">
                                 <button
                                     v-for="sport in filteredSports(editSportQueries[plan.id], formFor(plan))"
                                     :key="sport.slug"
                                     type="button"
-                                    class="rounded-lg border border-border bg-card px-3 py-2 text-left text-sm transition hover:border-borderHover hover:bg-muted"
+                                    class="rounded-lg border border-border bg-card px-3 py-2 text-start text-sm transition hover:border-borderHover hover:bg-muted"
                                     @click="addEditSport(plan, sport)"
                                 >
                                     <span class="block font-semibold text-primary">{{ sportLabel(sport.slug) }}</span>
@@ -208,5 +211,3 @@ const addEditSport = (plan, sport) => {
         </article>
     </section>
 </template>
-
-

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Notification as AppNotification;
 use App\Models\User;
 use App\Models\Event;
 use App\Models\EventParticipant;
@@ -68,7 +69,9 @@ class MobileGuardianApiTest extends TestCase
         $this->seed(RolesPermissionsSeeder::class);
 
         $guardian = $this->guardian();
+        $guardian->forceFill(['language' => 'fr'])->save();
         $child = $this->minor([
+            'language' => 'ar',
             'guardian_user_id' => $guardian->id,
             'guardian_email' => $guardian->email,
             'guardian_consent_requested_at' => now()->subMinutes(5),
@@ -77,9 +80,11 @@ class MobileGuardianApiTest extends TestCase
 
         Sanctum::actingAs($guardian);
 
-        $this->postJson("/api/v1/guardian/children/{$child->id}/approve")
+        $this->withHeader('X-App-Locale', 'fr')
+            ->postJson("/api/v1/guardian/children/{$child->id}/approve")
             ->assertOk()
             ->assertJsonPath('message', 'guardian_consent_approved')
+            ->assertJsonPath('message_text', __('guardian.responses.consent_approved', locale: 'fr'))
             ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.privacy.direct_messages_enabled', true)
             ->assertJsonMissingPath('data.guardian_consent_token');
@@ -91,9 +96,21 @@ class MobileGuardianApiTest extends TestCase
         $this->assertTrue($child->hasRole('minor_player'));
         $this->assertFalse($child->hasRole('minor_pending_consent'));
 
-        $this->postJson("/api/v1/guardian/children/{$child->id}/revoke")
+        $approvalNotification = AppNotification::query()
+            ->where('user_id', $child->id)
+            ->where('type', 'guardian.consent_approved')
+            ->firstOrFail();
+        $this->assertSame('ar', data_get($approvalNotification->data, 'locale'));
+        $this->assertSame(
+            __('guardian.notifications.approved_title', locale: 'ar'),
+            data_get($approvalNotification->data, 'title'),
+        );
+
+        $this->withHeader('X-App-Locale', 'fr')
+            ->postJson("/api/v1/guardian/children/{$child->id}/revoke")
             ->assertOk()
             ->assertJsonPath('message', 'guardian_consent_revoked')
+            ->assertJsonPath('message_text', __('guardian.responses.consent_revoked', locale: 'fr'))
             ->assertJsonPath('data.status', 'revoked')
             ->assertJsonPath('data.privacy.direct_messages_enabled', false);
 
@@ -103,14 +120,26 @@ class MobileGuardianApiTest extends TestCase
         $this->assertTrue($child->hasRole('minor_pending_consent'));
         $this->assertFalse($child->hasRole('minor_player'));
 
+        $revocationNotification = AppNotification::query()
+            ->where('user_id', $child->id)
+            ->where('type', 'guardian.consent_revoked')
+            ->firstOrFail();
+        $this->assertSame('ar', data_get($revocationNotification->data, 'locale'));
+        $this->assertSame(
+            __('guardian.notifications.revoked_title', locale: 'ar'),
+            data_get($revocationNotification->data, 'title'),
+        );
+
         $this->postJson("/api/v1/guardian/children/{$child->id}/resend")
             ->assertUnprocessable();
 
         $child->forceFill(['guardian_consent_requested_at' => now()->subMinutes(2)])->save();
 
-        $this->postJson("/api/v1/guardian/children/{$child->id}/resend")
+        $this->withHeader('X-App-Locale', 'fr')
+            ->postJson("/api/v1/guardian/children/{$child->id}/resend")
             ->assertOk()
             ->assertJsonPath('message', 'guardian_consent_resent')
+            ->assertJsonPath('message_text', __('guardian.responses.consent_resent', locale: 'fr'))
             ->assertJsonPath('data.status', 'revoked')
             ->assertJsonMissingPath('data.guardian_consent_token');
 

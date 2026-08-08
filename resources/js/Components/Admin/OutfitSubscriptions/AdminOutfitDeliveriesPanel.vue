@@ -1,4 +1,8 @@
 ﻿<script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps({
     deliveries: { type: Array, default: () => [] },
     deliveryModal: { type: Object, required: true },
@@ -135,7 +139,7 @@ defineProps({
                 <div class="w-full max-w-3xl overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
                     <div class="flex items-start justify-between gap-4 border-b border-border p-5">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferstatus bearbeiten</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">{{ t('outfit_admin.ui.delivery_status_edit') }}</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deliveryModal.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             {{ deliveryModal.subscription?.user?.name || 'Kunde' }} - {{ deliveryModal.subscription?.payment_reference || 'Keine Referenz' }}
@@ -151,7 +155,7 @@ defineProps({
 
                     <div class="grid max-h-[75vh] gap-4 overflow-y-auto p-5 md:grid-cols-2">
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Lieferstatus</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.delivery_status') }}</span>
                             <select v-model="formForDelivery(deliveryModal.delivery).status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                 <option value="planned">Geplant</option>
                                 <option value="preparing">In Vorbereitung</option>
@@ -162,13 +166,13 @@ defineProps({
                         </label>
 
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Liefermonat</span>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.delivery_month') }}</span>
                             <input v-model="formForDelivery(deliveryModal.delivery).delivery_month" type="date" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                         </label>
 
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Paketdienst</span>
-                            <input v-model="formForDelivery(deliveryModal.delivery).carrier" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z.B. DHL">
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.carrier') }}</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).carrier" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('outfit_admin.ui.carrier_placeholder')">
                         </label>
 
                         <label class="block">
@@ -177,13 +181,13 @@ defineProps({
                         </label>
 
                         <label class="block md:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Tracking-Link</span>
-                            <input v-model="formForDelivery(deliveryModal.delivery).tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://...">
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.tracking_link') }}</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('commerce.ui.url_placeholder')">
                         </label>
 
                         <label class="block md:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Artikel in der Lieferung</span>
-                            <textarea v-model="formForDelivery(deliveryModal.delivery).items_text" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ein Artikel pro Zeile"></textarea>
+                            <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.delivery_items') }}</span>
+                            <textarea v-model="formForDelivery(deliveryModal.delivery).items_text" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('outfit_admin.ui.items_placeholder')"></textarea>
                         </label>
 
                         <label class="block md:col-span-2">
@@ -207,7 +211,7 @@ defineProps({
 
                             <div class="mt-4 grid gap-3 md:grid-cols-2">
                                 <label class="block">
-                                    <span class="text-sm font-semibold text-primary">Support-Status</span>
+                                    <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.support_status') }}</span>
                                     <select v-model="formForDelivery(deliveryModal.delivery).issue_status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                         <option value="open">Offen</option>
                                         <option value="reviewing">In Prüfung</option>
@@ -223,12 +227,12 @@ defineProps({
                                     <input v-model="formForDelivery(deliveryModal.delivery).return_tracking_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional">
                                 </label>
                                 <label class="block md:col-span-2">
-                                    <span class="text-sm font-semibold text-primary">Retouren-Link</span>
-                                    <input v-model="formForDelivery(deliveryModal.delivery).return_tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://...">
+                                    <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.return_link') }}</span>
+                                    <input v-model="formForDelivery(deliveryModal.delivery).return_tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('commerce.ui.url_placeholder')">
                                 </label>
                                 <label class="block md:col-span-2">
-                                    <span class="text-sm font-semibold text-primary">Antwort / Support-Notiz</span>
-                                    <textarea v-model="formForDelivery(deliveryModal.delivery).issue_admin_note" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Was soll der Kunde sehen?"></textarea>
+                                    <span class="text-sm font-semibold text-primary">{{ t('outfit_admin.ui.support_note') }}</span>
+                                    <textarea v-model="formForDelivery(deliveryModal.delivery).issue_admin_note" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :placeholder="t('outfit_admin.ui.customer_visible_note')"></textarea>
                                 </label>
                             </div>
                         </div>
@@ -264,7 +268,7 @@ defineProps({
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Lieferung löschen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">{{ t('outfit_admin.ui.delete_delivery_title') }}</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteDeliveryModal.delivery?.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 Diese Lieferung wird dauerhaft entfernt. Das Outfit-Abo selbst bleibt bestehen.

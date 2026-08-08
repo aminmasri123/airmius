@@ -15,13 +15,16 @@ use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
 use App\Models\UserSubscription;
-use App\Services\UserSubscriptionActivationService;
+use App\Services\Subscriptions\SubscriptionCheckoutActivationService;
+use App\Services\Subscriptions\SubscriptionLifecycleService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
+use App\Support\SupportedLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -29,6 +32,11 @@ use Illuminate\Validation\ValidationException;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(
+        private readonly SubscriptionCheckoutActivationService $checkoutActivator,
+        private readonly SubscriptionLifecycleService $subscriptionLifecycle,
+    ) {}
+
     public function plans(Request $request)
     {
         $plans = SubscriptionPlan::query()
@@ -98,10 +106,9 @@ class SubscriptionController extends Controller
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'accepted_terms' => ['accepted'],
         ], [
-            'provider.in' => 'Dieser Zahlungsanbieter wird mobil nicht unterstützt.',
-            'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
+            'provider.in' => __('subscription.validation.provider_mobile_unsupported'),
+            'accepted_terms.accepted' => __('subscription.validation.accept_terms'),
         ]);
-
         $subscriptionPlan->loadMissing('countryPrices');
         $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
         $country = strtoupper((string) ($club?->country ?: $request->user()->country));
@@ -109,7 +116,7 @@ class SubscriptionController extends Controller
 
         if (! $price['available']) {
             throw ValidationException::withMessages([
-                'checkout' => 'Dieser Abo-Plan ist in deinem Land aktuell nicht verfügbar.',
+                'checkout' => __('subscription.validation.country_unavailable'),
             ]);
         }
 
@@ -119,14 +126,13 @@ class SubscriptionController extends Controller
 
         if ($amountCents <= 0) {
             throw ValidationException::withMessages([
-                'checkout' => 'Kostenlose Pläne brauchen keinen Checkout.',
+                'checkout' => __('subscription.validation.free_without_checkout'),
             ]);
         }
 
         if ($data['provider'] === 'bank_transfer' && blank($this->bankTransferSettings()['iban'])) {
-            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
+            $this->checkoutError(__('subscription.validation.bank_not_configured'));
         }
-
         $this->ensureProviderIsConfigured($data['provider']);
 
         $checkout = DB::transaction(function () use ($request, $subscriptionPlan, $club, $data, $price, $amountCents) {
@@ -150,7 +156,6 @@ class SubscriptionController extends Controller
                     'base_yearly_price_cents' => $subscriptionPlan->yearly_price_cents,
                 ],
             ]);
-
             if ($checkout->provider === 'bank_transfer') {
                 $this->prepareBankTransferCheckout($checkout);
             }
@@ -169,11 +174,21 @@ class SubscriptionController extends Controller
         }
 
         if ($checkout->provider === 'bank_transfer') {
-            AppNotification::send($checkout->user_id, 'subscription.invoice.awaiting_transfer', [
-                'title' => 'Airmius Rechnung wartet auf Überweisung',
-                'body' => $checkout->invoice?->number.' - '.$checkout->payment_reference,
-                'subscription_invoice_id' => $checkout->invoice?->id,
-            ]);
+            AppNotification::sendLocalized(
+                $checkout->user_id,
+                'subscription.invoice.awaiting_transfer',
+                'subscription.notifications.awaiting_transfer_title',
+                'subscription.notifications.awaiting_transfer_body',
+                [
+                    'invoice' => $checkout->invoice?->number ?: AppNotification::translatedReplacement(
+                        'subscription.invoice.fallback_name',
+                        'Subscription invoice',
+                    ),
+                    'reference' => $checkout->payment_reference,
+                ],
+                ['subscription_invoice_id' => $checkout->invoice?->id],
+                ['dedupe_key' => 'subscription-invoice:'.$checkout->invoice?->id.':awaiting-transfer'],
+            );
         }
 
         return (new PaymentCheckoutResource($checkout->fresh(['plan.countryPrices', 'club', 'invoice'])))
@@ -224,7 +239,7 @@ class SubscriptionController extends Controller
             ]),
         ]);
 
-        $this->activateCheckout($checkout->fresh(['user', 'club', 'invoice', 'plan']));
+        $this->checkoutActivator->activate($checkout);
 
         return new PaymentCheckoutResource($checkout->fresh(['plan.countryPrices', 'club', 'invoice']));
     }
@@ -237,7 +252,7 @@ class SubscriptionController extends Controller
             'mode' => ['nullable', Rule::in(['period_end', 'now'])],
         ]);
 
-        $this->cancelSubscription($subscription, $data['mode'] ?? 'period_end');
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode'] ?? 'period_end');
 
         return new UserSubscriptionResource($subscription->fresh('plan.countryPrices'));
     }
@@ -246,11 +261,15 @@ class SubscriptionController extends Controller
     {
         abort_unless($subscription->user_id === $request->user()->id, 404);
 
-        $data = $request->validate([
-            'months' => ['required', 'integer', 'min:1', 'max:36'],
+        $request->validate([
+            'months' => ['nullable', 'integer', 'min:1', 'max:36'],
         ]);
 
-        $this->renewSubscription($subscription, (int) $data['months']);
+        if (! $this->subscriptionLifecycle->resume($subscription)) {
+            throw ValidationException::withMessages([
+                'subscription' => __('subscription.validation.resume_unavailable'),
+            ]);
+        }
 
         return new UserSubscriptionResource($subscription->fresh('plan.countryPrices'));
     }
@@ -264,7 +283,7 @@ class SubscriptionController extends Controller
             'mode' => ['nullable', Rule::in(['period_end', 'now'])],
         ]);
 
-        $this->cancelSubscription($subscription, $data['mode'] ?? 'period_end');
+        $this->subscriptionLifecycle->cancel($subscription, $data['mode'] ?? 'period_end');
 
         return new ClubSubscriptionResource($subscription->fresh(['club', 'plan.countryPrices']));
     }
@@ -274,11 +293,15 @@ class SubscriptionController extends Controller
         $this->authorizeClubManager($request, $club);
         abort_unless($subscription->club_id === $club->id, 404);
 
-        $data = $request->validate([
-            'months' => ['required', 'integer', 'min:1', 'max:36'],
+        $request->validate([
+            'months' => ['nullable', 'integer', 'min:1', 'max:36'],
         ]);
 
-        $this->renewSubscription($subscription, (int) $data['months']);
+        if (! $this->subscriptionLifecycle->resume($subscription)) {
+            throw ValidationException::withMessages([
+                'subscription' => __('subscription.validation.resume_unavailable'),
+            ]);
+        }
 
         return new ClubSubscriptionResource($subscription->fresh(['club', 'plan.countryPrices']));
     }
@@ -294,7 +317,7 @@ class SubscriptionController extends Controller
                 $query->where('owner_id', $request->user()->id)
                     ->orWhereHas('users', function ($memberQuery) use ($request) {
                         $memberQuery->where('users.id', $request->user()->id);
-                        ClubRoles::whereAny($memberQuery, ClubRoles::ELEVATED);
+                        ClubRoles::whereAny($memberQuery, ClubRoles::SUBSCRIPTION_MANAGERS);
                     });
             });
 
@@ -304,7 +327,7 @@ class SubscriptionController extends Controller
 
         if (! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Bitte erst einen Verein erstellen oder auswählen.',
+                'club_id' => __('subscription.validation.club_required'),
             ]);
         }
 
@@ -322,72 +345,21 @@ class SubscriptionController extends Controller
         $isManager = $club->users()
             ->where('users.id', $user->id)
             ->where(function ($query) {
-                ClubRoles::whereAny($query, ClubRoles::ELEVATED);
+                ClubRoles::whereAny($query, ClubRoles::SUBSCRIPTION_MANAGERS);
             })
             ->exists();
 
         abort_unless($isManager, 403);
     }
 
-    private function cancelSubscription(ClubSubscription|UserSubscription $subscription, string $mode): void
-    {
-        if ($mode === 'now') {
-            $subscription->update([
-                'status' => 'cancelled',
-                'cancel_at_period_end' => false,
-                'cancels_at' => now(),
-                'cancelled_at' => now(),
-                'current_period_ends_at' => now(),
-            ]);
-
-            return;
-        }
-
-        $subscription->loadMissing('plan');
-        $endsAt = $subscription->current_period_ends_at ?: now();
-        $noticeEnd = now()->addDays((int) ($subscription->plan?->cancellation_notice_days ?? 0));
-        $minimumTermEnd = $subscription->created_at
-            ? $subscription->created_at->copy()->addMonths((int) ($subscription->plan?->minimum_term_months ?? 0))
-            : now();
-        $cancelsAt = collect([$endsAt, $noticeEnd, $minimumTermEnd])
-            ->reduce(fn ($latest, $date) => $date->greaterThan($latest) ? $date : $latest, now());
-
-        $subscription->update([
-            'status' => 'cancels_at_period_end',
-            'cancel_at_period_end' => true,
-            'cancels_at' => $cancelsAt,
-            'cancelled_at' => now(),
-        ]);
-    }
-
-    private function renewSubscription(ClubSubscription|UserSubscription $subscription, int $months): void
-    {
-        $baseDate = $subscription->current_period_ends_at && $subscription->current_period_ends_at->isFuture()
-            ? $subscription->current_period_ends_at
-            : now();
-
-        $subscription->update([
-            'status' => 'active',
-            'cancel_at_period_end' => false,
-            'cancels_at' => null,
-            'cancelled_at' => null,
-            'current_period_ends_at' => $baseDate->copy()->addMonths($months),
-            'next_invoice_at' => $baseDate->copy()->addMonths($months),
-            'last_renewed_at' => now(),
-            'renewal_notified_at' => null,
-            'renewal_email_sent_at' => null,
-            'payment_issue_email_sent_at' => null,
-        ]);
-    }
-
     private function ensureProviderIsConfigured(string $provider): void
     {
         if ($provider === 'stripe' && blank(config('services.stripe.secret'))) {
-            $this->checkoutError('Stripe ist noch nicht konfiguriert.');
+            $this->checkoutError(__('subscription.validation.provider_not_configured', ['provider' => 'Stripe']));
         }
 
         if ($provider === 'paypal' && (blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret')))) {
-            $this->checkoutError('PayPal ist noch nicht konfiguriert.');
+            $this->checkoutError(__('subscription.validation.provider_not_configured', ['provider' => 'PayPal']));
         }
     }
 
@@ -396,7 +368,7 @@ class SubscriptionController extends Controller
         $bank = $this->bankTransferSettings();
 
         if (blank($bank['iban'])) {
-            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
+            $this->checkoutError(__('subscription.validation.bank_not_configured'));
         }
 
         $checkout->update([
@@ -418,7 +390,7 @@ class SubscriptionController extends Controller
         $secret = config('services.stripe.secret');
 
         if (blank($secret)) {
-            $this->checkoutError('Stripe ist noch nicht konfiguriert.');
+            $this->checkoutError(__('subscription.validation.provider_not_configured', ['provider' => 'Stripe']));
         }
 
         $checkout->loadMissing(['plan', 'user']);
@@ -453,7 +425,7 @@ class SubscriptionController extends Controller
                 'body' => $response->json(),
             ]);
 
-            $this->checkoutError('Stripe Checkout konnte nicht gestartet werden.');
+            $this->checkoutError(__('subscription.validation.provider_checkout_failed', ['provider' => 'Stripe']));
         }
 
         $payload = $response->json();
@@ -499,7 +471,7 @@ class SubscriptionController extends Controller
                 'body' => $response->json(),
             ]);
 
-            $this->checkoutError('PayPal Checkout konnte nicht gestartet werden.');
+            $this->checkoutError(__('subscription.validation.provider_checkout_failed', ['provider' => 'PayPal']));
         }
 
         $payload = $response->json();
@@ -511,7 +483,7 @@ class SubscriptionController extends Controller
                 'payload' => $payload,
             ]);
 
-            $this->checkoutError('PayPal Genehmigungslink fehlt.');
+            $this->checkoutError(__('subscription.validation.paypal_approval_missing'));
         }
 
         $checkout->update([
@@ -548,7 +520,7 @@ class SubscriptionController extends Controller
         $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v1/billing/plans', [
             'product_id' => $productId,
             'name' => 'Airmius '.$checkout->plan->name.' '.strtoupper($checkout->currency).' '.$amount.' '.$intervalUnit,
-            'description' => Str::limit($checkout->plan->description ?: 'Airmius Abo', 120),
+            'description' => Str::limit($checkout->plan->description ?: __('subscription.checkout.product_fallback'), 120),
             'status' => 'ACTIVE',
             'billing_cycles' => [[
                 'frequency' => [
@@ -579,7 +551,7 @@ class SubscriptionController extends Controller
                 'body' => $response->json(),
             ]);
 
-            $this->checkoutError('PayPal Abo-Plan konnte nicht erstellt werden.');
+            $this->checkoutError(__('subscription.validation.paypal_plan_failed'));
         }
 
         $payload = $response->json();
@@ -597,7 +569,7 @@ class SubscriptionController extends Controller
     {
         $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v1/catalogs/products', [
             'name' => 'Airmius '.$plan->name,
-            'description' => Str::limit($plan->description ?: 'Airmius Abo', 120),
+            'description' => Str::limit($plan->description ?: __('subscription.checkout.product_fallback'), 120),
             'type' => 'SERVICE',
         ]);
 
@@ -608,7 +580,7 @@ class SubscriptionController extends Controller
                 'body' => $response->json(),
             ]);
 
-            $this->checkoutError('PayPal Produkt konnte nicht erstellt werden.');
+            $this->checkoutError(__('subscription.validation.paypal_product_failed'));
         }
 
         $payload = $response->json();
@@ -631,7 +603,7 @@ class SubscriptionController extends Controller
             ]);
 
         if ($response->failed()) {
-            $this->checkoutError('PayPal Token konnte nicht erzeugt werden.');
+            $this->checkoutError(__('subscription.validation.paypal_token_failed'));
         }
 
         return $response->json('access_token');
@@ -644,93 +616,10 @@ class SubscriptionController extends Controller
             : 'https://api-m.sandbox.paypal.com';
     }
 
-    private function activateCheckout(PaymentCheckout $checkout): void
-    {
-        if ($checkout->status === 'completed') {
-            return;
-        }
-
-        DB::transaction(function () use ($checkout) {
-            if ($checkout->coupon) {
-                $checkout->coupon->increment('redeemed_count');
-            }
-
-            $periodEndsAt = $checkout->billing_interval === 'yearly'
-                ? now()->addYear()
-                : now()->addMonth();
-
-            if ($checkout->club_id) {
-                $subscription = $checkout->club->currentSubscription()->updateOrCreate(
-                    ['club_id' => $checkout->club_id],
-                    [
-                        'subscription_plan_id' => $checkout->subscription_plan_id,
-                        'status' => 'active',
-                        'payment_provider' => $checkout->provider,
-                        'billing_interval' => $checkout->billing_interval,
-                        'provider_subscription_id' => $checkout->provider_subscription_id,
-                        'provider_customer_id' => $checkout->provider_customer_id,
-                        'trial_ends_at' => null,
-                        'current_period_ends_at' => $periodEndsAt,
-                        'next_invoice_at' => $periodEndsAt,
-                        'grace_period_ends_at' => null,
-                        'access_restricted_at' => null,
-                        'cancel_at_period_end' => false,
-                        'cancels_at' => null,
-                        'cancelled_at' => null,
-                    ],
-                );
-            } else {
-                $subscription = $checkout->user->subscriptions()->updateOrCreate(
-                    ['subscription_plan_id' => $checkout->subscription_plan_id],
-                    [
-                        'status' => 'active',
-                        'payment_provider' => $checkout->provider,
-                        'billing_interval' => $checkout->billing_interval,
-                        'provider_subscription_id' => $checkout->provider_subscription_id,
-                        'provider_customer_id' => $checkout->provider_customer_id,
-                        'trial_ends_at' => null,
-                        'current_period_ends_at' => $periodEndsAt,
-                        'next_invoice_at' => $periodEndsAt,
-                        'grace_period_ends_at' => null,
-                        'access_restricted_at' => null,
-                        'cancel_at_period_end' => false,
-                        'cancels_at' => null,
-                        'cancelled_at' => null,
-                    ],
-                );
-
-                app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($subscription->fresh('plan'));
-            }
-
-            $checkout->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-            ]);
-
-            $checkout->invoice?->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'payment_method' => $checkout->provider,
-                'payment_reference' => $checkout->payment_reference ?: $checkout->provider_checkout_id,
-                'subscription_type' => $checkout->club_id ? 'club' : 'user',
-                'subscription_id' => $subscription->id,
-                'meta' => array_merge($checkout->invoice->meta ?? [], [
-                    'provider_checkout_id' => $checkout->provider_checkout_id,
-                    'provider_subscription_id' => $checkout->provider_subscription_id,
-                    'provider_customer_id' => $checkout->provider_customer_id,
-                ]),
-            ]);
-        });
-
-        AppNotification::send($checkout->user_id, 'subscription.invoice.paid', [
-            'title' => 'Airmius Rechnung bezahlt',
-            'body' => ($checkout->invoice?->number ?: 'Abo-Rechnung').' wurde als bezahlt markiert.',
-            'subscription_invoice_id' => $checkout->invoice?->id,
-        ]);
-    }
-
     private function createSubscriptionInvoice(PaymentCheckout $checkout): SubscriptionInvoice
     {
+        $checkout->loadMissing(['plan', 'user:id,language']);
+        $locale = SupportedLocale::normalize($checkout->user?->language) ?? SupportedLocale::DEFAULT;
         $periodStart = now()->toDateString();
         $periodEnd = $checkout->billing_interval === 'yearly'
             ? now()->addYear()->subDay()->toDateString()
@@ -744,8 +633,14 @@ class SubscriptionController extends Controller
                 'subscription_plan_id' => $checkout->subscription_plan_id,
                 'subscription_type' => $checkout->club_id ? 'club' : 'user',
                 'number' => $this->nextInvoiceNumber(),
-                'title' => 'Airmius '.$checkout->plan->name,
-                'description' => 'Airmius Abo '.$checkout->plan->name.' ('.($checkout->billing_interval === 'yearly' ? 'Jahreszahlung' : 'Monatszahlung').')',
+                'title' => Lang::get('subscription.invoice.title', ['plan' => $checkout->plan->name], $locale),
+                'description' => Lang::get(
+                    $checkout->billing_interval === 'yearly'
+                        ? 'subscription.invoice.description_yearly'
+                        : 'subscription.invoice.description_monthly',
+                    ['plan' => $checkout->plan->name],
+                    $locale,
+                ),
                 'amount_cents' => $checkout->amount_cents,
                 'currency' => $checkout->currency,
                 'status' => $checkout->provider === 'bank_transfer' ? 'awaiting_transfer' : 'open',
@@ -811,4 +706,3 @@ class SubscriptionController extends Controller
             || $user->hasAnyRole(Roles::FULL_ACCESS);
     }
 }
-

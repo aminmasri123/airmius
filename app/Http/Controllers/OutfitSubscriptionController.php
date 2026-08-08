@@ -84,12 +84,12 @@ class OutfitSubscriptionController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Style-Profil gespeichert.',
+                'message' => __('outfit_subscription.responses.profile_saved'),
                 'data' => $profile->fresh(),
             ]);
         }
 
-        return back()->with('success', 'Style-Profil gespeichert.');
+        return back()->with('success', __('outfit_subscription.responses.profile_saved'));
     }
 
     public function store(Request $request, OutfitSubscriptionPlan $plan)
@@ -200,7 +200,7 @@ class OutfitSubscriptionController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'message' => 'PayPal-Zahlung kann fortgesetzt werden.',
+                    'message' => __('outfit_subscription.responses.paypal_continue'),
                     'data' => $this->subscriptionPayload(
                         $subscription->fresh(['plan.sponsor', 'sponsor', 'deliveries']),
                     ),
@@ -214,22 +214,27 @@ class OutfitSubscriptionController extends Controller
             return Inertia::location($checkoutUrl);
         }
 
-        AppNotification::send($request->user(), 'outfit.subscription.pending_payment', [
-            'title' => 'Outfit-Abo wartet auf Zahlung',
-            'message' => "Dein Outfit-Abo {$plan->name} wurde vorgemerkt. Es wird erst nach bestätigter Zahlung aktiviert.",
-            'plan' => $plan->name,
-            'amount_cents' => $subscription->monthly_price_cents,
-            'currency' => $subscription->currency,
-            'payment_provider' => $subscription->payment_provider,
-            'payment_reference' => $subscription->payment_reference,
-            'url' => route('auth.outfit-subscriptions.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $request->user(),
+            'outfit.subscription.pending_payment',
+            'outfit_subscription.notifications.pending_payment_title',
+            'outfit_subscription.notifications.pending_payment_body',
+            ['plan' => $plan->name],
+            [
+                'plan' => $plan->name,
+                'amount_cents' => $subscription->monthly_price_cents,
+                'currency' => $subscription->currency,
+                'payment_provider' => $subscription->payment_provider,
+                'payment_reference' => $subscription->payment_reference,
+                'url' => route('auth.outfit-subscriptions.index'),
+            ],
+        );
 
         $this->notifyOutfitSubscriptionRequested($request, $plan, $subscription);
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Outfit-Abo wurde angefragt.',
+                'message' => __('outfit_subscription.responses.requested'),
                 'data' => $this->subscriptionPayload(
                     $subscription->fresh(['plan.sponsor', 'sponsor', 'deliveries']),
                 ),
@@ -242,7 +247,7 @@ class OutfitSubscriptionController extends Controller
             ], 201);
         }
 
-        return back()->with('success', 'Outfit-Abo wurde angefragt. Es wird erst nach Zahlung aktiviert.');
+        return back()->with('success', __('outfit_subscription.responses.requested_web'));
     }
 
     public function success(Request $request, OutfitSubscription $subscription)
@@ -489,12 +494,12 @@ class OutfitSubscriptionController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Deine Meldung wurde gesendet.',
+                'message' => __('outfit_subscription.responses.issue_sent'),
                 'data' => $delivery->fresh(),
             ], 201);
         }
 
-        return back()->with('success', 'Deine Meldung wurde gesendet. Unser Team prüft die Lieferung.');
+        return back()->with('success', __('outfit_subscription.responses.issue_sent_web'));
     }
 
     private function subscriptionJsonResponse(
@@ -938,33 +943,45 @@ class OutfitSubscriptionController extends Controller
             ]);
         }
 
+        $subscription->loadMissing(['plan', 'user']);
+
         app(OutfitInvoiceService::class)->createPaidInvoice($subscription->fresh(['plan', 'sponsor']));
 
-        AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
-            'title' => 'Outfit-Abo aktiviert',
-            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestätigt. Dein Outfit-Abo ist jetzt aktiv.',
-            'url' => route('auth.outfit-subscriptions.index'),
-            'subscription_id' => $subscription->id,
-        ]);
+        AppNotification::sendLocalized(
+            $subscription->user,
+            'outfit.subscription.paid',
+            'outfit_subscription.notifications.paid_title',
+            'outfit_subscription.notifications.paid_body',
+            ['plan' => $subscription->plan?->name],
+            [
+                'url' => route('auth.outfit-subscriptions.index'),
+                'subscription_id' => $subscription->id,
+            ],
+        );
     }
 
     private function notifyOutfitSubscriptionRequested(Request $request, OutfitSubscriptionPlan $plan, OutfitSubscription $subscription): void
     {
         $this->outfitAdminRecipients()
             ->each(function (User $admin) use ($request, $plan, $subscription) {
-                AppNotification::send($admin, 'outfit.subscription.requested', [
-                    'title' => 'Neues Outfit-Abo angefragt',
-                    'message' => "{$request->user()->name} hat {$plan->name} angefragt. Zahlung ist noch offen.",
-                    'user_id' => $request->user()->id,
-                    'user_name' => $request->user()->name,
-                    'plan' => $plan->name,
-                    'subscription_id' => $subscription->id,
-                    'amount_cents' => $subscription->monthly_price_cents,
-                    'currency' => $subscription->currency,
-                    'payment_provider' => $subscription->payment_provider,
-                    'payment_reference' => $subscription->payment_reference,
-                    'url' => route('admin.outfit-subscriptions.index'),
-                ]);
+                AppNotification::sendLocalized(
+                    $admin,
+                    'outfit.subscription.requested',
+                    'outfit_subscription.notifications.requested_title',
+                    'outfit_subscription.notifications.requested_body',
+                    ['user' => $request->user()->name, 'plan' => $plan->name],
+                    [
+                        'user_id' => $request->user()->id,
+                        'user_name' => $request->user()->name,
+                        'plan' => $plan->name,
+                        'subscription_id' => $subscription->id,
+                        'amount_cents' => $subscription->monthly_price_cents,
+                        'currency' => $subscription->currency,
+                        'payment_provider' => $subscription->payment_provider,
+                        'payment_reference' => $subscription->payment_reference,
+                        'url' => route('admin.outfit-subscriptions.index'),
+                    ],
+                );
             });
     }
 
@@ -973,17 +990,22 @@ class OutfitSubscriptionController extends Controller
         $admins = $this->outfitAdminRecipients();
 
         $admins->each(function (User $admin) use ($request, $delivery) {
-            AppNotification::send($admin, 'outfit.delivery.issue_requested', [
-                'title' => 'Outfit-Lieferung braucht Support',
-                'message' => $request->user()->name.' hat ein Problem zu einer Outfit-Lieferung gemeldet.',
-                'user_id' => $request->user()->id,
-                'user_name' => $request->user()->name,
-                'delivery_id' => $delivery->id,
-                'subscription_id' => $delivery->outfit_subscription_id,
-                'issue_type' => $delivery->issue_type,
-                'issue_status' => $delivery->issue_status,
-                'url' => route('admin.outfit-subscriptions.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $admin,
+                'outfit.delivery.issue_requested',
+                'outfit_subscription.notifications.issue_requested_title',
+                'outfit_subscription.notifications.issue_requested_body',
+                ['user' => $request->user()->name],
+                [
+                    'user_id' => $request->user()->id,
+                    'user_name' => $request->user()->name,
+                    'delivery_id' => $delivery->id,
+                    'subscription_id' => $delivery->outfit_subscription_id,
+                    'issue_type' => $delivery->issue_type,
+                    'issue_status' => $delivery->issue_status,
+                    'url' => route('admin.outfit-subscriptions.index'),
+                ],
+            );
         });
     }
 
@@ -1011,11 +1033,11 @@ class OutfitSubscriptionController extends Controller
         $admins = collect();
 
         if ($existingRoleNames) {
-            $admins = $admins->merge(User::role($existingRoleNames)->get(['id', 'name', 'email']));
+            $admins = $admins->merge(User::role($existingRoleNames)->get(['id', 'name', 'email', 'language']));
         }
 
         if ($existingPermissionNames) {
-            $admins = $admins->merge(User::permission($existingPermissionNames)->get(['id', 'name', 'email']));
+            $admins = $admins->merge(User::permission($existingPermissionNames)->get(['id', 'name', 'email', 'language']));
         }
 
         return $admins->unique('id')->values();

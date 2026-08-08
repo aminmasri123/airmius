@@ -35,7 +35,7 @@ defineEmits(['updateCourse', 'uploadCourseCover'])
                 <p v-if="uploadState.key === 'cover'" class="text-xs text-secondary">Cover wird hochgeladen...</p>
                 <p v-if="uploadState.error && uploadState.key === 'cover'" class="text-xs text-error">{{ uploadState.error }}</p>
             </div>
-            <textarea v-model="courseForm.description" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+            <textarea v-model="courseForm.description" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Beschreibung')"></textarea>
             <div class="grid gap-3 lg:grid-cols-3">
                 <textarea v-model="courseForm.learning_goals_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
                 <textarea v-model="courseForm.requirements_text" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Voraussetzungen, je Zeile eine"></textarea>
@@ -75,6 +75,5 @@ defineEmits(['updateCourse', 'uploadCourseCover'])
         </form>
     </article>
 </template>
-
 
 

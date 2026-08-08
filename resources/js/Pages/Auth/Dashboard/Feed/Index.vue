@@ -247,9 +247,9 @@ const visitPage = (url) => url && router.visit(url, {
 </script>
 
 <template>
-    <AppLayout title="Feed">
+    <AppLayout :title="t('Feed')">
 
-        <Head title="Feed" />
+        <Head :title="t('Feed')" />
           <div class="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-4 overflow-hidden px-3 pb-24 sm:px-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
 
         <section class="min-w-0 space-y-4">

@@ -389,9 +389,9 @@ const {
                 <div>
                     <label class="text-xs font-semibold uppercase text-secondary">{{ tx('commerce.ui.payment_method', 'Zahlungsart') }}</label>
                     <select v-model="provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="bank_transfer">Überweisung</option>
-                        <option value="stripe">Stripe</option>
-                        <option value="paypal">PayPal</option>
+                        <option value="bank_transfer">{{ t('commerce.payment.bank_transfer') }}</option>
+                        <option value="stripe">{{ t('commerce.payment.stripe') }}</option>
+                        <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                     </select>
                 </div>
                 <div>
@@ -643,7 +643,7 @@ const {
                     <div class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
-                            <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                            <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
                             <p v-if="productForm.errors.image_url" class="mt-1 text-sm text-error">{{ productForm.errors.image_url }}</p>
                         </div>
                         <div>
@@ -829,7 +829,7 @@ const {
                     <div v-if="productForm.product_type === 'variable'" class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex items-center justify-between gap-2">
                             <div>
-                                <h3 class="text-sm font-semibold text-primary">Varianten</h3>
+                                <h3 class="text-sm font-semibold text-primary">{{ t('commerce.ui.variants') }}</h3>
                                 <p class="text-xs text-secondary">Eigener Preis, Bestand und Bild pro Variante.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductVariantRow">Variante</button>
@@ -853,7 +853,7 @@ const {
                             </div>
                         </div>
                     </div>
-                    <textarea v-model="productForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                    <textarea v-model="productForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.description_placeholder')"></textarea>
                     <p v-if="productForm.errors.description" class="text-sm text-error">{{ productForm.errors.description }}</p>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Zur Prüfung einreichen</button>
                         </div>
@@ -979,7 +979,15 @@ const {
                     <input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewünschte Domain">
                     <textarea v-model="websiteForm.goals" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was soll die Website können?"></textarea>
                     <textarea v-model="websiteForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Weitere Hinweise"></textarea>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Anfrage senden</button>
+                    <div class="rounded-lg border border-border bg-bg p-3">
+                        <p class="text-xs leading-relaxed text-secondary">{{ t('agency.privacy_notice') }}</p>
+                        <label class="mt-2 flex cursor-pointer items-start gap-2 text-sm font-semibold text-primary">
+                            <input v-model="websiteForm.accepted_privacy" type="checkbox" class="mt-0.5 rounded border-border bg-inputBg text-air-blue focus:ring-air-blue">
+                            <span>{{ t('agency.privacy_accept') }}</span>
+                        </label>
+                        <span v-if="websiteForm.errors.accepted_privacy" class="mt-1 block text-xs text-error">{{ websiteForm.errors.accepted_privacy }}</span>
+                    </div>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="websiteForm.processing || !websiteForm.accepted_privacy">{{ t('agency.send') }}</button>
                         </div>
                     </form>
                 </div>
@@ -990,7 +998,7 @@ const {
             <article class="surface-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace Anbieter</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ t('commerce.ui.marketplace_provider') }}</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">Sitzadresse & Öffentliches Profil</h2>
                         <p class="mt-1 max-w-2xl text-sm text-secondary">
                             Die Sitzadresse bleibt intern, solange du sie nicht freigibst. Kunden sehen nur die Daten, die du bewusst öffentlich schaltest.
@@ -1032,11 +1040,11 @@ const {
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary">
                         Website
-                        <input v-model="providerProfileForm.website" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                        <input v-model="providerProfileForm.website" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary md:col-span-2">
                         Logo-URL
-                        <input v-model="providerProfileForm.logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://.../logo.png">
+                        <input v-model="providerProfileForm.logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.logo_url_placeholder')">
                     </label>
                     <label class="grid gap-1 text-sm font-semibold text-primary md:col-span-2">
                         Öffentliche Beschreibung
@@ -1164,10 +1172,10 @@ const {
                 <h2 class="text-lg font-semibold text-primary">Auszahlungsdaten</h2>
                 <p class="mt-1 text-sm text-secondary">Hinterlege IBAN oder PayPal, damit Airmius Marketplace-Erlöse nach Prüfung auszahlen kann.</p>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storePayoutProfile">
-                    <input v-model="payoutForm.account_holder" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kontoinhaber">
+                    <input v-model="payoutForm.account_holder" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.account_holder_placeholder')">
                     <input v-model="payoutForm.paypal_email" type="email" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PayPal-E-Mail">
-                    <input v-model="payoutForm.iban" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="IBAN">
-                    <input v-model="payoutForm.bic" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="BIC">
+                    <input v-model="payoutForm.iban" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.iban_placeholder')">
+                    <input v-model="payoutForm.bic" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.bic_placeholder')">
                     <input v-model="payoutForm.tax_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Steuernummer optional">
                     <textarea v-model="payoutForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Hinweise für Auszahlung"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Auszahlungsdaten speichern</button>
@@ -1188,7 +1196,7 @@ const {
                     <form class="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_auto]" @submit.prevent="requestPayout">
                         <select v-model="payoutRequestForm.method" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="bank_transfer">Banküberweisung</option>
-                            <option value="paypal">PayPal</option>
+                            <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                         </select>
                         <input v-model="payoutRequestForm.notes" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Hinweis optional">
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="payoutRequestForm.processing || !Number(payoutSummary.amount_cents || 0)">
@@ -1343,15 +1351,15 @@ const {
                         <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
                         <select v-model="adProvider" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="bank_transfer">Überweisung</option>
-                            <option value="stripe">Stripe</option>
-                            <option value="paypal">PayPal</option>
+                            <option value="stripe">{{ t('commerce.payment.stripe') }}</option>
+                            <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                         </select>
                     </div>
                     <label class="hidden items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                         <input v-model="adAcceptedTerms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
                             Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass die Kampagne erst nach Zahlung zur Prüfung eingereicht wird.
-                            <Link :href="route('terms.show')" class="text-air-blue underline">AGB</Link>
+                            <Link :href="route('terms.show')" class="text-air-blue underline">{{ t('commerce.ui.terms') }}</Link>
                             <span> - </span>
                             <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
                         </span>
@@ -1573,7 +1581,7 @@ const {
                             </template>
                         </tbody>
                     </table>
-                    <p v-if="!myCampaigns.length" class="px-5 py-6 text-sm text-secondary">Noch keine eigenen Ads-Kampagnen.</p>
+                    <p v-if="!myCampaigns.length" class="px-5 py-6 text-sm text-secondary">{{ t('commerce.ui.no_campaigns') }}</p>
                 </div>
             </article>
         </section>
@@ -1732,7 +1740,7 @@ const {
                         Bestand verwalten
                     </label>
                     <input v-if="editProductForm.manages_stock" v-model="editProductForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
-                    <textarea v-model="editProductForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Beschreibung"></textarea>
+                    <textarea v-model="editProductForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" :placeholder="t('commerce.ui.description_placeholder')"></textarea>
                 </div>
                 <div v-if="editProductForm.manages_stock" class="mt-4 rounded-lg border border-border bg-bg p-3">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1836,7 +1844,7 @@ const {
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <label class="text-xs font-semibold uppercase text-secondary">Sportarten</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ t('commerce.ui.sports') }}</label>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 <span
                                     v-for="sport in selectedAdGroupSports"
@@ -2193,7 +2201,7 @@ const {
                     <input v-model="checkoutConfirmation.accepted" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                     <span>
                         Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass Marketplace-Angebote je nach Produkt durch den jeweiligen Anbieter erbracht werden.
-                        <Link :href="route('terms.show')" class="text-air-blue underline">AGB</Link>
+                        <Link :href="route('terms.show')" class="text-air-blue underline">{{ t('commerce.ui.terms') }}</Link>
                         <span> · </span>
                         <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
                     </span>
@@ -2256,20 +2264,20 @@ const {
                         <option v-for="country in pricingCountries" :key="country.country" :value="country.country">{{ country.label }}</option>
                     </select>
                     <select v-model="cartCheckoutForm.provider" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="bank_transfer">Überweisung</option>
-                        <option value="stripe">Stripe</option>
-                        <option value="paypal">PayPal</option>
+                        <option value="bank_transfer">{{ t('commerce.payment.bank_transfer') }}</option>
+                        <option value="stripe">{{ t('commerce.payment.stripe') }}</option>
+                        <option value="paypal">{{ t('commerce.payment.paypal') }}</option>
                     </select>
                     <select v-model="cartCheckoutForm.customer_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="consumer">Privatkunde</option>
                         <option value="business">Firma / Verein</option>
                     </select>
-                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="USt-IdNr.">
+                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" :placeholder="t('commerce.ui.vat_id_placeholder')">
                     <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="Firma / Verein">
                     <input v-model="cartCheckoutForm.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Straße">
                     <input v-model="cartCheckoutForm.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Nr.">
                     <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
-                    <input v-model="cartCheckoutForm.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ort">
+                    <input v-model="cartCheckoutForm.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.city_placeholder')">
                 </div>
 
                 <label class="mt-4 flex items-start gap-3 text-sm text-secondary">
@@ -2279,7 +2287,7 @@ const {
 
                 <div class="mt-5 flex justify-end gap-3">
                     <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showCartCheckout = false">Abbrechen</button>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Kaufen</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('commerce.ui.buy') }}</button>
                 </div>
             </form>
         </div>

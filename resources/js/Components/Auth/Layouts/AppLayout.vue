@@ -138,7 +138,12 @@ let stopInertiaException = null
 const recentFeedback = new Map()
 const shownFlashIds = new Set()
 const notificationReloader = createPartialReloader({
-    only: ['notificationCenter', 'unreadChatsCount', 'friendCenter'],
+    only: () => [
+        'notificationCenter',
+        'unreadChatsCount',
+        'friendCenter',
+        ...(page.component === 'Auth/Dashboard/Notifications/Index' ? ['notifications'] : []),
+    ],
 })
 const eventReloader = createPartialReloader({
     only: ['events', 'calendarEvents', 'eventStats', 'nextEvent', 'calendar'],

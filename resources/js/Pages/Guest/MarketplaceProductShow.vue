@@ -389,7 +389,7 @@ const updateCountry = () => {
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-primary shadow-sm sm:px-5">
                     <Link :href="route('guest.marketplace')" class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" :alt="t('guest.sponsors.airmius')" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-arrow-left text-xl"></i>
                         </span>

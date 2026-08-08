@@ -57,13 +57,19 @@ class SendLearningDripNotifications extends Command
                             continue;
                         }
 
-                        AppNotification::send($enrollment->user, 'learning.drip.unlocked', [
-                            'course_id' => $enrollment->course->id,
-                            'course_title' => $enrollment->course->title,
-                            'lesson_id' => $lesson->id,
-                            'lesson_title' => $lesson->title,
-                            'url' => route('guest.learning.courses.show', $enrollment->course),
-                        ]);
+                        AppNotification::sendLocalized(
+                            $enrollment->user,
+                            'learning.drip.unlocked',
+                            'learning.notifications.drip_unlocked_title',
+                            'learning.notifications.drip_unlocked_body',
+                            ['lesson' => $lesson->title, 'course' => $enrollment->course->title],
+                            [
+                                'course_id' => $enrollment->course->id,
+                                'lesson_id' => $lesson->id,
+                                'url' => route('guest.learning.courses.show', $enrollment->course),
+                            ],
+                            ['dedupe_key' => 'learning-drip-delivery:'.$delivery->id],
+                        );
 
                         $this->sendMail($enrollment, $lesson);
                         $sent++;

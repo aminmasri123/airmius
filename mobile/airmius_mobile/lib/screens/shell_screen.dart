@@ -48,6 +48,7 @@ import 'marketplace_screen.dart';
 import 'commerce_center_screen.dart';
 import 'sponsors_center_screen.dart';
 import 'sponsor_cockpit_screen.dart';
+import 'recruiting_pipeline_screen.dart';
 import 'media_guidelines_screen.dart';
 import 'blog_media_center_screen.dart';
 import 'users_center_screen.dart';
@@ -520,6 +521,7 @@ class _ShellScreenState extends State<ShellScreen> {
                 true
             ? const SponsorCockpitScreen()
             : const SponsorsCenterScreen(),
+      'Recruiting' => const RecruitingPipelineScreen(),
       'Medienrichtlinien' => const MediaGuidelinesScreen(),
       'Blog & Medien' => const BlogMediaCenterScreen(),
       'Nutzer' => const UsersCenterScreen(),

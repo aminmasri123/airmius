@@ -1589,16 +1589,16 @@ const inviteExternalMember = (member) => {
                                 <div class="mt-3 rounded-xl border border-border bg-bg p-3">
                                     <div class="flex items-center justify-between gap-3">
                                         <div>
-                                            <p class="text-sm font-semibold text-primary">Dokumenttypen in allen Sprachen</p>
-                                            <p class="mt-1 text-xs text-secondary">Bearbeite Standardtypen oder füge vereinseigene Typen hinzu. Der Schlüssel wird für bestehende Dokumente verwendet.</p>
+                                            <p class="text-sm font-semibold text-primary">{{ tx('club_memberships.workspace.document_types_multilingual_title', 'Dokumenttypen in allen Sprachen') }}</p>
+                                            <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.document_types_multilingual_body', 'Bearbeite Standardtypen oder füge vereinseigene Typen hinzu. Der Schlüssel wird für bestehende Dokumente verwendet.') }}</p>
                                         </div>
-                                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">+ Typ</button>
+                                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocumentType">{{ tx('club_memberships.workspace.add_type', '+ Typ') }}</button>
                                     </div>
                                     <div class="mt-3 space-y-2">
                                         <div v-for="(type, index) in membershipDocumentTypes" :key="type.value" class="rounded-lg border border-border bg-card p-3">
                                             <div class="mb-2 flex items-center justify-between gap-3">
                                                 <span class="text-xs font-semibold text-secondary">{{ type.value }}</span>
-                                                <button v-if="!['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].includes(type.value)" type="button" class="text-xs font-semibold text-error hover:underline" @click="removeMembershipDocumentType(index)">Entfernen</button>
+                                                <button v-if="!['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].includes(type.value)" type="button" class="text-xs font-semibold text-error hover:underline" @click="removeMembershipDocumentType(index)">{{ tx('club_memberships.workspace.remove', 'Entfernen') }}</button>
                                             </div>
                                             <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                                                 <label v-for="language in [{key:'de',label:'Deutsch'},{key:'en',label:'English'},{key:'fr',label:'Français'},{key:'ar',label:'العربية'}]" :key="language.key" class="text-xs font-semibold text-primary">{{ language.label }}<input v-model="type.labels[language.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm font-normal text-primary" :placeholder="language.label"></label>
@@ -1609,10 +1609,10 @@ const inviteExternalMember = (member) => {
                                 <div class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto]">
                                     <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
                                         <i class="las la-search text-lg text-secondary"></i>
-                                        <input v-model="documentSearch" class="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none" placeholder="Dokumente durchsuchen ...">
+                                        <input v-model="documentSearch" class="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none" :placeholder="tx('club_memberships.workspace.document_search_placeholder', 'Dokumente durchsuchen ...')">
                                     </label>
                                     <select v-model="documentTypeFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                                        <option value="all">Alle Dokumenttypen</option>
+                                        <option value="all">{{ tx('club_memberships.workspace.all_document_types', 'Alle Dokumenttypen') }}</option>
                                         <option v-for="type in membershipDocumentTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                     </select>
                                     <span class="flex items-center justify-center rounded-lg bg-bg px-3 py-2 text-xs font-semibold text-secondary">{{ filteredMembershipDocuments.length }} / {{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</span>
@@ -1630,8 +1630,8 @@ const inviteExternalMember = (member) => {
                                                 <span class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-secondary">
                                                     <span class="rounded-full bg-bg px-2 py-0.5">{{ documentTypeLabel(item.document.type) }}</span>
                                                     <span class="rounded-full bg-bg px-2 py-0.5">{{ item.document.membership_type_id ? (membershipTypes.find((type) => type.id === item.document.membership_type_id)?.name || 'Typ') : 'Alle Typen' }}</span>
-                                                    <span v-if="item.document.is_required" class="rounded-full bg-warning/15 px-2 py-0.5 text-warning">Bestätigung erforderlich</span>
-                                                    <span v-if="item.document.is_visible" class="rounded-full bg-air-green/15 px-2 py-0.5 text-air-green">Im Antrag sichtbar</span>
+                                                    <span v-if="item.document.is_required" class="rounded-full bg-warning/15 px-2 py-0.5 text-warning">{{ tx('club_memberships.workspace.confirmation_required', 'Bestätigung erforderlich') }}</span>
+                                                    <span v-if="item.document.is_visible" class="rounded-full bg-air-green/15 px-2 py-0.5 text-air-green">{{ tx('club_memberships.workspace.application_visible', 'Im Antrag sichtbar') }}</span>
                                                 </span>
                                             </span>
                                             <i class="las text-lg text-secondary" :class="expandedDocumentId === item.document.id ? 'la-angle-up' : 'la-angle-down'"></i>
@@ -1657,7 +1657,7 @@ const inviteExternalMember = (member) => {
                                                 </label>
                                                 <label class="block text-sm md:col-span-2">
                                                     <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.file_link', 'Link zur Datei oder Seite') }}</span>
-                                                    <input v-model="item.document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                                                    <input v-model="item.document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="'https://...'">
                                                 </label>
                                                 <label class="block text-sm md:col-span-2">
                                                     <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.upload_file', 'Oder Datei hochladen') }}</span>
@@ -1708,7 +1708,7 @@ const inviteExternalMember = (member) => {
                                             </label>
                                             <label class="block text-sm md:col-span-2">
                                                 <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.file_link', 'Link zur Datei oder Seite') }}</span>
-                                                <input v-model="document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                                                <input v-model="document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="'https://...'">
                                             </label>
                                             <label class="block text-sm md:col-span-2">
                                                 <span class="font-semibold text-primary">{{ tx('club_memberships.workspace.upload_file', 'Oder Datei hochladen') }}</span>
@@ -1771,9 +1771,9 @@ const inviteExternalMember = (member) => {
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Schritt 2</p>
                                 <h2 class="mt-1 text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.application_fields', 'Antragsfelder für diesen Typ') }}</h2>
-                                <p class="mt-1 text-sm text-secondary">Der Vereinsstandard wird nur für den ausgewählten Typ angepasst. Der Mitgliedschaftstyp selbst wird im vorherigen Schritt bearbeitet.</p>
+                                <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.workspace.wizard_club_standard_hint', 'Der Vereinsstandard wird nur für den ausgewählten Typ angepasst. Der Mitgliedschaftstyp selbst wird im vorherigen Schritt bearbeitet.') }}</p>
                             </div>
-                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="rulesWizardStep = 0">Typ auswählen</button>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="rulesWizardStep = 0">{{ tx('club_memberships.workspace.select_type', 'Typ auswählen') }}</button>
                         </div>
                         <div v-if="membershipTypeMode === 'choose'" class="mt-4 rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
                             Bitte zuerst im Schritt „Mitgliedschaftstyp“ einen neuen Typ erstellen oder einen bestehenden Typ bearbeiten.
@@ -1787,22 +1787,22 @@ const inviteExternalMember = (member) => {
                                     <option value="off">{{ tx('club_memberships.workspace.hidden', 'Ausgeblendet') }}</option>
                                 </select>
                             </label>
-                            <p v-if="!applicationFieldDefinitions.length" class="sm:col-span-2 rounded-lg border border-dashed border-border p-4 text-sm text-secondary">Keine Vereinsstandardfelder konfiguriert.</p>
+                            <p v-if="!applicationFieldDefinitions.length" class="sm:col-span-2 rounded-lg border border-dashed border-border p-4 text-sm text-secondary">{{ tx('club_memberships.workspace.no_standard_fields', 'Keine Vereinsstandardfelder konfiguriert.') }}</p>
                         </div>
                         <div v-if="membershipTypeMode !== 'choose'" class="mt-4 flex justify-end">
-                            <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="storeMembershipType">Typ und Antragsfelder speichern</button>
+                            <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="storeMembershipType">{{ tx('club_memberships.workspace.save_type_and_fields', 'Typ und Antragsfelder speichern') }}</button>
                         </div>
                     </section>
 
                     <section v-if="rulesWizardStep === 6" class="surface-card p-5">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Letzter Schritt</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Zusammenfassung</h2>
-                        <p class="mt-1 text-sm text-secondary">Bitte prüfe die wichtigsten Einstellungen. Mit „Fertig“ werden die Vereinsregeln gespeichert.</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">{{ tx('club_memberships.workspace.last_step', 'Letzter Schritt') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ tx('club_memberships.workspace.summary', 'Zusammenfassung') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.workspace.review_summary', 'Bitte prüfe die wichtigsten Einstellungen. Mit „Fertig“ werden die Vereinsregeln gespeichert.') }}</p>
                         <div class="mt-5 grid gap-3 md:grid-cols-2">
-                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Mitgliedschaftstypen</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipTypes.length }}</p></div>
-                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Beitragsregeln</p><p class="mt-1 text-lg font-bold text-primary">{{ contributionRules.length }}</p></div>
-                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Antragsfelder</p><p class="mt-1 text-lg font-bold text-primary">{{ applicationFieldDefinitions.length }}</p></div>
-                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">Dokumente</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.membership_types_count', 'Mitgliedschaftstypen') }}</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipTypes.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.contribution_rules_count', 'Beitragsregeln') }}</p><p class="mt-1 text-lg font-bold text-primary">{{ contributionRules.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.application_fields_count', 'Antragsfelder') }}</p><p class="mt-1 text-lg font-bold text-primary">{{ applicationFieldDefinitions.length }}</p></div>
+                            <div class="rounded-xl border border-border bg-bg p-4"><p class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.documents_count', 'Dokumente') }}</p><p class="mt-1 text-lg font-bold text-primary">{{ membershipSettingsFor(selectedClub).membership_application_documents.length }}</p></div>
                         </div>
                     </section>
 
@@ -1869,8 +1869,8 @@ const inviteExternalMember = (member) => {
                                 </div>
                             </div>
                             <div class="sm:col-span-2 rounded-xl border border-dashed border-border bg-bg p-3">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Beispiele zur Orientierung</p>
-                                <p class="mt-1 text-xs text-secondary">Diese Beispiele werden nicht als echte Vereinseinstellungen gespeichert.</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ tx('club_memberships.workspace.examples_title', 'Beispiele zur Orientierung') }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ tx('club_memberships.workspace.examples_body', 'Diese Beispiele werden nicht als echte Vereinseinstellungen gespeichert.') }}</p>
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <span v-for="example in ['Jugendmitglied', 'Aktives Mitglied', 'Probetraining', 'Fördermitglied']" :key="example" class="rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-primary">{{ example }}</span>
                                 </div>
@@ -2524,7 +2524,7 @@ const inviteExternalMember = (member) => {
                             <button
                                 class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                 :disabled="capabilities.datev_export === false"
-                                :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfügbar' : ''"
+                                :title="capabilities.datev_export === false ? tx('club_memberships.workspace.datev_unavailable', 'DATEV-Export ist ab Pro verfügbar') : ''"
                             >
                                 DATEV-Einstellungen speichern
                             </button>

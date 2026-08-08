@@ -14,6 +14,19 @@ return [
 
     'window_hours' => (int) env('OPERATIONS_MONITOR_WINDOW_HOURS', 24),
 
+    'performance' => [
+        // Enabled by default only in production. The listener records totals,
+        // never SQL text, bindings, request parameters, IPs, or user data.
+        'enabled' => env(
+            'OPERATIONS_PERFORMANCE_ENABLED',
+            env('APP_ENV', 'production') === 'production',
+        ),
+        'slow_request_ms' => (int) env('OPERATIONS_SLOW_REQUEST_MS', 1000),
+        'max_query_count' => (int) env('OPERATIONS_MAX_QUERY_COUNT', 100),
+        'max_query_time_ms' => (int) env('OPERATIONS_MAX_QUERY_TIME_MS', 500),
+        'sample_rate' => (float) env('OPERATIONS_PERFORMANCE_SAMPLE_RATE', 0.01),
+    ],
+
     'errors' => [
         'max_recent_errors' => (int) env('OPERATIONS_MAX_RECENT_ERRORS', 0),
         'scan_bytes' => (int) env('OPERATIONS_LOG_SCAN_BYTES', 262144),

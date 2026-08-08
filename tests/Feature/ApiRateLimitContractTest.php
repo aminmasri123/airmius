@@ -36,6 +36,7 @@ class ApiRateLimitContractTest extends TestCase
             'api.v1.comments.update' => 'throttle:content-comments',
             'api.v1.commerce.products.reviews.store' => 'throttle:content-comments',
             'api.v1.reports.store' => 'throttle:content-reports',
+            'api.v1.public.recruiting.jobs.interest' => 'throttle:content-reports',
             'api.v1.chat.messages.store' => 'throttle:chat-messages',
             'api.v1.chat.messages.reactions.store' => 'throttle:chat-messages',
             'api.v1.chat.typing' => 'throttle:chat-presence',

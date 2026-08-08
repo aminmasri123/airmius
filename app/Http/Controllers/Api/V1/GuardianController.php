@@ -18,6 +18,12 @@ use Illuminate\Support\Str;
 
 class GuardianController extends Controller
 {
+    private const RESPONSE_CONSENT_RESENT = 'guardian_consent_resent';
+
+    private const RESPONSE_CONSENT_APPROVED = 'guardian_consent_approved';
+
+    private const RESPONSE_CONSENT_REVOKED = 'guardian_consent_revoked';
+
     public function index(Request $request): JsonResponse
     {
         $guardian = $request->user();
@@ -180,7 +186,8 @@ class GuardianController extends Controller
         GuardianConsentNotifier::send($user, (string) $user->guardian_email);
 
         return response()->json([
-            'message' => 'guardian_consent_resent',
+            'message' => self::RESPONSE_CONSENT_RESENT,
+            'message_text' => __('guardian.responses.consent_resent'),
             'data' => $this->consentData($user->refresh()),
         ]);
     }
@@ -217,16 +224,21 @@ class GuardianController extends Controller
             return $managedChild->refresh();
         });
 
-        AppNotification::send($managedChild, 'guardian.consent_approved', [
-            'title' => 'Zustimmung erteilt',
-            'body' => 'Dein Airmius-Konto wurde von einem Erziehungsberechtigten freigegeben.',
-            'minor_id' => $managedChild->id,
-            'guardian_user_id' => $guardian->id,
-            'url' => route('auth.dashboard'),
-        ]);
+        AppNotification::sendLocalized(
+            $managedChild,
+            'guardian.consent_approved',
+            'guardian.notifications.approved_title',
+            'guardian.notifications.approved_body',
+            data: [
+                'minor_id' => $managedChild->id,
+                'guardian_user_id' => $guardian->id,
+                'url' => route('auth.dashboard'),
+            ],
+        );
 
         return response()->json([
-            'message' => 'guardian_consent_approved',
+            'message' => self::RESPONSE_CONSENT_APPROVED,
+            'message_text' => __('guardian.responses.consent_approved'),
             'data' => $this->childData($managedChild),
         ]);
     }
@@ -263,16 +275,21 @@ class GuardianController extends Controller
             return $managedChild->refresh();
         });
 
-        AppNotification::send($managedChild, 'guardian.consent_revoked', [
-            'title' => 'Zustimmung widerrufen',
-            'body' => 'Die Freigabe deines Airmius-Kontos wurde widerrufen. Bitte kläre das mit deinem Erziehungsberechtigten.',
-            'minor_id' => $managedChild->id,
-            'guardian_email' => $guardianEmail,
-            'url' => route('guardian-consent.pending'),
-        ]);
+        AppNotification::sendLocalized(
+            $managedChild,
+            'guardian.consent_revoked',
+            'guardian.notifications.revoked_title',
+            'guardian.notifications.revoked_body',
+            data: [
+                'minor_id' => $managedChild->id,
+                'guardian_email' => $guardianEmail,
+                'url' => route('guardian-consent.pending'),
+            ],
+        );
 
         return response()->json([
-            'message' => 'guardian_consent_revoked',
+            'message' => self::RESPONSE_CONSENT_REVOKED,
+            'message_text' => __('guardian.responses.consent_revoked'),
             'data' => $this->childData($managedChild),
         ]);
     }
@@ -309,7 +326,8 @@ class GuardianController extends Controller
         GuardianConsentNotifier::send($managedChild, (string) $managedChild->guardian_email);
 
         return response()->json([
-            'message' => 'guardian_consent_resent',
+            'message' => self::RESPONSE_CONSENT_RESENT,
+            'message_text' => __('guardian.responses.consent_resent'),
             'data' => $this->childData($managedChild),
         ]);
     }

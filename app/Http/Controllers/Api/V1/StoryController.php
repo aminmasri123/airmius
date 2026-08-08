@@ -134,7 +134,7 @@ class StoryController extends Controller
 
         return response()->json([
             'data' => (new StoryResource($story))->resolve($request),
-            'message' => 'Story erstellt.',
+            'message' => __('platform.social.story_created'),
         ], 201);
     }
 
@@ -364,4 +364,3 @@ class StoryController extends Controller
                 ->exists();
     }
 }
-

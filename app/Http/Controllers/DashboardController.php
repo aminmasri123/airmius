@@ -362,7 +362,7 @@ class DashboardController extends Controller
 
         if ($nextItem) {
             $items[] = [
-                'title' => 'Nächste Einheit dokumentieren',
+                'title' => __('platform.dashboard.next_training_title'),
                 'body' => $nextItem->title,
                 'meta' => $nextItem->scheduled_at?->format('d.m. H:i'),
                 'href' => route('auth.training.logs.create', ['plan_item_id' => $nextItem->id]),
@@ -373,7 +373,7 @@ class DashboardController extends Controller
 
         if ($nextEvent) {
             $items[] = [
-                'title' => 'Nächster Termin',
+                'title' => __('platform.dashboard.next_event_title'),
                 'body' => $nextEvent->title,
                 'meta' => $nextEvent->start_time?->format('d.m. H:i'),
                 'href' => route('auth.events.index'),

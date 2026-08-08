@@ -1,0 +1,106 @@
+{
+    "version": "2026-08-08",
+    "policy": "A gate may be passed or waived only with non-sensitive evidence references and named review metadata.",
+    "gates": [
+        {
+            "id": "staging_http_delivery",
+            "title": "Staging HTTP, cache, compression, and proxy verification",
+            "owner": "DevOps / Platform Engineering",
+            "status": "pending",
+            "required_evidence": "Record staging header checks for immutable assets, private API responses, ETag/304, CORS, Brotli or gzip, TLS, and reverse-proxy behavior.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "mysql_query_plans",
+            "title": "Production-like MySQL/MariaDB query plans",
+            "owner": "Backend / DBA",
+            "status": "pending",
+            "required_evidence": "Attach EXPLAIN ANALYZE evidence for chat previews, notifications, events, outbox, mobile-push, and the consent-filtered product analytics aggregates plus the online-DDL rollout plan.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "provider_smoke_tests",
+            "title": "SMTP, Firebase, Stripe, and PayPal smoke tests",
+            "owner": "DevOps / Commerce",
+            "status": "pending",
+            "required_evidence": "Provide sandbox or staging delivery, webhook signature, idempotency, retry, and failure-path evidence for every enabled provider.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "external_observability",
+            "title": "External SLO dashboards and alerts",
+            "owner": "SRE / Operations",
+            "status": "pending",
+            "required_evidence": "Link privacy-safe dashboards and tested alerts for availability, API errors, latency, queues, webhooks, mail, push, and backups.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "mobile_real_devices",
+            "title": "Android and iOS real-device acceptance",
+            "owner": "Mobile / QA",
+            "status": "pending",
+            "required_evidence": "Attach signed-build or TestFlight evidence for login, logout, secure token restore, push, upload, deep links, RTL, and core workflows on real devices.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "native_localization_qa",
+            "title": "Native-language and Arabic RTL review",
+            "owner": "Product / Localization",
+            "status": "pending",
+            "required_evidence": "Record native DE/EN/FR/AR review, semantic back-translation, overflow checks, and Arabic RTL visual acceptance on critical routes including privacy consent and product analytics.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "legal_release_approval",
+            "title": "Version-bound legal and privacy approval",
+            "owner": "Legal / Data Protection",
+            "status": "pending",
+            "required_evidence": "Record approval of provider identity, terms, privacy notices, separate product analytics consent/version, retention rules, and store privacy declarations for the exact release version.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "dpia_approval",
+            "title": "DSGVO DPIA and processing governance",
+            "owner": "Data Protection Officer",
+            "status": "pending",
+            "required_evidence": "Provide the approved DPIA, records of processing, processor inventory, product analytics purpose/KPI and minimum-group approval, deletion/export exercises, purpose limits, and incident contacts.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "external_penetration_test",
+            "title": "Independent penetration test",
+            "owner": "Security",
+            "status": "pending",
+            "required_evidence": "Attach the independent web, API, mobile, authorization, upload, payment, and tenant-isolation assessment plus closure evidence for critical findings.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        },
+        {
+            "id": "club_pilot",
+            "title": "Three-to-five-club pilot acceptance",
+            "owner": "Product / Customer Success",
+            "status": "pending",
+            "required_evidence": "Record onboarding, migration, support, active-use, billing, training, and administration outcomes for three to five representative pilot clubs.",
+            "evidence": [],
+            "reviewed_by": null,
+            "reviewed_at": null
+        }
+    ]
+}

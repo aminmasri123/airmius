@@ -127,6 +127,7 @@ export function useSettingsWorkspace({ props, t, te }) {
         friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
         ads_personalization_consent: Boolean(props.privacySettings.ads_personalization_consent),
         ads_measurement_consent: Boolean(props.privacySettings.ads_measurement_consent),
+        product_analytics_consent: Boolean(props.privacySettings.product_analytics_consent),
     })
     
     // Actions

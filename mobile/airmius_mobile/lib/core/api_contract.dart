@@ -66,6 +66,9 @@ class AirmiusApiContract {
   static const publicBlog = '/friends/public/blog';
   static const publicBlogCategories = '/friends/public/blog/categories';
   static const publicBlogRss = '/friends/public/blog/rss';
+  static const publicRecruitingJobsApi = '/api/v1/public/recruiting/jobs';
+  static String publicRecruitingJobInterestApi(int id) =>
+      '$publicRecruitingJobsApi/$id/interest';
   static const legalPages = '/friends/legal-pages';
   static const contactLocations = '/friends/contact-locations';
   static const uploads = '/friends/uploads';

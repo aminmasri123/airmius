@@ -73,7 +73,7 @@ defineProps({
                 <form class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
                     <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Jugendmitglied" required>
                     <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug optional">
-                    <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                    <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Beschreibung')"></textarea>
                     <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> Öffentlich sichtbar</label>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Typ speichern</button>
                 </form>
@@ -109,4 +109,3 @@ defineProps({
         </aside>
     </section>
 </template>
-

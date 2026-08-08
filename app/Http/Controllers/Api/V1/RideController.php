@@ -82,7 +82,7 @@ class RideController extends Controller
         $this->service->join($ride, $request->user());
 
         return response()->json([
-            'message' => 'ride_created',
+            ...$this->responseContract('ride_created'),
             'data' => $this->freshRideData($ride, $request->user()),
         ], 201);
     }
@@ -107,15 +107,21 @@ class RideController extends Controller
         ]);
 
         $ride->load(['users', 'driver']);
-        $this->notifyParticipants($ride, 'ride.updated', [
-            'title' => 'Fahrgemeinschaft wurde bearbeitet',
-            'message' => $ride->from.' -> '.$ride->to.' wurde aktualisiert.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ], $request->user()->id);
+        $this->notifyParticipants(
+            $ride,
+            'ride.updated',
+            'rides.notifications.updated_title',
+            'rides.notifications.updated_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+            $request->user()->id,
+        );
 
         return response()->json([
-            'message' => 'ride_updated',
+            ...$this->responseContract('ride_updated'),
             'data' => $this->freshRideData($ride, $request->user()),
         ]);
     }
@@ -154,16 +160,21 @@ class RideController extends Controller
         );
 
         if ($result === RideService::RESULT_REQUESTED) {
-            AppNotification::send($ride->driver_id, 'ride.requested', [
-                'title' => 'Neue Mitfahranfrage',
-                'message' => $user->name.' möchte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $ride->driver_id,
+                'ride.requested',
+                'rides.notifications.requested_title',
+                'rides.notifications.requested_body',
+                ['name' => $user->name, 'from' => $ride->from, 'to' => $ride->to],
+                [
+                    'ride_id' => $ride->id,
+                    'url' => route('auth.rides.index'),
+                ],
+            );
         }
 
         return response()->json([
-            'message' => $result,
+            ...$this->responseContract($result),
             'data' => $this->freshRideData($ride, $user),
         ]);
     }
@@ -185,16 +196,23 @@ class RideController extends Controller
         $ride->users()->detach($user->id);
 
         if ($wasAccepted) {
-            AppNotification::send($ride->driver_id, 'ride.left', [
-                'title' => 'Mitfahrt verlassen',
-                'message' => $user->name.' hat deine Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' verlassen.',
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $ride->driver_id,
+                'ride.left',
+                'rides.notifications.left_title',
+                'rides.notifications.left_body',
+                ['name' => $user->name, 'from' => $ride->from, 'to' => $ride->to],
+                [
+                    'ride_id' => $ride->id,
+                    'url' => route('auth.rides.index'),
+                ],
+            );
         }
 
+        $messageKey = $wasAccepted ? 'ride_left' : 'ride_request_withdrawn';
+
         return response()->json([
-            'message' => $wasAccepted ? 'ride_left' : 'ride_request_withdrawn',
+            ...$this->responseContract($messageKey),
             'data' => $this->freshRideData($ride, $user),
         ]);
     }
@@ -207,15 +225,20 @@ class RideController extends Controller
         abort_if($result === RideService::RESULT_FULL, 422, 'full');
         abort_unless($result === RideService::RESULT_APPROVED, 422, 'request_not_found');
 
-        AppNotification::send($user, 'ride.request_approved', [
-            'title' => 'Mitfahranfrage angenommen',
-            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde angenommen.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.request_approved',
+            'rides.notifications.approved_title',
+            'rides.notifications.approved_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
         return response()->json([
-            'message' => 'request_approved',
+            ...$this->responseContract('request_approved'),
             'data' => $this->freshRideData($ride, $request->user()),
         ]);
     }
@@ -225,15 +248,20 @@ class RideController extends Controller
         $this->authorize('update', $ride);
         abort_unless($this->service->rejectRequest($ride, $user), 422, 'request_not_found');
 
-        AppNotification::send($user, 'ride.request_rejected', [
-            'title' => 'Mitfahranfrage abgelehnt',
-            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde abgelehnt.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.request_rejected',
+            'rides.notifications.rejected_title',
+            'rides.notifications.rejected_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
         return response()->json([
-            'message' => 'request_rejected',
+            ...$this->responseContract('request_rejected'),
             'data' => $this->freshRideData($ride, $request->user()),
         ]);
     }
@@ -247,15 +275,20 @@ class RideController extends Controller
         abort_unless($pivot?->status === Ride::MEMBER_STATUS_ACCEPTED, 422, 'accepted_member_not_found');
 
         $ride->users()->detach($user->id);
-        AppNotification::send($user, 'ride.member_removed', [
-            'title' => 'Aus Fahrgemeinschaft entfernt',
-            'message' => 'Du wurdest aus der Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' entfernt.',
-            'ride_id' => $ride->id,
-            'url' => route('auth.rides.index'),
-        ]);
+        AppNotification::sendLocalized(
+            $user,
+            'ride.member_removed',
+            'rides.notifications.removed_title',
+            'rides.notifications.removed_body',
+            ['from' => $ride->from, 'to' => $ride->to],
+            [
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ],
+        );
 
         return response()->json([
-            'message' => 'member_removed',
+            ...$this->responseContract('member_removed'),
             'data' => $this->freshRideData($ride, $request->user()),
         ]);
     }
@@ -270,17 +303,22 @@ class RideController extends Controller
             ->get();
 
         foreach ($participants as $participant) {
-            AppNotification::send($participant, 'ride.deleted', [
-                'title' => 'Fahrgemeinschaft gelöscht',
-                'message' => $ride->from.' -> '.$ride->to.' wurde gelöscht.',
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+            AppNotification::sendLocalized(
+                $participant,
+                'ride.deleted',
+                'rides.notifications.deleted_title',
+                'rides.notifications.deleted_body',
+                ['from' => $ride->from, 'to' => $ride->to],
+                [
+                    'ride_id' => $ride->id,
+                    'url' => route('auth.rides.index'),
+                ],
+            );
         }
 
         $ride->delete();
 
-        return response()->json(['message' => 'ride_deleted']);
+        return response()->json($this->responseContract('ride_deleted'));
     }
 
     private function freshRideData(Ride $ride, User $user): array
@@ -497,12 +535,31 @@ class RideController extends Controller
         return $parts ? implode(', ', $parts) : null;
     }
 
-    private function notifyParticipants(Ride $ride, string $type, array $data, ?int $excludeUserId = null): void
-    {
+    private function notifyParticipants(
+        Ride $ride,
+        string $type,
+        string $titleKey,
+        string $bodyKey,
+        array $replace,
+        array $data,
+        ?int $excludeUserId = null,
+    ): void {
         foreach ($ride->users as $participant) {
             if ((int) $participant->id !== (int) $excludeUserId) {
-                AppNotification::send($participant, $type, $data);
+                AppNotification::sendLocalized($participant, $type, $titleKey, $bodyKey, $replace, $data);
             }
         }
+    }
+
+    /** @return array{message: string, message_text: string} */
+    private function responseContract(string $messageKey): array
+    {
+        $translationKey = 'rides.responses.'.$messageKey;
+        $messageText = __($translationKey);
+
+        return [
+            'message' => $messageKey,
+            'message_text' => $messageText === $translationKey ? $messageKey : $messageText,
+        ];
     }
 }

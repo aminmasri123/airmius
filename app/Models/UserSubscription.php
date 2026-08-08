@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSubscriptionEntitlements;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserSubscription extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSubscriptionEntitlements;
 
     protected $fillable = [
         'user_id',

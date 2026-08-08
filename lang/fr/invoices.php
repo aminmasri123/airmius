@@ -1,0 +1,63 @@
+<?php
+
+return [
+    'flash' => [
+        'created' => 'Facture créée.',
+        'status_updated' => 'Statut de la facture mis à jour.',
+        'deleted' => 'Facture supprimée.',
+    ],
+    'errors' => [
+        'payments_exist' => 'Les factures associées à des paiements ne peuvent pas être supprimées.',
+        'type_not_deletable' => 'Ce type de facture ne peut pas être supprimé ici.',
+    ],
+    'types' => [
+        'recurring_contribution' => 'Cotisation',
+        'account_subscription' => 'Abonnement du compte',
+        'outfit_subscription_manual' => 'Abonnement tenue',
+        'marketplace_purchase' => 'Achat Marketplace',
+        'elearning' => 'E-learning / cours',
+        'ads' => 'Publicités',
+        'agency_website' => 'Agence – site web',
+        'agency_logo' => 'Agence – logo',
+        'agency_branding' => 'Agence – image de marque',
+        'sponsorship' => 'Sponsoring',
+        'custom' => 'Personnalisé',
+        'manual' => 'Autre facture',
+        'club' => 'Facture du club',
+    ],
+    'manual_options' => [
+        'account_subscription' => ['label' => 'Abonnement du compte', 'hint' => 'Formule, mise à niveau ou compte utilisateur'],
+        'outfit_subscription_manual' => ['label' => 'Abonnement tenue', 'hint' => 'Tenue de sport, box ou accord sponsor'],
+        'marketplace_purchase' => ['label' => 'Achat Marketplace', 'hint' => 'Produit, commande ou panier'],
+        'elearning' => ['label' => 'E-learning / cours', 'hint' => 'Fournisseur de cours, coach ou entraîneur'],
+        'ads' => ['label' => 'Publicités', 'hint' => 'Annonce, campagne ou visibilité'],
+        'agency_website' => ['label' => 'Site web', 'hint' => 'Projet de site web de l’agence'],
+        'agency_logo' => ['label' => 'Logo', 'hint' => 'Création ou refonte de logo'],
+        'agency_branding' => ['label' => 'Image de marque', 'hint' => 'Identité visuelle, pack design ou présence de marque'],
+        'sponsorship' => ['label' => 'Sponsoring', 'hint' => 'Pack sponsor ou partenariat'],
+        'custom' => ['label' => 'Personnalisé', 'hint' => 'Motif libre'],
+    ],
+    'fallbacks' => [
+        'account_subscription' => 'Abonnement Airmius',
+        'outfit_subscription' => 'Abonnement tenue',
+        'outfit_number' => 'Abonnement tenue n° :id',
+    ],
+    'notifications' => [
+        'created_title' => 'Nouvelle facture reçue',
+        'created_body' => ':invoice d’un montant de :amount est maintenant disponible dans vos factures.',
+        'new_invoice_fallback' => 'Une nouvelle facture',
+        'status_updated_title' => 'Statut de la facture mis à jour',
+        'status_updated_body' => ':invoice est maintenant :status.',
+        'invoice_fallback' => 'Votre facture',
+    ],
+    'status' => [
+        'paid' => 'payée',
+        'open' => 'ouverte',
+        'pending' => 'en attente',
+        'awaiting_transfer' => 'en attente de virement',
+        'overdue' => 'en retard',
+        'cancelled' => 'annulée',
+        'failed' => 'échouée',
+        'unknown' => 'inconnu',
+    ],
+];

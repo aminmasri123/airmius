@@ -32,7 +32,7 @@ class PasswordRecoveryController extends Controller
         // discover which email addresses have an Airmius account.
         return response()->json([
             'data' => [
-                'message' => 'Wenn ein Konto zu dieser E-Mail-Adresse existiert, wurde ein sicherer Reset-Link gesendet.',
+                'message' => __('account_security.responses.password_reset_link_sent'),
             ],
         ]);
     }
@@ -72,7 +72,7 @@ class PasswordRecoveryController extends Controller
 
         return response()->json([
             'data' => [
-                'message' => 'Dein Passwort wurde zurückgesetzt. Du kannst dich jetzt anmelden.',
+                'message' => __('account_security.responses.password_reset'),
             ],
         ]);
     }

@@ -12,8 +12,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Jetstream\Features;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Jetstream\Features;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -83,6 +83,9 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'notification_quiet_time',
         'ads_personalization_consent',
         'ads_measurement_consent',
+        'product_analytics_consent',
+        'product_analytics_consented_at',
+        'product_analytics_consent_version',
         'bio',
     ];
 
@@ -139,6 +142,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'notification_channels' => 'array',
             'ads_personalization_consent' => 'boolean',
             'ads_measurement_consent' => 'boolean',
+            'product_analytics_consent' => 'boolean',
+            'product_analytics_consented_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

@@ -65,6 +65,15 @@ defineProps({
                         <span class="text-xs text-secondary">{{ settingsText('privacy.ads_measurement_help', 'Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.') }}</span>
                     </span>
                 </label>
+                <div class="mt-4 border-t border-border pt-4">
+                    <label class="flex items-start gap-3 text-sm text-primary">
+                        <input v-model="form.product_analytics_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">{{ settingsText('privacy.product_analytics', 'Anonyme Produktverbesserung erlauben') }}</span>
+                            <span class="text-xs leading-5 text-secondary">{{ settingsText('privacy.product_analytics_help', 'Erlaubt ausschließlich zusammengefasste Nutzungskennzahlen aus vorhandenen Airmius-Aktionen. Werbeeinwilligungen werden nicht wiederverwendet; es gibt keine zusätzlichen Tracking-Cookies oder SDKs.') }}</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <button class="btn-primary" :disabled="form.processing">
@@ -83,4 +92,3 @@ defineProps({
     @apply rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary;
 }
 </style>
-

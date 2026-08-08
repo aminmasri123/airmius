@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Support\Roles;
 use App\Support\ClubRoles;
+use App\Support\Roles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -254,7 +254,11 @@ class Club extends Model
 
     public function subscriptionPlan(): ?SubscriptionPlan
     {
-        return $this->currentSubscription?->plan ?? SubscriptionPlan::free();
+        $subscription = $this->currentSubscription;
+
+        return $subscription?->grantsAccess()
+            ? $subscription->plan
+            : SubscriptionPlan::free();
     }
 
     public function memberUsageCount(): int
